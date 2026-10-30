@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import type { BrowserWindow } from "electron";
 import {
   exactLayoutKeys,
@@ -35,6 +36,7 @@ export function registerTerminalLayoutIpc(options: {
     initialRead: boolean;
     tokens: Map<string, string>;
     capture?: Capture;
+    cleanup(): void;
   };
   const owners = new Map<object, Owner>();
   const ownerFor = (event: IpcEvent) =>
@@ -42,6 +44,7 @@ export function registerTerminalLayoutIpc(options: {
       ? owners.get(event.sender)
       : undefined;
   const remove = (owner: Owner) => {
+    owner.cleanup();
     owner.capture?.reject();
     owner.capture?.dispose();
     owner.tokens.clear();
@@ -111,24 +114,33 @@ export function registerTerminalLayoutIpc(options: {
       controller: TerminalIpcController,
       plan?: PreparedLayout,
     ) {
+      const contents = window.webContents;
+      const previous = owners.get(contents);
+      if (previous) remove(previous);
+      let unsubscribeLoss = () => {};
+      const navigation = (
+        _event: unknown,
+        _url: unknown,
+        inPlace: unknown,
+        mainFrame: unknown,
+      ) => {
+        if (mainFrame && !inPlace && owner.initialRead) remove(owner);
+      };
       const owner: Owner = {
-        contents: window.webContents,
+        contents,
         controller,
         initialRead: false,
         tokens: new Map(plan?.directories),
         ...(plan ? { plan } : {}),
-      };
-      owners.set(window.webContents, owner);
-      window.once("closed", () => remove(owner));
-      window.webContents.once("destroyed", () => remove(owner));
-      window.webContents.once("render-process-gone", () => remove(owner));
-      // A reload must not replay a consumed plan or revive unused allocations.
-      window.webContents.on(
-        "did-start-navigation",
-        (_event, _url, inPlace, mainFrame) => {
-          if (mainFrame && !inPlace && owner.initialRead) remove(owner);
+        cleanup() {
+          unsubscribeLoss();
+          contents.removeListener("did-start-navigation", navigation);
         },
-      );
+      };
+      owners.set(contents, owner);
+      // A reload must not replay a consumed plan or revive unused allocations.
+      contents.on("did-start-navigation", navigation);
+      unsubscribeLoss = subscribeWindowOwnerLoss(window, () => remove(owner));
     },
     capture(window: BrowserWindow, signal: AbortSignal): Promise<SavedLayout> {
       const owner = owners.get(window.webContents);

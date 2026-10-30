@@ -24,6 +24,53 @@ it("captures the original OSC7 source without retargeting and revokes on source 
   window.emit("closed");
   expect(second.signal.aborted).toBe(true);
 });
+it("arms invocation navigation only after load, then aborts and removes subscriptions", () => {
+  const contents = new EventEmitter();
+  const window = Object.assign(new EventEmitter(), {
+    webContents: contents,
+  }) as unknown as BrowserWindow;
+  const targets = extensionInvocationTarget(window);
+  const target = targets.capture(() => undefined);
+  contents.emit("did-start-navigation", {}, "initial", false, true);
+  expect(target.signal.aborted).toBe(false);
+  contents.emit("did-finish-load");
+  contents.emit("did-start-navigation", {}, "same", true, true);
+  contents.emit("did-start-navigation", {}, "child", false, false);
+  expect(target.signal.aborted).toBe(false);
+  contents.emit("did-start-navigation", {}, "reload", false, true);
+  expect(target.signal.aborted).toBe(true);
+  expect(targets.capture(() => undefined).signal.aborted).toBe(true);
+  expect(contents.listenerCount("did-finish-load")).toBe(0);
+  expect(contents.listenerCount("did-start-navigation")).toBe(0);
+  expect(contents.listenerCount("destroyed")).toBe(0);
+  expect(contents.listenerCount("render-process-gone")).toBe(0);
+  expect(window.listenerCount("closed")).toBe(0);
+});
+it.each([false, true])(
+  "cleans invocation load/navigation callbacks on owner loss (loaded=%s)",
+  (loaded) => {
+    const contents = new EventEmitter();
+    const window = Object.assign(new EventEmitter(), {
+      webContents: contents,
+    }) as unknown as BrowserWindow;
+    const targets = extensionInvocationTarget(window);
+    const target = targets.capture(() => undefined);
+    if (loaded) contents.emit("did-finish-load");
+    const getter = vi.fn(() => {
+      throw new Error("Object has been destroyed");
+    });
+    Object.defineProperty(window, "webContents", { get: getter });
+    contents.emit("render-process-gone");
+    expect(target.signal.aborted).toBe(true);
+    expect(contents.listenerCount("did-finish-load")).toBe(0);
+    expect(contents.listenerCount("did-start-navigation")).toBe(0);
+    expect(contents.listenerCount("destroyed")).toBe(0);
+    expect(contents.listenerCount("render-process-gone")).toBe(0);
+    expect(window.listenerCount("closed")).toBe(0);
+    contents.emit("did-finish-load");
+    expect(getter).not.toHaveBeenCalled();
+  },
+);
 it("normal Quit joins extension cleanup once and does not finish on acceptance", async () => {
   const native = Object.assign(new EventEmitter(), { quit: vi.fn() });
   let finish!: (result: boolean) => void;

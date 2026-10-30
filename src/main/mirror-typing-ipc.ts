@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import type { BrowserWindow } from "electron";
 import { exactLayoutKeys, isLayoutToken } from "../shared/terminal-layout";
 import {
@@ -62,14 +63,11 @@ class MirrorWindow {
       owner.on(name, callback);
       this.cleanup.push(() => owner.removeListener(name, callback));
     };
-    listen(window, "closed", () => this.dispose());
     listen(window, "hide", () => this.stop("unavailable"));
     listen(window, "minimize", () => this.stop("unavailable"));
     listen(window, "blur", () => {
       if (!this.context?.lease) this.stop("unavailable");
     });
-    listen(this.contents, "destroyed", () => this.dispose());
-    listen(this.contents, "render-process-gone", () => this.dispose());
     listen(
       this.contents,
       "did-start-navigation",
@@ -77,6 +75,7 @@ class MirrorWindow {
         if (mainFrame && !inPlace) this.retire();
       },
     );
+    this.cleanup.push(subscribeWindowOwnerLoss(window, () => this.dispose()));
   }
   private send(command: MirrorCommand) {
     if (!this.contents.isDestroyed())

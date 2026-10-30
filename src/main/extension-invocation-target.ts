@@ -1,4 +1,5 @@
 import type { BrowserWindow } from "electron";
+import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import type { ExtensionTarget } from "./extension-manager";
 
 /** Capture main-observed OSC7 provenance and native lifetime before async work.
@@ -8,17 +9,25 @@ export function extensionInvocationTarget(window: BrowserWindow) {
   const lifetime = new AbortController();
   const sessions = new Map<string, AbortController>();
   let selected: string | null = null;
-  window.once("closed", () => lifetime.abort());
-  window.webContents.once("destroyed", () => lifetime.abort());
-  window.webContents.once("render-process-gone", () => lifetime.abort());
-  window.webContents.once("did-finish-load", () => {
-    window.webContents.on(
-      "did-start-navigation",
-      (_event, _url, inPlace, mainFrame) => {
-        if (mainFrame && !inPlace) lifetime.abort();
-      },
-    );
-  });
+  const contents = window.webContents;
+  let unsubscribeLoss = () => {};
+  const lost = () => {
+    unsubscribeLoss();
+    contents.removeListener("did-finish-load", loaded);
+    contents.removeListener("did-start-navigation", navigation);
+    lifetime.abort();
+  };
+  const navigation = (
+    _event: unknown,
+    _url: unknown,
+    inPlace: unknown,
+    mainFrame: unknown,
+  ) => {
+    if (mainFrame && !inPlace) lost();
+  };
+  const loaded = () => contents.on("did-start-navigation", navigation);
+  contents.once("did-finish-load", loaded);
+  unsubscribeLoss = subscribeWindowOwnerLoss(window, lost);
   return {
     started(id: string) {
       sessions.set(id, new AbortController());

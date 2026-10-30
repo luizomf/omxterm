@@ -1,4 +1,5 @@
 import type { BrowserWindow, Input, InputEvent } from "electron";
+import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import { terminalIpc } from "../shared/terminal-ipc";
 import { hasNativeAltGr } from "./keyboard-modifiers";
 import {
@@ -83,6 +84,7 @@ export function registerWindowChrome(
   // Retain the emitter while its owner is still alive for teardown ordering.
   const webContents = window.webContents;
   let disposed = false;
+  let unsubscribeLoss = () => {};
   let titleBarVisible = options.showTitleBar;
   // On Windows fullscreen events precede the native getter update. The event
   // owns the new state; reading the getter there can stop sampling on exit.
@@ -297,7 +299,7 @@ export function registerWindowChrome(
     for (const event of events) window.removeListener(event, refresh);
     window.removeListener("enter-full-screen", enterFullScreen);
     window.removeListener("leave-full-screen", leaveFullScreen);
-    window.removeListener("closed", dispose);
+    unsubscribeLoss();
     if (usesAltMenu) {
       window.removeListener("blur", resetInput);
       webContents.removeListener("blur", resetInput);
@@ -305,8 +307,6 @@ export function registerWindowChrome(
       webContents.removeListener("before-mouse-event", cancelAlt);
       webContents.removeListener("input-event", inputEvent);
     }
-    webContents.removeListener("destroyed", dispose);
-    webContents.removeListener("render-process-gone", dispose);
   };
   if (usesAltMenu) {
     window.on("blur", resetInput);
@@ -319,9 +319,7 @@ export function registerWindowChrome(
   for (const event of events) window.on(event, refresh);
   window.on("enter-full-screen", enterFullScreen);
   window.on("leave-full-screen", leaveFullScreen);
-  window.on("closed", dispose);
-  webContents.on("destroyed", dispose);
-  webContents.on("render-process-gone", dispose);
+  unsubscribeLoss = subscribeWindowOwnerLoss(window, dispose);
   refresh();
   return {
     setTitle(next: string) {

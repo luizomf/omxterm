@@ -4,6 +4,7 @@ import {
   subscribeHostedLanguage,
 } from "./hosted-appearance";
 import type { SupportedLanguage } from "../shared/i18n";
+import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import { randomUUID } from "node:crypto";
 import { captureValue, type Value } from "../extension-runtime/protocol.js";
 import { isAbsolute } from "node:path";
@@ -146,6 +147,7 @@ class NativeExtensionViewHost {
   readonly #native;
   readonly #ownerContents: WebContents;
   #state: ExtensionViewState = "dormant";
+  #unsubscribeLoss = () => {};
   #session: Session | undefined;
   #retirement: Promise<ExtensionViewOutcome> | undefined;
   #selected: string | null = null;
@@ -186,16 +188,17 @@ class NativeExtensionViewHost {
         for (const entry of this.#views.values()) this.#sendLanguage(entry);
       },
     );
-    options.owner.on("closed", this.#ownerLost);
-    options.owner.webContents.on("destroyed", this.#ownerLost);
-    options.owner.webContents.on("render-process-gone", this.#ownerLost);
-    options.owner.webContents.on("did-start-navigation", this.#ownerNavigation);
+    this.#ownerContents.on("did-start-navigation", this.#ownerNavigation);
     options.owner.on("resize", this.#hideForLayout);
     options.owner.on("blur", this.#blur);
     options.owner.on("focus", this.#reportFocus);
     options.owner.on("hide", this.#windowHidden);
     options.owner.on("minimize", this.#windowHidden);
-    options.owner.webContents.on("zoom-changed", this.#hideForLayout);
+    this.#ownerContents.on("zoom-changed", this.#hideForLayout);
+    this.#unsubscribeLoss = subscribeWindowOwnerLoss(
+      options.owner,
+      this.#ownerLost,
+    );
   }
   #live() {
     return (
@@ -358,6 +361,7 @@ class NativeExtensionViewHost {
   retire = (): Promise<ExtensionViewOutcome> => {
     if (this.#retirement) return this.#retirement;
     this.#state = "retiring";
+    this.#unsubscribeLoss();
     this.#unsubscribeAppearance();
     this.#unsubscribeLanguage();
     this.#activity(null);
@@ -372,12 +376,6 @@ class NativeExtensionViewHost {
       } catch {
         outcome = { status: "failed", reason: "timeout" };
       }
-      this.options.owner.removeListener("closed", this.#ownerLost);
-      this.#ownerContents.removeListener("destroyed", this.#ownerLost);
-      this.#ownerContents.removeListener(
-        "render-process-gone",
-        this.#ownerLost,
-      );
       this.#ownerContents.removeListener(
         "did-start-navigation",
         this.#ownerNavigation,

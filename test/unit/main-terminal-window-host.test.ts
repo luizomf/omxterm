@@ -1,6 +1,9 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it, vi } from "vitest";
+import type { BrowserWindow } from "electron";
+import { extensionInvocationTarget } from "../../src/main/extension-invocation-target";
 import {
+  guardTerminalWindowClose,
   registerTerminalWindowHost,
   type HostedTerminalWindow,
 } from "../../src/main/terminal-window-host";
@@ -41,6 +44,58 @@ function createWindowHarness() {
 }
 
 describe("main Terminal Window host", () => {
+  it.each(["destroyed", "render-process-gone"])(
+    "keeps the busy close guard before synchronous invocation revocation and host close on %s",
+    (event) => {
+      const contents = new EventEmitter();
+      const events = new EventEmitter();
+      const order: string[] = [];
+      const attempts: ReturnType<typeof vi.fn>[] = [];
+      const window = Object.assign(events, {
+        webContents: contents,
+        isDestroyed: () => false,
+        isFullScreen: () => false,
+        close() {
+          const preventDefault = vi.fn();
+          attempts.push(preventDefault);
+          events.emit("close", { preventDefault });
+          if (!preventDefault.mock.calls.length) {
+            order.push("closed");
+            events.emit("closed");
+          }
+        },
+      }) as unknown as BrowserWindow;
+      const application = {
+        mayCloseWindow: vi.fn(() => false),
+        requestWindowClose: vi.fn(async () => {}),
+      };
+      guardTerminalWindowClose(window, application);
+      const targets = extensionInvocationTarget(window);
+      const target = targets.capture(() => undefined);
+      target.signal.addEventListener("abort", () => order.push("revoked"));
+      const disposed = vi.fn(() => {
+        expect(target.signal.aborted).toBe(true);
+        order.push("disposed");
+      });
+      const closed = vi.fn();
+      registerTerminalWindowHost(
+        window,
+        { applyFullScreen: vi.fn(), dispose: disposed },
+        closed,
+      );
+      window.close();
+      expect(attempts[0]).toHaveBeenCalledOnce();
+      expect(application.requestWindowClose).toHaveBeenCalledOnce();
+      expect(target.signal.aborted).toBe(false);
+      expect(disposed).not.toHaveBeenCalled();
+      contents.emit(event);
+      expect(order).toEqual(["revoked", "disposed", "closed"]);
+      expect(attempts[1]).not.toHaveBeenCalled();
+      expect(application.requestWindowClose).toHaveBeenCalledOnce();
+      expect(disposed).toHaveBeenCalledOnce();
+      expect(closed).toHaveBeenCalledOnce();
+    },
+  );
   it.each(["render-process-gone", "destroyed"])(
     "closes and disposes exactly once when WebContents emits %s",
     (event) => {

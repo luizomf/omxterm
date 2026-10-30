@@ -67,6 +67,17 @@ network source guard is the exact owned epoch-entry call, with behavior coverage
 for foreign origin/scheme/epoch/path/navigation. Other callers remain prohibited.
 The app-owned scheme does not register service-worker or CSP-bypass privileges.
 
+Core window owners share a single native `closed` / core `destroyed` /
+`render-process-gone` subscription through `subscribeWindowOwnerLoss`. It captures
+the core contents before destruction and synchronously notifies subscribers once,
+in registration order, detaching the native listeners on loss or the last
+unsubscribe. Loss remains final for later subscribers. Chrome, layout capture,
+semantic input, invocation lifetime, Mirror Typing and epoch hosts retain their
+own cancellation and cleanup; navigation predicates are not combined. The native
+close guard remains registered before this shared subscription, and terminal
+session shutdown remains separately owned. Epoch retirement unsubscribes from
+owner loss immediately, without treating notification as completed resource drain.
+
 Retirement first revokes admission, hides/closes known views, unhandles the route,
 settles actual resource reads, closes connections and clears session data. It
 releases the pin only after views and reads drain. Native close, storage or pin

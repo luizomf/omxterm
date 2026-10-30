@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import type { BrowserWindow } from "electron";
 import {
   isSelectionRevision,
@@ -66,6 +67,7 @@ export function registerSemanticInputIpc(options: {
       const contents = window.webContents;
       if (owners.has(contents)) return;
       const lost = () => remove(owner);
+      let unsubscribeLoss = () => {};
       const navigation = (
         _event: unknown,
         _url: unknown,
@@ -77,17 +79,13 @@ export function registerSemanticInputIpc(options: {
       const owner: Owner = {
         contents,
         cleanup() {
-          window.removeListener("closed", lost);
-          contents.removeListener("destroyed", lost);
-          contents.removeListener("render-process-gone", lost);
+          unsubscribeLoss();
           contents.removeListener("did-start-navigation", navigation);
         },
       };
       owners.set(contents, owner);
-      window.on("closed", lost);
-      contents.on("destroyed", lost);
-      contents.on("render-process-gone", lost);
       contents.on("did-start-navigation", navigation);
+      unsubscribeLoss = subscribeWindowOwnerLoss(window, lost);
     },
     request(
       window: BrowserWindow,

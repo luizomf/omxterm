@@ -94,6 +94,41 @@ it.each(["closed", "destroyed"] as const)(
     expect(nativeGetter).not.toHaveBeenCalled();
   },
 );
+it("keeps initial navigation local and removes subscriptions on post-read navigation", () => {
+  const test = setup();
+  test.contents.emit("did-start-navigation", {}, "app", false, true);
+  expect(test.service.constructing()).toBe(true);
+  expect(test.service.initial(test.window)).toMatchObject({ selected: 0 });
+  test.contents.emit("did-start-navigation", {}, "app#same", true, true);
+  test.contents.emit("did-start-navigation", {}, "child", false, false);
+  expect(test.service.constructing()).toBe(true);
+  test.contents.emit("did-start-navigation", {}, "reload", false, true);
+  expect(test.service.constructing()).toBe(false);
+  expect(() => test.service.consume(test.window, token)).toThrow();
+  expect(test.contents.listenerCount("did-start-navigation")).toBe(0);
+  expect(test.contents.listenerCount("destroyed")).toBe(0);
+  expect(test.contents.listenerCount("render-process-gone")).toBe(0);
+  expect(test.window.listenerCount("closed")).toBe(0);
+  test.service.dispose();
+});
+it("explicit layout disposal rejects capture and removes all owner subscriptions", async () => {
+  const test = setup();
+  const pending = test.service.capture(
+    test.window,
+    new AbortController().signal,
+  );
+  const rejected = expect(pending).rejects.toThrow(
+    "Layout capture unavailable",
+  );
+  test.service.dispose();
+  test.service.dispose();
+  await rejected;
+  expect(test.service.constructing()).toBe(false);
+  expect(test.contents.listenerCount("did-start-navigation")).toBe(0);
+  expect(test.contents.listenerCount("destroyed")).toBe(0);
+  expect(test.contents.listenerCount("render-process-gone")).toBe(0);
+  expect(test.window.listenerCount("closed")).toBe(0);
+});
 it("captures only matching sender/request and enriches the renderer clone in main", async () => {
   const test = setup();
   const pending = test.service.capture(

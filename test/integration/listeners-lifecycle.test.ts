@@ -96,6 +96,7 @@ it.skipIf(!enabled)(
         reason: "exit",
         cleanupErrors: [],
       });
+      expect(result.stderr).not.toContain("MaxListenersExceededWarning");
       const receipts = result.stdout
         .split("\n")
         .filter((line) => line.startsWith("LISTENERS_LIFECYCLE_RESULT:"));
