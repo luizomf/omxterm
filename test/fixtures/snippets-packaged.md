@@ -8,10 +8,9 @@ unchanged packaged host, physical keyboard, default GPU, or platform cutover.
 ## Composition supplied by the integration owner
 
 `OMXTERM_SNIPPETS_PACKAGED_ENTRY` must be an absolute path to a built Electron
-main entry with production lifecycle and assets. Its only composition differences
-are `startApplicationExtensions({ ..., qualifySnippets: true })` and omission of
-the built-in Snippets view/action in favor of the installed companion. Keep the
-ordinary Snippets menu entry routed to the companion. Retain production
+main entry with unchanged production Linux ARM64 composition, lifecycle and
+assets. Production routes the ordinary Snippets command to the optional installed
+companion or Extensions guidance, with no duplicate action or built-in view. Retain production
 `registerSemanticInputIpc`, renderer semantic capture/preview, native gesture
 ownership and hosted presentation wiring. Do not bypass admission or expose a
 fixture terminal-injection API. The entry must honor the isolated configuration
@@ -26,9 +25,8 @@ the result, and after execution; the entry digest is checked before/after.
 
 On the assigned disposable Linux ARM64 desktop only, run the normal source build,
 then `node test/fixtures/snippets-qualification-build.mjs /absolute/new/qualification`
-to copy its artifacts and rebuild only main/renderer with the explicit test
-composition. The builder refuses output reuse, verifies each replacement seam,
-and records source hashes. It leaves shipping `dist` unchanged. The copied host
+to copy its artifacts and rebuild main/renderer without source substitutions.
+The builder refuses output reuse and records source hashes and `differences: []`. It leaves shipping `dist` unchanged. The copied host
 uses the source's installed dependencies; keep both until qualification settles.
 
 ```sh
@@ -48,6 +46,8 @@ host commit/build and archive provenance.
 
 ## Oracles and limits
 
+- Absent/disabled package guidance without implicit installation or enablement;
+  retained compatibility toggle with catalog readiness before row interaction.
 - Dormant install, exact archive trust, one active native child/backend, and no
   built-in Snippets DOM in the core renderer.
 - Exact PTY bytes for Insert and Run, with shell output receipts proving actual

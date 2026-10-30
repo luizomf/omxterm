@@ -47,6 +47,11 @@ type Installation = Awaited<
   ReturnType<ReturnType<typeof createExtensionManager>["snapshot"]>
 >[number];
 
+type ExtensionTargetCapture = (
+  sessionId?: string,
+  context?: "window",
+) => ExtensionTarget;
+
 function managementEntry(entry: Installation) {
   return {
     id: entry.id,
@@ -87,7 +92,7 @@ async function applicationManager(
     environment: process.env,
     owner,
   });
-  return createExtensionManager({
+  const manager = createExtensionManager({
     packages,
     runtime: backend,
     trust: createExtensionPackageTrust({
@@ -97,13 +102,16 @@ async function applicationManager(
     }),
     createViews: (input) => applicationViews(options, input),
   });
+  try {
+    return { manager, installations: await manager.snapshot() };
+  } catch {
+    await manager.dispose();
+    return undefined;
+  }
 }
 
 export type ApplicationExtensionsOptions = {
   applicationRoot: string;
-  // Native qualification fixtures omit built-in Snippets and opt into exactly
-  // one replacement. Production keeps the built-in until platform cutover.
-  qualifySnippets?: boolean;
   semanticInput?: Pick<
     ReturnType<typeof import("./semantic-input-ipc").registerSemanticInputIpc>,
     "request"
@@ -182,8 +190,7 @@ function captureExtensionTarget(
   source: ExtensionTarget,
   context: "window" | undefined,
   presentation: "panel" | undefined,
-  captureWindow:
-    ((sessionId?: string, context?: "window") => ExtensionTarget) | undefined,
+  captureWindow: ExtensionTargetCapture | undefined,
 ): ExtensionTarget | undefined {
   if (presentation !== "panel" && context !== "window") return source;
   const windowTarget = captureWindow?.(source.sourceSessionId, "window");
@@ -196,22 +203,34 @@ function captureExtensionTarget(
     : windowTarget;
 }
 
+async function acknowledgeExtension(
+  pending: Map<BrowserWindow, { token: string; invoke(): Promise<void> }>,
+  window: BrowserWindow,
+  token: string,
+  accepted: boolean,
+  stopping: boolean,
+): Promise<ExtensionsResult> {
+  const issued = pending.get(window);
+  if (!issued || issued.token !== token)
+    return { ok: false, error: "unavailable" };
+  pending.delete(window);
+  if (!accepted || BrowserWindow.getFocusedWindow() !== window || stopping)
+    return { ok: false, error: "unavailable" };
+  await issued.invoke();
+  return { ok: true };
+}
+
 // Startup creates infrastructure, never activates installed code. Unsupported
 // platforms retain Settings with an explicit preview-unavailable result.
 export async function startApplicationExtensions(
   options: ApplicationExtensionsOptions,
 ) {
-  const windows = new Map<
-    BrowserWindow,
-    (sessionId?: string, context?: "window") => ExtensionTarget
-  >();
+  const windows = new Map<BrowserWindow, ExtensionTargetCapture>();
   const lifetime = new AbortController();
   const pending = new Map<
     BrowserWindow,
     { token: string; invoke(): Promise<void> }
   >();
-  let manager: ReturnType<typeof createExtensionManager> | undefined;
-  let installations: Installation[] = [];
   let stopping = false;
   const catalog = createExtensionCatalog(
     { appVersion: app.getVersion(), apiVersion: "0.1.0" },
@@ -219,15 +238,12 @@ export async function startApplicationExtensions(
   );
   const catalogLoads = createCatalogAcquisition(catalog);
   const supported = process.platform === "linux" && process.arch === "arm64";
-  if (supported)
-    try {
-      manager = await applicationManager(options, lifetime.signal);
-      installations = await manager.snapshot();
-    } catch {
-      await manager?.dispose();
-      manager = undefined;
-      // A broken extension store/runtime must not prevent terminal startup.
-    }
+  // Broken extension infrastructure must not prevent terminal startup.
+  const initialized = supported
+    ? await applicationManager(options, lifetime.signal).catch(() => undefined)
+    : undefined;
+  const manager = initialized?.manager;
+  let installations = initialized?.installations ?? [];
   async function refresh(): Promise<ExtensionsResult> {
     if (!manager)
       return {
@@ -248,20 +264,6 @@ export async function startApplicationExtensions(
     () => stopping,
     options.translator,
   );
-  async function open(
-    window: BrowserWindow,
-    token: string,
-    accepted: boolean,
-  ): Promise<ExtensionsResult> {
-    const issued = pending.get(window);
-    if (!issued || issued.token !== token)
-      return { ok: false, error: "unavailable" };
-    pending.delete(window);
-    if (!accepted || BrowserWindow.getFocusedWindow() !== window || stopping)
-      return { ok: false, error: "unavailable" };
-    await issued.invoke();
-    return { ok: true };
-  }
   ipcMain.handle(
     extensionsIpc,
     async (event, ...args: unknown[]): Promise<ExtensionsResult> => {
@@ -280,7 +282,13 @@ export async function startApplicationExtensions(
       )
         throw new TypeError("Invalid extension management request");
       if (args[0].operation === "open")
-        return open(window, args[0].token, args[0].accepted);
+        return acknowledgeExtension(
+          pending,
+          window,
+          args[0].token,
+          args[0].accepted,
+          stopping,
+        );
       if (args[0].operation === "cancel-install") {
         links.cancel(window, args[0].token);
         catalogLoads.cancel(window, args[0].token);
@@ -352,12 +360,7 @@ export async function startApplicationExtensions(
   ): CoreAction[] {
     if (stopping) return [];
     return installations.flatMap((entry) => {
-      if (snippetsCompatibility && entry.id !== "omxterm.snippets") return [];
-      if (
-        entry.id === "omxterm.snippets" &&
-        !options.qualifySnippets &&
-        !snippetsCompatibility
-      )
+      if ((entry.id === "omxterm.snippets") !== snippetsCompatibility)
         return [];
       const view = entry.enabled && entry.digest && entry.manifest?.view;
       if (!view) return [];
@@ -442,16 +445,10 @@ export async function startApplicationExtensions(
         ? actions(
             target,
             () => BrowserWindow.getFocusedWindow() === window && claim(),
-          ).map((action) => ({
-            label: action.label,
-            click: action.invoke,
-          }))
+          ).map(({ label, invoke: click }) => ({ label, click }))
         : [];
     },
-    registerWindow(
-      window: BrowserWindow,
-      target: (sessionId?: string, context?: "window") => ExtensionTarget,
-    ) {
+    registerWindow(window: BrowserWindow, target: ExtensionTargetCapture) {
       const contents = window.webContents;
       windows.set(window, target);
       window.once("closed", () => {

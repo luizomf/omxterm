@@ -232,12 +232,15 @@ export function isTerminalTabCommand(
     );
   if (isStrictRecord(value, ["action"]))
     return (
-      value.action === "new" ||
-      value.action === "snippets-management" ||
-      value.action === "close" ||
-      value.action === "prepare-close" ||
-      value.action === "next" ||
-      value.action === "previous"
+      typeof value.action === "string" &&
+      [
+        "new",
+        "snippets-management",
+        "close",
+        "prepare-close",
+        "next",
+        "previous",
+      ].includes(value.action)
     );
   if (isStrictRecord(value, ["action", "confirmed"]))
     return (

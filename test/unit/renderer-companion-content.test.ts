@@ -10,7 +10,10 @@ import {
   cleanupSnippetsWindows,
 } from "../fixtures/snippets-window";
 
-afterEach(cleanupSnippetsWindows);
+afterEach(() => {
+  cleanupSnippetsWindows();
+  vi.unstubAllGlobals();
+});
 const settle = async () => {
   for (let i = 0; i < 8; i++) await Promise.resolve();
 };
@@ -93,6 +96,58 @@ async function fixture() {
     },
   };
 }
+
+it.each([false, true])(
+  "retains admitted Settings destination through native hide (superseded: %s)",
+  async (superseded) => {
+    const f = await fixture();
+    vi.stubGlobal("omxterm", {
+      extensions: {
+        request: vi.fn(async () => ({
+          ok: false,
+          error: "runtime-unavailable",
+        })),
+      },
+    });
+    f.settingsOpen();
+    await settle();
+    document
+      .querySelector<HTMLButtonElement>("#settings-tab-config-file")!
+      .click();
+    f.tabCommand({ action: "select", position: 1 });
+    await settle();
+    f.open("files");
+    await settle();
+    const hide = deferred<boolean>();
+    vi.mocked(f.bridge.present).mockImplementationOnce(() => hide.promise);
+    f.tabCommand({ action: "snippets-management" });
+    expect(
+      document.querySelector('.settings-tabs [aria-selected="true"]')?.id,
+    ).toBe("settings-tab-config-file");
+    if (superseded) f.tabCommand({ action: "select", position: 1 });
+    hide.resolve(true);
+    await settle();
+    if (superseded) {
+      expect(
+        document.querySelector('.settings-tabs [aria-selected="true"]')?.id,
+      ).toBe("settings-tab-config-file");
+      f.settingsOpen();
+      await settle();
+      expect(
+        document.querySelector('.settings-tabs [aria-selected="true"]')?.id,
+      ).toBe("settings-tab-config-file");
+    } else {
+      expect(
+        document.querySelector('.settings-tabs [aria-selected="true"]')?.id,
+      ).toBe("settings-tab-extensions");
+      expect(
+        document.querySelector<HTMLElement>(".settings-snippets-notice")!
+          .hidden,
+      ).toBe(false);
+      expect(document.activeElement?.id).toBe("settings-tab-extensions");
+    }
+  },
+);
 
 it("owns an empty Auxiliary Panel without enabling Snippets", async () => {
   const { root, host, load } = await snippetsWindow({}, false);

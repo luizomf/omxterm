@@ -3,8 +3,24 @@ import {
   translatorFor,
   type Translator,
 } from "../../shared/i18n";
-import type { SettingsResult } from "../../shared/settings";
+import type { SettingsResult, SettingsSnapshot } from "../../shared/settings";
 import { settingsMessageText } from "../../shared/settings-messages";
+
+export function describeSettingsProblem(
+  issue: SettingsSnapshot["problem"],
+  t: Translator["t"],
+): { text: string; severity: "error" } {
+  const detail = issue === undefined ? "" : settingsMessageText(issue, t);
+  return {
+    text:
+      issue === undefined
+        ? ""
+        : typeof issue !== "string" && issue?.kind === "symlink"
+          ? detail
+          : `${detail}\n${t("settings.fileGuidance")}`,
+    severity: "error",
+  };
+}
 
 const lifetimes = {
   "new-tabs": "settings.lifetime.tabs",

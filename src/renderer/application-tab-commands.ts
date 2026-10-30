@@ -28,6 +28,29 @@ export function createApplicationTabCommands<Tab>(
   },
 ) {
   let pendingClose: Tab | undefined;
+  const extensionCommand = (
+    command: Extract<
+      TerminalTabCommand,
+      {
+        action:
+          | "snippets-management"
+          | "toggle-snippets-extension"
+          | "open-extension";
+      }
+    >,
+  ) => {
+    const accepted =
+      options.canFocus?.() !== false &&
+      (command.action === "open-extension" ||
+        options.canOpenSnippets?.() === true);
+    if (command.action === "snippets-management") {
+      if (accepted) options.openSnippetsManagement?.();
+      return;
+    }
+    void options.extensions
+      ?.request({ operation: "open", token: command.token, accepted })
+      .catch(() => {});
+  };
   return {
     handle(command: TerminalTabCommand) {
       if (!options.available()) {
@@ -39,21 +62,9 @@ export function createApplicationTabCommands<Tab>(
           options.openSsh?.(command);
           return;
         case "snippets-management":
-          if (options.canFocus?.() !== false && options.canOpenSnippets?.())
-            options.openSnippetsManagement?.();
-          return;
         case "toggle-snippets-extension":
         case "open-extension":
-          void options.extensions
-            ?.request({
-              operation: "open",
-              token: command.token,
-              accepted:
-                options.canFocus?.() !== false &&
-                (command.action !== "toggle-snippets-extension" ||
-                  options.canOpenSnippets?.() === true),
-            })
-            .catch(() => {});
+          extensionCommand(command);
           return;
         case "new":
           void options.create().catch(() => {});

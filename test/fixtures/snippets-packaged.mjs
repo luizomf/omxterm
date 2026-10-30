@@ -233,6 +233,13 @@ void ready
         () => native.getVisible() && view.isFocused(),
         "compatibility toggle restores retained child",
       );
+      await until(
+        () =>
+          view.executeJavaScript(
+            "document.querySelectorAll('.snippet-activate').length === 2",
+          ),
+        "catalog ready after compatibility reopen",
+      );
       assert.equal(hosted()[0], view);
       assert.equal(children.length, 1);
       checks.push("ordinary-archive-trust-enabled-activation");

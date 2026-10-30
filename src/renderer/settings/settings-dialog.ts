@@ -20,8 +20,10 @@ import {
   type Translate,
 } from "../renderer-language";
 import type { MessageKey } from "../../shared/i18n";
-import { settingsMessageText } from "../../shared/settings-messages";
-import { describeSettingsResult } from "./settings-results";
+import {
+  describeSettingsResult,
+  describeSettingsProblem,
+} from "./settings-results";
 export { describeSettingsResult } from "./settings-results";
 import { renderShortcuts } from "./settings-shortcuts";
 import { extensionsPage, extensionsNavigation } from "./settings-extensions";
@@ -46,6 +48,7 @@ export function createSettingsView(
   const language = options.language ?? englishLanguage;
   let unbindView: (() => void) | undefined;
   let navigateView: ((destination: SettingsDestination) => void) | undefined;
+  let pendingDestination: SettingsDestination | undefined;
   let dialog: HTMLElement | undefined;
   let selected = true;
   let blocked = false;
@@ -73,6 +76,7 @@ export function createSettingsView(
     unbindView?.();
     unbindView = undefined;
     navigateView = undefined;
+    pendingDestination = undefined;
     releaseView?.();
     releaseView = undefined;
     invalidate();
@@ -137,9 +141,12 @@ export function createSettingsView(
     isActive: interactive,
     open,
     navigate(destination: SettingsDestination) {
+      if (disposed || blocked) return;
       if (interactive()) navigateView?.(destination);
+      else pendingDestination = destination;
     },
     setSelected(value: boolean) {
+      if (!value) pendingDestination = undefined;
       if (selected === value) return;
       selected = value;
       invalidate();
@@ -148,12 +155,20 @@ export function createSettingsView(
         dialog.hidden = !value;
         dialog.inert = blocked || !value;
       }
+      if (interactive() && pendingDestination) {
+        const destination = pendingDestination;
+        pendingDestination = undefined;
+        navigateView?.(destination);
+      }
     },
     setBlocked(value: boolean) {
       if (blocked === value) return;
       blocked = value;
       invalidate();
-      if (value) releaseView?.();
+      if (value) {
+        pendingDestination = undefined;
+        releaseView?.();
+      }
       if (dialog) dialog.inert = blocked || !selected;
     },
     focus() {
@@ -241,24 +256,6 @@ async function editField(
     field.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-function renderSettingsProblem(
-  problem: HTMLElement,
-  issue: SettingsSnapshot["problem"],
-  t: Translate,
-) {
-  const detail = issue === undefined ? "" : settingsMessageText(issue, t);
-  const external = typeof issue !== "string" && issue?.kind === "symlink";
-  setPageNotice(problem, {
-    text:
-      issue === undefined
-        ? ""
-        : external
-          ? detail
-          : `${detail}\n${t("settings.fileGuidance")}`,
-    severity: "error",
-  });
-}
-
 function buildSettingsView(
   document: Document,
   bridge: SettingsBridge,
@@ -311,7 +308,7 @@ function buildSettingsView(
     });
   };
   const renderProblem = (t: Translate) =>
-    renderSettingsProblem(problem, snapshot?.problem, t);
+    setPageNotice(problem, describeSettingsProblem(snapshot?.problem, t));
   const report = (key?: MessageKey, error = false) => {
     statusMessage = key ? { key, error } : undefined;
     renderStatus(language.t);
