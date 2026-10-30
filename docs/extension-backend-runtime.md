@@ -72,7 +72,7 @@ for the first concrete consumer, privacy and cleanup disclosure.
 
 ## Bootstrap and immutable-version handoff
 
-1. Main calls actual `InstalledPackages.openVersion(id)` and holds the resulting startup guard. The store releases its short registry writer lease before returning; no writer lock spans spawn, IPC, import or retirement.
+1. Main calls actual `InstalledPackages.openVersion(id)` and holds the resulting startup guard. The store releases its short shared registry lease before returning; no registry lock spans spawn, IPC, import or retirement.
 2. Main forks the app-owned bootstrap using the bundled Electron executable, not the extension entrypoint. Node IPC carries a captured selection and a fresh epoch, not author-selected authority.
 3. Bootstrap opens the same actual store/native adapter and independently pins that exact selection. It acknowledges acquisition before any extension import.
 4. Main revalidates generation/digest/enabled state under another short store transaction, checks owner/epoch liveness and grants admission. Startup guard release follows the independent acquisition acknowledgement, or settled cancellation/actual exit if the handshake fails. Unknown startup cancellation keeps unresolved ownership, rather than guessing that a child acquired its pin.
