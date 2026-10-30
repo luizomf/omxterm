@@ -434,8 +434,11 @@ print('Enter released')`,
       // Commit via the real Settings language control, not the hosted bridge.
       menu("Settings");
       await until(
-        () => js("!!document.querySelector('.settings-dialog')"),
-        "language Settings",
+        () =>
+          js(
+            "[...document.querySelectorAll('.settings-dialog select')].some(s => !s.disabled && [...s.options].some(o => o.value === 'pt-BR'))",
+          ),
+        "ready language Settings control",
       );
       await js(
         `(() => { const select = [...document.querySelectorAll('.settings-dialog select')].find(s => [...s.options].some(o => o.value === 'pt-BR')); if (!select) throw Error('Missing language selector'); select.value = 'pt-BR'; select.dispatchEvent(new Event('change', { bubbles: true })); })()`,
