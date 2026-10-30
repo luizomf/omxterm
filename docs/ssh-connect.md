@@ -134,6 +134,13 @@ the same local PTY/Surface and normal joined Quit. It does not run the longer
 synthetic argv/exit/keyboard campaign or execute an SSH client. No endpoint
 substitution, custom CA or source product runtime is used. Native consent and
 input are fixture-controlled; inspect the retained catalog/terminal captures.
+Catalog captures require the selected, visible Extensions page and exact enabled
+SSH action, with the title/action inside the clipped viewport. One three-second
+deadline bounds two renderer-frame opportunities, capture, target revalidation
+and action dispatch. The fixture saves the exact checked image before clicking;
+unrelated incompatible cards do not block readiness. These ordering and geometry
+checks do not prove compositor presentation: inspect the saved pixels for the
+expected SSH version and Install/Reinstall action before accepting visual evidence.
 Failure receipts/profiles are retained; successful cleanup does not turn a failed
 scenario into a pass. Existing process ownership and exact AppImage/asar checks
 remain in force. Without the public-mode inputs the original synthetic campaign

@@ -82,6 +82,206 @@ async function until(check, label, timeout = 15000) {
   }
   throw Error(`Timed out: ${label}`);
 }
+// Executed in the real core renderer; retained references fence replacement
+// between frame readiness, capture and the eventual action.
+function prepareCatalogCapture(title, label, token, deadline) {
+  const fail = () => {
+    throw Error("SSH catalog capture target unavailable or changed");
+  };
+  const dialog = document.querySelector(".settings-dialog");
+  const tab = document.querySelector("#settings-tab-extensions");
+  const panel = document.querySelector(".extensions-panel");
+  const cards = () =>
+    [...document.querySelectorAll(".extension-catalog-card")].filter(
+      (card) => card.querySelector("h4")?.textContent === title,
+    );
+  const card = cards()[0];
+  const heading = card?.querySelector("h4");
+  const button = card?.querySelector("button");
+  const visible = (element) => {
+    if (!element?.isConnected || element.closest("[hidden], [inert]")) fail();
+    for (let node = element; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse" ||
+        style.opacity === "0"
+      )
+        fail();
+    }
+  };
+  const bounds = (element) => {
+    visible(element);
+    const rect = element.getBoundingClientRect();
+    let left = 0,
+      top = 0,
+      right = innerWidth,
+      bottom = innerHeight;
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      const clip = node.getBoundingClientRect();
+      if (
+        /(auto|scroll|hidden|clip|overlay)/.test(
+          style.overflowX || style.overflow,
+        )
+      ) {
+        left = Math.max(left, clip.left + node.clientLeft);
+        right = Math.min(right, clip.left + node.clientLeft + node.clientWidth);
+      }
+      if (
+        /(auto|scroll|hidden|clip|overlay)/.test(
+          style.overflowY || style.overflow,
+        )
+      ) {
+        top = Math.max(top, clip.top + node.clientTop);
+        bottom = Math.min(
+          bottom,
+          clip.top + node.clientTop + node.clientHeight,
+        );
+      }
+    }
+    if (!(
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.left >= left &&
+      rect.right <= right &&
+      rect.top >= top &&
+      rect.bottom <= bottom
+    ))
+      fail();
+    return [rect.x, rect.y, rect.width, rect.height];
+  };
+  let geometry;
+  const check = (measure = true) => {
+    if (Date.now() >= deadline)
+      throw Error("SSH catalog capture deadline exceeded");
+    if (
+      document.visibilityState !== "visible" ||
+      document.querySelector(".settings-dialog") !== dialog ||
+      document.querySelector("#settings-tab-extensions") !== tab ||
+      document.querySelector(".extensions-panel") !== panel ||
+      tab?.getAttribute("aria-selected") !== "true" ||
+      !dialog?.contains(panel) ||
+      !panel?.contains(card) ||
+      cards().length !== 1 ||
+      cards()[0] !== card ||
+      card?.querySelector("h4") !== heading ||
+      card?.querySelector("button") !== button ||
+      button?.disabled ||
+      button?.textContent !== label
+    )
+      fail();
+    visible(tab);
+    visible(panel);
+    visible(button);
+    const controls = panel.querySelector(":scope > .application-page-actions");
+    if (
+      !controls ||
+      !controls.querySelector("button") ||
+      [...controls.querySelectorAll("button")].some(
+        (control) => control.disabled,
+      )
+    )
+      fail();
+    if (measure) {
+      const current = JSON.stringify([bounds(heading), bounds(button)]);
+      if (geometry !== undefined && current !== geometry) fail();
+      geometry = current;
+    }
+  };
+  check(false);
+  card.scrollIntoView({ block: "center" });
+  check();
+  let frame;
+  let rejectFrame;
+  window.__sshCatalogCapture = {
+    token,
+    check,
+    click: () => {
+      check();
+      button.click();
+    },
+    dispose: () => {
+      cancelAnimationFrame(frame);
+      rejectFrame?.(Error("SSH catalog capture cancelled"));
+      delete window.__sshCatalogCapture;
+    },
+  };
+  // A frame opportunity is not proof that the compositor painted SSH text.
+  return new Promise((resolve, reject) => {
+    rejectFrame = reject;
+    frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        try {
+          check();
+          resolve();
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+  });
+}
+let catalogCaptureSequence = 0;
+async function catalogInstall(core, extensionTitle, label, saveImage) {
+  const deadline = Date.now() + 3000;
+  const token = ++catalogCaptureSequence;
+  const assertLive = () => {
+    if (Date.now() >= deadline)
+      throw Error("SSH catalog capture deadline exceeded");
+    if (core.isDestroyed())
+      throw Error("SSH catalog capture renderer destroyed");
+  };
+  const bounded = async (operation) => {
+    assertLive();
+    let timer;
+    try {
+      const result = await Promise.race([
+        operation(),
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(Error("SSH catalog capture deadline exceeded")),
+            deadline - Date.now(),
+          );
+        }),
+      ]);
+      assertLive();
+      return result;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const state = `(() => { const state = window.__sshCatalogCapture; if (state?.token !== ${token}) throw Error('SSH catalog capture identity lost'); return state; })()`;
+  try {
+    await bounded(() =>
+      core.executeJavaScript(
+        `(${prepareCatalogCapture.toString()})(${JSON.stringify(extensionTitle)}, ${JSON.stringify(label)}, ${token}, ${deadline})`,
+      ),
+    );
+    const image = await bounded(() => core.capturePage());
+    if (image.isEmpty()) throw Error("SSH catalog capture image empty");
+    await bounded(() => core.executeJavaScript(`${state}.check()`));
+    // Persist this exact checked image, never a second unverified capture.
+    assertLive();
+    saveImage(image);
+    await bounded(() => core.executeJavaScript(`${state}.click()`));
+  } finally {
+    // Timeout does not cancel Electron promises. Late frame/capture settlement
+    // cannot resume the rejected main sequence; a delayed click checks expiry too.
+    try {
+      if (!core.isDestroyed()) {
+        void core
+          .executeJavaScript(
+            `if (window.__sshCatalogCapture?.token === ${token}) window.__sshCatalogCapture.dispose();`,
+          )
+          .catch(() => {});
+      }
+    } catch {
+      /* Cleanup must not replace the capture failure. */
+    }
+  }
+}
 async function run(options) {
   inspect(options);
   const window = BrowserWindow.getAllWindows()[0];
@@ -284,21 +484,16 @@ async function run(options) {
     js(
       `document.querySelector('.extensions-panel')?.textContent.includes(${JSON.stringify(text)}) === true`,
     );
-  async function catalogInstall(label) {
-    await js(`(() => {
-      const card = [...document.querySelectorAll('.extension-catalog-card')].find(c => c.querySelector('h4')?.textContent === ${JSON.stringify(extensionTitle)});
-      const button = card?.querySelector('button');
-      if (!button || button.disabled || button.textContent !== ${JSON.stringify(label)}) throw Error('SSH catalog action unavailable');
-      card.scrollIntoView({block:'center'});
-    })()`);
-    await screenshot(`public-catalog-${label.toLowerCase()}.png`);
-    await js(`(() => {
-      const card = [...document.querySelectorAll('.extension-catalog-card')].find(c => c.querySelector('h4')?.textContent === ${JSON.stringify(extensionTitle)});
-      const button = card?.querySelector('button');
-      if (!button || button.disabled || button.textContent !== ${JSON.stringify(label)}) throw Error('SSH catalog action unavailable');
-      button.click();
-    })()`);
-  }
+  const installFromCatalog = (label) =>
+    catalogInstall(core, extensionTitle, label, (image) =>
+      fs.writeFileSync(
+        path.join(
+          options.evidence,
+          `public-catalog-${label.toLowerCase()}.png`,
+        ),
+        image.toPNG(),
+      ),
+    );
   await js(
     "window.__sshPublicCanvas = document.querySelector('.terminal-surface canvas')",
   );
@@ -310,7 +505,7 @@ async function run(options) {
       "public catalog loaded",
       65000,
     );
-    await catalogInstall("Install");
+    await installFromCatalog("Install");
   } else await click(core, "Install local .omxext…");
   await until(
     () =>
@@ -396,7 +591,7 @@ async function run(options) {
   if (options.catalogMode === "public") {
     // This checkpoint proves acquisition/management, not another SSH argv campaign.
     await settings();
-    await catalogInstall("Reinstall");
+    await installFromCatalog("Reinstall");
     await until(() => panelContains("generation 2"), "public reinstall", 65000);
     await until(
       () => hosted().length === 0 && children[0].closed,
@@ -1144,6 +1339,7 @@ async function run(options) {
   };
 }
 module.exports = {
+  catalogInstall,
   inspect,
   run,
   cleanup,
