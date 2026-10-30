@@ -1743,7 +1743,12 @@ foreground plus effective per-window tint opacity. Initial/latest snapshots
 replay to bounded subscribers, including while views are hidden; epoch
 retirement stops updates. The native child backing is transparent, allowing
 opt-in package CSS to reveal the window's single theme tint without fading
-foreground controls. Existing opaque packages retain their own paint. No
+foreground controls. Existing opaque packages retain their own paint. SSH Connect source 0.3.0 also
+consumes the host's read-only Interface Language updates for controls, notices
+and accessible names, including hidden retained views. Relabeling preserves
+literal targets, drafts, focus and pending operations without rediscovery or
+connection replay. Its minimum host is 0.24.0-dev.8; the immutable distributed
+SSH 0.1.0 archive is not updated by changing the host. No
 configuration paths or native blur authority cross this bridge; visible desktop
 blur remains platform/compositor dependent. See the
 [Files development preview qualification](files-development-preview.md#build-and-evidence-boundary)

@@ -258,7 +258,9 @@ with an incomplete bounded OpenSSH alias index and distinct quick-connect field.
 Its declared `terminal.openSsh.v1` capability transfers a typed target to a new
 core Terminal Tab while preserving the panel and existing sessions. Core
 owns literal system-ssh launch, PTY, Busy/close/Quit and retained nonzero
-exit output independently of extension lifetime. It is not an SSH broker,
+exit output independently of extension lifetime. Current source follows the host
+Interface Language while preserving literal aliases, drafts and pending launches;
+the separately distributed 0.1.0 archive remains unchanged. It is not an SSH broker,
 credential vault or reconnect service. See [the guide](docs/ssh-connect.md).
 
 **Ended-readable Surface** — Terminal rendering/font resources retained after

@@ -1,9 +1,9 @@
 {
   "format": 1,
   "id": "omxterm.ssh",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": "SSH Connect",
-  "engines": { "omxterm": ">=0.24.0-dev.4", "api": "0.1.x" },
+  "engines": { "omxterm": ">=0.24.0-dev.8", "api": "0.1.x" },
   "backend": "backend.mjs",
   "capabilities": ["terminal.openSsh.v1"],
   "view": {

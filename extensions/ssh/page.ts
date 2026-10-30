@@ -5,6 +5,8 @@ import {
 } from "../../src/renderer/application-page.js";
 import { parseSshTarget, type SshTarget } from "../../src/shared/ssh-target.js";
 import type { AliasIndex } from "./discovery.js";
+import type { SupportedLanguage } from "../../src/shared/i18n.js";
+import { sshMessages, sshIndexWarning, type SshNotice } from "./messages.js";
 
 type Reply = Partial<AliasIndex> & {
   ok?: boolean;
@@ -18,6 +20,7 @@ import {
 } from "../shared/appearance.js";
 
 export interface SshBridge extends AppearanceBridge {
+  onLanguage(listener: (language: SupportedLanguage) => void): () => void;
   request(value: unknown): Promise<Reply>;
   onVisibility(listener: (visible: boolean) => void): () => void;
 }
@@ -30,7 +33,6 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const heading = document.createElement("h1");
   heading.textContent = "SSH Connect";
   const subtitle = document.createElement("p");
-  subtitle.textContent = "OpenSSH connections";
   title.append(heading, subtitle);
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
@@ -38,27 +40,24 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const content = document.createElement("section");
   const quickSection = document.createElement("section");
   const quickLabel = document.createElement("label");
-  quickLabel.textContent = "Quick connect";
+  const quickText = document.createTextNode("");
+  quickLabel.append(quickText);
   const quick = document.createElement("input");
-  quick.placeholder = "user@host:port or user@[::1]:port";
   quick.maxLength = 384;
   quick.spellcheck = false;
   quickLabel.append(quick);
   const connectButton = createPageButton(document, "primary");
-  connectButton.textContent = "Connect";
   quickSection.className = "quick-connect";
   quickSection.append(quickLabel, connectButton);
   const aliasHeading = document.createElement("h2");
-  aliasHeading.textContent = "From your SSH config";
   const searchLabel = document.createElement("label");
-  searchLabel.textContent = "Search aliases";
+  const searchText = document.createTextNode("");
+  searchLabel.append(searchText);
   const search = document.createElement("input");
   search.type = "search";
-  search.placeholder = "Filter the listed aliases";
   search.spellcheck = false;
   searchLabel.append(search);
   const refresh = createPageButton(document);
-  refresh.textContent = "Refresh";
   const toolbar = document.createElement("div");
   toolbar.className = "alias-toolbar";
   toolbar.append(searchLabel, refresh);
@@ -69,8 +68,6 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   warning.className = "index-warning";
   const explanation = document.createElement("p");
   explanation.className = "ssh-explanation";
-  explanation.textContent =
-    "Uses your current OpenSSH configuration; configured commands and forwards still apply. OpenSSH handles authentication and may update known_hosts. This incomplete, read-only alias index does not evaluate Match conditions. Use quick connect for omitted aliases. ASCII names only; IPv6 requires brackets and does not support zone identifiers.";
   content.append(
     quickSection,
     aliasHeading,
@@ -94,10 +91,48 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   let gesture: { target: SshTarget; revision: number } | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let suppressClick = false;
+  let language: SupportedLanguage = "en-US";
+  let noticeState:
+    | { key: SshNotice; severity: "info" | "success" | "warning" | "error" }
+    | undefined;
+  let warningState:
+    "discovery" | "invalidated" | AliasIndex["reasons"] | undefined;
+  function relabel() {
+    const m = sshMessages(language);
+    document.documentElement.lang = language;
+    subtitle.textContent = m.subtitle;
+    quickText.data = m.quick;
+    quick.placeholder = m.placeholder;
+    connectButton.textContent = m.connect;
+    aliasHeading.textContent = m.aliases;
+    searchText.data = m.search;
+    search.placeholder = m.filter;
+    refresh.textContent = m.refresh;
+    explanation.textContent = m.explanation;
+    summary.textContent = reading
+      ? m.reading
+      : m.summary(filtered().length, aliases.length);
+    warning.textContent =
+      typeof warningState === "string"
+        ? m[warningState]
+        : warningState
+          ? sshIndexWarning(warningState, language)
+          : "";
+    if (noticeState)
+      setPageNotice(notice, {
+        text: m[noticeState.key],
+        severity: noticeState.severity,
+      });
+    for (const row of rows.querySelectorAll<HTMLButtonElement>("[data-alias]"))
+      row.setAttribute("aria-label", m.connectTo(row.dataset.alias!));
+  }
   const message = (
-    text: string,
+    key: SshNotice,
     severity: "info" | "success" | "warning" | "error" = "info",
-  ) => setPageNotice(notice, { text, severity });
+  ) => {
+    noticeState = { key, severity };
+    relabel();
+  };
   const filtered = () =>
     aliases.filter((alias) =>
       alias.toLowerCase().includes(search.value.toLowerCase()),
@@ -118,7 +153,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     if (pending || !available || disposed || !visible) return;
     pending = true;
     controls();
-    message("Opening terminal…");
+    message("opening");
     let reply: Reply;
     try {
       reply = await bridge.request({
@@ -131,26 +166,10 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     if (disposed) return;
     pending = false;
     controls();
-    if (reply.ok && reply.status === "accepted")
-      message(
-        "Terminal accepted. Authentication continues in the terminal.",
-        "success",
-      );
-    else if (reply.error === "ssh-not-found")
-      message(
-        "OpenSSH client not found on the application PATH. Install OpenSSH or start OMXTerm with its directory on PATH.",
-        "error",
-      );
-    else if (reply.error === "outcome-unknown")
-      message(
-        "A terminal may already have opened; check your tabs. This request will not be retried automatically.",
-        "warning",
-      );
-    else
-      message(
-        "Unable to open a terminal. The extension or its source window/session may no longer be available.",
-        "error",
-      );
+    if (reply.ok && reply.status === "accepted") message("accepted", "success");
+    else if (reply.error === "ssh-not-found") message("missing", "error");
+    else if (reply.error === "outcome-unknown") message("unknown", "warning");
+    else message("failed", "error");
   }
   function targetFor(element: EventTarget | null): SshTarget | undefined {
     if (element === quick || element === connectButton)
@@ -166,11 +185,8 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   function capture(element: EventTarget | null) {
     try {
       return targetFor(element);
-    } catch (error) {
-      message(
-        error instanceof Error ? error.message : "Invalid target",
-        "error",
-      );
+    } catch {
+      message("invalid", "error");
       return undefined;
     }
   }
@@ -179,7 +195,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     revision++;
     const list = filtered();
     selected = Math.min(selected, Math.max(0, list.length - 1));
-    summary.textContent = `${list.length} of ${aliases.length} indexed aliases${aliases.length === 0 ? " — use Quick connect or Refresh" : ""}`;
+
     rows.replaceChildren();
     const current = revision;
     list.forEach((alias, index) => {
@@ -188,7 +204,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
       row.className += " alias-row";
       row.classList.toggle("selected", index === selected);
       row.textContent = alias;
-      row.setAttribute("aria-label", `Connect to ${alias}`);
+      row.setAttribute("aria-label", sshMessages(language).connectTo(alias));
       row.addEventListener("click", () => {
         if (!suppressClick && current === revision)
           void connect({ host: alias });
@@ -196,6 +212,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
       rows.append(row);
     });
     controls();
+    relabel();
   }
   async function load() {
     if (reading || disposed) return;
@@ -203,37 +220,31 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     aliases = [];
     render();
     const current = ++discoveryRevision;
-    summary.textContent = "Reading aliases…";
+    relabel();
     try {
       const reply = await bridge.request({ operation: "aliases" });
       if (disposed || current !== discoveryRevision) return;
       if (!reply.ok || !Array.isArray(reply.aliases)) {
-        warning.textContent =
-          "Alias discovery is unavailable or may still be reading. Quick connect remains available; no automatic retry.";
+        warningState = "discovery";
       } else {
         aliases = reply.aliases;
-        warning.textContent = reply.incomplete
-          ? `Incomplete index — ${Object.entries(reply.reasons ?? {})
-              .map(([reason, count]) => `${reason}: ${count}`)
-              .join("; ")}. Quick connect accepts omitted aliases.`
-          : "";
+        warningState = reply.incomplete ? (reply.reasons ?? {}) : undefined;
       }
       render();
     } catch {
       if (!disposed && current === discoveryRevision) {
-        warning.textContent =
-          "Alias discovery is unavailable or may still be reading. No automatic retry.";
+        warningState = "discovery";
         render();
       }
     } finally {
       reading = false;
       if (!disposed) {
         if (current !== discoveryRevision) {
-          warning.textContent =
-            "The discovery result was invalidated. Choose Refresh to read again.";
+          warningState = "invalidated";
           render();
         }
         controls();
+        relabel();
       }
     }
   }
@@ -317,19 +328,21 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
       search.focus();
     }
   });
+  const unsubscribeLanguage = bridge.onLanguage((next) => {
+    if (disposed) return;
+    language = next;
+    relabel();
+  });
+  relabel();
   controls();
   const ready = (async () => {
     try {
       const reply = await bridge.request({ operation: "host.capabilities" });
       if (disposed) return;
       available = reply.capabilities?.includes("terminal.openSsh.v1") === true;
-      if (!available)
-        message(
-          "This host does not provide SSH Connect. Install a compatible Linux ARM64 preview host.",
-          "warning",
-        );
+      if (!available) message("unavailable", "warning");
     } catch {
-      if (!disposed) message("Host capabilities unavailable.", "error");
+      if (!disposed) message("capabilities", "error");
     }
     if (!disposed) {
       controls();
@@ -345,6 +358,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
       cancelGesture();
       unsubscribe();
       unsubscribeAppearance();
+      unsubscribeLanguage();
       lifetime.abort();
       page.remove();
     },
