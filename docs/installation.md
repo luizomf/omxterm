@@ -26,19 +26,23 @@ for compatibility and evidence limits.
 
 ## Optional SSH Connect preview
 
-SSH Connect0.1.0 requires the separate
-[Linux ARM64 host0.24.0-dev.0 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.0).
-It does not run on stable0.23.0 or dev.9; the normal stable downloads below remain
-unchanged. Download the preview AppImage, matching checksum and version-matched
-helper from that release, not `/latest/download`. Verify the checksums before
-launch/install. Unchanged Files0.1.0 is also supported on this exact preview host.
+SSH Connect0.3.0 requires host0.24.0-dev.8 or later; use the qualified
+[Linux ARM64 host0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11).
+It does not run on stable0.23.0 or 0.23.0-dev.9; the normal stable downloads below
+remain unchanged. Download the preview AppImage, matching checksum and
+version-matched helper from that release, not `/latest/download`. Verify the
+checksums before launch/install. Historical Files0.1.0 compatibility on dev.0
+does not extend to this dev.11 host.
 
-In Settings → Extensions, choose **Browse official extensions**, then install
-SSH Connect and review the trusted-code warning. Open SSH Connect separately from
-File or the Command Palette; installation remains dormant. The
-[separate SSH release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.1.0)
-also provides the prebuilt archive/checksum/receipt for local-file or link
-installation. No source build is needed. Both releases are non-Latest previews;
+The [separate SSH0.3.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0)
+provides the verified prebuilt archive/checksum/original receipt for local-file or
+**Install from link** installation in Settings → Extensions. Review the trusted-code
+warning and deliberately install/update the extension; upgrading the host alone
+does not update it. Open SSH Connect separately from File or the Command Palette;
+installation remains dormant. Official-catalog promotion and its public packaged
+checkpoint are pending; after promotion, **Browse official extensions** offers
+0.3.0 as well. Historical0.1.0 assets remain immutable.
+No source build is needed. Both releases are non-Latest previews;
 only Linux ARM64 is qualified, with synthetic clients rather than real SSH
 authentication/connectivity. See [SSH Connect](ssh-connect.md) for requirements,
 source/qualification distinctions and grammar limits. Extensions are trusted

@@ -62,21 +62,28 @@ entry. Empty source catalog integration is useful implementation, not completed
 public distribution. Public-endpoint packaged consumption is a separate required
 milestone; follow the [Files publication procedure](release.md#files-catalog-publication).
 
-SSH Connect0.1.0 uses the same catalog/installation owner, with target Linux ARM64
-and host minimum0.24.0-dev.0. The separately released source-named
-`ssh-6d939f0.omxext` and its original checksum/receipt retain the qualified bytes;
-its version is the manifest/release version, not a renamed artifact. The catalog
-keeps Files metadata unchanged and adds SSH only after exact public asset
-readback. The Files generator above must not be used for SSH or to erase other
-entries. Follow the [SSH preview procedure](release.md#ssh-preview-publication)
-for its partial host/extension prereleases and bounded public-consumption gate.
+SSH Connect0.3.0 uses the same catalog/installation owner, with target Linux ARM64
+and host minimum0.24.0-dev.8. The immutable `ext-ssh-v0.3.0` release provides
+`ssh-0.3.0-77937fc.omxext` (11,572 bytes, SHA-256
+`13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf`), bound to source
+`77937fcf87ae71a68709111df7ace7359fb3f0b6` and its original checksum/receipt.
+Draft and anonymous public asset readback passed; the catalog promotion candidate
+preserves Files and Snippets metadata. Fixed-endpoint readback and bounded public
+packaged consumption remain pending. The exact native-qualified pair reuses public
+Linux ARM64 host0.24.0-dev.11; the original receipt's build-time `not-run` and
+intended dev.19 fields remain unchanged. Historical SSH0.1.0
+`ssh-6d939f0.omxext` and its original sidecars remain immutable. Installing0.3.0
+is a deliberate extension update, not a side effect of upgrading the host.
+The Files generator above must not be used for SSH or to erase other entries.
+Follow the [SSH preview procedure](release.md#ssh-preview-publication) for the
+extension-only publication and bounded public-consumption gate.
 Catalog admission is not qualification of every version in an engine range.
 
 The public catalog also lists Snippets0.1.0 for Linux ARM64, bound to the
 published `snippets-0.1.0.omxext`, original receipt and checksum.
 Its embedded host range remains `>=0.24.0-dev.8` with API `0.1.x`; the qualified
-published pair is host `0.24.0-dev.11`, not every admitted host. Files/SSH entries
-are unchanged. The fixed endpoint was read back byte-for-byte and the separate
+published pair is host `0.24.0-dev.11`, not every admitted host. That Snippets
+promotion left Files/SSH entries unchanged. The fixed endpoint was read back byte-for-byte and the separate
 [packaged public-HTTPS checkpoint](snippets-migration.md#preview-coverage-and-remaining-platforms)
 passed on that exact pair. The [promotion procedure](release.md#snippets-catalog-promotion)
 retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),

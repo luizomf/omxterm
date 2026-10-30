@@ -287,9 +287,43 @@ is implied.
 
 ## SSH preview publication
 
-The selected SSH milestone follows the partial Linux ARM64 preview topology,
-not the twelve-asset stable release below. Publish host `v0.24.0-dev.0` and separate
-`ext-ssh-v0.1.0` as prereleases with `--latest=false`. Do not remove the development
+### Current SSH 0.3.0 publication
+
+SSH `ext-ssh-v0.3.0` was published on 2026-10-30 at 20:07:34 UTC as an immutable,
+non-Latest prerelease. Its tag identifies original build source
+`77937fcf87ae71a68709111df7ace7359fb3f0b6`; final candidate
+`ad505f6c96992c4d76a07bf97143b430308760c6` adds only a compatibility-test correction,
+and integrated `a2948618fb58c1fcbf3107bacf58909f8a74bc02` has the same final tree.
+The original `ssh-0.3.0-77937fc.omxext` is 11,572 bytes, SHA-256
+`13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf`.
+Draft and anonymous public downloads of all three original assets (archive,
+checksum, receipt) matched byte-for-byte. Release notes and the build receipt
+remain unchanged: `not-run` and intended host dev.19 are build-time fields,
+not a description of subsequent exact-pair qualification.
+
+The new pair reuses already public Linux ARM64 host `v0.24.0-dev.11`, AppImage
+SHA-256 `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`.
+Its exact SSH0.3 appearance/language and synthetic Connect qualification is
+recorded in the [SSH guide](ssh-connect.md#installing-the-distributed-preview).
+No host rebuild/release is required; stable `v0.23.0` remains Latest. Historical
+SSH0.1 assets, tags, notes and receipts remain immutable.
+
+The catalog/docs/test promotion candidate replaces only SSH metadata, preserving
+Files and Snippets. Bind version0.3.0, minimum host `>=0.24.0-dev.8`, API `0.1.x`,
+Linux ARM64 target, original source and exact archive identity to the new immutable
+release URLs. Complete independent candidate review before integration. Fixed raw
+catalog readback and the bounded [public SSH checkpoint](ssh-connect.md#public-distribution-checkpoint)
+are **pending**; do not infer them from published bytes or native qualification.
+Use extension version0.3.0 on exact publicdev.11 without appearance mode; retain
+actual catalog digest and outcomes separately. Catalog/docs/test-only promotion
+needs no application-version bump. Never retrofit sealed notes with later evidence.
+
+### Historical SSH 0.1.0 procedure
+
+The initial SSH milestone followed the partial Linux ARM64 preview topology,
+not the twelve-asset stable release below. The following sequence records host
+`v0.24.0-dev.0` and separate `ext-ssh-v0.1.0` publication as non-Latest prereleases;
+it is not permission to recreate those sealed releases. Do not remove the development
 suffix or bump main for catalog/docs/test-only changes: unchanged Files0.1.0 is
 explicitly compatible with this exact host version only. A different host version
 requires deliberate compatibility reconciliation and rebuilt/verified host bytes.

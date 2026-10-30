@@ -22,28 +22,55 @@ Controls, accessible names and notices follow the host's `en-US` or `pt-BR`
 interface language. Live language changes retain drafts, selected aliases, focus
 and pending operations without rediscovery or automatic connection retries.
 Alias names and connection targets remain literal, untranslated data.
-The immutable distributed 0.1.0 archive and catalog below remain unchanged;
-updating the host alone does not update a separately installed extension.
+Version 0.3.0 is now separately published; the historical 0.1.0 archive remains
+immutable. Updating the host alone does not update a separately installed extension:
+review and deliberately install the newer extension.
 
 ## Installing the distributed preview
 
-Use the [Linux ARM64 host 0.24.0-dev.0 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.0)
-with the separate [SSH Connect 0.1.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.1.0).
-Neither is Latest; stable0.23.0 and dev.9 cannot run SSH Connect. In Settings →
-Extensions, explicitly **Browse official extensions**, select SSH Connect and
-review its version/digest and trusted-code warning. Installation is dormant;
-open SSH Connect separately to activate it. Official does not mean sandboxed.
+Use the [Linux ARM64 host 0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
+with the separate [SSH Connect 0.3.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0).
+Neither is Latest; stable 0.23.0 and 0.23.0-dev.9 cannot run SSH Connect.
+The new archive requires host 0.24.0-dev.8 or later; dev.11 is the exact qualified
+Linux ARM64 host, not a claim of qualification for every admitted version.
+Install the published archive locally or through **Install from link** and review
+the version/digest and trusted-code warning. The official-catalog promotion is a
+candidate; fixed-endpoint readback and its public packaged checkpoint are pending.
+After promotion, **Browse official extensions** offers the new version for a
+deliberate install/update. Installation is dormant; open SSH Connect separately
+to activate it. Official does not mean sandboxed.
 
-Local-file or **Install from link** installation also works with the exact
-[ssh-6d939f0.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.1.0/ssh-6d939f0.omxext).
-Its source-named filename and original checksum/receipt are retained unchanged:
+The published [ssh-0.3.0-77937fc.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext)
+is 11,572 bytes, SHA-256
+`13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf`.
+The immutable prerelease was published on 2026-10-30 at 20:07:34 UTC; draft and
+anonymous public downloads of the archive and both original sidecars matched
+byte-for-byte. Tag `ext-ssh-v0.3.0` identifies build source
+`77937fcf87ae71a68709111df7ace7359fb3f0b6`, not the later source-integration squash.
+The original receipt retains build-time `qualification.status: not-run` and
+`intendedHost: 0.24.0-dev.19`; later qualification used public dev.11 instead.
+That AppImage's SHA-256 is
+`04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`.
+
+The exact dev.11/SSH0.3 pair passed the 12-cell appearance/language and
+synthetic Connect campaign, including normal/narrow geometry, retained state,
+core-owned terminals and joined Quit. A noncomposited nested desktop does not
+qualify native blur or universal transparency readability. Controlled inputs and
+synthetic clients do not establish real authentication or remote connectivity.
+Public asset verification is separate from the still-pending catalog checkpoint.
+
+### Historical 0.1.0 preview
+
+The original [ssh-6d939f0.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.1.0/ssh-6d939f0.omxext)
+retains its source-named filename and original checksum/receipt unchanged:
 version0.1.0,9418bytes,SHA-256
 `d11d16df09876d20a6fc766fcb1e5d76e2214d0d0965ad90be47496e4b066699`.
 The receipt identifies source6d939f0 and build-time qualification `not-run`;
 subsequent package evidence is separate, not a rewritten build receipt.
 
-The exact host/archive passed a synthetic-client campaign and host FULL verifier;
-unchanged Files0.1.0 passed its lifecycle on this host. These are not a real SSH
+The historical dev.0/SSH0.1 host/archive pair passed a synthetic-client campaign
+and host FULL verifier; unchanged Files0.1.0 passed its lifecycle on that host.
+Those Files results do not establish Files0.1 compatibility with dev.11. These are not a real SSH
 connectivity/authentication campaign or proof of public catalog consumption.
 The [release procedure](release.md#ssh-preview-publication) requires a separate
 public-only checkpoint after rollout; record its actual outcome, never infer it

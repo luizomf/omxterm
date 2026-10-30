@@ -23,19 +23,19 @@
       "id": "omxterm.ssh",
       "name": "SSH Connect",
       "description": "Project-maintained Linux ARM64 preview: searchable OpenSSH aliases and quick-connect in core-owned terminal tabs. Synthetic-client qualification only; real authentication and remote connectivity are unqualified.",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "engines": {
-        "omxterm": ">=0.24.0-dev.0",
+        "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.1.0/ssh-6d939f0.omxext",
-        "sha256": "d11d16df09876d20a6fc766fcb1e5d76e2214d0d0965ad90be47496e4b066699",
-        "bytes": 9418
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext",
+        "sha256": "13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf",
+        "bytes": 11572
       },
-      "sourceCommit": "6d939f0e837dba90728e6e892010a4a1889fe0c9",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.1.0"
+      "sourceCommit": "77937fcf87ae71a68709111df7ace7359fb3f0b6",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0"
     },
     {
       "id": "omxterm.snippets",

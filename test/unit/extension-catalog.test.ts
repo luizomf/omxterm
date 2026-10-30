@@ -43,15 +43,17 @@ describe("official catalog", () => {
     const ssh = catalog.find((entry) => entry.id === "omxterm.ssh")!;
     const files = catalog.find((entry) => entry.id === "omxterm.files")!;
     expect(ssh).toMatchObject({
-      version: "0.1.0",
-      engines: { omxterm: ">=0.24.0-dev.0", api: "0.1.x" },
-      sourceCommit: "6d939f0e837dba90728e6e892010a4a1889fe0c9",
+      version: "0.3.0",
+      engines: { omxterm: ">=0.24.0-dev.8", api: "0.1.x" },
+      sourceCommit: "77937fcf87ae71a68709111df7ace7359fb3f0b6",
+      releaseUrl:
+        "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0",
       targets: ["linux-arm64"],
       archive: {
-        bytes: 9418,
+        bytes: 11572,
         sha256:
-          "d11d16df09876d20a6fc766fcb1e5d76e2214d0d0965ad90be47496e4b066699",
-        url: "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.1.0/ssh-6d939f0.omxext",
+          "13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf",
+        url: "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext",
       },
     });
     expect(files).toMatchObject({
@@ -64,14 +66,31 @@ describe("official catalog", () => {
       },
     });
     expect(catalogCompatible(ssh, runtime, "linux-arm64")).toBe(false);
-    for (const entry of [files, ssh])
+    expect(
+      catalogCompatible(
+        files,
+        { ...runtime, appVersion: "0.24.0-dev.0" },
+        "linux-arm64",
+      ),
+    ).toBe(true);
+    for (const appVersion of ["0.24.0-dev.0", "0.24.0-dev.7"])
       expect(
-        catalogCompatible(
-          entry,
-          { ...runtime, appVersion: "0.24.0-dev.0" },
-          "linux-arm64",
-        ),
+        catalogCompatible(ssh, { ...runtime, appVersion }, "linux-arm64"),
+      ).toBe(false);
+    for (const appVersion of ["0.24.0-dev.8", "0.24.0-dev.11"])
+      expect(
+        catalogCompatible(ssh, { ...runtime, appVersion }, "linux-arm64"),
       ).toBe(true);
+    expect(
+      catalogAction(ssh, {
+        version: "0.1.0",
+        digest:
+          "d11d16df09876d20a6fc766fcb1e5d76e2214d0d0965ad90be47496e4b066699",
+      }),
+    ).toBe("update");
+    expect(
+      catalogAction(ssh, { version: ssh.version, digest: ssh.archive.sha256 }),
+    ).toBe("reinstall");
   });
   it("accepts bounded plain-text releases and an explicitly empty published catalog", () => {
     expect(parseCatalog(bytes())).toEqual([release]);

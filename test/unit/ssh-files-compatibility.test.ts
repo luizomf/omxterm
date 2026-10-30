@@ -11,6 +11,23 @@ import {
   type CatalogRelease,
 } from "../../src/main/extension-catalog";
 
+// Historical sealed archive, independent of the currently promoted catalog.
+const historicalSsh: CatalogRelease = {
+  id: "omxterm.ssh",
+  name: "SSH Connect",
+  description: "Historical Linux ARM64 preview",
+  version: "0.1.0",
+  engines: { omxterm: ">=0.24.0-dev.0", api: "0.1.x" },
+  targets: ["linux-arm64"],
+  archive: {
+    url: "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.1.0/ssh-6d939f0.omxext",
+    sha256: "d11d16df09876d20a6fc766fcb1e5d76e2214d0d0965ad90be47496e4b066699",
+    bytes: 9418,
+  },
+  sourceCommit: "6d939f0e837dba90728e6e892010a4a1889fe0c9",
+  releaseUrl: "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.1.0",
+};
+
 it.each([
   "0.24.0-dev.0",
   "0.24.0-dev.1",
@@ -19,14 +36,17 @@ it.each([
   "0.24.0-dev.4",
   "0.24.0-dev.5",
 ])(
-  "retains immutable Files/SSH catalog admission on explicitly assigned host %s",
+  "retains historical Files/SSH admission on explicitly assigned host %s",
   async (appVersion) => {
     const catalog = parseCatalog(
       await readFile("distribution/official-extensions-v1.json"),
     );
     const runtime = { appVersion, apiVersion: "0.1.0" };
     for (const id of ["omxterm.files", "omxterm.ssh"]) {
-      const release = catalog.find((entry) => entry.id === id)!;
+      const release =
+        id === "omxterm.ssh"
+          ? historicalSsh
+          : catalog.find((entry) => entry.id === id)!;
       expect(release.version).toBe("0.1.0");
       const manifest = parseManifest({
         format: 1,
