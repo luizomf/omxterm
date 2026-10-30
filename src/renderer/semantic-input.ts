@@ -55,10 +55,10 @@ export function createSemanticInput(
       // Capture before overlay admission; never recapture in its continuation.
       const target = options.capture();
       if (intent !== "preview") {
-        const available = target?.live() === true;
-        if (available) target!.deliver(snippet.body, intent === "run");
+        if (!target?.live()) return Promise.resolve(false);
+        target.deliver(snippet.body, intent === "run");
         options.focusTerminal();
-        return Promise.resolve(available);
+        return Promise.resolve(true);
       }
       if (!target?.live()) return Promise.resolve(false);
       return new Promise((resolve) => {

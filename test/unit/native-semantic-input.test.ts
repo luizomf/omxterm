@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import type { SnippetTarget } from "../../src/renderer/snippet-target";
 import { createSemanticInput } from "../../src/renderer/semantic-input";
 import { subscribeNativeSemanticInput } from "../../src/renderer/native-semantic-input";
 import { createSemanticInputBridge } from "../../src/preload/semantic-input-bridge";
@@ -24,7 +25,10 @@ afterEach(() => {
 const id = "11111111-1111-4111-8111-111111111111";
 const source = "22222222-2222-4222-8222-222222222222";
 const other = "33333333-3333-4333-8333-333333333333";
-const request = (preview = false): SemanticInputCommand => ({
+const request = (
+  preview = false,
+  intent: "insert" | "run" = "insert",
+): SemanticInputCommand => ({
   kind: "request",
   id,
   source,
@@ -33,7 +37,7 @@ const request = (preview = false): SemanticInputCommand => ({
     operation: "terminal.semanticInput.v1",
     text: "  $HOME\n\u0000",
     title: "Exact",
-    intent: "insert",
+    intent,
     preview,
   },
 });
@@ -51,12 +55,13 @@ function fixture() {
     deliver: vi.fn(),
     onUnavailable: () => () => {},
   };
-  const capture = vi.fn(() => target);
+  const capture = vi.fn<() => SnippetTarget | undefined>(() => target);
+  const focusTerminal = vi.fn();
   const overlays: { open(): void; refused?(): void }[] = [];
   const input = createSemanticInput(document, {
     capture,
     blocked: () => false,
-    focusTerminal: vi.fn(),
+    focusTerminal,
     onPreviewActivity: () => {},
     openOverlay: (open, refused) =>
       overlays.push({ open, ...(refused ? { refused } : {}) }),
@@ -74,6 +79,7 @@ function fixture() {
     handlers.get(semanticInputIpc.command)?.({}, value);
   return {
     command,
+    focusTerminal,
     ipc,
     target,
     capture,
@@ -96,6 +102,31 @@ it("rejects a changed core selection in transit and malformed commands before ca
     available: false,
   });
 });
+it.each([
+  ["insert", "missing"],
+  ["run", "missing"],
+  ["insert", "ended"],
+  ["run", "ended"],
+] as const)(
+  "reports unavailable %s for a %s target without transferring native focus",
+  async (intent, state) => {
+    const f = fixture();
+    if (state === "missing") f.capture.mockReturnValue(undefined);
+    else f.target.live.mockReturnValue(false);
+    f.command(request(false, intent));
+    await Promise.resolve();
+    expect(f.capture).toHaveBeenCalledOnce();
+    expect(f.target.deliver).not.toHaveBeenCalled();
+    expect(f.focusTerminal).not.toHaveBeenCalled();
+    expect(f.restore).not.toHaveBeenCalled();
+    expect(f.ipc.send).toHaveBeenLastCalledWith(semanticInputIpc.reply, {
+      kind: "finished",
+      id,
+      available: false,
+    });
+  },
+);
+
 it("captures once, preserves exact insert text, and leaves accepted delivery Surface-owned", async () => {
   const f = fixture();
   f.command(request());
