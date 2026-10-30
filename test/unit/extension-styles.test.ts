@@ -14,6 +14,10 @@ it.each(["files", "ssh"])(
     expect(css).toContain("--ui-surface:");
     expect(css).toContain("--tool-raised:");
     expect(css).toContain("background: transparent");
+    // Keep the rendered narrow-panel correction in both packaged stylesheets.
+    expect(css).toMatch(
+      /\.application-page\s*\{[^}]*grid-template-columns: minmax\(0, 1fr\)/,
+    );
     expect(css).not.toContain("#111923");
   },
 );
