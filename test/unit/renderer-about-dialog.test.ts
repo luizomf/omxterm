@@ -63,7 +63,7 @@ it("coalesces pending opens and ignores metadata and link failures after dismiss
   expect(focusTerminal).toHaveBeenCalledOnce();
 });
 
-it("presents compact runtime metadata and opens only named links", async () => {
+it("foregrounds the project and collective contributors without individual copyright, opening only named links", async () => {
   const openLink = vi.fn(async () => {});
   const focusTerminal = vi.fn();
   const about = createAboutDialog(document, {
@@ -83,6 +83,20 @@ it("presents compact runtime metadata and opens only named links", async () => {
   expect(document.querySelector("img")?.getAttribute("src")).toBe(
     "./application-icon.png",
   );
+  const dialog = document.querySelector("dialog")!;
+  expect(dialog.hasAttribute("open")).toBe(true);
+  expect(dialog.getAttribute("aria-labelledby")).toBe("about-title");
+  expect(document.getElementById("about-title")?.textContent).toBe(
+    "About OMXTerm",
+  );
+  expect(dialog.querySelector(".about-name")?.textContent).toBe("OMXTerm");
+  expect(dialog.textContent).not.toContain("Copyright");
+  expect(dialog.textContent).not.toContain("Luiz Otávio Miranda");
+  expect(
+    [...dialog.querySelectorAll(".about-links button")].map(
+      (button) => button.textContent,
+    ),
+  ).toEqual(["Project", "Contributors", "Report an issue", "MIT License"]);
   expect(document.body.textContent).toContain("MIT License");
   expect(document.querySelector("ul")).toBeNull();
   expect(document.body.textContent).not.toContain("Copyleft");
@@ -104,6 +118,41 @@ it("presents compact runtime metadata and opens only named links", async () => {
   expect(about.isActive()).toBe(false);
   expect(document.querySelector("dialog")).toBeNull();
   expect(focusTerminal).toHaveBeenCalledOnce();
+  about.dispose();
+});
+
+it("keeps project links and localized loading/error presentation when metadata fails", async () => {
+  const language = createRendererLanguage("en-US");
+  const openLink = vi.fn(async () => {});
+  const about = createAboutDialog(document, {
+    info: async () => {
+      throw new Error("private native detail");
+    },
+    openLink,
+    focusTerminal: vi.fn(),
+    onActivityChange: vi.fn(),
+    language,
+  });
+  about.open();
+  expect(document.body.textContent).toContain("Loading version…");
+  language.set("pt-BR");
+  expect(document.body.textContent).toContain("Carregando versão…");
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "Informações do aplicativo indisponíveis.",
+    ),
+  );
+  language.set("en-US");
+  expect(document.body.textContent).toContain(
+    "Application information unavailable.",
+  );
+  expect(document.body.textContent).not.toContain("private native detail");
+  expect(document.querySelector(".about-name")?.textContent).toBe("OMXTerm");
+  document
+    .querySelectorAll<HTMLButtonElement>(".about-links button")[1]!
+    .click();
+  expect(openLink).toHaveBeenCalledExactlyOnceWith("contributors");
+  expect(about.isActive()).toBe(true);
   about.dispose();
 });
 

@@ -19,6 +19,20 @@
   --ui-decoration: color-mix(in srgb, var(--ui-surface), var(--ui-text) 18%);
   --ui-input-border: color-mix(in srgb, var(--ui-surface), var(--ui-text) 55%);
   --ui-secondary: color-mix(in srgb, var(--ui-surface), var(--ui-text) 75%);
+  /* Paint alpha belongs to backgrounds, never text or whole controls. */
+  --ui-overlay: rgb(
+    from var(--ui-surface) r g b / var(--terminal-background-opacity, 1)
+  );
+  --ui-raised-tint: color-mix(
+    in srgb,
+    var(--ui-raised) calc(var(--terminal-background-opacity, 1) * 100%),
+    transparent
+  );
+  --ui-hover-tint: color-mix(
+    in srgb,
+    var(--ui-hover) calc(var(--terminal-background-opacity, 1) * 100%),
+    transparent
+  );
   --ui-radius: 6px;
   --ui-space-1: 4px;
   --ui-space-2: 8px;

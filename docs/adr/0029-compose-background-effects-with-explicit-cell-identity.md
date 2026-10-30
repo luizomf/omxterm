@@ -46,7 +46,12 @@ geometry emulation.
 The renderer body paints the theme background once at `1 - transparency`.
 Root, tab strip, tab containers, Surfaces and canvas default backgrounds do not
 add another tint. Chrome neutral overlays scale with the same amount; foreground
-controls and selected-tab underline stay visible. Local Image Preview and error
+controls and selected-tab underline stay visible. Settings page layers are also
+clear, retaining their layout and readable controls. About and Command Palette
+use theme-derived alpha on their overlay backgrounds, not whole-element opacity
+or an opaque dimming scrim. Their local overlay tint can composite over content;
+it is distinct from the single window base tint and does not implement desktop
+blur. Local Image Preview and error
 surfaces retain readable opaque treatment. Windows opaque fallback uses the same
 theme in native and renderer paint.
 

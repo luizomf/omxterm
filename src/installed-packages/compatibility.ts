@@ -14,7 +14,8 @@ export function packageCompatible(
       runtime.appVersion === "0.24.0-dev.1" ||
       runtime.appVersion === "0.24.0-dev.2" ||
       runtime.appVersion === "0.24.0-dev.3" ||
-      runtime.appVersion === "0.24.0-dev.4") &&
+      runtime.appVersion === "0.24.0-dev.4" ||
+      runtime.appVersion === "0.24.0-dev.5") &&
     manifest.id === "omxterm.files" &&
     manifest.version === "0.1.0" &&
     manifest.engines.omxterm === ">=0.23.0-dev.8 <0.24.0" &&

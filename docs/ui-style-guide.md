@@ -36,7 +36,15 @@ secondary text. Decoration is not focus: keyboard focus uses a 2 px foreground
 outline, independent of nullable pane appearance. No card/border around every
 shortcut row or category; spacing and subdued rules organize content.
 
-Settings is opaque even with terminal transparency. Its native-control
+Settings leaves its page layers transparent: the window body owns the base
+Terminal Theme tint once. Navigation and catalog-card fills use alpha-scaled
+raised tint; fields, selection and focus keep their readable foreground treatment.
+About and Command Palette use `--ui-overlay` at the effective window background
+opacity, with shared spacing, quiet controls and low-contrast outer hairlines.
+Their backdrop is clear, not an independently forced dark scrim. Overlay tint can
+accumulate over underlying application paint; neither CSS alpha nor page captures
+prove desktop blur. Main retains native effect ownership. No whole-element
+opacity fades text or focus. The native-control
 `color-scheme` follows background sRGB luminance (light above 0.179), not OS
 appearance. Arbitrary low-contrast custom palettes remain the user's choice;
 these conventions do not establish universal accessibility or compositor parity.

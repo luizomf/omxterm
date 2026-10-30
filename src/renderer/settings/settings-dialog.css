@@ -6,7 +6,8 @@
   min-width: 0;
   min-height: 0;
   padding-top: var(--native-title-inset, 0px);
-  background: var(--ui-surface);
+  /* The window body already owns the theme tint. */
+  background: transparent;
 }
 body.tabs-visible .settings-tab {
   padding-top: 0;
@@ -24,10 +25,13 @@ body.tabs-visible .settings-tab {
   border: 0;
   margin: 0;
   padding: 0;
-  background: var(--ui-surface, var(--terminal-background));
+  background: transparent;
   color: var(--ui-text, var(--terminal-foreground));
   color-scheme: var(--ui-color-scheme, dark);
   overflow: hidden;
+}
+.settings-body.application-page {
+  background: transparent;
 }
 .settings-tabs {
   display: flex;
@@ -35,7 +39,7 @@ body.tabs-visible .settings-tab {
   gap: 4px;
   align-self: stretch;
   padding: 4px;
-  background: var(--ui-raised);
+  background: var(--ui-raised-tint);
   border-radius: var(--ui-radius);
 }
 .settings-tabs [role="tab"] {
@@ -68,7 +72,7 @@ body.tabs-visible .settings-tab {
 .extension-catalog-card {
   padding: 20px;
   border-radius: var(--ui-radius);
-  background: var(--ui-raised);
+  background: var(--ui-raised-tint);
   align-items: flex-start;
 }
 .extension-catalog h3,

@@ -126,8 +126,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   provides bounded content/navigation scrolling, explicit control variants and
   consistent error/warning/result notices. Raw and graphical results retain their
   severity; symlink recovery directs external editing without offering in-app
-  write-through. Settings remains an opaque theme-derived reading/editing surface,
-  independently of terminal transparency. Settings survives last-terminal exit,
+  write-through. Settings keeps its retained layout and uses the window's theme tint
+  rather than adding an opaque page background; controls and focus remain visible. Settings survives last-terminal exit,
   cancellation or first-mount failure without inventing a shell or reporting
   false renderer emptiness. First-mount readiness still reports the actual
   terminal outcome. Final Application Tab removal commits the existing empty
@@ -415,9 +415,15 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   native floating level. New windows use the configured default.
 - The application menu's `About OMXTerm` entry opens one compact in-window
   dialog on every Supported Platform. It shows the application icon, name,
-  running version and copyright, and links to the project, contributors,
+  running version and MIT license, and links to the project, contributors,
   issue tracker and MIT license. Developer lists live in the repository's
-  `CONTRIBUTORS.md`, not in the dialog; legal notices remain in the distribution.
+  `CONTRIBUTORS.md`, not in the dialog; no individual copyright is spotlighted
+  in the presentation, and legal notices remain in the distribution. About and
+  Command Palette share theme-derived surfaces, subtle decorative hairlines,
+  controls and typography. Their background tint follows effective window
+  transparency without fading text or keyboard focus; no opaque scrim overrides
+  the preference. Overlay tint can composite over application content; it does
+  not establish native desktop blur, which remains main-owned and best effort.
   Main supplies runtime metadata and opens only fixed named destinations after
   validating the owning renderer's main frame. Opening About makes no network
   request. Existing Linux/Windows native metadata setup and macOS bundle metadata

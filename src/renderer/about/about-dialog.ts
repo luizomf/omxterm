@@ -129,7 +129,6 @@ export function createAboutDialog(
       name.className = "about-name";
       name.textContent = "OMXTerm";
       const version = document.createElement("p");
-      const copyright = document.createElement("p");
       const license = document.createElement("p");
       const error = document.createElement("p");
       error.setAttribute("role", "status");
@@ -186,17 +185,7 @@ export function createAboutDialog(
         keyboard.track(event, done);
         event.stopPropagation();
       });
-      current.append(
-        title,
-        icon,
-        name,
-        version,
-        copyright,
-        license,
-        links,
-        error,
-        done,
-      );
+      current.append(title, icon, name, version, license, links, error, done);
       document.body.append(current);
       options.onActivityChange(true);
       current.showModal();
@@ -210,7 +199,6 @@ export function createAboutDialog(
           version.textContent = language.t("about.version", {
             version: info.version,
           });
-          copyright.textContent = info.copyright;
         })
         .catch(() => {
           if (dialog !== current) return;

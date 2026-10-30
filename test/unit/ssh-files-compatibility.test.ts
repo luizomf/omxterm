@@ -17,6 +17,7 @@ it.each([
   "0.24.0-dev.2",
   "0.24.0-dev.3",
   "0.24.0-dev.4",
+  "0.24.0-dev.5",
 ])(
   "retains immutable Files/SSH catalog admission on explicitly assigned host %s",
   async (appVersion) => {
@@ -42,7 +43,7 @@ it.each([
         packageCompatible(manifest, { ...runtime, apiVersion: "0.2.0" }),
       ).toBe(false);
       if (id !== "omxterm.files") continue;
-      for (const appVersion of ["0.24.0", "0.24.0-dev.5", "0.25.0-dev.0"])
+      for (const appVersion of ["0.24.0", "0.24.0-dev.6", "0.25.0-dev.0"])
         expect(packageCompatible(manifest, { ...runtime, appVersion })).toBe(
           false,
         );
@@ -76,7 +77,7 @@ it.each(["files", "ssh"])(
       );
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(false);
     }
-    for (const appVersion of ["0.24.0-dev.4", "0.24.0"]) {
+    for (const appVersion of ["0.24.0-dev.4", "0.24.0-dev.5", "0.24.0"]) {
       const runtime = { appVersion, apiVersion: "0.1.0" };
       expect(() => checkCompatibility(manifest, runtime)).not.toThrow();
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(true);
@@ -84,16 +85,17 @@ it.each(["files", "ssh"])(
   },
 );
 
-it.each(["0.24.0-dev.1", "0.24.0-dev.2", "0.24.0-dev.3", "0.24.0-dev.4"])(
-  "keeps unchanged restoration compatible on %s",
-  async (appVersion) => {
-    const manifest = parseManifest(
-      JSON.parse(
-        await readFile("extensions/restoration/extension.json", "utf8"),
-      ),
-    );
-    expect(() =>
-      checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
-    ).not.toThrow();
-  },
-);
+it.each([
+  "0.24.0-dev.1",
+  "0.24.0-dev.2",
+  "0.24.0-dev.3",
+  "0.24.0-dev.4",
+  "0.24.0-dev.5",
+])("keeps unchanged restoration compatible on %s", async (appVersion) => {
+  const manifest = parseManifest(
+    JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
+  );
+  expect(() =>
+    checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
+  ).not.toThrow();
+});

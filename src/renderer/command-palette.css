@@ -4,17 +4,17 @@
   max-height: calc(100vh - 48px);
   margin: 24px auto auto;
   padding: var(--ui-space-4);
-  border: 1px solid var(--ui-input-border);
+  border: 1px solid var(--ui-decoration);
   border-radius: var(--ui-radius);
-  background: var(--ui-raised);
+  background: var(--ui-overlay);
   color: var(--ui-text);
+  color-scheme: var(--ui-color-scheme, dark);
   font:
     14px/1.5 system-ui,
     sans-serif;
-  box-shadow: 0 16px 48px #0006;
 }
 .command-palette::backdrop {
-  background: #0006;
+  background: transparent;
 }
 .command-palette h2 {
   margin: 0 0 var(--ui-space-3);
@@ -24,10 +24,11 @@
 .command-palette input {
   box-sizing: border-box;
   width: 100%;
-  padding: var(--ui-space-3);
+  min-height: 36px;
+  padding: 7px 12px;
   border: 1px solid var(--ui-input-border);
   border-radius: var(--ui-radius);
-  background: var(--ui-surface);
+  background: var(--ui-raised-tint);
   color: var(--ui-text);
   font: inherit;
 }
@@ -45,7 +46,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--ui-space-4);
-  padding: var(--ui-space-3);
+  min-height: 36px;
+  padding: var(--ui-space-2) var(--ui-space-3);
   border-radius: var(--ui-radius);
   cursor: default;
 }
@@ -53,7 +55,7 @@
   overflow-wrap: anywhere;
 }
 .command-palette [role="option"]:hover {
-  background: var(--ui-hover);
+  background: var(--ui-hover-tint);
 }
 .command-palette [aria-selected="true"] {
   background: var(--ui-selected);
@@ -67,5 +69,6 @@
 }
 .command-palette [role="status"] {
   color: var(--ui-secondary);
+  margin: 0;
   padding: var(--ui-space-3);
 }

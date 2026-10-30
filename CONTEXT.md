@@ -85,7 +85,8 @@ localized substring matching without fuzzy search or history and validates its
 captured selected tab/pane rather than retargeting a replacement. Copy, Paste,
 Select All, Find, positional tab selection and self-opening are excluded. Find
 awaits an established formerly focused Surface targeting contract. Settings
-remains retained application content underneath, not another modal.
+remains retained application content underneath, not another modal. The palette
+shares theme-aware overlay styling with About without changing action ownership.
 
 **Action Catalog** — The internal core action definitions shared by native-menu
 presentation, Command Palette results and main-process key delivery. It owns
@@ -120,7 +121,8 @@ A deliberate change
 validates, writes and reloads `config.json`; opening OMXTerm or Settings never
 rewrites an existing document. Its language selector and editor text share the
 Interface Language, relabeling in place while retaining drafts and pending
-operations. Initial-kit creation is the startup exception.
+operations. Its page layers leave the window theme tint visible rather than
+forcing an opaque background. Initial-kit creation is the startup exception.
 
 **User Configuration Reload** — A manual, serialized load and validation
 followed by sequential application. Validation rejection keeps active settings;
