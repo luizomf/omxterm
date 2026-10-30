@@ -57,6 +57,10 @@ adds explicit optional Saved Layout capture/open and extension-scoped CAS state.
 [ADR0043: Revoke visible Mirror Typing routes](0043-revoke-visible-mirror-typing-routes.md)
 adds the optional fixed same-tab keyboard route with core-owned Stop.
 
+[ADR0044: Migrate Snippets without changing terminal input](0044-migrate-snippets-without-changing-terminal-input.md)
+records the accepted optional-extension migration design and platform cutover
+prerequisites. It is not implemented; the built-in feature remains current behavior.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033.
