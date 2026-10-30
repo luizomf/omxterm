@@ -307,10 +307,33 @@ void ready
           path.join(fixture.evidence, "activation-events.json"),
           JSON.stringify(activationEvents, null, 2),
         );
-      await until(
-        () => nativeKeys.at(-1)?.type === "keyUp",
-        "native Enter release receipt",
-      );
+      // Electron can omit before-input-event/DOM keyUp after a prevented
+      // autorepeat (also reproduced without OMXTerm). Observe X11 key state
+      // instead; successful xdotool exit alone is not a release receipt.
+      const released = execFileSync(
+        "/usr/bin/python3",
+        [
+          "-c",
+          `import ctypes
+x = ctypes.CDLL('libX11.so.6')
+x.XOpenDisplay.argtypes = [ctypes.c_char_p]
+x.XOpenDisplay.restype = ctypes.c_void_p
+x.XKeysymToKeycode.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
+x.XKeysymToKeycode.restype = ctypes.c_ubyte
+x.XQueryKeymap.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+x.XCloseDisplay.argtypes = [ctypes.c_void_p]
+d = x.XOpenDisplay(None)
+if not d: raise SystemExit('Cannot open X display')
+code = x.XKeysymToKeycode(d, 0xff0d)
+keys = (ctypes.c_ubyte * 32)()
+x.XQueryKeymap(d, keys)
+x.XCloseDisplay(d)
+if not code or keys[code // 8] & (1 << (code % 8)): raise SystemExit('Enter still held')
+print('Enter released')`,
+        ],
+        { encoding: "utf8" },
+      ).trim();
+      assert.equal(released, "Enter released");
       await assertWrites(offset, run + "\r");
       assert.ok(
         nativeKeys.some(
@@ -319,12 +342,14 @@ void ready
         ),
         "Chromium delivered a native repeat",
       );
-      assert.equal(nativeKeys.at(-1)?.type, "keyUp");
-      assert.equal(nativeKeys.at(-1)?.code, "Enter");
+      // The next fresh gesture must not remain swallowed by the old owner.
+      const freshOffset = session.writes.length;
+      execFileSync("/usr/bin/xdotool", ["key", "Return"]);
+      await assertWrites(freshOffset, "\r");
       if (fixture.evidence)
         await writeFile(
           path.join(fixture.evidence, "native-keys.json"),
-          JSON.stringify(nativeKeys, null, 2),
+          JSON.stringify({ nativeKeys, released }, null, 2),
         );
       await until(
         () => /\r?\nSNIPPETS_RUN_RECEIPT\r?\n/.test(session.output),

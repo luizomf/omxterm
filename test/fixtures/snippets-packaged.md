@@ -65,8 +65,12 @@ evidence retains supervisor results, child/core/preview captures and failure
 DOM outside the cleaned fixture profile. Input uses DOM clicks and Electron
 `sendInputEvent`, plus `/usr/bin/xdotool` XTest events for the held Enter sequence
 across native focus handoff (install xdotool in the assigned guest). Keydown,
-repeat and release must be observed rather than inferred from no PTY bytes. This
-is synthetic X11 input, not physical keys. Consent is
+and repeat are observed through Electron on the child/core respectively. Release
+is verified with X11 `XQueryKeymap` (Python 3 and libX11), followed by exact PTY
+byte isolation and a fresh Enter that must reach the terminal. A minimal Electron
+comparison reproduced missing `before-input-event` and DOM keyUp after prevented
+autorepeat, even without OMXTerm; this fixture does not claim an Electron keyUp
+receipt for that suppressed sequence. This is synthetic X11 input, not physical keys. Consent is
 controlled. There is a bounded post-delivery drain assertion, not proof against
 arbitrarily delayed events. This fixture does not cover Kitty protocol, Protected
 Paste, stale selection, missing targets, removal during preview, update, backend
