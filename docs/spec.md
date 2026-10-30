@@ -1864,9 +1864,12 @@ through the same management/runtime/view owners as Linux ARM64. macOS ARM64 sour
 selects optional Snippets and omits its starter example from new configuration kits;
 the package's duplicate Snippets action stays withheld. The [bounded source
 qualification](snippets-migration.md#macos-arm64-source-transition) does not qualify
-macOS Files or publish a macOS host. Distributed macOS hosts retain built-in
-Snippets until the matching distribution gate is met. Isolated
-foundation/runtime builds remain available.
+macOS Files or itself establish host publication. The separately
+[published macOS ARM64 `0.24.0-dev.16` preview](snippets-migration.md#macos-arm64-published-preview)
+uses optional Snippets `0.1.0`, available through the official catalog or local
+archive installation. Stable `0.23.0`, Windows and Linux x64 retain built-in
+Snippets; remaining platform gates in [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
+still apply. Isolated foundation/runtime builds remain available.
 Explicit activation through the application manager lazily forks one
 standard Node ChildProcess per active extension/application runtime using bundled
 Electron Run-as-Node and Node IPC. Independent captured-version pins, fresh
