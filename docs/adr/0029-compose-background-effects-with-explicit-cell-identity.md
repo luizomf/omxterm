@@ -51,7 +51,18 @@ clear, retaining their layout and readable controls. About and Command Palette
 use theme-derived alpha on their overlay backgrounds, not whole-element opacity
 or an opaque dimming scrim. Their local overlay tint can composite over content;
 it is distinct from the single window base tint and does not implement desktop
-blur. Local Image Preview and error
+blur. While the real About dialog is modal, a relational CSS selector applies
+`filter: blur(12px)` to existing non-dialog body-child application underlays,
+including terminal/Settings and chrome outside About's bounds. This small modal
+focus treatment replaces the surface-local backdrop-filter candidate: transparent
+backdrop captures retained competing sharp detail, whereas filtering the actual
+underlying paint removed it in the composited-desktop diagnostic. Outside-modal
+application softening is intentional. The selector covers newly inserted underlays
+and restores on close/removal without wrappers, clones or JS lifecycle state.
+Body/html, About foreground and the clear backdrop remain unfiltered; theme alpha
+and native `window.blur` ownership are unchanged. Transparent app PNGs can still
+show low-alpha contour artifacts; this is not universal artifact removal or
+native/default-GPU/package qualification. Local Image Preview and error
 surfaces retain readable opaque treatment. Windows opaque fallback uses the same
 theme in native and renderer paint.
 

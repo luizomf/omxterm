@@ -78,6 +78,12 @@ themed title row with native window actions.
 its native floating behavior. The menu toggles the selected window;
 configuration sets the default for new windows.
 
+**About Dialog** — A temporary window-owned modal showing project metadata and
+collective contributor links. While modal, it blurs application underlays,
+including Settings and chrome outside its bounds, with a fixed CSS filter on
+non-dialog body children. The body tint, About foreground and focus remain
+unfiltered. This treatment is separate from main-owned native desktop blur.
+
 **Command Palette** — A temporary window-owned dialog for searching and invoking
 core application actions from the native View menu or configurable
 `commandPalette` shortcut. It uses the Action Catalog and validates its captured

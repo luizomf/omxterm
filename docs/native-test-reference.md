@@ -340,8 +340,26 @@ keyboard input. For an explicitly scheduled browser handoff check, set
 `OMXTERM_TEST_ABOUT_BROWSER=1`: it opens the fixed project page in the default
 browser, observes focus leaving OMXTerm, then returns focus to the dialog.
 `OMXTERM_ABOUT_EVIDENCE_DIR` optionally saves fixture-only normal/small light/dark
-PNG captures. These checks still require an idle unlocked desktop; they do not
-claim physical keyboard navigation or pixel parity across platforms.
+PNG captures, named by underlying terminal or Settings content. The scenario
+opens About above both, checks focus restoration after Escape and Close, and
+checks the actual non-dialog body-child underlay filters (including a newly
+inserted sibling), their restoration, and unfiltered body/html, About foreground
+and backdrop separately from theme RGBA at
+background opacity 0, 0.65 and 1. Small-window captures retain each combination
+(`about-{terminal,settings}-{light,dark}-opacity-{0,0.65,1}-small.png`). These are
+background opacity values, not `window.transparency` values.
+
+Computed-style checks establish wiring, not visible softening. Compare actual
+before/after rendered captures over synthetic readable terminal/Settings content
+at normal and small geometry; inspect sharp foreground/focus, softened detail
+behind About and intentionally softened application content outside its bounds,
+with original detail restored after dismissal. Preserve failed surface-backdrop
+comparisons as diagnostic evidence, not accepted visuals. Transparent app PNGs
+may retain low-alpha contour artifacts; inspect composited-desktop captures too
+rather than claiming universal artifact removal. Page captures can support
+application-underlay blur evaluation, never native desktop-blur qualification. These
+checks still require an idle unlocked desktop; they do not claim physical
+keyboard navigation or pixel parity across platforms.
 
 On Windows, the real handle-drag no-resize oracle compares exact Win32 physical
 window **and** client sizes before/after input on the same HWND, monitor, DPI and

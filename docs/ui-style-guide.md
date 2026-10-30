@@ -41,7 +41,14 @@ Terminal Theme tint once. Navigation and catalog-card fills use alpha-scaled
 raised tint; fields, selection and focus keep their readable foreground treatment.
 About and Command Palette use `--ui-overlay` at the effective window background
 opacity, with shared spacing, quiet controls and low-contrast outer hairlines.
-Their backdrop is clear, not an independently forced dark scrim. Overlay tint can
+Their backdrop is clear, not an independently forced dark scrim. While About
+is modal, a fixed 12 px CSS filter softens non-dialog body-child application
+underlays, including terminal/Settings and chrome outside its rounded bounds.
+Body/html, About text/controls and its backdrop remain unfiltered. The selector
+covers inserted underlays and restores automatically on dismissal or disposal;
+no wrapper, clone or lifecycle state is needed. This modal focus treatment is
+independent of the native `window.blur` preference.
+Overlay tint can
 accumulate over underlying application paint; neither CSS alpha nor page captures
 prove desktop blur. Main retains native effect ownership. No whole-element
 opacity fades text or focus. The native-control

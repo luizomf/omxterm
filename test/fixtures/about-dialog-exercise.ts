@@ -25,7 +25,8 @@ export function createAboutExercise(
   });
   return {
     show: about.show,
-    exercise: () => exerciseAboutDialog(getWindow(), openedLinks),
+    exercise: (underlying: "terminal" | "settings" = "terminal") =>
+      exerciseAboutDialog(getWindow(), openedLinks, underlying),
     dispose: about.dispose,
   };
 }
@@ -35,6 +36,7 @@ export function createAboutExercise(
 export async function exerciseAboutDialog(
   window: BrowserWindow,
   openedLinks: readonly string[],
+  underlying: "terminal" | "settings" = "terminal",
 ) {
   const contents = window.webContents;
   const waitFor = async (expression: string) => {
@@ -53,6 +55,38 @@ export async function exerciseAboutDialog(
     event: object,
   ) => void;
   const open = () => click(item, window, {});
+  // Inspect actual application paint, not only the About surface declaration.
+  const assertUnderlays = async (active: boolean) => {
+    const treatment: unknown = await contents.executeJavaScript(`(() => {
+      const underlays = [...document.querySelectorAll('body > :not(dialog, script, style, link)')];
+      const content = document.querySelector('${underlying === "terminal" ? ".terminal-surface:not([hidden])" : ".settings-dialog"}');
+      return {
+        modal: !!document.querySelector('body > .about-dialog:modal'),
+        containsContent: underlays.some(element => element === content || element.contains(content)),
+        filters: [...new Set(underlays.map(element => getComputedStyle(element).filter))],
+        ancestors: [document.body, document.documentElement].map(element => ({
+          filter: getComputedStyle(element).filter,
+          backdrop: getComputedStyle(element).backdropFilter,
+          opacity: getComputedStyle(element).opacity,
+        })),
+      };
+    })()`);
+    assert.deepEqual(treatment, {
+      modal: active,
+      containsContent: true,
+      filters: [active ? "blur(12px)" : "none"],
+      ancestors: Array.from({ length: 2 }, () => ({
+        filter: "none",
+        backdrop: "none",
+        opacity: "1",
+      })),
+    });
+  };
+  if (underlying === "settings")
+    await waitFor(
+      "!!document.querySelector('.settings-dialog') && document.querySelector('.settings-dialog').contains(document.activeElement)",
+    );
+  await assertUnderlays(false);
   window.focus();
   open();
   open();
@@ -77,15 +111,28 @@ export async function exerciseAboutDialog(
   await waitFor(
     "document.querySelector('.about-dialog').contains(document.activeElement)",
   );
+  await assertUnderlays(true);
+  // A late body sibling needs no observer or lifecycle registration.
+  assert.equal(
+    await contents.executeJavaScript(`(() => {
+      const sibling = document.createElement('div');
+      document.body.append(sibling);
+      try { return getComputedStyle(sibling).filter; }
+      finally { sibling.remove(); }
+    })()`),
+    "blur(12px)",
+  );
   const browser = process.env.OMXTERM_TEST_ABOUT_BROWSER === "1";
+  const previousLinkCount = openedLinks.length;
   await contents.executeJavaScript(
     `[...document.querySelectorAll('.about-links button')].find(b => b.textContent === '${browser ? "Project" : "Contributors"}').click()`,
   );
   const deadline = Date.now() + 5_000;
-  while (openedLinks.length === 0 && Date.now() < deadline)
+  while (openedLinks.length === previousLinkCount && Date.now() < deadline)
     await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal(openedLinks.length, previousLinkCount + 1);
   assert.equal(
-    openedLinks.at(-1),
+    openedLinks[previousLinkCount],
     browser
       ? "https://github.com/luizomf/omxterm"
       : "https://github.com/luizomf/omxterm/blob/main/CONTRIBUTORS.md",
@@ -108,7 +155,7 @@ export async function exerciseAboutDialog(
   if (evidence) {
     await mkdir(evidence, { recursive: true });
     await writeFile(
-      path.join(evidence, "about-normal.png"),
+      path.join(evidence, `about-${underlying}-normal.png`),
       (await contents.capturePage()).toPNG(),
     );
   }
@@ -147,6 +194,43 @@ export async function exerciseAboutDialog(
         })()`)) as number[];
         assert.deepEqual(pixels.slice(0, 4), pixels.slice(4, 8));
         assert.equal(pixels[3], Math.round(opacity * 255));
+        // Computed CSS is a wiring oracle, not proof of rendered blur.
+        await assertUnderlays(true);
+        const treatment: unknown = await contents.executeJavaScript(`(() => {
+          const dialog = document.querySelector('.about-dialog');
+          const surface = getComputedStyle(dialog);
+          const foreground = getComputedStyle(dialog.querySelector('.about-close'));
+          return {
+            backdrop: surface.backdropFilter,
+            filter: surface.filter,
+            opacity: surface.opacity,
+            foregroundFilter: foreground.filter,
+            foregroundOpacity: foreground.opacity,
+            scrimFilter: getComputedStyle(dialog, '::backdrop').filter,
+            scrimBackdrop: getComputedStyle(dialog, '::backdrop').backdropFilter,
+          };
+        })()`);
+        assert.deepEqual(treatment, {
+          backdrop: "none",
+          filter: "none",
+          opacity: "1",
+          foregroundFilter: "none",
+          foregroundOpacity: "1",
+          scrimFilter: "none",
+          scrimBackdrop: "none",
+        });
+        if (evidence) {
+          await contents.executeJavaScript(
+            "new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
+          );
+          await writeFile(
+            path.join(
+              evidence,
+              `about-${underlying}-${background === "#ffffff" ? "light" : "dark"}-opacity-${opacity}-small.png`,
+            ),
+            (await contents.capturePage()).toPNG(),
+          );
+        }
       }
     } finally {
       await contents.executeJavaScript(
@@ -170,9 +254,7 @@ export async function exerciseAboutDialog(
       await writeFile(
         path.join(
           evidence,
-          background === "#ffffff"
-            ? "about-light-small.png"
-            : "about-dark-small.png",
+          `about-${underlying}-${background === "#ffffff" ? "light" : "dark"}-small.png`,
         ),
         image.toPNG(),
       );
@@ -183,12 +265,17 @@ export async function exerciseAboutDialog(
   contents.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
   contents.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
   await waitFor(
-    "!document.querySelector('.about-dialog') && document.querySelector('.terminal-surface:not([hidden])').contains(document.activeElement)",
+    `!document.querySelector('.about-dialog') && document.querySelector('${underlying === "terminal" ? ".terminal-surface:not([hidden])" : ".settings-dialog"}').contains(document.activeElement)`,
   );
+  await assertUnderlays(false);
   open();
   await waitFor("!!document.querySelector('.about-dialog')");
+  await assertUnderlays(true);
   await contents.executeJavaScript(
     "document.querySelector('.about-close').click()",
   );
-  await waitFor("!document.querySelector('.about-dialog')");
+  await waitFor(
+    `!document.querySelector('.about-dialog') && document.querySelector('${underlying === "terminal" ? ".terminal-surface:not([hidden])" : ".settings-dialog"}').contains(document.activeElement)`,
+  );
+  await assertUnderlays(false);
 }

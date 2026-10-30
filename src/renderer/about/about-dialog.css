@@ -1,3 +1,8 @@
+/* Soften application paint, including outside About; never the body tint or dialog.
+   :modal restores automatically on close/removal and covers inserted underlays. */
+body:has(> .about-dialog:modal) > :not(dialog, script, style, link) {
+  filter: blur(12px);
+}
 .about-dialog {
   box-sizing: border-box;
   width: min(26rem, calc(100vw - 24px));

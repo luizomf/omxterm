@@ -33,7 +33,10 @@ import {
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { createAboutExercise } from "./about-dialog-exercise";
 import { createWindowChromeFeatureScenario } from "./window-chrome-feature-scenario";
-import { runSettingsExercise } from "./settings-dialog-exercise";
+import {
+  createSettingsExercise,
+  runSettingsExercise,
+} from "./settings-dialog-exercise";
 import { fixtureConfigurationApplier } from "./window-chrome-configuration";
 import { exerciseAboutKeyboardWithInput } from "./about-keyboard-exercise";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
@@ -257,6 +260,18 @@ async function exerciseScenario(
         sessionInputs[0]!,
       );
       await about.exercise();
+      const settings = createSettingsExercise(
+        root,
+        router,
+        () => windows[0]!,
+        apply,
+      );
+      try {
+        settings.show();
+        await about.exercise("settings");
+      } finally {
+        settings.dispose();
+      }
       return { about: "menu-keyboard-focus-layout-verified" };
     }
     if (auxiliaryOnly) {

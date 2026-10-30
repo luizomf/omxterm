@@ -31,6 +31,17 @@ it.each(["about/about-dialog.css", "command-palette.css"])(
   },
 );
 
+it("filters existing application underlays only while the direct-child About is modal", () => {
+  const styles = css("about/about-dialog.css");
+  const underlays = styles.match(
+    /body:has\(> \.about-dialog:modal\) > :not\(dialog, script, style, link\) \{([^}]+)\}/,
+  )?.[1];
+  expect(underlays).toContain("filter: blur(12px);");
+  expect(styles.match(/\bfilter\s*:/g)).toHaveLength(1);
+  expect(styles).not.toMatch(/backdrop-filter\s*:|\bopacity\s*:/);
+  expect(styles).toMatch(/::backdrop\s*\{\s*background: transparent;\s*\}/);
+});
+
 it("derives overlay alpha from effective window paint without fading foreground", () => {
   const tokens = css("ui-tokens.css");
   expect(tokens).toContain(
