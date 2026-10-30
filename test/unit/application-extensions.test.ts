@@ -8,6 +8,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
 import type {
   BrowserWindow,
   OpenDialogOptions,
@@ -266,6 +267,79 @@ afterEach(async () => {
   await service?.dispose();
   await rm(adapters.root, { recursive: true, force: true });
 });
+it.each([
+  ["darwin", "arm64", true],
+  ["darwin", "x64", false],
+  ["linux", "x64", false],
+  ["win32", "arm64", false],
+] as const)(
+  "production admission on %s %s is %s",
+  async (platform, arch, supported) => {
+    await service.dispose();
+    let starting: ReturnType<typeof startApplicationExtensions>;
+    try {
+      Object.defineProperty(process, "platform", {
+        value: platform,
+        configurable: true,
+      });
+      Object.defineProperty(process, "arch", {
+        value: arch,
+        configurable: true,
+      });
+      starting = startApplicationExtensions({
+        applicationRoot: adapters.root,
+        ssh: { open: adapters.sshOpen },
+        layout: { capture: vi.fn(), open: vi.fn() },
+        translator: () => translatorFor(language),
+        sendAction: adapters.sendOpen,
+        isTrustedSender: (event) => event.sender === window.webContents,
+        changed() {},
+        keybind() {},
+      });
+    } finally {
+      Object.defineProperty(process, "platform", originalPlatform);
+      Object.defineProperty(process, "arch", originalArch);
+    }
+    service = await starting;
+    service.registerWindow(window, () => ({
+      owner: window,
+      signal: new AbortController().signal,
+      terminalDirectory: null,
+    }));
+    if (!supported) {
+      expect(await request({ operation: "install" })).toEqual({
+        ok: false,
+        error: "unsupported",
+      });
+      expect(adapters.consent).not.toHaveBeenCalled();
+      return;
+    }
+    expect(usesOptionalSnippets(platform, arch)).toBe(false);
+    expect(await request({ operation: "install" })).toMatchObject({
+      ok: true,
+      entries: [{ enabled: true, local: "dormant" }],
+    });
+    expect(adapters.consent).toHaveBeenCalledOnce();
+    expect(adapters.activate).not.toHaveBeenCalled();
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() =>
+      expect(adapters.hosts[0]?.open).toHaveBeenCalledOnce(),
+    );
+    expect(
+      await request({ operation: "disable", id: manifest.id, generation: 1 }),
+    ).toMatchObject({ ok: true, entries: [{ enabled: false }] });
+    expect(adapters.hosts[0]!.retire).toHaveBeenCalled();
+    expect(service.actions()).toEqual([]);
+    expect(
+      await request({ operation: "uninstall", id: manifest.id, generation: 2 }),
+    ).toMatchObject({ ok: true, entries: [{ installed: false }] });
+    await installSnippets();
+    expect(service.actions()).toEqual([]);
+    expect(service.contextMenu(window, "s1", () => true)).toEqual([]);
+    expect(adapters.activate).toHaveBeenCalledOnce();
+  },
+);
+
 async function installSnippets() {
   await writeFile(
     archive,

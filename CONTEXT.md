@@ -280,8 +280,8 @@ review, support or a safety guarantee.
 
 **Installed Packages** — The internal module that owns local archive validation,
 immutable installed versions, aggregate registry transactions, installation
-generations and deferred cleanup. It is consumed by the Linux ARM64 Files
-preview's application manager, but does not itself own management UI or execution. See the
+generations and deferred cleanup. It is consumed by the Linux ARM64 and preparatory
+macOS ARM64 application composition, but does not itself own management UI or execution. See the
 [foundation contract](docs/extension-installation-foundation.md).
 
 **Backend Runtime** — An internal app-owned authority that lazily activates an
@@ -333,10 +333,12 @@ transfers exact text to a core-captured Surface, not a PTY handle or raw key rou
 retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit
-official-catalog browsing and HTTPS extension archive installation in the Linux
-ARM64 development preview, through bounded main-owned acquisition and
+official-catalog browsing and HTTPS extension archive installation on Linux ARM64
+and macOS ARM64, through bounded main-owned acquisition and
 captured-byte trust. No startup/reopen catalog, telemetry or background update
-requests are made. Internal hosted content remains
+requests are made. macOS composition does not broaden published catalog targets,
+qualify Files or migrate built-in Snippets; see [its scope](docs/macos-extension-composition.md).
+Internal hosted content remains
 restricted to its owned epoch-local packaged-resource protocol. Child processes
 retain normal network access; explicitly activated terminal web links open through the OS.
 

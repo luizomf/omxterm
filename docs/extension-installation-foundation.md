@@ -98,7 +98,7 @@ npm run build:installed-packages
 npm test -- test/integration/installed-packages.test.ts
 ```
 
-The explicit build produces `dist/installed-packages/index.mjs` and the addon. Normal macOS and Linux ARM64 `npm run build` includes the runtime and native lease addon; only Linux ARM64 includes the separate Files move addon and admits production extensions. The runtime consumes independent leases in main and its app-owned bootstrap.
+The explicit build produces `dist/installed-packages/index.mjs` and the addon. Normal macOS and Linux ARM64 `npm run build` includes the runtime and native lease addon; only Linux ARM64 includes the separate Files move addon. Production extension admission includes Linux ARM64 and preparatory [macOS ARM64 composition](macos-extension-composition.md), without changing built-in macOS Snippets. The runtime consumes independent leases in main and its app-owned bootstrap.
 macOS and Linux ARM64 package verification checks required resources and actual bundled
 Node-mode store/native loading; that is not GUI or backend activation. macOS also
 requires explicit native unpacking and checks the complete ad-hoc seal; no

@@ -20,10 +20,12 @@ v1 catalog, search, exact text, preview, Insert/Run intent, localization and
 keyboard behavior. Merely moving the sidebar to a web page would lose the
 captured-target and gesture guarantees currently owned by the terminal renderer.
 
-There is also a platform prerequisite: application extension composition currently
-admits Linux ARM64 only (`startApplicationExtensions`). A Linux preview cannot
-replace the existing feature on macOS or Windows. Published host and extension
-artifacts remain immutable.
+There is also a platform prerequisite: application extension composition admits
+Linux ARM64 and now preparatory macOS ARM64 (`startApplicationExtensions`).
+[macOS composition](../macos-extension-composition.md) does not select the installed
+Snippets implementation or change its starter kit. Matching Snippets migration
+qualification remains separate. A Linux preview cannot replace the existing
+feature on macOS or Windows. Published host and extension artifacts remain immutable.
 
 ## Decision
 

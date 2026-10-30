@@ -28,8 +28,9 @@ The [runtime contract](../extension-backend-runtime.md) governs actual caller/ex
 
 ### Current application consumer
 
-Linux ARM64 application startup constructs the runtime without activating
-installed code. The [runtime reference](../extension-backend-runtime.md) covers
+Linux ARM64 and macOS ARM64 application startup construct the runtime without
+activating installed code. [macOS composition](../macos-extension-composition.md)
+is preparatory; existing package/module receipts are not production-lifecycle qualification. The [runtime reference](../extension-backend-runtime.md) covers
 current consumers and builds; [Files composition](../files-development-preview.md#owned-composition-modules)
 covers the application manager's separate installation/trust, backend and view
 owners. Installation and enable remain dormant; explicit actions activate code.

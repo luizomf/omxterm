@@ -1659,7 +1659,9 @@ input/output, clipboard data, environment contents, configuration contents,
 executable names, command arguments, commands, titles, secrets, or transcripts.
 
 The application makes remote requests only for deliberate official-catalog browsing
-and HTTPS extension archive installation in the Linux ARM64 development preview.
+and HTTPS extension archive installation on Linux ARM64 and macOS ARM64.
+macOS production composition is preparatory; published catalog target restrictions
+remain unchanged (see [qualification scope](macos-extension-composition.md)).
 The fixed project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
@@ -1824,8 +1826,8 @@ in main.
 
 The internal Installed Packages module implements local archive
 validation/installation, compatibility, immutable version pins, generation-based
-admission, disable/tombstones and deferred physical cleanup. The Linux ARM64
-Files preview consumes it through production Settings with captured-byte trust.
+admission, disable/tombstones and deferred physical cleanup. Linux ARM64 and
+macOS ARM64 consume it through production Settings with captured-byte trust.
 This foundation itself owns neither extension execution nor catalog/network
 acquisition or a public SDK. Main owns HTTPS acquisition separately; terminal ownership is unchanged. Its implemented interface and
 limits are governed by the [foundation contract](extension-installation-foundation.md)
@@ -1836,9 +1838,12 @@ and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 A separately owned backend runtime consumes Installed Packages through an
 app-owned bootstrap. Normal macOS and Linux ARM64 builds include its artifacts and
 native lease addon; only Linux ARM64 includes the separate Files move addon.
-macOS inclusion is a packaging prerequisite: production application extension
-admission and built-in Snippets stay unchanged. Isolated foundation/runtime
-builds remain available.
+macOS ARM64 production composition admits installation and explicit activation
+through the same management/runtime/view owners as Linux ARM64. Built-in macOS
+Snippets and its starter kit remain until separate matching migration qualification;
+the package's duplicate Snippets action stays withheld. This is preparatory wiring,
+not macOS Files support or a platform qualification claim. Isolated
+foundation/runtime builds remain available.
 Explicit activation through the application manager lazily forks one
 standard Node ChildProcess per active extension/application runtime using bundled
 Electron Run-as-Node and Node IPC. Independent captured-version pins, fresh

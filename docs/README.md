@@ -25,6 +25,8 @@ features or a stable extension SDK. The [published Snippets preview](installatio
 pairs host 0.24.0-dev.11 with Snippets 0.1.0; stable 0.23.0 and other platforms
 retain built-in Snippets. Follow each guide's exact host/package pairing rather
 than assuming all preview packages share qualification.
+[Preparatory macOS ARM64 composition](macos-extension-composition.md) has a separate
+production-path fixture; it does not migrate Snippets or qualify these packages.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

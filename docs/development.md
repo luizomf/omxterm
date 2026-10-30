@@ -211,10 +211,13 @@ The [internal extension backend runtime](extension-backend-runtime.md) has an
 explicit `npm run build:extension-runtime` artifact and actual native process/store
 tests. Normal macOS and Linux ARM64 `npm run build` also includes the runtime
 and native lease addon; only Linux ARM64 includes the Files move addon for the
-[Files preview](files-development-preview.md). macOS runtime inclusion is a
-packaging prerequisite, not production extension admission or Snippets cutover.
-Linux ARM64 application startup constructs infrastructure without activating installed code;
-explicit shared actions activate it. Files remains a separately built archive.
+[Files preview](files-development-preview.md). Linux ARM64 and preparatory macOS
+ARM64 application startup construct infrastructure without activating installed
+code; explicit shared actions activate it. The opt-in
+[macOS production-composition fixture](macos-extension-composition.md#installed-package-production-fixture)
+uses an ordinary build and a minimal installed archive, without selecting the
+installed Snippets implementation or implying macOS Files support.
+Files remains a separately built archive.
 The runtime's default integration wrapper launches real Electron/Node children even
 without opening windows; use an assigned native environment. No application
 startup activation, package/fuse/signing qualification or public SDK follows from
