@@ -83,9 +83,13 @@ const extensionEntries = [
   "/dist/extension-runtime/index.mjs",
   "/dist/extension-runtime/packages.mjs",
   "/dist/extension-runtime/extension-leases.node",
-  "/dist/extension-runtime/files-move.node",
   "/node_modules/semver/package.json",
   "/node_modules/yauzl/package.json",
+];
+
+const linuxExtensionEntries = [
+  ...extensionEntries,
+  "/dist/extension-runtime/files-move.node",
 ];
 
 const windowsEntries = (arch: string) => [
@@ -317,6 +321,7 @@ describe("packaged application verifier", () => {
         [
           ...requiredEntries,
           "/dist/main/macos-window-blur.node",
+          ...extensionEntries,
           "/node_modules/node-pty/prebuilds/darwin-arm64",
           "/node_modules/node-pty/prebuilds/darwin-arm64/pty.node",
           "/node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper",
@@ -328,7 +333,7 @@ describe("packaged application verifier", () => {
       inspectAsarEntries(
         [
           ...requiredEntries,
-          ...extensionEntries,
+          ...linuxExtensionEntries,
           "/node_modules/node-pty/build/Release/pty.node",
         ],
         "linux",
@@ -457,7 +462,7 @@ describe("pinned PTY packaged inventory", () => {
   it("reports a missing runtime asset", () => {
     expect(
       inspectAsarEntries(
-        [...requiredEntries.slice(1), ...extensionEntries],
+        [...requiredEntries.slice(1), ...linuxExtensionEntries],
         "linux",
       ).missing,
     ).toEqual(["/dist/main/index.js"]);
@@ -466,9 +471,10 @@ describe("pinned PTY packaged inventory", () => {
 
 it("requires the blur addon only on macOS and rejects its build-only headers", () => {
   const addon = "/dist/main/macos-window-blur.node";
-  expect(inspectAsarEntries(requiredEntries, "darwin").missing).toEqual([
-    addon,
-  ]);
+  expect(
+    inspectAsarEntries([...requiredEntries, ...extensionEntries], "darwin")
+      .missing,
+  ).toEqual([addon]);
   for (const platform of ["linux", "win32"] as const) {
     expect(
       inspectAsarEntries([...requiredEntries, addon], platform).forbidden,
@@ -483,20 +489,39 @@ it("requires the blur addon only on macOS and rejects its build-only headers", (
 });
 
 describe("separately installed Files package inventory", () => {
-  it("requires runtime, native adapters, preload and dependencies only on Linux ARM64", () => {
+  it("requires Linux Files move in addition to the shared ARM64 runtime", () => {
     expect(
       inspectAsarEntries(requiredEntries, "linux", "arm64").missing,
-    ).toEqual(extensionEntries);
+    ).toEqual(linuxExtensionEntries);
     expect(inspectAsarEntries(requiredEntries, "linux", "x64").missing).toEqual(
       [],
     );
     expect(
       inspectAsarEntries(
-        [...requiredEntries, ...extensionEntries],
+        [...requiredEntries, ...linuxExtensionEntries],
         "linux",
         "arm64",
       ).missing,
     ).toEqual([]);
+  });
+  it("requires each macOS ARM64 runtime asset without a Files move addon", () => {
+    const base = [...requiredEntries, "/dist/main/macos-window-blur.node"];
+    expect(inspectAsarEntries(base, "darwin").missing).toEqual(
+      extensionEntries,
+    );
+    for (const omitted of extensionEntries) {
+      expect(
+        inspectAsarEntries(
+          [...base, ...extensionEntries.filter((entry) => entry !== omitted)],
+          "darwin",
+        ).missing,
+      ).toEqual([omitted]);
+    }
+    const move = "/dist/extension-runtime/files-move.node";
+    expect(
+      inspectAsarEntries([...base, ...extensionEntries, move], "darwin")
+        .forbidden,
+    ).toEqual([move]);
   });
   it("rejects separate archives and receipts both inside and outside ASAR", () => {
     expect(

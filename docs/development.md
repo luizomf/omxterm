@@ -209,9 +209,11 @@ build receipt is not native installed-host qualification; see the guide's
 
 The [internal extension backend runtime](extension-backend-runtime.md) has an
 explicit `npm run build:extension-runtime` artifact and actual native process/store
-tests. Normal Linux ARM64 `npm run build` also includes the runtime and native
-lease/Files move addons for the [Files preview](files-development-preview.md).
-Application startup constructs infrastructure without activating installed code;
+tests. Normal macOS and Linux ARM64 `npm run build` also includes the runtime
+and native lease addon; only Linux ARM64 includes the Files move addon for the
+[Files preview](files-development-preview.md). macOS runtime inclusion is a
+packaging prerequisite, not production extension admission or Snippets cutover.
+Linux ARM64 application startup constructs infrastructure without activating installed code;
 explicit shared actions activate it. Files remains a separately built archive.
 The runtime's default integration wrapper launches real Electron/Node children even
 without opening windows; use an assigned native environment. No application
@@ -347,6 +349,14 @@ Electron Run-as-Node; Linux also runs bounded real PTY exec-status checks.
 Desktop/GPU/installer and ordinary-user integration remain unverified, not gates
 for these lanes. `--windows-unpacked-only` is **not** headless: it still launches
 the application. See [hosted artifact delivery](release.md#hosted-x64-build-only-artifact-delivery).
+
+macOS ARM64 package verification (also with `--inspection-only`) checks the
+unpacked extension lease addon, complete ad-hoc seal, architecture/deployment
+floor and packaged Node-mode store/lease/bootstrap resolution. Prepared and
+final hashes are recorded in `.scratch/extensions-package.json`; native bytes
+may differ after signing, but JavaScript must match exactly. Linux ARM64 keeps
+its additional Files no-clobber move/conflict checks. This is not macOS Files,
+backend activation, production platform admission or Snippets qualification.
 
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.
 

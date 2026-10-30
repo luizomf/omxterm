@@ -75,6 +75,7 @@ mac:
     - "!node_modules/node-pty/typings/**"
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
+    - dist/extension-runtime/extension-leases.node
     - dist/main/macos-window-blur.node
     - node_modules/node-pty/prebuilds/darwin-arm64/pty.node
     - node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper

@@ -34,6 +34,8 @@ export function inspectWindowsInstallerInputs(
   // payloads, including custom-output .omxext.json/.omxext.sha256 sidecars.
   // These payload-only exclusions change no app identity, NSIS option,
   // registry/cache location, shortcut, template or locked builder dependency.
+  // #712 adds only the macOS extension lease unpack entry. Windows payload,
+  // NSIS identities/options, registry/cache paths and locked templates are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -41,7 +43,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "957b2e409bec4bf690b15e578c0d57efcb900f0f5e6758fed9a3ce41866a1604"
+      "2c21c3b3e2b58fb5375ccddafc92fd75c7696e101f52f509408dda4e31a3777a"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

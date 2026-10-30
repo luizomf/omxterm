@@ -1,4 +1,4 @@
-import { extractFile, listPackage } from "@electron/asar";
+import { extractFile, listPackage, statFile } from "@electron/asar";
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -61,18 +61,27 @@ const requiredAsarEntries = [
   "/package.json",
 ];
 
-const linuxExtensionEntries = [
+const extensionEntries = [
   "/dist/preload/extension-view.cjs",
   ...[
     "bootstrap.mjs",
     "index.mjs",
     "packages.mjs",
     "extension-leases.node",
-    "files-move.node",
   ].map((file) => `/dist/extension-runtime/${file}`),
   "/node_modules/semver/package.json",
   "/node_modules/yauzl/package.json",
 ];
+
+function packagedExtensionEntries(platform, arch) {
+  if (arch !== "arm64" || !["linux", "darwin"].includes(platform)) return [];
+  return [
+    ...extensionEntries,
+    ...(platform === "linux"
+      ? ["/dist/extension-runtime/files-move.node"]
+      : []),
+  ];
+}
 
 const macBlurEntry = "/dist/main/macos-window-blur.node";
 const windowsNativeFiles = [
@@ -132,7 +141,7 @@ export function inspectAsarEntries(
   const required = [
     ...requiredAsarEntries,
     ...(platform === "darwin" ? [macBlurEntry] : []),
-    ...(platform === "linux" && arch === "arm64" ? linuxExtensionEntries : []),
+    ...packagedExtensionEntries(platform, arch),
     ...(platform === "win32"
       ? [
           ...windowsNativeFiles.map(
@@ -150,6 +159,8 @@ export function inspectAsarEntries(
     (entry) =>
       privateLooking.has(entry) ||
       (platform !== "darwin" && entry === macBlurEntry) ||
+      (platform !== "linux" &&
+        entry === "/dist/extension-runtime/files-move.node") ||
       entry.includes("/node_modules/@xterm/") ||
       (platform === "linux" &&
         entry.includes("/node_modules/node-pty/prebuilds/")) ||
@@ -183,12 +194,31 @@ export function inspectAsarEntries(
 // Node-mode probes do not qualify the browser/Files vertical. They do protect
 // actual packaged module/native resolution, independently of source imports.
 async function verifyPackagedExtensions(executable, asar) {
-  for (const entry of linuxExtensionEntries.filter((file) =>
-    file.startsWith("/dist/"),
-  )) {
+  const artifacts = [];
+  for (const entry of packagedExtensionEntries(
+    process.platform,
+    process.arch,
+  ).filter((file) => file.startsWith("/dist/"))) {
     const prepared = await readFile(path.join(projectRoot, entry.slice(1)));
-    if (!prepared.equals(extractFile(asar, entry.slice(1))))
+    const packaged = extractFile(asar, entry.slice(1));
+    // Final macOS ad-hoc signing changes native bytes, but not JS bundles.
+    if (process.platform === "darwin" && entry.endsWith(".node")) {
+      if (!statFile(asar, entry.slice(1)).unpacked)
+        throw new Error(`Packaged native extension must be unpacked: ${entry}`);
+      const addon = path.join(`${asar}.unpacked`, entry.slice(1));
+      await inspectArchitecture(addon, "extension lease module", "darwin");
+      const { stdout } = await execFile("otool", ["-l", addon]);
+      if (!/\bminos 12\.0\b/u.test(stdout))
+        throw new Error("Extension lease module must target macOS 12.0");
+      // The complete app seal is verified before this probe.
+    } else if (!prepared.equals(packaged)) {
       throw new Error(`Packaged extension resource differs: ${entry}`);
+    }
+    artifacts.push({
+      file: entry,
+      preparedSHA256: createHash("sha256").update(prepared).digest("hex"),
+      packagedSHA256: createHash("sha256").update(packaged).digest("hex"),
+    });
   }
   const scratch = await mkdtemp(
     path.join(tmpdir(), "omxterm-packaged-extensions-"),
@@ -225,7 +255,7 @@ async function verifyPackagedExtensions(executable, asar) {
     );
     await writeFile(
       path.join(projectRoot, ".scratch/extensions-package.json"),
-      `${JSON.stringify(JSON.parse(stdout), null, 2)}\n`,
+      `${JSON.stringify({ ...JSON.parse(stdout), artifacts }, null, 2)}\n`,
     );
   } finally {
     await rm(scratch, { recursive: true, force: true });
@@ -1154,7 +1184,7 @@ export async function verifyPackagedApplication(
         `Development/private-looking files were packaged: ${asarInspection.forbidden.join(", ")}`,
       );
 
-    if (platform === "linux" && process.arch === "arm64")
+    if (["linux", "darwin"].includes(platform) && process.arch === "arm64")
       await verifyPackagedExtensions(executable, asar);
 
     await Promise.all([

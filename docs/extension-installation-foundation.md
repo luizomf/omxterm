@@ -98,10 +98,11 @@ npm run build:installed-packages
 npm test -- test/integration/installed-packages.test.ts
 ```
 
-The explicit build produces `dist/installed-packages/index.mjs` and the addon. Normal Linux ARM64 `npm run build` includes the runtime and native addons used by the production Files preview. The runtime consumes independent leases in main and its app-owned bootstrap.
-Linux ARM64 package verification checks required resources and actual bundled
-Node-mode store/native loading; that is not GUI activation, signing or other
-platform qualification. `yauzl`/`semver` remain external direct dependencies of this Node bundle. No binaries enter Git.
+The explicit build produces `dist/installed-packages/index.mjs` and the addon. Normal macOS and Linux ARM64 `npm run build` includes the runtime and native lease addon; only Linux ARM64 includes the separate Files move addon and admits production extensions. The runtime consumes independent leases in main and its app-owned bootstrap.
+macOS and Linux ARM64 package verification checks required resources and actual bundled
+Node-mode store/native loading; that is not GUI or backend activation. macOS also
+requires explicit native unpacking and checks the complete ad-hoc seal; no
+Developer ID/notarization, Files or other-platform qualification follows. `yauzl`/`semver` remain external direct dependencies of this Node bundle. No binaries enter Git.
 
 macOS needs Xcode Command Line Tools; Linux needs a C++17 compiler; pinned `node-api-headers` supplies Node-API declarations without downloading runtime headers. Windows needs a target-native MSVC developer shell, matching Windows SDK/Visual C++ runtime, and an absolute `OMXTERM_NODE_IMPORT_LIBRARY` pointing to an architecture-matched `node.exe` import library exposing Node-API 8. The delay-load helper binds only that library to the current Node/Electron executable. Build performs no toolchain provisioning/download. Native ARM64 results do not qualify x64, deployment floors or signed packages.
 
