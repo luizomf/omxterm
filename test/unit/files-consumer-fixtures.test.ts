@@ -174,11 +174,13 @@ it.each([true, false])(
     canvas.getBoundingClientRect = () =>
       ({ width: selected ? 200 : 0 }) as DOMRect;
     const environment = { __filesOriginalCanvas: canvas };
-    const js = async (script: string) =>
-      new Function("document", "window", `return (${script});`)(
-        document,
-        environment,
-      ) as unknown;
+    const js = async (script: string) => {
+      const run = new Function("document", "window", `return (${script});`) as (
+        document: Document,
+        window: typeof environment,
+      ) => unknown;
+      return run(document, environment);
+    };
     const create = new Function(
       "assert",
       "ptys",

@@ -110,9 +110,10 @@ it.skipIf(process.platform !== "linux" || process.arch !== "arm64" || !source)(
           ]
         : [
             "Settings-captured-trust-dormant-no-backend",
-            "shared-menu-palette-two-real-views-one-backend",
+            "menu-palette-single-companion-reopen-hide-settings-same-terminal",
             "real-create-folder-no-clobber-move-trash-confirmed-delete",
-            "renderer-domain-isolation-backend-loss-no-mutation-retry",
+            "backend-loss-retires-companion-core-survives",
+            "explicit-reopen-fresh-view-and-backend",
             "disable-uninstall-real-settlement-retained-draft-same-PTY",
           ],
     });

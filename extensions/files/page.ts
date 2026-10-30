@@ -20,7 +20,10 @@ const parent = (path: string) => path.slice(0, path.lastIndexOf("/")) || "/";
 /** The page owns interaction targets; the tree owns asynchronous listing state. */
 export function mountFilesPage(
   document: Document,
-  bridge: { request(value: unknown): Promise<Reply> },
+  bridge: {
+    request(value: unknown): Promise<Reply>;
+    onVisibility?(listener: (visible: boolean) => void): () => void;
+  },
 ) {
   const title = document.createElement("div");
   const heading = document.createElement("h1");
@@ -110,8 +113,12 @@ export function mountFilesPage(
       ? active?.dataset.path
       : undefined;
     state = snapshot;
-    if (selected && !state.rows.some((row) => row.path === selected?.path))
-      selected = undefined;
+    if (selected) {
+      const current = state.rows.find((row) => row.path === selected?.path);
+      selected = current
+        ? { path: current.path, kind: current.kind }
+        : undefined;
+    }
     if (document.activeElement !== address) address.value = state.root ?? "";
     entries.setAttribute("aria-busy", String(state.loading));
     entries.replaceChildren();
@@ -572,12 +579,18 @@ export function mountFilesPage(
     editor,
     menu,
   );
+  // Native Escape belongs to the companion host, not this DOM menu. Hiding
+  // dismisses transient menus while operation drafts remain retained.
+  const unsubscribeVisibility = bridge.onVisibility?.((visible) => {
+    if (!visible) closeMenu(false);
+  });
   const ready = navigateFrom("home");
   return {
     ready,
     dispose() {
       navigationRevision++;
       discardConfirmation();
+      unsubscribeVisibility?.();
       document.removeEventListener("pointerdown", dismissMenu);
     },
   };

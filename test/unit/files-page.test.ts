@@ -51,12 +51,21 @@ async function setup() {
       return { ok: true, path: request.path!, token: "captured" };
     return { ok: true };
   });
-  const page = mountFilesPage(document, { request });
+  let visibility!: (visible: boolean) => void;
+  const page = mountFilesPage(document, {
+    request,
+    onVisibility(listener) {
+      visibility = listener;
+      listener(true);
+      return () => {};
+    },
+  });
   dispose = page.dispose;
   await page.ready;
   return {
     request,
     listings,
+    visibility,
     handle(value: typeof handler) {
       handler = value;
     },
@@ -109,12 +118,72 @@ function navigate(path: string) {
   );
 }
 async function settled() {
-  await vi.waitFor(() =>
+  await vi.waitFor(() => {
     expect(
       document.querySelector('[role="tree"]')?.getAttribute("aria-busy"),
-    ).toBe("false"),
-  );
+    ).toBe("false");
+    expect(
+      document.querySelector<HTMLElement>(".operation-editor")!.inert,
+    ).not.toBe(true);
+  });
 }
+
+it.each(["file", "directory"])(
+  "reconciles selected kind after refresh to %s without retargeting an open editor",
+  async (kind) => {
+    const { listings, request } = await setup();
+    const target = kind === "file" ? "/root/folder" : "/root/alpha";
+    context(target);
+    button("Rename / move", menu()).click();
+    listings["/root"] = [{ name: target.split("/").at(-1)!, kind, size: 0 }];
+    button("Refresh").click();
+    await settled();
+    expect(row(target).getAttribute("aria-label")).toContain(kind);
+    button("Actions…").click();
+    expect(menu().textContent?.includes("Open directory")).toBe(
+      kind === "directory",
+    );
+    key(document.activeElement as HTMLElement, "Tab");
+    apply("/root/destination");
+    await vi.waitFor(() =>
+      expect(request).toHaveBeenCalledWith({
+        operation: "move",
+        path: target,
+        destination: "/root/destination",
+      }),
+    );
+    await settled();
+    button("Actions…").click();
+    button("New file", menu()).click();
+    expect(document.querySelector(".operation-editor label")?.textContent).toBe(
+      `Create file in ${kind === "directory" ? target : "/root"}`,
+    );
+  },
+);
+it("closes transient menus on host hiding while retaining operation drafts", async () => {
+  const { visibility } = await setup();
+  context("/root/alpha");
+  expect(menu().hidden).toBe(false);
+  visibility(false);
+  expect(menu().hidden).toBe(true);
+  visibility(true);
+  context("/root/alpha");
+  button("Rename / move", menu()).click();
+  const input = document.querySelector<HTMLInputElement>(
+    ".operation-editor input",
+  )!;
+  input.value = "/root/draft";
+  visibility(false);
+  visibility(true);
+  expect(input.value).toBe("/root/draft");
+  expect(document.querySelector<HTMLElement>(".operation-editor")!.hidden).toBe(
+    false,
+  );
+  button("Cancel").click();
+  expect(document.querySelector<HTMLElement>(".operation-editor")!.hidden).toBe(
+    true,
+  );
+});
 
 it("expands folders with keyboard, traverses rows and collapses without treating links as folders", async () => {
   await setup();
