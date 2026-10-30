@@ -30,6 +30,7 @@ async function exercise(exits: number[], finishLastExit = false) {
       physicalLoads: () => 1,
       requests: () => 4,
     }),
+    sessionDiagnostics: (indices) => indices.map((index) => ({ index })),
     sessionStarts: () => starts,
     ptyExits: () => exited.size,
     sessionExited: (index: number) => exited.has(index),

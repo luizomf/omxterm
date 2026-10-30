@@ -56,6 +56,7 @@ export async function exerciseConcurrentResttyTabs(options: {
   readonly sessionStarts: () => number;
   readonly ptyExits: () => number;
   readonly sessionExited: (index: number) => boolean;
+  readonly sessionDiagnostics: (indices: readonly number[]) => unknown;
   readonly waitFor: (
     predicate: () => boolean | Promise<boolean>,
     label: string,
@@ -146,7 +147,7 @@ export async function exerciseConcurrentResttyTabs(options: {
       ),
     };
     throw new Error(
-      `${cause instanceof Error ? cause.message : "Concurrent fixture PTY cleanup failed"}; callback snapshot: ${JSON.stringify(snapshot)}`,
+      `${cause instanceof Error ? cause.message : "Concurrent fixture PTY cleanup failed"}; callback snapshot: ${JSON.stringify(snapshot)}; session diagnostics: ${JSON.stringify(options.sessionDiagnostics([...targetSessionIndices, ...livePriorSessionIndices]))}`,
       { cause },
     );
   }

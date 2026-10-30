@@ -9,9 +9,19 @@ For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-
 The integrated host's concurrent-font phase requires actual exit callbacks from
 all four removed sessions and no exit from previously live peers; aggregate
 counts, DOM removal and kill requests do not prove completion. Failure snapshots
-include counts and missing-target/exited-peer indices. The wait deadline and
-independent fixture settlement still apply. Headless callback-order checks:
-`npm test -- test/unit/restty-host-concurrent-cleanup.test.ts`.
+include counts and missing-target/exited-peer indices. Before fixture cleanup,
+these failures also capture each target and previously live peer's spawned PID,
+delivered LocalTerminalSession close calls (returned/threw), and Linux procfs
+birth/start ticks plus current state/parent PID. A returned close is not proof
+of signal delivery or exit. Same birth ticks identify a sampled process, not
+continued liveness (a zombie may still have a stat entry); different ticks mean
+PID reuse. Missing procfs entries, unreadable observations and unsupported
+platforms remain explicit, not inferred callback completion or tree settlement.
+No command, environment, process name or terminal payload is captured. Birth
+reads may perturb timing; failure reads are synchronous and read-only, before
+additional cleanup closes. The wait deadline and independent fixture settlement
+still apply. Headless diagnostic and callback-order checks:
+`npm test -- test/unit/restty-host-concurrent-cleanup.test.ts test/unit/restty-host-failure-state.test.ts test/unit/restty-session-diagnostic.test.ts`.
 The historical Fedora timeout in [#722](https://github.com/luizomf/omxterm/issues/722)
 remains unattributed and is not cleared by these checks or the later instrumented
 native pass.

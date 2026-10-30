@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createResttySessionDiagnostic } from "./restty-session-diagnostic";
 import {
   createLocalTerminalSession,
   type LocalTerminalSession,
@@ -54,6 +55,10 @@ export function createResttyHostSessions(options: {
   readonly reportError: (message: string) => void;
 }) {
   const sessions = new Set<OwnedSession>();
+  const diagnostics = new Map<
+    number,
+    ReturnType<typeof createResttySessionDiagnostic>
+  >();
   let completion: Promise<void> | undefined;
   let exitCode = 0;
   // Own Electron's default last-window quit, including on fixture failure.
@@ -85,7 +90,16 @@ export function createResttyHostSessions(options: {
         `Timed out waiting for ${label}${shellsReady() ? "" : " (owned PowerShell isolation not acknowledged)"}`,
       );
     },
-    createSession(sessionOptions: LocalTerminalSessionOptions) {
+    sessionDiagnostics(indices: readonly number[]) {
+      return indices.map((index) => ({
+        index,
+        ...diagnostics.get(index)?.snapshot(),
+      }));
+    },
+    createSession(
+      sessionOptions: LocalTerminalSessionOptions,
+      diagnosticIndex?: number,
+    ) {
       if (completion) throw new Error("Restty fixture is completing");
       const isolate =
         sessionOptions.platform === "win32" &&
@@ -100,8 +114,8 @@ export function createResttyHostSessions(options: {
       };
       sessions.add(record);
       try {
-        const spawn: SpawnPty = (file, args, ptyOptions) =>
-          options.spawn(
+        const spawn: SpawnPty = (file, args, ptyOptions) => {
+          const pty = options.spawn(
             file,
             isolate
               ? [
@@ -125,6 +139,13 @@ export function createResttyHostSessions(options: {
                 }
               : ptyOptions,
           );
+          if (diagnosticIndex !== undefined)
+            diagnostics.set(
+              diagnosticIndex,
+              createResttySessionDiagnostic(pty.pid),
+            );
+          return pty;
+        };
         record.session = createLocalTerminalSession(spawn, {
           ...sessionOptions,
           onOutput(data) {
@@ -146,6 +167,17 @@ export function createResttyHostSessions(options: {
         sessions.delete(record);
         finish();
         throw error;
+      }
+      const diagnostic =
+        diagnosticIndex === undefined
+          ? undefined
+          : diagnostics.get(diagnosticIndex);
+      if (diagnostic) {
+        const session = record.session;
+        record.session = {
+          ...session,
+          close: () => diagnostic.close(() => session.close()),
+        };
       }
       if (completion) close(record);
       return record.session;

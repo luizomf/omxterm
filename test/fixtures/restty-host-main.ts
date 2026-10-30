@@ -127,33 +127,36 @@ function createHost(window: BrowserWindow) {
               oracle === "output-checkpoints" ? 0 : 2,
               checkpointCount,
             );
-      const terminal = fixtureSessions.createSession({
-        shell: defaultShell,
-        ...(fixtureLaunchRequest
-          ? { launchRequest: fixtureLaunchRequest }
-          : index === 1
-            ? {
-                launchRequest: resttyPlatform.explicitFixtureLaunchRequest(),
-              }
-            : {}),
-        platform: process.platform,
-        homeDirectory: home,
-        applicationVersionProvider: app,
-        environment: shellEnvironment,
-        onOutput(data) {
-          if (!outputStress.observeOutput(index, data))
-            outputs[index]!.push(data);
-          callbacks.onOutput(sourceControl.transform(index, data));
+      const terminal = fixtureSessions.createSession(
+        {
+          shell: defaultShell,
+          ...(fixtureLaunchRequest
+            ? { launchRequest: fixtureLaunchRequest }
+            : index === 1
+              ? {
+                  launchRequest: resttyPlatform.explicitFixtureLaunchRequest(),
+                }
+              : {}),
+          platform: process.platform,
+          homeDirectory: home,
+          applicationVersionProvider: app,
+          environment: shellEnvironment,
+          onOutput(data) {
+            if (!outputStress.observeOutput(index, data))
+              outputs[index]!.push(data);
+            callbacks.onOutput(sourceControl.transform(index, data));
+          },
+          onResizeFailure: (reason) =>
+            outputStress.observeResizeFailure(index, reason),
+          onExit(exit, launchKind) {
+            exitedSessionIndices.add(index);
+            outputStress.observeExit(index, exit);
+            ptyExits += 1;
+            callbacks.onExit(exit, launchKind);
+          },
         },
-        onResizeFailure: (reason) =>
-          outputStress.observeResizeFailure(index, reason),
-        onExit(exit, launchKind) {
-          exitedSessionIndices.add(index);
-          outputStress.observeExit(index, exit);
-          ptyExits += 1;
-          callbacks.onExit(exit, launchKind);
-        },
-      });
+        index,
+      );
       const { deliverOutput, terminal: routedTerminal } =
         createFixtureMetricReplyRouter(terminal, callbacks.onOutput, {
           inputs: inputs[index]!,
@@ -460,6 +463,7 @@ app
     const concurrentFontInitialization = await exerciseConcurrentResttyTabs({
       window,
       beginFontLoad: fontLoads.begin,
+      sessionDiagnostics: fixtureSessions.sessionDiagnostics,
       sessionStarts: () => sessionIndex,
       ptyExits: () => ptyExits,
       sessionExited: (index) => exitedSessionIndices.has(index),
