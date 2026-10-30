@@ -39,14 +39,14 @@
     },
     {
       "id": "omxterm.snippets",
-      "name": "Snippets — Linux ARM64 preview",
-      "description": "Project-maintained optional Snippets preview: search your existing YAML catalog, preview exact text, then Insert or Run. Qualified with OMXTerm 0.24.0-dev.11 on Linux ARM64; other platforms retain built-in Snippets.",
+      "name": "Snippets — Linux and macOS ARM64 preview",
+      "description": "Project-maintained optional Snippets preview: search your existing YAML catalog, preview exact text, then Insert or Run. Qualified with OMXTerm 0.24.0-dev.11 on Linux ARM64 and 0.24.0-dev.16 on macOS ARM64. Windows and Linux x64 retain built-in Snippets.",
       "version": "0.1.0",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
-      "targets": ["linux-arm64"],
+      "targets": ["linux-arm64", "darwin-arm64"],
       "archive": {
         "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.0/snippets-0.1.0.omxext",
         "sha256": "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",

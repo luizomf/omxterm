@@ -15,8 +15,13 @@ macOS package verifier passed. The immutable, non-Latest macOS ARM64 host
 `0.24.0-dev.16` is now published with the unchanged Snippets `0.1.0` archive
 verified publicly before host publication. Use the
 [local/offline archive route](../snippets-migration.md#macos-arm64-published-preview);
-the official catalog remains Linux ARM64 only. Public byte verification is not
-native macOS public-HTTPS installation or broader platform qualification.
+the published official catalog remains Linux ARM64 only. A
+[repository catalog candidate](../snippets-migration.md#macos-arm64-catalog-promotion-candidate)
+adds `darwin-arm64` to the same immutable entry, preserving Linux and Files/SSH.
+Candidate review, integration, exact public catalog readback and a separate
+macOS packaged public-HTTPS checkpoint remain pending. Public byte verification
+and the earlier exact-DMG/FULL passes are not native macOS public-HTTPS
+installation or broader platform qualification.
 Stable `0.23.0` remains Latest; Windows and Linux x64 retain built-in Snippets.
 Remaining platform gates and #741 stay open; no stable extension SDK is established.
 

@@ -337,9 +337,12 @@ retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 official-catalog browsing and HTTPS extension archive installation on Linux ARM64
 and macOS ARM64, through bounded main-owned acquisition and
 captured-byte trust. No startup/reopen catalog, telemetry or background update
-requests are made. macOS composition does not broaden published catalog targets
-or qualify Files. Its qualified Snippets source transition is not a distributed
-host migration; see [its scope](docs/macos-extension-composition.md).
+requests are made. macOS composition alone does not broaden published catalog
+targets or qualify Files. The published Snippets dev.16 preview uses explicit
+local-archive installation; its repository catalog candidate adds `darwin-arm64`
+to the same immutable entry without new Files/SSH qualification. Promotion and
+public readback remain separate from the pending macOS packaged public-HTTPS
+checkpoint; see [the candidate scope](docs/snippets-migration.md#macos-arm64-catalog-promotion-candidate).
 Internal hosted content remains
 restricted to its owned epoch-local packaged-resource protocol. Child processes
 retain normal network access; explicitly activated terminal web links open through the OS.

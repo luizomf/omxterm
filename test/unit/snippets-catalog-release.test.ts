@@ -1,16 +1,23 @@
 import { readFile } from "node:fs/promises";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { downloadExtension } from "../../src/main/extension-download";
 import {
   catalogCompatible,
+  createExtensionCatalog,
   parseCatalog,
   type CatalogRelease,
 } from "../../src/main/extension-catalog";
 
+vi.mock("../../src/main/extension-download", async (original) => ({
+  ...(await original<typeof import("../../src/main/extension-download")>()),
+  downloadExtension: vi.fn(),
+}));
+
 let snippets: CatalogRelease;
+let catalogBytes: Buffer;
 beforeAll(async () => {
-  const catalog = parseCatalog(
-    await readFile("distribution/official-extensions-v1.json"),
-  );
+  catalogBytes = await readFile("distribution/official-extensions-v1.json");
+  const catalog = parseCatalog(catalogBytes);
   expect(catalog.map((entry) => entry.id)).toEqual([
     "omxterm.files",
     "omxterm.ssh",
@@ -26,7 +33,7 @@ describe("published Snippets catalog candidate", () => {
       id: "omxterm.snippets",
       version: "0.1.0",
       engines: { omxterm: ">=0.24.0-dev.8", api: "0.1.x" },
-      targets: ["linux-arm64"],
+      targets: ["linux-arm64", "darwin-arm64"],
       sourceCommit: "805e95dbc77552dc137707578b18b48ad6d047e9",
       releaseUrl:
         "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0",
@@ -39,50 +46,92 @@ describe("published Snippets catalog candidate", () => {
     });
   });
 
-  it.each([
-    ["0.23.0", false],
-    ["0.24.0-dev.7", false],
-    ["0.24.0-dev.8", true],
-    ["0.24.0-dev.11", true],
-    ["0.24.0", true],
-    ["0.24.1-dev.0", false],
-    ["0.25.0-dev.0", false],
-  ])(
-    "preserves manifest semver admission for %s (not qualification)",
-    (appVersion, compatible) => {
-      expect(
-        catalogCompatible(
-          snippets,
-          { appVersion, apiVersion: "0.1.0" },
-          "linux-arm64",
-        ),
-      ).toBe(compatible);
-    },
-  );
+  describe.each(["linux-arm64", "darwin-arm64"])("%s admission", (target) => {
+    it.each([
+      ["0.23.0", false],
+      ["0.24.0-dev.7", false],
+      ["0.24.0-dev.8", true],
+      ["0.24.0-dev.11", true],
+      ["0.24.0-dev.16", true],
+      ["0.24.0", true],
+      ["0.24.1-dev.0", false],
+      ["0.25.0-dev.0", false],
+    ])(
+      "preserves manifest semver admission for %s (not qualification)",
+      (appVersion, compatible) => {
+        expect(
+          catalogCompatible(
+            snippets,
+            { appVersion, apiVersion: "0.1.0" },
+            target,
+          ),
+        ).toBe(compatible);
+      },
+    );
 
-  it.each(["linux-x64", "darwin-arm64", "win32-arm64", "win32-x64"])(
+    it.each(["0.0.9", "0.2.0", "0.1.1-dev.0"])(
+      "rejects incompatible API %s",
+      (apiVersion) => {
+        expect(
+          catalogCompatible(
+            snippets,
+            { appVersion: "0.24.0-dev.16", apiVersion },
+            target,
+          ),
+        ).toBe(false);
+      },
+    );
+  });
+
+  it.each(["linux-x64", "darwin-x64", "win32-arm64", "win32-x64"])(
     "does not admit the installed preview on %s",
     (target) => {
       expect(
         catalogCompatible(
           snippets,
-          { appVersion: "0.24.0-dev.11", apiVersion: "0.1.0" },
+          { appVersion: "0.24.0-dev.16", apiVersion: "0.1.0" },
           target,
         ),
       ).toBe(false);
     },
   );
 
-  it.each(["0.0.9", "0.2.0", "0.1.1-dev.0"])(
-    "rejects incompatible API %s",
-    (apiVersion) => {
+  it.each([
+    ["linux-arm64", "0.24.0-dev.11"],
+    ["darwin-arm64", "0.24.0-dev.16"],
+  ])(
+    "offers the same captured archive on %s / %s",
+    async (target, appVersion) => {
+      vi.mocked(downloadExtension).mockResolvedValue(catalogBytes);
+      const catalog = createExtensionCatalog(
+        { appVersion, apiVersion: "0.1.0" },
+        target,
+      );
+      await catalog.refresh(new AbortController().signal);
+      const card = catalog
+        .snapshot([])
+        .entries.find((entry) => entry.id === snippets.id)!;
+      expect(card).toMatchObject({ compatible: true, action: "install" });
+      expect(catalog.select(card.selection)).toEqual(snippets);
       expect(
-        catalogCompatible(
-          snippets,
-          { appVersion: "0.24.0-dev.11", apiVersion },
-          "linux-arm64",
-        ),
-      ).toBe(false);
+        catalog
+          .snapshot([
+            {
+              id: snippets.id,
+              manifest: { version: snippets.version },
+              digest: snippets.archive.sha256,
+            },
+          ])
+          .entries.find((entry) => entry.id === snippets.id)?.action,
+      ).toBe("reinstall");
+      if (target === "darwin-arm64") {
+        for (const other of catalog
+          .snapshot([])
+          .entries.filter((entry) => entry.id !== snippets.id)) {
+          expect(other.compatible).toBe(false);
+          expect(() => catalog.select(other.selection)).toThrow("incompatible");
+        }
+      }
     },
   );
 });

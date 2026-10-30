@@ -6,7 +6,8 @@ use the separately installed [Snippets 0.1.0 extension](https://github.com/luizo
 All are immutable non-Latest prereleases; stable **0.23.0** remains Latest with
 built-in Snippets. Windows and Linux x64 retain built-in Snippets. macOS uses
 local-archive installation, available offline after download; the official catalog
-remains Linux ARM64 only.
+remains Linux ARM64 only until the [macOS catalog candidate](#macos-arm64-catalog-promotion-candidate)
+is promoted and verified.
 
 ## Existing catalogs and shortcuts
 
@@ -96,6 +97,29 @@ build receipt remain immutable, including source
 `qualification.status: not-run`; later qualification is separate evidence.
 Public downloads do not establish native macOS public-HTTPS installation.
 
+## macOS ARM64 catalog promotion candidate
+
+The repository catalog candidate extends the existing Snippets `0.1.0` entry to
+`darwin-arm64`, retaining `linux-arm64` and the unchanged Files/SSH entries.
+It names the already published macOS `0.24.0-dev.16` / Linux `0.24.0-dev.11`
+hosts without changing the archive, original receipt, source, digest, size,
+immutable URLs or manifest engine ranges. The manifest has no platform restriction;
+its host/API ranges express compatibility, not qualification of every admitted host.
+Windows and Linux x64 retain built-in Snippets.
+
+This is a **promotion candidate**, not a claim of live macOS catalog delivery.
+Complete independent review, integration and exact public catalog readback remain
+with the integration maintainer, followed by a separate bounded macOS packaged
+production public-HTTPS consumption checkpoint. The exact-DMG nine-scenario and
+FULL verifier passes below remain valid, separate evidence; neither is that
+public-HTTPS checkpoint. No new Files/SSH qualification or stable SDK is implied.
+
+After promotion, **Browse official extensions** can offer the same archive on
+macOS ARM64. Installation/trust, enablement and Toggle remain deliberate; no
+startup acquisition or automatic activation is added. Until then use the local
+archive route above, which also remains available offline after download.
+Existing YAML and terminal sessions remain untouched by installation/removal.
+
 ## macOS ARM64 source transition
 
 The source transition reuses the single compatibility action, preserves existing catalogs
@@ -106,8 +130,8 @@ archive/trust/enable steps. The existing archive has no manifest platform
 restriction and requires host `>=0.24.0-dev.8`; compatibility metadata alone is
 not qualification. Keep the user's existing YAML beside `config.json`.
 
-The official catalog still advertises **Linux ARM64 only**. Do not treat its
-listing or the original Linux build receipt as macOS evidence. The full ordinary
+At source qualification, the official catalog advertised **Linux ARM64 only**.
+Do not treat a listing or the original Linux build receipt as macOS evidence. The full ordinary
 nine-scenario source campaign passed on macOS 27.0.1 ARM64, Electron 43.8.1,
 host `0.24.0-dev.16`, source `117428a31d897d6ba4775cbe31f3e3d52df5d917`, using
 published Snippets `0.1.0` SHA-256

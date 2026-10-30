@@ -338,8 +338,8 @@ verified the exact qualified DMG. Stable `0.23.0` remains Latest. See the
 [migration guide](snippets-migration.md#macos-arm64-published-preview) for exact
 source/artifact identities, local/offline installation and separate native
 nine-scenario/FULL package evidence. Public byte verification is not native macOS
-public-HTTPS installation. The official catalog remains Linux ARM64 only; no
-archive or original receipt was replaced.
+public-HTTPS installation. The published catalog remains Linux ARM64 only pending
+the macOS promotion below; no archive or original receipt was replaced.
 
 The Linux-oriented procedure below applies to future preview pairs, not permission
 to recreate either sealed release; source transition alone does not establish
@@ -385,25 +385,36 @@ remain untouched.
 
 ### Snippets catalog promotion
 
-Snippets0.1.0 is now listed alongside unchanged Files/SSH entries. Exact public
+Snippets0.1.0 is listed for Linux ARM64 alongside unchanged Files/SSH entries. Exact public
 endpoint readback and the separate dev.11 packaged public-HTTPS checkpoint passed;
 see the [migration guide](snippets-migration.md#preview-coverage-and-remaining-platforms)
 for coverage and limits. No application-version bump, rebuild or release-asset
 replacement was needed. The sequence below records the promotion requirements,
-not outstanding work or permission to repeat completed qualification.
+not permission to repeat completed Linux qualification. The repository candidate
+extends this same entry to `darwin-arm64` for the published macOS dev.16 host;
+complete candidate review, integration, public endpoint readback and a separate
+macOS public-HTTPS checkpoint remain pending. See the
+[candidate scope](snippets-migration.md#macos-arm64-catalog-promotion-candidate).
 
 1. Independently download the immutable `ext-snippets-v0.1.0` archive and its
    original `.sha256`/`.json`. Bind 76,653 bytes and SHA-256
    `6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`
    to receipt source `805e95dbc77552dc137707578b18b48ad6d047e9` and the
    embedded manifest: `omxterm.snippets`, `0.1.0`, host `>=0.24.0-dev.8`,
-   API `0.1.x`. Preserve the receipt's build-time `not-run` field. Target is
-   Linux ARM64; the archive and release-page URLs must name the same sealed tag.
+   API `0.1.x`. Preserve the receipt's build-time `not-run` field and original
+   Linux build target. Catalog targets are `linux-arm64` and `darwin-arm64` in
+   the candidate; the archive has no manifest platform restriction. Do not raise
+   its engine minimum or rewrite its receipt to describe later qualification.
+   The archive and release-page URLs must name the same sealed tag.
 2. Review/integrate the complete candidate without changing Files/SSH metadata.
    Read back the fixed raw catalog endpoint and compare with promoted source.
 3. Run a separate bounded packaged public-HTTPS checkpoint on the published
-   dev.11 AppImage (SHA-256
-   `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`).
+   host for each newly promoted target. Linux dev.11 AppImage (SHA-256
+   `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`)
+   already passed. The pending macOS checkpoint uses the published dev.16 DMG
+   (SHA-256 `52b8a6b60dce7380b1157755e5ba3dcda0dfdc8e4c54ed2a71b723b160ef061f`),
+   whose nine-scenario exact-package and separate FULL verifier passes are not
+   public-HTTPS consumption evidence.
    Verify actual catalog acquisition, exact-byte trust, dormant install/reinstall,
    deliberate enablement/Toggle Snippets, retained YAML and terminal usability,
    management and joined normal Quit. Record actual archive/host hashes, outcomes
