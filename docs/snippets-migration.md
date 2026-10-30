@@ -35,12 +35,17 @@ sha256sum --check snippets-0.1.0.omxext.sha256
 ```
 
 No source build is required. Older hosts are not qualified for this package, and
-existing Files/SSH packages were not newly qualified on dev.11. No Snippets
-catalog entry was promoted with this release; use the explicit local archive
-rather than expecting it in **Browse official extensions**.
+existing Files/SSH packages were not newly qualified on dev.11. The source official
+catalog now includes a candidate entry for these same Snippets bytes. Catalog
+publication and packaged public-HTTPS consumption are separate checkpoints, not
+established by this source change. The original release did not promote a catalog
+entry.
 
 1. Open **Settings → Extensions** and choose **Install local .omxext…**. A local
-   archive works offline; browsing the official catalog is optional and explicit.
+   archive works offline. Alternatively, after catalog publication, choose
+   **Browse official extensions**, select the Snippets Linux ARM64 preview and
+   install it. Browse/Refresh is explicit; reopening Settings does not fetch the
+   catalog. Both routes use the same captured-byte trust and installation flow.
 2. Inspect the captured package identity and trust information before approving.
    Extension code is trusted code, not a sandboxed command catalog.
 3. If the installation is disabled, enable it explicitly. Installation does not

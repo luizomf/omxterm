@@ -373,6 +373,35 @@ qualification. A Linux preview does not close #741's other-platform work, create
 a stable SDK or imply automatic installation/enablement. Existing user catalogs
 remain untouched.
 
+### Snippets catalog promotion
+
+The source catalog candidate adds already published Snippets0.1.0 alongside
+unchanged Files/SSH entries; it is not evidence of a public consumption checkpoint.
+No application-version bump, rebuild or release-asset replacement is needed for
+this catalog/tests/docs change.
+
+1. Independently download the immutable `ext-snippets-v0.1.0` archive and its
+   original `.sha256`/`.json`. Bind 76,653 bytes and SHA-256
+   `6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`
+   to receipt source `805e95dbc77552dc137707578b18b48ad6d047e9` and the
+   embedded manifest: `omxterm.snippets`, `0.1.0`, host `>=0.24.0-dev.8`,
+   API `0.1.x`. Preserve the receipt's build-time `not-run` field. Target is
+   Linux ARM64; the archive and release-page URLs must name the same sealed tag.
+2. Review/integrate the complete candidate without changing Files/SSH metadata.
+   Read back the fixed raw catalog endpoint and compare with promoted source.
+3. Run a separate bounded packaged public-HTTPS checkpoint on the published
+   dev.11 AppImage (SHA-256
+   `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`).
+   Verify actual catalog acquisition, exact-byte trust, dormant install/reinstall,
+   deliberate enablement/Toggle Snippets, retained YAML and terminal usability,
+   management and joined normal Quit. Record actual archive/host hashes, outcomes
+   and input/rendering limits; local download or headless parser tests are not
+   this checkpoint. Do not rewrite sealed release notes to claim later evidence.
+
+Maintainer integration/publication and this native checkpoint remain separate
+obligations. Keep explicit local/offline installation available; no new Files/SSH
+qualification, other-platform cutover, stable SDK or full #741 completion follows.
+
 ## Publication
 
 Create tag `vX.Y.Z` and a draft GitHub Release in `luizomf/omxterm`. Upload every applicable file (twelve with both x64 platforms), download and verify the complete set against local byte counts and SHA-256 records, then publish to seal the immutable release:
