@@ -105,6 +105,11 @@ body {
   width: 100%;
 }
 
+/* Keep DOM/focus owners stable; only the shared allocation changes sides. */
+#terminal-window-content[data-auxiliary-panel-side="left"] {
+  flex-direction: row-reverse;
+}
+
 #terminal-tabs {
   display: flex;
   flex: 1 1 auto;

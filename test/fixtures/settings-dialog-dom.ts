@@ -31,6 +31,7 @@ export const base: SettingsSnapshot = {
     "window.showTitleBar": true,
     "window.showTabBar": true,
     "window.alwaysOnTop": false,
+    "window.auxiliaryPanelSide": "right",
   },
 };
 
@@ -67,7 +68,8 @@ export async function open(
           values: { ...base.values, [change.path]: change.value },
         },
         undefined,
-        change.path.startsWith("window.")
+        change.path.startsWith("window.") &&
+          change.path !== "window.auxiliaryPanelSide"
           ? ["new-windows"]
           : change.path === "font.family"
             ? ["restart"]

@@ -263,6 +263,68 @@ describe("tool close and panel visibility", () => {
   });
 });
 
+describe("shared panel placement", () => {
+  it.each(["left", "right"] as const)(
+    "resizes physically on the %s without replacing views",
+    (side) => {
+      const f = fixture();
+      f.panel.toggle("a");
+      const focused = document.activeElement;
+      f.panel.setSide(side);
+      expect(document.activeElement).toBe(focused);
+      expect(f.views[0]!.activate).toHaveBeenCalledOnce();
+      expect(f.views[0]!.deactivate).not.toHaveBeenCalled();
+      expect(f.factories[0]!.create).toHaveBeenCalledOnce();
+      f.key(side === "left" ? "ArrowRight" : "ArrowLeft");
+      expect(f.root.style.width).toBe("290px");
+      f.key(side === "left" ? "ArrowLeft" : "ArrowRight");
+      expect(f.root.style.width).toBe("280px");
+      f.pointer("pointerdown");
+      f.pointer("pointermove", 1, side === "left" ? 580 : 420);
+      f.pointer("pointerup");
+      expect(f.root.style.width).toBe("360px");
+      f.key("End");
+      f.size(500);
+      expect(f.root.style.width).toBe("314px");
+      f.size(1000);
+      expect(f.root.style.width).toBe("560px");
+      f.key("Home");
+      expect(f.root.style.width).toBe("220px");
+      f.panel.dismiss();
+      f.panel.setSide(side === "left" ? "right" : "left");
+      expect(f.root.hidden).toBe(true);
+      f.panel.toggleVisibility();
+      expect(f.root.style.width).toBe("220px");
+      expect(f.factories[0]!.create).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("ends drag on side change, but not an unchanged configuration", () => {
+    const f = fixture();
+    f.panel.toggle("a");
+    let frame!: FrameRequestCallback;
+    vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+      frame = callback;
+      return 1;
+    });
+    const cancel = vi
+      .spyOn(window, "cancelAnimationFrame")
+      .mockImplementation(() => {});
+    f.pointer("pointerdown");
+    f.pointer("pointermove", 1, 450);
+    expect(f.panel.setSide("right")).toBe(false);
+    expect(f.separator.releasePointerCapture).not.toHaveBeenCalled();
+    expect(f.panel.setSide("left")).toBe(true);
+    expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+    expect(f.root.style.width).toBe("330px");
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(f.separator.releasePointerCapture).toHaveBeenCalledOnce();
+    frame(0);
+    f.pointer("pointermove", 1, 800);
+    expect(f.root.style.width).toBe("330px");
+  });
+});
+
 describe("window auxiliary panel", () => {
   it("observes actual content and releases geometry callbacks without late mutation", () => {
     let changed!: () => void;

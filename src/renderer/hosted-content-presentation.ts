@@ -200,6 +200,9 @@ export function createHostedContentPresentation(
         });
       } else finish();
     },
+    // Position-only changes do not trigger ResizeObserver. Refresh through the
+    // same coalesced, guarded path without changing selection or native focus.
+    layout,
     focus: () => show(true),
     restoreFocus: () => show("restore"),
     focusCore(activate: () => void) {

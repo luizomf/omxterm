@@ -27,6 +27,8 @@ export const MAX_USER_FILE_ERROR_COUNT = 10;
 // notice crossing into the renderer.
 export const MAX_USER_FILE_ERROR_LENGTH = 65_536;
 
+export type AuxiliaryPanelSide = "left" | "right";
+
 export type OperationalLogLevel = "error" | "info" | "debug";
 export type OptionKeyMode = "none" | "left" | "right" | "both";
 
@@ -40,6 +42,7 @@ export interface TerminalPadding {
 export interface TerminalRendererConfiguration {
   // Startup composition policy, not a user setting. Standalone hosts retain built-in.
   readonly optionalSnippets?: boolean;
+  readonly auxiliaryPanelSide?: AuxiliaryPanelSide;
   // Main always sends the configured language; absent means en-US.
   readonly language?: SupportedLanguage;
   readonly fontConfigurationId?: string;
@@ -73,6 +76,7 @@ export interface UserConfiguration {
   readonly terminalContextMenuEnabled: boolean;
   readonly scrollbackLines: number;
   readonly optionKeyMode: OptionKeyMode;
+  readonly auxiliaryPanelSide: AuxiliaryPanelSide;
   readonly alwaysOnTop: boolean;
   readonly blur: boolean;
   readonly transparency: number;
@@ -87,6 +91,9 @@ function hasValidOptionalRendererFields(
 ): boolean {
   return (
     (value.language === undefined || isSupportedLanguage(value.language)) &&
+    (value.auxiliaryPanelSide === undefined ||
+      value.auxiliaryPanelSide === "left" ||
+      value.auxiliaryPanelSide === "right") &&
     (value.optionalSnippets === undefined ||
       typeof value.optionalSnippets === "boolean") &&
     isOptionalSurfaceFontIdentity(value.fontConfigurationId) &&
@@ -104,6 +111,7 @@ export function isTerminalRendererConfiguration(
       [
         "language",
         "optionalSnippets",
+        "auxiliaryPanelSide",
         "fontConfigurationId",
         "fontFamily",
         "fontSize",

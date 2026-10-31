@@ -1,3 +1,4 @@
+import type { AuxiliaryPanelSide } from "../shared/user-configuration";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
 import { installAuxiliaryPanelInput } from "./auxiliary-panel-input";
@@ -24,6 +25,7 @@ export interface AuxiliaryViewDefinition {
   readonly close?: () => void;
 }
 export interface AuxiliaryPanel {
+  setSide(side: AuxiliaryPanelSide): boolean;
   register(view: AuxiliaryViewDefinition, opened?: boolean): void;
   remove(id: string): void;
   show(id: string): void;
@@ -211,6 +213,7 @@ export function createAuxiliaryPanel(
     });
   }
   return {
+    setSide: geometry.setSide,
     register(definition, isOpen = false) {
       if (disposed || definitions.has(definition.id)) return;
       definitions.set(definition.id, definition);

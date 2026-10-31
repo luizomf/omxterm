@@ -25,6 +25,11 @@ routes only to its captured backend callback, with cancellation on destruction.
 Neither caller-provided IDs nor terminal renderer requests can select a backend. Monotonic layout revisions, owner lifetime and main-approved
 content bounds prevent stale presentation and keep host chrome outside the view.
 CSS geometry is converted using actual page zoom, not terminal font zoom.
+Shared Auxiliary Panel side changes explicitly schedule the same coalesced
+geometry refresh: moving a same-size slot changes position without necessarily
+triggering ResizeObserver. Refresh reads the latest selected slot and sends no
+focus intent, preserving the existing blocked/overlay/selection/retirement guards.
+No per-tool placement protocol or new native authority is introduced.
 A same-view geometry refresh does not revoke captured visible-child semantic
 admission. Actual hiding, selection loss, window hide/minimize or retirement
 revokes it permanently; showing that child again cannot revive the capture.

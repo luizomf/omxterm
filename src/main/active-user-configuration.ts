@@ -55,6 +55,7 @@ export function terminalRendererConfiguration(
   const configuration: LoadedUserConfiguration = active.configuration;
   return Object.freeze({
     language: configuration.language,
+    auxiliaryPanelSide: configuration.auxiliaryPanelSide,
     optionalSnippets: usesOptionalSnippets(process.platform, process.arch),
     ...(configuration.fontFamily
       ? { fontFamily: configuration.fontFamily }

@@ -95,7 +95,11 @@ manually typed ssh. A Launch Request applies only to the first tab's first pane.
 ## Window presentation
 
 The renderer-owned tab strip occupies a full-width row above the Terminal
-Surface and right-side Auxiliary Panel containing Snippets. The panel owns its
+Surface and Auxiliary Panel containing Snippets. The panel defaults to the right;
+`window.auxiliaryPanelSide` selects left/right live through User Configuration
+and Settings → Window. Only the flex allocation changes, preserving DOM owners,
+focus, tool state and sessions. Separator arrows follow physical movement;
+changing side ends an active drag. The panel owns its
 own nonmodal lifecycle, focus and bounded resizing; layout changes retain every
 Surface/session and hidden-tab geometry. The tab strip appears only with at least two tabs and an
 enabled window-local tab-bar flag. Title/tab visibility initializes from

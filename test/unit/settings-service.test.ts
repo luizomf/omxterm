@@ -78,6 +78,42 @@ describe("settings snapshot", () => {
 });
 
 describe("graphical settings changes", () => {
+  it("persists shared panel side live and removes it to inherit right", async () => {
+    const original = {
+      version: 1,
+      window: { showTabBar: false },
+      logLevel: "debug",
+    };
+    const { service, read, reload } = await setup(JSON.stringify(original));
+    expect((await service.snapshot()).values["window.auxiliaryPanelSide"]).toBe(
+      "right",
+    );
+    const result = await service.change({
+      path: "window.auxiliaryPanelSide",
+      value: "left",
+    });
+    expect(result).toMatchObject({
+      status: "saved",
+      lifetimes: [],
+      snapshot: { values: { "window.auxiliaryPanelSide": "left" } },
+    });
+    expect(JSON.parse(await read())).toEqual({
+      ...original,
+      window: { showTabBar: false, auxiliaryPanelSide: "left" },
+    });
+    expect(
+      await service.change({ path: "window.auxiliaryPanelSide", value: "top" }),
+    ).toMatchObject({ status: "rejected" });
+    expect(
+      await service.change({ path: "window.auxiliaryPanelSide", value: null }),
+    ).toMatchObject({
+      status: "saved",
+      lifetimes: [],
+      snapshot: { values: { "window.auxiliaryPanelSide": "right" } },
+    });
+    expect(JSON.parse(await read())).toEqual(original);
+    expect(reload).toHaveBeenCalledTimes(2);
+  });
   it("creates a minimal document only when the user changes a setting", async () => {
     const { service, read, reload } = await setup();
     const result = await service.change({ path: "font.size", value: 20 });

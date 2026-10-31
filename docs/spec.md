@@ -522,7 +522,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Reload User Configuration` defaults to `Cmd+Shift+,` on macOS and
   `Ctrl+Shift+,` on Linux and Windows. It manually rereads and validates the
   complete configuration. Successful application updates font-size baseline,
-  padding, terminal context-menu eligibility, scrollback, ligatures, Option Key Mode, theme, transparency and blur
+  padding, terminal context-menu eligibility, scrollback, ligatures, Option Key Mode, theme, transparency, blur and shared Auxiliary Panel side
   in place, plus close confirmation, logging, menu and keybind delivery. It
   updates Always-on-Top, title-bar and tab-bar defaults for new windows and, on
   Windows, shell selection for new Default Shell sessions. Existing windows keep
@@ -548,7 +548,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   the flag or focus. Title-bar visibility and fullscreen remain independent.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) opens, reveals or closes the
-  selected window's Snippets view in one right-side, nonmodal Auxiliary Panel
+  selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
   below full-width title/tab chrome. Linux ARM64 and macOS ARM64 source use the
   separately installed Snippets extension; other targets retain the built-in view.
   The published Linux ARM64 `0.24.0-dev.11` and macOS ARM64 `0.24.0-dev.16`
@@ -649,25 +649,35 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   terminal key remains ordinary input. Hiding does not
   cancel already accepted Surface-owned delivery; closing that Surface stops
   remaining chunks/Enter without rollback.
+- **Settings → Window → Auxiliary panel side** persists
+  `window.auxiliaryPanelSide` (`left` or `right`, default `right`) in User
+  Configuration and applies live to all windows. The same side hosts built-in
+  Snippets and every companion tool; no per-tool placement or additional panel
+  is created. A side change ends active resizing and preserves preferred width,
+  visibility, selection, drafts, focus and view/Surface/session identities. It
+  does not activate, hide, reopen or reload a tool. Native position-only changes
+  explicitly refresh the existing coalesced presentation path without focus
+  intent; overlay, selection and retirement guards remain authoritative.
 - Panel preferred border-box width starts at 280 CSS px per window. Bounds are
-  220–560 px, with a separate 6 px left separator and 180 px terminal layout
+  220–560 px, with a separate 6 px terminal-facing separator and 180 px terminal layout
   allowance. Actual content-row width determines the effective maximum:
   `min(560, contentWidth - 186)`. Automatic clamping preserves preferred width.
   Below 406 px, hide/deactivate without automatic reopening when space returns;
   a too-narrow open reports “Widen the window to open Snippets”. Primary-pointer
-  dragging captures the pointer, grows the right panel when moving left and
-  coalesces painting per animation frame. Up, cancel, lost capture, hide, switch,
+  dragging captures the pointer, grows the right panel when moving left or the
+  left panel when moving right, and coalesces painting per animation frame. Up, cancel, lost capture, hide, switch,
   overlay activity and disposal end dragging at the last valid width. The
   separator paints a 1 px line with the same default hover/drag and independent
   keyboard-focus states as pane dividers, while keeping its 6 px target/allocation.
   Its decorative color/null choice is separate from pane dividers; the panel
   never gains an active-pane highlight. The
   focusable vertical separator exposes current/min/max pixels and readable value
-  text. Left/Right grow/shrink by 10 px; Home/End choose current limits. Resize
+  text. Left/Right move the separator physically by 10 px (Left grows a right
+  panel, Right grows a left panel); Home/End choose current limits. Resize
   keys are consumed only on the separator. Width preference survives hiding,
   view switching, reload/theme and chrome changes in that window's memory only;
-  new windows/restarts reset width and visibility. No configuration or filesystem
-  state is added. Layout changes retain Surface/core/Adapter/session identities,
+  new windows/restarts reset width and visibility. Only the side preference is
+  persisted; tool state and width remain memory-only. Layout changes retain Surface/core/Adapter/session identities,
   refit the selected grid and preserve hidden-tab geometry/output.
 - Native Copy/Paste/Select All (menu and default/remapped shortcuts) edit the
   focused panel text field, never the PTY. Paste inserts at its selection with
@@ -1251,7 +1261,7 @@ track subsequent bundled palette changes. A present file must contain
 - `scrollback.lines`;
 - `keyboard.optionAsAlt`: `none`, `left`, `right`, or `both`;
 - `window.alwaysOnTop`, `window.showTitleBar`, `window.showTabBar`,
-  `window.blur`, and `window.transparency`;
+  `window.blur`, `window.transparency`, and `window.auxiliaryPanelSide`;
 - `theme.path`;
 - `keybinds.<action>` for the fixed application-shortcut vocabulary below.
 
@@ -1299,6 +1309,12 @@ to `true`. They choose initial visibility for newly created windows. A
 successful reload updates these defaults for future windows, not existing
 windows' choices; menu/keybind toggles never rewrite the document. An enabled
 tab bar still needs two or more tabs to become visible.
+
+`window.auxiliaryPanelSide` accepts only `left` or `right` and defaults to `right`.
+Settings → Window saves it explicitly; successful reload applies it to existing
+and future windows without changing panel visibility, tool state or focus.
+Width and visibility remain memory-only. Wrong types (including null) and other
+strings are rejected; removing the entry inherits right.
 
 `window.blur` accepts only a boolean and defaults to `false`.
 `window.transparency` accepts only a finite number from 0 through 1, including
@@ -1613,7 +1629,7 @@ default.
 `terminal.padding`, `terminal.contextMenuEnabled`, `scrollback.lines`,
 `keyboard.optionAsAlt` (macOS), the
 new-window defaults `window.showTitleBar`, `window.showTabBar` and
-`window.alwaysOnTop`, and `theme.path`; transparency and blur stay file-only in
+`window.alwaysOnTop`, the live `window.auxiliaryPanelSide` choice, and `theme.path`; transparency and blur stay file-only in
 this editor. Its **Shortcuts** page shows each action of the current keybind
 vocabulary with its effective shortcut and whether it inherits the default,
 has a custom binding or is explicitly unbound: Default removes the action's

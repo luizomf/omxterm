@@ -125,6 +125,72 @@ it("orders tab-independent slots and DOM activation through one revision stream"
   expect(revisions).toEqual([1, 2, 3, 4]);
 });
 
+it("refreshes position-only moves without observer notification or focus intent", async () => {
+  let frame!: FrameRequestCallback;
+  const request = vi
+    .spyOn(window, "requestAnimationFrame")
+    .mockImplementation((callback) => {
+      frame = callback;
+      return 1;
+    });
+  const h = fixture();
+  const target = h.slot("panel");
+  let x = 700;
+  vi.spyOn(target.slot, "getBoundingClientRect").mockImplementation(
+    () => ({ x, y: 80, width: 280, height: 500 }) as DOMRect,
+  );
+  h.owner.select(target, () => {}, target);
+  await settle();
+  x = 12;
+  h.owner.layout();
+  h.owner.layout();
+  expect(request).toHaveBeenCalledOnce();
+  frame(0);
+  await settle();
+  expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+    id: "panel",
+    activeId: "panel",
+    focus: false,
+    bounds: { x: 12, y: 80, width: 280, height: 500 },
+  });
+});
+
+it.each([
+  "blocked",
+  "overlay",
+  "retired",
+  "disposed",
+  "failed",
+  "transition",
+] as const)("does not reshow a position refresh while %s", async (state) => {
+  let frame!: FrameRequestCallback;
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+    frame = callback;
+    return 1;
+  });
+  const h = fixture();
+  const target = h.slot("panel");
+  h.owner.select(target, () => {}, target);
+  await settle();
+  h.owner.layout();
+  if (state === "blocked") h.owner.setBlocked(true);
+  if (state === "overlay") {
+    h.bridge.present.mockImplementationOnce(() => deferred<boolean>().promise);
+    h.owner.openOverlay(() => {});
+  }
+  if (state === "retired") target.removed = true;
+  if (state === "disposed") h.owner.dispose();
+  if (state === "failed") h.fail();
+  if (state === "transition") {
+    h.bridge.present.mockImplementationOnce(() => deferred<boolean>().promise);
+    h.owner.select(h.slot("replacement"), () => {}, {});
+  }
+  const calls = h.bridge.present.mock.calls.length;
+  frame(0);
+  await settle();
+  expect(h.bridge.present).toHaveBeenCalledTimes(calls);
+});
+
 it("observes the selected allocation and coalesces geometry without stealing focus", async () => {
   const observe = vi.fn();
   const unobserve = vi.fn();

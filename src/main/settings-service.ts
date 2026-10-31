@@ -310,6 +310,7 @@ function settingsValues(
     "terminal.padding.left": configuration.terminalPadding.left,
     "scrollback.lines": configuration.scrollbackLines,
     "keyboard.optionAsAlt": configuration.optionKeyMode,
+    "window.auxiliaryPanelSide": configuration.auxiliaryPanelSide,
     "window.alwaysOnTop": configuration.alwaysOnTop,
     "window.showTitleBar": configuration.showTitleBar,
     "window.showTabBar": configuration.showTabBar,

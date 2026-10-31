@@ -1,3 +1,4 @@
+import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { HostedContentBridge } from "../shared/extension-view";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { ApplicationTab } from "./terminal-tabs";
@@ -184,6 +185,12 @@ export function createCompanionContent(
   return {
     panel,
     presentation,
+    applyConfiguration(
+      configuration?: Pick<TerminalRendererConfiguration, "auxiliaryPanelSide">,
+    ) {
+      if (panel?.setSide(configuration?.auxiliaryPanelSide ?? "right"))
+        presentation.layout();
+    },
     select(
       tab: ApplicationTab,
       activate: (focusAllowed?: boolean) => void,

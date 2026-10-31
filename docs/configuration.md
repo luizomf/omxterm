@@ -276,6 +276,7 @@ Every field except `version` is optional and falls back to its default when omit
 | `window.blur`                 | boolean                                 | `false`                          |
 | `window.transparency`         | number `0` – `1`                        | `0`                              |
 | `window.showTitleBar`         | boolean                                 | `true`                           |
+| `window.auxiliaryPanelSide`   | `"left"` or `"right"`                   | `"right"`                        |
 | `window.showTabBar`           | boolean                                 | `true`                           |
 | `theme.path`                  | relative or absolute file path          | bundled `omtheme`                |
 | `keybinds.<action>`           | Electron accelerator string or `null`   | built-in shortcut per action     |
@@ -285,6 +286,7 @@ Every field except `version` is optional and falls back to its default when omit
 - **`language`:** chooses the language of OMXTerm's menus, dialogs, window controls, Settings, snippets panel and preview, image preview, About and search controls. OMXTerm never picks it from your system language. Only the exact tags `"en-US"` and `"pt-BR"` are accepted; any other value is a configuration error. At startup, invalid configuration uses the built-in defaults; a rejected manual reload keeps the last-valid configuration, including its language. Reloading the configuration switches the language in open windows without closing tabs. Some text stays in English: the validation detail inside a reload notice, technical cause detail inside a translated Terminal Surface failure notice, failures that happen before the configuration loads, logs, snippet file diagnostics, and text owned by the operating system. Terminal output is never translated.
 - **`scrollback.lines`:** kept in memory per tab (up to a 10 MB per-screen core ceiling). Setting `0` clears and disables scrollback history.
 - **`keyboard.optionAsAlt` (macOS only):** `"none"` keeps standard macOS Option character input (like accented letters or symbols); `"left"`, `"right"`, or `"both"` sends terminal `Alt` sequences instead.
+- **`window.auxiliaryPanelSide`:** choose **Settings → Window → Auxiliary panel side** to place the shared Snippets/Files/SSH panel on the left or right. The saved choice applies live to all windows without reopening tools or losing drafts/focus. Width and visibility remain window-local and memory-only. Omitting the setting restores right.
 - **`window.showTitleBar`, `window.showTabBar`, and `window.alwaysOnTop`:** set the initial state for new windows. Use the **View** and **Window** menus to toggle them in your current window.
 
 ### Start with hidden bars
@@ -554,7 +556,7 @@ Choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`) a
 | Scope                 | Settings updated                                                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------------ |
 | Existing and new tabs | Theme, font size, ligatures, padding, scrollback, Option keys, terminal context-menu eligibility |
-| All windows and tabs  | Background transparency and blur                                                                 |
+| All windows and tabs  | Background transparency, blur and shared Auxiliary Panel side                                    |
 | App behavior          | Close confirmation, log level, keyboard shortcuts, language                                      |
 | New tabs (or restart) | Font family, line height, Windows shell                                                          |
 | New windows           | Always-on-Top, title-bar, and tab-bar initial defaults                                           |

@@ -17,6 +17,7 @@ function activeConfiguration(): ActiveUserConfiguration {
       ...DEFAULT_USER_CONFIGURATION,
       confirmClose: false,
       alwaysOnTop: true,
+      auxiliaryPanelSide: "left",
       fontSize: 40,
       fontLigatures: false,
       blur: true,
@@ -70,6 +71,7 @@ it("commits applicable application state and current visual state without touchi
     expect.objectContaining({
       fontSize: 40,
       fontLigatures: false,
+      auxiliaryPanelSide: "left",
       transparency: 0.375,
       terminalTheme: state.configuration.terminalTheme,
       userFileErrors: ["current warning"],

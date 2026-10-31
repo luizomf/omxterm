@@ -201,6 +201,7 @@ export function mountTerminalWindowPage(
     },
   );
   auxiliaryPanel = companion.panel;
+  companion.applyConfiguration(options.configuration);
   const tabs: TerminalTabs = createTerminalTabs(
     { strip: elements.tabStrip, container: elements.tabsContainer },
     {
@@ -322,6 +323,7 @@ export function mountTerminalWindowPage(
     (configuration) => {
       if (disposed) return;
       language.set(configuration.language);
+      companion.applyConfiguration(configuration);
       fontConfigurationId = configuration.fontConfigurationId;
       if (!chrome)
         page.document.documentElement.style.setProperty(

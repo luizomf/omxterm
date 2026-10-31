@@ -59,6 +59,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   terminalContextMenuEnabled: true,
   scrollbackLines: DEFAULT_SCROLLBACK_LINES,
   optionKeyMode: "none",
+  auxiliaryPanelSide: "right",
   alwaysOnTop: false,
   blur: false,
   transparency: 0,
@@ -403,6 +404,7 @@ export function validateUserConfiguration(
   if (window)
     rejectUnknownKeys(window, configurationPath, "window", [
       "alwaysOnTop",
+      "auxiliaryPanelSide",
       "blur",
       "transparency",
       "showTitleBar",
@@ -564,6 +566,13 @@ function windowPreferences(
       fallback,
     );
   return {
+    auxiliaryPanelSide: optionalEnum(
+      window?.auxiliaryPanelSide,
+      configurationPath,
+      "window.auxiliaryPanelSide",
+      ["left", "right"] as const,
+      "right",
+    ),
     alwaysOnTop: read("alwaysOnTop", false),
     blur: read("blur", false),
     transparency: numberInRange(

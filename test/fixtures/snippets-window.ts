@@ -28,6 +28,7 @@ export async function snippetsWindow(
     "hostedContent" | "sshPane"
   > = {},
   includeSnippets = true,
+  auxiliaryPanelSide: "left" | "right" = "right",
 ) {
   installSettingsDom();
   const content = document.createElement("div"),
@@ -49,7 +50,10 @@ export async function snippetsWindow(
   let settingsOpen!: () => void;
   let update!: (configuration: TerminalRendererConfiguration) => void;
   const configuration = terminalRendererConfiguration(
-    { configuration: DEFAULT_USER_CONFIGURATION, userFileErrors: [] },
+    {
+      configuration: { ...DEFAULT_USER_CONFIGURATION, auxiliaryPanelSide },
+      userFileErrors: [],
+    },
     0,
   );
   const settingsChange = vi.fn(async () =>
@@ -226,6 +230,8 @@ export async function snippetsWindow(
     failure,
     settingsOpen,
     settingsChange,
+    setSide: (auxiliaryPanelSide: "left" | "right") =>
+      update({ ...configuration, auxiliaryPanelSide }),
     setLanguage: (language: SupportedLanguage) =>
       update({ ...configuration, language }),
   };

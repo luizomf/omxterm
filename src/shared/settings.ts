@@ -84,6 +84,10 @@ export const SETTINGS_FIELDS = {
     lifetime: "live",
     accepts: oneOf(["none", "left", "right", "both"]),
   },
+  "window.auxiliaryPanelSide": {
+    lifetime: "live",
+    accepts: oneOf(["left", "right"]),
+  },
   "window.alwaysOnTop": { lifetime: "new-windows", accepts: isBoolean },
   "window.showTitleBar": { lifetime: "new-windows", accepts: isBoolean },
   "window.showTabBar": { lifetime: "new-windows", accepts: isBoolean },

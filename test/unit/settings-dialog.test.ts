@@ -21,6 +21,26 @@ import {
 
 beforeAll(installSettingsDom);
 
+it("edits shared panel placement on the Window page with live feedback", async () => {
+  const view = await open();
+  view.query<HTMLButtonElement>("#settings-tab-window").click();
+  const choice = view.field("Auxiliary panel side");
+  expect(choice.value).toBe("right");
+  expect([...choice.options].map((option) => option.textContent)).toEqual([
+    "Left",
+    "Right",
+  ]);
+  choice.value = "left";
+  choice.dispatchEvent(new Event("change"));
+  await view.settle();
+  expect(view.bridge.change).toHaveBeenCalledWith({
+    path: "window.auxiliaryPanelSide",
+    value: "left",
+  });
+  expect(choice.value).toBe("left");
+  expect(view.status()).not.toContain("new windows");
+});
+
 afterEach(() => {
   document.body.replaceChildren();
 });

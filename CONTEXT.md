@@ -147,10 +147,12 @@ Font Mono is the default, with bundled and OS fallback faces for coverage.
 layout input (`none`), or use `left`, `right` or `both` Option keys as terminal
 Alt.
 
-**Auxiliary Panel** — One window-owned, nonmodal right-side host shared by
+**Auxiliary Panel** — One window-owned, nonmodal host (right by default) shared by
 Snippets and explicitly opened companion tools, with one visible view at a time.
 It owns independent tool closure and retained panel hiding, focus and
-pointer/keyboard resizing; width and visibility are memory-only. Close disposes
+pointer/keyboard resizing; width and visibility are memory-only. Settings → Window
+persists `window.auxiliaryPanelSide` (`left`/`right`) and applies it live across
+windows without replacing views or changing their focus/state. Close disposes
 the selected tool view, not its extension backend or previously created terminal
 sessions. Hide/Escape preserves open tools; panel reveal restores an open tool
 without reopening a closed one. Terminal-tab changes preserve it; Settings/general hosted tabs

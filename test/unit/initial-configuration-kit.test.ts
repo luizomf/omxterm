@@ -122,6 +122,7 @@ describe("initial configuration kit", () => {
       );
       expect(document).toMatchObject({
         window: {
+          auxiliaryPanelSide: "right",
           alwaysOnTop: false,
           blur: false,
           transparency: 0,

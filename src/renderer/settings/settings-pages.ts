@@ -149,6 +149,15 @@ export function pages(platform: string): readonly Page[] {
       label: "settings.page.window",
       controls: [
         {
+          kind: "choice",
+          path: "window.auxiliaryPanelSide",
+          label: "settings.auxiliaryPanelSide",
+          options: [
+            ["left", "settings.panelLeft"],
+            ["right", "settings.panelRight"],
+          ],
+        },
+        {
           kind: "toggle",
           path: "window.showTitleBar",
           label: "settings.titleBar",

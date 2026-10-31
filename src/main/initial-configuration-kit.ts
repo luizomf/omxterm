@@ -65,6 +65,7 @@ snippets:
       scrollback: { lines: defaults.scrollbackLines },
       keyboard: { optionAsAlt: defaults.optionKeyMode },
       window: {
+        auxiliaryPanelSide: defaults.auxiliaryPanelSide,
         alwaysOnTop: defaults.alwaysOnTop,
         blur: defaults.blur,
         transparency: defaults.transparency,

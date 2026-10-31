@@ -1,3 +1,4 @@
+import type { AuxiliaryPanelSide } from "../shared/user-configuration";
 import type { RendererLanguage } from "./renderer-language";
 
 // Own preferred width, constrained layout and the separator gesture lifetime.
@@ -14,6 +15,7 @@ export function createAuxiliaryPanelGeometry(
 ) {
   const page = root.ownerDocument.defaultView!;
   let disposed = false;
+  let side: AuxiliaryPanelSide = "right";
   let preferred = 280;
   let maximum = 560;
   let effective = 280;
@@ -81,7 +83,8 @@ export function createAuxiliaryPanelGeometry(
   };
   const onPointerMove = (event: PointerEvent) => {
     if (!drag || event.pointerId !== drag.id) return;
-    resize(drag.width + drag.x - event.clientX);
+    const delta = event.clientX - drag.x;
+    resize(drag.width + (side === "left" ? delta : -delta));
     if (frame === undefined)
       frame = page.requestAnimationFrame(() => {
         frame = undefined;
@@ -96,10 +99,10 @@ export function createAuxiliaryPanelGeometry(
     let width: number;
     switch (event.key) {
       case "ArrowLeft":
-        width = effective + 10;
+        width = effective + (side === "right" ? 10 : -10);
         break;
       case "ArrowRight":
-        width = effective - 10;
+        width = effective + (side === "left" ? 10 : -10);
         break;
       case "Home":
         width = 220;
@@ -128,12 +131,21 @@ export function createAuxiliaryPanelGeometry(
       : undefined;
   observer?.observe(options.content);
   return {
+    setSide(value: AuxiliaryPanelSide) {
+      if (disposed || value === side) return false;
+      endDrag();
+      side = value;
+      options.content.dataset.auxiliaryPanelSide = side;
+      measure();
+      return true;
+    },
     measure,
     endDrag,
     dispose() {
       if (disposed) return;
       endDrag();
       disposed = true;
+      delete options.content.dataset.auxiliaryPanelSide;
       removeLanguage();
       observer?.disconnect();
       page.removeEventListener("resize", measure);
