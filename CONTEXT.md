@@ -324,7 +324,7 @@ management need not stop.
 validation, IPC, PTY control or failures. Local logs exclude Terminal Payload,
 clipboard, configuration and environment contents, commands and titles.
 
-**Files Development Preview** — Separately installed, precompiled Linux ARM64
+**Files Development Preview** — Separately installed, precompiled Linux and macOS ARM64
 extension consumed through Settings captured-byte trust and shared namespaced
 actions. Published Files0.4.0 browses expandable local folders with contextual and
 keyboard-accessible actions, captured operation targets and automatic refresh
@@ -337,8 +337,11 @@ a build receipt identifies bytes and inputs, not completed qualification or ship
 macOS host source provides no-clobber move and optional Foundation trash in its
 owned Node-child service. Bounded exact-package trash semantics passed on macOS
 ARM64. A separate Files0.5.0/dev.21 exact-pair consumer checkpoint passed real
-operations, retained companion state, management and active-backend normal Quit;
-public macOS distribution remains pending, not implied by installation admission.
+operations, retained companion state, management and active-backend normal Quit.
+Host dev.21 and Files0.5.0 are published as separate immutable, non-Latest
+prereleases; a separate actual Settings HTTPS-link installation checkpoint passed.
+This is [macOS link-first distribution](docs/files-development-preview.md#macos-link-first-distribution),
+not macOS catalog discovery or broader platform qualification.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
 display metadata, not a manifest platform fence or blanket native qualification. The published Linux0.4.0
 catalog remains unchanged. The host's optional `toggleFiles` shortcut is unbound
