@@ -233,10 +233,40 @@ Snippets `0.1.0` archive identified above. The official catalog does not yet off
 Snippets for Linux x64; do not alter its platform metadata or original build receipt
 to infer qualification.
 
-This is a source transition, not a published Linux x64 preview. Matching native
-source qualification, exact-package verification and public distribution are
-separate evidence boundaries. Do not distribute a host removing built-in access
-until the matching host/archive pair and migration gates below are satisfied.
+The ordinary production source campaign passed on Ubuntu 24.04 x64 / Electron
+43.8.1, host `0.24.0-dev.30`, source
+`d9e3cb535152cee2e3b8d2665f2eef4037fd7b5b`, with the unchanged published
+Snippets `0.1.0` archive (76,653 bytes, SHA-256
+`6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`).
+All ten current shared-campaign checks passed: ordinary trust/dormant installation,
+missing/disabled guidance, Close versus retained Hide, exact Insert/Run, held Enter
+repeat/release isolation and fresh Enter, preview overrides/Cancel focus, retained
+search, live en-US/pt-BR, and uninstall with unchanged YAML and the same usable
+Surface/PTY. The backend retired at Disable with exit zero; normal Quit subsequently
+joined the PTY. This is not an active-backend-at-Quit test.
+
+Exact source/runtime/archive identities, unchanged ordinary and qualification
+builds, all 219 qualification input hashes, actual process/stream settlement and
+an empty independent scope snapshot were checked. Three WebContents captures were
+inspected: the child shows its search and two rows, the core shows terminal/panel
+chrome, but the preview capture has a blank content region. Functional preview
+DOM/focus/byte assertions passed; that capture does **not** establish rendered
+preview appearance. Capture timing is unconfirmed, not a diagnosed product defect.
+D-Bus and X keyboard-map diagnostics remain retained.
+
+One complete independent 21-path review found four low-severity documentation/
+receipt-wording issues, all corrected and verified. Full formatting, typecheck,
+type-aware lint and 4,759 headless tests passed (66 skipped); later documentation
+and builder-receipt corrections received focused checks. The changed minimal
+composition assertion was not rerun; its earlier evidence remains separate.
+
+Scope is synthetic Chromium/X11 input, ANGLE SwiftShader, controlled consent and
+a plain-paste shell—not physical keyboard, Kitty, default GPU, compositor, full
+portable-suite, exact-AppImage GUI or public-HTTPS qualification. This is a source
+transition, not a published Linux x64 preview. Exact-package verification and
+public distribution remain separate gates. Do not distribute a host removing
+built-in access until the matching host/archive pair and migration gates below
+are satisfied.
 
 ## Preview coverage and remaining platforms
 

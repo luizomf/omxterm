@@ -70,8 +70,9 @@ The [Linux ARM64 host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases
 and [macOS ARM64 host 0.24.0-dev.16](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16)
 use the separate [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)
 instead of built-in Snippets. All are non-Latest prereleases; stable 0.23.0 remains
-Latest, and Windows and Linux x64 retain built-in Snippets. These pairings do not
-newly qualify Files/SSH.
+Latest, and published Windows/Linux x64 hosts retain built-in Snippets. The
+[Linux x64 source transition](snippets-migration.md#linux-x64-source-transition)
+is not a published preview. These pairings do not newly qualify Files/SSH.
 
 Download the versioned host DMG/checksum for macOS, or AppImage/checksum and optional
 matching helper for Linux, from the respective release, not `/latest/download`.

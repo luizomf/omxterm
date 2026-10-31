@@ -514,8 +514,9 @@ was replaced.
 The Linux-oriented procedure below applies to future preview pairs, not permission
 to recreate either sealed release; source transition alone does not establish
 distributed migration. Prepare a partial prerelease, not the complete stable asset
-set. Windows and Linux x64 retain built-in Snippets until their own replacement is
-qualified. Source-native qualification does not substitute for the exact packaged host/archive pair.
+set. Published Windows/Linux x64 hosts retain built-in Snippets; the Linux x64
+source transition alone does not satisfy its distribution gates. Source-native
+qualification does not substitute for the exact packaged host/archive pair.
 
 1. Select exact committed host and Snippets source identities. Build the host,
    then `node scripts/build-snippets-extension.mjs /absolute/new/snippets.omxext`

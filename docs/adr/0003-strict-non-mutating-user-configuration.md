@@ -93,7 +93,7 @@ Startup may seed absent files with built-in defaults. An existing `config.json`
 entry opts out of the entire kit, even if invalid or a dangling symlink.
 Otherwise startup creates configuration and `themes/omtheme.json`, preserving
 existing siblings. Targets retaining built-in Snippets also receive a
-non-executing snippet example; Linux ARM64 and macOS ARM64 source use the optional package's example
+non-executing snippet example; Linux ARM64/x64 and macOS ARM64 source use the optional package's example
 instead. See the [configuration contract](../spec.md#configuration-and-local-state)
 for the current kit contents. Complete files are published
 without replacement, configuration last. Creation errors are non-blocking
