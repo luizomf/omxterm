@@ -3,7 +3,7 @@
 > [!TIP]
 > **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio) lets you import, customize, and export your settings, themes, and shortcuts in the browser.
 
-OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Targets with built-in Snippets also create the example catalog below; Linux ARM64 and macOS ARM64 source with optional Snippets leave it user-owned and absent until you create it:
+OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Targets with built-in Snippets also create the example catalog below; Linux ARM64/x64 and macOS ARM64 source with optional Snippets leave it user-owned and absent until you create it:
 
 ```text
 omxterm/

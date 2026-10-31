@@ -22,7 +22,9 @@ a separate bounded macOS packaged public-HTTPS checkpoint passed. Its
 remain distinct from public byte verification and the earlier exact-DMG/FULL
 passes, which were not rerun. No broader platform or new Files/SSH qualification
 is implied.
-Stable `0.23.0` remains Latest; Windows and Linux x64 retain built-in Snippets.
+Stable `0.23.0` remains Latest. Linux x64 source now selects the optional tool;
+its exact-package qualification and distributed cutover remain separate. Windows
+retains built-in Snippets.
 Remaining platform gates and #741 stay open; no stable extension SDK is established.
 
 ## Context
@@ -34,7 +36,7 @@ keyboard behavior. Merely moving the sidebar to a web page would lose the
 captured-target and gesture guarantees currently owned by the terminal renderer.
 
 There is also a platform prerequisite: application extension composition admits
-Linux ARM64 and macOS ARM64 (`startApplicationExtensions`).
+Linux ARM64/x64 and macOS ARM64 (`startApplicationExtensions`).
 The delivered [macOS composition](../macos-extension-composition.md) prerequisite
 did not select installed Snippets or change its starter kit. The subsequent source
 transition reuses its ordinary production owners and the existing optional-Snippets
@@ -157,7 +159,7 @@ removing built-in access from any shipping platform. Development qualification
 selects one implementation at a time; it must not register duplicate production
 actions or compete for the panel. The package's separate action is withheld from production composition: the
 existing `toggleSnippets` command is the sole Snippets menu/palette action.
-Linux ARM64 composition and the qualified macOS ARM64 source transition omit the built-in view and invoke the installed tool
+Linux ARM64/x64 and macOS ARM64 source composition omit the built-in view and invoke the installed tool
 through ordinary captured-target/token admission. Like Files and SSH Connect,
 invocation closes the selected-visible companion; otherwise it opens or reveals
 that tool. Close discards view state, while Hide/Escape and the independent panel

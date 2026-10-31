@@ -653,7 +653,7 @@ print('Enter released')`,
       input:
         process.platform === "darwin"
           ? "synthetic Quartz session input; tagged OS release and held-state observation; controlled native consent; production macOS ARM64 composition"
-          : "synthetic Chromium/X11; controlled native consent; production Linux ARM64 composition",
+          : `synthetic Chromium/X11; controlled native consent; production Linux ${process.arch === "arm64" ? "ARM64" : "x64"} composition`,
     };
   } catch (error) {
     if (fixture.evidence) {

@@ -8,8 +8,10 @@ import { build } from "esbuild";
 const source = path.resolve(import.meta.dirname, "../..");
 const output = process.argv[2];
 assert.ok(output && path.isAbsolute(output), "absolute new output required");
-assert.ok(["linux", "darwin"].includes(process.platform));
-assert.equal(process.arch, "arm64");
+assert.ok(
+  (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
+    (process.platform === "darwin" && process.arch === "arm64"),
+);
 await mkdir(output);
 // Preserve the ordinary development layout: main resolves ../.. / assets
 // from dist/main. Every copied asset stays inside this newly owned output.
@@ -65,7 +67,7 @@ await writeFile(
     {
       inputs,
       differences: [],
-      scope: `Unchanged production ${process.platform} ARM64 composition in an isolated qualification output; not publication or cross-platform qualification`,
+      scope: `Unchanged production ${process.platform} ${process.arch} composition in an isolated qualification output; not publication or cross-platform qualification`,
     },
     null,
     2,

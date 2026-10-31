@@ -9,7 +9,7 @@ qualifies physical keyboards or other platforms; Linux uses software rendering.
 ## Composition supplied by the integration owner
 
 `OMXTERM_SNIPPETS_PACKAGED_ENTRY` must be an absolute path to a built Electron
-main entry with unchanged production Linux or macOS ARM64 composition, lifecycle and
+main entry with unchanged production Linux ARM64/x64 or macOS ARM64 composition, lifecycle and
 assets. Production routes the ordinary Snippets command to the optional installed
 companion or Extensions guidance, with no duplicate action or built-in view. Retain production
 `registerSemanticInputIpc`, renderer semantic capture/preview, native gesture
@@ -27,7 +27,7 @@ installation and records it as `SNIPPETS_SOURCE_HOST`; Electron's fallback versi
 is not matching-host evidence. The archive digest is checked before launch, at consent, in
 the result, and after execution; the entry digest is checked before/after.
 
-On an assigned disposable Linux or macOS ARM64 desktop only, run the normal source build,
+On an assigned disposable Linux ARM64/x64 or macOS ARM64 desktop only, run the normal source build,
 then `node test/fixtures/snippets-qualification-build.mjs /absolute/new/qualification`
 to copy its artifacts and rebuild main/renderer without source substitutions.
 The builder refuses output reuse and records source hashes (including the real

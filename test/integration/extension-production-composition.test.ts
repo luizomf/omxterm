@@ -20,7 +20,7 @@ it.skipIf(!enabled)(
       (process.platform === "darwin" && process.arch === "arm64") ||
         (process.platform === "linux" && process.arch === "x64"),
     );
-    const optionalSnippets = process.platform === "darwin";
+    const optionalSnippets = true;
     const executable = createRequire(import.meta.url)("electron") as string;
     const entry = path.resolve("dist/main/index.js");
     const entrySha256 = digest(await readFile(entry));

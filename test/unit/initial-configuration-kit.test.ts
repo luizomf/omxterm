@@ -44,7 +44,7 @@ async function fixture(xdg = false) {
 describe("initial configuration kit", () => {
   it.each([
     ["linux", "arm64", false],
-    ["linux", "x64", true],
+    ["linux", "x64", false],
     ["darwin", "arm64", false],
     ["darwin", "x64", true],
     ["win32", "arm64", true],
@@ -76,20 +76,23 @@ describe("initial configuration kit", () => {
     });
     expect((await readdir(directory)).includes("snippets.yaml")).toBe(
       !(
-        ["linux", "darwin"].includes(process.platform) &&
-        process.arch === "arm64"
+        (process.platform === "linux" &&
+          ["arm64", "x64"].includes(process.arch)) ||
+        (process.platform === "darwin" && process.arch === "arm64")
       ),
     );
   });
 
   it.each([
-    ["linux", false],
-    ["linux", true],
-    ["darwin", false],
-    ["darwin", true],
+    ["linux", "arm64", false],
+    ["linux", "arm64", true],
+    ["linux", "x64", false],
+    ["linux", "x64", true],
+    ["darwin", "arm64", false],
+    ["darwin", "arm64", true],
   ] as const)(
-    "preserves arbitrary existing catalog bytes on %s ARM64 (config exists: %s)",
-    async (platform, existingConfig) => {
+    "preserves arbitrary existing catalog bytes on %s/%s (config exists: %s)",
+    async (platform, architecture, existingConfig) => {
       const { options, directory } = await fixture();
       await mkdir(directory, { recursive: true });
       const bytes = Buffer.from([0xef, 0xbb, 0xbf, 0x23, 0x0d, 0x0a, 0xff]);
@@ -100,7 +103,7 @@ describe("initial configuration kit", () => {
       await createInitialConfigurationKit({
         ...options,
         platform,
-        architecture: "arm64",
+        architecture,
       });
       expect(await readFile(catalog)).toEqual(bytes);
       if (existingConfig)
@@ -141,6 +144,11 @@ describe("initial configuration kit", () => {
       );
       const snippets = await loadTerminalSnippets(options);
       expect(snippets.error).toBeUndefined();
+      if (platform === "linux") {
+        expect(snippets.snippets).toEqual([]);
+        expect(await readdir(directory)).toEqual(["config.json", "themes"]);
+        return;
+      }
       expect(snippets.snippets).toHaveLength(1);
       expect(snippets.snippets[0]).toEqual({
         name: "Print a message",
@@ -199,7 +207,9 @@ describe("initial configuration kit", () => {
     const { options, directory } = await fixture(true);
     expect(
       await Promise.all(
-        Array.from({ length: 8 }, () => createInitialConfigurationKit(options)),
+        Array.from({ length: 8 }, () =>
+          createInitialConfigurationKit({ ...options, platform: "win32" }),
+        ),
       ),
     ).toEqual(Array(8).fill(undefined));
     expect((await loadUserConfiguration(options)).fallback).toBeUndefined();

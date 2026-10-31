@@ -7,8 +7,9 @@ activate trusted installed packages; disable/uninstall and normal Quit retain
 existing owned retirement joins. Infrastructure failure does not prevent terminal
 startup. Other unsupported targets retain the explicit unavailable result.
 
-This #712 prerequisite is not a stable SDK or a Snippets migration. Linux x64
-retains built-in Snippets and its starter kit. The separate Files native move
+This #712 prerequisite was delivered with built-in Snippets and its starter kit
+intact. The subsequent [Linux x64 Snippets source transition](snippets-migration.md#linux-x64-source-transition)
+is separate; neither establishes a stable SDK or distributed cutover. The separate Files native move
 addon remains ARM64-only. Published manifests/catalog target restrictions and
 immutable releases are unchanged; admitting host infrastructure does not qualify
 an existing archive for this target. No automatic installation, activation or
@@ -37,8 +38,9 @@ exercises exact-digest local installation/trust, dormant installation/enablement
 explicit activation and backend response, native editing isolated from the PTY,
 disable/uninstall and the same usable Surface/PTY. A second backend stays active
 until ordinary Quit, which must join both backend streams and the original PTY.
-Linux x64 additionally asserts built-in Snippets still opens without extension
-activation; macOS retains its absent optional-Snippets management assertion.
+Both targets now assert absent optional-Snippets management without activation.
+The historical Linux x64 evidence below exercised the former built-in assertion;
+it does not qualify the changed optional-Snippets path.
 The fixture does not install directly into the store or substitute product owners.
 
 ## Evidence boundary

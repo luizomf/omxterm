@@ -549,7 +549,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) opens, reveals or closes the
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
-  below full-width title/tab chrome. Linux ARM64 and macOS ARM64 source use the
+  below full-width title/tab chrome. Linux ARM64/x64 and macOS ARM64 source use the
   separately installed Snippets extension; other targets retain the built-in view.
   The published Linux ARM64 `0.24.0-dev.11` and macOS ARM64 `0.24.0-dev.16`
   previews use optional Snippets; stable `0.23.0` retains the built-in view.
@@ -1240,7 +1240,7 @@ common built-in defaults (including explicit `window.blur: false` and
 `window.transparency: 0`) and `theme.path` set to `themes/omtheme.json`, one
 copy of the bundled theme at `themes/omtheme.json`. Targets retaining built-in
 Snippets also create one non-executing literal-block example in `snippets.yaml`;
-Linux ARM64 and macOS ARM64 source leave that user-owned catalog absent and the optional package
+Linux ARM64/x64 and macOS ARM64 source leave that user-owned catalog absent and the optional package
 provides an example instead. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
 published last. Shell, font family and shortcuts retain their implicit platform
@@ -1505,7 +1505,7 @@ actionable problem, including the resolved path and schema field location or
 syntax line/column coordinates, in place of the list, and the terminal is
 unaffected. Parser excerpts and arbitrary parser messages are never displayed.
 For built-in Snippets, Electron main reads and validates the file and sends only
-validated, typed data over the preload bridge. On Linux ARM64 and in macOS ARM64 source, the installed
+validated, typed data over the preload bridge. On Linux ARM64/x64 and macOS ARM64 source, the installed
 Snippets backend reuses that parser and configuration-root resolution, returning
 complete activation-scoped catalog snapshots in bounded pages. Installation,
 disabling and uninstalling never modify the catalog. Core retains captured-target
@@ -1788,14 +1788,14 @@ not revoke accepted Surface-owned input or end sessions. This preparatory
 capability does not install an optional Snippets package or cut over any platform.
 `extensions/snippets` source builds a separate archive using the shared
 Snippets UI/CSS and bounded catalog client. Its separate action is withheld from
-production; Linux ARM64 and macOS ARM64 source composition route
+production; Linux ARM64/x64 and macOS ARM64 source composition route
 the existing Snippets command to the optional installed companion or Extensions
-guidance. The macOS source transition passed its nine-scenario native campaign;
-macOS host publication remains separate. Other targets
-retain the built-in view. Native qualification uses unchanged production composition. Native child
+guidance. Linux x64 source migration does not establish exact-package qualification,
+catalog availability or distributed cutover. Other targets retain the built-in view.
+Native qualification uses unchanged production composition. Native child
 logical activity is separate from temporary visibility, and committed language
 and explicit search/restore focus intent preserve controls across overlays.
-No macOS host publication or distributed-platform migration is implied;
+Published ARM64 previews and remaining distributed-platform gates are recorded separately;
 see [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
 This is a production-facing development module consumed by the Linux ARM64 Files preview.
 Catalog acquisition and stable SDK exposure remain separate. Packaged child

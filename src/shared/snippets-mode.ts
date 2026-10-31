@@ -5,6 +5,8 @@ export function usesOptionalSnippets(
   architecture: string,
 ): boolean {
   return (
-    (platform === "linux" || platform === "darwin") && architecture === "arm64"
+    (platform === "linux" &&
+      (architecture === "arm64" || architecture === "x64")) ||
+    (platform === "darwin" && architecture === "arm64")
   );
 }

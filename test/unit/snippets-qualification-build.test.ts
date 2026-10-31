@@ -17,9 +17,12 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 // Exercise the real builder CLI and filesystem layout, not Electron or a GUI.
-// Like the builder itself, this lane is native Linux/macOS ARM64 only.
+// Like the builder itself, this lane admits Linux ARM64/x64 and macOS ARM64.
 it.skipIf(
-  !["linux", "darwin"].includes(process.platform) || process.arch !== "arm64",
+  !(
+    (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
+    (process.platform === "darwin" && process.arch === "arm64")
+  ),
 )(
   "isolates a qualification build with the real development icon at the main entry's relative path",
   async () => {

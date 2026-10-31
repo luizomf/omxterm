@@ -4,7 +4,8 @@ The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/lui
 and [OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16)
 use the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
 All are immutable non-Latest prereleases; stable **0.23.0** remains Latest with
-built-in Snippets. Windows and Linux x64 retain built-in Snippets. Both previews
+built-in Snippets. Published Windows and Linux x64 hosts retain built-in Snippets;
+Linux x64 source now selects the optional tool as described below. Both previews
 offer Snippets through the official catalog; local-archive installation remains
 available offline after download. See the separate
 [macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
@@ -109,7 +110,7 @@ It names the already published macOS `0.24.0-dev.16` / Linux `0.24.0-dev.11`
 hosts without changing the archive, original receipt, source, digest, size,
 immutable URLs or manifest engine ranges. The manifest has no platform restriction;
 its host/API ranges express compatibility, not qualification of every admitted host.
-Windows and Linux x64 retain built-in Snippets.
+Published Windows and Linux x64 hosts retain built-in Snippets.
 
 Catalog source `dbbc1a9814606f72bcaea226ab68564da4a345fb` received complete
 independent review and was integrated. Fixed public endpoint readback matched
@@ -218,6 +219,22 @@ qualify catalog promotion, native macOS public-HTTPS installation,
 Finder/Gatekeeper/notarization, physical-keyboard, natural-autorepeat, Kitty,
 OS-compositor, macOS Files/SSH or the full portable suite. No immutable archive
 or original build receipt was changed.
+
+## Linux x64 source transition
+
+Linux x64 source selects the same optional Snippets implementation as ARM64.
+The existing menu/palette action and configured shortcut open or close the installed
+companion; missing/disabled guidance never installs, enables or falls back to a
+built-in view. Existing YAML is untouched; only newly created configuration kits
+omit the example. Use explicit local-archive installation of the unchanged published
+Snippets `0.1.0` archive identified above. The official catalog does not yet offer
+Snippets for Linux x64; do not alter its platform metadata or original build receipt
+to infer qualification.
+
+This is a source transition, not a published Linux x64 preview. Matching native
+source qualification, exact-package verification and public distribution are
+separate evidence boundaries. Do not distribute a host removing built-in access
+until the matching host/archive pair and migration gates below are satisfied.
 
 ## Preview coverage and remaining platforms
 

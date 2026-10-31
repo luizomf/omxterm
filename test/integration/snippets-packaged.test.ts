@@ -14,15 +14,18 @@ const enabled =
   process.env.OMXTERM_SNIPPETS_PACKAGED_QUARTZ_TOOL !== undefined;
 const executable = createRequire(import.meta.url)("electron") as string;
 
-// Opt-in on an assigned disposable Linux or macOS ARM64 desktop. ENTRY uses unchanged
+// Opt-in on an assigned Linux ARM64/x64 or macOS ARM64 guest. ENTRY uses unchanged
 // production composition in an isolated output with normal shutdown. This is
 // installed-package evidence, not publication or physical-keyboard qualification.
 it.skipIf(!enabled)(
   "qualifies an ordinarily installed Snippets archive with a live Surface and PTY",
   { timeout: 150_000 },
   async (testContext) => {
-    assert.ok(["linux", "darwin"].includes(process.platform));
-    assert.equal(process.arch, "arm64");
+    assert.ok(
+      (process.platform === "linux" &&
+        ["arm64", "x64"].includes(process.arch)) ||
+        (process.platform === "darwin" && process.arch === "arm64"),
+    );
     assert.equal(process.env.OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE, undefined);
     const values = Object.fromEntries(
       names.map((name) => {
@@ -158,7 +161,7 @@ it.skipIf(!enabled)(
       input:
         process.platform === "darwin"
           ? "synthetic Quartz session input; tagged OS release and held-state observation; controlled native consent; production macOS ARM64 composition"
-          : "synthetic Chromium/X11; controlled native consent; production Linux ARM64 composition",
+          : `synthetic Chromium/X11; controlled native consent; production Linux ${process.arch === "arm64" ? "ARM64" : "x64"} composition`,
     });
     assert.equal(
       digest(await readFile(values.ENTRY)),

@@ -3,7 +3,7 @@ import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
 
 it.each([
   ["linux", "arm64", true],
-  ["linux", "x64", false],
+  ["linux", "x64", true],
   ["linux", "arm", false],
   ["darwin", "arm64", true],
   ["darwin", "x64", false],
