@@ -41,8 +41,9 @@ captured-target and gesture guarantees currently owned by the terminal renderer.
 
 There is also a platform prerequisite: application extension composition admits
 Linux ARM64/x64, macOS ARM64 and Windows ARM64 source (`startApplicationExtensions`).
-Windows native composition and its Snippets migration remain separate,
-unqualified checkpoints; Windows source retains built-in Snippets.
+The bounded [Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#evidence-boundary)
+passed with built-in Snippets retained. Windows packaging and any Snippets
+migration remain separate, unqualified checkpoints.
 The delivered [macOS composition](../macos-extension-composition.md) prerequisite
 did not select installed Snippets or change its starter kit. The subsequent source
 transition reuses its ordinary production owners and the existing optional-Snippets

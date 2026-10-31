@@ -35,7 +35,8 @@ from Snippets qualification and does not qualify macOS Files/SSH.
 minimal fixture. Its historical built-in Snippets receipt predates the separate
 Snippets source transition; existing package restrictions are unchanged.
 [Windows ARM64 source composition](windows-arm64-extension-composition.md)
-retains built-in Snippets and awaits separate native and packaging checks.
+retains built-in Snippets and passed a bounded ordinary-user native checkpoint;
+Windows packaging and Snippets migration remain separate.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

@@ -1917,8 +1917,8 @@ The internal Installed Packages module implements local archive
 validation/installation, compatibility, immutable version pins, generation-based
 admission, disable/tombstones and deferred physical cleanup. Linux ARM64/x64,
 macOS ARM64 and Windows ARM64 source consume it through production Settings
-with captured-byte trust; Windows native composition remains unqualified.
-This foundation itself owns neither extension execution nor catalog/network
+with captured-byte trust. The bounded [Windows ARM64 source-composition checkpoint](windows-arm64-extension-composition.md#evidence-boundary)
+is separate from packaged qualification. This foundation itself owns neither extension execution nor catalog/network
 acquisition or a public SDK. Main owns HTTPS acquisition separately; terminal ownership is unchanged. Its implemented interface and
 limits are governed by the [foundation contract](extension-installation-foundation.md)
 and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
@@ -1928,9 +1928,9 @@ and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 A separately owned backend runtime consumes Installed Packages through an
 app-owned bootstrap. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64 builds
 include its artifacts and native lease addon. Windows ARM64 source admits the
-same explicit management and activation while retaining built-in Snippets;
-[its native composition and packaging](windows-arm64-extension-composition.md)
-remain unqualified. Linux x64 now admits explicit extension
+same explicit management and activation while retaining built-in Snippets. Its
+[bounded native source composition](windows-arm64-extension-composition.md#evidence-boundary)
+passed separately from the still-unqualified Windows packaging. Linux x64 now admits explicit extension
 installation and activation through the existing production owners; its
 [composition qualification](linux-x64-extension-composition.md) remains distinct
 from earlier module, hosted-view and package checks. That historical composition

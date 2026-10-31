@@ -26,8 +26,8 @@ The selected adapter adds a small per-target native build obligation, including 
 The [foundation contract](../extension-installation-foundation.md) owns interfaces,
 limits, builds and error behavior. Linux ARM64/x64, macOS ARM64 and Windows ARM64
 source application startup constructs installation/runtime infrastructure without
-activating installed code. Windows native composition remains unqualified. Execution,
-web-content hosting, acquisition and trust UI remain consumer responsibilities;
+activating installed code. The bounded [Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#evidence-boundary)
+passed separately from packaging. Execution, web-content hosting, acquisition and trust UI remain consumer responsibilities;
 [Files composition](../files-development-preview.md#owned-composition-modules)
 documents their integration. Installation and enable remain dormant. Separate
 extension archives are not bundled into the host. [macOS composition](../macos-extension-composition.md)
