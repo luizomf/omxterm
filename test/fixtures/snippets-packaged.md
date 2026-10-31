@@ -217,8 +217,8 @@ app receives only a loopback inspector, isolated profile and readiness-shell
 arguments. Its environment excludes source Node/npm settings and uses system
 commands, isolated HOME/XDG roots, native graphics and Chromium sandboxing—no
 Linux flags. The existing inspector observer asserts actual app/version/executable/
-ASAR and backend identity, creates an ordinary New Tab and invokes the same nine
-scenarios. Baseline readiness PTY liveness uses real macOS `ps` start identity,
+ASAR and backend identity, creates an ordinary New Tab and invokes the shared
+scenario. Baseline readiness PTY liveness uses real macOS `ps` start identity,
 not `/proc` or PID-only existence.
 
 Normal Quit must join baseline/scenario PTYs and backends; the controller also
