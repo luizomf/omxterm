@@ -29,7 +29,9 @@ function recording() {
   deliverKeybindsFromKeyEvents(
     contents,
     () => terminalDefaultKeybinds("linux"),
-    invoke,
+    (action) => {
+      invoke(action);
+    },
     "linux",
     capture,
   );

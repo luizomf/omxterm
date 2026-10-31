@@ -6,12 +6,25 @@ import { coreActionKeybinds, type CoreActionCatalog } from "./action-catalog";
 import type { startCommandPalette } from "./command-palette";
 import type { KeybindCapture } from "./keybind-capture";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
+import { createCompanionDismissal } from "./companion-dismissal";
+import { isCompanionToolAction } from "../shared/terminal-keybinds";
 
 export function deliverExtensionKeybind(
   catalog: CoreActionCatalog,
   event: Event,
   input: Input,
+  owner: BrowserWindow,
+  capture: KeybindCapture,
 ) {
+  if (event.defaultPrevented || !owner.isFocused()) return;
+  const gestures = createCompanionDismissal(owner);
+  if (
+    capture.intercept(owner.webContents, input) ||
+    gestures.interceptShortcut(input)
+  ) {
+    event.preventDefault();
+    return;
+  }
   if (input.type !== "keyDown" && input.type !== "rawKeyDown") return;
   const action = coreActionForKeyboardInput(
     catalog,
@@ -20,6 +33,8 @@ export function deliverExtensionKeybind(
   );
   if (!action) return;
   event.preventDefault();
+  if (isCompanionToolAction(action.id) && !gestures.claimShortcut(input))
+    return;
   action.invoke();
 }
 
@@ -50,12 +65,21 @@ export function registerWindowActionDelivery(
   palette: () => ReturnType<typeof startCommandPalette> | undefined,
 ) {
   const contents = window.webContents;
+  const gestures = createCompanionDismissal(window);
   deliverKeybindsFromKeyEvents(
     contents,
     () => coreActionKeybinds(catalog()),
-    (action) => catalog()[action].invoke(),
+    (action, input) => {
+      if (isCompanionToolAction(action) && !gestures.claimShortcut(input))
+        return;
+      catalog()[action].invoke();
+    },
     process.platform,
-    capture,
+    {
+      release: (target) => capture.release(target),
+      intercept: (target, input) =>
+        capture.intercept(target, input) || gestures.interceptShortcut(input),
+    },
   );
   const invalidate = () => palette()?.invalidate(contents);
   window.on("blur", invalidate);

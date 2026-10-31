@@ -37,7 +37,9 @@ function keybindDeliveryHarness(
       },
     },
     () => activeKeybinds,
-    invoke,
+    (action) => {
+      invoke(action);
+    },
     platform,
   );
   const sendKey = (overrides: KeyboardInputOverrides) => {

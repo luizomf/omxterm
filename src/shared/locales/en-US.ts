@@ -27,6 +27,8 @@ export const englishMessages = {
   "menu.zoomOut": "Zoom Out",
   "menu.actualSize": "Actual Size",
   "menu.toggleSnippets": "Toggle Snippets",
+  "menu.toggleFiles": "Toggle Files",
+  "menu.toggleSshConnect": "Toggle SSH Connect",
   "menu.toggleTabBar": "Toggle Tab Bar",
   "menu.toggleAuxiliaryPanel": "Toggle Auxiliary Panel",
   "menu.toggleTitleBar": "Toggle Title Bar",

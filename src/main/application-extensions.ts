@@ -21,7 +21,10 @@ import { CatalogError, createExtensionCatalog } from "./extension-catalog";
 import { createCatalogAcquisition } from "./extension-catalog-acquisition";
 import { createExtensionLinkInstaller } from "./extension-link-install";
 import { applicationViews } from "./application-extension-views";
-import { extensionPresentation } from "./extension-presentation";
+import {
+  companionToolShortcut,
+  extensionPresentation,
+} from "./extension-presentation";
 import { MirrorSetupError } from "./mirror-typing-ipc";
 import { startExtensionViewHost } from "./extension-view-ipc";
 import {
@@ -367,6 +370,7 @@ export async function startApplicationExtensions(
       const view = entry.enabled && entry.digest && entry.manifest?.view;
       if (!view) return [];
       const presentation = extensionPresentation(entry.manifest!);
+      const shortcut = companionToolShortcut(entry.manifest!);
       const open = manager!.action({
         id: entry.id,
         generation: entry.generation,
@@ -379,6 +383,7 @@ export async function startApplicationExtensions(
           accelerator: null,
           palette: true,
           extension: true,
+          ...(shortcut ? { shortcut } : {}),
           invoke() {
             if (claim && !claim()) return;
             const source =

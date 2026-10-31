@@ -181,30 +181,34 @@ describe("recorded accelerators", () => {
 });
 
 describe("saving shortcuts", () => {
-  it("saves and resets the default-unbound auxiliary panel binding", async () => {
-    const view = await service('{ "version": 1 }\n');
-    expect(
-      (await view.service.snapshot()).keybinds?.toggleAuxiliaryPanel,
-    ).toEqual({ effective: null, state: "inherit" });
-    for (const choice of [
-      { state: "custom", accelerator: "Control+Alt+J" },
-      { state: "unbound" },
-      { state: "inherit" },
-    ] as const) {
-      const result = await view.service.changeKeybind({
-        action: "toggleAuxiliaryPanel",
-        choice,
+  it.each(["toggleAuxiliaryPanel", "toggleFiles", "toggleSshConnect"] as const)(
+    "saves and resets default-unbound %s without an installed tool",
+    async (action) => {
+      const view = await service('{ "version": 1 }\n');
+      expect((await view.service.snapshot()).keybinds?.[action]).toEqual({
+        effective: null,
+        state: "inherit",
       });
-      expect(result.status).toBe("saved");
-      expect(result.snapshot.keybinds?.toggleAuxiliaryPanel).toEqual({
-        effective: choice.state === "custom" ? choice.accelerator : null,
-        state: choice.state,
+      for (const choice of [
+        { state: "custom", accelerator: "Control+Alt+J" },
+        { state: "unbound" },
+        { state: "inherit" },
+      ] as const) {
+        const result = await view.service.changeKeybind({
+          action,
+          choice,
+        });
+        expect(result.status).toBe("saved");
+        expect(result.snapshot.keybinds?.[action]).toEqual({
+          effective: choice.state === "custom" ? choice.accelerator : null,
+          state: choice.state,
+        });
+      }
+      expect(JSON.parse(await readFile(view.file, "utf8"))).toEqual({
+        version: 1,
       });
-    }
-    expect(JSON.parse(await readFile(view.file, "utf8"))).toEqual({
-      version: 1,
-    });
-  });
+    },
+  );
 
   it("writes custom, null and inherited states without touching other entries", async () => {
     const view = await service(
@@ -289,7 +293,9 @@ describe("main-owned capture", () => {
     deliverKeybindsFromKeyEvents(
       contents,
       () => terminalDefaultKeybinds("linux"),
-      invoke,
+      (action) => {
+        invoke(action);
+      },
       "linux",
       capture,
     );

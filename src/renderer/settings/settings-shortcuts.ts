@@ -45,6 +45,8 @@ const MENU_KEYS: Readonly<
   actualSize: "menu.actualSize",
   toggleFullScreen: "menu.toggleFullScreen",
   toggleSnippets: "menu.toggleSnippets",
+  toggleFiles: "menu.toggleFiles",
+  toggleSshConnect: "menu.toggleSshConnect",
   toggleTabBar: "menu.toggleTabBar",
   toggleAuxiliaryPanel: "menu.toggleAuxiliaryPanel",
   toggleTitleBar: "menu.toggleTitleBar",

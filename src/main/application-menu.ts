@@ -78,6 +78,7 @@ export function coreActionMenuTemplate(
           .filter((action) => action.extension)
           .map((action) => ({
             label: action.label,
+            ...accelerator(action.accelerator),
             click: action.invoke,
           })),
         { type: "separator" },

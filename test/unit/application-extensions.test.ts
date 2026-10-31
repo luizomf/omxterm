@@ -341,6 +341,10 @@ it.each([
 );
 
 async function installSnippets() {
+  return installTool("omxterm.snippets", "Snippets");
+}
+
+async function installTool(id: string, title: string) {
   await writeFile(
     archive,
     packageArchive([
@@ -348,11 +352,11 @@ async function installSnippets() {
         name: "extension.json",
         data: JSON.stringify({
           ...manifest,
-          id: "omxterm.snippets",
+          id,
           view: {
             ...manifest.view,
-            action: "omxterm.snippets.open",
-            title: "Snippets",
+            action: `${id}.open`,
+            title,
           },
         }),
       },
@@ -362,6 +366,62 @@ async function installSnippets() {
   );
   expect(await request({ operation: "install" })).toMatchObject({ ok: true });
 }
+
+it.each([
+  ["omxterm.files", "toggleFiles"],
+  ["omxterm.ssh", "toggleSshConnect"],
+])(
+  "exposes %s's captured action through its fixed %s slot",
+  async (id, shortcut) => {
+    expect(service.actions()).toEqual([]);
+    await installTool(id, "Original title");
+    adapters.sendOpen.mockImplementation(() => {});
+    let directory = "/original";
+    service.registerWindow(window, () => ({
+      owner: window,
+      signal: new AbortController().signal,
+      terminalDirectory: directory,
+    }));
+    const [action] = service.actions();
+    expect(action).toMatchObject({
+      id: `${id}.open`,
+      shortcut,
+      label: "Original title",
+      accelerator: null,
+    });
+    action!.invoke();
+    const command = adapters.sendOpen.mock.calls[0]![2];
+    if (!isTerminalTabCommand(command) || command.action !== "open-extension")
+      throw new Error("Expected ordinary extension admission");
+    directory = "/replacement";
+    expect(adapters.activate).not.toHaveBeenCalled();
+    await request({ operation: "open", token: command.token, accepted: true });
+    const host = adapters.hosts[0]!;
+    expect(host.open).toHaveBeenCalledWith(
+      expect.objectContaining({ presentation: "panel" }),
+    );
+    expect(
+      await host.options.onRequest!(
+        { operation: "terminal-directory" },
+        new AbortController().signal,
+        { id: "hosted-view", isCurrentVisible: () => true },
+      ),
+    ).toEqual({ ok: true, directory: "/original" });
+    await request({ operation: "disable", id, generation: 1 });
+    expect(service.actions()).toEqual([]);
+    action!.invoke();
+    const stale = adapters.sendOpen.mock.calls[1]![2];
+    if (!isTerminalTabCommand(stale) || stale.action !== "open-extension")
+      throw new Error("Expected stale guarded admission");
+    await request({ operation: "open", token: stale.token, accepted: true });
+    expect(adapters.activate).toHaveBeenCalledOnce();
+    expect(
+      adapters.sendOpen.mock.calls.every(
+        (call) => (call[2] as { action: string }).action === "open-extension",
+      ),
+    ).toBe(true);
+  },
+);
 
 it.each(["absent", "disabled"])(
   "guides %s Snippets to management without executing code",

@@ -31,6 +31,8 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.zoomOut": "Diminuir Zoom",
   "menu.actualSize": "Tamanho Real",
   "menu.toggleSnippets": "Alternar Snippets",
+  "menu.toggleFiles": "Alternar Files",
+  "menu.toggleSshConnect": "Alternar SSH Connect",
   "menu.toggleTabBar": "Alternar Barra de Abas",
   "menu.toggleAuxiliaryPanel": "Alternar Painel Auxiliar",
   "menu.toggleTitleBar": "Alternar Barra de Título",

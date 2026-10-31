@@ -38,6 +38,8 @@ const snapshot = (find: {
     find,
     newTab: { effective: "Control+Shift+T", state: "inherit" },
     toggleAuxiliaryPanel: { effective: null, state: "inherit" },
+    toggleFiles: { effective: null, state: "inherit" },
+    toggleSshConnect: { effective: null, state: "inherit" },
   },
 });
 
@@ -189,6 +191,15 @@ describe("Shortcuts page", () => {
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
     ).toBe("Record shortcut for Toggle Auxiliary Panel");
+    for (const [action, title] of [
+      ["toggleFiles", "Files"],
+      ["toggleSshConnect", "SSH Connect"],
+    ]) {
+      expect(view.cells(action!)).toEqual(["None", "Default"]);
+      expect(view.button(action!, "record").getAttribute("aria-label")).toBe(
+        `Record shortcut for Toggle ${title}`,
+      );
+    }
     expect(view.cells("quit")).toEqual(["None", ""]);
     expect(view.button("find", "record").getAttribute("aria-label")).toBe(
       "Record shortcut for Find…",
@@ -250,6 +261,15 @@ describe("Shortcuts page", () => {
       "Atalhos",
     );
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Padrão"]);
+    for (const [action, title] of [
+      ["toggleFiles", "Files"],
+      ["toggleSshConnect", "SSH Connect"],
+    ]) {
+      expect(view.cells(action!)).toEqual(["Nenhum", "Padrão"]);
+      expect(view.button(action!, "record").getAttribute("aria-label")).toBe(
+        `Gravar atalho para Alternar ${title}`,
+      );
+    }
     expect(view.cells("quit")).toEqual(["Nenhum", ""]);
     expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", "Padrão"]);
     expect(

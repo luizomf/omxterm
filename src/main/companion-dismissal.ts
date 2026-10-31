@@ -1,15 +1,38 @@
 import type { BrowserWindow, Event, Input } from "electron";
 import { extensionViewIpc } from "../shared/extension-view";
+import type { KeybindKeyboardInput } from "./keybind-delivery";
+
+type CompanionDismissal = {
+  handle(
+    event: Event,
+    input: Input,
+    panelId?: string,
+    activationId?: string,
+  ): boolean;
+  claimActivation(id: string): void;
+  interceptShortcut(input: KeybindKeyboardInput): boolean;
+  claimShortcut(input: KeybindKeyboardInput): boolean;
+};
+const owners = new WeakMap<BrowserWindow, CompanionDismissal>();
 
 // One gesture belongs to the window, not the WebContents that received its
 // first press. Child blur is the expected focus transfer, not cancellation.
-export function createCompanionDismissal(window: BrowserWindow) {
+export function createCompanionDismissal(
+  window: BrowserWindow,
+): CompanionDismissal {
+  const existing = owners.get(window);
+  if (existing) return existing;
+  const shortcuts = new Set<string>();
   const contents = window.webContents;
   let owned: string | undefined;
   let activation: { id: string; identity: string } | undefined;
-  const release = () => {
+  const releaseDismissal = () => {
     owned = undefined;
     activation = undefined;
+  };
+  const release = () => {
+    releaseDismissal();
+    shortcuts.clear();
   };
   const handle = (
     event: Event,
@@ -21,9 +44,9 @@ export function createCompanionDismissal(window: BrowserWindow) {
     if (!down && input.type !== "keyUp") return false;
     const identity = input.code || input.key;
     if (owned === identity) {
-      if (down && !input.isAutoRepeat) release();
+      if (down && !input.isAutoRepeat) releaseDismissal();
       else {
-        if (!down) release();
+        if (!down) releaseDismissal();
         event.preventDefault();
         return true;
       }
@@ -51,8 +74,28 @@ export function createCompanionDismissal(window: BrowserWindow) {
     contents.removeListener("render-process-gone", release);
     window.removeListener("blur", release);
   });
-  return {
+  const owner: CompanionDismissal = {
     handle,
+    // The same physical press may start in core and finish in a native child,
+    // or vice versa. Modifier release and catalog changes do not release it.
+    interceptShortcut(input) {
+      const identity = input.code || input.key;
+      if (!shortcuts.has(identity)) return false;
+      if (input.type === "keyUp") {
+        shortcuts.delete(identity);
+        return true;
+      }
+      if (input.type !== "keyDown" && input.type !== "rawKeyDown") return false;
+      if (input.isAutoRepeat) return true;
+      shortcuts.delete(identity);
+      return false;
+    },
+    claimShortcut(input) {
+      const identity = input.code || input.key;
+      if (identity.length > 64 || shortcuts.size >= 256) return false;
+      shortcuts.add(identity);
+      return !input.isAutoRepeat;
+    },
     // A trusted semantic request claims the still-held Enter that reached its
     // own child. The initial press remains a DOM activation; only subsequent
     // repeats/release are swallowed across the child-to-core handoff.
@@ -62,4 +105,6 @@ export function createCompanionDismissal(window: BrowserWindow) {
       activation = undefined;
     },
   };
+  owners.set(window, owner);
+  return owner;
 }

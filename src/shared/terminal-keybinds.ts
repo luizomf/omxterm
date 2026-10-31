@@ -37,6 +37,8 @@ export const TERMINAL_ACTION_NAMES = [
   "actualSize",
   "toggleFullScreen",
   "toggleSnippets",
+  "toggleFiles",
+  "toggleSshConnect",
   "toggleTabBar",
   "toggleAuxiliaryPanel",
   "toggleTitleBar",
@@ -45,6 +47,13 @@ export const TERMINAL_ACTION_NAMES = [
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
+export type CompanionToolAction = "toggleFiles" | "toggleSshConnect";
+
+export function isCompanionToolAction(
+  action: string,
+): action is CompanionToolAction {
+  return action === "toggleFiles" || action === "toggleSshConnect";
+}
 
 // null disables an action's shortcut; the action stays in the menu.
 export type TerminalKeybinds = Readonly<
@@ -94,6 +103,8 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     actualSize: "CommandOrControl+0",
     toggleFullScreen: "Control+Command+F",
     toggleSnippets: "CommandOrControl+Shift+S",
+    toggleFiles: null,
+    toggleSshConnect: null,
     toggleTabBar: "CommandOrControl+Shift+B",
     toggleAuxiliaryPanel: null,
     toggleTitleBar: "CommandOrControl+Shift+D",
@@ -140,6 +151,8 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   actualSize: "Control+0",
   toggleFullScreen: "F11",
   toggleSnippets: "Control+Shift+S",
+  toggleFiles: null,
+  toggleSshConnect: null,
   toggleTabBar: "Control+Shift+B",
   toggleAuxiliaryPanel: null,
   toggleTitleBar: "Control+Shift+D",

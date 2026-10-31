@@ -41,7 +41,10 @@ export interface KeybindWebContents {
 export function deliverKeybindsFromKeyEvents(
   webContents: KeybindWebContents,
   keybinds: () => TerminalKeybinds,
-  invokeAction: (action: TerminalActionName) => void,
+  invokeAction: (
+    action: TerminalActionName,
+    input: KeybindKeyboardInput,
+  ) => void,
   platform: string = "darwin",
   capture?: Pick<KeybindCapture, "intercept" | "release">,
 ): void {
@@ -71,6 +74,6 @@ export function deliverKeybindsFromKeyEvents(
     if (action === undefined) return;
     // A delivered keybind must never also reach the Terminal Surface or PTY.
     event.preventDefault();
-    invokeAction(action);
+    invokeAction(action, input);
   });
 }

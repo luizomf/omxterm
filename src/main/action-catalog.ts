@@ -7,6 +7,8 @@ import {
   TERMINAL_ACTION_NAMES,
   terminalActionForKeyboardInput,
   type AcceleratorKeyboardInput,
+  type CompanionToolAction,
+  isCompanionToolAction,
   type TerminalActionName,
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
@@ -58,6 +60,8 @@ export type CoreActionId =
 export interface CoreAction {
   readonly id: string;
   readonly extension?: boolean;
+  // Assigned only by core composition for the two recognized companion tools.
+  readonly shortcut?: CompanionToolAction;
   readonly label: string;
   readonly accelerator: string | null;
   // These existing guarded callbacks own availability, target selection and
@@ -112,6 +116,8 @@ export function createCoreActionCatalog(
     zoomIn: action(t("menu.zoomIn"), actions.zoomInSelectedWindow),
     zoomOut: action(t("menu.zoomOut"), actions.zoomOutSelectedWindow),
     actualSize: action(t("menu.actualSize"), actions.resetSelectedWindowZoom),
+    toggleFiles: action(t("menu.toggleFiles"), () => {}, false),
+    toggleSshConnect: action(t("menu.toggleSshConnect"), () => {}, false),
     toggleSnippets: action(
       t("menu.toggleSnippets"),
       actions.toggleSelectedSnippets,
@@ -192,6 +198,7 @@ export function createCoreActionCatalog(
         (entry) =>
           entry.extension &&
           entry.id.includes(".") &&
+          !entry.shortcut &&
           !Object.hasOwn(definitions, entry.id),
       )
       .map((entry) => [
@@ -202,16 +209,26 @@ export function createCoreActionCatalog(
   return Object.freeze({
     ...contributed,
     ...(Object.fromEntries(
-      Object.entries(definitions).map(([id, definition]) => [
-        id,
-        Object.freeze({
+      Object.entries(definitions).map(([id, definition]) => {
+        const companion = isCompanionToolAction(id);
+        const installed = companion
+          ? extensions.find((entry) => entry.extension && entry.shortcut === id)
+          : undefined;
+        return [
           id,
-          ...definition,
-          accelerator: Object.hasOwn(keybinds, id)
-            ? keybinds[id as TerminalActionName]
-            : null,
-        }),
-      ]),
+          Object.freeze({
+            ...definition,
+            ...(installed ?? {}),
+            id,
+            accelerator:
+              companion && !installed
+                ? null
+                : Object.hasOwn(keybinds, id)
+                  ? keybinds[id as TerminalActionName]
+                  : null,
+          }),
+        ];
+      }),
     ) as Record<CoreActionId, CoreAction>),
   });
 }

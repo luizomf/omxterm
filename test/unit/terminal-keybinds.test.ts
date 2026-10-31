@@ -119,7 +119,11 @@ describe("terminal keybind accelerators", () => {
       const canonicals = TERMINAL_ACTION_NAMES.flatMap((action) => {
         const value = defaults[action];
         if (value === null) {
-          expect(action).toBe("toggleAuxiliaryPanel");
+          expect([
+            "toggleAuxiliaryPanel",
+            "toggleFiles",
+            "toggleSshConnect",
+          ]).toContain(action);
           return [];
         }
         expect(isValidAccelerator(value)).toBe(true);

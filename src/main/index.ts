@@ -219,8 +219,14 @@ app
           semanticInput,
           isTrustedSender: terminalIpcRouter.isTrustedSender,
           changed: () => rebuildMenu(),
-          keybind: (event, input) =>
-            deliverExtensionKeybind(actionCatalog, event, input),
+          keybind: (event, input, owner) =>
+            deliverExtensionKeybind(
+              actionCatalog,
+              event,
+              input,
+              owner,
+              keybindCapture,
+            ),
         });
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
         const backgroundEffects = createWindowBackgroundEffectsOwner(

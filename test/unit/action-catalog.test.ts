@@ -122,6 +122,11 @@ it.each(["en-US", "pt-BR"] as const)(
     for (const action of Object.values(catalog)) {
       expect(catalog[action.id]).toBe(action);
       const item = items.find((item) => item.click === action.invoke);
+      if (action.id === "toggleFiles" || action.id === "toggleSshConnect") {
+        expect(item).toBeUndefined();
+        expect(action.accelerator).toBeNull();
+        continue;
+      }
       expect(item?.label).toBe(action.label);
       expect(item?.accelerator ?? null).toBe(action.accelerator);
     }
@@ -139,6 +144,8 @@ it.each(["en-US", "pt-BR"] as const)(
         "selectAll",
         "find",
         "commandPalette",
+        "toggleFiles",
+        "toggleSshConnect",
         ...Array.from({ length: 9 }, (_, index) => `selectTab${index + 1}`),
       ].sort(),
     );
