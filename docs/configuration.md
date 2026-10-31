@@ -359,6 +359,8 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `actualSize`                | `CommandOrControl+0`         | `Control+0`           |
 | `toggleFullScreen`          | `Control+Command+F`          | `F11`                 |
 | `toggleSnippets`            | `CommandOrControl+Shift+S`   | `Control+Shift+S`     |
+| `toggleFiles`               | `null`                       | `null`                |
+| `toggleSshConnect`          | `null`                       | `null`                |
 | `toggleAuxiliaryPanel`      | `null`                       | `null`                |
 | `toggleTabBar`              | `CommandOrControl+Shift+B`   | `Control+Shift+B`     |
 | `toggleTitleBar`            | `CommandOrControl+Shift+D`   | `Control+Shift+D`     |
@@ -390,6 +392,15 @@ Example overriding a single shortcut:
 - Set an action to `null` to remove its shortcut. The action stays in the menu. OMXTerm stops using that key for the action, but another binding or your operating system may still use it. Leave an action out to keep its default.
 - Use literal punctuation characters (such as `Control+Shift+,`), except for `+`, which is written as `Plus`.
 - Each action needs its own shortcut. If two actions end up on the same key, including through a default, OMXTerm reports both actions and the key; pick another shortcut for one of them or set one to `null`. OMXTerm never changes another action's shortcut or your file for you. If you bind an action on Linux or Windows to a bare `Ctrl+<key>` that terminal programs use (like `Ctrl+C` or `Ctrl+D`), OMXTerm keeps the binding but shows a warning, since that key no longer reaches your shell.
+
+`toggleFiles` and `toggleSshConnect` are optional bindings for the existing Files
+and SSH Connect entry points, unbound by default. Configure them in Settings →
+Shortcuts even before installing the tools. Missing, disabled or unsupported tools
+do not consume their configured key; your binding remains saved and still counts
+for conflict validation. Available tools show the binding on their existing menu
+and palette entries. Holding either key invokes once: a selected-visible tool
+closes, a hidden/nonselected tool is revealed, and a closed tool opens fresh.
+Use `toggleAuxiliaryPanel` instead to hide/reveal without closing tools.
 
 For example, to use `F11` for Snippets instead of full screen:
 

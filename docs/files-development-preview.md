@@ -301,7 +301,11 @@ or changing their captured generation. This does not add an extension localizati
 SDK. Missing runtime/store infrastructure leaves terminals usable.
 
 Files appears in the shared palette, File menu and terminal context menu with no
-default or configurable shortcut. Terminal-popup actions must claim the same live,
+default shortcut. Host source supports an optional `toggleFiles` binding in
+Settings → Shortcuts, reusing that same entry point; it does not add a general
+extension shortcut API. Missing/disabled/unsupported tools do not consume their
+configured key. This host capability does not change published preview binaries.
+Terminal-popup actions must claim the same live,
 one-shot popup/window target as core actions. All explicit openings pass through
 core renderer modal admission before activation. Files and SSH Connect use one
 retained companion view per tool/window. Concurrent opens coalesce; later opens

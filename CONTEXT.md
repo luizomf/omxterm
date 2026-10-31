@@ -341,7 +341,9 @@ operations, retained companion state, management and active-backend normal Quit;
 public macOS distribution remains pending, not implied by installation admission.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
 display metadata, not a manifest platform fence or blanket native qualification. The published Linux0.4.0
-catalog remains unchanged. No startup code activation, default/configurable shortcut or stable SDK is implied;
+catalog remains unchanged. The host's optional `toggleFiles` shortcut is unbound
+by default and reuses the existing tool entry point; unavailable tools do not
+consume it. No startup code activation, default shortcut or stable SDK is implied;
 see [the preview contract](docs/files-development-preview.md) for qualification limits.
 
 **Extension View Host** — Internal owner of lazy native packaged-content views

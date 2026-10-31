@@ -71,6 +71,25 @@ This is the bounded core palette contribution to
 [#669](https://github.com/luizomf/omxterm/issues/669), not completion of its broader
 contributions or the planned Extension architecture.
 
+## Fixed companion-tool bindings
+
+Files and SSH Connect have two core-owned configurable slots, `toggleFiles` and
+`toggleSshConnect`, unbound by default. The catalog reuses their recognized,
+captured installed-action callbacks and preserves a single existing menu/palette
+entry. This is not an extension manifest accelerator or public registration API;
+generic contributed actions remain unbound.
+
+Unavailable tools retain editable configuration but have no active runtime
+binding or launch entry. Configuration collision validation remains independent
+of installation state. Invocation still crosses the existing target, generation
+and modal-admission boundaries, without automatic installation or enablement.
+
+These tool toggles invoke once per physical press. A window-owned gesture retains
+repeats/release across native-child closure and core focus handoff, rather than
+allowing repeated close/reopen or terminal input. Shortcut recording retains
+priority; unrelated repeatable actions are unchanged. Native qualification must
+exercise this route, not infer it from Escape or semantic Enter evidence.
+
 ## Maintenance boundary
 
 Matcher and duplicate-detection tests cover effective native identity, logical

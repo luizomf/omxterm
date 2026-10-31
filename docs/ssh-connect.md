@@ -9,8 +9,12 @@ builder produces `dist/extensions/ssh-0.3.0.omxext`, a SHA-256 sidecar and an
 unqualified source/tool receipt; existing outputs are never overwritten. Install
 the archive through Settings → Extensions and review the ordinary trusted-code
 warning. Open **SSH Connect** from File, the Command Palette or the terminal
-context menu. There is no new toolbar or default shortcut. Building an archive
-alone does not publish it.
+context menu. There is no new toolbar or default shortcut. Host source also
+supports an optional `toggleSshConnect` binding in Settings → Shortcuts, reusing
+the same entry point once per key press. Missing/disabled/unsupported tools do
+not consume that key. This host capability does not change published preview
+binaries or broaden SSH platform qualification. Building an archive alone does
+not publish it.
 
 Source version 0.3.0 requires host 0.24.0-dev.8 or later for its read-only
 appearance and interface-language subscriptions. Compact controls share the terminal's theme tokens;

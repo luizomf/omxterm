@@ -1377,7 +1377,8 @@ An optional `keybinds` object remaps application-chrome shortcuts for a fixed
 action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `find`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
-`toggleSnippets`, `toggleAuxiliaryPanel`, `toggleTabBar`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
+`toggleSnippets`, `toggleFiles`, `toggleSshConnect`, `toggleAuxiliaryPanel`,
+`toggleTabBar`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
 `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`, `focusPaneLeft`,
 `focusPaneRight`, `focusPaneUp`, `focusPaneDown`, `equalizePanes`, and
 `commandPalette`. Command Palette defaults to `CommandOrControl+Shift+P` on macOS
@@ -1398,8 +1399,27 @@ application menu displays and registers the effective accelerator. One internal
 Action Catalog defines core action labels, effective bindings and invocation
 callbacks for the native menu, Command Palette and main key matcher; the menu
 is not a separate behavior registry. There is no second shortcut system, and
-terminal control sequences inside the PTY are untouched. An
-effective keybind works even when the platform refuses to fire its menu
+terminal control sequences inside the PTY are untouched.
+
+`toggleFiles` and `toggleSshConnect` are fixed core shortcut slots, both defaulting
+to `null` on every platform. They reuse the exact installed Files/SSH action and
+its captured generation, target and modal-admission guards, with one existing
+File-menu/palette entry per available tool. Generic extension contributions do
+not gain configurable shortcuts. A missing, disabled or unsupported tool retains
+its editable configuration but has no launch entry or active shortcut: its key
+is not consumed for that tool. Collision validation remains independent of
+installation state. No backend is activated to determine availability and no
+installation or enablement is implicit; later activation failures use the
+existing unavailable handling.
+
+These two bindings follow ordinary tool-toggle semantics: close selected-visible
+content, reveal hidden/nonselected content, or open a fresh closed view. One
+physical press invokes once, retaining repeats and release across child/core
+focus transfer without sending them to the terminal or reopening the tool.
+Shortcut recording takes priority. Other actions keep their existing repeat
+behavior; Snippets and independent panel-toggle bindings are unchanged.
+
+An effective keybind works even when the platform refuses to fire its menu
 accelerator (macOS never delivers `Control+Tab` to a menu item): the main
 process invokes the same action from the key event itself, and a key that
 triggered a keybind this way is consumed — it never reaches the terminal as
