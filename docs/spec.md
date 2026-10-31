@@ -1922,8 +1922,10 @@ and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 ### Internal extension backend runtime
 
 A separately owned backend runtime consumes Installed Packages through an
-app-owned bootstrap. Normal macOS and Linux ARM64 builds include its artifacts and
-native lease and separate Files move addons. The latter uses Linux
+app-owned bootstrap. Normal macOS ARM64 and Linux ARM64/x64 builds include its
+artifacts and native lease addon. Linux x64 bundling is a packaging prerequisite,
+not production extension admission or a Snippets cutover. The separate Files move
+addon remains limited to macOS and Linux ARM64 and uses Linux
 `renameat2(RENAME_NOREPLACE)` or macOS `renameatx_np(RENAME_EXCL)` through the
 same bounded asynchronous interface, refusing unsupported filesystems and
 cross-device moves without an overwrite-capable fallback. This primitive does
@@ -2009,10 +2011,11 @@ distinguishes published bytes, controlled dev.11 qualification and the separatel
 passed public-HTTPS native checkpoint; admission does not qualify every host.
 Archives and build receipts are excluded from application packages. Build receipts
 bind final archive bytes to source/tool metadata without claiming qualification.
-macOS and Linux ARM64 package inspection exercises packaged store/lease/bootstrap
-resolution, not backend activation or the user-facing Files lifecycle. macOS
-requires both native addons unpacked under the complete ad-hoc application seal;
-both platforms exercise the Files no-clobber move/conflict primitive. The macOS
+macOS ARM64 and Linux ARM64/x64 package inspection exercises packaged
+store/lease/bootstrap resolution, not backend activation or the user-facing Files
+lifecycle. Native extension addons must be explicitly unpacked; macOS also
+requires the complete ad-hoc application seal. Only the ARM64 targets include and
+exercise the Files no-clobber move/conflict primitive. The macOS
 probe also checks the trash export/root refusal without executing a trash mutation; see
 [preview preparation](release.md#files-preview-preparation).
 Trusted children retain ordinary Node capabilities. Production/native/visual and

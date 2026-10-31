@@ -42,7 +42,7 @@ afterEach(() => {
 it.each([
   ["darwin", "arm64", true, true],
   ["linux", "arm64", true, true],
-  ["linux", "x64", false, false],
+  ["linux", "x64", true, false],
   ["win32", "arm64", false, false],
   ["win32", "x64", false, false],
   ["darwin", "x64", false, false],
@@ -114,16 +114,20 @@ it.each([
   },
 );
 
-it("unpacks the macOS lease and Files move addons explicitly with smart unpacking disabled", () => {
-  const config = parse(readFileSync("electron-builder.yml", "utf8")) as {
-    asar: { smartUnpack: boolean };
-    mac: { asarUnpack: string[] };
-  };
-  expect(config.asar.smartUnpack).toBe(false);
-  expect(config.mac.asarUnpack).toContain(
-    "dist/extension-runtime/extension-leases.node",
-  );
-  expect(config.mac.asarUnpack).toContain(
-    "dist/extension-runtime/files-move.node",
-  );
-});
+it.each(["mac", "linux"] as const)(
+  "unpacks the %s lease and Files move addons explicitly with smart unpacking disabled",
+  (platform) => {
+    const config = parse(readFileSync("electron-builder.yml", "utf8")) as {
+      asar: { smartUnpack: boolean };
+      mac: { asarUnpack: string[] };
+      linux: { asarUnpack: string[] };
+    };
+    expect(config.asar.smartUnpack).toBe(false);
+    expect(config[platform].asarUnpack).toContain(
+      "dist/extension-runtime/extension-leases.node",
+    );
+    expect(config[platform].asarUnpack).toContain(
+      "dist/extension-runtime/files-move.node",
+    );
+  },
+);

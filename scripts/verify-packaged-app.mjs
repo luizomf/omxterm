@@ -74,6 +74,7 @@ const extensionEntries = [
 ];
 
 function packagedExtensionEntries(platform, arch) {
+  if (platform === "linux" && arch === "x64") return extensionEntries;
   if (arch !== "arm64" || !["linux", "darwin"].includes(platform)) return [];
   return [...extensionEntries, "/dist/extension-runtime/files-move.node"];
 }
@@ -196,12 +197,19 @@ async function verifyPackagedExtensions(executable, asar) {
   ).filter((file) => file.startsWith("/dist/"))) {
     const prepared = await readFile(path.join(projectRoot, entry.slice(1)));
     const packaged = extractFile(asar, entry.slice(1));
-    // Final macOS ad-hoc signing changes native bytes, but not JS bundles.
-    if (process.platform === "darwin" && entry.endsWith(".node")) {
+    if (entry.endsWith(".node")) {
       if (!statFile(asar, entry.slice(1)).unpacked)
         throw new Error(`Packaged native extension must be unpacked: ${entry}`);
       const addon = path.join(`${asar}.unpacked`, entry.slice(1));
-      await inspectArchitecture(addon, "extension native module", "darwin");
+      await inspectArchitecture(
+        addon,
+        "extension native module",
+        process.platform,
+      );
+    }
+    // Final macOS ad-hoc signing changes native bytes, but not JS bundles.
+    if (process.platform === "darwin" && entry.endsWith(".node")) {
+      const addon = path.join(`${asar}.unpacked`, entry.slice(1));
       const { stdout } = await execFile("otool", ["-l", addon]);
       if (!/\bminos 12\.0\b/u.test(stdout))
         throw new Error("Extension native module must target macOS 12.0");
@@ -1179,7 +1187,7 @@ export async function verifyPackagedApplication(
         `Development/private-looking files were packaged: ${asarInspection.forbidden.join(", ")}`,
       );
 
-    if (["linux", "darwin"].includes(platform) && process.arch === "arm64")
+    if (packagedExtensionEntries(platform, process.arch).length > 0)
       await verifyPackagedExtensions(executable, asar);
 
     await Promise.all([

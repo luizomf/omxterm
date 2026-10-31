@@ -353,6 +353,14 @@ Desktop/GPU/installer and ordinary-user integration remain unverified, not gates
 for these lanes. `--windows-unpacked-only` is **not** headless: it still launches
 the application. See [hosted artifact delivery](release.md#hosted-x64-build-only-artifact-delivery).
 
+Linux x64 builds also bundle the preparatory backend/InstalledPackages runtime
+and explicitly unpack its native lease addon. Package verification (including
+`--inspection-only`) checks exact bundled bytes, native architecture/unpacking,
+and actual packaged Node-mode store/lease/bootstrap resolution, recording
+`.scratch/extensions-package.json`. It neither builds nor admits the ARM64-only
+Files move addon. Production Linux x64 extension activation and built-in Snippets
+remain unchanged; this is not a platform cutover or GUI qualification.
+
 macOS ARM64 package verification (also with `--inspection-only`) checks the
 unpacked extension lease and Files move addons, complete ad-hoc seal,
 architecture/deployment floor and packaged Node-mode store/lease/bootstrap resolution. Prepared and

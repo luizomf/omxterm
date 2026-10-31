@@ -339,6 +339,31 @@ describe("packaged application verifier", () => {
     ).toEqual({ missing: [], forbidden: [] });
   });
 
+  it("requires Linux x64 runtime prerequisites but refuses the ARM64-only Files addon", () => {
+    const runtime = extensionEntries.filter(
+      (entry) => !entry.endsWith("/files-move.node"),
+    );
+    expect(
+      inspectAsarEntries([...requiredEntries, ...runtime], "linux", "x64"),
+    ).toEqual({ missing: [], forbidden: [] });
+    for (const entry of runtime) {
+      expect(
+        inspectAsarEntries(
+          [...requiredEntries, ...runtime.filter((file) => file !== entry)],
+          "linux",
+          "x64",
+        ).missing,
+      ).toEqual([entry]);
+    }
+    expect(
+      inspectAsarEntries(
+        [...requiredEntries, ...extensionEntries],
+        "linux",
+        "x64",
+      ).forbidden,
+    ).toEqual(["/dist/extension-runtime/files-move.node"]);
+  });
+
   it("accepts only the win32-arm64 native runtime and rejects debug symbols on Windows", () => {
     expect(
       inspectAsarEntries(
@@ -492,7 +517,9 @@ describe("separately installed Files package inventory", () => {
       inspectAsarEntries(requiredEntries, "linux", "arm64").missing,
     ).toEqual(linuxExtensionEntries);
     expect(inspectAsarEntries(requiredEntries, "linux", "x64").missing).toEqual(
-      [],
+      linuxExtensionEntries.filter(
+        (entry) => !entry.endsWith("/files-move.node"),
+      ),
     );
     expect(
       inspectAsarEntries(

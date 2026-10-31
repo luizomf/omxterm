@@ -124,6 +124,8 @@ linux:
     - "!node_modules/node-pty/typings/**"
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
+    - dist/extension-runtime/extension-leases.node
+    - dist/extension-runtime/files-move.node
     - node_modules/node-pty/build/Release/pty.node
   target:
     - target: AppImage

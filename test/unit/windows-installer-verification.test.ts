@@ -16,7 +16,7 @@ function adapter() {
 }
 
 describe("exact Windows installer verification", () => {
-  it("accepts the reviewed footprint including macOS lease and Files move unpacking", async () => {
+  it("accepts the reviewed footprint including POSIX lease and Files move unpacking", async () => {
     const configuration = await readFile(
       new URL("../../electron-builder.yml", import.meta.url),
       "utf8",
@@ -25,7 +25,7 @@ describe("exact Windows installer verification", () => {
       inspectWindowsInstallerInputs(configuration, "26.15.3", "omxterm"),
     ).not.toThrow();
   });
-  it("keeps exact input guarding after the macOS native addon unpacking review", async () => {
+  it("keeps exact input guarding after the POSIX native addon unpacking review", async () => {
     const configuration = await readFile(
       new URL("../../electron-builder.yml", import.meta.url),
       "utf8",
@@ -71,6 +71,14 @@ describe("exact Windows installer verification", () => {
         configuration.replace(
           "    - dist/extension-runtime/files-move.node\n",
           "",
+        ),
+        "26.15.3",
+        "omxterm",
+      ],
+      [
+        configuration.replace(
+          "  asarUnpack:\n    - dist/extension-runtime/extension-leases.node\n    - dist/extension-runtime/files-move.node\n    - node_modules/node-pty/build/Release/pty.node",
+          "  asarUnpack:\n    - node_modules/node-pty/build/Release/pty.node",
         ),
         "26.15.3",
         "omxterm",

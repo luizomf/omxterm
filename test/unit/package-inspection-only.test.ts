@@ -183,7 +183,20 @@ it.each(["linux", "win32"])(
       "lib",
       chosenFile,
     );
+    const extensionFiles =
+      platform === "linux"
+        ? [
+            "dist/preload/extension-view.cjs",
+            "dist/extension-runtime/bootstrap.mjs",
+            "dist/extension-runtime/index.mjs",
+            "dist/extension-runtime/packages.mjs",
+            "dist/extension-runtime/extension-leases.node",
+          ]
+        : [];
     const entries = {
+      ...Object.fromEntries(
+        extensionFiles.map((file) => [file, "same licensed/icon bytes"]),
+      ),
       "package.json": '{"version":"1.2.3"}',
       [nodePtyMetadata]: '{"version":"1.2.0-beta.18"}',
       ...Object.fromEntries(
@@ -211,7 +224,16 @@ it.each(["linux", "win32"])(
       ...entries,
       [nodePtyMetadata]: '{"version":"9.9.9"}',
     });
+    const changedExtensionArchive = await tinyRuntimeArchive(
+      root,
+      "changed-extension",
+      {
+        ...entries,
+        "dist/extension-runtime/packages.mjs": "// wrong packaged store\n",
+      },
+    );
     let selectedArchive = validArchive;
+    let nativeExtensionUnpacked = true;
     const packagedPath = path.join(
       root,
       platform === "linux" ? "OMXTerm-1.2.3-x64.AppImage" : "win-unpacked",
@@ -304,6 +326,31 @@ it.each(["linux", "win32"])(
           ),
         );
         expect(options.env?.ELECTRON_RUN_AS_NODE).toBe("1");
+        if (args[0] === "--input-type=module") {
+          expect(platform).toBe("linux");
+          expect(args.slice(0, 3)).toEqual([
+            "--input-type=module",
+            "-e",
+            "same licensed/icon bytes",
+          ]);
+          expect(args.slice(3)).toEqual([
+            "--",
+            path.join(applicationRoot, "resources", "app.asar"),
+            root,
+            "1.2.3",
+          ]);
+          expect(options.env?.PATH).toBe(path.join(root, "empty-path"));
+          return {
+            stdout: JSON.stringify({
+              target: "linux-x64",
+              checks: [
+                "packaged-store-and-lease",
+                "bootstrap-missing-IPC-refusal",
+              ],
+            }),
+            stderr: "",
+          };
+        }
         expect(args).toEqual([
           path.resolve("scripts/inspect-packaged-runtime.cjs"),
           path.join(applicationRoot, "resources", "app.asar"),
@@ -334,7 +381,15 @@ it.each(["linux", "win32"])(
     // Native files, inventory, licenses and subprocesses remain controlled ports.
     vi.doMock("@electron/asar", () => ({
       extractFile: extract,
+      statFile: () => ({ unpacked: nativeExtensionUnpacked }),
       listPackage: async () => [
+        ...extensionFiles.map((file) => `/${file}`),
+        ...(platform === "linux"
+          ? [
+              "/node_modules/semver/package.json",
+              "/node_modules/yauzl/package.json",
+            ]
+          : []),
         "/dist/main/index.js",
         "/dist/preload/index.cjs",
         "/dist/renderer/application-icon.png",
@@ -380,6 +435,7 @@ it.each(["linux", "win32"])(
         path.join("node_modules", "node-pty", "lib", file),
       ]),
       [expectedAsar, nodePtyMetadata],
+      ...extensionFiles.map((file) => [expectedAsar, file]),
     ]);
     const nativeHelperCalls = () =>
       execute.mock.calls.filter(
@@ -405,6 +461,21 @@ it.each(["linux", "win32"])(
     }
     if (platform === "linux") {
       expect(launcher).toHaveBeenCalledTimes(4);
+      selectedArchive = changedExtensionArchive;
+      await expect(
+        verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+      ).rejects.toThrow("Packaged extension resource differs");
+      selectedArchive = validArchive;
+      nativeExtensionUnpacked = false;
+      await expect(
+        verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+      ).rejects.toThrow("Packaged native extension must be unpacked");
+      nativeExtensionUnpacked = true;
+      expect(
+        execute.mock.calls.filter(
+          ([, args]) => args[0] === "--input-type=module",
+        ),
+      ).toHaveLength(1);
       execute.mockResolvedValueOnce({
         stdout: "ELF 64-bit LSB executable, ARM aarch64",
         stderr: "",
