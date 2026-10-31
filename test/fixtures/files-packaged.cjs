@@ -88,6 +88,20 @@ function assertNormalBackendRetirement(child) {
   );
 }
 
+function deleteConfirmationReady(document) {
+  const editor = document.querySelector(".operation-editor");
+  if (!editor || editor.closest("[hidden], [inert]")) return false;
+  return (
+    editor.textContent.includes("cannot be undone") &&
+    [...editor.querySelectorAll("button")].some(
+      (button) =>
+        button.textContent === "Delete permanently" &&
+        !button.disabled &&
+        !button.closest("[hidden], [inert]"),
+    )
+  );
+}
+
 async function run(options) {
   inspect(options);
   currentRoot = options.root;
@@ -627,7 +641,7 @@ async function run(options) {
     await until(
       () =>
         view.executeJavaScript(
-          "document.querySelector('.operation-editor').textContent.includes('cannot be undone')",
+          `(${deleteConfirmationReady.toString()})(document)`,
         ),
       "delete confirmation",
     );
@@ -637,7 +651,7 @@ async function run(options) {
     await until(
       () =>
         view.executeJavaScript(
-          "document.querySelector('.operation-editor').textContent.includes('cannot be undone')",
+          `(${deleteConfirmationReady.toString()})(document)`,
         ),
       "fresh delete confirmation",
     );

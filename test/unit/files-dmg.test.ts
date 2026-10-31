@@ -19,6 +19,7 @@ let root: string, abort: AbortController;
 let values: NonNullable<ReturnType<typeof filesDmgInputs>>;
 const platform = process.platform,
   arch = process.arch;
+const getuidDescriptor = Object.getOwnPropertyDescriptor(process, "getuid");
 beforeEach(async () => {
   vi.resetAllMocks();
   root = await fs.mkdtemp(path.join(os.tmpdir(), "files-dmg-unit-"));
@@ -29,7 +30,10 @@ beforeEach(async () => {
     ...os.userInfo(),
     shell: "/bin/sh",
   });
-  vi.spyOn(process, "getuid").mockReturnValue(501);
+  Object.defineProperty(process, "getuid", {
+    configurable: true,
+    value: () => 501,
+  });
   await fs.writeFile(path.join(root, "dmg"), "dmg");
   await fs.writeFile(path.join(root, "archive"), "archive");
   values = {
@@ -82,6 +86,9 @@ beforeEach(async () => {
 afterEach(async () => {
   Object.defineProperty(process, "platform", { value: platform });
   Object.defineProperty(process, "arch", { value: arch });
+  if (getuidDescriptor)
+    Object.defineProperty(process, "getuid", getuidDescriptor);
+  else Reflect.deleteProperty(process, "getuid");
   vi.restoreAllMocks();
   await fs.rm(root, { recursive: true, force: true });
   for (const call of vi.mocked(runner.runNativeFixture).mock.calls)

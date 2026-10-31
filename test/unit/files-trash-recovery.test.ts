@@ -80,9 +80,10 @@ it("records source identity before dispatch and restores only the verified exact
     verified: false,
     restored: false,
   });
-  expect(
-    (await lstat(path.join(root, "trash-recovery.json"))).mode & 0o777,
-  ).toBe(0o600);
+  if (process.platform !== "win32")
+    expect(
+      (await lstat(path.join(root, "trash-recovery.json"))).mode & 0o777,
+    ).toBe(0o600);
   await rename(entry.source, entry.destination); // Controlled stand-in, not native qualification.
   await recovery.recover(entry, root, move);
   expect(move).toHaveBeenCalledExactlyOnceWith(entry.destination, entry.source);
