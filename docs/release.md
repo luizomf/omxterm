@@ -294,6 +294,12 @@ is needed for fixture/docs-only work; catalog evolution is a separate host chang
 
 ## Files macOS catalog publication
 
+Host dev.26 was published on 2026-10-31 as an immutable non-Latest preview;
+both draft/public assets, both raw endpoints, the new exact-DMG FULL verification
+and the separate six-check public-catalog checkpoint passed. See
+[actual identities, outcomes and limits](files-development-preview.md#macos-catalog-distribution).
+The sequence below governs future promotions, not a request to replay this delivery.
+
 Current source selects a separate complete schema1 endpoint,
 `distribution/official-extensions-darwin-arm64-v1.json`, only for macOS ARM64.
 This is an application change requiring a new host build, not a metadata update

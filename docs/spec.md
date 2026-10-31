@@ -1998,9 +1998,10 @@ and active-backend normal Quit. The separate immutable dev.21/Files0.5 releases
 and actual public Settings-link checkpoint are delivered; see
 [link-first evidence](files-development-preview.md#macos-link-first-distribution).
 That published dev.21 host still uses the legacy catalog URL. Current source
-selects Files0.5 from a separate complete macOS ARM64 endpoint; usable public
-discovery requires a new packaged/published host and its own public-catalog
-checkpoint. Earlier link and primitive evidence does not establish that checkpoint.
+selects Files0.5 from a separate complete macOS ARM64 endpoint. Published dev.26
+passed its own [public-catalog checkpoint](files-development-preview.md#macos-catalog-distribution)
+with three Official consents, retained PTY and normal joined Quit. Earlier link
+and primitive evidence remains separate, not relabeled as this checkpoint.
 The unchanged legacy catalog selects immutable Files0.4.0 for Linux ARM64 with host
 `>=0.24.0-dev.8` and API `0.1.x`, preserving historical0.1.0 local/link delivery.
 The [distribution evidence](files-development-preview.md#files-040-distribution-and-controlled-qualification)

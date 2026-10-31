@@ -96,8 +96,9 @@ and all immutable assets unchanged.
 
 ## Public-catalog mode
 
-Prepared for a **new macOS host containing target-specific catalog selection**;
-this is not an execution or publication receipt. Published dev.21 still selects
+The separate six-check public-catalog checkpoint passed on published dev.26
+on 2026-10-31; see [actual evidence and limits](../../docs/files-development-preview.md#macos-catalog-distribution).
+This procedure alone does not qualify other inputs. Published dev.21 still selects
 the legacy Linux Files offer. Its existing local/link qualification cannot prove
 new catalog discovery.
 

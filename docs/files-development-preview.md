@@ -36,8 +36,8 @@ Source now builds **Files 0.5.0 — ARM64 preview**, requiring host
 for optional host trash. This is a new archive identity, not a replacement or
 new qualification of immutable Files0.4.0. The legacy catalog remains Linux-only0.4.0;
 macOS published dev.21 uses the separately published link-first pair described below.
-Current source selects a separate macOS0.5 catalog; its new-host distribution
-checkpoint remains separate.
+Published dev.26 selects a separate macOS0.5 catalog; its
+[public-catalog checkpoint](#macos-catalog-distribution) passed separately.
 
 The opt-in [exact-DMG Files fixture](../test/fixtures/files-dmg.md) passed the
 bounded consumer checkpoint against the retained compatible dev.21 host.
@@ -380,6 +380,52 @@ Network errors expose fixed localized categories, never native error text, URL,
 query or archive content in logs. No download history, background updater,
 remote extension views or stable SDK is added.
 
+## macOS catalog distribution
+
+On 2026-10-31, [host dev.26](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.26)
+was published as an immutable, non-Latest macOS ARM64 preview at exact build/tag
+`4018e7d0c19234d2a675836972368657ee12c5a1`. Its DMG is 129,722,755 bytes,
+SHA-256 `f7bbe77b8dee9ca1cf15254f5a47b4a40902b46886920243171cf7bb6165f16d`.
+Both draft and anonymous public DMG/checksum downloads matched the qualified
+bytes. Stable0.23.0 remains Latest; original Files0.5 and all sealed releases
+remain unchanged.
+
+Use **Settings → Extensions → Browse official extensions → Files → Install**.
+The new complete macOS endpoint read back as SHA-256
+`3392b90da19bb004afefb7cd7d4a1640eb6614bf5a215191b16b4039ae518ca8`.
+The legacy endpoint remained byte-identical at
+`315c7208328b401a31944c97f8c259d8b449ab6c7185a1ded00c691d997c26f9`, preserving
+Linux Files0.4; SSH/Snippets entries are equal across both documents. Published
+dev.21 still uses its original link/local route, not the new endpoint.
+
+Complete independent source review found no supported findings. Format, lint,
+types and 4,740 headless tests passed (66 skipped). Fresh locked native build,
+DMG image verification, staged/mounted/detached-copy equality, ordinary **FULL**
+startup/PTY/privacy verification and ad-hoc seal passed. A separate read-only
+audit verified 1,264 source entries, 630 bundle entries and all 24 stage joins.
+
+The subsequent exact public-DMG six-check fixture passed with fresh anonymous
+host/archive downloads and real production HTTPS, without transport interception
+or local archive substitution. All three Files-card actions (Install, Reinstall,
+Install) required exact Files0.5 manifest/digest and Official catalog consent.
+Dormant installation/reinstallation, create/move/conflict with destination bytes
+and exact old-source absence, Disable/dormant Enable/Uninstall, the same PTY and
+Surface, and third activation alive before normal Quit passed. All three backends
+exited zero and closed; shell exit, normal main exit/streams and supervisor
+settlement joined. A separate read-only audit confirmed unchanged inputs/bundle,
+seal, absent owned mounts and no current scope processes.
+
+The first private invocation failed before tests/app launch because it duplicated
+Vitest's `--maxWorkers` option. Removing only the duplicate runner argument allowed
+the unchanged source/package checkpoint to pass; the failure remains recorded.
+Catalog Install/Reinstall and terminal captures were visually inspected. The Files
+capture was stale (still showing the old source name) and is **not final-move
+visual proof**; filesystem assertions passed independently. Synthetic Chromium
+input, controlled consent, configured endpoint rather than passive network trace,
+physical/Gatekeeper/notarization, deployment-floor, native-I/O cancellation and
+main-death limits remain. Earlier primitive/local lifecycle campaigns were not
+replayed or relabeled. Original release notes retain their publication-time status.
+
 ## Official catalog
 
 Settings → Extensions offers **Browse official extensions** and explicit Refresh.
@@ -394,9 +440,9 @@ for macOS ARM64; every other target retains `official-extensions-v1.json`.
 Only one endpoint is fetched, with no merge or fallback. The new endpoint
 selects original Files0.5 for macOS and copies SSH/Snippets unchanged; common
 entries must remain equal across both documents. Published dev.21 still embeds
-the legacy URL. It does not gain discovery from the new JSON: a newly packaged
-host and separate actual public-catalog checkpoint are required. Earlier
-link-first qualification is not evidence for this new route. Before
+the legacy URL. It does not gain discovery from the new JSON. Published dev.26
+and its [separate public-catalog checkpoint](#macos-catalog-distribution) now
+establish this route; earlier link-first qualification remains distinct. Before
 trust, downloaded length/SHA-256 and manifest ID/version/engine strings must match
 exactly; there is no fallback to unchecked link installation. The same native
 trusted-code warning applies. Official means project-maintained, not harmless,

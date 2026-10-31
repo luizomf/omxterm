@@ -348,7 +348,10 @@ prereleases; a separate actual Settings HTTPS-link installation checkpoint passe
 This is [macOS link-first distribution](docs/files-development-preview.md#macos-link-first-distribution),
 not macOS catalog discovery or broader platform qualification. Current source
 adds a separate macOS catalog endpoint; existing dev.21 binaries still use the
-legacy URL. New-host packaged/public discovery qualification remains separate.
+legacy URL. Published dev.26 passed its separate exact-package
+[public catalog checkpoint](docs/files-development-preview.md#macos-catalog-distribution),
+including three Official consents and normal joined Quit; prior link evidence
+is not relabeled.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
 display metadata, not a manifest platform fence or blanket native qualification. The published Linux0.4.0
 catalog remains unchanged. The host's optional `toggleFiles` shortcut is unbound
