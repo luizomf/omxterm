@@ -78,7 +78,12 @@ export interface ExtensionViewHostOptions {
   onViewRevoked?(id: string): void;
   onState?(state: ExtensionViewState, outcome?: ExtensionViewOutcome): void;
   onRendererProcess?(id: string, pid: number): void;
-  onKeybind?(event: Event, input: Input, owner: BrowserWindow): void;
+  onKeybind?(
+    event: Event,
+    input: Input,
+    owner: BrowserWindow,
+    companionOnly?: boolean,
+  ): void;
   interceptInput?(event: Event, input: Input, id: string): boolean;
   onRequest?(
     value: Value,

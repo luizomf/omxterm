@@ -1,11 +1,23 @@
 /* eslint-disable max-lines -- Keep the shared native adapter and its lifetime/IPC failure matrix together. */
 import { EventEmitter } from "node:events";
+import {
+  createCoreActionCatalog,
+  type TerminalApplicationMenuActions,
+} from "../../src/main/action-catalog";
+import { createKeybindCapture } from "../../src/main/keybind-capture";
+import {
+  deliverExtensionKeybind,
+  registerWindowActionDelivery,
+} from "../../src/main/window-action-delivery";
+import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 import { mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
   BrowserWindow,
+  Event,
+  Input,
   Session,
   WebContentsView,
   IpcMain,
@@ -401,6 +413,163 @@ it("publishes actual panel focus and reveals the retained identity", async () =>
   expect(() => host.reveal(descriptor)).toThrow("retired");
 });
 
+it.each([
+  ["toggleFiles", "omxterm.files.open", "child"],
+  ["toggleSshConnect", "omxterm.ssh.open", "child"],
+  ["toggleFiles", "omxterm.files.open", "core"],
+  ["toggleSshConnect", "omxterm.ssh.open", "core"],
+] as const)(
+  "routes %s (%s) Control+Escape from %s through native presentation and dismissal",
+  async (action, id, start) => {
+    const f = await fixture(false);
+    const invoke = vi.fn();
+    const other = vi.fn();
+    const capture = createKeybindCapture(process.platform);
+    const owner = f.options.owner;
+    const catalog = createCoreActionCatalog(
+      "OMXTerm",
+      new Proxy({} as TerminalApplicationMenuActions, { get: () => other }),
+      {
+        ...terminalDefaultKeybinds(process.platform),
+        [action]: "Control+Escape",
+        zoomIn: "Control+Alt+J",
+      },
+      undefined,
+      [
+        {
+          id,
+          shortcut: action,
+          extension: true,
+          label: "Tool",
+          accelerator: null,
+          palette: true,
+          invoke,
+        },
+      ],
+    );
+    registerWindowActionDelivery(
+      owner,
+      () => catalog,
+      capture,
+      () => undefined,
+    );
+    const ipc = {
+      handle: vi.fn(),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const host = startExtensionViewHost({
+      ...f.options,
+      ipcMain: ipc,
+      onKeybind: (event, input, window, companionOnly) =>
+        deliverExtensionKeybind(
+          catalog,
+          event,
+          input,
+          window,
+          capture,
+          companionOnly,
+        ),
+    });
+    cleanups.push(() => host.retire());
+    const descriptor = await host.open({ ...opening, presentation: "panel" });
+    const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([channel]) => channel === extensionViewIpc.present,
+    )![1] as (
+      event: unknown,
+      request: HostedContentPresentation,
+    ) => Promise<unknown>;
+    const sender = {
+      sender: f.owner.webContents,
+      senderFrame: f.owner.webContents.mainFrame,
+    };
+    const child = f.views[0]!.webContents;
+    const send = (
+      contents: Contents,
+      overrides: Record<string, unknown> = {},
+    ) => {
+      let defaultPrevented = false;
+      const event = {
+        get defaultPrevented() {
+          return defaultPrevented;
+        },
+        preventDefault: vi.fn(() => {
+          defaultPrevented = true;
+        }),
+      };
+      contents.emit("before-input-event", event, {
+        type: "keyDown",
+        key: "Escape",
+        code: "Escape",
+        control: true,
+        alt: false,
+        meta: false,
+        shift: false,
+        ...overrides,
+      });
+      return event.preventDefault;
+    };
+    if (start === "child") await handler(sender, present(descriptor.id));
+    f.owner.webContents.send.mockClear();
+    expect(
+      send(start === "child" ? child : f.owner.webContents),
+    ).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledOnce();
+    if (start === "core") await handler(sender, present(descriptor.id));
+    expect(send(child, { isAutoRepeat: true })).toHaveBeenCalledOnce();
+    expect(
+      send(child, { type: "keyUp", control: false }),
+    ).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(
+      f.owner.webContents.send.mock.calls.filter(
+        ([channel]) => channel === extensionViewIpc.dismissPanel,
+      ),
+    ).toEqual([]);
+    // A fresh plain Escape still hides, and owns its release after core handoff.
+    expect(send(child, { control: false })).toHaveBeenCalledOnce();
+    expect(f.owner.webContents.send).toHaveBeenCalledWith(
+      extensionViewIpc.dismissPanel,
+      descriptor.id,
+    );
+    expect(
+      send(f.owner.webContents, { type: "keyUp", control: false }),
+    ).toHaveBeenCalledOnce();
+    // Recording still precedes a new configured tool press.
+    capture.set(f.owner.webContents, {
+      captureId: "tool-escape",
+      active: true,
+    });
+    send(child);
+    send(child, { isAutoRepeat: true });
+    send(child, { type: "keyUp" });
+    expect(invoke).toHaveBeenCalledOnce();
+    send(child, { key: "j", code: "KeyJ", alt: true });
+    send(child, { key: "j", code: "KeyJ", alt: true, isAutoRepeat: true });
+    expect(other).toHaveBeenCalledTimes(2);
+    const second = await host.open({ ...opening, presentation: "panel" });
+    await handler(sender, present(second.id, 2));
+    expect(send(child)).not.toHaveBeenCalled(); // no action from nonselected child
+    const selected = f.views[1]!.webContents;
+    expect(send(selected)).toHaveBeenCalledOnce(); // the other tool can select this action
+    expect(invoke).toHaveBeenCalledTimes(2);
+    await handler(sender, present(null, 3));
+    expect(
+      send(f.owner.webContents, { isAutoRepeat: true }),
+    ).toHaveBeenCalledOnce();
+    expect(
+      send(f.owner.webContents, { type: "keyUp", control: false }),
+    ).toHaveBeenCalledOnce();
+    expect(send(child)).not.toHaveBeenCalled();
+    await handler(sender, present(descriptor.id, 4));
+    f.owner.isFocused.mockReturnValue(false);
+    expect(send(child)).not.toHaveBeenCalled();
+    f.owner.isFocused.mockReturnValue(true);
+    await host.retire();
+    expect(send(child)).not.toHaveBeenCalled(); // a retired view cannot originate a toggle
+    expect(invoke).toHaveBeenCalledTimes(2);
+  },
+);
+
 it.each([true, false])(
   "owns native Escape only for companion content (panel=%s)",
   async (panel) => {
@@ -669,7 +838,15 @@ async function fixture(createHost = true) {
     onRetired: retired,
     onViewRevoked: revoked,
     onState: state,
-    onKeybind: keybind,
+    onKeybind: (
+      event: Event,
+      input: Input,
+      window: BrowserWindow,
+      companionOnly?: boolean,
+    ) => {
+      // The ordinary fixture has no configured companion shortcuts.
+      if (!companionOnly) keybind(event, input, window);
+    },
   };
   const host = createHost ? createExtensionViewHost(options) : undefined;
   if (host) cleanups.push(() => host.retire());

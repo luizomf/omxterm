@@ -260,7 +260,9 @@ describe("standalone Alt opens the native application menu", () => {
     deliverKeybindsFromKeyEvents(
       view.webContents,
       () => bindings,
-      invoke,
+      (action) => {
+        invoke(action);
+      },
       "linux",
     );
     key(view, "keyDown");

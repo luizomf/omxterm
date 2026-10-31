@@ -219,13 +219,14 @@ app
           semanticInput,
           isTrustedSender: terminalIpcRouter.isTrustedSender,
           changed: () => rebuildMenu(),
-          keybind: (event, input, owner) =>
+          keybind: (event, input, owner, companionOnly) =>
             deliverExtensionKeybind(
               actionCatalog,
               event,
               input,
               owner,
               keybindCapture,
+              companionOnly,
             ),
         });
         const nativeTitleInset = terminalNativeTitleInset(process.platform);

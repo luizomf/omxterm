@@ -94,7 +94,9 @@ async function open() {
   deliverKeybindsFromKeyEvents(
     contents,
     () => terminalDefaultKeybinds("linux"),
-    invokeAction,
+    (action) => {
+      invokeAction(action);
+    },
     "linux",
     capture,
   );

@@ -170,6 +170,13 @@ export function startExtensionViewHost(
         input,
         id === sourceId && ownerRoute.panels.has(id) ? id : undefined,
         id === sourceId ? id : undefined,
+        () => {
+          // focusedId includes live, visible, selected child and native owner
+          // guards. A stale/hidden child must never originate a core action.
+          if (id !== sourceId) return false;
+          options.onKeybind?.(event, input, options.owner, true);
+          return event.defaultPrevented;
+        },
       );
     },
     onRetired(id) {

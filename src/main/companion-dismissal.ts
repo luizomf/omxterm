@@ -8,6 +8,7 @@ type CompanionDismissal = {
     input: Input,
     panelId?: string,
     activationId?: string,
+    beforeDismissal?: () => boolean,
   ): boolean;
   claimActivation(id: string): void;
   interceptShortcut(input: KeybindKeyboardInput): boolean;
@@ -39,6 +40,7 @@ export function createCompanionDismissal(
     input: Input,
     panelId?: string,
     activationId = panelId,
+    beforeDismissal?: () => boolean,
   ) => {
     const down = input.type === "keyDown" || input.type === "rawKeyDown";
     if (!down && input.type !== "keyUp") return false;
@@ -51,6 +53,9 @@ export function createCompanionDismissal(
         return true;
       }
     }
+    // Existing dismissal/semantic gestures keep ownership. Before a fresh
+    // Escape fallback, let core recording and companion shortcuts claim input.
+    if (beforeDismissal?.()) return true;
     if (activation?.identity === identity && !down) activation = undefined;
     if (activationId && down && !input.isAutoRepeat && input.key === "Enter")
       activation = { id: activationId, identity };

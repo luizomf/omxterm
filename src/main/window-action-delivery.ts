@@ -15,6 +15,7 @@ export function deliverExtensionKeybind(
   input: Input,
   owner: BrowserWindow,
   capture: KeybindCapture,
+  companionOnly = false,
 ) {
   if (event.defaultPrevented || !owner.isFocused()) return;
   const gestures = createCompanionDismissal(owner);
@@ -31,7 +32,7 @@ export function deliverExtensionKeybind(
     { ...input, altGr: hasNativeAltGr(input) },
     process.platform,
   );
-  if (!action) return;
+  if (!action || (companionOnly && !isCompanionToolAction(action.id))) return;
   event.preventDefault();
   if (isCompanionToolAction(action.id) && !gestures.claimShortcut(input))
     return;
