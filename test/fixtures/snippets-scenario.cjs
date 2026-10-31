@@ -145,6 +145,13 @@ async function runScenario({
       (child) => child.webContents === view,
     );
     assert.ok(native);
+    // Native hide/core focus precede the IPC ACK and renderer Hide commit.
+    const panelHidden = async () =>
+      !native.getVisible() &&
+      core.isFocused() &&
+      (await js(
+        "document.querySelector('.auxiliary-panel')?.hidden === true && !!document.activeElement?.closest('.terminal-surface')",
+      ));
     await until(
       () =>
         native.getVisible() && view.isFocused() && native.getBounds().width > 0,
@@ -232,10 +239,7 @@ async function runScenario({
       "window.__snippetsSearch = document.querySelector('input[type=search]'); window.__snippetsSearch.value = 'Exact run'; window.__snippetsSearch.dispatchEvent(new Event('input', {bubbles:true}));",
     );
     await click(core, ".auxiliary-hide");
-    await until(
-      () => !native.getVisible() && core.isFocused(),
-      "Hide retains native Snippets",
-    );
+    await until(panelHidden, "Hide retains native Snippets");
     menu("Toggle Auxiliary Panel");
     await until(
       () => native.getVisible() && view.isFocused(),
@@ -250,10 +254,7 @@ async function runScenario({
       true,
     );
     menu("Toggle Auxiliary Panel");
-    await until(
-      () => !native.getVisible() && core.isFocused(),
-      "independent panel hide",
-    );
+    await until(panelHidden, "independent panel hide");
     menu("Toggle Snippets");
     await until(
       () => native.getVisible() && view.isFocused(),
@@ -284,10 +285,7 @@ async function runScenario({
       // Hide first: selected-visible tool activation now destroys, not hides.
       if (native.getVisible()) {
         await click(core, ".auxiliary-hide");
-        await until(
-          () => !native.getVisible(),
-          "Hide acknowledged before reveal",
-        );
+        await until(panelHidden, "Hide acknowledged before reveal");
       }
       menu("Toggle Snippets");
       await until(
