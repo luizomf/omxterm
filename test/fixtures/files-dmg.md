@@ -134,6 +134,19 @@ trace** and makes no packaged assertion of absent startup/reopen requests. Only
 the controlled transport lane can assert its request counts. ROOT owns public
 byte verification, exact-package provenance and later actual execution.
 
+Public-link and public-catalog observers now gate `files.png` on the completed
+move notice, inactive/hidden editor, successful nonbusy listing of the exact
+fixture directory, destination row present and source row absent. They then
+await two animation-frame callbacks in that same child, recheck the predicates,
+and capture it before switching to Settings. This is render-opportunity ordering,
+not an acknowledgement of compositor submission or fresh pixels. Local legacy
+and the longer macOS lifecycle mode retain their different final-state capture
+path. Headless actual-page/caller tests cover refusal and capture ordering; they
+do not reproduce or resolve the historical stale image. Inspect the resulting
+image on the next bounded native consumption checkpoint before claiming improved
+paint evidence. No native replay or package rebuild is implied by this observer
+change; original excluded captures stay excluded.
+
 Inspect captures separately; a DOM success or named image is not final-operation
 paint proof. Existing synthetic-input, controlled-consent, native-I/O cancellation,
 physical/Gatekeeper and main-death limitations remain. Preserve the complete

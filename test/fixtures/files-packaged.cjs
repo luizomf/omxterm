@@ -516,6 +516,29 @@ async function run(options) {
       "mutation settled",
     );
   }
+  async function captureFilesOperation(view) {
+    // Public checkpoints use the current auto-refreshing page. Local legacy and
+    // macOS lifecycle campaigns retain their different final-state contract.
+    if (options.publicLink || options.publicCatalog) {
+      const ready = `(${listingReady(options.files)}) &&
+        !!${entryQuery(options.files, "moved.txt")} &&
+        !${entryQuery(options.files, "source.txt")} &&
+        !document.querySelector('.operation-editor').inert &&
+        document.querySelector('.operation-editor').hidden &&
+        [...document.querySelectorAll('[role=status]')].some(notice => notice.textContent === 'Operation completed.')`;
+      await until(
+        () => view.executeJavaScript(ready),
+        "completed Files move ready for capture",
+      );
+      // These are render opportunities, not compositor/pixel freshness proof.
+      // The enclosing native supervisor still bounds an unavailable renderer.
+      await view.executeJavaScript(`(async () => {
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        if (!(${ready})) throw Error('Files operation changed before capture');
+      })()`);
+    }
+    return view.capturePage();
+  }
   window.focus();
   await until(
     () => js("!!document.querySelector('.terminal-surface canvas')"),
@@ -877,7 +900,7 @@ async function run(options) {
   }
   await writeFile(
     path.join(options.evidence, "files.png"),
-    (await view.capturePage()).toPNG(),
+    (await captureFilesOperation(view)).toPNG(),
   );
   const requestsBeforeReopen = catalogTransport?.requests.length;
   await settings();
