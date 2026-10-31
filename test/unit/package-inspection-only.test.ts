@@ -339,6 +339,11 @@ it.each([
       rm: vi.fn(),
       mkdtemp: vi.fn(async () => root),
       stat: vi.fn(async (file: string) => {
+        if (
+          platform === "win32" &&
+          file.endsWith(path.join("release", `OMXTerm-1.2.3-${arch}.exe`))
+        )
+          throw new Error("Inspection must not access an installer");
         if (file.endsWith("default_app.asar"))
           throw Object.assign(new Error(), { code: "ENOENT" });
         return { isFile: () => true };

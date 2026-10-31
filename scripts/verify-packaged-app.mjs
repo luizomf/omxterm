@@ -547,6 +547,7 @@ async function inspectApplicationVersion({
   asar,
   platform,
   artifactPath,
+  requireWindowsInstaller,
 }) {
   const expectedVersion = await sourceVersion();
   let packagedPackage;
@@ -583,12 +584,14 @@ async function inspectApplicationVersion({
     bundleVersion: expectedVersion,
   });
   if (platform === "win32") {
-    const installer = path.join(
-      projectRoot,
-      "release",
-      `OMXTerm-${expectedVersion}-${process.arch}.exe`,
-    );
-    await stat(installer);
+    if (requireWindowsInstaller) {
+      const installer = path.join(
+        projectRoot,
+        "release",
+        `OMXTerm-${expectedVersion}-${process.arch}.exe`,
+      );
+      await stat(installer);
+    }
     return;
   }
   const expectedName = `OMXTerm-${expectedVersion}-${process.arch}.AppImage`;
@@ -1172,6 +1175,7 @@ export async function verifyPackagedApplication(
       asar,
       platform,
       artifactPath: packagedPath,
+      requireWindowsInstaller: !inspectionOnly && !windowsUnpackedOnly,
     });
 
     const preparedRuntimeFiles =

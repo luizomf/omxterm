@@ -383,8 +383,11 @@ This mode never launches a GUI, executes NSIS or installs the Linux helper. It
 performs package-content checks and loads the exact packaged addon through
 Electron Run-as-Node; Linux also runs bounded real PTY exec-status checks.
 Desktop/GPU/installer and ordinary-user integration remain unverified, not gates
-for these lanes. `--windows-unpacked-only` is **not** headless: it still launches
-the application. See [hosted artifact delivery](release.md#hosted-x64-build-only-artifact-delivery).
+for these lanes. Windows inspection and unpacked-only verification compare the
+embedded app version to the source without requiring an installer artifact;
+full Windows verification requires the versioned installer. `--windows-unpacked-only`
+is **not** headless: it still launches the application. See [hosted artifact
+delivery](release.md#hosted-x64-build-only-artifact-delivery).
 
 Linux x64 builds also bundle the preparatory backend/InstalledPackages runtime
 and explicitly unpack its native lease addon. Package verification (including

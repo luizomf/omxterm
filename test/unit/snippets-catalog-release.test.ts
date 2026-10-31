@@ -59,6 +59,7 @@ describe("published Snippets catalog candidate", () => {
         ["0.24.0-dev.16", true],
         ["0.24.0-dev.30", true],
         ["0.24.0-dev.31", true],
+        ["0.24.0-dev.32", true],
         ["0.24.0", true],
         ["0.24.1-dev.0", false],
         ["0.25.0-dev.0", false],
