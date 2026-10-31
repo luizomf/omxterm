@@ -263,18 +263,77 @@ composition assertion was not rerun; its earlier evidence remains separate.
 Scope is synthetic Chromium/X11 input, ANGLE SwiftShader, controlled consent and
 a plain-paste shell—not physical keyboard, Kitty, default GPU, compositor, full
 portable-suite, exact-AppImage GUI or public-HTTPS qualification. This is a source
-transition, not a published Linux x64 preview. Exact-package verification and
-public distribution remain separate gates. The existing
+transition, not a published Linux x64 preview. The separate exact-AppImage
+checkpoint below does not expand that historical source campaign's evidence or
+explain its blank preview capture. The shared
 [exact-AppImage adapter](../test/fixtures/snippets-packaged.md#exact-appimage-adapter)
-now admits Linux x64 alongside ARM64 through the same observer and ten-check
-scenario, retaining the untouched packaged entry/ASAR/runtime/archive boundary.
-Its test-only preview capture adds two renderer frame opportunities and stale-state
-revalidation before saving evidence. Focused headless coverage checks admission,
-receipt wording and capture ordering/refusal only; it does not establish native
-or visual success, and the earlier blank capture remains unresolved pending actual
-native image inspection. No host version, archive, catalog or original build receipt
-changes are required by this tooling. Do not distribute a host removing built-in
-access until the matching host/archive pair and migration gates below are satisfied.
+admits Linux x64 alongside ARM64 without replacing the packaged entry/ASAR/runtime
+or archive. Its capture barrier and acknowledged-Hide readiness checks are fixture
+changes, not product fixes; headless coverage alone is not native or visual
+qualification. Public distribution remains a separate gate. Do not distribute a
+host removing built-in access until the matching host/archive pair and migration
+gates below are satisfied.
+
+## Linux x64 exact-AppImage checkpoint
+
+A bounded, **unpublished** exact-package checkpoint passed on Linux x64 with
+host `0.24.0-dev.30` / Electron 43.8.1. Package source is
+`04943ae5f6af10bb7d1f482da780d011445cf7ae`; test-fixture source is
+`6a3728c1d9d3024a6499f4b8fa3971d74f539e33`. The latter changes only the shared
+scenario's completed-Hide wait and its headless regression. Product/build inputs
+are identical; the package was not rebuilt or relabeled as coming from that test
+revision.
+
+- AppImage: `OMXTerm-0.24.0-dev.30-x64.AppImage`, **127,994,725 bytes**, SHA-256
+  `8a1e73d16833a97819273c23d566cc2d46af6b6dddf3a475c616d1109a3a2a95`.
+- Packaged ASAR SHA-256:
+  `7aa7f7aa2a0fd0a91076d365354acf5e1867b7c62531c043fec0c294a48e4b75`.
+- Unchanged published Snippets `0.1.0`: **76,653 bytes**, SHA-256
+  `6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`.
+  Its original build receipt, catalog and archive remain unchanged.
+
+One executed native test passed all ten shared checks: absent/disabled guidance,
+ordinary trust and dormant installation, Close versus retained Hide, exact
+Insert/Run with held Enter repeat/release isolation and fresh Enter, preview
+intent overrides/Cancel focus, retained search, live en-US/pt-BR, and
+Disable/uninstall with unchanged catalog and usable Surface/PTY. Disable joined
+the backend with exit zero; normal Quit then joined the distinct baseline and
+scenario PTYs, with packaged main exit zero, closed streams and bounded owned
+settlement. This is not an active-backend-at-Quit test. The shared scenario's
+original exact-byte assertions passed; a separate raw PTY byte transcript was
+not exported.
+
+All three actual WebContents captures were inspected. The child shows its search,
+rows and Preview controls; the core shows terminal/panel chrome. The preview is
+not blank: literal command text, Cancel, Insert and Run controls are readable,
+with a visible Run focus outline and dimmed background. This establishes visible
+preview content for this exact controlled execution, not why the earlier source
+capture was blank or every rendering/theme/compositor mode.
+
+The same exact artifact separately passed the ordinary stock **FULL Linux
+verifier** in direct and extract-and-run modes, both with code zero/no signal,
+stream closure and owned settlement. The extract-and-run result belongs to the
+failure-propagation-checked wrapper, not a separate kernel wait of Electron main. That passing verifier subreceipt is
+separate from its enclosing diagnostic's failed retained-input guard; the latter
+remains failed. Earlier teardown and panel-reveal attempts also remain failed,
+with original causes unproven. The successful run does not retrospectively
+qualify them or prove that a fixture race caused the earlier native failure.
+
+Application stderr was not clean: one request logged `outcome-unknown` on a
+view-destruction stack, consistent with supported post-dispatch cancellation,
+but its method, timing and effect remain unknown. D-Bus errors were also
+retained. These were accepted as nonblocking explicit limitations alongside the independently passing
+scenario/continuity/shutdown checks, not proof that the interrupted request
+succeeded or that D-Bus behavior is qualified.
+
+Scope remains synthetic Chromium/X11 input, ANGLE SwiftShader, controlled consent
+and a controlled plain-paste shell. This does not qualify physical keyboards,
+natural autorepeat, Kitty, default GPUs, physical-desktop/compositor behavior,
+account-shell/bracketed-paste behavior, public acquisition, other platforms or the
+full portable suite. The Snippets adapter itself does not qualify FUSE/helper
+installation; the separately tested FULL modes remain distinct. No host release,
+catalog promotion or distributed Linux x64 cutover is performed by this
+checkpoint; Windows and the remaining #741 gates stay open.
 
 ## Preview coverage and remaining platforms
 

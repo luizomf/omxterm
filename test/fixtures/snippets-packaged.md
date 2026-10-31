@@ -156,8 +156,15 @@ AppImage/archive/ASAR hashes are rechecked even on failure. Successful completio
 requires normal Quit, actual main exit and joined process ownership; failed roots
 and evidence are retained. Extraction does not qualify FUSE/helper installation
 or public acquisition. Run the ordinary Linux package verifier separately on
-the same exact artifact; the Snippets campaign does not replace it. No package,
-catalog, public-HTTPS or Files qualification follows from headless tests.
+the same exact artifact; the Snippets campaign does not replace it. The bounded
+[Linux x64 exact-AppImage checkpoint](../../docs/snippets-migration.md#linux-x64-exact-appimage-checkpoint)
+records package-source and test-fixture identities separately, its ten-check and
+actual-preview evidence, reused FULL modes and retained diagnostic limitations.
+A later fixture-only revision does not imply an artifact rebuild. Shared Hide
+waits require native hide/core focus **and** committed renderer panel hiding and
+terminal DOM focus before another reveal; native effects alone can precede the
+Hide acknowledgement. Reveal/input oracles and timeouts remain unchanged. No
+package, catalog, public-HTTPS or Files qualification follows from headless tests.
 
 All adapters observe new `node-pty` instances at their existing event-forwarding
 prototype seam and forward writes unchanged. This avoids assuming that replacing
