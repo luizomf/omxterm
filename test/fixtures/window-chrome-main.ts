@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { createTranslator } from "../../src/shared/i18n";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { createWindowBackgroundEffectsOwner } from "../../src/main/window-background-effects";
 import { registerWindowChrome } from "../../src/main/window-chrome";
 import { applicationMenuForWindow } from "../../src/main/native-application-menu";
@@ -65,6 +66,9 @@ import {
   observeExtensionFixtureOutput,
   exerciseExtensionViews,
 } from "./extension-view-scenario";
+
+// Match production's Linux fallback permission before readiness/backend creation.
+applyChromiumGpuPolicy(app.commandLine);
 
 let extensionClipboard:
   ((action: "copy" | "paste" | "selectAll") => boolean) | undefined;

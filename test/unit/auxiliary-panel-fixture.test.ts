@@ -10,9 +10,15 @@ it("bundles the auxiliary native scenario and production renderer headlessly", a
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-panel-build-"));
   try {
     await buildFixture(root);
-    expect(await readFile(path.join(root, "main.cjs"), "utf8")).toContain(
-      "--fixture-auxiliary-only",
+    const main = await readFile(path.join(root, "main.cjs"), "utf8");
+    expect(main).toContain("--fixture-auxiliary-only");
+    // The custom entrypoint must retain production's permission-only GPU policy.
+    // Platform/switch behavior is covered in chromium-gpu-policy.test.ts.
+    const gpuPolicy = main.search(
+      /applyChromiumGpuPolicy\(import_electron\d*\.app\.commandLine\)/,
     );
+    expect(gpuPolicy).toBeGreaterThan(-1);
+    expect(main.indexOf(".whenReady()")).toBeGreaterThan(gpuPolicy);
     const fixtureRenderer = await readFile(
       path.join(root, "renderer/index.js"),
       "utf8",
