@@ -29,6 +29,8 @@ available. Stable 0.23.0, Windows and Linux x64 retain built-in Snippets. Follow
 preview packages share qualification. The earlier
 [macOS ARM64 composition](macos-extension-composition.md) fixture remains separate
 from Snippets qualification and does not qualify macOS Files/SSH.
+[Linux x64 production composition](linux-x64-extension-composition.md) shares that
+minimal fixture while preserving built-in Snippets and existing package restrictions.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

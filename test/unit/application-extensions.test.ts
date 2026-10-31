@@ -293,7 +293,9 @@ afterEach(async () => {
 it.each([
   ["darwin", "arm64", true],
   ["darwin", "x64", false],
-  ["linux", "x64", false],
+  ["linux", "arm64", true],
+  ["linux", "x64", true],
+  ["linux", "arm", false],
   ["win32", "arm64", false],
 ] as const)(
   "production admission on %s %s is %s",
@@ -337,7 +339,7 @@ it.each([
       expect(adapters.consent).not.toHaveBeenCalled();
       return;
     }
-    expect(usesOptionalSnippets(platform, arch)).toBe(true);
+    expect(usesOptionalSnippets(platform, arch)).toBe(arch === "arm64");
     expect(await request({ operation: "install" })).toMatchObject({
       ok: true,
       entries: [{ enabled: true, local: "dormant" }],

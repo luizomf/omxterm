@@ -305,7 +305,7 @@ review, support or a safety guarantee.
 
 **Installed Packages** — The internal module that owns local archive validation,
 immutable installed versions, aggregate registry transactions, installation
-generations and deferred cleanup. It is consumed by the Linux ARM64 and
+generations and deferred cleanup. It is consumed by the Linux ARM64/x64 and
 macOS ARM64 application composition, but does not itself own management UI or execution. See the
 [foundation contract](docs/extension-installation-foundation.md).
 
@@ -375,7 +375,7 @@ transfers exact text to a core-captured Surface, not a PTY handle or raw key rou
 retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit
-official-catalog browsing and HTTPS extension archive installation on Linux ARM64
+official-catalog browsing and HTTPS extension archive installation on Linux ARM64/x64
 and macOS ARM64, through bounded main-owned acquisition and
 captured-byte trust. No startup/reopen catalog, telemetry or background update
 requests are made. macOS composition alone does not broaden published catalog

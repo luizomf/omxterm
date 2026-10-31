@@ -7,15 +7,18 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import observation from "./snippets-observer.cjs";
-import scenario from "./macos-composition-scenario.cjs";
+import scenario from "./extension-composition-scenario.cjs";
 
 const root = import.meta.dirname;
 const fixture = {
   ...JSON.parse(await readFile(path.join(root, "fixture.json"), "utf8")),
   root,
 };
-assert.equal(process.platform, "darwin");
-assert.equal(process.arch, "arm64");
+assert.ok(
+  (process.platform === "darwin" && process.arch === "arm64") ||
+    (process.platform === "linux" && process.arch === "x64"),
+);
+assert.equal(fixture.optionalSnippets, process.platform === "darwin");
 await mkdir(path.join(root, "config/omxterm"), { recursive: true });
 await writeFile(
   path.join(root, "config/omxterm/config.json"),
@@ -55,7 +58,7 @@ void ready
           assert.deepEqual(child.exit, { code: 0, signal: null });
         result.checks.push("ordinary-quit-joins-active-backend-and-pty");
         console.log(
-          "MACOS_COMPOSITION_RESULT:" +
+          "EXTENSION_COMPOSITION_RESULT:" +
             JSON.stringify({ ...result, archiveSha256 }),
         );
       } catch (error) {

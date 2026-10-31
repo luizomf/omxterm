@@ -1731,7 +1731,7 @@ input/output, clipboard data, environment contents, configuration contents,
 executable names, command arguments, commands, titles, secrets, or transcripts.
 
 The application makes remote requests only for deliberate official-catalog browsing
-and HTTPS extension archive installation on Linux ARM64 and macOS ARM64.
+and HTTPS extension archive installation on Linux ARM64/x64 and macOS ARM64.
 macOS source composition includes the qualified optional Snippets transition;
 published catalog target restrictions remain unchanged (see [qualification scope](macos-extension-composition.md)).
 Main selects the complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`,
@@ -1912,7 +1912,7 @@ in main.
 
 The internal Installed Packages module implements local archive
 validation/installation, compatibility, immutable version pins, generation-based
-admission, disable/tombstones and deferred physical cleanup. Linux ARM64 and
+admission, disable/tombstones and deferred physical cleanup. Linux ARM64/x64 and
 macOS ARM64 consume it through production Settings with captured-byte trust.
 This foundation itself owns neither extension execution nor catalog/network
 acquisition or a public SDK. Main owns HTTPS acquisition separately; terminal ownership is unchanged. Its implemented interface and
@@ -1923,8 +1923,12 @@ and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 
 A separately owned backend runtime consumes Installed Packages through an
 app-owned bootstrap. Normal macOS ARM64 and Linux ARM64/x64 builds include its
-artifacts and native lease addon. Linux x64 bundling is a packaging prerequisite,
-not production extension admission or a Snippets cutover. The separate Files move
+artifacts and native lease addon. Linux x64 now admits explicit extension
+installation and activation through the existing production owners; its
+[composition qualification](linux-x64-extension-composition.md) remains distinct
+from earlier module, hosted-view and package checks. Built-in Snippets and its
+starter kit are unchanged; catalog/manifests retain their target restrictions.
+The separate Files move
 addon remains limited to macOS and Linux ARM64 and uses Linux
 `renameat2(RENAME_NOREPLACE)` or macOS `renameatx_np(RENAME_EXCL)` through the
 same bounded asynchronous interface, refusing unsupported filesystems and

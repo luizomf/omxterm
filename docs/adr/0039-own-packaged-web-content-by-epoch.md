@@ -145,8 +145,9 @@ There is no per-view process-isolation promise.
 The host module itself does not own installation, catalogs or backend activation.
 The separately installed [Files development preview](../files-development-preview.md)
 composes production Settings, shared actions, backends and this host/reader/tab seam.
-Preparatory [macOS ARM64 composition](../macos-extension-composition.md) uses
-these same owners with a minimal installed-package qualification fixture, not Files.
+Preparatory [macOS ARM64 composition](../macos-extension-composition.md) and
+[Linux x64 composition](../linux-x64-extension-composition.md) use
+these same owners with a shared minimal installed-package qualification fixture, not Files.
 Its phase-specific product evidence is separate from host-module qualification;
 this host module exposes no public SDK and performs no catalog acquisition.
 The installed-package adapter and ordinary browser retirement must be qualified

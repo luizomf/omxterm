@@ -24,13 +24,14 @@ The selected adapter adds a small per-target native build obligation, including 
 ## Current integration and qualification
 
 The [foundation contract](../extension-installation-foundation.md) owns interfaces,
-limits, builds and error behavior. Linux ARM64 and macOS ARM64 application startup constructs
+limits, builds and error behavior. Linux ARM64/x64 and macOS ARM64 application startup constructs
 installation/runtime infrastructure without activating installed code. Execution,
 web-content hosting, acquisition and trust UI remain consumer responsibilities;
 [Files composition](../files-development-preview.md#owned-composition-modules)
 documents their integration. Installation and enable remain dormant. Separate
 extension archives are not bundled into the host. [macOS composition](../macos-extension-composition.md)
-is preparatory, not a Files qualification or Snippets migration. Terminal ownership and ADR 0018
+and [Linux x64 composition](../linux-x64-extension-composition.md)
+are separate from Files qualification or Snippets migration. Terminal ownership and ADR 0018
 are unchanged; the [specification](../spec.md#configuration-and-local-state) owns
 the application network policy.
 

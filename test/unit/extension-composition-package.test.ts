@@ -3,13 +3,13 @@ import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { InstalledPackages } from "../../src/installed-packages/installed-packages";
-import { macosCompositionPackage } from "../fixtures/macos-composition-package";
+import { compositionPackage } from "../fixtures/extension-composition-package";
 
 it("installs the native composition fixture through actual archive validation without execution", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "composition-package-"));
   try {
     const archive = path.join(root, "fixture.omxext");
-    await writeFile(archive, macosCompositionPackage());
+    await writeFile(archive, compositionPackage());
     const packages = await InstalledPackages.open({
       root: path.join(root, "store"),
       runtime: { appVersion: "0.24.0-dev.14", apiVersion: "0.1.0" },

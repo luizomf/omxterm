@@ -6,50 +6,61 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
-import { macosCompositionPackage } from "../fixtures/macos-composition-package";
+import { compositionPackage } from "../fixtures/extension-composition-package";
 
-const enabled = process.env.OMXTERM_MACOS_COMPOSITION === "1";
+const enabled = process.env.OMXTERM_EXTENSION_COMPOSITION === "1";
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 
 it.skipIf(!enabled)(
-  "qualifies macOS production composition with a real installed package and joined Quit",
+  "qualifies production composition with a real installed package and joined Quit",
   { timeout: 150_000 },
   async (testContext) => {
-    assert.equal(process.platform, "darwin");
-    assert.equal(process.arch, "arm64");
+    assert.ok(
+      (process.platform === "darwin" && process.arch === "arm64") ||
+        (process.platform === "linux" && process.arch === "x64"),
+    );
+    const optionalSnippets = process.platform === "darwin";
     const executable = createRequire(import.meta.url)("electron") as string;
     const entry = path.resolve("dist/main/index.js");
     const entrySha256 = digest(await readFile(entry));
     const { version } = JSON.parse(await readFile("package.json", "utf8")) as {
       version: string;
     };
-    const bytes = macosCompositionPackage();
+    const bytes = compositionPackage();
     const archiveSha256 = digest(bytes);
-    const evidence = process.env.OMXTERM_MACOS_COMPOSITION_EVIDENCE;
+    const evidence = process.env.OMXTERM_EXTENSION_COMPOSITION_EVIDENCE;
     if (evidence) {
       assert.ok(path.isAbsolute(evidence));
       await mkdir(evidence, { recursive: true });
       await writeFile(path.join(evidence, "composition.omxext"), bytes);
     }
     const root = await mkdtemp(
-      path.join(tmpdir(), "omxterm-macos-composition-"),
+      path.join(tmpdir(), "omxterm-extension-composition-"),
     );
     let preparationOwned = false;
     const result = await runNativeFixture({
       executable,
-      args: [root, "-e", "/bin/sh", "-i"],
+      args: [
+        ...(process.platform === "linux"
+          ? ["--no-sandbox", "--ozone-platform=x11"]
+          : []),
+        root,
+        "-e",
+        "/bin/sh",
+        "-i",
+      ],
       root,
       timeout: 120_000,
       testContext,
       prepare: async () => {
         preparationOwned = true;
         await cp(
-          "test/fixtures/macos-composition.mjs",
+          "test/fixtures/extension-composition.mjs",
           path.join(root, "main.mjs"),
         );
         for (const name of [
-          "macos-composition-scenario.cjs",
+          "extension-composition-scenario.cjs",
           "snippets-observer.cjs",
         ])
           await cp(path.join("test/fixtures", name), path.join(root, name));
@@ -61,7 +72,13 @@ it.skipIf(!enabled)(
         await writeFile(archive, bytes);
         await writeFile(
           path.join(root, "fixture.json"),
-          JSON.stringify({ source: process.cwd(), entry, archive, evidence }),
+          JSON.stringify({
+            source: process.cwd(),
+            entry,
+            archive,
+            evidence,
+            optionalSnippets,
+          }),
         );
       },
     }).catch(async (error: unknown) => {
@@ -86,13 +103,15 @@ it.skipIf(!enabled)(
     });
     const receipts = result.stdout
       .split("\n")
-      .filter((line) => line.startsWith("MACOS_COMPOSITION_RESULT:"));
+      .filter((line) => line.startsWith("EXTENSION_COMPOSITION_RESULT:"));
     expect(receipts).toHaveLength(1);
     expect(
-      JSON.parse(receipts[0]!.slice("MACOS_COMPOSITION_RESULT:".length)),
+      JSON.parse(receipts[0]!.slice("EXTENSION_COMPOSITION_RESULT:".length)),
     ).toEqual({
       checks: [
-        "optional-snippets-management-no-activation",
+        optionalSnippets
+          ? "optional-snippets-management-no-activation"
+          : "built-in-snippets-preserved-no-activation",
         "ordinary-install-trust-dormancy",
         "explicit-activation-hosted-backend-and-editing",
         "disable-uninstall-retained-surface-pty",

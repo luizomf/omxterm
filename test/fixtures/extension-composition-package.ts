@@ -2,7 +2,7 @@ import { packageArchive } from "./extension-package-archive";
 
 // Deliberately not Files or Snippets: this private fixture exercises ordinary
 // install/activation without advertising a native move primitive or migration.
-export function macosCompositionPackage() {
+export function compositionPackage() {
   return packageArchive([
     {
       name: "extension.json",

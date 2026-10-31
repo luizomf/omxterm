@@ -1,6 +1,7 @@
 # Internal extension backend runtime
 
-This internal runtime lazily activates installed backends for Linux ARM64 and
+This internal runtime lazily activates installed backends for Linux ARM64,
+[Linux x64 production composition](linux-x64-extension-composition.md) and
 [macOS ARM64 production composition](macos-extension-composition.md). Consumers include [Files](files-development-preview.md),
 [SSH Connect](ssh-connect.md), [Saved Layout](saved-layout.md) and
 [Mirror Typing](mirror-typing.md). Application startup constructs infrastructure,

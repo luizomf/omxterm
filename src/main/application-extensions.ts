@@ -241,8 +241,9 @@ export async function startApplicationExtensions(
   );
   const catalogLoads = createCatalogAcquisition(catalog);
   const supported =
-    (process.platform === "linux" || process.platform === "darwin") &&
-    process.arch === "arm64";
+    (process.platform === "linux" &&
+      (process.arch === "arm64" || process.arch === "x64")) ||
+    (process.platform === "darwin" && process.arch === "arm64");
   // Broken extension infrastructure must not prevent terminal startup.
   const initialized = supported
     ? await applicationManager(options, lifetime.signal).catch(() => undefined)

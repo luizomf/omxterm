@@ -104,21 +104,37 @@ async function runScenario({ window, fixture, ptys, children, approvalCount }) {
       "window.__compositionCanvas = document.querySelector('.terminal-surface canvas')",
     );
     menu("Toggle Snippets");
-    await until(
-      () =>
-        js(
-          "document.querySelector('#settings-tab-extensions')?.getAttribute('aria-selected') === 'true' && document.querySelector('.settings-snippets-notice')?.hidden === false",
-        ),
-      "absent optional Snippets opens management",
-    );
+    if (fixture.optionalSnippets) {
+      await until(
+        () =>
+          js(
+            "document.querySelector('#settings-tab-extensions')?.getAttribute('aria-selected') === 'true' && document.querySelector('.settings-snippets-notice')?.hidden === false",
+          ),
+        "absent optional Snippets opens management",
+      );
+      assert.equal(
+        await js("document.querySelectorAll('.snippets-view').length"),
+        0,
+      );
+      await closeSettings();
+      checks.push("optional-snippets-management-no-activation");
+    } else {
+      await until(
+        () =>
+          js(
+            "!!document.querySelector('.snippets-view') && document.querySelector('.auxiliary-panel')?.hidden === false",
+          ),
+        "built-in Snippets remains available",
+      );
+      menu("Toggle Snippets");
+      await until(
+        () => js("document.querySelector('.auxiliary-panel')?.hidden === true"),
+        "built-in Snippets closes",
+      );
+      checks.push("built-in-snippets-preserved-no-activation");
+    }
     assert.equal(hosted().length, 0);
     assert.equal(children.length, 0);
-    assert.equal(
-      await js("document.querySelectorAll('.snippets-view').length"),
-      0,
-    );
-    await closeSettings();
-    checks.push("optional-snippets-management-no-activation");
     await management();
     await button("Install local .omxext…");
     await installed();

@@ -209,14 +209,15 @@ build receipt is not native installed-host qualification; see the guide's
 
 The [internal extension backend runtime](extension-backend-runtime.md) has an
 explicit `npm run build:extension-runtime` artifact and actual native process/store
-tests. Normal macOS and Linux ARM64 `npm run build` also includes the runtime
-and native lease and Files move addons for the
-[Files preview](files-development-preview.md). Linux ARM64 and preparatory macOS
-ARM64 application startup construct infrastructure without activating installed
-code; explicit shared actions activate it. The opt-in
-[macOS production-composition fixture](macos-extension-composition.md#installed-package-production-fixture)
-uses an ordinary build and a minimal installed archive, without selecting the
-installed Snippets implementation or implying macOS Files support.
+tests. Normal macOS ARM64 and Linux ARM64/x64 `npm run build` includes the runtime
+and native lease addon; the Files move addon remains ARM64-only for the
+[Files preview](files-development-preview.md). Those targets construct application
+infrastructure without activating installed code; explicit shared actions activate it.
+The opt-in shared production-composition fixture has distinct
+[macOS](macos-extension-composition.md#installed-package-production-fixture) and
+[Linux x64](linux-x64-extension-composition.md#installed-package-production-fixture)
+qualification boundaries. It uses an ordinary build and a minimal installed archive,
+without changing Snippets selection or implying Files support.
 Files remains a separately built archive.
 The runtime's default integration wrapper launches real Electron/Node children even
 without opening windows; use an assigned native environment. No application
