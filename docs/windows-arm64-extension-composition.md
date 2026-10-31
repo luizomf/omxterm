@@ -8,10 +8,11 @@ starter kit. Windows x64 remains outside this admission. The separate Files
 move primitive remains unsupported on Windows, with no overwrite fallback.
 
 A bounded ordinary-user, source-launched Windows ARM64 composition checkpoint
-passed with the limits below. It does not establish compatibility of existing
-published archives, a Snippets cutover, Windows x64, packaged-addon/installer
-inclusion, public catalog consumption, physical input, or full portable
-qualification. Existing released hosts and archives are unchanged.
+passed with the limits below. A separate [packaged runtime checkpoint](#packaged-runtime-checkpoint)
+inspected one exact unpacked ARM64 app directory. Neither establishes
+compatibility of existing published archives, a Snippets cutover, Windows x64,
+installer behavior, packaged GUI composition, public catalog consumption,
+physical input or full portable qualification. Existing releases are unchanged.
 
 ## Installed-package production fixture
 
@@ -77,9 +78,7 @@ reported no cleanup errors. The test archive SHA-256 was
 Source and 16 runtime/build artifacts matched before and after; a subsequent
 bounded identity snapshot found all 29 recorded owner identities absent. The
 MSVC `.lib`/`.exp` intermediates remained in the native output, not the source
-root. Windows packaging now excludes runtime compiler/linker intermediates and
-explicitly unpacks the lease addon. The exact Windows package and installer
-remain separate, unqualified checks.
+root. This source checkpoint alone did not inspect a package or installer.
 
 The actual hosted capture visibly shows an input, caret and focus outline; the
 separate core capture shows application chrome, tabs and Close. Fixture heading
@@ -100,4 +99,46 @@ not physical input, physical Quit UI, hardware/default GPU or broad Windows
 qualification. Earlier elevated Windows store/runtime passes retain their older
 source and elevation limits. The preceding `5acf0be` prepare failed its POSIX
 path fixture and remains a failure; the corrected `14464ba` run is separate.
-No release, catalog, installed Snippets migration or package qualification follows.
+No release, catalog, installed Snippets migration or package result follows
+from that source test alone.
+
+## Packaged runtime checkpoint
+
+🤖 AI-assisted.
+
+A separate non-elevated Interactive/Limited Windows ARM64 task built and
+inspected an unpacked app directory from exact source
+`7f9fde17b6e966fec07bed5e168cc99d086ec15e` (`0.24.0-dev.32`). This is not
+the earlier `14464ba` source-launched GUI fixture. The package task verified
+1,280 source entries before and after, completed the ordinary native build and
+passed 113 focused tests across ten files without skips. Native ARM64 Node was
+`26.12.1`; the packaged Electron was `43.8.1` with Node `24.22.0`.
+
+The inspection compared the prepared extension runtime and packaged bytes,
+verified ARM64 PE architecture and the lease addon's explicit ASAR unpacking,
+and found no `.lib`, `.exp` or `.obj` files in the ASAR or output tree. The
+ASAR SHA-256 was
+`1f15ef5df6787d35c8726148045fcaf14fe54a63cc971c19f7cd9d4adc7a5a65`;
+the unpacked `extension-leases.node` SHA-256 was
+`92a10ac42bc6947c70c55df3cae0896bc2c54dfe712264dcd7d4f0ceecf3899f`.
+The staged app executable SHA-256 was
+`8ae41dba589a59490e569317efd20c1db1657c5535c042eabf2eee1404cbb431`.
+The packaged Electron in Node mode acquired and released a native lease,
+opened an empty Installed Packages store, resolved the bootstrap to its
+missing-IPC refusal and loaded the packaged node-pty addon. This did not
+activate an installed extension or create a ConPTY session.
+
+All nine direct task steps recorded exit, close and both stream EOFs. A later
+snapshot found the runner and nine recorded step PIDs absent; the task did not
+record their creation identities or census arbitrary descendants. npm
+reported deprecation and install-script-approval warnings; the controlled
+installer-transaction unit tests printed four replacement warnings without
+running NSIS. An SSH key-exchange warning and legacy-encoded PowerShell progress
+were retained. The previous `695f560` package attempt failed three focused
+ASAR-path tests and remains a failed attempt; the later corrected run is separate.
+
+This checkpoint did not launch the packaged GUI, build or execute an NSIS
+installer, publish an artifact or catalog, migrate Snippets, admit the Windows
+Files move addon, or qualify Windows x64 or full portable behavior. The separate
+source-composition result and this inspection cannot be combined into a claim
+of packaged GUI composition.

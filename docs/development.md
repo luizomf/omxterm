@@ -403,11 +403,11 @@ its `.lib`, `.exp` and `.obj` build intermediates. The inspection-only verifier
 requires the extension runtime and dependencies, checks native architecture and
 unpacking, compares prepared/package bytes, and runs the packaged Electron
 Node-mode store/lease/bootstrap probe. It does not admit the Files move addon or
-change Windows x64 admission. Ordinary-user token and symlink prerequisites
-remain separate checks on the assigned Windows host. The exact Windows ARM64
-package is not qualified until these checks actually run; inspection does not
-execute NSIS or qualify graphical composition, installer behavior or Snippets
-migration.
+change Windows x64 admission. One exact unpacked ARM64 app passed this
+[inspection-only checkpoint](windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
+under a non-elevated Interactive/Limited account, including ordinary-user symlink
+access. Inspection does not execute NSIS or qualify graphical composition,
+installer behavior or Snippets migration.
 
 macOS ARM64 package verification (also with `--inspection-only`) checks the
 unpacked extension lease and Files move addons, complete ad-hoc seal,

@@ -1930,10 +1930,10 @@ app-owned bootstrap. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64 build
 include its artifacts and native lease addon. Windows ARM64 source admits the
 same explicit management and activation while retaining built-in Snippets. Its
 [bounded native source composition](windows-arm64-extension-composition.md#evidence-boundary)
-passed separately from the still-unqualified Windows packaging. Windows ARM64
-packaging explicitly unpacks the lease addon and its inspection-only verifier
-checks packaged runtime bytes and Node-mode store/lease/bootstrap loading; the
-exact target package still requires native qualification. Linux x64 now admits explicit extension
+passed separately from an [unpacked Windows ARM64 package inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint).
+That inspection checked runtime bytes, lease-addon unpacking and packaged
+Node-mode store/lease/bootstrap loading, not packaged GUI activation or an
+installer. Linux x64 now admits explicit extension
 installation and activation through the existing production owners; its
 [composition qualification](linux-x64-extension-composition.md) remains distinct
 from earlier module, hosted-view and package checks. That historical composition
