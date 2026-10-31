@@ -43,6 +43,7 @@ function harness(
   const original = new Error("controlled native route failure");
   const events: string[] = [];
   const app = Object.assign(new EventEmitter(), {
+    commandLine: { appendSwitch: vi.fn() },
     setPath() {},
     whenReady: async () => {},
     isActive: vi.fn(() => {
@@ -109,6 +110,9 @@ function harness(
       ipcMain: {},
     },
     "node:fs": { mkdirSync() {}, writeSync },
+    "../../src/main/chromium-gpu-policy": {
+      applyChromiumGpuPolicy: vi.fn(),
+    },
     "../../src/main/terminal-window": {
       terminalWindowOptions: () => ({ webPreferences: {} }),
     },

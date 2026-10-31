@@ -91,6 +91,7 @@ it.each([
       ...change,
     };
     const require = createRequire(import.meta.url);
+    const switches: string[] = [];
     let constructors = 0,
       stderr = "";
     let completed: (() => void) | undefined;
@@ -127,9 +128,16 @@ it.each([
         if (id === "electron")
           return {
             app: {
+              commandLine: {
+                appendSwitch(name: string) {
+                  switches.push(name);
+                },
+              },
               setPath() {},
               on() {},
-              whenReady: async () => {},
+              whenReady: async () => {
+                expect(switches).toEqual(["enable-unsafe-swiftshader"]);
+              },
               exit() {
                 completed!();
               },
@@ -162,6 +170,7 @@ it.each([
       },
     });
     await done;
+    expect(switches).toEqual(["enable-unsafe-swiftshader"]);
     expect(stderr).toContain(message);
     expect(constructors).toBe(expectedConstructors);
   },
