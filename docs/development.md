@@ -109,9 +109,11 @@ npm.cmd run build
 The example path is a placeholder, not an included library. The build uses
 locked `node-api-headers`, delay-loads `node.exe` against the running
 Node/Electron executable, and neither downloads nor provisions an import
-library or compiler. Native ARM64 Node and a matching Visual C++ runtime are
-required. Windows x64 does not select this ordinary-build runtime; the separate
-explicit runtime build has its own target-native prerequisites. The
+library or compiler. The MSVC import library and export sidecars are build
+intermediates kept in the selected native output directory; runtime loads the
+`.node` addon, not those sidecars. Native ARM64 Node and a matching Visual C++
+runtime are required. Windows x64 does not select this ordinary-build runtime;
+the separate explicit runtime build has its own target-native prerequisites. The
 [Windows composition fixture](windows-arm64-extension-composition.md) describes
 its additional native evidence boundary; source admission is not package or
 installer qualification.

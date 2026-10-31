@@ -30,6 +30,7 @@ vi.mock("../../scripts/build-macos-window-blur.mjs", () => ({
   buildMacOSWindowBlur: calls.blur,
 }));
 
+const filesTrashNative = /[/\\]native[/\\]files-trash-macos\.mm$/u;
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const arch = Object.getOwnPropertyDescriptor(process, "arch")!;
 afterEach(() => {
@@ -79,9 +80,7 @@ it.each([
         );
         expect(args).not.toContain("-shared");
         expect(args).not.toContain("-fPIC");
-        expect(args).toContainEqual(
-          expect.stringMatching(/\/native\/files-trash-macos\.mm$/),
-        );
+        expect(args).toContainEqual(expect.stringMatching(filesTrashNative));
         expect(
           args.slice(
             args.indexOf("-framework"),
@@ -113,6 +112,16 @@ it.each([
     } else expect(runtimeBuild).toBeUndefined();
   },
 );
+
+it.each([
+  ["POSIX", "/project/native/files-trash-macos.mm"],
+  ["Windows", "C:\\project\\native\\files-trash-macos.mm"],
+])("recognizes the macOS native source on a %s host", (_host, source) => {
+  expect(source).toMatch(filesTrashNative);
+  expect(source.replace("native", "native-other")).not.toMatch(
+    filesTrashNative,
+  );
+});
 
 it.each(["mac", "linux"] as const)(
   "unpacks the %s lease and Files move addons explicitly with smart unpacking disabled",

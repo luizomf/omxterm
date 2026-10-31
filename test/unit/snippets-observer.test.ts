@@ -125,7 +125,7 @@ describe("Snippets fixture observation", () => {
   });
 
   it("refuses a nonpackaged backend before spawn and records exit separately from stream close", () => {
-    const h = harness();
+    const h = harness(123, path.posix);
     const observation = h.observe();
     const fork = h.childProcess.fork as unknown as (
       ...args: unknown[]
@@ -176,13 +176,17 @@ describe("Snippets fixture observation", () => {
       }),
     ).toThrow();
     expect(h.originalFork).not.toHaveBeenCalled();
-    fork(
-      path.win32.join(asar, "dist", "extension-runtime", "bootstrap.mjs"),
-      [],
-      {
-        execPath: executable,
-      },
+    const bootstrap = path.win32.join(
+      asar,
+      "dist",
+      "extension-runtime",
+      "bootstrap.mjs",
     );
+    expect(() =>
+      fork(bootstrap, [], { execPath: "C:\\wrong\\omxterm.exe" }),
+    ).toThrow();
+    expect(h.originalFork).not.toHaveBeenCalled();
+    fork(bootstrap, [], { execPath: executable });
     h.child.emit("exit", 0, null);
     h.child.emit("close");
     expect(observation.children).toHaveLength(1);

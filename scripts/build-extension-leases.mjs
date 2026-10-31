@@ -50,6 +50,7 @@ export async function buildExtensionLeases(outputDirectory) {
       "delayimp.lib",
       library,
       `/OUT:${addon}`,
+      `/IMPLIB:${path.join(output, "extension-leases.lib")}`,
     ];
   } else if (process.platform === "darwin" || process.platform === "linux") {
     command =
@@ -77,7 +78,12 @@ export async function buildExtensionLeases(outputDirectory) {
   } else {
     throw new Error("Unsupported extension lease platform");
   }
-  execFileSync(command, args, { stdio: "pipe", timeout: 60_000 });
+  execFileSync(command, args, {
+    stdio: "pipe",
+    timeout: 60_000,
+    // Keep MSVC's generated export and import files with the native output.
+    ...(process.platform === "win32" ? { cwd: output } : {}),
+  });
 }
 
 if (
