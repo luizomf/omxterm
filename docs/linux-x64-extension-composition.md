@@ -9,10 +9,11 @@ startup. Other unsupported targets retain the explicit unavailable result.
 
 This #712 prerequisite was delivered with built-in Snippets and its starter kit
 intact. The subsequent [Linux x64 Snippets source transition](snippets-migration.md#linux-x64-source-transition)
-is separate; neither establishes a stable SDK or distributed cutover. The separate Files native move
-addon remains ARM64-only. Published manifests/catalog target restrictions and
-immutable releases are unchanged; admitting host infrastructure does not qualify
-an existing archive for this target. No automatic installation, activation or
+is separate; neither alone established a stable SDK or distributed cutover. The
+later [published dev.30 preview](snippets-migration.md#linux-x64-published-preview-and-catalog-candidate)
+has its own exact-pair evidence. The separate Files native move addon remains
+ARM64-only. Admitting host infrastructure alone does not qualify an existing
+archive for this target; published manifests and immutable releases remain unchanged. No automatic installation, activation or
 fallback implementation is introduced.
 
 ## Installed-package production fixture

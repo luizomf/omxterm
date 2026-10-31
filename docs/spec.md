@@ -551,13 +551,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
   below full-width title/tab chrome. Linux ARM64/x64 and macOS ARM64 source use the
   separately installed Snippets extension; other targets retain the built-in view.
-  The published Linux ARM64 `0.24.0-dev.11` and macOS ARM64 `0.24.0-dev.16`
-  previews use optional Snippets; stable `0.23.0` retains the built-in view.
-  Both previews offer the same immutable Snippets archive through the official
+  The published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and
+  Linux x64 `0.24.0-dev.30` previews use optional Snippets; stable `0.23.0` retains
+  the built-in view. The ARM64 previews offer the same immutable archive through the official
   catalog on `darwin-arm64` and `linux-arm64`, retaining local/offline installation.
   Exact public catalog readback and separate bounded packaged public-HTTPS
-  checkpoints passed. Source, exact-DMG/FULL, publication and catalog-consumption
-  evidence remain distinct in the
+  checkpoints passed. Linux x64 uses the local archive while its catalog promotion
+  and packaged public-HTTPS checkpoint remain separate. Source, exact-DMG/FULL,
+  publication and catalog-consumption evidence remain distinct in the
   [migration guide](snippets-migration.md#macos-arm64-catalog-delivery). The existing
   command remains the sole menu/palette entry, including remapped/null bindings.
   Without an enabled installation, it opens Extensions management with an
@@ -1732,12 +1733,14 @@ executable names, command arguments, commands, titles, secrets, or transcripts.
 
 The application makes remote requests only for deliberate official-catalog browsing
 and HTTPS extension archive installation on Linux ARM64/x64 and macOS ARM64.
-macOS source composition includes the qualified optional Snippets transition;
-published catalog target restrictions remain unchanged (see [qualification scope](macos-extension-composition.md)).
-Main selects the complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`,
-and the unchanged legacy schema1 catalog for every other target. Common
+macOS source composition includes the qualified optional Snippets transition
+(see [qualification scope](macos-extension-composition.md)). Main selects the
+complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
+schema1 catalog for every other target. Common
 SSH/Snippets entries remain identical; macOS selects Files0.5 while legacy
-Linux clients retain Files0.4. There is no merge or endpoint fallback.
+Linux clients retain Files0.4. The source catalog candidate adds `linux-x64` to
+Snippets; public endpoint readback and packaged public-HTTPS consumption remain
+separate. There is no merge or endpoint fallback.
 The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
@@ -1790,8 +1793,9 @@ capability does not install an optional Snippets package or cut over any platfor
 Snippets UI/CSS and bounded catalog client. Its separate action is withheld from
 production; Linux ARM64/x64 and macOS ARM64 source composition route
 the existing Snippets command to the optional installed companion or Extensions
-guidance. Linux x64 source migration does not establish exact-package qualification,
-catalog availability or distributed cutover. Other targets retain the built-in view.
+guidance. Linux x64 source migration alone does not establish exact-package
+qualification, catalog availability or distributed cutover. Other targets retain
+the built-in view.
 Native qualification uses unchanged production composition. Native child
 logical activity is separate from temporary visibility, and committed language
 and explicit search/restore focus intent preserve controls across overlays.
@@ -1954,8 +1958,10 @@ qualification](snippets-migration.md#macos-arm64-source-transition) does not qua
 macOS Files or itself establish host publication. The separately
 [published macOS ARM64 `0.24.0-dev.16` preview](snippets-migration.md#macos-arm64-published-preview)
 uses optional Snippets `0.1.0`, available through the official catalog or local
-archive installation. Stable `0.23.0` and published Windows/Linux x64 hosts retain
-built-in Snippets. Linux x64 source selects the optional tool; remaining platform gates in [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
+archive installation. The published Linux x64 `0.24.0-dev.30` preview also uses
+the optional tool; its catalog and public-HTTPS checkpoints remain separate. Stable
+`0.23.0` and published Windows hosts retain built-in Snippets. Remaining platform
+gates in [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
 still apply. Isolated foundation/runtime builds remain available.
 Explicit activation through the application manager lazily forks one
 standard Node ChildProcess per active extension/application runtime using bundled

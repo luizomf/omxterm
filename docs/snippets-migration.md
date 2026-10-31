@@ -1,14 +1,14 @@
 # Optional Snippets migration
 
-The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
-and [OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16)
+The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
+[OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16),
+and [OMXTerm 0.24.0-dev.30 Linux x64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30)
 use the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
-All are immutable non-Latest prereleases; stable **0.23.0** remains Latest with
-built-in Snippets. Published Windows and Linux x64 hosts retain built-in Snippets;
-Linux x64 source now selects the optional tool as described below. Both previews
-offer Snippets through the official catalog; local-archive installation remains
-available offline after download. See the separate
-[macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
+All are immutable non-Latest prereleases; stable **0.23.0** and published Windows
+hosts retain built-in Snippets. The ARM64 pairs offer Snippets through the official
+catalog; use local-archive installation for the Linux x64 preview while its catalog
+promotion and public-HTTPS checkpoint remain separate. Local installation is
+available offline after download. See the [macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
 
 ## Existing catalogs and shortcuts
 
@@ -21,8 +21,9 @@ Paste remain the same. There is no conversion or second Commands catalog.
 (`Ctrl+Shift+S` on Linux, `Cmd+Shift+S` on macOS, including custom remaps or
 `null`) remain supported.
 An enabled package opens in the shared companion panel. In the published ARM64
-previews, invoking the command again hides it. Current source instead **closes**
-the selected-visible tool, discarding its view's search/scroll state; **Hide** or
+previews, invoking the command again hides it. The published Linux x64 dev.30 host
+and current source instead **close** the selected-visible tool, discarding its view's
+search/scroll state; **Hide** or
 Escape preserves that state for reopening. Without an enabled package, the command opens **Settings →
 Extensions** with an explanation. It never installs or enables anything for you.
 A disabled package remains disabled. Runtime unavailability is reported separately
@@ -32,8 +33,8 @@ from a missing installation. Terminal sessions remain usable.
 
 Use the exact preview pair for your platform linked above. On macOS, download the
 ARM64 DMG and checksum; see [macOS installation](#macos-arm64-published-preview).
-On Linux, download the ARM64 AppImage, its checksum and, if wanted, the
-version-matched application-menu helper and checksum. Follow that release's
+On Linux, download the AppImage for your architecture, its checksum and, if wanted,
+the version-matched application-menu helper and checksum. Follow that release's
 installation instructions, not `/latest/download` or the stable-version filenames in the general installation
 guide. For local installation, download `snippets-0.1.0.omxext` and its checksum
 from the Snippets release into the same folder, then verify before installation:
@@ -46,7 +47,7 @@ sha256sum --check snippets-0.1.0.omxext.sha256
 ```
 
 No source build is required. Older hosts are not qualified for this package, and
-existing Files/SSH packages were not newly qualified on either preview. The official
+existing Files/SSH packages were not newly qualified on these previews. The official
 catalog lists these same Snippets bytes for Linux ARM64 and macOS ARM64. Separate
 bounded public-HTTPS checkpoints passed on the Linux dev.11 and macOS dev.16
 host/archive pairs; see [macOS delivery](#macos-arm64-catalog-delivery) and
@@ -54,7 +55,7 @@ host/archive pairs; see [macOS delivery](#macos-arm64-catalog-delivery) and
 
 1. Open **Settings → Extensions** and choose **Install local .omxext…**. A local
    archive works offline after download. On either ARM64 preview, alternatively choose
-   **Browse official extensions**, select **Snippets — Linux and macOS ARM64 preview** and
+   **Browse official extensions**, select the Snippets preview and
    install it. Browse/Refresh is explicit; reopening Settings does not fetch the
    catalog. Both routes use the same captured-byte trust and installation flow.
 2. Inspect the captured package identity and trust information before approving.
@@ -112,7 +113,8 @@ It names the already published macOS `0.24.0-dev.16` / Linux `0.24.0-dev.11`
 hosts without changing the archive, original receipt, source, digest, size,
 immutable URLs or manifest engine ranges. The manifest has no platform restriction;
 its host/API ranges express compatibility, not qualification of every admitted host.
-Published Windows and Linux x64 hosts retain built-in Snippets.
+Stable `0.23.0` and published Windows hosts retain built-in Snippets; the later
+Linux x64 preview is described separately below.
 
 Catalog source `dbbc1a9814606f72bcaea226ab68564da4a345fb` received complete
 independent review and was integrated. Fixed public endpoint readback matched
@@ -229,9 +231,9 @@ The existing menu/palette action and configured shortcut open or close the insta
 companion; missing/disabled guidance never installs, enables or falls back to a
 built-in view. Existing YAML is untouched; only newly created configuration kits
 omit the example. Use explicit local-archive installation of the unchanged published
-Snippets `0.1.0` archive identified above. The official catalog does not yet offer
-Snippets for Linux x64; do not alter its platform metadata or original build receipt
-to infer qualification.
+Snippets `0.1.0` archive identified above. A source catalog candidate adds Linux x64;
+public endpoint readback and packaged public-HTTPS consumption remain separate.
+The original build receipt is not rewritten to infer qualification.
 
 The ordinary production source campaign passed on Ubuntu 24.04 x64 / Electron
 43.8.1, host `0.24.0-dev.30`, source
@@ -262,21 +264,20 @@ composition assertion was not rerun; its earlier evidence remains separate.
 
 Scope is synthetic Chromium/X11 input, ANGLE SwiftShader, controlled consent and
 a plain-paste shell—not physical keyboard, Kitty, default GPU, compositor, full
-portable-suite, exact-AppImage GUI or public-HTTPS qualification. This is a source
-transition, not a published Linux x64 preview. The separate exact-AppImage
-checkpoint below does not expand that historical source campaign's evidence or
+portable-suite, exact-AppImage GUI or public-HTTPS qualification. This historical
+source campaign did not itself establish a published Linux x64 preview. The separate
+exact-AppImage checkpoint below does not expand that historical source campaign's evidence or
 explain its blank preview capture. The shared
 [exact-AppImage adapter](../test/fixtures/snippets-packaged.md#exact-appimage-adapter)
 admits Linux x64 alongside ARM64 without replacing the packaged entry/ASAR/runtime
 or archive. Its capture barrier and acknowledged-Hide readiness checks are fixture
 changes, not product fixes; headless coverage alone is not native or visual
-qualification. Public distribution remains a separate gate. Do not distribute a
-host removing built-in access until the matching host/archive pair and migration
-gates below are satisfied.
+qualification. Publication and public catalog consumption are separate from this
+historical source campaign.
 
 ## Linux x64 exact-AppImage checkpoint
 
-A bounded, **unpublished** exact-package checkpoint passed on Linux x64 with
+A bounded prepublication exact-package checkpoint passed on Linux x64 with
 host `0.24.0-dev.30` / Electron 43.8.1. Package source is
 `04943ae5f6af10bb7d1f482da780d011445cf7ae`; test-fixture source is
 `6a3728c1d9d3024a6499f4b8fa3971d74f539e33`. The latter changes only the shared
@@ -290,7 +291,7 @@ revision.
   `7aa7f7aa2a0fd0a91076d365354acf5e1867b7c62531c043fec0c294a48e4b75`.
 - Unchanged published Snippets `0.1.0`: **76,653 bytes**, SHA-256
   `6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`.
-  Its original build receipt, catalog and archive remain unchanged.
+  Its original build receipt, user YAML catalog and archive remain unchanged.
 
 One executed native test passed all ten shared checks: absent/disabled guidance,
 ordinary trust and dormant installation, Close versus retained Hide, exact
@@ -331,9 +332,36 @@ and a controlled plain-paste shell. This does not qualify physical keyboards,
 natural autorepeat, Kitty, default GPUs, physical-desktop/compositor behavior,
 account-shell/bracketed-paste behavior, public acquisition, other platforms or the
 full portable suite. The Snippets adapter itself does not qualify FUSE/helper
-installation; the separately tested FULL modes remain distinct. No host release,
-catalog promotion or distributed Linux x64 cutover is performed by this
-checkpoint; Windows and the remaining #741 gates stay open.
+installation; the separately tested FULL modes remain distinct. This checkpoint
+did not itself publish the host or promote the catalog; Windows and the remaining
+#741 gates stay open.
+
+## Linux x64 published preview and catalog candidate
+
+The [Linux x64 `0.24.0-dev.30` host](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30)
+was published on **2026-10-31 at 19:33:37 UTC** as an immutable, non-Latest
+prerelease. Its original AppImage, version-matched helper and both checksum files
+passed draft and anonymous public byte verification. The unchanged published
+Snippets archive/checksum/original receipt were anonymously verified before host
+publication. The package was built from `04943ae5f6af10bb7d1f482da780d011445cf7ae`,
+qualified with test fixture `6a3728c1d9d3024a6499f4b8fa3971d74f539e33`, and tagged
+at `2aa533f99e61a690496e16b93d68286bead5fb48`; the later changes were test/docs
+only and did not rebuild the image. The original Snippets receipt retains source
+`805e95dbc77552dc137707578b18b48ad6d047e9`, its Linux ARM64 build target and
+build-time `not-run` qualification field.
+
+Verify `OMXTerm-0.24.0-dev.30-x64.AppImage.sha256` and, if used,
+`linux_install.sh.sha256` from that release. Install the separate Snippets archive
+through the deliberate local/trust/enable steps above. The candidate catalog adds
+`linux-x64` to the unchanged Snippets archive identity in both complete source
+catalogs, preserving Files/SSH and the existing ARM64 targets. The embedded manifest
+has no platform restriction and retains host `>=0.24.0-dev.8` / API `0.1.x`;
+that compatibility range does not qualify every admitted host. The host selects
+`https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json`.
+Source candidate integration, fixed-endpoint readback and a separate actual
+packaged public-HTTPS installation checkpoint are not established by publication
+or local qualification. Do not assume catalog discovery works on Linux x64 until
+those steps are completed and recorded.
 
 ## Preview coverage and remaining platforms
 
@@ -359,8 +387,7 @@ consent, synthetic input, ANGLE SwiftShader and an isolated plain-paste shell;
 this does not expand the earlier keyboard/GPU/platform limits or requalify
 Files/SSH. No archive, host package or original build receipt was changed.
 
-Windows and Linux x64 migrations remain open in [#741](https://github.com/luizomf/omxterm/issues/741).
-Each requires its own compatible, published package and matching qualification
-before removing built-in access from a distributed host, as required by
-[ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
+[#741](https://github.com/luizomf/omxterm/issues/741) remains open: Linux x64
+catalog promotion and public consumption remain separate from the published
+preview, and Windows retains built-in Snippets until its own prerequisites are met.
 Existing published artifacts remain immutable; this preview is not a stable SDK.

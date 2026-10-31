@@ -35,7 +35,7 @@ describe("published Snippets catalog candidate", () => {
       id: "omxterm.snippets",
       version: "0.1.0",
       engines: { omxterm: ">=0.24.0-dev.8", api: "0.1.x" },
-      targets: ["linux-arm64", "darwin-arm64"],
+      targets: ["linux-arm64", "darwin-arm64", "linux-x64"],
       sourceCommit: "805e95dbc77552dc137707578b18b48ad6d047e9",
       releaseUrl:
         "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0",
@@ -48,44 +48,48 @@ describe("published Snippets catalog candidate", () => {
     });
   });
 
-  describe.each(["linux-arm64", "darwin-arm64"])("%s admission", (target) => {
-    it.each([
-      ["0.23.0", false],
-      ["0.24.0-dev.7", false],
-      ["0.24.0-dev.8", true],
-      ["0.24.0-dev.11", true],
-      ["0.24.0-dev.16", true],
-      ["0.24.0", true],
-      ["0.24.1-dev.0", false],
-      ["0.25.0-dev.0", false],
-    ])(
-      "preserves manifest semver admission for %s (not qualification)",
-      (appVersion, compatible) => {
-        expect(
-          catalogCompatible(
-            snippets,
-            { appVersion, apiVersion: "0.1.0" },
-            target,
-          ),
-        ).toBe(compatible);
-      },
-    );
+  describe.each(["linux-arm64", "darwin-arm64", "linux-x64"])(
+    "%s admission",
+    (target) => {
+      it.each([
+        ["0.23.0", false],
+        ["0.24.0-dev.7", false],
+        ["0.24.0-dev.8", true],
+        ["0.24.0-dev.11", true],
+        ["0.24.0-dev.16", true],
+        ["0.24.0-dev.30", true],
+        ["0.24.0", true],
+        ["0.24.1-dev.0", false],
+        ["0.25.0-dev.0", false],
+      ])(
+        "preserves manifest semver admission for %s (not qualification)",
+        (appVersion, compatible) => {
+          expect(
+            catalogCompatible(
+              snippets,
+              { appVersion, apiVersion: "0.1.0" },
+              target,
+            ),
+          ).toBe(compatible);
+        },
+      );
 
-    it.each(["0.0.9", "0.2.0", "0.1.1-dev.0"])(
-      "rejects incompatible API %s",
-      (apiVersion) => {
-        expect(
-          catalogCompatible(
-            snippets,
-            { appVersion: "0.24.0-dev.16", apiVersion },
-            target,
-          ),
-        ).toBe(false);
-      },
-    );
-  });
+      it.each(["0.0.9", "0.2.0", "0.1.1-dev.0"])(
+        "rejects incompatible API %s",
+        (apiVersion) => {
+          expect(
+            catalogCompatible(
+              snippets,
+              { appVersion: "0.24.0-dev.16", apiVersion },
+              target,
+            ),
+          ).toBe(false);
+        },
+      );
+    },
+  );
 
-  it.each(["linux-x64", "darwin-x64", "win32-arm64", "win32-x64"])(
+  it.each(["darwin-x64", "win32-arm64", "win32-x64"])(
     "does not admit the installed preview on %s",
     (target) => {
       expect(
@@ -100,6 +104,7 @@ describe("published Snippets catalog candidate", () => {
 
   it.each([
     ["linux-arm64", "0.24.0-dev.11"],
+    ["linux-x64", "0.24.0-dev.30"],
     ["darwin-arm64", "0.24.0-dev.16"],
     ["darwin-arm64", "0.24.0-dev.26"],
   ])(
@@ -108,6 +113,11 @@ describe("published Snippets catalog candidate", () => {
       // This exercises current source with supplied runtime metadata, not the
       // endpoint embedded in the historical dev.16 executable.
       vi.mocked(downloadExtension).mockImplementation(async (url) => {
+        expect(url).toBe(
+          target === "darwin-arm64"
+            ? MACOS_OFFICIAL_CATALOG_URL
+            : OFFICIAL_CATALOG_URL,
+        );
         if (url === OFFICIAL_CATALOG_URL) return catalogBytes;
         expect(url).toBe(MACOS_OFFICIAL_CATALOG_URL);
         return readFile(
@@ -135,12 +145,14 @@ describe("published Snippets catalog candidate", () => {
           ])
           .entries.find((entry) => entry.id === snippets.id)?.action,
       ).toBe("reinstall");
-      if (target === "darwin-arm64") {
+      if (target === "darwin-arm64" || target === "linux-x64") {
         for (const other of catalog
           .snapshot([])
           .entries.filter((entry) => entry.id !== snippets.id)) {
           const compatible =
-            other.id === "omxterm.files" && appVersion === "0.24.0-dev.26";
+            target === "darwin-arm64" &&
+            other.id === "omxterm.files" &&
+            appVersion === "0.24.0-dev.26";
           expect(other.compatible).toBe(compatible);
           if (!compatible)
             expect(() => catalog.select(other.selection)).toThrow(

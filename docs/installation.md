@@ -66,13 +66,13 @@ responsibility.
 
 ## Optional Snippets preview
 
-The [Linux ARM64 host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
-and [macOS ARM64 host 0.24.0-dev.16](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16)
+The [Linux ARM64 host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
+[macOS ARM64 host 0.24.0-dev.16](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16),
+and [Linux x64 host 0.24.0-dev.30](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30)
 use the separate [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)
 instead of built-in Snippets. All are non-Latest prereleases; stable 0.23.0 remains
-Latest, and published Windows/Linux x64 hosts retain built-in Snippets. The
-[Linux x64 source transition](snippets-migration.md#linux-x64-source-transition)
-is not a published preview. These pairings do not newly qualify Files/SSH.
+Latest, and published Windows hosts retain built-in Snippets. These pairings do not
+newly qualify Files/SSH.
 
 Download the versioned host DMG/checksum for macOS, or AppImage/checksum and optional
 matching helper for Linux, from the respective release, not `/latest/download`.
@@ -83,8 +83,9 @@ and checksum, then choose **Settings → Extensions → Install local .omxext…
 On macOS, use `shasum -a 256 -c snippets-0.1.0.omxext.sha256`; on Linux, use
 `sha256sum --check snippets-0.1.0.omxext.sha256`. Local installation works offline
 after download. On either ARM64 preview, you can instead choose **Settings →
-Extensions → Browse official extensions** and install **Snippets — Linux and
-macOS ARM64 preview**. Review trust, enable deliberately if disabled, and open
+Extensions → Browse official extensions** and install the Snippets preview. For
+Linux x64, use the local archive while catalog promotion and public-HTTPS consumption
+remain separate. Review trust, enable deliberately if disabled, and open
 **View → Toggle Snippets**. No source build or automatic installation is involved.
 Separate bounded public-HTTPS installation checkpoints passed on both exact
 preview pairs; see [macOS coverage](snippets-migration.md#macos-arm64-catalog-delivery).

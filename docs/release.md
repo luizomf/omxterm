@@ -498,8 +498,10 @@ release notes/assets to retroactively claim later verification.
 
 ## Snippets preview preparation and publication
 
-The Linux ARM64 host `0.24.0-dev.11` and macOS ARM64 host `0.24.0-dev.16`
-Snippets previews are published, each using the unchanged Snippets `0.1.0` archive.
+The Linux ARM64 host `0.24.0-dev.11`, macOS ARM64 host `0.24.0-dev.16` and
+Linux x64 host `0.24.0-dev.30` Snippets previews are published, each using the
+unchanged Snippets `0.1.0` archive. The Linux x64 preview's exact publication and
+remaining catalog gates are recorded in the [migration guide](snippets-migration.md#linux-x64-published-preview-and-catalog-candidate).
 The macOS release was sealed on 2026-10-30 at 16:25:11 UTC as an immutable,
 non-Latest prerelease with only the DMG/checksum. The existing public archive was
 verified before host publication; public host/checksum downloads subsequently
@@ -512,13 +514,15 @@ public-HTTPS checkpoint below subsequently passed; no archive or original receip
 was replaced.
 
 The Linux-oriented procedure below applies to future preview pairs, not permission
-to recreate either sealed release; source transition alone does not establish
+to recreate any sealed release; source transition alone does not establish
 distributed migration. Prepare a partial prerelease, not the complete stable asset
-set. Published Windows/Linux x64 hosts retain built-in Snippets; the Linux x64
-source transition alone does not satisfy its distribution gates. Source-native
-qualification does not substitute for the exact packaged host/archive pair.
+set. Published Windows hosts retain built-in Snippets; source transition alone
+does not satisfy platform distribution gates. Source-native qualification does
+not substitute for the exact packaged host/archive pair.
 
-1. Select exact committed host and Snippets source identities. Build the host,
+1. Select exact committed host and Snippets source identities. Reuse an already
+   published compatible archive when its exact bytes and receipt match the selected
+   qualification; do not rebuild or replace it. For a new archive, build the host,
    then `node scripts/build-snippets-extension.mjs /absolute/new/snippets.omxext`
    (append the verified full source commit for an exported checkout). Preserve
    archive/checksum/receipt identities; do not overwrite an earlier candidate or
@@ -531,15 +535,17 @@ qualification does not substitute for the exact packaged host/archive pair.
    verifier evidence separately: extraction-only execution does not qualify FUSE
    launch or helper installation. Include the [migration guide](snippets-migration.md).
 3. After complete source review/corrections and matching qualification, check
-   that the proposed host/extension tags and releases are absent. Create verified
-   exact-source tags and separate draft prereleases with `--verify-tag --draft
---prerelease --latest=false`. The Snippets release gets its archive, checksum
-   and original receipt; the host gets its qualified AppImage/helper and checksum
-   pairs. Bind release notes to actual hashes, versions, source identities and
-   limitations, not a generic claim that every compatible host is qualified.
+   that the proposed host tag and release are absent. Check extension tag/release
+   absence only when creating a new extension release; never recreate an existing
+   one. Create verified exact-source tags and draft prereleases with `--verify-tag
+--draft --prerelease --latest=false`. A new Snippets release gets its archive,
+   checksum and original receipt; the host gets its qualified AppImage/helper and
+   checksum pairs. Bind release notes to actual hashes, versions, source identities
+   and limitations, not a generic claim that every compatible host is qualified.
 4. Download draft assets and compare exact sizes/SHA-256. **Publish Snippets
-   first and verify anonymous public downloads before publishing a host that
-   removes built-in access.** Then publish/download/verify the compatible host.
+   first, or reuse its existing published release, and verify anonymous public
+   downloads before publishing a host that removes built-in access.** Then
+   publish/download/verify the compatible host.
    Keep stable Latest unchanged. Never replace published same-version bytes,
    move a sealed tag or retrofit assets into an immutable release.
 5. Ordinary local-archive installation remains available offline. Catalog
@@ -575,7 +581,7 @@ permission to repeat qualification.
    to receipt source `805e95dbc77552dc137707578b18b48ad6d047e9` and the
    embedded manifest: `omxterm.snippets`, `0.1.0`, host `>=0.24.0-dev.8`,
    API `0.1.x`. Preserve the receipt's build-time `not-run` field and original
-   Linux build target. Catalog targets are `linux-arm64` and `darwin-arm64`;
+   Linux build target. That promotion's targets were `linux-arm64` and `darwin-arm64`;
    the archive has no manifest platform restriction. Do not raise
    its engine minimum or rewrite its receipt to describe later qualification.
    The archive and release-page URLs must name the same sealed tag.

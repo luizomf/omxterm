@@ -169,9 +169,10 @@ a captured live Surface, never a replacement target. See
 Published Linux ARM64 `0.24.0-dev.11` and macOS ARM64 `0.24.0-dev.16` previews
 use optional Snippets `0.1.0`, available through the official catalog or local
 archive; see [delivery evidence and limits](docs/snippets-migration.md#macos-arm64-catalog-delivery).
-Stable `0.23.0` remains Latest with built-in Snippets. Linux x64 source now selects
-the optional tool; its distributed cutover remains separate. Windows retains the
-built-in view. Published artifacts and original receipts remain
+Stable `0.23.0` remains Latest with built-in Snippets. The published Linux x64
+`0.24.0-dev.30` preview uses the optional tool with local-archive installation;
+its catalog promotion and packaged public-HTTPS checkpoint remain separate.
+Windows retains the built-in view. Published artifacts and original receipts remain
 immutable. Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).

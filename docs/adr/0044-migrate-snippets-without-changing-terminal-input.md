@@ -22,12 +22,12 @@ a separate bounded macOS packaged public-HTTPS checkpoint passed. Its
 remain distinct from public byte verification and the earlier exact-DMG/FULL
 passes, which were not rerun. No broader platform or new Files/SSH qualification
 is implied.
-Stable `0.23.0` remains Latest. Linux x64 source now selects the optional tool.
-A bounded unpublished [exact-AppImage checkpoint](../snippets-migration.md#linux-x64-exact-appimage-checkpoint)
+Stable `0.23.0` remains Latest. The published Linux x64 `0.24.0-dev.30` preview
+selects the optional tool. Its prepublication [exact-AppImage checkpoint](../snippets-migration.md#linux-x64-exact-appimage-checkpoint)
 passed the shared ten checks and controlled visible-preview inspection, with
-separate stock FULL modes and explicit evidence/diagnostic limits. Distributed
-cutover remains separate; published Linux x64 and Windows hosts retain built-in
-Snippets.
+separate stock FULL modes and explicit evidence/diagnostic limits. The source
+catalog candidate, public endpoint readback and packaged public-HTTPS checkpoint
+remain distinct; published Windows hosts retain built-in Snippets.
 Remaining platform gates and #741 stay open; no stable extension SDK is established.
 
 ## Context

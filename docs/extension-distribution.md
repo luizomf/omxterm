@@ -13,9 +13,9 @@ Main selects one fixed schema1 endpoint from the host target:
 
 Each is a complete catalog with unique package IDs. There is no multi-endpoint
 merge, schema negotiation or fallback to the legacy endpoint after failure.
-The legacy document remains byte-for-byte unchanged by this target split, so
-published Linux hosts retain Files0.4/dev.11. Common SSH/Snippets entries are
-identical in both documents; future promotions must update both together.
+The legacy document remained byte-for-byte unchanged by the original target split,
+so Linux hosts retain the Files0.4 offer. Common SSH/Snippets entries are identical
+in both documents; future promotions must update both together.
 Only explicit Browse/Refresh requests the selected endpoint. No startup, reopen, polling or automatic
 update traffic is added. Responses use the existing 60-second HTTPS/redirect policy
 with a smaller 256 KiB declared/actual body bound. JSON must be valid UTF-8,
@@ -127,4 +127,11 @@ promotion left Files/SSH entries unchanged. The fixed endpoint was read back byt
 [packaged public-HTTPS checkpoint](snippets-migration.md#preview-coverage-and-remaining-platforms)
 passed on that exact pair. The [promotion procedure](release.md#snippets-catalog-promotion)
 retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),
-explicit trust/enablement and other-platform built-in Snippets remain unchanged.
+explicit trust/enablement and the published Windows built-in Snippets remain unchanged.
+
+The Linux x64 `0.24.0-dev.30` host is now published with the same archive through
+the deliberate local-install route. A source candidate adds `linux-x64` to the
+common Snippets entry in both complete catalogs, without altering Files/SSH or
+archive identity. Linux x64 selects the legacy endpoint listed above. Candidate
+source is not public endpoint readback or actual packaged public-HTTPS consumption;
+those remain separate steps. See the [Linux x64 preview](snippets-migration.md#linux-x64-published-preview-and-catalog-candidate).

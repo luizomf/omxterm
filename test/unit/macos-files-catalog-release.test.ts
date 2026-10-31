@@ -26,15 +26,19 @@ beforeAll(async () => {
 });
 
 describe("macOS Files catalog publication candidate", () => {
-  it("preserves legacy bytes and every common release", async () => {
+  it("preserves legacy Files/SSH metadata and every common release", async () => {
     const legacyBytes = await readFile(
       "distribution/official-extensions-v1.json",
     );
-    // Exact pre-selection catalog: old published hosts keep fetching these bytes.
-    expect(createHash("sha256").update(legacyBytes).digest("hex")).toBe(
-      "315c7208328b401a31944c97f8c259d8b449ab6c7185a1ded00c691d997c26f9",
-    );
     const legacy = parseCatalog(legacyBytes);
+    // Snippets promotion must not change any other legacy entry.
+    expect(
+      createHash("sha256")
+        .update(
+          JSON.stringify(legacy.filter(({ id }) => id !== "omxterm.snippets")),
+        )
+        .digest("hex"),
+    ).toBe("b8802c2de3987a86bd0a93a616dfd4d6a1c1492019639b96a5e107b647cb3c26");
     const macos = parseCatalog(catalogBytes);
     expect(macos.map(({ id }) => id)).toEqual(legacy.map(({ id }) => id));
     expect(macos.filter(({ id }) => id !== files.id)).toEqual(
