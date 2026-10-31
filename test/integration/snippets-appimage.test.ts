@@ -17,59 +17,22 @@ import { promisify } from "node:util";
 import { it } from "vitest";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
+import { appImageInputs } from "../fixtures/snippets-appimage-inputs";
 
-const prefix = "OMXTERM_SNIPPETS_APPIMAGE_";
-const names = [
-  "APPIMAGE",
-  "ARCHIVE",
-  "APPIMAGE_SHA256",
-  "ARCHIVE_SHA256",
-  "VERSION",
-  "EVIDENCE",
-] as const;
-const enabled = names.some((name) => process.env[prefix + name] !== undefined);
-assert.ok(
-  !enabled || process.env.OMXTERM_SNIPPETS_PACKAGED_ENTRY === undefined,
-  "Choose either source-entry or exact AppImage Snippets qualification",
-);
+const values = appImageInputs();
 const execute = promisify(execFile);
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 const scope =
   "unchanged extracted AppImage; synthetic Chromium/X11; ANGLE SwiftShader; controlled consent; no FUSE/helper installation or public acquisition";
 
-function qualificationInputs() {
-  assert.equal(process.platform, "linux");
-  assert.equal(process.arch, "arm64");
-  assert.notEqual(process.getuid?.(), 0);
-  const values = Object.fromEntries(
-    names.map((name) => {
-      const value = process.env[prefix + name];
-      assert.ok(value, `${prefix}${name} is required`);
-      return [name, value];
-    }),
-  ) as Record<(typeof names)[number], string>;
-  for (const name of ["APPIMAGE", "ARCHIVE", "EVIDENCE"] as const)
-    assert.ok(path.isAbsolute(values[name]), `${name} must be absolute`);
-  for (const name of ["APPIMAGE_SHA256", "ARCHIVE_SHA256"] as const)
-    assert.match(values[name], /^[a-f0-9]{64}$/);
-  // New Tab uses the real account shell, not HOME or an overridden policy.
-  assert.ok(
-    ["/bin/sh", "/usr/bin/sh", "/bin/bash", "/usr/bin/bash"].includes(
-      os.userInfo().shell ?? "",
-    ),
-    "Prepared guest needs a POSIX sh/bash account shell",
-  );
-  return values;
-}
-
-// Opt-in on the assigned disposable Linux ARM64 desktop only. The shared
+// Opt-in on the assigned disposable Linux ARM64/x64 desktop only. The shared
 // scenario observes the untouched package, not a replacement application entry.
-it.skipIf(!enabled)(
-  "qualifies separate Snippets in the exact Linux ARM64 AppImage",
+it.skipIf(!values)(
+  "qualifies separate Snippets in the exact Linux AppImage",
   { timeout: 360000 },
   async () => {
-    const values = qualificationInputs();
+    assert.ok(values);
     const root = await mkdtemp(
       path.join(os.tmpdir(), "omxterm-snippets-appimage-"),
     );
@@ -259,8 +222,7 @@ it.skipIf(!enabled)(
         ],
         archiveSha256: values.ARCHIVE_SHA256,
         approvals: 1,
-        input:
-          "synthetic Chromium/X11; controlled native consent; production Linux ARM64 composition",
+        input: values.input,
       });
       await owner.verifyMain();
       await client.evaluate(`${observer}.quit(); true`, 5000);

@@ -494,15 +494,36 @@ print('Enter released')`,
       "preview",
     );
     assert.equal(native.getVisible(), false, "overlay excludes native child");
-    if (fixture.evidence)
-      await writeFile(
-        path.join(fixture.evidence, "preview.png"),
-        (await core.capturePage()).toPNG(),
-      );
     assert.equal(
       await js("document.querySelector('.snippet-preview-body').textContent"),
       run,
     );
+    async function capturePreview() {
+      // An open dialog is DOM readiness, not a render opportunity. Match the
+      // child/Files capture barrier without claiming compositor/pixel freshness.
+      // The existing native supervisor/inspector deadline bounds stalled frames.
+      await core.executeJavaScript(`(async () => {
+        const dialog = document.querySelector('.snippet-preview[open]');
+        const body = dialog?.querySelector('.snippet-preview-body');
+        const check = () => {
+          if (!dialog?.isConnected || !dialog.open ||
+              document.querySelector('.snippet-preview[open]') !== dialog ||
+              dialog.querySelector('.snippet-preview-body') !== body ||
+              body?.textContent !== ${JSON.stringify(run)})
+            throw Error('Snippets preview changed before capture');
+        };
+        check();
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        check();
+      })()`);
+      assert.equal(native.getVisible(), false, "overlay excludes native child");
+      return core.capturePage();
+    }
+    if (fixture.evidence)
+      await writeFile(
+        path.join(fixture.evidence, "preview.png"),
+        (await capturePreview()).toPNG(),
+      );
     await click(core, ".snippet-preview-insert");
     await terminalFocus();
     await assertWrites(offset, run);

@@ -264,9 +264,17 @@ Scope is synthetic Chromium/X11 input, ANGLE SwiftShader, controlled consent and
 a plain-paste shell—not physical keyboard, Kitty, default GPU, compositor, full
 portable-suite, exact-AppImage GUI or public-HTTPS qualification. This is a source
 transition, not a published Linux x64 preview. Exact-package verification and
-public distribution remain separate gates. Do not distribute a host removing
-built-in access until the matching host/archive pair and migration gates below
-are satisfied.
+public distribution remain separate gates. The existing
+[exact-AppImage adapter](../test/fixtures/snippets-packaged.md#exact-appimage-adapter)
+now admits Linux x64 alongside ARM64 through the same observer and ten-check
+scenario, retaining the untouched packaged entry/ASAR/runtime/archive boundary.
+Its test-only preview capture adds two renderer frame opportunities and stale-state
+revalidation before saving evidence. Focused headless coverage checks admission,
+receipt wording and capture ordering/refusal only; it does not establish native
+or visual success, and the earlier blank capture remains unresolved pending actual
+native image inspection. No host version, archive, catalog or original build receipt
+changes are required by this tooling. Do not distribute a host removing built-in
+access until the matching host/archive pair and migration gates below are satisfied.
 
 ## Preview coverage and remaining platforms
 

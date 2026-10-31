@@ -3,8 +3,11 @@
 This fixture exercises an ordinary `.omxext` install and explicit trust through
 Settings, followed by real hosted-page requests through production semantic
 admission, presentation, Surface and PTY delivery. Source, exact-AppImage and exact-DMG
-adapters share one nine-scenario body. Their evidence remains distinct; neither
-qualifies physical keyboards or other platforms; Linux uses software rendering.
+adapters share one current ten-check scenario body. Historical nine-scenario
+receipts below remain bound to their original inputs. Adapter admission and
+headless tooling tests are not native qualification. The adapters' evidence
+remains distinct; none qualifies physical keyboards or other platforms; Linux
+uses software rendering.
 
 ## Composition supplied by the integration owner
 
@@ -120,11 +123,17 @@ marker reset, rerun, permission prompt, or fallback from failed Quartz evidence.
 
 ## Exact AppImage adapter
 
+On an assigned disposable, nonroot Linux ARM64 or x64 X11 desktop,
 `test/integration/snippets-appimage.test.ts` extracts the supplied exact AppImage
-without replacing its entry, dependencies or ASAR. It uses the existing packaged
-process owner and loopback inspector, loading a separate CommonJS observer. The
-application runs with isolated HOME/XDG/profile and a PATH without source
-Node/npm dependencies. The ordinary guest account shell must be sh or bash.
+without replacing its entry, dependencies or ASAR. Both architectures use the
+same observer and shared scenario, with architecture-specific expected input
+receipts; admitting x64 is tooling, not an exact-package PASS or release gate
+completion. It uses the existing packaged process owner and loopback inspector,
+loading a separate CommonJS observer. The application runs with isolated
+HOME/XDG/profile and a PATH without source Node/npm dependencies. The ordinary
+guest account shell must be sh or bash. Provision xdotool, Python 3/libX11,
+xprop and bwrap in that guest; keep the desktop idle with no competing GUI suite.
+Rendering explicitly remains X11/ANGLE SwiftShader on both architectures.
 
 ```sh
 OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE=/absolute/host.AppImage \
@@ -136,13 +145,19 @@ OMXTERM_SNIPPETS_APPIMAGE_EVIDENCE=/absolute/evidence \
   npm test -- test/integration/snippets-appimage.test.ts
 ```
 
-Do not set the source adapter's variables in this mode. Partial configuration
-fails; with no opt-in variables the test skips. Each run has new receipts. The
+Do not set source or DMG adapter variables in this mode. Mixed adapters and
+partial configuration fail; with no AppImage opt-in variables the test skips.
+For Linux x64, use the unchanged published Snippets `0.1.0` archive identified in
+the [source transition](../../docs/snippets-migration.md#linux-x64-source-transition),
+not a rebuilt archive, edited catalog or relabeled original build receipt. Bind
+`VERSION` to the supplied exact host, not Electron's version. Each run has new receipts. The
 observer asserts actual packaged version, executable, ASAR and backend paths.
 AppImage/archive/ASAR hashes are rechecked even on failure. Successful completion
 requires normal Quit, actual main exit and joined process ownership; failed roots
 and evidence are retained. Extraction does not qualify FUSE/helper installation
-or public acquisition.
+or public acquisition. Run the ordinary Linux package verifier separately on
+the same exact artifact; the Snippets campaign does not replace it. No package,
+catalog, public-HTTPS or Files qualification follows from headless tests.
 
 All adapters observe new `node-pty` instances at their existing event-forwarding
 prototype seam and forward writes unchanged. This avoids assuming that replacing
@@ -259,7 +274,18 @@ release. Exact native DMG execution remains an integration-owner gate.
 
 Linux rendering explicitly selects ANGLE SwiftShader, not the default GPU. Optional
 evidence retains supervisor results, child/core/preview captures and failure
-DOM outside the cleaned fixture profile. Input uses DOM clicks and Electron
+DOM outside the cleaned fixture profile. Preview evidence now waits for two
+renderer animation-frame opportunities after dialog-open/exact-body readiness,
+then rechecks the same connected open dialog, body identity/exact text and native
+child exclusion before capturing. This test-only barrier follows the existing
+child/Files capture pattern; the unchanged enclosing native deadline bounds stalled
+frames. Headless regressions check ordering and stale-state refusal, not pixels.
+The earlier Linux x64 source preview capture remains blank/unqualified: neither
+this barrier nor a DOM PASS proves paint or diagnoses that observation. The next
+native campaign must inspect the actual new image. If still blank, retain it and
+compare dialog/body computed visibility and bounds with the capture under the
+same rendering mode before considering a product change. Separate WebContents
+captures are not OS-compositor evidence. Input uses DOM clicks and Electron
 `sendInputEvent`, plus `/usr/bin/xdotool` XTest events for the held Enter sequence
 across native focus handoff (install xdotool in the assigned guest). Keydown,
 and repeat are observed through Electron on the child/core respectively. Release
