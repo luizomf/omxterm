@@ -237,6 +237,71 @@ void ready.then(async (window) => {
     await panel(view, true, "child");
     return view;
   }
+  async function closeFiles(view, action) {
+    const native = window.contentView.children.find(
+      (child) => child.webContents === view,
+    );
+    assert.ok(native);
+    const oldId = view.id;
+    const backend = children[0];
+    await view.executeJavaScript(
+      "document.querySelector('form.location input').value = 'discard-on-close';",
+    );
+    let destroyed = false;
+    view.once("destroyed", () => {
+      destroyed = true;
+    });
+    await action();
+    await until(
+      async () =>
+        destroyed &&
+        view.isDestroyed() &&
+        !window.contentView.children.includes(native) &&
+        hosted().length === 0 &&
+        core.isFocused() &&
+        (await js(
+          "document.querySelector('.auxiliary-panel').hidden && ![...document.querySelectorAll('.auxiliary-tools button')].some(b => b.textContent === 'Files') && !!document.activeElement?.closest('.terminal-surface')",
+        )),
+      "Close destroys and detaches Files, removes opened membership and returns terminal focus",
+    );
+    await sameTerminal();
+    // Fence the independent action delivery, not an immediate negative snapshot.
+    await js(
+      "window.__filesPanelToggled = false; window.__removeFilesPanelToggle = window.omxterm.terminal.onAuxiliaryPanelToggle(() => { window.__filesPanelToggled = true; }); void 0;",
+    );
+    try {
+      menu("Toggle Auxiliary Panel");
+      await until(
+        () => js("window.__filesPanelToggled"),
+        "empty panel toggle delivered",
+      );
+      assert.equal(
+        await js("document.querySelector('.auxiliary-panel').hidden"),
+        true,
+      );
+      assert.equal(
+        hosted().length,
+        0,
+        "empty panel reveal cannot reopen a closed tool",
+      );
+    } finally {
+      await js("window.__removeFilesPanelToggle(); void 0;");
+    }
+    const replacement = await openFiles();
+    assert.notEqual(replacement, view);
+    assert.notEqual(replacement.id, oldId);
+    assert.equal(
+      await replacement.executeJavaScript(
+        "document.querySelector('form.location input').value === 'discard-on-close'",
+      ),
+      false,
+    );
+    assert.equal(children.length, 1);
+    assert.equal(children[0], backend);
+    assert.equal(backend.closed, false);
+    assert.equal(backend.exit, null);
+    return replacement;
+  }
   // These DOM-driven gestures qualify fixture-controlled input, not physical keys.
   async function filesAction(contents, label) {
     const visible = await contents.executeJavaScript(
@@ -432,13 +497,33 @@ void ready.then(async (window) => {
       () => js("!document.querySelector('.settings-dialog')"),
       "Settings closed",
     );
-    const view = await openFiles();
-    await reopen(() => menu("Files"));
-    await panel(view, true, "child");
-    assert.equal(children.length, 1, "menu reopen retains backend");
-    await js("document.querySelector('.auxiliary-header button').click()");
+    let view = await openFiles();
+    view = await closeFiles(view, () => menu("Files"));
+    view = await closeFiles(view, () =>
+      js("document.querySelector('.auxiliary-close').click()"),
+    );
+    checks.push(
+      "selected-visible-toggle-header-close-destroy-empty-reveal-noop-fresh-view-same-backend-PTY",
+    );
+    await view.executeJavaScript(
+      "window.__filesDirectory = document.querySelector('form.location input'); window.__filesDirectory.value = 'unsaved-directory';",
+    );
+    await js("document.querySelector('.auxiliary-hide').click()");
     await panel(view, false, "core");
     await terminal("OMX_FILES_HIDDEN");
+    menu("Toggle Auxiliary Panel");
+    await panel(view, true, "child");
+    assert.equal(
+      await view.executeJavaScript(
+        "window.__filesDirectory === document.querySelector('form.location input') && window.__filesDirectory.value === 'unsaved-directory'",
+      ),
+      true,
+    );
+    menu("Toggle Auxiliary Panel");
+    await panel(view, false, "core");
+    checks.push(
+      "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
+    );
     menu("Command Palette");
     await until(
       () =>
@@ -466,11 +551,11 @@ void ready.then(async (window) => {
       "Settings closed with retained Files",
     );
     await panel(view, true, "core");
+    await js("document.querySelector('.auxiliary-hide').click()");
+    await panel(view, false, "core");
     await reopen(() => menu("Files"));
     await panel(view, true, "child");
-    checks.push(
-      "menu-palette-single-companion-reopen-hide-settings-same-terminal",
-    );
+    checks.push("menu-palette-hidden-reveal-settings-retain-same-terminal");
     await location(view);
     await filesAction(view, "New file");
     await apply(view, "created.txt");

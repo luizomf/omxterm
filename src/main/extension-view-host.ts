@@ -707,6 +707,21 @@ class NativeExtensionViewHost {
   async close(id: string): Promise<void> {
     const entry = this.#views.get(id);
     if (!entry) throw new Error("Unknown hosted content");
+    // Transfer current native ownership before destruction clears selection.
+    // The renderer's later hide ACK cannot recover this child's focus once its
+    // epoch has retired. Never defer this handoff across the destruction await:
+    // a newer selection/window may own focus by then. DOM focus remains guarded
+    // by the renderer's acknowledged retirement continuation.
+    if (
+      this.#live() &&
+      !entry.closing &&
+      entry.visible &&
+      this.#selected === id &&
+      !entry.contents.isDestroyed() &&
+      entry.contents.isFocused() &&
+      this.options.owner.isFocused()
+    )
+      this.#ownerContents.focus();
     this.#destroy(entry);
     try {
       await bounded(entry.destroyed, retirementMs);

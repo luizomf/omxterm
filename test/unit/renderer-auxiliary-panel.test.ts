@@ -161,6 +161,108 @@ describe("window auxiliary panel localization", () => {
   });
 });
 
+describe("tool close and panel visibility", () => {
+  it("separates available factories from opened tools and retains them across hide, not close", () => {
+    const f = fixture();
+    const tools = () =>
+      [...f.root.querySelectorAll(".auxiliary-tools button")].map(
+        (button) => button.textContent,
+      );
+    expect(tools()).toEqual([]);
+    f.panel.toggleVisibility();
+    expect(f.root.hidden).toBe(true);
+    f.panel.toggle("a");
+    expect(tools()).toEqual(["A"]);
+    f.panel.toggle("b");
+    expect(tools()).toEqual(["A", "B"]);
+    f.panel.toggleVisibility();
+    expect(f.root.hidden).toBe(true);
+    expect(f.views[1]!.dispose).not.toHaveBeenCalled();
+    f.panel.toggleVisibility();
+    expect(f.panel.selected()).toBe("b");
+    expect(f.factories[1]!.create).toHaveBeenCalledOnce();
+    f.panel.toggle("b");
+    expect(f.root.hidden).toBe(true);
+    expect(f.views[1]!.dispose).toHaveBeenCalledOnce();
+    expect(tools()).toEqual(["A"]);
+    f.panel.toggleVisibility();
+    expect(f.panel.selected()).toBe("a");
+    f.panel.toggle("b");
+    expect(f.factories[1]!.create).toHaveBeenCalledTimes(2);
+    expect(f.views[0]!.dispose).not.toHaveBeenCalled();
+  });
+
+  it("keeps Escape and Hide nondestructive, but header Close disposes and retains its gesture", () => {
+    const f = fixture();
+    f.panel.show("a");
+    const hide = f.root.querySelector<HTMLButtonElement>(".auxiliary-hide")!;
+    const close = f.root.querySelector<HTMLButtonElement>(".auxiliary-close")!;
+    f.key("Enter", hide);
+    expect(f.root.hidden).toBe(true);
+    expect(f.views[0]!.dispose).not.toHaveBeenCalled();
+    expect(f.key("Enter", document.body, true)).toHaveProperty(
+      "defaultPrevented",
+      true,
+    );
+    f.key("Enter", document.body, false, "keyup");
+    f.panel.toggleVisibility();
+    f.key("Escape", f.views[0]!.element);
+    expect(f.views[0]!.dispose).not.toHaveBeenCalled();
+    f.key("Escape", document.body, false, "keyup");
+    f.panel.toggleVisibility();
+    f.key("Enter", close);
+    expect(f.views[0]!.dispose).toHaveBeenCalledOnce();
+    expect(f.key("Enter", document.body, true).defaultPrevented).toBe(true);
+    expect(f.key("Enter", document.body, false, "keyup").defaultPrevented).toBe(
+      true,
+    );
+    f.panel.toggleVisibility();
+    expect(f.root.hidden).toBe(true);
+    f.panel.toggle("a");
+    expect(f.factories[0]!.create).toHaveBeenCalledTimes(2);
+  });
+
+  it("reveals hidden toggles and selects switcher entries without closing them", () => {
+    const f = fixture();
+    f.panel.show("a");
+    f.panel.show("b");
+    f.panel.dismiss();
+    f.panel.toggle("b");
+    expect(f.views[1]!.dispose).not.toHaveBeenCalled();
+    f.panel.toggle("a");
+    const a = f.root.querySelector<HTMLButtonElement>(
+      ".auxiliary-tools button",
+    )!;
+    a.click();
+    expect(f.panel.selected()).toBe("a");
+    expect(f.views[0]!.dispose).not.toHaveBeenCalled();
+    f.panel.setSuspended(true);
+    f.panel.toggleVisibility();
+    f.panel.setSuspended(false);
+    expect(f.panel.selected()).toBe("a");
+    f.panel.dismiss();
+    f.panel.setSuspended(true);
+    f.panel.setSuspended(false);
+    expect(f.root.hidden).toBe(true);
+  });
+
+  it("coalesces native close requests and never reveals a closing instance", () => {
+    const f = fixture();
+    const close = vi.fn();
+    f.panel.register({ ...f.factories[0]!, id: "native", close }, true);
+    f.panel.show("native");
+    f.panel.toggle("native");
+    f.panel.toggle("native");
+    expect(close).toHaveBeenCalledOnce();
+    expect(f.root.hidden).toBe(false);
+    f.panel.show("b");
+    f.panel.show("native");
+    expect(f.panel.selected()).toBe("b");
+    f.panel.remove("native");
+    expect(f.panel.selected()).toBe("b");
+  });
+});
+
 describe("window auxiliary panel", () => {
   it("observes actual content and releases geometry callbacks without late mutation", () => {
     let changed!: () => void;

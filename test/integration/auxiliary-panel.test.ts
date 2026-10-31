@@ -12,10 +12,24 @@ it.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   { timeout: 150_000 },
   async (testContext) => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-auxiliary-"));
+    // Assigned nested desktops may lack hardware WebGL2. This opt-in qualifies
+    // the same Surface with software rendering, not GPU behavior/performance.
+    const softwareRendering =
+      process.platform === "linux" &&
+      process.env.OMXTERM_AUXILIARY_SOFTWARE_RENDERING === "1";
+    if (softwareRendering)
+      console.info("Auxiliary fixture graphics: software WebGL2 (SwiftShader)");
     const execution = await runNativeFixture({
       executable: createRequire(import.meta.url)("electron") as string,
       args: [
         ...supportedFixtureChromiumArguments(),
+        ...(softwareRendering
+          ? [
+              "--enable-unsafe-swiftshader",
+              "--use-gl=angle",
+              "--use-angle=swiftshader",
+            ]
+          : []),
         root,
         "--fixture-auxiliary-only",
       ],

@@ -75,32 +75,32 @@ function scene() {
 }
 
 describe("main palette capability", () => {
-  it("projects the catalog, executes once, and scopes dispatch only to the captured owner", () => {
-    const s = scene();
-    const { token, actions } = s.snapshot();
-    expect(actions.map(({ id }) => id)).toContain("toggleTabBar");
-    expect(actions.map(({ id }) => id)).not.toContain("copy");
-    s.invoked.mockImplementation(() => {
-      s.manager.send(s.sender, terminalIpc.tabBarToggle);
-      s.manager.send(s.other, terminalIpc.tabBarToggle);
-    });
-    s.call(paletteIpc.invoke, token, "toggleTabBar");
-    expect(s.sender.send.mock.calls).toContainEqual([
-      paletteIpc.dispatch,
-      { token, channel: terminalIpc.tabBarToggle, payload: undefined },
-    ]);
-    expect(s.sender.send.mock.calls).toContainEqual([
-      terminalIpc.tabBarToggle,
-      undefined,
-    ]);
-    s.call(paletteIpc.invoke, token, "toggleTabBar");
-    expect(s.invoked).toHaveBeenCalledTimes(1);
-    s.manager.send(s.sender, terminalIpc.tabBarToggle);
-    expect(s.sender.send).toHaveBeenLastCalledWith(
-      terminalIpc.tabBarToggle,
-      undefined,
-    );
-  });
+  it.each([
+    ["toggleTabBar", terminalIpc.tabBarToggle],
+    ["toggleAuxiliaryPanel", terminalIpc.auxiliaryPanelToggle],
+  ] as const)(
+    "projects %s, executes once, and scopes dispatch only to the captured owner",
+    (id, channel) => {
+      const s = scene();
+      const { token, actions } = s.snapshot();
+      expect(actions.map(({ id }) => id)).toContain(id);
+      expect(actions.map(({ id }) => id)).not.toContain("copy");
+      s.invoked.mockImplementation(() => {
+        s.manager.send(s.sender, channel);
+        s.manager.send(s.other, channel);
+      });
+      s.call(paletteIpc.invoke, token, id);
+      expect(s.sender.send.mock.calls).toContainEqual([
+        paletteIpc.dispatch,
+        { token, channel, payload: undefined },
+      ]);
+      expect(s.other.send.mock.calls).toContainEqual([channel, undefined]);
+      s.call(paletteIpc.invoke, token, id);
+      expect(s.invoked).toHaveBeenCalledTimes(1);
+      s.manager.send(s.sender, channel);
+      expect(s.sender.send).toHaveBeenLastCalledWith(channel, undefined);
+    },
+  );
   it.each(["selection", "catalog", "token", "excluded", "unknown"])(
     "rejects stale/invalid %s without retargeting",
     (kind) => {

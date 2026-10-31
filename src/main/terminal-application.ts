@@ -110,6 +110,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendFind: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
+  readonly sendAuxiliaryPanelToggle: (window: Window) => void;
   readonly sendTitleBarToggle: (window: Window) => void;
   readonly sendLocalImageOpen: (window: Window) => void;
   readonly toggleDeveloperTools: (window: Window) => void;
@@ -153,6 +154,7 @@ export interface TerminalApplication<
   findInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
+  toggleSelectedAuxiliaryPanel(): void;
   toggleSelectedTitleBar(): void;
   openLocalImageInSelectedWindow(): void;
   applyConfiguration(configuration: {
@@ -162,6 +164,7 @@ export interface TerminalApplication<
   isQuitting(): boolean;
 }
 
+// eslint-disable-next-line max-lines-per-function -- Keep window lifecycle and selected-window action routing under one owner.
 export function startTerminalApplication<Window extends NativeTerminalWindow>(
   options: TerminalApplicationOptions<Window>,
 ): TerminalApplication<Window> {
@@ -418,6 +421,9 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     },
     findInSelectedWindow: selectedWindowAction(options.sendFind),
     toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
+    toggleSelectedAuxiliaryPanel: selectedWindowAction(
+      options.sendAuxiliaryPanelToggle,
+    ),
     toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
     toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
     openLocalImageInSelectedWindow: selectedWindowAction(

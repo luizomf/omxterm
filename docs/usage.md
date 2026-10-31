@@ -287,8 +287,20 @@ Change the interface language in **Settings → General → Language**. Row and 
 
 The Linux ARM64 preview's installed **Files** and **SSH Connect** tools open beside
 the terminal through their existing File-menu, palette or terminal-context actions.
-The panel's labeled buttons switch between opened tools and Snippets. Hiding or
-switching tools retains their state; reopening a tool reuses its existing view.
+The panel's labeled buttons switch between opened tools without closing them.
+**Hide panel** (−) or Escape retains their state. **Close tool** (×) closes the
+selected tool and hides the panel, retaining any other open tools. Invoking a
+tool's ordinary entry point closes it only when it is already selected and
+visible; otherwise it reveals or opens it. Reopening a closed tool creates a
+fresh view, discarding its old drafts/search state.
+
+**View → Toggle Auxiliary Panel** independently hides or reveals retained tools.
+It has no default shortcut; configure `toggleAuxiliaryPanel` in Settings or
+`keybinds`. Reveal restores the remembered open tool or the first remaining one;
+with no open tools it does nothing. Tool close does not disable the extension
+or end terminal sessions. Accepted file operations or SSH launches may still
+finish; close does not promise cancellation or rollback, and reopening does not
+repeat an operation.
 Switching terminal tabs keeps the panel visible. Connecting through SSH opens a
 new terminal tab without replacing the current session or closing the panel.
 Settings and general extension tabs temporarily suspend it.
@@ -299,9 +311,9 @@ retires its view. Published legacy extension pages retain their own styling.
 
 ### Resize or close Snippets
 
-Drag the left separator to resize the right-side Snippets panel. Its 1 px line matches pane dividers but retains a 6 px resize target; keyboard focus highlights the line, not a rectangle. You can also focus the separator with Tab: Left/Right grow/shrink by 10 px, and Home/End choose the current minimum/maximum. The default width is 280 px, bounded to 220–560 px and the available window space. The header's Close button, Escape inside the panel, or `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) hides it and returns terminal focus.
+Drag the left separator to resize the right-side Snippets panel. Its 1 px line matches pane dividers but retains a 6 px resize target; keyboard focus highlights the line, not a rectangle. You can also focus the separator with Tab: Left/Right grow/shrink by 10 px, and Home/End choose the current minimum/maximum. The default width is 280 px, bounded to 220–560 px and the available window space. The header's Hide button or Escape inside the panel hides it and returns terminal focus. Close disposes the selected tool instead. `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) closes selected-visible Snippets, otherwise opens or reveals it.
 
-The panel shrinks automatically in narrow windows and closes below 406 px of content width. Widen the window and open it again; it does not reopen automatically. Your preferred width, search and scroll survive hiding and configuration/theme changes in that window only, not restart. The remaining terminal allowance does not guarantee columns with extreme padding.
+The panel shrinks automatically in narrow windows and hides below 406 px of content width. Widen the window and open it again; it does not reopen automatically. Your preferred width, search and scroll survive hiding and configuration/theme changes in that window only, not restart. The remaining terminal allowance does not guarantee columns with extreme padding.
 
 Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. Selecting Settings or a general extension tab suspends the panel; returning to a terminal restores the selected tool. About, snippet preview and Local Image Preview temporarily make the retained visible panel inert.
 

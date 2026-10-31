@@ -90,6 +90,7 @@ it.each([false, true])(
       onClipboardAction: subscribe,
       onTabCommand: subscribe,
       onTabBarToggle: subscribe,
+      onAuxiliaryPanelToggle: vi.fn(subscribe),
       onFind: subscribe,
       onTabTitle: subscribe,
       onLocalImageOpen: subscribe,
@@ -127,6 +128,7 @@ it.each([false, true])(
         bundle.outputFiles.find((file) => file.path.endsWith(".js"))!.text,
       );
       await vi.waitFor(() => expect(openSettings).toBeTypeOf("function"));
+      expect(terminal.onAuxiliaryPanelToggle).toHaveBeenCalledOnce();
       openSettings();
       await vi.waitFor(() =>
         expect(dom.window.document.querySelector("textarea")).not.toBeNull(),

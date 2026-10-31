@@ -38,6 +38,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleFullScreen",
   "toggleSnippets",
   "toggleTabBar",
+  "toggleAuxiliaryPanel",
   "toggleTitleBar",
   "reloadConfig",
   "commandPalette",
@@ -94,6 +95,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     toggleFullScreen: "Control+Command+F",
     toggleSnippets: "CommandOrControl+Shift+S",
     toggleTabBar: "CommandOrControl+Shift+B",
+    toggleAuxiliaryPanel: null,
     toggleTitleBar: "CommandOrControl+Shift+D",
     reloadConfig: "CommandOrControl+Shift+,",
   },
@@ -139,6 +141,7 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   toggleFullScreen: "F11",
   toggleSnippets: "Control+Shift+S",
   toggleTabBar: "Control+Shift+B",
+  toggleAuxiliaryPanel: null,
   toggleTitleBar: "Control+Shift+D",
   reloadConfig: "Control+Shift+,",
 });

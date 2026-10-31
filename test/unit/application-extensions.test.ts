@@ -702,8 +702,15 @@ it.each([false, true])(
       sshOpen: adapters.sshOpen,
     }),
 );
-it("retains companion Files after its source terminal ends and reopens the same view", () =>
-  exerciseCompanionRouting({ archive, window, service, request }, adapters));
+it.each(["files", "ssh"] as const)(
+  "retains companion %s after its source terminal ends and toggles the same view",
+  (tool) =>
+    exerciseCompanionRouting(
+      { archive, window, service, request },
+      adapters,
+      tool,
+    ),
+);
 
 it.each([true, false])(
   "admits semantic input only for a declared current visible view (%s)",
@@ -845,6 +852,9 @@ it("revokes issued actions across disable/enable without reviving new authority"
   expect(adapters.activate).not.toHaveBeenCalled();
   service.actions()[0]!.invoke();
   await vi.waitFor(() => expect(adapters.hosts).toHaveLength(1));
+  expect(adapters.hosts[0]!.open).toHaveBeenCalledWith(
+    expect.not.objectContaining({ presentation: "panel" }),
+  );
   expect(adapters.activate).toHaveBeenCalledWith(
     manifest.id,
     expect.objectContaining({ generation: 3 }),

@@ -94,6 +94,7 @@ export function coreActionMenuTemplate(
         item("zoomOut"),
         item("actualSize"),
         { type: "separator" },
+        item("toggleAuxiliaryPanel"),
         item("toggleSnippets"),
         item("toggleTabBar"),
         item("toggleTitleBar"),

@@ -135,13 +135,13 @@ async function runScenario({
         )),
       "installed catalog",
     );
-    const view = hosted()[0];
+    let view = hosted()[0];
     view.on("before-input-event", observeInput("child"));
     assert.equal(
       await view.executeJavaScript("document.documentElement.lang"),
       "en-US",
     );
-    const native = window.contentView.children.find(
+    let native = window.contentView.children.find(
       (child) => child.webContents === view,
     );
     assert.ok(native);
@@ -164,27 +164,115 @@ async function runScenario({
       );
     }
     assert.equal(children.length, 1);
-    menu("Toggle Snippets");
+    async function closeAndReopen(action) {
+      const previous = view;
+      const previousNative = native;
+      const previousId = view.id;
+      const backend = children[0];
+      await view.executeJavaScript(
+        "const search = document.querySelector('input[type=search]'); search.value = 'discard-on-close'; search.dispatchEvent(new Event('input', {bubbles:true}));",
+      );
+      let destroyed = false;
+      previous.once("destroyed", () => {
+        destroyed = true;
+      });
+      await action();
+      await until(
+        async () =>
+          destroyed &&
+          previous.isDestroyed() &&
+          !window.contentView.children.includes(previousNative) &&
+          hosted().length === 0 &&
+          core.isFocused() &&
+          (await js(
+            "document.querySelector('.auxiliary-panel').hidden && ![...document.querySelectorAll('.auxiliary-tools button')].some(b => b.textContent === 'Snippets') && !!document.activeElement?.closest('.terminal-surface')",
+          )),
+        "Close destroys Snippets and returns native terminal focus",
+      );
+      menu("Toggle Snippets");
+      await until(
+        async () =>
+          hosted().length === 1 &&
+          (await hosted()[0].executeJavaScript(
+            "document.querySelectorAll('.snippet-activate').length === 2 && document.querySelector('input[type=search]').value === ''",
+          )),
+        "fresh Snippets catalog without discarded search",
+      );
+      view = hosted()[0];
+      native = window.contentView.children.find(
+        (child) => child.webContents === view,
+      );
+      assert.ok(native);
+      assert.notEqual(view, previous);
+      assert.notEqual(view.id, previousId);
+      assert.notEqual(native, previousNative);
+      view.on("before-input-event", observeInput("child"));
+      await until(
+        () => native.getVisible() && view.isFocused(),
+        "fresh native Snippets focus",
+      );
+      assert.equal(children.length, 1);
+      assert.equal(children[0], backend);
+      assert.equal(backend.closed, false);
+      assert.equal(backend.exit, null);
+      assert.equal(ptys.length, 1);
+      assert.equal(session.exited, false);
+      assert.equal(
+        await js(`window.__snippetsCanvas === (${visibleCanvas})`),
+        true,
+      );
+      assert.equal(await readFile(catalogPath, "utf8"), originalCatalog);
+    }
+    await closeAndReopen(() => menu("Toggle Snippets"));
+    await closeAndReopen(() => click(core, ".auxiliary-close"));
+    checks.push(
+      "selected-visible-toggle-and-header-close-destroy-fresh-view-same-backend-catalog-PTY",
+    );
+    await view.executeJavaScript(
+      "window.__snippetsSearch = document.querySelector('input[type=search]'); window.__snippetsSearch.value = 'Exact run'; window.__snippetsSearch.dispatchEvent(new Event('input', {bubbles:true}));",
+    );
+    await click(core, ".auxiliary-hide");
     await until(
-      () => !native.getVisible(),
-      "compatibility toggle hides retained child",
+      () => !native.getVisible() && core.isFocused(),
+      "Hide retains native Snippets",
+    );
+    menu("Toggle Auxiliary Panel");
+    await until(
+      () => native.getVisible() && view.isFocused(),
+      "independent panel reveal",
+    );
+    assert.equal(hosted()[0], view);
+    assert.equal(hosted().length, 1);
+    assert.equal(
+      await view.executeJavaScript(
+        "window.__snippetsSearch === document.querySelector('input[type=search]') && window.__snippetsSearch.value === 'Exact run'",
+      ),
+      true,
+    );
+    menu("Toggle Auxiliary Panel");
+    await until(
+      () => !native.getVisible() && core.isFocused(),
+      "independent panel hide",
     );
     menu("Toggle Snippets");
     await until(
       () => native.getVisible() && view.isFocused(),
-      "compatibility toggle restores retained child",
+      "hidden tool action reveals retained Snippets",
+    );
+    await view.executeJavaScript(
+      "window.__snippetsSearch.value = ''; window.__snippetsSearch.dispatchEvent(new Event('input', {bubbles:true}));",
     );
     await until(
       () =>
         view.executeJavaScript(
           "document.querySelectorAll('.snippet-activate').length === 2",
         ),
-      "catalog ready after compatibility reopen",
+      "unfiltered retained catalog",
     );
-    assert.equal(hosted()[0], view);
-    assert.equal(children.length, 1);
     checks.push("ordinary-archive-trust-enabled-activation");
-    checks.push("compatibility-toggle-single-retained-view");
+    checks.push(
+      "explicit-hide-independent-panel-toggle-retains-exact-view-query",
+    );
     const terminalFocus = () =>
       until(
         async () =>
@@ -193,8 +281,14 @@ async function runScenario({
         "native terminal focus",
       );
     const open = async () => {
-      // Header close, then ordinary menu activation: deterministic toggle state.
-      if (native.getVisible()) await click(core, ".auxiliary-header button");
+      // Hide first: selected-visible tool activation now destroys, not hides.
+      if (native.getVisible()) {
+        await click(core, ".auxiliary-hide");
+        await until(
+          () => !native.getVisible(),
+          "Hide acknowledged before reveal",
+        );
+      }
       menu("Toggle Snippets");
       await until(
         () => native.getVisible() && view.isFocused(),
@@ -455,8 +549,9 @@ print('Enter released')`,
     await view.executeJavaScript(
       "const search = document.querySelector('input[type=search]'); search.value = 'Exact run'; search.dispatchEvent(new Event('input', { bubbles: true }));",
     );
-    await click(core, ".auxiliary-header button");
-    menu("Toggle Snippets");
+    await click(core, ".auxiliary-hide");
+    await until(() => !native.getVisible(), "search Hide acknowledged");
+    menu("Toggle Auxiliary Panel");
     await until(
       async () =>
         native.getVisible() &&

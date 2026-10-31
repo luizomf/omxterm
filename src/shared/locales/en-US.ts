@@ -28,6 +28,7 @@ export const englishMessages = {
   "menu.actualSize": "Actual Size",
   "menu.toggleSnippets": "Toggle Snippets",
   "menu.toggleTabBar": "Toggle Tab Bar",
+  "menu.toggleAuxiliaryPanel": "Toggle Auxiliary Panel",
   "menu.toggleTitleBar": "Toggle Title Bar",
   "menu.reloadConfiguration": "Reload User Configuration",
   "menu.toggleDeveloperTools": "Toggle Developer Tools",
@@ -179,7 +180,8 @@ export const englishMessages = {
 
   "panel.resize": "Resize auxiliary panel",
   "panel.width": "{width} pixels wide",
-  "panel.close": "Close auxiliary panel",
+  "panel.close": "Close tool",
+  "panel.hide": "Hide auxiliary panel",
   "panel.tooNarrow": "Widen the window to open {view}",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Search snippets",

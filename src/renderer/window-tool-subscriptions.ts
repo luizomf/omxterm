@@ -41,6 +41,7 @@ export function subscribeToWindowTools(
   let removeActions: (() => void) | undefined;
   let removeSettings: (() => void) | undefined;
   let removeNative: (() => void) | undefined;
+  let removePanel: (() => void) | undefined;
   const input = createSemanticInput(document, {
     language: owner.language,
     capture: tabs.captureSnippetTarget,
@@ -58,6 +59,7 @@ export function subscribeToWindowTools(
     snippets?.unsubscribe();
     removeSettings?.();
     removeNative?.();
+    removePanel?.();
   };
   try {
     removeActions = subscribeToGuardedActions(
@@ -70,6 +72,10 @@ export function subscribeToWindowTools(
         (panel?.clipboardAction(action) ?? false),
       owner.modalClipboard,
     );
+    removePanel = options.subscribeToAuxiliaryPanelToggle?.(() => {
+      if (!disposed && !owner.blocked() && tabs.isTerminalSelected())
+        panel?.toggleVisibility();
+    });
     snippets = mountWindowSnippets(document, panel, options.snippets, {
       tabs,
       input,

@@ -68,6 +68,7 @@ export async function exerciseCompanionRouting(
     }[];
     activate: ReturnType<typeof vi.fn>;
   },
+  tool: "files" | "ssh" = "files",
 ) {
   const { archive, window, service, request } = context;
   await writeFile(
@@ -77,8 +78,8 @@ export async function exerciseCompanionRouting(
         name: "extension.json",
         data: JSON.stringify({
           ...manifest,
-          id: "omxterm.files",
-          view: { ...manifest.view, action: "omxterm.files.open" },
+          id: `omxterm.${tool}`,
+          view: { ...manifest.view, action: `omxterm.${tool}.open` },
         }),
       },
       { name: "backend.mjs", data: "" },
@@ -111,6 +112,9 @@ export async function exerciseCompanionRouting(
   ).toEqual({ ok: true, directory: "/original" });
   service.actions()[0]!.invoke();
   await vi.waitFor(() => expect(host.reveal).toHaveBeenCalledOnce());
+  expect(host.reveal).toHaveBeenCalledWith(
+    expect.objectContaining({ toggle: true }),
+  );
   expect(adapters.hosts).toHaveLength(1);
   expect(adapters.activate).toHaveBeenCalledOnce();
   window.emit("closed");

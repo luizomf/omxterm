@@ -12,7 +12,12 @@ import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture
 
 // Execute the real suite entry up to its external process boundary. Renderer
 // bundling is unnecessary for argv coverage; filesystem setup stays real.
-async function observeLaunch(name: string, caseIndex = 0) {
+async function observeLaunch(
+  name: string,
+  caseIndex = 0,
+  platform: NodeJS.Platform = "linux",
+  softwareRendering?: string,
+) {
   const entry = path.resolve(`test/integration/${name}.test.ts`);
   const compiled = await build({
     entryPoints: [entry],
@@ -30,10 +35,16 @@ async function observeLaunch(name: string, caseIndex = 0) {
     onTestFinished: (finish: () => Promise<void>) => finalizers.push(finish),
   };
   const cases: (() => Promise<void>)[] = [];
+  type FixtureTest = (testContext: typeof context) => Promise<void>;
   const register = (
     _name: string,
-    test: (testContext: typeof context) => Promise<void>,
-  ) => cases.push(() => test(context));
+    optionsOrTest: FixtureTest | { timeout: number },
+    test?: FixtureTest,
+  ) => {
+    const body = typeof optionsOrTest === "function" ? optionsOrTest : test;
+    if (!body) throw new Error("Missing fixture test body");
+    cases.push(() => body(context));
+  };
   const suite = (_name: string, tests: () => void) => tests();
   const require = createRequire(import.meta.url);
   const stopped = new Error("Observed launch before native process creation");
@@ -48,7 +59,14 @@ async function observeLaunch(name: string, caseIndex = 0) {
     throw stopped;
   };
   runInNewContext(compiled.outputFiles[0]!.text, {
-    process: { ...process, platform: "linux" },
+    process: {
+      ...process,
+      platform,
+      env: {
+        ...process.env,
+        OMXTERM_AUXILIARY_SOFTWARE_RENDERING: softwareRendering,
+      },
+    },
     Buffer,
     URL,
     TextEncoder,
@@ -61,6 +79,7 @@ async function observeLaunch(name: string, caseIndex = 0) {
           expect,
           describe: Object.assign(suite, { skipIf: () => suite }),
           it: Object.assign(register, {
+            skipIf: (skip: boolean) => (skip ? () => {} : register),
             for:
               (values: unknown[]) =>
               (
@@ -162,6 +181,38 @@ describe("supported custom graphical fixture launches", () => {
     expect(args).toContain("--force-device-scale-factor=2.5");
     expect(args).toContain("--ozone-platform=x11");
     expect(args.at(-1)).toMatch(/omxterm-/u);
+  });
+
+  it.each([
+    ["linux", undefined, false],
+    ["linux", "0", false],
+    ["linux", "true", false],
+    ["linux", "1", true],
+    ["darwin", "1", false],
+  ] as const)(
+    "auxiliary software rendering is explicit and Linux-only: %s/%s",
+    async (platform, optIn, enabled) => {
+      const args = await observeLaunch("auxiliary-panel", 0, platform, optIn);
+      expect(args.slice(0, -2)).toEqual([
+        ...supportedFixtureChromiumArguments(platform),
+        ...(enabled
+          ? [
+              "--enable-unsafe-swiftshader",
+              "--use-gl=angle",
+              "--use-angle=swiftshader",
+            ]
+          : []),
+      ]);
+      expect(args.at(-2)).toMatch(/omxterm-auxiliary-/u);
+      expect(args.at(-1)).toBe("--fixture-auxiliary-only");
+    },
+  );
+
+  it("does not apply the auxiliary opt-in to other native fixtures", async () => {
+    const args = await observeLaunch("local-image-native", 0, "linux", "1");
+    expect(args.slice(0, -1)).toEqual(
+      supportedFixtureChromiumArguments("linux"),
+    );
   });
 
   it("adds no Linux switches on macOS or Windows", () => {

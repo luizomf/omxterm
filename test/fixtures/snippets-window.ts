@@ -44,6 +44,8 @@ export async function snippetsWindow(
   let clipboardAction!: (action: "copy" | "paste" | "select-all") => void;
   let tabCommand!: (command: TerminalTabCommand) => void;
   let tabBar!: () => void;
+  let panelToggle!: () => void;
+  const removePanelToggle = vi.fn();
   let settingsOpen!: () => void;
   let update!: (configuration: TerminalRendererConfiguration) => void;
   const configuration = terminalRendererConfiguration(
@@ -177,6 +179,10 @@ export async function snippetsWindow(
         tabCommand = listener;
         return vi.fn();
       },
+      subscribeToAuxiliaryPanelToggle(listener) {
+        panelToggle = listener;
+        return removePanelToggle;
+      },
       subscribeToTabBarToggle(listener) {
         tabBar = listener;
         return vi.fn();
@@ -210,6 +216,8 @@ export async function snippetsWindow(
     clipboardAction,
     tabCommand,
     tabBar,
+    panelToggle,
+    removePanelToggle,
     surfaces,
     adapters,
     sessionHandlers,

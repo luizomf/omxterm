@@ -8,6 +8,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rm,
   symlink,
   writeFile,
@@ -35,13 +36,20 @@ const names = [
   "VERSION",
   "EVIDENCE",
 ] as const;
-const enabled = [
-  ...names,
-  "CATALOG",
-  "CATALOG_SHA256",
-  "EXTENSION_VERSION",
-  "APPEARANCE",
-].some((name) => process.env[prefix + name] !== undefined);
+const source = process.env.OMXTERM_SSH_PACKAGED_SOURCE;
+const combined = process.env.OMXTERM_SSH_PACKAGED_COMBINED;
+assert.ok(combined === undefined || combined === "1");
+if (combined)
+  assert.ok(source, "combined checkpoint requires production source");
+const enabled =
+  !!source ||
+  [
+    ...names,
+    "CATALOG",
+    "CATALOG_SHA256",
+    "EXTENSION_VERSION",
+    "APPEARANCE",
+  ].some((name) => process.env[prefix + name] !== undefined);
 const execute = promisify(execFile);
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
@@ -133,26 +141,132 @@ async function recordPublicCatalog(
   );
 }
 
-// Opt-in, assigned idle Linux ARM64 desktop ONLY. Extraction preserves the
-// exact asar and application bootstrap; no developer entry or package patch.
+type Values = Record<(typeof names)[number], string>;
+async function inputValues(): Promise<Values> {
+  const values = Object.fromEntries(
+    names.map((name) => {
+      if (source && (name === "APPIMAGE" || name === "APPIMAGE_SHA256"))
+        return [name, ""];
+      const value = process.env[prefix + name];
+      assert.ok(value, `${prefix}${name} is required`);
+      return [name, value];
+    }),
+  ) as Values;
+  for (const name of ["ARCHIVE", "EVIDENCE"] as const)
+    assert.ok(path.isAbsolute(values[name]), `${name} must be absolute`);
+  assert.match(values.ARCHIVE_SHA256, /^[a-f0-9]{64}$/);
+  if (source) {
+    assert.ok(path.isAbsolute(source));
+    assert.equal(await realpath(source), source, "canonical source root");
+    for (const name of ["APPIMAGE", "APPIMAGE_SHA256", "CATALOG"])
+      assert.equal(process.env[prefix + name], undefined);
+  } else {
+    assert.ok(path.isAbsolute(values.APPIMAGE));
+    assert.match(values.APPIMAGE_SHA256, /^[a-f0-9]{64}$/);
+  }
+  return values;
+}
+async function hostIdentity(root: string, version: string) {
+  const asar = source ?? path.join(root, "squashfs-root/resources/app.asar");
+  const executable = source
+    ? await realpath(path.join(source, "node_modules/electron/dist/electron"))
+    : path.join(root, "squashfs-root/omxterm");
+  const executableSha256 = source
+    ? digest(await readFile(executable))
+    : undefined;
+  const sourceHashes: Record<string, string> = {};
+  if (source) {
+    for (const name of [
+      "package.json",
+      "dist/main/index.js",
+      "dist/extension-runtime/bootstrap.mjs",
+    ])
+      sourceHashes[name] = digest(await readFile(path.join(source, name)));
+    const manifest = JSON.parse(
+      await readFile(path.join(source, "package.json"), "utf8"),
+    ) as { version: string };
+    assert.equal(manifest.version, version);
+  }
+  return { asar, executable, executableSha256, sourceHashes };
+}
+async function combinedInputs(root: string, receipts: string) {
+  if (!combined) return {};
+  assert.ok(source);
+  const manifest = JSON.parse(
+    await readFile(
+      path.join(source, "extensions/files/extension.json"),
+      "utf8",
+    ),
+  ) as { name: string; version: string };
+  const filesArchive = path.join(
+    source,
+    `dist/extensions/files-${manifest.version}.omxext`,
+  );
+  const filesArchiveSha256 = digest(await readFile(filesArchive));
+  for (const helper of ["companion-combined.cjs", "companion-native-input.cjs"])
+    await cp(path.join("test/fixtures", helper), path.join(root, helper));
+  const inputs = {
+    filesArchive,
+    filesArchiveSha256,
+    filesTitle: `${manifest.name} · ${manifest.version}`,
+  };
+  await writeFile(
+    path.join(receipts, "combined-artifacts.json"),
+    JSON.stringify(inputs, null, 2),
+  );
+  return inputs;
+}
+async function preparePackage(values: Values, root: string, asar: string) {
+  if (source) return undefined;
+  assert.equal(digest(await readFile(values.APPIMAGE)), values.APPIMAGE_SHA256);
+  await execute(values.APPIMAGE, ["--appimage-extract"], {
+    cwd: root,
+    timeout: 60000,
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  const manifest = JSON.parse(extractFile(asar, "package.json").toString()) as {
+    version: string;
+  };
+  assert.equal(manifest.version, values.VERSION);
+  return digest(await readFile(asar));
+}
+async function unchangedInputs(
+  values: Values,
+  host: Awaited<ReturnType<typeof hostIdentity>>,
+  asarBefore: string | undefined,
+) {
+  if (asarBefore)
+    assert.equal(digest(await readFile(host.asar)), asarBefore, "asar changed");
+  if (!source)
+    assert.equal(
+      digest(await readFile(values.APPIMAGE)),
+      values.APPIMAGE_SHA256,
+    );
+  else
+    assert.equal(
+      digest(await readFile(host.executable)),
+      host.executableSha256,
+      "source Electron executable changed",
+    );
+  for (const [name, hash] of Object.entries(host.sourceHashes))
+    assert.equal(
+      digest(await readFile(path.join(host.asar, name))),
+      hash,
+      `source changed: ${name}`,
+    );
+  assert.equal(digest(await readFile(values.ARCHIVE)), values.ARCHIVE_SHA256);
+}
+
+// Opt-in, assigned idle Linux ARM64 desktop ONLY. Package mode keeps its exact
+// asar/bootstrap. Source mode honestly launches the built production directory.
 it.skipIf(!enabled)(
-  "qualifies separate SSH in the exact Linux ARM64 package",
+  "qualifies separate SSH in the selected Linux ARM64 production host",
   { timeout: 360000 },
   async () => {
     assert.equal(process.platform, "linux");
     assert.equal(process.arch, "arm64");
     assert.notEqual(process.getuid?.(), 0);
-    const values = Object.fromEntries(
-      names.map((name) => {
-        const value = process.env[prefix + name];
-        assert.ok(value, `${prefix}${name} is required`);
-        return [name, value];
-      }),
-    ) as Record<(typeof names)[number], string>;
-    for (const name of ["APPIMAGE", "ARCHIVE", "EVIDENCE"] as const)
-      assert.ok(path.isAbsolute(values[name]), `${name} must be absolute`);
-    for (const name of ["APPIMAGE_SHA256", "ARCHIVE_SHA256"] as const)
-      assert.match(values[name], /^[a-f0-9]{64}$/);
+    const values = await inputValues();
     // Default Shell comes from the OS account, not HOME. Keep that real policy;
     // these shells use our isolated HOME for startup files. No account mutation.
     assert.ok(
@@ -168,8 +282,8 @@ it.skipIf(!enabled)(
     await mkdir(evidence, { recursive: true });
     // A new receipt directory prevents a stale successful Quit from qualifying.
     const receipts = await mkdtemp(path.join(evidence, "run-"));
-    const asar = path.join(root, "squashfs-root/resources/app.asar");
-    const executable = path.join(root, "squashfs-root/omxterm");
+    const host = await hostIdentity(root, values.VERSION);
+    const { asar, executable, executableSha256, sourceHashes } = host;
     let asarBefore: string | undefined;
     let owner:
       Awaited<ReturnType<typeof launchLinuxPackagedProcess>> | undefined;
@@ -188,31 +302,19 @@ it.skipIf(!enabled)(
         values.ARCHIVE_SHA256,
         extensionVersion,
       );
-      const appBytes = await readFile(values.APPIMAGE);
       const archiveBytes = await readFile(values.ARCHIVE);
-      assert.equal(digest(appBytes), values.APPIMAGE_SHA256);
+      asarBefore = await preparePackage(values, root, asar);
       assert.equal(digest(archiveBytes), values.ARCHIVE_SHA256);
       await json("artifacts.json", {
-        appImage: values.APPIMAGE_SHA256,
+        appImage: source ? undefined : values.APPIMAGE_SHA256,
+        source,
+        sourceHashes,
+        executableSha256,
         archive: values.ARCHIVE_SHA256,
         version: values.VERSION,
         extensionVersion,
         appearance: !!appearance,
       });
-      await execute(values.APPIMAGE, ["--appimage-extract"], {
-        cwd: root,
-        timeout: 60000,
-        maxBuffer: 16 * 1024 * 1024,
-      });
-      asarBefore = digest(await readFile(asar));
-      assert.equal(
-        (
-          JSON.parse(extractFile(asar, "package.json").toString()) as {
-            version: string;
-          }
-        ).version,
-        values.VERSION,
-      );
       for (const name of [
         "home/.ssh",
         "profile",
@@ -277,6 +379,7 @@ it.skipIf(!enabled)(
       owner = await launchLinuxPackagedProcess({
         executable,
         args: [
+          ...(source ? [source] : []),
           "--no-sandbox",
           "--ozone-platform=x11",
           "--inspect=127.0.0.1:0",
@@ -316,6 +419,7 @@ it.skipIf(!enabled)(
       assert.ok(url);
       client = await inspector(url);
       observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(path.join(asar, "package.json"))})(${JSON.stringify(path.join(root, "observer.cjs"))})`;
+      const combinedOptions = await combinedInputs(root, receipts);
       const options = {
         root,
         evidence: receipts,
@@ -328,6 +432,10 @@ it.skipIf(!enabled)(
         catalogMode,
         extensionVersion,
         appearance: !!appearance,
+        source,
+        sourceHashes,
+        ...combinedOptions,
+        executableSha256,
       };
       await json(
         "attachment.json",
@@ -398,20 +506,7 @@ it.skipIf(!enabled)(
         stderr = owner.stderrText();
       }
       try {
-        if (asarBefore)
-          assert.equal(
-            digest(await readFile(asar)),
-            asarBefore,
-            "asar changed",
-          );
-        assert.equal(
-          digest(await readFile(values.APPIMAGE)),
-          values.APPIMAGE_SHA256,
-        );
-        assert.equal(
-          digest(await readFile(values.ARCHIVE)),
-          values.ARCHIVE_SHA256,
-        );
+        await unchangedInputs(values, host, asarBefore);
       } catch (error) {
         failures.push(error);
       }
@@ -424,7 +519,9 @@ it.skipIf(!enabled)(
         failures: failures.map((error) =>
           error instanceof Error ? error.stack : String(error),
         ),
-        scope,
+        scope: source
+          ? "built production source; synthetic SSH client; not packaged qualification"
+          : scope,
       });
       if (passed && failures.length === 0)
         await rm(root, { recursive: true, force: true });
@@ -432,7 +529,7 @@ it.skipIf(!enabled)(
     if (failures.length)
       throw new AggregateError(
         failures,
-        `Packaged SSH failed; retained ${root}; receipts ${receipts}`,
+        `Production SSH failed; retained ${root}; receipts ${receipts}`,
       );
   },
 );

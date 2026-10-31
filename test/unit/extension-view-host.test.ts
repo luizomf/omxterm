@@ -275,6 +275,77 @@ it.each([
   },
 );
 
+it.each([
+  [true, true, true, false],
+  [true, true, true, true],
+  [false, true, true, false],
+  [true, false, true, false],
+  [true, true, false, false],
+])(
+  "close hands off native focus before destruction only for its current owner (%s, %s, %s, newer owner %s)",
+  async (windowFocused, childFocused, selected, newerOwner) => {
+    const f = await fixture(false);
+    const handlers = new Map<
+      string,
+      (event: unknown, value: unknown) => Promise<unknown>
+    >();
+    const ipc = {
+      handle: vi.fn(
+        (
+          name: string,
+          handler: (event: unknown, value: unknown) => Promise<unknown>,
+        ) => handlers.set(name, handler),
+      ),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const host = startExtensionViewHost({ ...f.options, ipcMain: ipc });
+    cleanups.push(() => host.retire());
+    const descriptor = await host.open({ ...opening, presentation: "panel" });
+    const sender = {
+      sender: f.owner.webContents,
+      senderFrame: f.owner.webContents.mainFrame,
+    };
+    const invoke = (channel: string, value: unknown) =>
+      handlers.get(channel)!(sender, value);
+    await invoke(extensionViewIpc.present, present(descriptor.id));
+    if (!selected) await invoke(extensionViewIpc.present, present(null, 2));
+    const child = f.views[0]!;
+    f.owner.isFocused.mockReturnValue(windowFocused);
+    f.owner.webContents.focused = false;
+    f.owner.webContents.focus.mockClear();
+    child.webContents.focused = childFocused;
+    // Native hide/detach does not focus the parent. Model exclusive native
+    // ownership explicitly; the default adapter's independent booleans do not.
+    f.owner.webContents.focus.mockImplementation(() => {
+      f.owner.webContents.focused = true;
+      child.webContents.focused = false;
+    });
+    child.setVisible.mockImplementation((visible: boolean) => {
+      if (!visible) child.webContents.focused = false;
+    });
+    const shouldReturn = windowFocused && childFocused && selected;
+    child.webContents.close.mockImplementation(() => {});
+    const closing = invoke(extensionViewIpc.close, descriptor.id);
+    const focusedBeforeDestruction = f.owner.webContents.isFocused();
+    const focusCallsBeforeDestruction =
+      f.owner.webContents.focus.mock.calls.length;
+    // A newer native focus owner while destruction drains must not be stolen
+    // by the close completion, retirement notification or renderer hide ACK.
+    if (newerOwner) f.owner.webContents.focused = false;
+    child.webContents.dead = true;
+    child.webContents.emit("destroyed");
+    await closing;
+    expect(focusedBeforeDestruction).toBe(shouldReturn);
+    expect(focusCallsBeforeDestruction).toBe(shouldReturn ? 1 : 0);
+    expect(child.webContents.close).toHaveBeenCalledOnce();
+    expect(await invoke(extensionViewIpc.present, present(null, 3))).toBe(true);
+    expect(f.owner.webContents.isFocused()).toBe(shouldReturn && !newerOwner);
+    expect(f.owner.webContents.focus).toHaveBeenCalledTimes(
+      shouldReturn ? 1 : 0,
+    );
+  },
+);
+
 it("publishes actual panel focus and reveals the retained identity", async () => {
   const f = await fixture(false);
   const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;

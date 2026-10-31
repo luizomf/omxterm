@@ -157,6 +157,7 @@ it("Close Tab confirms the busy sibling while its focused pane is still mounting
     sendClipboardAction: vi.fn(),
     sendSnippetsToggle: vi.fn(),
     sendTabBarToggle: vi.fn(),
+    sendAuxiliaryPanelToggle: vi.fn(),
     sendFind: vi.fn(),
     sendTitleBarToggle: vi.fn(),
     sendLocalImageOpen: vi.fn(),

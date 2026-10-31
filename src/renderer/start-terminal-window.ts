@@ -94,6 +94,8 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
           droppedFilePathInsertion: bridge.terminal.droppedFilePathInsertion,
           subscribeToTabCommands: bridge.terminal.onTabCommand,
           subscribeToTabBarToggle: bridge.terminal.onTabBarToggle,
+          subscribeToAuxiliaryPanelToggle:
+            bridge.terminal.onAuxiliaryPanelToggle,
           subscribeToFind: bridge.terminal.onFind,
           subscribeToTabTitles: bridge.terminal.onTabTitle,
           notifyTabSelection: bridge.terminal.notifyTabSelection,

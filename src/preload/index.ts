@@ -130,6 +130,14 @@ const terminal: TerminalBridge = {
     return () =>
       actionTransport.removeListener(terminalIpc.tabBarToggle, handler);
   },
+  onAuxiliaryPanelToggle(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+      if (payload === undefined) listener();
+    };
+    actionTransport.on(terminalIpc.auxiliaryPanelToggle, handler);
+    return () =>
+      actionTransport.removeListener(terminalIpc.auxiliaryPanelToggle, handler);
+  },
   onFind(listener) {
     const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
       if (payload === undefined) listener();

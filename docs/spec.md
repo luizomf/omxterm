@@ -547,7 +547,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Image Preview choosing/loading/showing suppresses the action without changing
   the flag or focus. Title-bar visibility and fullscreen remain independent.
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
-  on Linux and Windows, remappable through `keybinds`) shows or hides the
+  on Linux and Windows, remappable through `keybinds`) opens, reveals or closes the
   selected window's Snippets view in one right-side, nonmodal Auxiliary Panel
   below full-width title/tab chrome. Linux ARM64 and macOS ARM64 source use the
   separately installed Snippets extension; other targets retain the built-in view.
@@ -565,10 +565,20 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   installing, enabling or executing code. Settings and modal owners remain no-op
   targets. Runtime failure never restores a competing built-in implementation. Installed Files and SSH Connect share this
   panel after explicit activation through their existing actions. A labeled tool
-  switcher selects among opened tools and Snippets; one view is visible at a time.
-  Reopening an active extension tool reveals its retained view; the existing
-  Snippets compatibility command instead toggles its retained companion. Closing the panel
-  hides it without retiring its extension epoch or ending terminal sessions.
+  switcher selects among opened tools; one view is visible at a time.
+  Each tool's ordinary entry point closes it when selected and visible; otherwise
+  it opens or reveals that tool. Switcher buttons select without closing.
+  Header Close closes only the selected tool and hides the panel; other open
+  tools remain retained. Built-in Snippets disposes its view but keeps its lazy
+  factory available. Native tool close retires its view through the existing
+  acknowledged host lifecycle, not extension disable or backend retirement.
+  Reopening after retirement creates fresh view state and invocation context.
+  Repeated closes coalesce; pending close does not queue an automatic reopen.
+  Header Hide and Escape instead preserve all opened tools and their state.
+  `View -> Toggle Auxiliary Panel` (`keybinds.toggleAuxiliaryPanel`, default
+  `null`) independently hides or reveals the container. Reveal restores the
+  remembered open tool or the first remaining open tool; with none, it does
+  nothing. Hiding does not retain active semantic-input authority.
   Window composition creates the shared panel independently of Snippets wiring;
   Built-in Snippets contributes its lazy view definition; installed Snippets
   uses the native companion presenter. Core owns semantic preview in either
@@ -581,7 +591,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   superseded or disposed activation are inert. Query and scroll survive hiding
   in memory; scroll clamps after shorter results. Deactivation stops active-only
   work and disposal releases all created views and listeners once. Native extension
-  views retain their page state while hidden; accepted filesystem work may finish.
+  views retain their page state while hidden. Closing discards view drafts and
+  revokes view requests, but accepted filesystem work may still finish with an
+  unknown outcome; close is not rollback, and reopening never replays it.
+  Backend scratch state may survive view close. Core-owned SSH launches and
+  accepted Surface-owned paste remain independent of view lifetime.
   Terminal-tab changes preserve the selected companion view. Settings and general
   hosted tabs suspend the panel and restore its selected view on terminal return.
   Panel tools are window-owned, independently of the opening terminal's lifetime;
@@ -592,9 +606,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   core while the panel remains visible; a background result does not steal focus.
   One window-native presentation owner orders panel and tab geometry, focus,
   acknowledged hiding before DOM overlays, and stale continuation rejection.
-- Toggle the visible/loading Snippets view, Close, or Escape originating inside
-  the panel hides/deactivates it and focuses the live selected terminal. A
-  closing Escape or Enter-on-Close gesture owns its repeats and release, including
+- Close (including a selected-visible tool toggle) disposes the selected tool;
+  Hide or Escape originating inside the panel only hides/deactivates it.
+  Both return focus to the live selected terminal after native acknowledgement,
+  unless a newer selection or modal owns focus. Neither closes terminal sessions.
+  An Escape or Enter-on-Close/Hide gesture owns its repeats and release, including
   Kitty event reporting. Escape in the terminal remains terminal input. Switching
   internal views deactivates the old view and focuses the new one directly, with
   no intermediate terminal focus. There is no backdrop, focus trap or global
@@ -1361,7 +1377,7 @@ An optional `keybinds` object remaps application-chrome shortcuts for a fixed
 action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `find`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
-`toggleSnippets`, `toggleTabBar`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
+`toggleSnippets`, `toggleAuxiliaryPanel`, `toggleTabBar`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
 `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`, `focusPaneLeft`,
 `focusPaneRight`, `focusPaneUp`, `focusPaneDown`, `equalizePanes`, and
 `commandPalette`. Command Palette defaults to `CommandOrControl+Shift+P` on macOS

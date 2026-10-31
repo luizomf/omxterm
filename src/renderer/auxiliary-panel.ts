@@ -20,15 +20,18 @@ export interface AuxiliaryViewDefinition {
   // A fixed label, or one that follows the window language.
   readonly label: string | ((t: Translate) => string);
   readonly create: (isInteractive: () => boolean) => AuxiliaryView;
+  // Native views finish removal through their authoritative retirement owner.
+  readonly close?: () => void;
 }
 export interface AuxiliaryPanel {
-  register(view: AuxiliaryViewDefinition): void;
+  register(view: AuxiliaryViewDefinition, opened?: boolean): void;
   remove(id: string): void;
   show(id: string): void;
   selected(): string | undefined;
   requested(): string | undefined;
   setSuspended(suspended: boolean): void;
   toggle(id: string): void;
+  toggleVisibility(): void;
   deactivate(): void;
   dismiss(): void;
   setBlocked(blocked: boolean): void;
@@ -53,14 +56,13 @@ export function createAuxiliaryPanel(
   },
 ): AuxiliaryPanel {
   const language = options.language ?? englishLanguage;
-  const labelOf = (definition: AuxiliaryViewDefinition, t: Translate) =>
-    typeof definition.label === "string"
-      ? definition.label
-      : definition.label(t);
   const document = root.ownerDocument;
   const page = document.defaultView!;
   const definitions = new Map(options.views.map((view) => [view.id, view]));
   const created = new Map<string, AuxiliaryView>();
+  const opened = new Set<string>();
+  const closing = new Set<string>();
+  let remembered: string | undefined;
   let suspended = false;
   let transition = 0;
   let current: string | undefined;
@@ -69,32 +71,10 @@ export function createAuxiliaryPanel(
   let blocked = false;
   let statusTimer: number | undefined;
   let narrowView: AuxiliaryViewDefinition | undefined;
-  const { separator, title, close, body, status } = createPanelElements(root);
-  const switcher = document.createElement("nav");
-  switcher.className = "auxiliary-tools";
-  body.before(switcher);
-  const toolButtons = new Map<string, HTMLButtonElement>();
-  const renderTools = () => {
-    switcher.hidden = definitions.size < 2;
-    for (const [id, button] of toolButtons) {
-      if (!definitions.has(id)) {
-        button.remove();
-        toolButtons.delete(id);
-      }
-    }
-    for (const definition of definitions.values()) {
-      let button = toolButtons.get(definition.id);
-      if (!button) {
-        button = document.createElement("button");
-        button.type = "button";
-        button.addEventListener("click", () => show(definition.id));
-        toolButtons.set(definition.id, button);
-        switcher.append(button);
-      }
-      button.textContent = labelOf(definition, language.t);
-      button.setAttribute("aria-pressed", String(definition.id === current));
-    }
-  };
+  const { separator, title, close, hideButton, body, status } =
+    createPanelElements(root);
+  const tools = createPanelTools(body, definitions, opened, show);
+  const renderTools = () => tools(current, language.t);
   const renderNarrowNotice = (t: Translate) => {
     if (narrowView)
       status.textContent = t("panel.tooNarrow", {
@@ -103,6 +83,7 @@ export function createAuxiliaryPanel(
   };
   const unbindLabels = language.bind((t) => {
     close.setAttribute("aria-label", t("panel.close"));
+    hideButton.setAttribute("aria-label", t("panel.hide"));
     const definition = definitions.get(current ?? "");
     if (definition) {
       title.textContent = labelOf(definition, t);
@@ -145,21 +126,48 @@ export function createAuxiliaryPanel(
       if (restoreFocus && !blocked) options.focusTerminal();
     });
   };
+  const disposeView = (id: string) => {
+    const view = created.get(id);
+    view?.dispose();
+    view?.element.remove();
+    created.delete(id);
+    opened.delete(id);
+    closing.delete(id);
+    if (remembered === id) remembered = undefined;
+    renderTools();
+  };
+  const closeCurrent = () => {
+    if (!interactive() || !current) return;
+    const id = current;
+    if (closing.has(id)) return;
+    const definition = definitions.get(id);
+    if (definition?.close) {
+      closing.add(id);
+      definition.close();
+      return;
+    }
+    select(undefined, () => {
+      hideNow();
+      disposeView(id);
+      if (!blocked) options.focusTerminal();
+    });
+  };
   const geometry = createAuxiliaryPanelGeometry(root, separator, {
     content: options.content,
     language,
     interactive,
     tooNarrow: () => hide(true),
   });
-  const input = installAuxiliaryPanelInput(root, separator, close, {
+  const input = installAuxiliaryPanelInput(root, separator, close, hideButton, {
     interactive,
     ownsFocus,
-    close: () => hide(true),
+    close: closeCurrent,
+    hide: () => hide(true),
     blur: geometry.endDrag,
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
   });
   function show(id: string) {
-    if (disposed || blocked || suspended) return;
+    if (disposed || blocked || suspended || closing.has(id)) return;
     const definition = definitions.get(id);
     if (!definition) return;
     if (!geometry.measure()) {
@@ -187,6 +195,8 @@ export function createAuxiliaryPanel(
         body.append(view.element);
       }
       current = id;
+      remembered = id;
+      opened.add(id);
       for (const [key, candidate] of created)
         candidate.element.hidden = key !== id;
       title.textContent = labelOf(definition, language.t);
@@ -201,9 +211,10 @@ export function createAuxiliaryPanel(
     });
   }
   return {
-    register(definition) {
+    register(definition, isOpen = false) {
       if (disposed || definitions.has(definition.id)) return;
       definitions.set(definition.id, definition);
+      if (isOpen) opened.add(definition.id);
       renderTools();
     },
     remove(id) {
@@ -213,8 +224,7 @@ export function createAuxiliaryPanel(
         requested = undefined;
       }
       if (current === id) hideNow();
-      created.get(id)?.dispose();
-      created.delete(id);
+      disposeView(id);
       definitions.delete(id);
       renderTools();
     },
@@ -243,8 +253,16 @@ export function createAuxiliaryPanel(
     dismiss: () => hide(true),
     toggle(id) {
       if (disposed || blocked || suspended) return;
-      if (current === id) hide(true);
+      if (current === id) closeCurrent();
       else show(id);
+    },
+    toggleVisibility() {
+      if (disposed || blocked || suspended) return;
+      if (current !== undefined || requested !== undefined) hide(true);
+      else {
+        const id = remembered ?? opened.values().next().value;
+        if (id) show(id);
+      }
     },
     setBlocked(value) {
       if (disposed || value === blocked) return;
@@ -274,6 +292,47 @@ export function createAuxiliaryPanel(
   };
 }
 
+function labelOf(definition: AuxiliaryViewDefinition, t: Translate) {
+  return typeof definition.label === "string"
+    ? definition.label
+    : definition.label(t);
+}
+
+function createPanelTools(
+  body: HTMLElement,
+  definitions: ReadonlyMap<string, AuxiliaryViewDefinition>,
+  opened: ReadonlySet<string>,
+  show: (id: string) => void,
+) {
+  const document = body.ownerDocument;
+  const switcher = document.createElement("nav");
+  switcher.className = "auxiliary-tools";
+  body.before(switcher);
+  const buttons = new Map<string, HTMLButtonElement>();
+  return (selected: string | undefined, t: Translate) => {
+    switcher.hidden = opened.size < 2;
+    for (const [id, button] of buttons) {
+      if (!opened.has(id)) {
+        button.remove();
+        buttons.delete(id);
+      }
+    }
+    for (const definition of definitions.values()) {
+      if (!opened.has(definition.id)) continue;
+      let button = buttons.get(definition.id);
+      if (!button) {
+        button = document.createElement("button");
+        button.type = "button";
+        button.addEventListener("click", () => show(definition.id));
+        buttons.set(definition.id, button);
+        switcher.append(button);
+      }
+      button.textContent = labelOf(definition, t);
+      button.setAttribute("aria-pressed", String(definition.id === selected));
+    }
+  };
+}
+
 function createPanelElements(root: HTMLElement) {
   const document = root.ownerDocument;
   root.hidden = true;
@@ -290,7 +349,12 @@ function createPanelElements(root: HTMLElement) {
   const close = document.createElement("button");
   close.type = "button";
   close.textContent = "×";
-  header.append(title, close);
+  close.className = "auxiliary-close";
+  const hideButton = document.createElement("button");
+  hideButton.type = "button";
+  hideButton.className = "auxiliary-hide";
+  hideButton.textContent = "−";
+  header.append(title, hideButton, close);
   const body = document.createElement("div");
   body.className = "auxiliary-body";
   root.replaceChildren(header, body);
@@ -300,5 +364,5 @@ function createPanelElements(root: HTMLElement) {
   status.setAttribute("role", "status");
   status.hidden = true;
   document.body.append(status);
-  return { separator, title, close, body, status };
+  return { separator, title, close, hideButton, body, status };
 }

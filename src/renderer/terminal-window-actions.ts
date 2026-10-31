@@ -15,6 +15,9 @@ export interface TerminalWindowActionSubscriptions {
   ) => () => void;
   readonly subscribeToClipboardActions?: TerminalBridge["onClipboardAction"];
   readonly subscribeToTabBarToggle?: (listener: () => void) => () => void;
+  readonly subscribeToAuxiliaryPanelToggle?: (
+    listener: () => void,
+  ) => () => void;
   readonly subscribeToFind?: (listener: () => void) => () => void;
 }
 

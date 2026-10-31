@@ -32,6 +32,7 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.actualSize": "Tamanho Real",
   "menu.toggleSnippets": "Alternar Snippets",
   "menu.toggleTabBar": "Alternar Barra de Abas",
+  "menu.toggleAuxiliaryPanel": "Alternar Painel Auxiliar",
   "menu.toggleTitleBar": "Alternar Barra de Título",
   "menu.reloadConfiguration": "Recarregar Configuração",
   "menu.toggleDeveloperTools": "Alternar Ferramentas de Desenvolvedor",
@@ -190,7 +191,8 @@ export const brazilianPortugueseMessages: Readonly<
 
   "panel.resize": "Redimensionar painel auxiliar",
   "panel.width": "{width} pixels de largura",
-  "panel.close": "Fechar painel auxiliar",
+  "panel.close": "Fechar ferramenta",
+  "panel.hide": "Ocultar painel auxiliar",
   "panel.tooNarrow": "Alargue a janela para abrir {view}",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Buscar snippets",

@@ -37,7 +37,10 @@ import {
   createSettingsExercise,
   runSettingsExercise,
 } from "./settings-dialog-exercise";
-import { fixtureConfigurationApplier } from "./window-chrome-configuration";
+import {
+  fixtureConfigurationApplier,
+  fixtureSnippetsRouter,
+} from "./window-chrome-configuration";
 import { exerciseAboutKeyboardWithInput } from "./about-keyboard-exercise";
 import { exerciseWindowChrome } from "./window-chrome-exercise";
 import { createFixtureSessionInput } from "./fixture-session-input";
@@ -370,7 +373,10 @@ app
       process.stdout.write(
         `__OMXTERM_CHROME_NATIVE_EXPECTATION__${nativeExpectation}\n`,
       );
-    const router = registerTerminalIpcRouter(ipcMain);
+    const router = fixtureSnippetsRouter(
+      registerTerminalIpcRouter(ipcMain),
+      auxiliaryOnly,
+    );
     const about = createAboutExercise(router, () => windows[0]!, sendAction);
     application = startTerminalApplication<BrowserWindow>({
       createWindow(lifecycle) {
@@ -498,6 +504,8 @@ app
         window.webContents.send(terminalIpc.titleBarToggle),
       sendTabBarToggle: (window) =>
         sendAction(window.webContents, terminalIpc.tabBarToggle),
+      sendAuxiliaryPanelToggle: (window) =>
+        sendAction(window.webContents, terminalIpc.auxiliaryPanelToggle),
       sendFind: (window) => window.webContents.send(terminalIpc.find),
       sendTabCommand: (window, command) =>
         window.webContents.send(terminalIpc.tabCommand, command),

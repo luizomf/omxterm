@@ -91,8 +91,10 @@ export const filesPublicLinkChecks = [
 ];
 export const filesDmgChecks = [
   "exact-archive-trust-dormant-install",
+  "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
   "source-terminal-closed-same-companion-distinct-surviving-PTY",
-  "panel-outside-tabs-native-focus-reopen-close-settings-terminal-switch",
+  "panel-outside-tabs-hide-reveal-settings-terminal-switch-selected-visible-close",
+  "selected-visible-toggle-header-close-destroy-fresh-view-same-backend-PTY",
   "legacy-captured-initial-directory",
   "packaged-backend-create-move-conflict",
   "folder-confirm-cancel-delete-real-backend-trash-recovered",

@@ -110,7 +110,9 @@ it.skipIf(process.platform !== "linux" || process.arch !== "arm64" || !source)(
           ]
         : [
             "Settings-captured-trust-dormant-no-backend",
-            "menu-palette-single-companion-reopen-hide-settings-same-terminal",
+            "selected-visible-toggle-header-close-destroy-empty-reveal-noop-fresh-view-same-backend-PTY",
+            "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
+            "menu-palette-hidden-reveal-settings-retain-same-terminal",
             "real-create-folder-no-clobber-move-trash-confirmed-delete",
             "backend-loss-retires-companion-core-survives",
             "explicit-reopen-fresh-view-and-backend",

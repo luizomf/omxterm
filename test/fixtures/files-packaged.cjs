@@ -390,7 +390,7 @@ async function run(options) {
     } else await click(core, "Install local .omxext…");
   }
   async function openFiles() {
-    await js("document.querySelector('.settings-close').click()");
+    await js("document.querySelector('.settings-close')?.click()");
     await until(
       () => js("!document.querySelector('.settings-dialog')"),
       "Settings closed",
@@ -412,6 +412,49 @@ async function run(options) {
     );
     assert.equal(shellStat()?.start, identity.start);
     return hosted()[0];
+  }
+  async function closeFiles(view, action) {
+    const native = window.contentView.children.find(
+      (child) => child.webContents === view,
+    );
+    assert.ok(native);
+    const oldId = view.id;
+    const backend = children[0];
+    await view.executeJavaScript(
+      "document.querySelector('form.location input').value = 'discard-on-close';",
+    );
+    let destroyed = false;
+    view.once("destroyed", () => {
+      destroyed = true;
+    });
+    await action();
+    await until(
+      async () =>
+        destroyed &&
+        view.isDestroyed() &&
+        !window.contentView.children.includes(native) &&
+        hosted().length === 0 &&
+        core.isFocused() &&
+        (await js(
+          "document.querySelector('.auxiliary-panel').hidden && ![...document.querySelectorAll('.auxiliary-tools button')].some(b => b.textContent === 'Files') && !!document.activeElement?.closest('.terminal-surface')",
+        )),
+      "Close destroys and detaches Files, removes opened membership and returns terminal focus",
+    );
+    assert.equal(shellStat()?.start, identity.start);
+    const replacement = await openFiles();
+    assert.notEqual(replacement, view);
+    assert.notEqual(replacement.id, oldId);
+    assert.equal(
+      await replacement.executeJavaScript(
+        "document.querySelector('form.location input').value === 'discard-on-close'",
+      ),
+      false,
+    );
+    assert.equal(children.length, 1);
+    assert.equal(children[0], backend);
+    assert.equal(backend.closed, false);
+    assert.equal(backend.exit, null);
+    return replacement;
   }
   async function apply(view, value, outcome = "success") {
     await view.executeJavaScript(
@@ -540,34 +583,36 @@ async function run(options) {
   listeners("first-view-active");
   assert.equal(children.length, 1);
   if (!options.publicLink) {
+    view = await closeFiles(view, () => menu("Files"));
+    view = await closeFiles(view, () =>
+      js("document.querySelector('.auxiliary-close').click()"),
+    );
     await filesAction(view, "Use terminal directory");
     await until(
       () => view.executeJavaScript(listingReady(options.root)),
       "initial captured OSC 7 directory",
     );
     const initialDirectory = options.root;
-    // Already-visible pixels cannot acknowledge asynchronous repeated admission.
-    // Observe its delivered open before testing the following Close gesture.
-    await js(`(() => {
-    window.__filesReopened = false;
-    window.__removeFilesReopen = window.omxterm.terminal.hostedContent.onOpen(() => {
-      window.__filesReopened = true;
-    });
-  })()`);
-    try {
-      menu("Files");
-      await until(
-        () => js("window.__filesReopened"),
-        "repeated Files admission",
-      );
-    } finally {
-      await js("window.__removeFilesReopen(); void 0;");
-    }
+    await view.executeJavaScript(
+      "window.__filesDirectory = document.querySelector('form.location input'); window.__filesDirectory.value = 'unsaved-directory';",
+    );
+    await js("document.querySelector('.auxiliary-hide').click()");
+    await panel(view, false, "core");
+    menu("Toggle Auxiliary Panel");
     await panel(view, true, "child");
-    await js("document.querySelector('.auxiliary-header button').click()");
+    assert.equal(
+      await view.executeJavaScript(
+        "window.__filesDirectory === document.querySelector('form.location input') && window.__filesDirectory.value === 'unsaved-directory'",
+      ),
+      true,
+    );
+    menu("Toggle Auxiliary Panel");
     await panel(view, false, "core");
     menu("Files");
     await panel(view, true, "child");
+    checks.push(
+      "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
+    );
     await settings();
     await js("document.querySelector('.settings-close').click()");
     await panel(view, true, "core");
@@ -597,6 +642,9 @@ async function run(options) {
     assert.notEqual(secondPid, shell.probePid);
     const secondIdentity = processIdentity.identity(secondPid);
     assert.ok(secondIdentity && processIdentity.alive(secondIdentity));
+    // Hide before revealing to retain the legacy captured terminal context.
+    await js("document.querySelector('.auxiliary-hide').click()");
+    await panel(view, false, "core");
     menu("Files");
     await panel(view, true, "child");
     await view.executeJavaScript(
@@ -643,11 +691,12 @@ async function run(options) {
       );
     }
     await panel(view, true, "core");
-    menu("Files");
-    await panel(view, true, "child");
-    assert.equal(children.length, 1, "reopen never restarts backend");
+    // Selected-visible entry closes even after terminal switching/closing.
+    view = await closeFiles(view, () => menu("Files"));
+    assert.equal(children.length, 1, "fresh view never restarts backend");
     checks.push(
-      "panel-outside-tabs-native-focus-reopen-close-settings-terminal-switch",
+      "panel-outside-tabs-hide-reveal-settings-terminal-switch-selected-visible-close",
+      "selected-visible-toggle-header-close-destroy-fresh-view-same-backend-PTY",
       "legacy-captured-initial-directory",
     );
   }
@@ -758,9 +807,9 @@ async function run(options) {
     await view.executeJavaScript(
       `(() => { const input = document.querySelector('.operation-editor input'); window.__filesDraft = input; input.value = ${JSON.stringify(draft)}; input.focus(); input.setSelectionRange(3, 8); })()`,
     );
-    await js("document.querySelector('.auxiliary-header button').click()");
+    await js("document.querySelector('.auxiliary-hide').click()");
     await panel(view, false, "core");
-    menu("Files");
+    menu("Toggle Auxiliary Panel");
     await panel(view, true, "child");
     assert.equal(
       await view.executeJavaScript(

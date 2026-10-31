@@ -70,6 +70,7 @@ function fail(error: unknown) {
 process.on("uncaughtException", fail);
 process.on("unhandledRejection", fail);
 
+// eslint-disable-next-line max-lines-per-function -- Keep the native acknowledgement scenario and its inert action ports together.
 async function run() {
   await app.whenReady();
   const events: OperationalEvent[] = [];
@@ -234,6 +235,7 @@ async function run() {
     sendClipboardAction() {},
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
+    sendAuxiliaryPanelToggle() {},
     sendFind() {},
     sendTitleBarToggle() {},
     sendLocalImageOpen() {},

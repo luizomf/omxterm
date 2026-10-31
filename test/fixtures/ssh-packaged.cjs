@@ -1,5 +1,5 @@
-// Main-inspector observer of the untouched package. Only native dialog answers
-// are replaced; actions, hosted preload, PTY, renderer and fonts remain real.
+// Main-inspector observer of the untouched package or explicit built-source host.
+// Native dialog answers are controlled; production actions/preload/PTY stay real.
 const {
   app,
   BrowserWindow,
@@ -42,12 +42,54 @@ function abort() {
   app.quit();
 }
 function inspect(options) {
-  assert.equal(app.isPackaged, true);
+  assert.equal(app.isPackaged, !options.source);
+  if (options.source) {
+    assert.equal(options.asar, options.source);
+    assert.equal(fs.realpathSync(options.source), options.source);
+    assert.equal(
+      fs.realpathSync(
+        path.join(options.source, "node_modules/electron/dist/electron"),
+      ),
+      options.executable,
+    );
+    assert.equal(process.argv[1], options.source);
+    assert.equal(
+      require("node:crypto")
+        .createHash("sha256")
+        .update(fs.readFileSync(process.execPath))
+        .digest("hex"),
+      options.executableSha256,
+      "source Electron executable identity",
+    );
+    for (const name of [
+      "package.json",
+      "dist/main/index.js",
+      "dist/extension-runtime/bootstrap.mjs",
+    ]) {
+      const hash = require("node:crypto")
+        .createHash("sha256")
+        .update(fs.readFileSync(path.join(options.source, name)))
+        .digest("hex");
+      assert.equal(
+        hash,
+        options.sourceHashes[name],
+        `source identity: ${name}`,
+      );
+    }
+    assert.equal(
+      JSON.parse(
+        fs.readFileSync(path.join(options.source, "package.json"), "utf8"),
+      ).main,
+      "dist/main/index.js",
+    );
+  }
   assert.equal(app.getVersion(), options.version);
   assert.equal(app.getAppPath(), options.asar);
   assert.equal(process.execPath, options.executable);
   return {
-    packaged: true,
+    packaged: app.isPackaged,
+    source: options.source,
+    sourceHashes: options.sourceHashes,
     version: app.getVersion(),
     appPath: app.getAppPath(),
     executable: process.execPath,
@@ -540,7 +582,57 @@ async function run(options) {
       )),
     "real SSH page capability and alias discovery",
   );
-  const view = hosted()[0];
+  let view = hosted()[0];
+  async function closeSsh(action, afterClose = async () => {}) {
+    const previous = view;
+    const native = window.contentView.children.find(
+      (child) => child.webContents === previous,
+    );
+    assert.ok(native);
+    const oldId = previous.id;
+    const backend = children[0];
+    await view.executeJavaScript(
+      "document.querySelector('.quick-connect input').value = 'discard-on-close';",
+    );
+    let destroyed = false;
+    previous.once("destroyed", () => {
+      destroyed = true;
+    });
+    await action();
+    await until(
+      async () =>
+        destroyed &&
+        previous.isDestroyed() &&
+        !window.contentView.children.includes(native) &&
+        hosted().length === 0 &&
+        core.isFocused() &&
+        (await js(
+          "document.querySelector('.auxiliary-panel').hidden && ![...document.querySelectorAll('.auxiliary-tools button')].some(b => b.textContent === 'SSH Connect') && !!document.activeElement?.closest('.terminal-surface')",
+        )),
+      "Close destroys and detaches SSH tool and returns native terminal focus",
+    );
+    await afterClose();
+    menu("SSH Connect");
+    await until(
+      async () =>
+        hosted().length === 1 &&
+        (await hosted()[0].executeJavaScript(
+          "!!document.querySelector('[data-alias=fixture-fast]') && !document.querySelector('.quick-connect button').disabled && document.querySelector('.quick-connect input').value === '' && document.querySelector('input[type=search]').value === ''",
+        )),
+      "fresh SSH view without drafts",
+    );
+    view = hosted()[0];
+    assert.notEqual(view, previous);
+    assert.notEqual(view.id, oldId);
+    await panel(view, true, "child");
+    assert.equal(children.length, 1);
+    assert.equal(children[0], backend);
+    assert.equal(backend.closed, false);
+    assert.equal(backend.exit, null);
+    checks.push(
+      "close-destroys-detaches-fresh-SSH-view-drops-draft-same-backend",
+    );
+  }
   await panel(view, true, "child");
   assert.equal(await tabCount(), 1, "tool is outside Application Tabs");
   assert.equal(
@@ -550,32 +642,35 @@ async function run(options) {
     true,
   );
   assert.ok(alive(ptys[0]), "opening panel preserves original PTY");
-  // Repeated admission is asynchronous even while the retained view is visible.
-  await js(`(() => {
-    window.__sshReopened = false;
-    window.__removeSshReopen = window.omxterm.terminal.hostedContent.onOpen(() => {
-      window.__sshReopened = true;
-    });
-  })()`);
-  try {
-    menu("SSH Connect");
-    await until(() => js("window.__sshReopened"), "repeated SSH admission");
-  } finally {
-    await js("window.__removeSshReopen(); void 0;");
-  }
+  await closeSsh(() => menu("SSH Connect"));
+  await view.executeJavaScript(
+    "window.__sshDraft = document.querySelector('.quick-connect input'); window.__sshDraft.value = 'retained-unsaved';",
+  );
+  await js("document.querySelector('.auxiliary-hide').click()");
+  await panel(view, false, "core");
+  menu("Toggle Auxiliary Panel");
   await panel(view, true, "child");
-  await js("document.querySelector('.auxiliary-header button').click()");
+  assert.equal(
+    await view.executeJavaScript(
+      "window.__sshDraft === document.querySelector('.quick-connect input') && window.__sshDraft.value === 'retained-unsaved'",
+    ),
+    true,
+  );
+  menu("Toggle Auxiliary Panel");
   await panel(view, false, "core");
   menu("SSH Connect");
   await panel(view, true, "child");
+  await view.executeJavaScript("window.__sshDraft.value = '';");
   await settings();
   await panel(view, false, "core");
   await closeSettings();
   await panel(view, true, "core");
+  await js("document.querySelector('.auxiliary-hide').click()");
+  await panel(view, false, "core");
   menu("SSH Connect");
   await panel(view, true, "child");
   checks.push(
-    "panel-outside-tabs-reopen-identity-close-focus-settings-suspend-restore",
+    "panel-outside-tabs-hide-independent-toggle-exact-draft-settings-suspend-restore",
   );
   assert.equal(children.length, 1);
   assert.deepEqual(
@@ -804,9 +899,7 @@ async function run(options) {
             blur: true,
           };
           if (hidden) {
-            await js(
-              "document.querySelector('.auxiliary-header button').click()",
-            );
+            await js("document.querySelector('.auxiliary-hide').click()");
             await panel(view, false, "core");
           }
           fs.writeFileSync(
@@ -1054,7 +1147,7 @@ async function run(options) {
     afterCanvas,
     textPixels,
     fontEvidence:
-      "real packaged Restty canvas; visual readability requires owner inspection, not CSS FontFace enumeration",
+      "real production Restty canvas; visual readability requires owner inspection, not CSS FontFace enumeration",
   });
   await screenshot("retained-output.png");
   await core.insertText("NEVER-A-REMOTE-COMMAND");
@@ -1067,6 +1160,9 @@ async function run(options) {
   );
   assert.equal(state.busyClose, 0, "ended pane is not Busy");
   checks.push("retained-search-copy-nonblank-canvas-local-refit-close");
+  await panel(view, true, "core");
+  await js("document.querySelector('.auxiliary-hide').click()");
+  await panel(view, false, "core");
   menu("SSH Connect");
   await panel(view, true, "child");
   // Remove only our controlled executable. A page error must not allocate a tab.
@@ -1168,6 +1264,83 @@ async function run(options) {
   checks.push(
     "pointer-quick-distinct-target-literal-ipv6-argv-foreground-title",
   );
+  // Positive input AND newly rendered output fence core ownership across Hide
+  // and actual Close, not merely PID existence or a stale terminal screenshot.
+  const clientsBeforeClose = fs.readFileSync(
+    file("client-invocations.jsonl"),
+    "utf8",
+  );
+  await js(
+    "window.__sshLiveCanvas = document.activeElement.closest('.terminal-surface').querySelector('canvas')",
+  );
+  async function liveAckCount() {
+    clipboard.clear();
+    menu("Select All");
+    menu("Copy");
+    await until(
+      () => clipboard.readText().includes("SYNTHETIC-SSH-live-OUTPUT"),
+      "live Surface copy receipt",
+    );
+    return clipboard.readText().split("SYNTHETIC-INPUT-ACK").length - 1;
+  }
+  async function liveControl(text, expected) {
+    assert.ok(alive(live), "same live SSH birth identity");
+    assert.equal(
+      await js(
+        "window.__sshLiveCanvas === document.activeElement?.closest('.terminal-surface')?.querySelector('canvas') && !document.querySelector('.terminal-exit-notice')",
+      ),
+      true,
+    );
+    // Each prior one-byte write must already have painted its ACK. Otherwise
+    // an old X acknowledgement could masquerade as fresh H/C output.
+    await until(
+      async () => (await liveAckCount()) === expected.length - 1,
+      "all preceding one-byte SSH acknowledgements rendered",
+    );
+    await core.insertText(text);
+    await until(
+      () => fs.readFileSync(file("ssh-live-input.bin"), "utf8") === expected,
+      "same client accepts fresh control",
+    );
+    await until(
+      async () => (await liveAckCount()) === expected.length,
+      "fresh SSH output rendered after lifecycle transition",
+    );
+    assert.ok(alive(live));
+    assert.equal(
+      fs.readFileSync(file("client-invocations.jsonl"), "utf8"),
+      clientsBeforeClose,
+      "no duplicate SSH client",
+    );
+  }
+  const retainedLiveView = view;
+  await view.executeJavaScript(
+    "window.__sshLiveDraft = document.querySelector('.quick-connect input'); window.__sshLiveDraft.value = 'live-draft';",
+  );
+  await js("document.querySelector('.auxiliary-hide').click()");
+  await panel(view, false, "core");
+  await liveControl("H", "XH");
+  menu("Toggle Auxiliary Panel");
+  await panel(view, true, "child");
+  assert.equal(view, retainedLiveView);
+  assert.equal(
+    await view.executeJavaScript(
+      "window.__sshLiveDraft === document.querySelector('.quick-connect input') && window.__sshLiveDraft.value === 'live-draft'",
+    ),
+    true,
+  );
+  await closeSsh(
+    () => js("document.querySelector('.auxiliary-close').click()"),
+    () => liveControl("C", "XHC"),
+  );
+  assert.ok(alive(live), "fresh tool did not replace core-owned client");
+  assert.equal(
+    fs.readFileSync(file("client-invocations.jsonl"), "utf8"),
+    clientsBeforeClose,
+  );
+  checks.push(
+    "live-SSH-hide-exact-draft-close-destruction-fresh-reopen-same-client-Surface-fresh-input-output-no-duplicate",
+  );
   async function defaultShellReceipt(name) {
     await until(
       () => js("!!document.activeElement?.closest('.terminal-surface')"),
@@ -1247,6 +1420,8 @@ async function run(options) {
     "source terminal removed",
   );
   await panel(view, true, "core");
+  await js("document.querySelector('.auxiliary-hide').click()");
+  await panel(view, false, "core");
   menu("SSH Connect");
   await panel(view, true, "child");
   assert.equal(children.length, 1, "source exit does not restart backend");
@@ -1270,7 +1445,7 @@ async function run(options) {
   assert.ok(alive(live), "cancelled Busy close keeps client");
   await core.insertText("Y");
   await until(
-    () => fs.readFileSync(file("ssh-live-input.bin"), "utf8") === "XY",
+    () => fs.readFileSync(file("ssh-live-input.bin"), "utf8") === "XHCY",
     "client remains usable after disable and cancelled close",
   );
   await screenshot("live-after-disable.png");
@@ -1296,6 +1471,36 @@ async function run(options) {
   );
   assert.deepEqual(fs.readdirSync(file("home/.ssh")), ["config"]);
   assert.equal(fs.existsSync(file("home/.ssh/known_hosts")), false);
+  if (options.filesArchive) {
+    await require("./companion-combined.cjs").runCombined({
+      core,
+      window,
+      js,
+      menu,
+      until,
+      hosted,
+      settings,
+      closeSettings,
+      click,
+      children,
+      options,
+      checks,
+      dialog,
+    });
+    assert.ok(
+      alive(live),
+      "same core SSH birth identity after combined gestures",
+    );
+    assert.deepEqual(
+      fs
+        .readFileSync(file("client-invocations.jsonl"), "utf8")
+        .trimEnd()
+        .split("\n")
+        .map((line) => JSON.parse(line)),
+      invocations,
+      "combined gestures cannot launch another client",
+    );
+  }
   prepareQuit();
   function prepareQuit() {
     app.once("will-quit", () => {
@@ -1328,8 +1533,9 @@ async function run(options) {
   }
   return {
     ...state,
-    scope:
-      "Synthetic client only; DOM keyboard and Chromium pointer; native dialog responses controlled",
+    scope: options.filesArchive
+      ? "Synthetic client; DOM/Chromium scenario plus X11 XTEST companion gestures; controlled native dialogs"
+      : "Synthetic client only; DOM keyboard and Chromium pointer; native dialog responses controlled",
     limitations: [
       "No real SSH/network/authentication",
       "No physical-keyboard/native-popup qualification",

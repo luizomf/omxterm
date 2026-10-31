@@ -176,6 +176,7 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
     findInSelectedTerminal: unexpected,
     toggleSelectedSnippets: unexpected,
     toggleSelectedTabBar: unexpected,
+    toggleSelectedAuxiliaryPanel: unexpected,
     toggleSelectedTitleBar: unexpected,
     reloadUserConfiguration: unexpected,
     openLocalImage: unexpected,

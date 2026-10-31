@@ -149,8 +149,11 @@ Alt.
 
 **Auxiliary Panel** — One window-owned, nonmodal right-side host shared by
 Snippets and explicitly opened companion tools, with one visible view at a time.
-It owns dismissal, focus and pointer/keyboard resizing; width and visibility are
-memory-only. Terminal-tab changes preserve it; Settings/general hosted tabs
+It owns independent tool closure and retained panel hiding, focus and
+pointer/keyboard resizing; width and visibility are memory-only. Close disposes
+the selected tool view, not its extension backend or previously created terminal
+sessions. Hide/Escape preserves open tools; panel reveal restores an open tool
+without reopening a closed one. Terminal-tab changes preserve it; Settings/general hosted tabs
 suspend it. It is independent of the opening terminal's lifetime. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 geometry, view retention and retirement rules.

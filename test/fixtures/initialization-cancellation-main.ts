@@ -118,6 +118,7 @@ async function closeFirstTab(
   };
 }
 
+// eslint-disable-next-line max-lines-per-function -- Keep the native cancellation scenario and its inert action ports together.
 async function run() {
   stage("app-ready", "begin");
   await app.whenReady();
@@ -222,6 +223,7 @@ async function run() {
     sendClipboardAction() {},
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
+    sendAuxiliaryPanelToggle() {},
     sendFind() {},
     sendTitleBarToggle() {},
     sendLocalImageOpen() {},

@@ -399,7 +399,7 @@ export async function startApplicationExtensions(
               invoke: () =>
                 invokeExtension(
                   options,
-                  snippetsCompatibility
+                  captured.presentation === "panel"
                     ? { ...captured, togglePanel: true }
                     : captured,
                   source!,

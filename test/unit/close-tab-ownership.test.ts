@@ -216,6 +216,7 @@ async function harness(confirmClose = true) {
     sendClipboardAction() {},
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
+    sendAuxiliaryPanelToggle() {},
     sendFind() {},
     sendTitleBarToggle() {},
     sendLocalImageOpen() {},

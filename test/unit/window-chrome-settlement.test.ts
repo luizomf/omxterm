@@ -7,6 +7,7 @@ import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { createFixtureSessionInput } from "../fixtures/fixture-session-input";
 import { explicitFixtureReadyMarker } from "../fixtures/restty-host-platform";
 import { createWindowChromeFeatureScenario } from "../fixtures/window-chrome-feature-scenario";
+import { fixtureSnippetsRouter } from "../fixtures/window-chrome-configuration";
 
 // The added observer is real; its native-only scenario is not invoked here.
 vi.mock("electron", () => ({ ipcMain: {}, Menu: {} }));
@@ -35,6 +36,7 @@ function harness(
     appActive?: boolean;
     failFast?: boolean;
     createPeer?: boolean;
+    auxiliaryOnly?: boolean;
   } = {},
 ) {
   const require = createRequire(import.meta.url);
@@ -54,7 +56,11 @@ function harness(
   const processPort = Object.assign(new EventEmitter(), {
     platform: options.platform ?? "win32",
     env: {},
-    argv: options.failFast ? ["--fixture-fail-fast"] : [],
+    argv: options.failFast
+      ? ["--fixture-fail-fast"]
+      : options.auxiliaryOnly
+        ? ["--fixture-auxiliary-only"]
+        : [],
     stdout: { write: vi.fn() },
     stderr: { write: vi.fn() },
     exit: vi.fn(),
@@ -73,6 +79,7 @@ function harness(
     forceCloseWindow: vi.fn(),
   };
   const dispose = vi.fn();
+  const configurations: unknown[] = [];
   const writeSync = vi.fn();
   const windows: Array<{ focus: ReturnType<typeof vi.fn> }> = [];
   const exerciseWindowChrome = vi.fn(async () => {
@@ -121,7 +128,11 @@ function harness(
     "../../src/main/terminal-ipc-controller": {
       registerTerminalIpcRouter: () => ({
         dispose,
-        registerController(options: { createSession: typeof createSession }) {
+        registerController(options: {
+          createSession: typeof createSession;
+          configuration: unknown;
+        }) {
+          configurations.push(options.configuration);
           createSession = options.createSession;
           for (let index = 0; index < count; index++) createSession!(callbacks);
           return {};
@@ -140,7 +151,7 @@ function harness(
       },
     },
     "../../src/main/active-user-configuration": {
-      terminalRendererConfiguration: () => ({}),
+      terminalRendererConfiguration: () => ({ optionalSnippets: true }),
     },
     "../../src/main/user-configuration": { DEFAULT_USER_CONFIGURATION: {} },
     "../../src/main/local-terminal-session": {
@@ -191,6 +202,7 @@ function harness(
     "./settings-dialog-exercise": { runSettingsExercise: async () => ({}) },
     "./window-chrome-configuration": {
       fixtureConfigurationApplier: () => () => {},
+      fixtureSnippetsRouter,
     },
     "../../src/main/native-application-menu": {},
   };
@@ -224,8 +236,24 @@ function harness(
     dispose,
     writeSync,
     createLate: () => createSession!(callbacks),
+    configurations,
   };
 }
+
+it.each([false, true])(
+  "the actual main entry selects built-in fixture composition only for auxiliaryOnly=%s",
+  async (auxiliaryOnly) => {
+    const h = harness(0, {
+      platform: "linux",
+      auxiliaryOnly,
+      exerciseSucceeds: true,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.configurations).toEqual([{ optionalSnippets: !auxiliaryOnly }]);
+    expect(h.processPort.stderr.write).not.toHaveBeenCalled();
+    expect(h.app.quit).toHaveBeenCalledOnce();
+  },
+);
 
 it.each([
   ["darwin", false, true],

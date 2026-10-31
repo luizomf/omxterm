@@ -91,6 +91,8 @@ function createScenario(options: PanelOptions) {
     findInSelectedTerminal: unexpected,
     toggleSelectedSnippets: () => application.toggleSelectedSnippets(),
     toggleSelectedTabBar: () => application.toggleSelectedTabBar(),
+    toggleSelectedAuxiliaryPanel: () =>
+      application.toggleSelectedAuxiliaryPanel(),
     toggleSelectedTitleBar: () => application.toggleSelectedTitleBar(),
     reloadUserConfiguration: options.reload,
     openLocalImage: () => application.openLocalImageInSelectedWindow(),
@@ -247,7 +249,8 @@ async function exerciseClipboard(s: Scene) {
   await until(searchFocused);
   assert.equal(
     await evaluate("document.querySelector('#snippets-sidebar input').value"),
-    "default",
+    "",
+    "selected-visible Snippets shortcut closes its draft; reopening is fresh",
   );
   clipboard.text = "remapped";
   key("A", ["control", "alt"]);
@@ -342,11 +345,11 @@ async function exerciseSmallWindow(s: Scene) {
   );
   assert.equal(
     await evaluate(
-      "(() => { const r = document.querySelector('.auxiliary-header button').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()",
+      "(() => { const r = document.querySelector('.auxiliary-close').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()",
     ),
     true,
   );
-  await evaluate("document.querySelector('.auxiliary-header button').click()");
+  await evaluate("document.querySelector('.auxiliary-hide').click()");
   await until(terminalFocused);
   key("S", ["control", "alt"]);
   await until(searchFocused);
@@ -398,7 +401,7 @@ async function exerciseOverlays(s: Scene) {
   clickMenu("Paste");
   await consumed(expected(["toggle", "clipboard"]));
   await evaluate(
-    "document.querySelector('#snippets-sidebar li .snippet-activate').click(); document.querySelector('.auxiliary-header button').click()",
+    "document.querySelector('#snippets-sidebar li .snippet-activate').click(); document.querySelector('.auxiliary-close').click(); document.querySelector('.auxiliary-hide').click()",
   );
   assert.equal(await evaluate(shown), true);
   assert.equal(input.join(""), "");

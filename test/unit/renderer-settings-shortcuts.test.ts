@@ -37,6 +37,7 @@ const snapshot = (find: {
   keybinds: {
     find,
     newTab: { effective: "Control+Shift+T", state: "inherit" },
+    toggleAuxiliaryPanel: { effective: null, state: "inherit" },
   },
 });
 
@@ -184,6 +185,10 @@ describe("Shortcuts page", () => {
     const view = await open();
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
     expect(view.cells("newTab")).toEqual(["Ctrl+Shift+T", "Default"]);
+    expect(view.cells("toggleAuxiliaryPanel")).toEqual(["None", "Default"]);
+    expect(
+      view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
+    ).toBe("Record shortcut for Toggle Auxiliary Panel");
     expect(view.cells("quit")).toEqual(["None", ""]);
     expect(view.button("find", "record").getAttribute("aria-label")).toBe(
       "Record shortcut for Find…",
@@ -246,6 +251,10 @@ describe("Shortcuts page", () => {
     );
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Padrão"]);
     expect(view.cells("quit")).toEqual(["Nenhum", ""]);
+    expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", "Padrão"]);
+    expect(
+      view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
+    ).toBe("Gravar atalho para Alternar Painel Auxiliar");
     expect(view.button("find", "record").textContent).toBe("Gravar");
     expect(
       document.querySelector(

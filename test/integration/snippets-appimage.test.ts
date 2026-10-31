@@ -247,8 +247,9 @@ it.skipIf(!enabled)(
       assert.deepEqual(scenario, {
         checks: [
           "absent-package-management-no-activation",
+          "selected-visible-toggle-and-header-close-destroy-fresh-view-same-backend-catalog-PTY",
           "ordinary-archive-trust-enabled-activation",
-          "compatibility-toggle-single-retained-view",
+          "explicit-hide-independent-panel-toggle-retains-exact-view-query",
           "exact-insert-run-native-enter-repeat-release",
           "preview-overrides-both-intents-cancel-restores-focus",
           "retained-search-hide-reactivate",

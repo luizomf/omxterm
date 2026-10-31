@@ -14,7 +14,7 @@ it.each([true, false])(
   async (macosLifecycle) => {
     const code = await block(
       "    if (options.macosLifecycle)\n      await js",
-      '    await panel(view, true, "core");\n    menu("Files");',
+      '    await panel(view, true, "core");\n    // Selected-visible entry closes',
     );
     const shell = { probePid: 11 };
     let selected = 22;

@@ -60,6 +60,7 @@ export async function exerciseApplicationMenu(
     findInSelectedTerminal: unexpected,
     toggleSelectedSnippets: unexpected,
     toggleSelectedTabBar: unexpected,
+    toggleSelectedAuxiliaryPanel: unexpected,
     toggleSelectedTitleBar() {
       titleActions += 1;
       application.toggleSelectedTitleBar();

@@ -160,6 +160,7 @@ export async function tabRemovalScene(
       onConfigurationUpdate: subscribe,
       onClipboardAction: subscribe,
       onTabBarToggle: subscribe,
+      onAuxiliaryPanelToggle: subscribe,
       onFind: subscribe,
       onTabTitle: subscribe,
       onLocalImageOpen: subscribe,

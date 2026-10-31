@@ -73,6 +73,7 @@ function createApplicationHarness(
   const sendClipboardAction = vi.fn();
   const sendSnippetsToggle = vi.fn();
   const sendTabBarToggle = vi.fn();
+  const sendAuxiliaryPanelToggle = vi.fn();
   const sendFind = vi.fn();
   const sendTitleBarToggle = vi.fn();
   const sendLocalImageOpen = vi.fn();
@@ -98,6 +99,7 @@ function createApplicationHarness(
     sendClipboardAction,
     sendSnippetsToggle,
     sendTabBarToggle,
+    sendAuxiliaryPanelToggle,
     sendFind,
     sendTitleBarToggle,
     sendLocalImageOpen,
@@ -118,6 +120,7 @@ function createApplicationHarness(
     sendClipboardAction,
     sendSnippetsToggle,
     sendTabBarToggle,
+    sendAuxiliaryPanelToggle,
     sendFind,
     sendTitleBarToggle,
     sendLocalImageOpen,
@@ -131,7 +134,7 @@ function createApplicationHarness(
 }
 
 describe("Window Chrome application actions", () => {
-  it.each(["TabBar", "TitleBar"] as const)(
+  it.each(["TabBar", "TitleBar", "AuxiliaryPanel"] as const)(
     "toggles %s only in the selected Terminal Window",
     async (bar) => {
       const harness = createApplicationHarness();
@@ -146,6 +149,9 @@ describe("Window Chrome application actions", () => {
       );
       expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
       expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
+      harness.application.forceCloseWindow(harness.windows[1]!.window);
+      harness.application[`toggleSelected${bar}`]();
+      expect(harness[`send${bar}Toggle`]).toHaveBeenCalledOnce();
     },
   );
 });
@@ -365,6 +371,7 @@ describe("Terminal application lifecycle", () => {
       sendClipboardAction: vi.fn(),
       sendSnippetsToggle: vi.fn(),
       sendTabBarToggle: vi.fn(),
+      sendAuxiliaryPanelToggle: vi.fn(),
       sendFind: vi.fn(),
       sendTitleBarToggle: vi.fn(),
       sendLocalImageOpen: vi.fn(),

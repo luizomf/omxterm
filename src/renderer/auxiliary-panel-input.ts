@@ -7,10 +7,12 @@ export function installAuxiliaryPanelInput(
   root: HTMLElement,
   separator: HTMLElement,
   close: HTMLButtonElement,
+  hide: HTMLButtonElement,
   options: {
     readonly interactive: () => boolean;
     readonly ownsFocus: () => boolean;
     readonly close: () => void;
+    readonly hide: () => void;
     readonly blur: () => void;
     readonly clipboard?: TerminalClipboard;
   },
@@ -47,13 +49,17 @@ export function installAuxiliaryPanelInput(
     // terminal focus, so retain the whole gesture without changing its action.
     ownedKey = identity(event);
     event.stopPropagation();
-    if (event.key === "Escape" || button === close) {
+    if (event.key === "Escape" || button === hide || button === close) {
       event.preventDefault();
-      options.close();
+      if (event.key === "Escape" || button === hide) options.hide();
+      else options.close();
     }
   };
   const onClose = () => {
     if (options.interactive()) options.close();
+  };
+  const onHide = () => {
+    if (options.interactive()) options.hide();
   };
   const onBlur = () => {
     ownedKey = undefined;
@@ -121,6 +127,7 @@ export function installAuxiliaryPanelInput(
   root.addEventListener("focusout", invalidate);
   root.addEventListener("contextmenu", onContextMenu);
   close.addEventListener("click", onClose);
+  hide.addEventListener("click", onHide);
   page.addEventListener("keydown", onPageKey, true);
   page.addEventListener("keyup", onPageKey, true);
   page.addEventListener("blur", onBlur);
@@ -138,6 +145,7 @@ export function installAuxiliaryPanelInput(
       root.removeEventListener("focusout", invalidate);
       root.removeEventListener("contextmenu", onContextMenu);
       close.removeEventListener("click", onClose);
+      hide.removeEventListener("click", onHide);
       page.removeEventListener("keydown", onPageKey, true);
       page.removeEventListener("keyup", onPageKey, true);
       page.removeEventListener("blur", onBlur);

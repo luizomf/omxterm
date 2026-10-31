@@ -34,13 +34,15 @@ export async function exercisePanelKeyboard(s: AuxiliaryPanelScenario) {
     });
     key("S", ["control", "alt"]);
     await until(`!(${shown})`);
-    for (const keyCode of ["Escape", "Enter"]) {
+    for (const [keyCode, selector] of [
+      ["Escape", undefined],
+      ["Enter", ".auxiliary-hide"],
+      ["Enter", ".auxiliary-close"],
+    ] as const) {
       key("S", ["control", "alt"]);
       await until(searchFocused);
-      if (keyCode === "Enter")
-        await evaluate(
-          "document.querySelector('.auxiliary-header button').focus()",
-        );
+      if (selector)
+        await evaluate(`document.querySelector('${selector}').focus()`);
       const before = input.join("").length;
       contents.sendInputEvent({ type: "keyDown", keyCode });
       await until(`!(${shown}) && ${terminalFocused}`);
@@ -99,7 +101,7 @@ export async function exercisePanelKeyboard(s: AuxiliaryPanelScenario) {
     );
     const beforeSnippet = input.join("").length;
     await evaluate(
-      "document.querySelectorAll('#snippets-sidebar li .snippet-activate')[1].click(); document.querySelector('.auxiliary-header button').click()",
+      "document.querySelectorAll('#snippets-sidebar li .snippet-activate')[1].click(); document.querySelector('.auxiliary-hide').click()",
     );
     await wait(
       () => input.join("").slice(beforeSnippet).endsWith("\r"),

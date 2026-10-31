@@ -158,8 +158,11 @@ selects one implementation at a time; it must not register duplicate production
 actions or compete for the panel. The package's separate action is withheld from production composition: the
 existing `toggleSnippets` command is the sole Snippets menu/palette action.
 Linux ARM64 composition and the qualified macOS ARM64 source transition omit the built-in view and invoke the installed tool
-through ordinary captured-target/token admission. Repeated invocation toggles
-the retained companion; other extension actions still reveal. Missing or disabled
+through ordinary captured-target/token admission. Like Files and SSH Connect,
+invocation closes the selected-visible companion; otherwise it opens or reveals
+that tool. Close discards view state, while Hide/Escape and the independent panel
+toggle retain it, as specified in ADR0039. Reopening a closed Snippets view rereads
+the unchanged catalog with fresh query/scroll state. Missing or disabled
 installations open the retained Settings Extensions page with localized guidance,
 without execution. Runtime failures retain the management owner's distinct status.
 Native qualification uses unchanged production composition, not source substitutions. Its archive still uses ordinary installation/trust.

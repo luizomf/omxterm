@@ -44,6 +44,34 @@ it("reuses validated About/Settings handlers and leaves native delivery unchange
   expect(events.listenerCount(paletteIpc.dispatch)).toBe(0);
 });
 
+it("guards auxiliary panel envelopes and removes both direct and palette subscriptions", () => {
+  const events = new EventEmitter();
+  const { palette, transport } = createPaletteTransport({
+    on: events.on.bind(events),
+    removeListener: events.removeListener.bind(events),
+    invoke: vi.fn(),
+  });
+  const listener = vi.fn();
+  transport.on(terminalIpc.auxiliaryPanelToggle, listener);
+  const send = (token: string) =>
+    events.emit(
+      paletteIpc.dispatch,
+      {},
+      { token, channel: terminalIpc.auxiliaryPanelToggle },
+    );
+  send("current");
+  palette.setDispatchGuard((token) => token === "current");
+  send("stale");
+  expect(listener).not.toHaveBeenCalled();
+  send("current");
+  expect(listener).toHaveBeenCalledOnce();
+  transport.removeListener(terminalIpc.auxiliaryPanelToggle, listener);
+  events.emit(terminalIpc.auxiliaryPanelToggle, {});
+  send("current");
+  expect(listener).toHaveBeenCalledOnce();
+  expect(events.listenerCount(paletteIpc.dispatch)).toBe(0);
+});
+
 it("validates snapshots and literal invoke arguments and excludes non-action channels", async () => {
   const events = new EventEmitter();
   const invoke = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({

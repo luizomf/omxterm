@@ -115,12 +115,15 @@ describe("terminal keybind accelerators", () => {
       expect(defaults.commandPalette).toBe(
         platform === "darwin" ? "CommandOrControl+Shift+P" : "Control+Shift+P",
       );
-      const canonicals = TERMINAL_ACTION_NAMES.map((action) => {
+      expect(defaults.toggleAuxiliaryPanel).toBeNull();
+      const canonicals = TERMINAL_ACTION_NAMES.flatMap((action) => {
         const value = defaults[action];
-        expect(value).not.toBeNull();
-        if (value === null) throw new Error("Existing default was unbound");
+        if (value === null) {
+          expect(action).toBe("toggleAuxiliaryPanel");
+          return [];
+        }
         expect(isValidAccelerator(value)).toBe(true);
-        return canonicalAccelerator(value, platform);
+        return [canonicalAccelerator(value, platform)];
       });
       expect(new Set(canonicals).size).toBe(canonicals.length);
     },

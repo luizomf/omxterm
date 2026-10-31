@@ -36,6 +36,7 @@ async function run() {
     sendClipboardAction: () => {},
     sendSnippetsToggle: () => {},
     sendTabBarToggle: () => {},
+    sendAuxiliaryPanelToggle: () => {},
     sendFind: () => {},
     sendTitleBarToggle: () => {},
     sendLocalImageOpen: () => {},

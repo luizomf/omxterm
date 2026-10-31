@@ -167,7 +167,9 @@ async function observeScenario(
       approvals: 2,
       checks: [
         "exact-archive-trust-dormant-install",
-        "panel-outside-tabs-native-focus-reopen-close-settings-terminal-switch",
+        "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
+        "panel-outside-tabs-hide-reveal-settings-terminal-switch-selected-visible-close",
+        "selected-visible-toggle-header-close-destroy-fresh-view-same-backend-PTY",
         "legacy-captured-initial-directory",
         "packaged-backend-create-move-conflict",
         "explicit-reinstall-actual-retirement-dormant",

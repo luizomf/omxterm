@@ -359,6 +359,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `actualSize`                | `CommandOrControl+0`         | `Control+0`           |
 | `toggleFullScreen`          | `Control+Command+F`          | `F11`                 |
 | `toggleSnippets`            | `CommandOrControl+Shift+S`   | `Control+Shift+S`     |
+| `toggleAuxiliaryPanel`      | `null`                       | `null`                |
 | `toggleTabBar`              | `CommandOrControl+Shift+B`   | `Control+Shift+B`     |
 | `toggleTitleBar`            | `CommandOrControl+Shift+D`   | `Control+Shift+D`     |
 | `reloadConfig`              | `CommandOrControl+Shift+,`   | `Control+Shift+,`     |
@@ -431,8 +432,8 @@ snippets:
 - `execute: false` (the default) appends no Enter; `execute: true` appends Enter after the body. Embedded line breaks or control characters may themselves execute commands even with `false`. Multiline/control-character bodies use the existing Protected Paste confirmation when bracketed paste is disabled.
 - Up to 512 snippets are supported: `name` is 1–128 characters, `body` is 1–65,536, and optional `description` is at most 512 (UTF-16 code units). `execute` must be a boolean. Unknown fields are rejected.
 - The file must be one UTF-8 YAML 1.2 core document, at most 1 MiB. Collection nesting is limited to 16 levels (root collection is level 1), with at most 4,096 total mapping pairs and sequence entries. Duplicate keys, aliases, custom/non-core tags, and multiple documents are rejected. Quote scalar values that must be text, such as `"true"` or `"123"`.
-- Opening reveals search/loading immediately and rereads the catalog. Close and reopen to reload edits; query and scroll are retained in window memory. Old rows cannot run during loading, and empty/error results replace them. Invalid files show a path and safe diagnostic instead of the list; syntax errors include line/column coordinates, not command excerpts.
-- The [resizable panel](usage.md#resize-or-close-snippets) keeps its preferred width only for that window's lifetime. There are no panel configuration fields or persistent width/visibility settings. Close/Escape in the panel returns terminal focus. Selecting Settings deactivates/hides it without losing its query/scroll/width; About, snippet preview and Local Image Preview keep it visible but inert.
+- Opening reveals search/loading immediately and rereads the catalog. Hide and reveal to reload edits while retaining query and scroll in window memory; Close and reopen creates a fresh view. Old rows cannot run during loading, and empty/error results replace them. Invalid files show a path and safe diagnostic instead of the list; syntax errors include line/column coordinates, not command excerpts.
+- The [resizable panel](usage.md#resize-or-close-snippets) keeps its preferred width only for that window's lifetime. There are no persistent width/visibility settings. `keybinds.toggleAuxiliaryPanel` configures independent hide/reveal (unbound by default). Close disposes the selected tool; Hide/Escape retains it. Both return terminal focus unless a newer selection or modal owns it. Selecting Settings deactivates/hides it without losing its query/scroll/width; About, snippet preview and Local Image Preview keep it visible but inert.
 - Existing `snippets.json` files are not read, rewritten, or migrated. Move your entries into `snippets.yaml` yourself; JSON-formatted content is also valid YAML, subject to the same limits.
 
 ## Terminal themes

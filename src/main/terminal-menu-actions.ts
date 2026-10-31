@@ -41,6 +41,7 @@ export function terminalMenuActions(
     findInSelectedTerminal: application.findInSelectedWindow,
     toggleSelectedSnippets: application.toggleSelectedSnippets,
     toggleSelectedTabBar: application.toggleSelectedTabBar,
+    toggleSelectedAuxiliaryPanel: application.toggleSelectedAuxiliaryPanel,
     toggleSelectedTitleBar: application.toggleSelectedTitleBar,
     openLocalImage: application.openLocalImageInSelectedWindow,
   };

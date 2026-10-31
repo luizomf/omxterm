@@ -1,10 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import type {
-  HostedContentBridge,
-  HostedContentDescriptor,
-  HostedContentPresentation,
-} from "../../src/shared/extension-view";
+import { fixture, settle, deferred } from "../fixtures/companion-content";
 import {
   snippetsWindow,
   cleanupSnippetsWindows,
@@ -14,88 +10,6 @@ afterEach(() => {
   cleanupSnippetsWindows();
   vi.unstubAllGlobals();
 });
-const settle = async () => {
-  for (let i = 0; i < 8; i++) await Promise.resolve();
-};
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-}
-async function fixture() {
-  const opens = new Set<(descriptor: HostedContentDescriptor) => void>();
-  const retired = new Set<(id: string) => void>();
-  const focuses = new Set<(id: string | null) => void>();
-  const dismissals = new Set<(id: string) => void>();
-  const focus = (id: string | null) => {
-    for (const listener of focuses) listener(id);
-  };
-  const bridge: HostedContentBridge = {
-    onOpen(listener) {
-      opens.add(listener);
-      return () => {
-        opens.delete(listener);
-      };
-    },
-    onRetired(listener) {
-      retired.add(listener);
-      return () => {
-        retired.delete(listener);
-      };
-    },
-    onFailure: () => () => {},
-    onDismissPanel(listener) {
-      dismissals.add(listener);
-      return () => {
-        dismissals.delete(listener);
-      };
-    },
-    onFocus(listener) {
-      focuses.add(listener);
-      return () => {
-        focuses.delete(listener);
-      };
-    },
-    present: vi.fn(async (request: HostedContentPresentation) => {
-      if (request.focus === true) focus(request.id);
-      if (request.focus === "core" || request.id === null) focus(null);
-      return true;
-    }),
-    close: vi.fn(async () => {}),
-  };
-  const sshPane = vi.fn();
-  const f = await snippetsWindow({ hostedContent: bridge, sshPane });
-  return {
-    ...f,
-    bridge,
-    sshPane,
-    focus,
-    open(id = "files", panel = true, toggle = false) {
-      for (const listener of opens)
-        listener({
-          id,
-          title: id,
-          ...(toggle ? { toggle: true as const } : {}),
-          ...(panel ? { presentation: "panel" as const } : {}),
-        });
-    },
-    dismiss(id: string) {
-      for (const listener of dismissals) listener(id);
-    },
-    retire(id: string) {
-      for (const listener of retired) listener(id);
-    },
-    tool(title: string) {
-      return [
-        ...f.root.querySelectorAll<HTMLButtonElement>(
-          ".auxiliary-tools button",
-        ),
-      ].find((button) => button.textContent === title)!;
-    },
-  };
-}
 
 it.each([false, true])(
   "retains admitted Settings destination through native hide (superseded: %s)",
@@ -153,7 +67,8 @@ it("owns an empty Auxiliary Panel without enabling Snippets", async () => {
   const { root, host, load } = await snippetsWindow({}, false);
   expect(root.hidden).toBe(true);
   expect(root.classList.contains("auxiliary-panel")).toBe(true);
-  expect(root.querySelector(".auxiliary-header button")).not.toBeNull();
+  expect(root.querySelector(".auxiliary-close")).not.toBeNull();
+  expect(root.querySelector(".auxiliary-hide")).not.toBeNull();
   expect(document.querySelectorAll(".auxiliary-separator")).toHaveLength(1);
   expect(root.querySelector(".auxiliary-body")!.children).toHaveLength(0);
   expect(document.querySelector(".snippet-preview")).toBeNull();
@@ -183,7 +98,8 @@ it("retains exclusive tools outside Application Tabs and repeat opens reuse the 
   f.tool("files").click();
   await settle();
   expect((files as HTMLElement).hidden).toBe(false);
-  f.tool("Snippets").click();
+  expect(f.tool("Snippets")).toBeUndefined();
+  f.toggle();
   await settle();
   await vi.waitFor(() => expect(f.root.querySelector("input")).not.toBeNull());
   const query = f.root.querySelector("input")!;
@@ -195,7 +111,7 @@ it("retains exclusive tools outside Application Tabs and repeat opens reuse the 
   await settle();
   expect(f.root.querySelector("input")).toBe(query);
   expect(query.value).toBe("retained");
-  f.root.querySelector<HTMLButtonElement>(".auxiliary-header button")!.click();
+  f.root.querySelector<HTMLButtonElement>(".auxiliary-hide")!.click();
   await settle();
   expect(f.root.hidden).toBe(true);
   expect(f.bridge.close).not.toHaveBeenCalled();
@@ -205,7 +121,7 @@ it("retains exclusive tools outside Application Tabs and repeat opens reuse the 
   expect(f.adapters).toHaveBeenCalledOnce();
 });
 
-it("toggles the retained companion without closing it or allocating another slot", async () => {
+it("closes the selected companion toggle and opens a fresh slot, but reveals nonselected tools", async () => {
   const f = await fixture();
   f.open("optional-snippets");
   await settle();
@@ -217,15 +133,192 @@ it("toggles the retained companion without closing it or allocating another slot
   f.open("optional-snippets", true, true);
   await settle();
   expect(f.root.hidden).toBe(false);
-  expect(f.root.querySelector(".companion-native-slot")).toBe(slot);
+  const reopened = f.root.querySelector(".companion-native-slot");
+  expect(reopened).not.toBe(slot);
   expect(f.root.querySelectorAll(".companion-native-slot")).toHaveLength(1);
+  expect(f.bridge.close).toHaveBeenCalledExactlyOnceWith("optional-snippets");
   f.open("files");
   await settle();
   f.open("optional-snippets", true, true);
   await settle();
   expect(f.root.hidden).toBe(false);
-  expect((slot as HTMLElement).hidden).toBe(false);
-  expect(f.bridge.close).not.toHaveBeenCalled();
+  expect((reopened as HTMLElement).hidden).toBe(false);
+  expect(f.bridge.close).toHaveBeenCalledOnce();
+});
+
+it("closes only after native retirement and hide acknowledgement, coalescing duplicate completion", async () => {
+  const f = await fixture();
+  f.open("ssh");
+  await settle();
+  f.open("files");
+  await settle();
+  const close = deferred<void>();
+  vi.mocked(f.bridge.close).mockReturnValueOnce(close.promise);
+  const button = f.root.querySelector<HTMLButtonElement>(".auxiliary-close")!;
+  f.surfaces[0]!.focus.mockClear();
+  button.click();
+  button.click();
+  f.open("files", true, true);
+  expect(f.bridge.close).toHaveBeenCalledExactlyOnceWith("files");
+  expect(f.root.hidden).toBe(false);
+  expect(f.surfaces[0]!.focus).not.toHaveBeenCalled();
+  const hide = deferred<boolean>();
+  vi.mocked(f.bridge.present).mockReturnValueOnce(hide.promise);
+  f.retire("files");
+  expect(f.root.hidden).toBe(false);
+  expect(f.surfaces[0]!.focus).not.toHaveBeenCalled();
+  hide.resolve(true);
+  await settle();
+  expect(f.root.hidden).toBe(true);
+  expect(f.tool("files")).toBeUndefined();
+  expect(f.tool("ssh")).toBeDefined();
+  expect(f.surfaces[0]!.focus).toHaveBeenCalledOnce();
+  close.resolve();
+  await settle();
+  expect(f.surfaces[0]!.focus).toHaveBeenCalledOnce();
+  expect(f.surfaces[0]!.dispose).not.toHaveBeenCalled();
+  f.open("files-new");
+  await settle();
+  expect(f.root.hidden).toBe(false);
+});
+
+it.each(["close", "hide", "terminal"])(
+  "does not let stale %s completion hide or focus over a newer selection",
+  async (phase) => {
+    const f = await fixture();
+    f.open("files");
+    await settle();
+    const close = deferred<void>();
+    vi.mocked(f.bridge.close).mockReturnValueOnce(close.promise);
+    f.root.querySelector<HTMLButtonElement>(".auxiliary-close")!.click();
+    const hide = deferred<boolean>();
+    if (phase !== "close") {
+      vi.mocked(f.bridge.present).mockReturnValueOnce(hide.promise);
+      f.retire("files");
+    }
+    if (phase === "terminal") f.tabCommand({ action: "new" });
+    else f.open("ssh");
+    await settle();
+    for (const surface of f.surfaces) surface.focus.mockClear();
+    close.resolve();
+    hide.resolve(true);
+    await settle();
+    expect(f.root.hidden).toBe(phase === "terminal");
+    if (phase !== "terminal")
+      expect(f.root.querySelector("h2")!.textContent).toBe("ssh");
+    expect(f.tool("files")).toBeUndefined();
+    for (const surface of f.surfaces)
+      expect(surface.focus).not.toHaveBeenCalled();
+    expect(f.surfaces[0]!.focus).not.toHaveBeenCalled();
+    expect(f.surfaces[0]!.dispose).not.toHaveBeenCalled();
+    if (phase === "terminal") {
+      f.toggle();
+      await settle();
+      expect(f.root.querySelector("h2")?.textContent).toBe("Snippets");
+      expect(f.root.hidden).toBe(false);
+    }
+  },
+);
+
+it.each(
+  ["resolve", "reject"].flatMap((outcome) =>
+    ["before", "after"].flatMap((order) =>
+      ["ack", "refuse", "reject"].map((hideOutcome) => ({
+        outcome,
+        order,
+        hideOutcome,
+      })),
+    ),
+  ),
+)(
+  "settles activation only on safe retirement ACK ($outcome handoff $order $hideOutcome hide)",
+  async ({ outcome, order, hideOutcome }) => {
+    const f = await fixture();
+    f.tabCommand({ action: "new" });
+    await settle();
+    f.open();
+    await settle();
+    vi.mocked(f.bridge.close).mockReturnValueOnce(deferred<void>().promise);
+    f.root.querySelector<HTMLButtonElement>(".auxiliary-close")!.click();
+    const handoff = deferred<boolean>();
+    vi.mocked(f.bridge.present).mockReturnValueOnce(
+      handoff.promise.then(() => {
+        if (outcome === "reject")
+          throw new Error("Unknown active hosted content");
+        return true;
+      }),
+    );
+    f.tabCommand({ action: "previous" });
+    await settle();
+    const hide = deferred<boolean>();
+    vi.mocked(f.bridge.present).mockReturnValueOnce(
+      hide.promise.then((accepted) => {
+        if (hideOutcome === "reject") throw new Error("Hide failed");
+        return accepted;
+      }),
+    );
+    f.retire("files");
+    if (order === "before") handoff.resolve(true);
+    await settle();
+    f.toggle();
+    expect(f.root.querySelector("input")).toBeNull();
+    hide.resolve(hideOutcome !== "refuse");
+    await settle();
+    if (order === "after") handoff.resolve(true);
+    await settle();
+    f.toggle();
+    await settle();
+    if (hideOutcome === "ack") {
+      expect(f.root.hidden).toBe(false);
+      expect(f.root.querySelector("h2")?.textContent).toBe("Snippets");
+    } else {
+      expect(f.root.querySelector("input")).toBeNull();
+      expect(document.querySelector('[role="status"]')?.textContent).toContain(
+        "could not",
+      );
+      expect(f.tool("files")).toBeDefined();
+    }
+  },
+);
+
+it.each(["previous", "same", "overlay", "control"])(
+  "does not restore close-time focus after a newer %s intent",
+  async (intent) => {
+    const f = await fixture();
+    f.tabCommand({ action: "new" });
+    await settle();
+    f.open();
+    await settle();
+    vi.mocked(f.bridge.close).mockReturnValueOnce(deferred<void>().promise);
+    f.root.querySelector<HTMLButtonElement>(".auxiliary-close")!.click();
+    if (intent === "previous") f.tabCommand({ action: "previous" });
+    else if (intent === "same") f.tabCommand({ action: "select", position: 2 });
+    else if (intent === "overlay") f.about();
+    else f.root.querySelector<HTMLButtonElement>(".auxiliary-hide")!.focus();
+    await settle();
+    for (const surface of f.surfaces) surface.focus.mockClear();
+    f.retire("files");
+    await settle();
+    for (const surface of f.surfaces)
+      expect(surface.focus).not.toHaveBeenCalled();
+    expect(f.tool("files")).toBeUndefined();
+  },
+);
+
+it("keeps close failure visible and does not issue a second close or revive its slot", async () => {
+  const f = await fixture();
+  f.open();
+  await settle();
+  vi.mocked(f.bridge.close).mockRejectedValueOnce(new Error("failed"));
+  f.root.querySelector<HTMLButtonElement>(".auxiliary-close")!.click();
+  await settle();
+  f.open("files", true, true);
+  expect(f.bridge.close).toHaveBeenCalledOnce();
+  expect(f.tool("files")).toBeDefined();
+  expect(document.querySelector('[role="status"]')!.textContent).toContain(
+    "could not",
+  );
+  expect(f.surfaces[0]!.dispose).not.toHaveBeenCalled();
 });
 
 it.each(["settings", "modal"])(
@@ -301,7 +394,7 @@ it("settles a refused core focus handoff without focus theft or poisoning later 
   expect(document.querySelector('[role="status"]')?.textContent).not.toContain(
     "could not",
   );
-  f.tool("Snippets").click();
+  f.toggle();
   await settle();
   f.tool("ssh").click();
   await settle();
@@ -381,7 +474,7 @@ it("keeps a pending Snippets selection when a hidden native tool retires", async
   await settle();
   const hide = deferred<boolean>();
   vi.mocked(f.bridge.present).mockImplementationOnce(() => hide.promise);
-  f.tool("Snippets").click();
+  f.toggle();
   f.retire("ssh");
   hide.resolve(true);
   await settle();

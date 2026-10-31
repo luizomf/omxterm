@@ -60,6 +60,7 @@ function fixture() {
     findInSelectedTerminal: unexpected,
     toggleSelectedSnippets: unexpected,
     toggleSelectedTabBar: unexpected,
+    toggleSelectedAuxiliaryPanel: unexpected,
     toggleSelectedTitleBar: unexpected,
     reloadUserConfiguration: unexpected,
     openLocalImage: unexpected,

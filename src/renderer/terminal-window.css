@@ -406,6 +406,7 @@ body.tabs-visible .terminal-tab {
 }
 
 .auxiliary-header h2 {
+  flex: 1;
   min-width: 0;
   margin: 0;
   overflow: hidden;

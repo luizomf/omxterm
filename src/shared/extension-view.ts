@@ -10,7 +10,7 @@ export interface HostedContentDescriptor {
   title: string;
   // Omission keeps the existing general application-tab presentation.
   presentation?: "panel";
-  // Main-only compatibility command for an already retained companion.
+  // Main-issued tool toggle for an already retained companion.
   toggle?: true;
 }
 

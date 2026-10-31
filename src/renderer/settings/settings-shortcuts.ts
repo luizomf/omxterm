@@ -46,6 +46,7 @@ const MENU_KEYS: Readonly<
   toggleFullScreen: "menu.toggleFullScreen",
   toggleSnippets: "menu.toggleSnippets",
   toggleTabBar: "menu.toggleTabBar",
+  toggleAuxiliaryPanel: "menu.toggleAuxiliaryPanel",
   toggleTitleBar: "menu.toggleTitleBar",
   reloadConfig: "menu.reloadConfiguration",
 };

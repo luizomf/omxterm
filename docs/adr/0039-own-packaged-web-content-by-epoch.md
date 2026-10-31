@@ -57,6 +57,28 @@ never a former terminal field. Host Close retains its Enter gesture through
 repeats/release using the same window dismissal owner as Settings. Closing a
 hosted tab does not close a PTY.
 
+Companion tools distinguish Close from Hide: Close uses the same owner-bound
+per-view retirement path, while Hide/Escape retains the page and remembers the
+panel selection separately from native activity. A tool entry point closes only
+its selected-visible view; otherwise it reveals or opens it. The independent
+panel toggle never implicitly reopens a closed tool. Built-in tools retain an
+available factory separately from opened instances. Closing the selected tool
+hides the container without selecting a successor; other opened tools survive.
+Removal is per-identity and idempotent across retirement notification and close
+completion. Explicit close transfers native focus from the selected focused child
+to core synchronously before hiding/detaching/destroying it, only while its owner
+window is focused. The renderer still waits for acknowledged retirement before
+restoring terminal DOM focus. Native focus is not deferred until destruction
+settles: by then selection and even the epoch may be gone. A stale completion
+cannot steal a newer selection's focus.
+
+View retirement does not retire the app-owned backend. Reopening after settlement
+creates fresh view state and context using the existing backend activation.
+Close revokes view-owned requests and discards drafts, but accepted filesystem
+effects can finish with an unknown outcome. Core-transferred SSH launches and
+Surface-owned paste remain core-owned. No rollback or automatic replay follows
+from view closure.
+
 The resource consumer retains the whole captured `openVersion()` pin privately.
 Fresh admission is revalidated before epoch creation; existing reads never follow
 a latest-version pointer. Only bounded, fully materialized Responses cross the
