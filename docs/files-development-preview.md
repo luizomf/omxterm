@@ -308,9 +308,10 @@ configured key. This host capability does not change published preview binaries.
 Terminal-popup actions must claim the same live,
 one-shot popup/window target as core actions. All explicit openings pass through
 core renderer modal admission before activation. Files and SSH Connect use one
-retained companion view per tool/window. Concurrent opens coalesce; later opens
-revalidate the captured package generation and reveal that view instead of
-allocating another epoch. The main-owned presentation policy recognizes their
+retained companion view per tool/window. Concurrent opens coalesce. Later entry-point
+invocations revalidate the captured package generation: hidden/nonselected views
+are revealed without allocating another epoch, while selected-visible views are
+closed. Reopening a closed tool creates a fresh view and discards old drafts. The main-owned presentation policy recognizes their
 captured package ID and matching open-action metadata; this selects layout, not
 publisher trust or additional capabilities. General extensions retain Application
 Tab presentation and independent per-invocation context/view pins.
