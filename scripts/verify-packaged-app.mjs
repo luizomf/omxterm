@@ -200,10 +200,11 @@ async function verifyPackagedExtensions(executable, asar) {
     process.platform,
     process.arch,
   ).filter((file) => file.startsWith("/dist/"))) {
-    const prepared = await readFile(path.join(projectRoot, entry.slice(1)));
-    const packaged = extractFile(asar, entry.slice(1));
+    const member = path.normalize(entry.slice(1));
+    const prepared = await readFile(path.join(projectRoot, member));
+    const packaged = extractFile(asar, member);
     if (entry.endsWith(".node")) {
-      if (!statFile(asar, entry.slice(1)).unpacked)
+      if (!statFile(asar, member).unpacked)
         throw new Error(`Packaged native extension must be unpacked: ${entry}`);
       const addon = path.join(`${asar}.unpacked`, entry.slice(1));
       await inspectArchitecture(

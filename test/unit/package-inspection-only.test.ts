@@ -15,6 +15,32 @@ const windowsRuntimeFiles = [
   "utils.js",
 ];
 const temporary: string[] = [];
+
+// Exercise Windows-native ASAR member paths even when the test host is Unix.
+function mockWindowsAsarMemberPaths() {
+  vi.doMock("node:path", () => ({
+    ...path,
+    default: { ...path, normalize: path.win32.normalize },
+  }));
+}
+
+function extractFixtureMember(
+  archive: string,
+  member: string,
+  extensionFiles: string[],
+) {
+  if (extensionFiles.includes(member.replaceAll("\\", "/")))
+    expect(member).toBe(path.win32.normalize(member));
+  return realAsar.extractFile(archive, member.replaceAll("\\", path.sep));
+}
+
+function fixtureNativeMetadata(member: string, unpacked: boolean) {
+  expect(member).toBe(
+    path.win32.normalize("dist/extension-runtime/extension-leases.node"),
+  );
+  return { unpacked };
+}
+
 async function tinyRuntimeArchive(
   root: string,
   name: string,
@@ -41,6 +67,7 @@ afterEach(async () => {
   vi.resetModules();
   vi.doUnmock("node:fs/promises");
   vi.doUnmock("node:child_process");
+  vi.doUnmock("node:path");
   vi.doUnmock("@electron/asar");
   vi.doUnmock("../../scripts/verify-linux-launcher.mjs");
   realAsar.uncacheAll();
@@ -372,16 +399,18 @@ it.each([
       throw new Error("No GUI or helper may be spawned");
     });
     vi.doMock("node:child_process", () => ({ execFile, spawn }));
+    mockWindowsAsarMemberPaths();
     const expectedAsar = path.join(applicationRoot, "resources", "app.asar");
     const extract = vi.fn((archive: string, member: string) => {
       expect(archive).toBe(expectedAsar);
-      return realAsar.extractFile(selectedArchive, member);
+      return extractFixtureMember(selectedArchive, member, extensionFiles);
     });
     // Only map archive identity; member lookup/payload bytes are the real reader.
     // Native files, inventory, licenses and subprocesses remain controlled ports.
     vi.doMock("@electron/asar", () => ({
       extractFile: extract,
-      statFile: () => ({ unpacked: nativeExtensionUnpacked }),
+      statFile: (_archive: string, member: string) =>
+        fixtureNativeMetadata(member, nativeExtensionUnpacked),
       listPackage: async () => [
         ...extensionFiles.map((file) => `/${file}`),
         ...(extensionFiles.length
@@ -442,7 +471,10 @@ it.each([
         path.join("node_modules", "node-pty", "lib", file),
       ]),
       [expectedAsar, nodePtyMetadata],
-      ...extensionFiles.map((file) => [expectedAsar, file]),
+      ...extensionFiles.map((file) => [
+        expectedAsar,
+        path.win32.normalize(file),
+      ]),
     ]);
     const nativeHelperCalls = () =>
       execute.mock.calls.filter(
