@@ -310,7 +310,12 @@ describe("installed fallback font data", () => {
     },
     {
       platform: "win32",
-      families: ["Segoe UI Emoji", "Microsoft YaHei UI", "Segoe UI Symbol"],
+      families: [
+        "Segoe UI Emoji",
+        "Microsoft YaHei UI",
+        "Malgun Gothic",
+        "Segoe UI Symbol",
+      ],
     },
   ])(
     "preserves available fallback precedence on $platform",

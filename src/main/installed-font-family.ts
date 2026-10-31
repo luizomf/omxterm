@@ -204,7 +204,13 @@ export async function installedFallbackFontData(
     platform === "darwin"
       ? ["Apple Color Emoji", "Hiragino Sans GB", "Apple Symbols"]
       : platform === "win32"
-        ? ["Segoe UI Emoji", "Microsoft YaHei UI", "Segoe UI Symbol"]
+        ? [
+            "Segoe UI Emoji",
+            "Microsoft YaHei UI",
+            // YaHei has no Hangul syllables; Malgun Gothic ships with Windows.
+            "Malgun Gothic",
+            "Segoe UI Symbol",
+          ]
         : [
             "Noto Color Emoji",
             "Noto Sans CJK SC",
