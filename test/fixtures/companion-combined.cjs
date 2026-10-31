@@ -87,9 +87,11 @@ async function runCombined(s) {
     await visible(view, true);
     return view;
   }
+  // The field exists before Home/list replies; their renders overwrite an
+  // unfocused address. Admit drafts only after a successful initial listing.
   const a = await openTool(
     "Files",
-    "!!document.querySelector('form.location input')",
+    "!!document.querySelector('form.location input') && document.querySelector('.entries[role=tree]')?.getAttribute('aria-busy') === 'false' && /^[0-9][0-9,]* visible entr(?:y|ies)(?: · Truncated at 5,000 per folder)?$/.test(document.querySelector('.summary')?.textContent ?? '')",
   );
   await a.executeJavaScript(
     "window.__combinedDraft = document.querySelector('form.location input'); window.__combinedDraft.value = 'retained-A';",

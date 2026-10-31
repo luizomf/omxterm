@@ -62,12 +62,16 @@ async function runShortcuts(s) {
       key: "F6",
       label: "Files",
       selector: "form.location input",
+      // Home/list renders must settle before the fixture writes an address draft.
+      ready:
+        "!!document.querySelector('form.location input') && document.querySelector('.entries[role=tree]')?.getAttribute('aria-busy') === 'false' && /^[0-9][0-9,]* visible entr(?:y|ies)(?: · Truncated at 5,000 per folder)?$/.test(document.querySelector('.summary')?.textContent ?? '')",
     },
     ssh: {
       action: "toggleSshConnect",
       key: "F7",
       label: "SSH Connect",
       selector: ".quick-connect input",
+      ready: "!!document.querySelector('.quick-connect input')",
     },
   };
   const accelerator = (tool) => tool.accelerator || "Control+Shift+" + tool.key;
@@ -239,13 +243,7 @@ async function runShortcuts(s) {
     const fresh = hosted().filter((v) => !previous.has(v));
     assert.equal(fresh.length, 1);
     const view = fresh[0];
-    await until(
-      () =>
-        view.executeJavaScript(
-          `!!document.querySelector(${JSON.stringify(tool.selector)})`,
-        ),
-      "fresh tool ready",
-    );
+    await until(() => view.executeJavaScript(tool.ready), "fresh tool ready");
     await visible(view);
     const receipt = {
       oldId,
