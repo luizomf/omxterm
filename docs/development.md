@@ -88,6 +88,34 @@ Use a newly created, private directory on an execution-capable filesystem you ow
 3. Install the Microsoft Visual C++ Redistributable that matches your machine (**ARM64** or **x64**), and C++ build tools if building native addons from source. Without it, `npm ci` fails while loading native modules.
 4. Run desktop development and graphical tests as a normal (non-Administrator) user inside an interactive desktop session (not a headless SSH Session 0). The separate hosted build-only lane uses headless checks and does not claim ordinary-user integration.
 
+On **Windows ARM64**, ordinary `npm run build`, `npm run dev`, and the build
+phase of `npm run check:portable` compile the extension lease addon. Install
+Visual Studio C++ Build Tools with native ARM64 compiler/linker and Windows SDK
+ARM64 libraries. Open an ARM64 native-tools developer shell as the ordinary
+user. Alternatively, in `cmd.exe`, `call` the installed `vcvarsall.bat arm64`
+and start `powershell.exe` from that initialized shell; invoking the batch file
+directly from PowerShell does not update PowerShell's environment. Verify
+`$env:VSCMD_ARG_TGT_ARCH` is `arm64`, and `where.exe cl.exe` and
+`where.exe link.exe` resolve the expected toolchain. Provision a trusted ARM64
+`node.exe` import library exporting the required Node-API 8 symbols from a
+compatible Node release and verify its provenance and architecture. Set
+`OMXTERM_NODE_IMPORT_LIBRARY` to its **absolute** path in that shell, for example:
+
+```powershell
+$env:OMXTERM_NODE_IMPORT_LIBRARY = 'C:\tools\node-arm64\node.lib'
+npm.cmd run build
+```
+
+The example path is a placeholder, not an included library. The build uses
+locked `node-api-headers`, delay-loads `node.exe` against the running
+Node/Electron executable, and neither downloads nor provisions an import
+library or compiler. Native ARM64 Node and a matching Visual C++ runtime are
+required. Windows x64 does not select this ordinary-build runtime; the separate
+explicit runtime build has its own target-native prerequisites. The
+[Windows composition fixture](windows-arm64-extension-composition.md) describes
+its additional native evidence boundary; source admission is not package or
+installer qualification.
+
 To verify that your user account can create symlinks before running `npm ci`, run in a non-elevated PowerShell window:
 
 ```powershell
@@ -209,13 +237,15 @@ build receipt is not native installed-host qualification; see the guide's
 
 The [internal extension backend runtime](extension-backend-runtime.md) has an
 explicit `npm run build:extension-runtime` artifact and actual native process/store
-tests. Normal macOS ARM64 and Linux ARM64/x64 `npm run build` includes the runtime
-and native lease addon; the Files move addon remains ARM64-only for the
+tests. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64 `npm run build`
+includes the runtime and native lease addon; the Files move addon remains limited
+to macOS and Linux ARM64 for the
 [Files preview](files-development-preview.md). Those targets construct application
 infrastructure without activating installed code; explicit shared actions activate it.
 The opt-in shared production-composition fixture has distinct
 [macOS](macos-extension-composition.md#installed-package-production-fixture) and
-[Linux x64](linux-x64-extension-composition.md#installed-package-production-fixture)
+[Linux x64](linux-x64-extension-composition.md#installed-package-production-fixture) and
+[Windows ARM64](windows-arm64-extension-composition.md#installed-package-production-fixture)
 qualification boundaries. It uses an ordinary build and a minimal installed archive,
 without changing Snippets selection or implying Files support.
 Files remains a separately built archive.

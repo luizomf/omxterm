@@ -28,8 +28,9 @@ The [runtime contract](../extension-backend-runtime.md) governs actual caller/ex
 
 ### Current application consumer
 
-Linux ARM64/x64 and macOS ARM64 application startup construct the runtime without
-activating installed code. [macOS composition](../macos-extension-composition.md)
+Linux ARM64/x64, macOS ARM64 and Windows ARM64 source application startup
+construct the runtime without activating installed code. Windows native
+composition remains unqualified. [macOS composition](../macos-extension-composition.md)
 and [Linux x64 composition](../linux-x64-extension-composition.md) retain separate
 qualification boundaries; existing package/module receipts are not production-lifecycle qualification. The [runtime reference](../extension-backend-runtime.md) covers
 current consumers and builds; [Files composition](../files-development-preview.md#owned-composition-modules)

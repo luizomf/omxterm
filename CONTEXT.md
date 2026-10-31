@@ -305,7 +305,9 @@ review, support or a safety guarantee.
 **Installed Packages** — The internal module that owns local archive validation,
 immutable installed versions, aggregate registry transactions, installation
 generations and deferred cleanup. It is consumed by the Linux ARM64/x64 and
-macOS ARM64 application composition, but does not itself own management UI or execution. See the
+macOS ARM64 application composition and admitted by Windows ARM64 source, but
+does not itself own management UI or execution. Windows native composition is
+not yet qualified. See the
 [foundation contract](docs/extension-installation-foundation.md).
 
 **Backend Runtime** — An internal app-owned authority that lazily activates an

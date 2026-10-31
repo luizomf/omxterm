@@ -24,8 +24,9 @@ The selected adapter adds a small per-target native build obligation, including 
 ## Current integration and qualification
 
 The [foundation contract](../extension-installation-foundation.md) owns interfaces,
-limits, builds and error behavior. Linux ARM64/x64 and macOS ARM64 application startup constructs
-installation/runtime infrastructure without activating installed code. Execution,
+limits, builds and error behavior. Linux ARM64/x64, macOS ARM64 and Windows ARM64
+source application startup constructs installation/runtime infrastructure without
+activating installed code. Windows native composition remains unqualified. Execution,
 web-content hosting, acquisition and trust UI remain consumer responsibilities;
 [Files composition](../files-development-preview.md#owned-composition-modules)
 documents their integration. Installation and enable remain dormant. Separate

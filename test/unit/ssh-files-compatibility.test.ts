@@ -78,6 +78,7 @@ it.each([
         "0.24.0-dev.6",
         "0.24.0-dev.11",
         "0.24.0-dev.20",
+        "0.24.0-dev.31",
         "0.25.0-dev.0",
       ])
         expect(packageCompatible(manifest, { ...runtime, appVersion })).toBe(
@@ -129,6 +130,7 @@ it.each(["files", "ssh"])(
       ...(name === "files"
         ? ["0.24.0-dev.21", "0.24.0-dev.22"]
         : ["0.24.0-dev.8", "0.24.0-dev.11", "0.24.0-dev.12"]),
+      "0.24.0-dev.31",
       "0.24.0",
     ];
     for (const appVersion of compatibleHosts) {

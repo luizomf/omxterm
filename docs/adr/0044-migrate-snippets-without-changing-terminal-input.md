@@ -40,7 +40,9 @@ keyboard behavior. Merely moving the sidebar to a web page would lose the
 captured-target and gesture guarantees currently owned by the terminal renderer.
 
 There is also a platform prerequisite: application extension composition admits
-Linux ARM64/x64 and macOS ARM64 (`startApplicationExtensions`).
+Linux ARM64/x64, macOS ARM64 and Windows ARM64 source (`startApplicationExtensions`).
+Windows native composition and its Snippets migration remain separate,
+unqualified checkpoints; Windows source retains built-in Snippets.
 The delivered [macOS composition](../macos-extension-composition.md) prerequisite
 did not select installed Snippets or change its starter kit. The subsequent source
 transition reuses its ordinary production owners and the existing optional-Snippets

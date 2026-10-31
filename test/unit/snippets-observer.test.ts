@@ -6,9 +6,9 @@ import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
 
 const source = readFileSync("test/fixtures/snippets-observer.cjs", "utf8");
-function harness() {
+function harness(initialPid = 123, nativePath: typeof path = path) {
   class Terminal extends EventEmitter {
-    pid = 123;
+    pid = initialPid;
     writes: string[] = [];
     forwarded = 0;
     constructor() {
@@ -44,6 +44,7 @@ function harness() {
   type Observation = {
     ptys: { pid: number; writes: string[]; output: string; exited: boolean }[];
     children: {
+      pid: number;
       closed: boolean;
       exit: { code: number; signal: null } | null;
     }[];
@@ -62,19 +63,20 @@ function harness() {
         electron: { dialog },
         "node:child_process": childProcess,
         "node:module": { syncBuiltinESMExports: sync },
-        "node:path": path,
+        "node:path": nativePath,
       };
       assert.ok(Object.hasOwn(modules, name));
       return modules[name];
     },
   });
-  const observe = () =>
+  const observe = (options: object = {}) =>
     module.exports.observe(
       {
         archive: "/fixture/snippets.omxext",
         archiveSha256: "digest",
         asar: "/fixture/app.asar",
         executable: "/fixture/omxterm",
+        ...options,
       },
       (name) => {
         expect(name).toBe("node-pty/lib/terminal.js");
@@ -144,6 +146,51 @@ describe("Snippets fixture observation", () => {
     });
     h.child.emit("close");
     expect(observation.children[0]?.closed).toBe(true);
+    observation.restore();
+  });
+
+  it("observes a ConPTY whose PID becomes available after attachment", () => {
+    const h = harness(0);
+    const observation = h.observe();
+    const session = new h.Terminal();
+    expect(observation.ptys[0]?.pid).toBe(0);
+    session.pid = 321;
+    session.emit("data", "ready");
+    expect(observation.ptys[0]).toMatchObject({ pid: 321, output: "ready" });
+    session.emit("exit");
+    expect(observation.ptys[0]).toMatchObject({ pid: 321, exited: true });
+    observation.restore();
+  });
+
+  it("recognizes and validates a native Windows backend path", () => {
+    const h = harness(123, path.win32);
+    const asar = "C:\\fixture\\app.asar";
+    const executable = "C:\\fixture\\omxterm.exe";
+    const observation = h.observe({ asar, executable });
+    const fork = h.childProcess.fork as unknown as (
+      ...args: unknown[]
+    ) => EventEmitter;
+    expect(() =>
+      fork("C:\\wrong\\extension-runtime\\bootstrap.mjs", [], {
+        execPath: executable,
+      }),
+    ).toThrow();
+    expect(h.originalFork).not.toHaveBeenCalled();
+    fork(
+      path.win32.join(asar, "dist", "extension-runtime", "bootstrap.mjs"),
+      [],
+      {
+        execPath: executable,
+      },
+    );
+    h.child.emit("exit", 0, null);
+    h.child.emit("close");
+    expect(observation.children).toHaveLength(1);
+    expect(observation.children[0]).toMatchObject({
+      pid: 456,
+      closed: true,
+      exit: { code: 0, signal: null },
+    });
     observation.restore();
   });
 

@@ -17,7 +17,7 @@ await rm(outputRoot, { recursive: true, force: true });
 await Promise.all([
   ...((process.platform === "linux" &&
     ["arm64", "x64"].includes(process.arch)) ||
-  (process.platform === "darwin" && process.arch === "arm64")
+  (["darwin", "win32"].includes(process.platform) && process.arch === "arm64")
     ? [buildExtensionRuntime(path.join(outputRoot, "extension-runtime"))]
     : []),
   buildMacOSWindowBlur(path.join(outputRoot, "main")),

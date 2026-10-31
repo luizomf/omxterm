@@ -34,6 +34,8 @@ from Snippets qualification and does not qualify macOS Files/SSH.
 [Linux x64 production composition](linux-x64-extension-composition.md) shares that
 minimal fixture. Its historical built-in Snippets receipt predates the separate
 Snippets source transition; existing package restrictions are unchanged.
+[Windows ARM64 source composition](windows-arm64-extension-composition.md)
+retains built-in Snippets and awaits separate native and packaging checks.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

@@ -21,10 +21,17 @@ function observe(options, packageRequire) {
   const subscriptions = [];
   Terminal.prototype._forwardEvents = function (...args) {
     const result = original.forward.apply(this, args);
-    assert.ok(this.pid > 0);
-    const record = { pid: this.pid, writes: [], output: "", exited: false };
-    ptys.push(record);
     const session = this;
+    // Windows node-pty fills its PID asynchronously on ConPTY readiness.
+    const record = {
+      get pid() {
+        return session.pid;
+      },
+      writes: [],
+      output: "",
+      exited: false,
+    };
+    ptys.push(record);
     const write = session.write;
     session.write = function (data) {
       record.writes.push(data);
@@ -46,10 +53,11 @@ function observe(options, packageRequire) {
     return result;
   };
   childProcess.fork = (...args) => {
-    if (
-      String(args[0]).endsWith("extension-runtime/bootstrap.mjs") &&
-      options.asar
-    ) {
+    const bootstrap =
+      typeof args[0] === "string" &&
+      path.basename(args[0]) === "bootstrap.mjs" &&
+      path.basename(path.dirname(args[0])) === "extension-runtime";
+    if (bootstrap && options.asar) {
       assert.equal(
         args[0],
         path.join(options.asar, "dist/extension-runtime/bootstrap.mjs"),
@@ -57,7 +65,7 @@ function observe(options, packageRequire) {
       assert.equal(args[2].execPath, options.executable);
     }
     const child = original.fork(...args);
-    if (String(args[0]).endsWith("extension-runtime/bootstrap.mjs")) {
+    if (bootstrap) {
       const record = { pid: child.pid, closed: false, exit: null };
       children.push(record);
       child.once("exit", (code, signal) => {

@@ -43,7 +43,7 @@ it.each([
   ["darwin", "arm64", true, true],
   ["linux", "arm64", true, true],
   ["linux", "x64", true, false],
-  ["win32", "arm64", false, false],
+  ["win32", "arm64", true, false],
   ["win32", "x64", false, false],
   ["darwin", "x64", false, false],
 ])(

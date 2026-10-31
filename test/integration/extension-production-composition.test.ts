@@ -5,6 +5,8 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
+import { build } from "esbuild";
+import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 import { compositionPackage } from "../fixtures/extension-composition-package";
 
@@ -18,9 +20,13 @@ it.skipIf(!enabled)(
   async (testContext) => {
     assert.ok(
       (process.platform === "darwin" && process.arch === "arm64") ||
-        (process.platform === "linux" && process.arch === "x64"),
+        (process.platform === "linux" && process.arch === "x64") ||
+        (process.platform === "win32" && process.arch === "arm64"),
     );
-    const optionalSnippets = true;
+    const optionalSnippets = usesOptionalSnippets(
+      process.platform,
+      process.arch,
+    );
     const executable = createRequire(import.meta.url)("electron") as string;
     const entry = path.resolve("dist/main/index.js");
     const entrySha256 = digest(await readFile(entry));
@@ -38,18 +44,27 @@ it.skipIf(!enabled)(
     const root = await mkdtemp(
       path.join(tmpdir(), "omxterm-extension-composition-"),
     );
+    const windows = process.platform === "win32";
+    const appArgs = [
+      ...(process.platform === "linux"
+        ? ["--no-sandbox", "--ozone-platform=x11"]
+        : []),
+      root,
+      "-e",
+      ...(windows
+        ? [process.execPath, path.join(root, "extension-composition-probe.cjs")]
+        : ["/bin/sh", "-i"]),
+    ];
     let preparationOwned = false;
     const result = await runNativeFixture({
-      executable,
-      args: [
-        ...(process.platform === "linux"
-          ? ["--no-sandbox", "--ozone-platform=x11"]
-          : []),
-        root,
-        "-e",
-        "/bin/sh",
-        "-i",
-      ],
+      executable: windows ? process.execPath : executable,
+      args: windows
+        ? [
+            path.join(root, "extension-composition-launch.cjs"),
+            executable,
+            ...appArgs,
+          ]
+        : appArgs,
       root,
       timeout: 120_000,
       testContext,
@@ -61,9 +76,20 @@ it.skipIf(!enabled)(
         );
         for (const name of [
           "extension-composition-scenario.cjs",
+          "extension-composition-launch.cjs",
+          "extension-composition-probe.cjs",
           "snippets-observer.cjs",
         ])
           await cp(path.join("test/fixtures", name), path.join(root, name));
+        // Reuse the fixture supervisor's OS creation-identity inventory.
+        await build({
+          entryPoints: ["test/fixtures/native-fixture-processes.ts"],
+          outfile: path.join(root, "fixture-processes.cjs"),
+          bundle: true,
+          platform: "node",
+          format: "cjs",
+          logLevel: "silent",
+        });
         await writeFile(
           path.join(root, "package.json"),
           JSON.stringify({ type: "module", main: "main.mjs", version }),
@@ -101,6 +127,25 @@ it.skipIf(!enabled)(
       reason: "exit",
       cleanupErrors: [],
     });
+    if (windows) {
+      const launchReceipts = result.stdout
+        .split("\n")
+        .filter((line) => line.startsWith("COMPOSITION_LAUNCH_RESULT:"));
+      expect(launchReceipts).toHaveLength(1);
+      expect(
+        JSON.parse(
+          launchReceipts[0]!.slice("COMPOSITION_LAUNCH_RESULT:".length),
+        ),
+      ).toEqual({
+        exitCode: 0,
+        signal: null,
+        exited: true,
+        closed: true,
+        stdoutEnded: true,
+        stderrEnded: true,
+        truncated: false,
+      });
+    }
     const receipts = result.stdout
       .split("\n")
       .filter((line) => line.startsWith("EXTENSION_COMPOSITION_RESULT:"));

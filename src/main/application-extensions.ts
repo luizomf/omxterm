@@ -224,7 +224,8 @@ async function acknowledgeExtension(
 }
 
 // Startup creates infrastructure, never activates installed code. Unsupported
-// platforms retain Settings with an explicit preview-unavailable result.
+// platforms retain Settings with an explicit preview-unavailable result. Broken
+// infrastructure must not prevent terminal startup.
 export async function startApplicationExtensions(
   options: ApplicationExtensionsOptions,
 ) {
@@ -241,10 +242,9 @@ export async function startApplicationExtensions(
   );
   const catalogLoads = createCatalogAcquisition(catalog);
   const supported =
-    (process.platform === "linux" &&
-      (process.arch === "arm64" || process.arch === "x64")) ||
-    (process.platform === "darwin" && process.arch === "arm64");
-  // Broken extension infrastructure must not prevent terminal startup.
+    (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
+    (["darwin", "win32"].includes(process.platform) &&
+      process.arch === "arm64");
   const initialized = supported
     ? await applicationManager(options, lifetime.signal).catch(() => undefined)
     : undefined;

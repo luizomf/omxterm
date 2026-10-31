@@ -4,7 +4,14 @@ const assert = require("node:assert/strict");
 const { writeFile } = require("node:fs/promises");
 const path = require("node:path");
 
-async function runScenario({ window, fixture, ptys, children, approvalCount }) {
+async function runScenario({
+  window,
+  fixture,
+  ptys,
+  children,
+  approvalCount,
+  fixtureProcesses,
+}) {
   const core = window.webContents;
   const js = (code) => core.executeJavaScript(code);
   const until = async (check, label) => {
@@ -89,13 +96,25 @@ async function runScenario({ window, fixture, ptys, children, approvalCount }) {
     assert.notEqual(view.getOSProcessId(), core.getOSProcessId());
     return view;
   };
+  const identity = (pid) => {
+    assert.ok(Number.isSafeInteger(pid) && pid > 0, "live process PID");
+    const record = fixtureProcesses().find((row) => row.pid === pid);
+    assert.ok(record && record.identity && record.identity !== "exited");
+    return record;
+  };
   const checks = [];
   try {
     window.focus();
     await until(
-      () => ptys.length === 1 && ptys[0].output.length > 0,
-      "initial PTY",
+      () =>
+        ptys.length === 1 &&
+        ptys[0].pid > 0 &&
+        (process.platform === "win32"
+          ? ptys[0].output.includes("COMPOSITION_PROBE_READY")
+          : ptys[0].output.length > 0),
+      "initial PTY and process ready",
     );
+    const ptyIdentity = identity(ptys[0].pid);
     await until(
       () => js("!!document.querySelector('.terminal-surface canvas')"),
       "Surface",
@@ -145,6 +164,8 @@ async function runScenario({ window, fixture, ptys, children, approvalCount }) {
     await closeSettings();
     const view = await activate();
     assert.equal(children.length, 1);
+    const firstBackend = identity(children[0].pid);
+    assert.notEqual(firstBackend.pid, ptyIdentity.pid);
     await view.executeJavaScript("document.querySelector('input').focus()");
     await view.insertText("retained draft");
     assert.equal(
@@ -207,19 +228,29 @@ async function runScenario({ window, fixture, ptys, children, approvalCount }) {
     );
     assert.equal(ptys.length, 1);
     assert.equal(ptys[0].exited, false);
+    assert.deepEqual(identity(ptys[0].pid), ptyIdentity);
     assert.equal(
       await js(
         "window.__compositionCanvas === document.querySelector('.terminal-surface canvas') && window.__compositionCanvas.getBoundingClientRect().width > 0",
       ),
       true,
     );
-    await core.insertText("printf '%s\\n' 'COMPOSITION_AFTER_RETIREMENT'");
+    const input =
+      process.platform === "win32"
+        ? "COMPOSITION_INPUT"
+        : "printf '%s\\n' 'COMPOSITION_AFTER_RETIREMENT'";
+    await core.insertText(input);
     core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
     core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
     await until(
-      () => /\r?\nCOMPOSITION_AFTER_RETIREMENT\r?\n/.test(ptys[0].output),
+      () =>
+        (process.platform === "win32"
+          ? /\r?\nCOMPOSITION_ACK\r?\n/
+          : /\r?\nCOMPOSITION_AFTER_RETIREMENT\r?\n/
+        ).test(ptys[0].output),
       "same terminal still usable",
     );
+    assert.ok(ptys[0].writes.join("").includes(input));
     checks.push("disable-uninstall-retained-surface-pty");
     // Leave a second real epoch active: normal Quit must join it, not just a
     // backend that already stopped during the disable scenario.
@@ -232,7 +263,17 @@ async function runScenario({ window, fixture, ptys, children, approvalCount }) {
     await activate();
     assert.equal(children.length, 2);
     assert.equal(children[1].closed, false);
-    return { checks, approvals: approvalCount() };
+    assert.equal(children[1].exit, null);
+    assert.equal(ptys[0].exited, false);
+    const activeBackend = identity(children[1].pid);
+    assert.notEqual(activeBackend.pid, ptyIdentity.pid);
+    assert.notDeepEqual(activeBackend, firstBackend);
+    assert.deepEqual(identity(ptys[0].pid), ptyIdentity);
+    return {
+      checks,
+      approvals: approvalCount(),
+      identities: [ptyIdentity, firstBackend, activeBackend],
+    };
   } catch (error) {
     if (fixture.evidence) {
       await writeFile(
