@@ -25,12 +25,16 @@ features or a stable extension SDK. The [published Snippets previews](installati
 pair Linux ARM64 host 0.24.0-dev.11 or macOS ARM64 host 0.24.0-dev.16 with
 Snippets 0.1.0. Both offer Snippets through the official catalog and passed separate
 bounded public-HTTPS checkpoints; local/offline archive installation remains
-available. Stable 0.23.0, Windows and Linux x64 retain built-in Snippets. Follow each guide's exact host/package pairing rather than assuming all
+available. Stable 0.23.0 and published Windows/Linux x64 hosts retain built-in Snippets.
+The [Linux x64 source transition](snippets-migration.md#linux-x64-source-transition)
+uses the optional tool, with distribution gates still separate.
+Follow each guide's exact host/package pairing rather than assuming all
 preview packages share qualification. The earlier
 [macOS ARM64 composition](macos-extension-composition.md) fixture remains separate
 from Snippets qualification and does not qualify macOS Files/SSH.
 [Linux x64 production composition](linux-x64-extension-composition.md) shares that
-minimal fixture while preserving built-in Snippets and existing package restrictions.
+minimal fixture. Its historical built-in Snippets receipt predates the separate
+Snippets source transition; existing package restrictions are unchanged.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

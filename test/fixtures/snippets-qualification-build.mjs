@@ -67,7 +67,7 @@ await writeFile(
     {
       inputs,
       differences: [],
-      scope: `Unchanged production ${process.platform} ${process.arch} composition in an isolated qualification output; not publication or cross-platform qualification`,
+      scope: `Unchanged production ${process.platform} ${process.arch === "arm64" ? "ARM64" : "x64"} composition in an isolated qualification output; not publication or cross-platform qualification`,
     },
     null,
     2,

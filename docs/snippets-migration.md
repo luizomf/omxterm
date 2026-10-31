@@ -20,8 +20,10 @@ Paste remain the same. There is no conversion or second Commands catalog.
 **View → Toggle Snippets**, its Command Palette entry and existing shortcut
 (`Ctrl+Shift+S` on Linux, `Cmd+Shift+S` on macOS, including custom remaps or
 `null`) remain supported.
-An enabled package opens in the shared companion panel; invoking the command
-again hides it. Without an enabled package, the command opens **Settings →
+An enabled package opens in the shared companion panel. In the published ARM64
+previews, invoking the command again hides it. Current source instead **closes**
+the selected-visible tool, discarding its view's search/scroll state; **Hide** or
+Escape preserves that state for reopening. Without an enabled package, the command opens **Settings →
 Extensions** with an explanation. It never installs or enables anything for you.
 A disabled package remains disabled. Runtime unavailability is reported separately
 from a missing installation. Terminal sessions remain usable.

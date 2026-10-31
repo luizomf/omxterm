@@ -421,10 +421,12 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Linux ARM64 and macOS ARM64 source, along with the published Linux ARM64
+Linux ARM64/x64 and macOS ARM64 source, along with the published Linux ARM64
 **0.24.0-dev.11** and macOS ARM64 **0.24.0-dev.16** previews, use the optional
-Snippets extension. Stable **0.23.0**, Windows and Linux x64 retain built-in
-Snippets. Both previews offer official-catalog and explicit local/offline archive
+Snippets extension. Stable **0.23.0** and published Windows/Linux x64 hosts retain
+built-in Snippets. The [Linux x64 source transition](snippets-migration.md#linux-x64-source-transition)
+uses explicit local-archive installation; its distribution gates remain separate.
+Both ARM64 previews offer official-catalog and explicit local/offline archive
 installation. See the [migration guide](snippets-migration.md) for matching host
 and package downloads, installation steps, existing catalogs and qualification
 limits. No catalog conversion, automatic installation or automatic enablement

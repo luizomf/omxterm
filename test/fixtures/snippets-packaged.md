@@ -62,7 +62,7 @@ neither scenario oracles nor timeouts are relaxed.
 
 The campaign uses native macOS graphics and Chromium sandboxing, without Linux/X11 flags. The published
 Snippets 0.1.0 manifest has no platform restriction and its engine permits the
-qualified source host; reuse its exact archive without editing the Linux-only catalog
+qualified source host; reuse its exact archive without editing the published catalog
 or original build receipt. A new macOS receipt must identify that archive and
 matching host independently. The extension builder's `qualification.target` is
 still `linux-arm64` / `not-run`, not macOS evidence; no rebuild is needed here.
@@ -238,7 +238,7 @@ marker is never reset by this adapter. After interruption, inspect the marker,
 PID/start settlement and independent OS state before authorizing another run.
 
 This adapter does not repeat or supersede the delivered source qualification,
-promote the Linux-only catalog, change immutable archives/receipts or authorize a
+extend published catalog admission, change immutable archives/receipts or authorize a
 release. Exact native DMG execution remains an integration-owner gate.
 
 ## Oracles and limits

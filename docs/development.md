@@ -359,8 +359,9 @@ and explicitly unpack its native lease addon. Package verification (including
 `--inspection-only`) checks exact bundled bytes, native architecture/unpacking,
 and actual packaged Node-mode store/lease/bootstrap resolution, recording
 `.scratch/extensions-package.json`. It neither builds nor admits the ARM64-only
-Files move addon. Production Linux x64 extension activation and built-in Snippets
-remain unchanged; this is not a platform cutover or GUI qualification.
+Files move addon. [Production Linux x64 extension composition](linux-x64-extension-composition.md)
+and the subsequent [optional Snippets source transition](snippets-migration.md#linux-x64-source-transition)
+have separate evidence; package inspection is not distributed cutover or GUI qualification.
 
 macOS ARM64 package verification (also with `--inspection-only`) checks the
 unpacked extension lease and Files move addons, complete ad-hoc seal,

@@ -272,10 +272,12 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 ### Insert, run or preview a snippet
 
-Linux ARM64 and macOS ARM64 source, along with the published Linux ARM64
+Linux ARM64/x64 and macOS ARM64 source, along with the published Linux ARM64
 **0.24.0-dev.11** and macOS ARM64 **0.24.0-dev.16** previews, use optional installed
-Snippets. Stable **0.23.0**, Windows and Linux x64 retain the built-in tool.
-Both previews offer Snippets through **Settings → Extensions → Browse official
+Snippets. Stable **0.23.0** and published Windows/Linux x64 hosts retain the built-in tool.
+The [Linux x64 source transition](snippets-migration.md#linux-x64-source-transition)
+uses explicit local-archive installation; its distribution gates remain separate.
+Both ARM64 previews offer Snippets through **Settings → Extensions → Browse official
 extensions**; explicit local/offline archive installation also remains available.
 The [migration guide](snippets-migration.md) links the matching previews and explains
 installation, disabled/unavailable states, unchanged catalogs and qualification

@@ -96,8 +96,12 @@ it.skipIf(
       ) as {
         differences: unknown[];
         inputs: Record<string, string>;
+        scope: string;
       };
       expect(receipt.differences).toEqual([]);
+      expect(receipt.scope).toBe(
+        `Unchanged production ${process.platform} ${process.arch === "arm64" ? "ARM64" : "x64"} composition in an isolated qualification output; not publication or cross-platform qualification`,
+      );
       expect(receipt.inputs["assets/application-icon.png"]).toBe(
         createHash("sha256").update(icon).digest("hex"),
       );
