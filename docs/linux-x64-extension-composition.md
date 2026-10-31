@@ -45,9 +45,29 @@ The fixture does not install directly into the store or substitute product owner
 
 The earlier Linux x64 module-native, hosted-view and exact-AppImage packaging
 receipts remain separate prerequisites, not evidence of this newly admitted
-production lifecycle. Native execution of the shared production fixture is
-required before delivery; a skipped opt-in test is not a pass. Record actual
-source/archive identities, assertions, captures and process settlement separately.
+production lifecycle. The ordinary build and shared production fixture passed on
+Ubuntu 24.04 x86_64 / Electron 43.8.1 using source
+`b8cbf0648d22ba11e75b70325406dc02d17ee0b9` (`0.24.0-dev.29`). All five lifecycle
+checks and two exact-digest consents passed, including retained built-in Snippets,
+the same usable Surface/PTY and ordinary Quit with a second backend active.
+The minimal archive SHA-256 was
+`3468705b26b344ed404bd8af34ddd492f1ee10fc5ef89601af2674b8d018b609`.
+
+Exact source/runtime inputs and unchanged ordinary build bytes were checked;
+processes and streams settled, with only expected WM/X server TERM shutdowns and
+an empty independent scope snapshot. Both actual captures were inspected: the
+child shows its synthetic draft, while the host shows tab chrome. D-Bus, initial
+GPU initialization/transient command-buffer, readPixels and X keyboard-map
+diagnostics remain recorded; the passing assertions do not establish universal
+harmlessness. No product workaround or assertion relaxation was introduced.
+
+One complete independent 19-path review found a stale runtime-guide admission
+statement, corrected before native execution. Full formatting, typecheck and
+type-aware lint passed, with 4,756 headless tests passing and 66 skipped. Those
+checks ran on executable-identical `4f851460e9cde7dde7400269604435b53d9092ed`;
+subsequent changes are factual documentation only. The shared fixture's macOS
+branch was not rerun; its historical evidence retains its original scope.
+A skipped opt-in test is never a native pass.
 
 Scope is source-launched composition with synthetic Chromium input and controlled
 consent, not exact-AppImage GUI, public-HTTPS acquisition, physical input,
