@@ -129,9 +129,9 @@ passed on that exact pair. The [promotion procedure](release.md#snippets-catalog
 retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),
 explicit trust/enablement and the published Windows built-in Snippets remain unchanged.
 
-The Linux x64 `0.24.0-dev.30` host is now published with the same archive through
-the deliberate local-install route. A source candidate adds `linux-x64` to the
-common Snippets entry in both complete catalogs, without altering Files/SSH or
-archive identity. Linux x64 selects the legacy endpoint listed above. Candidate
-source is not public endpoint readback or actual packaged public-HTTPS consumption;
-those remain separate steps. See the [Linux x64 preview](snippets-migration.md#linux-x64-published-preview-and-catalog-candidate).
+The Linux x64 `0.24.0-dev.30` host offers the same archive through the official
+catalog or local installation. The promoted catalogs add `linux-x64` to the common
+Snippets entry without altering Files/SSH or archive identity. The host selects the
+legacy endpoint listed above; its public readback and a separate bounded packaged
+public-HTTPS checkpoint passed. See the [Linux x64 checkpoint](snippets-migration.md#linux-x64-public-catalog-checkpoint)
+for the exact pair and limits.

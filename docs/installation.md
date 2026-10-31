@@ -78,17 +78,16 @@ Download the versioned host DMG/checksum for macOS, or AppImage/checksum and opt
 matching helper for Linux, from the respective release, not `/latest/download`.
 On macOS, verify the DMG with
 `shasum -a 256 -c OMXTerm-0.24.0-dev.16-arm64.dmg.sha256` and follow the release's
-installation/first-launch instructions. Download and verify the Snippets archive
-and checksum, then choose **Settings → Extensions → Install local .omxext…**.
-On macOS, use `shasum -a 256 -c snippets-0.1.0.omxext.sha256`; on Linux, use
-`sha256sum --check snippets-0.1.0.omxext.sha256`. Local installation works offline
-after download. On either ARM64 preview, you can instead choose **Settings →
-Extensions → Browse official extensions** and install the Snippets preview. For
-Linux x64, use the local archive while catalog promotion and public-HTTPS consumption
-remain separate. Review trust, enable deliberately if disabled, and open
-**View → Toggle Snippets**. No source build or automatic installation is involved.
-Separate bounded public-HTTPS installation checkpoints passed on both exact
-preview pairs; see [macOS coverage](snippets-migration.md#macos-arm64-catalog-delivery).
+installation/first-launch instructions. On any of these previews, choose **Settings →
+Extensions → Browse official extensions** and install Snippets. Alternatively,
+download and verify the Snippets archive and checksum, then choose
+**Install local .omxext…**. On macOS, use `shasum -a 256 -c snippets-0.1.0.omxext.sha256`; on
+Linux, use `sha256sum --check snippets-0.1.0.omxext.sha256`. Local installation
+works offline after download. Review trust, enable deliberately if disabled, and
+open **View → Toggle Snippets**. No source build or automatic installation is involved.
+Separate bounded public-HTTPS checkpoints passed on all three exact preview pairs;
+see [macOS coverage](snippets-migration.md#macos-arm64-catalog-delivery) and
+[Linux x64 coverage](snippets-migration.md#linux-x64-public-catalog-checkpoint).
 This does not qualify Finder/Gatekeeper first launch.
 Existing YAML catalogs remain untouched; without the enabled package, the shortcut
 opens Extensions guidance. See the [migration guide](snippets-migration.md) for

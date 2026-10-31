@@ -13,7 +13,7 @@ same optional implementation and has passed bounded nine-scenario native
 qualification. The subsequent exact-DMG nine-scenario campaign and separate FULL
 macOS package verifier passed. The immutable, non-Latest macOS ARM64 host
 `0.24.0-dev.16` is now published with the unchanged Snippets `0.1.0` archive
-verified publicly before host publication. The official catalog now offers the
+verified publicly before host publication. That catalog promotion offered the
 same immutable Snippets entry on `darwin-arm64` and `linux-arm64`, preserving
 Files/SSH metadata and the [local/offline archive route](../snippets-migration.md#macos-arm64-published-preview).
 Complete candidate review, integration and exact public catalog readback are done;
@@ -25,9 +25,10 @@ is implied.
 Stable `0.23.0` remains Latest. The published Linux x64 `0.24.0-dev.30` preview
 selects the optional tool. Its prepublication [exact-AppImage checkpoint](../snippets-migration.md#linux-x64-exact-appimage-checkpoint)
 passed the shared ten checks and controlled visible-preview inspection, with
-separate stock FULL modes and explicit evidence/diagnostic limits. The source
-catalog candidate, public endpoint readback and packaged public-HTTPS checkpoint
-remain distinct; published Windows hosts retain built-in Snippets.
+separate stock FULL modes and explicit evidence/diagnostic limits. Catalog
+promotion and endpoint readback were followed by a separate bounded [public-HTTPS
+checkpoint](../snippets-migration.md#linux-x64-public-catalog-checkpoint) on that
+published pair. Published Windows hosts retain built-in Snippets.
 Remaining platform gates and #741 stay open; no stable extension SDK is established.
 
 ## Context

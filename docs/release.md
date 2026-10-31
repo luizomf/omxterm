@@ -500,8 +500,8 @@ release notes/assets to retroactively claim later verification.
 
 The Linux ARM64 host `0.24.0-dev.11`, macOS ARM64 host `0.24.0-dev.16` and
 Linux x64 host `0.24.0-dev.30` Snippets previews are published, each using the
-unchanged Snippets `0.1.0` archive. The Linux x64 preview's exact publication and
-remaining catalog gates are recorded in the [migration guide](snippets-migration.md#linux-x64-published-preview-and-catalog-candidate).
+unchanged Snippets `0.1.0` archive. The Linux x64 preview's publication, catalog
+promotion and bounded public-HTTPS checkpoint are recorded in the [migration guide](snippets-migration.md#linux-x64-public-catalog-checkpoint).
 The macOS release was sealed on 2026-10-30 at 16:25:11 UTC as an immutable,
 non-Latest prerelease with only the DMG/checksum. The existing public archive was
 verified before host publication; public host/checksum downloads subsequently
@@ -562,14 +562,18 @@ remain untouched.
 
 ### Snippets catalog promotion
 
-Snippets0.1.0 is listed for Linux ARM64 and macOS ARM64 alongside unchanged
-Files/SSH entries. Complete candidate review, integration and exact public endpoint
-readback passed, followed by separate bounded packaged public-HTTPS checkpoints on
-dev.11 Linux and dev.16 macOS. The macOS promotion source is
-`dbbc1a9814606f72bcaea226ab68564da4a345fb`; public catalog SHA-256 is
-`c86ea2ee6f4f27eb17718e5832ce29a8e862aca99fb91afe358c9572ca844ead`.
-See [macOS delivery](snippets-migration.md#macos-arm64-catalog-delivery) and
-[Linux coverage](snippets-migration.md#preview-coverage-and-remaining-platforms)
+Snippets `0.1.0` is listed for Linux ARM64, macOS ARM64 and Linux x64 alongside
+unchanged Files/SSH entries. Catalog integration and exact public endpoint readback
+were followed by separate bounded packaged public-HTTPS checkpoints on Linux dev.11,
+macOS dev.16 and Linux x64 dev.30. The macOS promotion source was
+`dbbc1a9814606f72bcaea226ab68564da4a345fb`; its recorded catalog SHA-256 was
+`c86ea2ee6f4f27eb17718e5832ce29a8e862aca99fb91afe358c9572ca844ead`. The later
+Linux x64 promotion source is `0164f768b060e4ac3a1fc7afa20b30d4426e6fc8` and its
+legacy endpoint readback SHA-256 is
+`b1383fe0690b3320433cd9419d9863b6ac8a7b2bcb48b9d2205d3e7248e45d97`.
+See [Linux x64 delivery](snippets-migration.md#linux-x64-public-catalog-checkpoint),
+[macOS delivery](snippets-migration.md#macos-arm64-catalog-delivery) and
+[Linux ARM64 coverage](snippets-migration.md#preview-coverage-and-remaining-platforms)
 for exact outcomes and limits. No application-version bump or rebuild was needed;
 published releases, tags, assets and original receipts remain unchanged. The
 sequence below records completed promotion requirements, not outstanding work or
@@ -581,8 +585,9 @@ permission to repeat qualification.
    to receipt source `805e95dbc77552dc137707578b18b48ad6d047e9` and the
    embedded manifest: `omxterm.snippets`, `0.1.0`, host `>=0.24.0-dev.8`,
    API `0.1.x`. Preserve the receipt's build-time `not-run` field and original
-   Linux build target. That promotion's targets were `linux-arm64` and `darwin-arm64`;
-   the archive has no manifest platform restriction. Do not raise
+   Linux build target. The macOS promotion retained `linux-arm64` and added
+   `darwin-arm64`; the later Linux x64 promotion added `linux-x64`. The archive
+   has no manifest platform restriction. Do not raise
    its engine minimum or rewrite its receipt to describe later qualification.
    The archive and release-page URLs must name the same sealed tag.
 2. Review/integrate the complete candidate without changing Files/SSH metadata.
@@ -593,8 +598,10 @@ permission to repeat qualification.
    passed. The macOS checkpoint also passed using the freshly downloaded public
    dev.16 DMG (SHA-256
    `52b8a6b60dce7380b1157755e5ba3dcda0dfdc8e4c54ed2a71b723b160ef061f`).
-   Its earlier nine-scenario exact-package and separate FULL verifier passes were
-   not rerun and remain distinct from public-HTTPS consumption evidence.
+   Linux x64 also passed on the public dev.30 AppImage (SHA-256
+   `8a1e73d16833a97819273c23d566cc2d46af6b6dddf3a475c616d1109a3a2a95`).
+   Earlier exact-package campaigns and separate FULL verifier passes were not
+   rerun and remain distinct from public-HTTPS consumption evidence.
    Verify actual catalog acquisition, exact-byte trust, dormant install/reinstall,
    deliberate enablement/Toggle Snippets, retained YAML and terminal usability,
    management and joined normal Quit. Record actual archive/host hashes, outcomes

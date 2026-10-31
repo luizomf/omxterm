@@ -553,13 +553,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   separately installed Snippets extension; other targets retain the built-in view.
   The published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and
   Linux x64 `0.24.0-dev.30` previews use optional Snippets; stable `0.23.0` retains
-  the built-in view. The ARM64 previews offer the same immutable archive through the official
-  catalog on `darwin-arm64` and `linux-arm64`, retaining local/offline installation.
-  Exact public catalog readback and separate bounded packaged public-HTTPS
-  checkpoints passed. Linux x64 uses the local archive while its catalog promotion
-  and packaged public-HTTPS checkpoint remain separate. Source, exact-DMG/FULL,
-  publication and catalog-consumption evidence remain distinct in the
-  [migration guide](snippets-migration.md#macos-arm64-catalog-delivery). The existing
+  the built-in view. All three previews offer the same immutable archive through
+  the official catalog, retaining local/offline installation. Exact public catalog
+  readback and separate bounded packaged public-HTTPS checkpoints passed for these
+  pairs. Source, exact-package/FULL, publication and catalog-consumption evidence
+  remain distinct in the [migration guide](snippets-migration.md). The existing
   command remains the sole menu/palette entry, including remapped/null bindings.
   Without an enabled installation, it opens Extensions management with an
   optional-tool explanation and the actual installation/runtime status, without
@@ -1738,9 +1736,10 @@ macOS source composition includes the qualified optional Snippets transition
 complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
 schema1 catalog for every other target. Common
 SSH/Snippets entries remain identical; macOS selects Files0.5 while legacy
-Linux clients retain Files0.4. The source catalog candidate adds `linux-x64` to
-Snippets; public endpoint readback and packaged public-HTTPS consumption remain
-separate. There is no merge or endpoint fallback.
+Linux clients retain Files0.4. The promoted catalog adds `linux-x64` to Snippets;
+public endpoint readback and the separate packaged public-HTTPS checkpoint passed
+for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).
+There is no merge or endpoint fallback.
 The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
@@ -1930,8 +1929,9 @@ app-owned bootstrap. Normal macOS ARM64 and Linux ARM64/x64 builds include its
 artifacts and native lease addon. Linux x64 now admits explicit extension
 installation and activation through the existing production owners; its
 [composition qualification](linux-x64-extension-composition.md) remains distinct
-from earlier module, hosted-view and package checks. Built-in Snippets and its
-starter kit are unchanged; catalog/manifests retain their target restrictions.
+from earlier module, hosted-view and package checks. That historical composition
+checkpoint left built-in Snippets and its starter kit unchanged; the later optional
+Snippets transition and catalog promotion are described below.
 The separate Files move
 addon remains limited to macOS and Linux ARM64 and uses Linux
 `renameat2(RENAME_NOREPLACE)` or macOS `renameatx_np(RENAME_EXCL)` through the
@@ -1958,10 +1958,11 @@ qualification](snippets-migration.md#macos-arm64-source-transition) does not qua
 macOS Files or itself establish host publication. The separately
 [published macOS ARM64 `0.24.0-dev.16` preview](snippets-migration.md#macos-arm64-published-preview)
 uses optional Snippets `0.1.0`, available through the official catalog or local
-archive installation. The published Linux x64 `0.24.0-dev.30` preview also uses
-the optional tool; its catalog and public-HTTPS checkpoints remain separate. Stable
-`0.23.0` and published Windows hosts retain built-in Snippets. Remaining platform
-gates in [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
+archive installation. The published Linux x64 `0.24.0-dev.30` preview also offers
+the optional tool through the catalog or a local archive; its bounded public-HTTPS
+checkpoint passed separately. Stable `0.23.0` and published Windows hosts retain
+built-in Snippets. Remaining platform gates in
+[ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
 still apply. Isolated foundation/runtime builds remain available.
 Explicit activation through the application manager lazily forks one
 standard Node ChildProcess per active extension/application runtime using bundled

@@ -59,14 +59,12 @@ adds the optional fixed same-tab keyboard route with core-owned Stop.
 
 [ADR0044: Migrate Snippets without changing terminal input](0044-migrate-snippets-without-changing-terminal-input.md)
 records the accepted optional-extension migration design and platform cutover
-prerequisites. The published Linux ARM64 OMXTerm `0.24.0-dev.11` and macOS ARM64
-OMXTerm `0.24.0-dev.16` previews use the optional installed Snippets `0.1.0`
-companion. Separate bounded public-HTTPS catalog checkpoints passed on both
-host/archive pairs; the [migration guide](../snippets-migration.md) records
-installation, qualification evidence and limits. The Linux x64 dev.30 preview is
-published with optional Snippets; catalog promotion and public-HTTPS consumption
-remain separate. Windows retains built-in Snippets until its migration prerequisites
-are met; #741 remains open.
+prerequisites. The published Linux ARM64 OMXTerm `0.24.0-dev.11`, macOS ARM64
+OMXTerm `0.24.0-dev.16` and Linux x64 OMXTerm `0.24.0-dev.30` previews use the
+optional installed Snippets `0.1.0` companion. Separate bounded public-HTTPS
+catalog checkpoints passed on all three host/archive pairs; the [migration guide](../snippets-migration.md)
+records installation, qualification evidence and limits. Windows retains built-in
+Snippets until its migration prerequisites are met; #741 remains open.
 
 ## Related boundaries
 
