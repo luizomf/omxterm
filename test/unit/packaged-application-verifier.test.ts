@@ -89,6 +89,9 @@ const extensionEntries = [
 ];
 
 const linuxExtensionEntries = extensionEntries;
+const portableExtensionEntries = extensionEntries.filter(
+  (entry) => !entry.endsWith("/files-move.node"),
+);
 
 const windowsEntries = (arch: string) => [
   ...[
@@ -373,6 +376,7 @@ describe("packaged runtime inventory", () => {
           ...requiredEntries,
           "/node_modules/node-pty/prebuilds/win32-arm64",
           ...windowsEntries("arm64"),
+          ...portableExtensionEntries,
         ],
         "win32",
       ),
@@ -597,6 +601,7 @@ describe("Windows native runtime architecture", () => {
             ...requiredEntries,
             `/node_modules/node-pty/prebuilds/win32-${arch}`,
             ...windowsEntries(arch),
+            ...(arch === "arm64" ? portableExtensionEntries : []),
           ],
           "win32",
           arch,

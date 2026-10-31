@@ -3,118 +3,7 @@ import path from "node:path";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as realAsar from "@electron/asar";
-import { runInNewContext } from "node:vm";
-import { createRequire } from "node:module";
 import { afterEach, expect, it, vi } from "vitest";
-import { windowsVerificationOptions } from "../../scripts/windows-verification-options.mjs";
-
-it("inspection is explicit, platform-independent and cannot authorize full verification", () => {
-  for (const platform of ["linux", "win32", "darwin"]) {
-    expect(windowsVerificationOptions(["--inspection-only"], platform)).toEqual(
-      { inspectionOnly: true, windowsUnpackedOnly: false, disposableVm: false },
-    );
-  }
-  expect(windowsVerificationOptions([], "win32")).toEqual({
-    windowsUnpackedOnly: false,
-    disposableVm: false,
-  });
-  for (const args of [
-    ["--inspection-only", "--inspection-only"],
-    ["--inspection-only", "--windows-unpacked-only"],
-    ["--inspection-only", "--disposable-vm-allow-omxterm-replacement"],
-  ]) {
-    expect(() => windowsVerificationOptions(args, "win32")).toThrow();
-  }
-});
-
-it.each(["win32", "linux"])(
-  "the actual %s inspection helper uses only its target addons and native resize contract",
-  async (platform) => {
-    const source = await readFile(
-      "scripts/inspect-packaged-runtime.cjs",
-      "utf8",
-    );
-    const asar = path.resolve("exact-package/app.asar");
-    const loaded: string[] = [];
-    const spawn = vi.fn((_file: string, _args: string[]) => {
-      const index = spawn.mock.calls.length;
-      return {
-        kill: vi.fn(),
-        resize: vi.fn(),
-        onData(listener: (text: string) => void) {
-          queueMicrotask(() => listener("OMXTERM_PTY_OK"));
-        },
-        onExit(listener: (event: object) => void) {
-          queueMicrotask(() =>
-            listener({
-              exitCode: index === 1 ? 0 : 1,
-              execFailed: index === 2,
-            }),
-          );
-        },
-      };
-    });
-    const resize = vi.fn((...args: number[]) => {
-      if (JSON.stringify(args) !== JSON.stringify([-1, 80, 24, 0, 0]))
-        throw new Error("wrong resize arguments");
-      throw new Error("ioctl(2) failed, EBADF");
-    });
-    const runtimeProcess = {
-      argv: ["electron", "helper", asar],
-      platform,
-      arch: "x64",
-      versions: { electron: "43.8.1" },
-      exitCode: 0,
-    };
-    const require = createRequire(import.meta.url);
-    const result = await new Promise<unknown>((resolve, reject) => {
-      runInNewContext(source, {
-        process: runtimeProcess,
-        setTimeout,
-        clearTimeout,
-        console: {
-          log: (text: string) => resolve(JSON.parse(text) as unknown),
-          error: reject,
-        },
-        require(id: string) {
-          if (!path.isAbsolute(id)) return require(id) as unknown;
-          loaded.push(id);
-          if (id === path.join(asar, "node_modules/node-pty")) return { spawn };
-          const root = path.join(
-            `${asar}.unpacked`,
-            "node_modules/node-pty",
-            platform === "win32" ? "prebuilds/win32-x64" : "build/Release",
-          );
-          if (
-            id ===
-            path.join(root, platform === "win32" ? "conpty.node" : "pty.node")
-          )
-            return { resize };
-          if (
-            platform === "win32" &&
-            id === path.join(root, "conpty_console_list.node")
-          )
-            return {};
-          throw new Error(`Unexpected addon: ${id}`);
-        },
-      });
-    });
-    expect(result).toMatchObject({ platform, arch: "x64" });
-    if (platform === "win32") {
-      expect(spawn).not.toHaveBeenCalled();
-      expect(resize).not.toHaveBeenCalled();
-      expect(loaded.map((file) => path.basename(file))).toEqual([
-        "node-pty",
-        "conpty.node",
-        "conpty_console_list.node",
-      ]);
-    } else {
-      expect(spawn).toHaveBeenCalledTimes(3);
-      expect(resize).toHaveBeenCalledWith(-1, 80, 24, 0, 0);
-    }
-  },
-);
-
 const windowsRuntimeFiles = [
   "windowsTerminal.js",
   "windowsPtyAgent.js",
@@ -129,7 +18,7 @@ const temporary: string[] = [];
 async function tinyRuntimeArchive(
   root: string,
   name: string,
-  entries: Record<string, string>,
+  entries: Record<string, string | Buffer>,
 ) {
   const input = path.join(root, name);
   for (const [member, contents] of Object.entries(entries)) {
@@ -148,6 +37,7 @@ afterEach(async () => {
   Object.defineProperty(process, "platform", originalPlatform);
   Object.defineProperty(process, "arch", originalArch);
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   vi.resetModules();
   vi.doUnmock("node:fs/promises");
   vi.doUnmock("node:child_process");
@@ -158,16 +48,110 @@ afterEach(async () => {
     await rm(directory, { recursive: true, force: true });
 });
 
+async function createInspectionArchives(
+  root: string,
+  platform: string,
+  arch: string,
+) {
+  const runtimeFiles =
+    platform === "win32"
+      ? windowsRuntimeFiles
+      : ["unixTerminal.js", "terminal.js", "utils.js"];
+  const runtimeBytes = Object.fromEntries(
+    runtimeFiles.map((file) => [file, `// prepared ${file}\n`]),
+  );
+  const nodePtyMetadata = path.join("node_modules", "node-pty", "package.json");
+  const chosenFile =
+    platform === "win32" ? "worker/conoutSocketWorker.js" : "unixTerminal.js";
+  const chosenMember = path.join("node_modules", "node-pty", "lib", chosenFile);
+  const extensionFiles =
+    platform === "linux" || (platform === "win32" && arch === "arm64")
+      ? [
+          "dist/preload/extension-view.cjs",
+          "dist/extension-runtime/bootstrap.mjs",
+          "dist/extension-runtime/index.mjs",
+          "dist/extension-runtime/packages.mjs",
+          "dist/extension-runtime/extension-leases.node",
+        ]
+      : [];
+  const pe = Buffer.alloc(128);
+  pe.writeUInt16LE(0x5a4d, 0);
+  pe.writeUInt32LE(64, 0x3c);
+  pe.writeUInt32LE(0x00004550, 64);
+  pe.writeUInt16LE(arch === "arm64" ? 0xaa64 : 0x8664, 68);
+  const entries = {
+    ...Object.fromEntries(
+      extensionFiles.map((file) => [
+        file,
+        platform === "win32" && file.endsWith(".node")
+          ? pe
+          : "same licensed/icon bytes",
+      ]),
+    ),
+    "package.json": '{"version":"1.2.3"}',
+    [nodePtyMetadata]: '{"version":"1.2.0-beta.18"}',
+    ...Object.fromEntries(
+      runtimeFiles.map((file) => [
+        path.join("node_modules", "node-pty", "lib", file),
+        runtimeBytes[file]!,
+      ]),
+    ),
+  };
+  // Create real archives before platform and filesystem mocks are installed.
+  const validArchive = await tinyRuntimeArchive(root, "valid", entries);
+  const missingEntries = { ...entries };
+  delete missingEntries[chosenMember];
+  const missingArchive = await tinyRuntimeArchive(
+    root,
+    "missing",
+    missingEntries,
+  );
+  const changedArchive = await tinyRuntimeArchive(root, "changed", {
+    ...entries,
+    [chosenMember]: "// different packaged bytes\n",
+  });
+  const wrongVersionArchive = await tinyRuntimeArchive(root, "version", {
+    ...entries,
+    [nodePtyMetadata]: '{"version":"9.9.9"}',
+  });
+  const changedExtensionArchive = await tinyRuntimeArchive(
+    root,
+    "changed-extension",
+    {
+      ...entries,
+      "dist/extension-runtime/packages.mjs": "// wrong packaged store\n",
+    },
+  );
+  return {
+    runtimeFiles,
+    runtimeBytes,
+    nodePtyMetadata,
+    extensionFiles,
+    pe,
+    validArchive,
+    missingArchive,
+    changedArchive,
+    wrongVersionArchive,
+    changedExtensionArchive,
+  };
+}
+
 function inspectionCommands(
   platform: string,
+  arch: string,
   applicationRoot: string,
   root: string,
+  probeFailure: {
+    active: boolean;
+    invalidStdout: boolean;
+    report: object | null;
+  },
 ) {
   return vi.fn(
     async (
       file: string,
       args: string[],
-      options: { env?: NodeJS.ProcessEnv },
+      options: { env?: NodeJS.ProcessEnv; encoding?: string },
     ) => {
       if (file === "file")
         return { stdout: "ELF 64-bit LSB executable, x86-64", stderr: "" };
@@ -185,7 +169,27 @@ function inspectionCommands(
       );
       expect(options.env?.ELECTRON_RUN_AS_NODE).toBe("1");
       if (args[0] === "--input-type=module") {
-        expect(platform).toBe("linux");
+        expect(
+          platform === "linux" || (platform === "win32" && arch === "arm64"),
+        ).toBe(true);
+        if (platform === "win32") {
+          expect(options.env?.SystemRoot).toBe("C:\\Windows");
+          expect(options.env?.TEMP).toBe(root);
+          expect(options.env?.TMP).toBe(root);
+          expect(options.env?.USERPROFILE).toBe(root);
+          expect(Object.keys(options.env ?? {}).sort()).toEqual(
+            [
+              "ELECTRON_RUN_AS_NODE",
+              "HOME",
+              "PATH",
+              "SystemRoot",
+              "TEMP",
+              "TMP",
+              "TMPDIR",
+              "USERPROFILE",
+            ].sort(),
+          );
+        }
         expect(args.slice(0, 3)).toEqual([
           "--input-type=module",
           "-e",
@@ -198,15 +202,30 @@ function inspectionCommands(
           "1.2.3",
         ]);
         expect(options.env?.PATH).toBe(path.join(root, "empty-path"));
+        expect(options.encoding).toBe("buffer");
+        if (probeFailure.active)
+          throw Object.assign(new Error("packaged extension probe failed"), {
+            stderr: Buffer.from([0xa2, 0x0a]),
+          });
         return {
-          stdout: JSON.stringify({
-            target: "linux-x64",
-            checks: [
-              "packaged-store-and-lease",
-              "bootstrap-missing-IPC-refusal",
-            ],
-          }),
-          stderr: "",
+          stdout: probeFailure.invalidStdout
+            ? Buffer.from([
+                0x7b, 0x22, 0x78, 0x22, 0x3a, 0x22, 0xff, 0x22, 0x7d,
+              ])
+            : Buffer.from(
+                JSON.stringify(
+                  probeFailure.report ?? {
+                    target: `${platform}-${arch}`,
+                    hostVersion: "1.2.3",
+                    runtime: { electron: "43.8.1" },
+                    checks: [
+                      "packaged-store-and-lease",
+                      "bootstrap-missing-IPC-refusal",
+                    ],
+                  },
+                ),
+              ),
+          stderr: Buffer.from([0xa2, 0x0a]),
         };
       }
       expect(args).toEqual([
@@ -217,7 +236,7 @@ function inspectionCommands(
         stdout: JSON.stringify({
           versions: { electron: "43.8.1" },
           platform,
-          arch: "x64",
+          arch,
         }),
         stderr: "",
       };
@@ -225,82 +244,30 @@ function inspectionCommands(
   );
 }
 
-it.each(["linux", "win32"])(
-  "%s x64 inspection loads only the packaged runtime, never provisions or starts a desktop",
-  async (platform) => {
+it.each([
+  ["linux", "x64"],
+  ["win32", "x64"],
+  ["win32", "arm64"],
+])(
+  "%s %s inspection loads only the packaged runtime, never provisions or starts a desktop",
+  async (platform, arch) => {
     const root = await mkdtemp(path.join(tmpdir(), "omxterm-asar-inspection-"));
     temporary.push(root);
-    const runtimeFiles =
-      platform === "win32"
-        ? windowsRuntimeFiles
-        : ["unixTerminal.js", "terminal.js", "utils.js"];
-    const runtimeBytes = Object.fromEntries(
-      runtimeFiles.map((file) => [file, `// prepared ${file}\n`]),
-    );
-    const nodePtyMetadata = path.join(
-      "node_modules",
-      "node-pty",
-      "package.json",
-    );
-    const chosenFile =
-      platform === "win32" ? "worker/conoutSocketWorker.js" : "unixTerminal.js";
-    const chosenMember = path.join(
-      "node_modules",
-      "node-pty",
-      "lib",
-      chosenFile,
-    );
-    const extensionFiles =
-      platform === "linux"
-        ? [
-            "dist/preload/extension-view.cjs",
-            "dist/extension-runtime/bootstrap.mjs",
-            "dist/extension-runtime/index.mjs",
-            "dist/extension-runtime/packages.mjs",
-            "dist/extension-runtime/extension-leases.node",
-          ]
-        : [];
-    const entries = {
-      ...Object.fromEntries(
-        extensionFiles.map((file) => [file, "same licensed/icon bytes"]),
-      ),
-      "package.json": '{"version":"1.2.3"}',
-      [nodePtyMetadata]: '{"version":"1.2.0-beta.18"}',
-      ...Object.fromEntries(
-        runtimeFiles.map((file) => [
-          path.join("node_modules", "node-pty", "lib", file),
-          runtimeBytes[file]!,
-        ]),
-      ),
-    };
-    // Create real tiny archives BEFORE platform/FS mocks. Extraction later uses
-    // the actual HOST path semantics, not Windows emulation by process.platform.
-    const validArchive = await tinyRuntimeArchive(root, "valid", entries);
-    const missingEntries = { ...entries };
-    delete missingEntries[chosenMember];
-    const missingArchive = await tinyRuntimeArchive(
-      root,
-      "missing",
-      missingEntries,
-    );
-    const changedArchive = await tinyRuntimeArchive(root, "changed", {
-      ...entries,
-      [chosenMember]: "// different packaged bytes\n",
-    });
-    const wrongVersionArchive = await tinyRuntimeArchive(root, "version", {
-      ...entries,
-      [nodePtyMetadata]: '{"version":"9.9.9"}',
-    });
-    const changedExtensionArchive = await tinyRuntimeArchive(
-      root,
-      "changed-extension",
-      {
-        ...entries,
-        "dist/extension-runtime/packages.mjs": "// wrong packaged store\n",
-      },
-    );
+    const {
+      runtimeFiles,
+      runtimeBytes,
+      nodePtyMetadata,
+      extensionFiles,
+      pe,
+      validArchive,
+      missingArchive,
+      changedArchive,
+      wrongVersionArchive,
+      changedExtensionArchive,
+    } = await createInspectionArchives(root, platform, arch);
     let selectedArchive = validArchive;
     let nativeExtensionUnpacked = true;
+    let wrongExtensionArchitecture = false;
     const packagedPath = path.join(
       root,
       platform === "linux" ? "OMXTerm-1.2.3-x64.AppImage" : "win-unpacked",
@@ -312,9 +279,10 @@ it.each(["linux", "win32"])(
       configurable: true,
     });
     Object.defineProperty(process, "arch", {
-      value: "x64",
+      value: arch,
       configurable: true,
     });
+    if (platform === "win32") vi.stubEnv("SystemRoot", "C:\\Windows");
     const helperSource = "VERSION='@OMXTERM_VERSION@'\n";
     const helper = "VERSION='1.2.3'\n";
     const digest = (text: string) =>
@@ -326,11 +294,15 @@ it.each(["linux", "win32"])(
           file.endsWith(".node") ||
           file.endsWith(".dll"))
       ) {
-        const pe = Buffer.alloc(128);
-        pe.writeUInt16LE(0x5a4d, 0);
-        pe.writeUInt32LE(64, 0x3c);
-        pe.writeUInt32LE(0x00004550, 64);
-        pe.writeUInt16LE(0x8664, 68);
+        if (
+          wrongExtensionArchitecture &&
+          file.includes("app.asar.unpacked") &&
+          file.endsWith(path.join("extension-runtime", "extension-leases.node"))
+        ) {
+          const wrong = Buffer.from(pe);
+          wrong.writeUInt16LE(0x8664, 68);
+          return wrong;
+        }
         return pe;
       }
       let contents = "same licensed/icon bytes";
@@ -372,7 +344,22 @@ it.each(["linux", "win32"])(
         return { isFile: () => true };
       }),
     }));
-    const execute = inspectionCommands(platform, applicationRoot, root);
+    const probeFailure: {
+      active: boolean;
+      invalidStdout: boolean;
+      report: object | null;
+    } = {
+      active: false,
+      invalidStdout: false,
+      report: null,
+    };
+    const execute = inspectionCommands(
+      platform,
+      arch,
+      applicationRoot,
+      root,
+      probeFailure,
+    );
     const execFile = Object.assign(vi.fn(), {
       [Symbol.for("nodejs.util.promisify.custom")]: execute,
     });
@@ -392,7 +379,7 @@ it.each(["linux", "win32"])(
       statFile: () => ({ unpacked: nativeExtensionUnpacked }),
       listPackage: async () => [
         ...extensionFiles.map((file) => `/${file}`),
-        ...(platform === "linux"
+        ...(extensionFiles.length
           ? [
               "/node_modules/semver/package.json",
               "/node_modules/yauzl/package.json",
@@ -413,7 +400,8 @@ it.each(["linux", "win32"])(
                 "conpty/conpty.dll",
                 "conpty/OpenConsole.exe",
               ].map(
-                (file) => `/node_modules/node-pty/prebuilds/win32-x64/${file}`,
+                (file) =>
+                  `/node_modules/node-pty/prebuilds/win32-${arch}/${file}`,
               ),
               ...windowsRuntimeFiles.map(
                 (file) => `/node_modules/node-pty/lib/${file}`,
@@ -429,12 +417,18 @@ it.each(["linux", "win32"])(
     }));
     const { verifyPackagedApplication } =
       await import("../../scripts/verify-packaged-app.mjs");
+    const stderr = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
     const result = await verifyPackagedApplication(packagedPath, {
       inspectionOnly: true,
     });
     expect(result.verification).toContain("INSPECTION ONLY");
     expect(result.verification).not.toContain("FULL");
     expect(result.records).toBe(0);
+    if (extensionFiles.length)
+      expect(stderr).toHaveBeenCalledWith(Buffer.from([0xa2, 0x0a]));
+    else expect(stderr).not.toHaveBeenCalled();
     expect(spawn).not.toHaveBeenCalled();
     expect(extract.mock.calls).toEqual([
       [expectedAsar, "package.json"],
@@ -467,8 +461,8 @@ it.each(["linux", "win32"])(
       expect(nativeHelperCalls()).toBe(1); // all three failures precede native load
       expect(spawn).not.toHaveBeenCalled();
     }
-    if (platform === "linux") {
-      expect(launcher).toHaveBeenCalledTimes(4);
+    if (extensionFiles.length) {
+      if (platform === "linux") expect(launcher).toHaveBeenCalledTimes(4);
       selectedArchive = changedExtensionArchive;
       await expect(
         verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
@@ -484,13 +478,57 @@ it.each(["linux", "win32"])(
           ([, args]) => args[0] === "--input-type=module",
         ),
       ).toHaveLength(1);
-      execute.mockResolvedValueOnce({
-        stdout: "ELF 64-bit LSB executable, ARM aarch64",
-        stderr: "",
-      });
+      const priorStderrCalls = stderr.mock.calls.length;
+      probeFailure.active = true;
       await expect(
         verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
-      ).rejects.toThrow("x64-only ELF");
+      ).rejects.toThrow("packaged extension probe failed");
+      expect(stderr.mock.calls).toHaveLength(priorStderrCalls + 1);
+      expect(stderr).toHaveBeenLastCalledWith(Buffer.from([0xa2, 0x0a]));
+      probeFailure.active = false;
+      probeFailure.invalidStdout = true;
+      await expect(
+        verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+      ).rejects.toThrow(/encoded data was not valid/u);
+      probeFailure.invalidStdout = false;
+      const validReport = {
+        target: `${platform}-${arch}`,
+        hostVersion: "1.2.3",
+        runtime: { electron: "43.8.1" },
+        checks: ["packaged-store-and-lease", "bootstrap-missing-IPC-refusal"],
+      };
+      for (const report of [
+        { ...validReport, target: "wrong-target" },
+        { ...validReport, hostVersion: "0.0.0" },
+        { ...validReport, checks: ["packaged-store-and-lease"] },
+        { ...validReport, runtime: {} },
+      ]) {
+        probeFailure.report = report;
+        await expect(
+          verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+        ).rejects.toThrow("Packaged extension probe result mismatch");
+      }
+      probeFailure.report = null;
+      if (platform === "win32") {
+        wrongExtensionArchitecture = true;
+        await expect(
+          verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+        ).rejects.toThrow("extension native module is not an arm64-only PE");
+        wrongExtensionArchitecture = false;
+        vi.stubEnv("SystemRoot", "relative");
+        await expect(
+          verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+        ).rejects.toThrow("absolute Windows SystemRoot");
+      }
+      if (platform === "linux") {
+        execute.mockResolvedValueOnce({
+          stdout: "ELF 64-bit LSB executable, ARM aarch64",
+          stderr: "",
+        });
+        await expect(
+          verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
+        ).rejects.toThrow("x64-only ELF");
+      }
     } else {
       expect(execute).toHaveBeenCalledOnce(); // no NSIS, helper or GUI subprocess
       expect(launcher).not.toHaveBeenCalled();

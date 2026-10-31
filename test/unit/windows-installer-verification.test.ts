@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it, vi } from "vitest";
+import { parse } from "yaml";
 import {
   inspectWindowsInstallation,
   inspectWindowsInstallerInputs,
@@ -16,6 +17,36 @@ function adapter() {
 }
 
 describe("exact Windows installer verification", () => {
+  it("unpacks the Windows extension lease addon alongside the PTY runtime", async () => {
+    const configuration = parse(
+      await readFile(
+        new URL("../../electron-builder.yml", import.meta.url),
+        "utf8",
+      ),
+    ) as { win: { asarUnpack: string[] } };
+    expect(configuration.win.asarUnpack).toContain(
+      "dist/extension-runtime/extension-leases.node",
+    );
+    expect(configuration.win.asarUnpack).toContain(
+      "node_modules/node-pty/prebuilds/win32-${arch}/**",
+    );
+    expect(configuration.win.asarUnpack).not.toContain(
+      "dist/extension-runtime/files-move.node",
+    );
+  });
+  it("excludes Windows extension compiler and linker intermediates from the package", async () => {
+    const configuration = parse(
+      await readFile(
+        new URL("../../electron-builder.yml", import.meta.url),
+        "utf8",
+      ),
+    ) as { win: { files: string[] } };
+    for (const suffix of ["lib", "exp", "obj"])
+      expect(configuration.win.files).toContain(
+        `!dist/extension-runtime/*.${suffix}`,
+      );
+  });
+
   it("accepts the reviewed footprint including POSIX lease and Files move unpacking", async () => {
     const configuration = await readFile(
       new URL("../../electron-builder.yml", import.meta.url),
@@ -83,6 +114,25 @@ describe("exact Windows installer verification", () => {
         "26.15.3",
         "omxterm",
       ],
+      [
+        configuration.replace(
+          "  asarUnpack:\n    - dist/extension-runtime/extension-leases.node\n    - node_modules/node-pty/prebuilds/win32-${arch}/**",
+          "  asarUnpack:\n    - node_modules/node-pty/prebuilds/win32-${arch}/**",
+        ),
+        "26.15.3",
+        "omxterm",
+      ],
+      ...["lib", "exp", "obj"].map(
+        (suffix) =>
+          [
+            configuration.replace(
+              `    - "!dist/extension-runtime/*.${suffix}"\n`,
+              "",
+            ),
+            "26.15.3",
+            "omxterm",
+          ] as const,
+      ),
       [configuration, "26.15.4", "omxterm"],
       [configuration, "26.15.3", "other-package"],
     ] as const) {

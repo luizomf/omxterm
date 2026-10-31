@@ -8,14 +8,14 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const [asar, scratch, appVersion] = process.argv.slice(1);
-assert.ok(["linux", "darwin"].includes(process.platform));
 assert.ok(
-  process.arch === "arm64" ||
-    (process.platform === "linux" && process.arch === "x64"),
+  (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
+    (["darwin", "win32"].includes(process.platform) &&
+      process.arch === "arm64"),
 );
 assert.ok(process.versions.electron);
 assert.equal(process.type, undefined);
-assert.notEqual(process.getuid(), 0);
+if (process.platform !== "win32") assert.notEqual(process.getuid(), 0);
 const runtime = path.join(asar, "dist/extension-runtime");
 const require = createRequire(path.join(runtime, "bootstrap.mjs"));
 const { InstalledPackages, createNativeLeaseAdapter } = await import(
@@ -36,7 +36,7 @@ assert.deepEqual(await packages.snapshot(), []);
 const checks = ["packaged-store-and-lease"];
 // Native loading/conflict evidence only, not a complete Files qualification.
 // Linux x64 packages contain the runtime prerequisite, not the Files primitive.
-if (process.arch === "arm64") {
+if (process.arch === "arm64" && process.platform !== "win32") {
   const move = require("./files-move.node");
   if (process.platform === "darwin") {
     assert.equal(typeof move.trash, "function");

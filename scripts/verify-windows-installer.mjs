@@ -40,6 +40,9 @@ export function inspectWindowsInstallerInputs(
   // payload, NSIS options and locked installer footprint remain unchanged.
   // #712 explicitly unpacks the Linux lease and ARM64 Files move addons;
   // Windows payload/NSIS options and the locked installer footprint are unchanged.
+  // The Windows lease addon is unpacked for ARM64; its compiler/linker
+  // intermediates are excluded. NSIS identity, registration, cache/shortcut
+  // locations and installer options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -47,7 +50,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "f48b843060ae72f33fa354449fb65abe987af85792cefa9e6bd9870b98743b6a"
+      "932076d7606b5dc6093ebe642d5c993989ed23c561e62d51b704aebbd416ad3a"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

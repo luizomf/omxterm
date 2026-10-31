@@ -395,6 +395,17 @@ Files move addon. [Production Linux x64 extension composition](linux-x64-extensi
 and the subsequent [optional Snippets source transition](snippets-migration.md#linux-x64-source-transition)
 have separate evidence; package inspection is not distributed cutover or GUI qualification.
 
+Windows ARM64 packaging explicitly unpacks `extension-leases.node` and excludes
+its `.lib`, `.exp` and `.obj` build intermediates. The inspection-only verifier
+requires the extension runtime and dependencies, checks native architecture and
+unpacking, compares prepared/package bytes, and runs the packaged Electron
+Node-mode store/lease/bootstrap probe. It does not admit the Files move addon or
+change Windows x64 admission. Ordinary-user token and symlink prerequisites
+remain separate checks on the assigned Windows host. The exact Windows ARM64
+package is not qualified until these checks actually run; inspection does not
+execute NSIS or qualify graphical composition, installer behavior or Snippets
+migration.
+
 macOS ARM64 package verification (also with `--inspection-only`) checks the
 unpacked extension lease and Files move addons, complete ad-hoc seal,
 architecture/deployment floor and packaged Node-mode store/lease/bootstrap resolution. Prepared and

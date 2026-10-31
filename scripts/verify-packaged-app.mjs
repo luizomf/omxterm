@@ -74,7 +74,11 @@ const extensionEntries = [
 ];
 
 function packagedExtensionEntries(platform, arch) {
-  if (platform === "linux" && arch === "x64") return extensionEntries;
+  if (
+    (platform === "linux" && arch === "x64") ||
+    (platform === "win32" && arch === "arm64")
+  )
+    return extensionEntries;
   if (arch !== "arm64" || !["linux", "darwin"].includes(platform)) return [];
   return [...extensionEntries, "/dist/extension-runtime/files-move.node"];
 }
@@ -105,6 +109,7 @@ const forbiddenEntryPatterns = [
   /\.(?:map|pem|p12|key)$/iu,
   /\.omxext(?:\.(?:json|sha256))?$/iu,
   /(?:^|\/)dist\/extensions(?:\/|$)/iu,
+  /(?:^|\/)dist\/extension-runtime\/[^/]+\.(?:obj|lib|exp)$/iu,
   /\.test\.js$/iu,
   /(?:credential|private[_-]?key|session[_-]?transcript)/iu,
 ];
@@ -233,17 +238,21 @@ async function verifyPackagedExtensions(executable, asar) {
       path.join(projectRoot, "scripts/packaged-extensions-probe.mjs"),
       "utf8",
     );
-    const { stdout } = await execFile(
+    const appVersion = await sourceVersion();
+    const lockedElectron = JSON.parse(
+      await readFile(path.join(projectRoot, "package-lock.json"), "utf8"),
+    ).packages["node_modules/electron"]?.version;
+    const systemRoot = process.env.SystemRoot;
+    if (
+      process.platform === "win32" &&
+      (!systemRoot || !path.win32.isAbsolute(systemRoot))
+    )
+      throw new Error(
+        "An absolute Windows SystemRoot is required for package inspection",
+      );
+    const { stdout, stderr } = await execFile(
       executable,
-      [
-        "--input-type=module",
-        "-e",
-        probe,
-        "--",
-        asar,
-        scratch,
-        await sourceVersion(),
-      ],
+      ["--input-type=module", "-e", probe, "--", asar, scratch, appVersion],
       {
         cwd: scratch,
         env: {
@@ -251,14 +260,51 @@ async function verifyPackagedExtensions(executable, asar) {
           TMPDIR: scratch,
           PATH: emptyPath,
           ELECTRON_RUN_AS_NODE: "1",
+          ...(process.platform === "win32"
+            ? {
+                SystemRoot: systemRoot,
+                TEMP: scratch,
+                TMP: scratch,
+                USERPROFILE: scratch,
+              }
+            : {}),
         },
         timeout: 20_000,
         killSignal: "SIGKILL",
+        encoding: "buffer",
       },
+    ).catch((cause) => {
+      if (Buffer.isBuffer(cause?.stderr) && cause.stderr.length)
+        process.stderr.write(cause.stderr);
+      throw cause;
+    });
+    if (stderr.length) process.stderr.write(stderr);
+    const report = JSON.parse(
+      new TextDecoder("utf-8", { fatal: true }).decode(stdout),
     );
+    const checks = ["packaged-store-and-lease"];
+    if (process.arch === "arm64" && process.platform !== "win32") {
+      if (process.platform === "darwin")
+        checks.push("native-trash-export-and-root-refusal");
+      checks.push("native-move-and-conflict");
+    }
+    checks.push("bootstrap-missing-IPC-refusal");
+    if (
+      !report ||
+      typeof report !== "object" ||
+      Array.isArray(report) ||
+      report.target !== `${process.platform}-${process.arch}` ||
+      report.hostVersion !== appVersion ||
+      !lockedElectron ||
+      report.runtime?.electron !== lockedElectron ||
+      !Array.isArray(report.checks) ||
+      report.checks.length !== checks.length ||
+      checks.some((check, index) => report.checks[index] !== check)
+    )
+      throw new Error("Packaged extension probe result mismatch");
     await writeFile(
       path.join(projectRoot, ".scratch/extensions-package.json"),
-      `${JSON.stringify({ ...JSON.parse(stdout), artifacts }, null, 2)}\n`,
+      `${JSON.stringify({ ...report, artifacts }, null, 2)}\n`,
     );
   } finally {
     await rm(scratch, { recursive: true, force: true });

@@ -77,8 +77,9 @@ reported no cleanup errors. The test archive SHA-256 was
 Source and 16 runtime/build artifacts matched before and after; a subsequent
 bounded identity snapshot found all 29 recorded owner identities absent. The
 MSVC `.lib`/`.exp` intermediates remained in the native output, not the source
-root. The Windows packaging `dist/**` glob could include them; actual installer
-contents and addon unpacking remain separate checks.
+root. Windows packaging now excludes runtime compiler/linker intermediates and
+explicitly unpacks the lease addon. The exact Windows package and installer
+remain separate, unqualified checks.
 
 The actual hosted capture visibly shows an input, caret and focus outline; the
 separate core capture shows application chrome, tabs and Close. Fixture heading

@@ -135,6 +135,9 @@ win:
   icon: assets/application-icon.png
   files:
     - dist/**
+    - "!dist/extension-runtime/*.lib"
+    - "!dist/extension-runtime/*.exp"
+    - "!dist/extension-runtime/*.obj"
     - "!dist/extensions/**"
     - "!dist/**/*.omxext"
     - "!dist/**/*.omxext.json"
@@ -160,6 +163,7 @@ win:
     - "!node_modules/node-pty/typings/**"
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
+    - dist/extension-runtime/extension-leases.node
     - node_modules/node-pty/prebuilds/win32-${arch}/**
   target:
     - target: nsis
