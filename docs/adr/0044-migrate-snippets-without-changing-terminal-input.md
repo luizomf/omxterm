@@ -43,8 +43,9 @@ There is also a platform prerequisite: application extension composition admits
 Linux ARM64/x64, macOS ARM64 and Windows ARM64 source (`startApplicationExtensions`).
 The bounded [Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#evidence-boundary)
 passed with built-in Snippets retained. A separate [unpacked-package inspection](../windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
-passed for runtime loading only; packaged GUI, installer and any Windows Snippets
-migration remain separate, unqualified checkpoints.
+passed for runtime loading only; a later [packaged-GUI composition checkpoint](../windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
+exercised that retained package with a minimal local extension. Installer and any
+Windows Snippets migration remain separate, unqualified checkpoints.
 The delivered [macOS composition](../macos-extension-composition.md) prerequisite
 did not select installed Snippets or change its starter kit. The subsequent source
 transition reuses its ordinary production owners and the existing optional-Snippets

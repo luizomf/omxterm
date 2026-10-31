@@ -1933,7 +1933,9 @@ same explicit management and activation while retaining built-in Snippets. Its
 passed separately from an [unpacked Windows ARM64 package inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint).
 That inspection checked runtime bytes, lease-addon unpacking and packaged
 Node-mode store/lease/bootstrap loading, not packaged GUI activation or an
-installer. Linux x64 now admits explicit extension
+installer. A later [packaged-GUI checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
+exercised a minimal local extension on that retained directory; an installer and
+Windows Snippets migration remain separate. Linux x64 now admits explicit extension
 installation and activation through the existing production owners; its
 [composition qualification](linux-x64-extension-composition.md) remains distinct
 from earlier module, hosted-view and package checks. That historical composition

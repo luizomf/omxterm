@@ -406,8 +406,11 @@ Node-mode store/lease/bootstrap probe. It does not admit the Files move addon or
 change Windows x64 admission. One exact unpacked ARM64 app passed this
 [inspection-only checkpoint](windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
 under a non-elevated Interactive/Limited account, including ordinary-user symlink
-access. Inspection does not execute NSIS or qualify graphical composition,
-installer behavior or Snippets migration.
+access. Inspection does not execute NSIS or itself qualify graphical composition,
+installer behavior or Snippets migration. A later, separately bounded
+[packaged-GUI checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
+exercised that retained package with a minimal local extension; it did not run an
+installer or qualify a Snippets migration.
 
 macOS ARM64 package verification (also with `--inspection-only`) checks the
 unpacked extension lease and Files move addons, complete ad-hoc seal,

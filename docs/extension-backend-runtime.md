@@ -141,8 +141,11 @@ runtime bytes, PE architecture and unpacking, then runs the same packaged
 Node-mode store/lease/bootstrap probe using a Windows-specific isolated
 execution environment. One exact Windows ARM64 unpacked directory passed this
 [inspection-only checkpoint](windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
-on the target. This does not qualify packaged GUI/backend activation or an
-installer, or enable the Files move primitive or Windows x64 extension admission.
+on the target. That inspection alone does not qualify packaged GUI/backend
+activation. A later [packaged-GUI checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
+exercised a minimal local extension on that exact directory. Neither checkpoint
+qualifies an installer or enables the Files move primitive or Windows x64
+extension admission.
 
 Controlled tests cover admission races, cancellation, bounded pending calls, replay rejection and separate exit/close facts. Native tests use the actual runtime/store/ESM/bootstrap interface and real direct children, not a copied prototype. They require an assigned disposable native environment; never run them on an owner's working desktop merely because the outer Vitest wrapper is headless. Test artifacts remain when settlement is unknown. Actual parent-process death is a separate native gate from channel loss; do not substitute one for the other. The Linux-only parent-death test uses a read-only Python pidfd observer, opened while the backend still belongs to its live main. It neither signals nor reaps the backend; the parent is terminated through its retained ChildProcess handle. Missing Python/pidfd support fails before deliberate parent death. This test-only observer is not an app dependency or a cross-platform exit-code claim; non-Linux explicitly skips that case. Its source/build/profile receipts are retained for the outer qualification owner to export and remove only after verified settlement.
 
