@@ -54,6 +54,7 @@ it.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
     expect(lines).toHaveLength(1);
     expect(JSON.parse(lines[0]!.slice(prefix.length))).toEqual({
       auxiliary: "layout-lifetime-input-overlays-verified",
+      placement: "both-sides-draft-focus-surfaces-resize-left-compact-overlays",
       input: "synthetic-chromium-not-physical",
     });
   },

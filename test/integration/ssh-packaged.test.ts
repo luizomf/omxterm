@@ -38,6 +38,17 @@ const names = [
 ] as const;
 const source = process.env.OMXTERM_SSH_PACKAGED_SOURCE;
 const combined = process.env.OMXTERM_SSH_PACKAGED_COMBINED;
+const placement = process.env.OMXTERM_SSH_PACKAGED_PLACEMENT;
+assert.ok(placement === undefined || placement === "1");
+if (placement) {
+  assert.ok(source, "placement requires production source");
+  for (const mode of ["COMBINED", "CATALOG", "CATALOG_SHA256", "APPEARANCE"])
+    assert.equal(
+      process.env[prefix + mode],
+      undefined,
+      "exclusive placement mode",
+    );
+}
 assert.ok(combined === undefined || combined === "1");
 if (combined)
   assert.ok(source, "combined checkpoint requires production source");
@@ -190,7 +201,7 @@ async function hostIdentity(root: string, version: string) {
   return { asar, executable, executableSha256, sourceHashes };
 }
 async function combinedInputs(root: string, receipts: string) {
-  if (!combined) return {};
+  if (!combined && !placement) return {};
   assert.ok(source);
   const manifest = JSON.parse(
     await readFile(
@@ -203,12 +214,18 @@ async function combinedInputs(root: string, receipts: string) {
     `dist/extensions/files-${manifest.version}.omxext`,
   );
   const filesArchiveSha256 = digest(await readFile(filesArchive));
-  for (const helper of [
-    "companion-combined.cjs",
-    "companion-native-input.cjs",
-    "companion-shortcuts.cjs",
-    "companion-shortcut-input.cjs",
-  ])
+  for (const helper of placement
+    ? [
+        "companion-placement.cjs",
+        "companion-placement-input.cjs",
+        "companion-placement-contract.cjs",
+      ]
+    : [
+        "companion-combined.cjs",
+        "companion-native-input.cjs",
+        "companion-shortcuts.cjs",
+        "companion-shortcut-input.cjs",
+      ])
     await cp(path.join("test/fixtures", helper), path.join(root, helper));
   const inputs = {
     filesArchive,
@@ -439,6 +456,7 @@ it.skipIf(!enabled)(
         appearance: !!appearance,
         source,
         sourceHashes,
+        placement: placement === "1",
         ...combinedOptions,
         executableSha256,
       };

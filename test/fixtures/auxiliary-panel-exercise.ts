@@ -37,6 +37,7 @@ interface PanelOptions {
   readonly imagePending: () => boolean;
   readonly finishImage: (image: LocalImageData | null) => void;
   readonly reload: () => void;
+  readonly setSide: (side: "left" | "right") => void;
 }
 const shown = "!document.querySelector('#snippets-sidebar').hidden";
 const searchFocused =
@@ -205,7 +206,7 @@ export async function exerciseAuxiliaryPanel(options: PanelOptions) {
     await evaluate("window.dispatchEvent(new Event('focus'))");
     await until(searchFocused);
     await exerciseClipboard(scene);
-    await exerciseResize(scene);
+    await exercisePlacement(scene);
     assert.deepEqual(sizes[0]!.at(-1), hiddenSize);
     options.output(0, "\r\nHIDDEN_PANEL_OUTPUT\r\n");
     await exerciseSmallWindow(scene);
@@ -213,6 +214,7 @@ export async function exerciseAuxiliaryPanel(options: PanelOptions) {
     await exerciseRetention(scene, hiddenSize);
     return {
       auxiliary: "layout-lifetime-input-overlays-verified",
+      placement: "both-sides-draft-focus-surfaces-resize-left-compact-overlays",
       input: "synthetic-chromium-not-physical",
     };
   } finally {
@@ -270,36 +272,85 @@ async function exerciseClipboard(s: Scene) {
   );
 }
 
-async function exerciseResize(s: Scene) {
+async function exercisePlacement(s: Scene) {
+  const { evaluate, until, width } = s;
+  await evaluate(
+    "window.panelDraft = document.querySelector('#snippets-sidebar input'); window.panelDraft.value = 'placement-draft'; window.panelDraft.focus(); window.panelDraft.setSelectionRange(2, 6)",
+  );
+  const originalWidth = await width();
+  for (const side of ["left", "right", "left"] as const) {
+    s.options.setSide(side);
+    await until(
+      `(() => { const p = document.querySelector('#snippets-sidebar').getBoundingClientRect(); const t = document.querySelector('#terminal-tabs').getBoundingClientRect(); return ${side === "left" ? "p.right <= t.left" : "t.right <= p.left"}; })()`,
+    );
+    assert.equal(await width(), originalWidth);
+    assert.equal(
+      await evaluate(
+        "window.panelDraft === document.querySelector('#snippets-sidebar input') && window.panelDraft === document.activeElement && window.panelDraft.value === 'placement-draft' && window.panelDraft.selectionStart === 2 && window.panelDraft.selectionEnd === 6 && window.panelCanvases.every((c, i) => c === document.querySelectorAll('canvas')[i]) && window.panelSurfaces.every((c, i) => c === document.querySelectorAll('.terminal-surface')[i])",
+      ),
+      true,
+    );
+    assert.equal(s.contents.isFocused(), true, "native core focus retained");
+  }
+  await evaluate(
+    "window.panelDraft.value = ''; window.panelDraft.dispatchEvent(new Event('input'))",
+  );
+  await exerciseResize(s, "left");
+  s.options.setSide("right");
+  await until(
+    "document.querySelector('#terminal-tabs').getBoundingClientRect().right <= document.querySelector('#snippets-sidebar').getBoundingClientRect().left",
+  );
+  await exerciseResize(s, "right");
+  // The remaining existing compact/chrome/overlay exercises now qualify left.
+  s.options.setSide("left");
+  await until(
+    "document.querySelector('#snippets-sidebar').getBoundingClientRect().right <= document.querySelector('#terminal-tabs').getBoundingClientRect().left",
+  );
+}
+
+async function exerciseResize(s: Scene, side: "left" | "right") {
   const { contents, until, wait, width, key, evaluate } = s;
+  await evaluate(`${separator}.focus()`);
+  key("Home");
+  await wait(async () => (await width()) === 220, "resize baseline minimum");
+  for (let index = 0; index < 6; index++)
+    key(side === "left" ? "Right" : "Left");
+  await wait(async () => (await width()) === 280, "resize baseline");
   const point = await s.point();
+  const delta = side === "left" ? 80 : -80;
   contents.sendInputEvent({ type: "mouseMove", ...point });
-  contents.sendInputEvent({
-    type: "mouseDown",
-    button: "left",
-    clickCount: 1,
-    ...point,
-  });
-  await until(`${separator}.classList.contains('dragging')`);
-  contents.sendInputEvent({
-    type: "mouseMove",
-    x: point.x - 80,
-    y: point.y,
-    modifiers: ["leftbuttondown"],
-  });
-  await wait(async () => (await width()) >= 350, "captured resize");
-  contents.sendInputEvent({
-    type: "mouseUp",
-    button: "left",
-    clickCount: 1,
-    x: point.x - 80,
-    y: point.y,
-  });
+  try {
+    contents.sendInputEvent({
+      type: "mouseDown",
+      button: "left",
+      clickCount: 1,
+      ...point,
+    });
+    await until(`${separator}.classList.contains('dragging')`);
+    contents.sendInputEvent({
+      type: "mouseMove",
+      x: point.x + delta,
+      y: point.y,
+      modifiers: ["leftbuttondown"],
+    });
+    await wait(
+      async () => (await width()) === 360,
+      "captured directional resize",
+    );
+  } finally {
+    contents.sendInputEvent({
+      type: "mouseUp",
+      button: "left",
+      clickCount: 1,
+      x: point.x + delta,
+      y: point.y,
+    });
+  }
   await until(`!${separator}.classList.contains('dragging')`);
   for (const [code, expected] of [
     ["Home", 220],
-    ["Left", 230],
-    ["Right", 220],
+    [side === "left" ? "Right" : "Left", 230],
+    [side === "left" ? "Left" : "Right", 220],
     ["End", 560],
   ] as const) {
     key(code);

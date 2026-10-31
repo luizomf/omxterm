@@ -299,6 +299,17 @@ async function exerciseScenario(
           finish!(image);
         },
         reload: options.reload,
+        setSide(side) {
+          // Keep this fixture buildable before the production enum lands; use
+          // the ordinary configuration projection, never a renderer test hook.
+          configuration = Object.assign({}, configuration, {
+            auxiliaryPanelSide: side,
+          });
+          applyFixtureConfiguration(router)(
+            { configuration, userFileErrors: [] },
+            true,
+          );
+        },
       });
     }
     assert.ok(

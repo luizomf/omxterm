@@ -572,6 +572,35 @@ async function run(options) {
   assert.equal(children.length, 0);
   assert.equal(hosted().length, 0);
   checks.push("exact-archive-trust-dormant-install");
+  if (options.placement) {
+    await require("./companion-placement.cjs").runPlacement({
+      core,
+      window,
+      js,
+      menu,
+      until,
+      hosted,
+      settings,
+      closeSettings,
+      click,
+      children,
+      ptys,
+      options,
+      checks,
+      dialog,
+      identity,
+      alive,
+    });
+    prepareQuit();
+    return {
+      ...state,
+      scope:
+        "Source placement only; synthetic SSH; assigned X11 XTEST hit testing",
+      limitations: [
+        "No package, network SSH, physical input or cross-platform qualification",
+      ],
+    };
+  }
   await closeSettings();
   menu("SSH Connect");
   await until(
