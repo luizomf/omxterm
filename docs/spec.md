@@ -1933,8 +1933,15 @@ Links are not implicitly expanded, and existing bounded listings, no-clobber
 moves and one-shot permanent-delete confirmation remain unchanged. See the
 [Files interaction contract](files-development-preview.md#concrete-consumer).
 
-Files archive version/compatibility is maintained separately from the host;
-the current catalog selects immutable Files0.4.0 for Linux ARM64 with host
+Files archive version/compatibility is maintained separately from the host.
+Source Files0.5.0 requires `>=0.24.0-dev.21` / API `0.1.x`, uses a neutral ARM64
+preview name and includes corrected raw-path forwarding for macOS trash. Its
+[controlled exact-DMG consumer checkpoint](files-development-preview.md#files-050-macos-controlled-qualification)
+passed real operations/recoverable trash, retained companion state, management
+and active-backend normal Quit. Public distribution remains separate.
+The compatible retained dev.21 host remains distinct from current source's
+dev.22 metadata; no host rebuild follows from an archive/fixture-only checkpoint.
+The current catalog selects immutable Files0.4.0 for Linux ARM64 with host
 `>=0.24.0-dev.8` and API `0.1.x`, preserving historical0.1.0 local/link delivery.
 The [distribution evidence](files-development-preview.md#files-040-distribution-and-controlled-qualification)
 distinguishes published bytes, controlled dev.11 qualification and the separately

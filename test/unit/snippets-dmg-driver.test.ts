@@ -201,6 +201,36 @@ it.each([
       ).toBe(true);
   },
 );
+it("runs the Files observer through the same owned native controller without Quartz or Linux flags", async () => {
+  const input = JSON.parse(await fs.readFile(options, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  delete input.quartzTool;
+  await fs.writeFile(
+    options,
+    JSON.stringify({
+      ...input,
+      observer: "files-packaged.cjs",
+      macosLifecycle: true,
+      files: "/owned/files",
+      trashLookup: "/lookup",
+    }),
+  );
+  await runDmgController(options);
+  expect(
+    client.evaluate.mock.calls.some(
+      ([expression]) =>
+        expression.includes("files-packaged.cjs") &&
+        expression.includes(".run("),
+    ),
+  ).toBe(true);
+  expect(spawnFixtureProcess).toHaveBeenCalledOnce();
+  expect(vi.mocked(childProcess.spawn).mock.calls[0]![1]).not.toContain(
+    "--no-sandbox",
+  );
+});
+
 it("preserves inspector attachment failure without claiming a scenario or Quit", async () => {
   vi.mocked(inspector.inspector).mockRejectedValue(
     new Error("attachment failed"),

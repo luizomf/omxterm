@@ -274,6 +274,10 @@ it.skipIf(
         "test/fixtures/files-packaged.cjs",
         path.join(root, "observer.cjs"),
       );
+      await cp(
+        "test/fixtures/snippets-process-identity.cjs",
+        path.join(root, "snippets-process-identity.cjs"),
+      );
       await prepareCatalog(root);
       const env: NodeJS.ProcessEnv = {
         HOME: path.join(root, "home"),

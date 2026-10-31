@@ -39,6 +39,14 @@ not that changed minimal-fixture assertion.
   Normal Quit is not a substitute for that experiment. Historical #746 diagnostics
   remain open; do not suppress their output or relax assertions.
 
+The separate [Files0.5.0 exact-DMG fixture](../test/fixtures/files-dmg.md) passed
+its eleven bounded consumer checks against the compatible retained dev.21 host:
+local archive trust, real operations/recoverable trash, retained companion state,
+management and an active Files backend at normal Quit. Its exact identities and
+[qualification limits](files-development-preview.md#files-050-macos-controlled-qualification)
+remain separate from this minimal fixture and the qualified Snippets campaign.
+Public host/archive/catalog distribution is not established by that checkpoint.
+
 ## Installed-package production fixture
 
 On an assigned disposable, logged-in, idle macOS ARM64 desktop, build ordinary

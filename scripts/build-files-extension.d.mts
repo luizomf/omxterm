@@ -14,7 +14,7 @@ export interface FilesBuildReceipt {
   qualification: {
     status: "not-run";
     intendedHost: string;
-    target: "linux-arm64";
+    target: "linux-arm64" | "darwin-arm64";
   };
 }
 
@@ -22,9 +22,11 @@ export function buildExtension(
   name: "files" | "ssh" | "restoration" | "mirror-typing" | "snippets",
   output?: string,
   suppliedCommit?: string,
+  target?: "linux-arm64" | "darwin-arm64",
 ): Promise<FilesBuildReceipt>;
 
 export function buildFilesExtension(
   output?: string,
   suppliedCommit?: string,
+  target?: "linux-arm64" | "darwin-arm64",
 ): Promise<FilesBuildReceipt>;

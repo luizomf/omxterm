@@ -4,11 +4,13 @@ const { app, BrowserWindow, Menu, dialog, webContents } = require("electron");
 const assert = require("node:assert/strict");
 const { syncBuiltinESMExports } = require("node:module");
 const { readFile, writeFile, stat } = require("node:fs/promises");
-const { readFileSync, writeFileSync } = require("node:fs");
+const { writeFileSync } = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 let catalogTransport;
+let currentRoot;
+const processIdentity = require("./snippets-process-identity.cjs");
 async function cleanup() {
   await catalogTransport?.close();
 }
@@ -86,8 +88,23 @@ function assertNormalBackendRetirement(child) {
   );
 }
 
+function deleteConfirmationReady(document) {
+  const editor = document.querySelector(".operation-editor");
+  if (!editor || editor.closest("[hidden], [inert]")) return false;
+  return (
+    editor.textContent.includes("cannot be undone") &&
+    [...editor.querySelectorAll("button")].some(
+      (button) =>
+        button.textContent === "Delete permanently" &&
+        !button.disabled &&
+        !button.closest("[hidden], [inert]"),
+    )
+  );
+}
+
 async function run(options) {
   inspect(options);
+  currentRoot = options.root;
   const window = BrowserWindow.getAllWindows()[0];
   assert.ok(window);
   const core = window.webContents;
@@ -175,6 +192,12 @@ async function run(options) {
       "trust must identify exact separate archive",
     );
     assert.match(prompt.detail, /network/);
+    if (options.macosLifecycle)
+      assert.equal(
+        prompt.message,
+        "Install Files — ARM64 preview 0.5.0?",
+        "new Files archive version shown before consent",
+      );
     approvals++;
     return { response: 1, checkboxChecked: false };
   };
@@ -274,17 +297,10 @@ async function run(options) {
     assert.equal(hosted()[0], view, "same native WebContents identity");
   }
   const shell = JSON.parse(await readFile(options.readiness, "utf8"));
-  const shellStat = () => {
-    try {
-      const text = readFileSync(`/proc/${shell.probePid}/stat`, "utf8");
-      const fields = text.slice(text.lastIndexOf(")") + 2).split(" ");
-      return { state: fields[0], start: fields[19] };
-    } catch (error) {
-      if (["ENOENT", "ESRCH"].includes(error.code)) return null;
-      throw error;
-    }
-  };
-  const identity = shellStat();
+  const shellStat = () => processIdentity.identity(shell.probePid);
+  let identity = shellStat();
+  const initialShell = { ...shell, start: identity?.start };
+  let sourceExited = false;
   assert.ok(identity);
   const quote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
   async function terminal(marker) {
@@ -532,6 +548,8 @@ async function run(options) {
   );
   const secondPid = Number(await readFile(receipt, "utf8"));
   assert.notEqual(secondPid, shell.probePid);
+  const secondIdentity = processIdentity.identity(secondPid);
+  assert.ok(secondIdentity && processIdentity.alive(secondIdentity));
   menu("Files");
   await panel(view, true, "child");
   await view.executeJavaScript(
@@ -553,23 +571,25 @@ async function run(options) {
   await panel(view, true, "core");
   await js("document.querySelectorAll('#tab-strip [role=tab]')[1].click()");
   await panel(view, true, "core");
+  if (options.macosLifecycle)
+    await js("document.querySelectorAll('#tab-strip [role=tab]')[0].click()");
+  const closingIdentity = options.macosLifecycle ? identity : secondIdentity;
   menu("Close Tab");
-  await until(async () => (await tabCount()) === 1, "second terminal closed");
-  await until(async () => {
-    const proc = await readFile(`/proc/${secondPid}/stat`, "utf8").catch(
-      (error) => {
-        // procfs can lose the task after open but before read completes.
-        if (["ENOENT", "ESRCH"].includes(error.code)) return "";
-        throw error;
-      },
+  await until(async () => (await tabCount()) === 1, "selected terminal closed");
+  await until(
+    () => !processIdentity.alive(closingIdentity),
+    "closed shell kernel exit",
+  );
+  if (options.macosLifecycle) {
+    sourceExited = true;
+    shell.probePid = secondPid;
+    identity = secondIdentity;
+    assert.ok(processIdentity.alive(identity));
+    await js(
+      "window.__packagedCanvas = document.querySelector('.terminal-surface canvas')",
     );
-    return (
-      !proc ||
-      ["Z", "X", "x"].includes(
-        proc.slice(proc.lastIndexOf(")") + 2).split(" ")[0],
-      )
-    );
-  }, "second shell kernel exit");
+    checks.push("source-terminal-closed-same-companion-distinct-surviving-PTY");
+  }
   await panel(view, true, "core");
   menu("Files");
   await panel(view, true, "child");
@@ -610,6 +630,92 @@ async function run(options) {
     "source",
   );
   checks.push("packaged-backend-create-move-conflict");
+  if (options.macosLifecycle) {
+    await filesAction(view, "New folder");
+    await apply(view, "created-folder");
+    assert.ok(
+      (await stat(path.join(options.files, "created-folder"))).isDirectory(),
+    );
+    await select(view, "created.txt");
+    await filesAction(view, "Delete permanently…");
+    await until(
+      () =>
+        view.executeJavaScript(
+          `(${deleteConfirmationReady.toString()})(document)`,
+        ),
+      "delete confirmation",
+    );
+    await click(view, "Cancel");
+    assert.ok((await stat(path.join(options.files, "created.txt"))).isFile());
+    await filesAction(view, "Delete permanently…");
+    await until(
+      () =>
+        view.executeJavaScript(
+          `(${deleteConfirmationReady.toString()})(document)`,
+        ),
+      "fresh delete confirmation",
+    );
+    assert.ok((await stat(path.join(options.files, "created.txt"))).isFile());
+    await click(view, "Delete permanently");
+    await until(
+      () =>
+        view.executeJavaScript(
+          "document.querySelector('[role=status]')?.textContent === 'Operation completed.'",
+        ),
+      "confirmed deletion success",
+    );
+    await assert.rejects(stat(path.join(options.files, "created.txt")), {
+      code: "ENOENT",
+    });
+    const recovery = require("./files-trash-recovery.cjs");
+    const entry = await recovery.prepare({
+      files: options.files,
+      evidence: options.evidence,
+      lookup: options.trashLookup,
+    });
+    await click(view, "Refresh");
+    await select(view, path.basename(entry.source));
+    await filesAction(view, "Move to Trash");
+    await until(
+      () =>
+        view.executeJavaScript(
+          "document.querySelector('[role=status]')?.textContent === 'Operation completed.'",
+        ),
+      "real backend trash success",
+    );
+    await until(
+      () =>
+        view.executeJavaScript(
+          `(${listingReady(options.files)}) && !${entryQuery(options.files, path.basename(entry.source))}`,
+        ),
+      "trashed row removed",
+    );
+    // Only test recovery uses the addon directly; the trash operation above
+    // must traverse the real page, installed backend and production service.
+    const native = require(
+      path.join(options.asar, "dist/extension-runtime/files-move.node"),
+    );
+    await recovery.recover(entry, options.evidence, native.moveNoReplace);
+    checks.push("folder-confirm-cancel-delete-real-backend-trash-recovered");
+    await filesAction(view, "New file");
+    const draft = "retained draft.txt";
+    await view.executeJavaScript(
+      `(() => { const input = document.querySelector('.operation-editor input'); window.__filesDraft = input; input.value = ${JSON.stringify(draft)}; input.focus(); input.setSelectionRange(3, 8); })()`,
+    );
+    await js("document.querySelector('.auxiliary-header button').click()");
+    await panel(view, false, "core");
+    menu("Files");
+    await panel(view, true, "child");
+    assert.equal(
+      await view.executeJavaScript(
+        `(() => { const input = document.querySelector('.operation-editor input'); return input === window.__filesDraft && input.value === ${JSON.stringify(draft)} && input.selectionStart === 3 && input.selectionEnd === 8; })()`,
+      ),
+      true,
+    );
+    assert.equal(children.length, 1);
+    await click(view, "Cancel");
+    checks.push("retained-operation-draft-caret-same-view-backend");
+  }
   await writeFile(
     path.join(options.evidence, "files.png"),
     (await view.capturePage()).toPNG(),
@@ -654,10 +760,21 @@ async function run(options) {
     "Disable retirement",
   );
   assertNormalBackendRetirement(children[1]);
+  if (options.macosLifecycle) {
+    await click(core, "Enable");
+    await state("generation 4");
+    assert.equal(children.length, 2, "Enable remains dormant");
+    assert.equal(hosted().length, 0);
+  }
   await click(core, "Uninstall");
   await state("uninstalled");
   checks.push("fresh-activation-disable-uninstall");
   listeners("uninstalled");
+  await js("document.querySelector('.settings-close').click()");
+  await until(
+    () => js("!document.querySelector('.settings-dialog')"),
+    "Settings closed before terminal capture",
+  );
   await terminal("after");
   assert.equal(
     await js(
@@ -666,11 +783,34 @@ async function run(options) {
     true,
   );
   assert.equal(shellStat()?.start, identity.start);
-  checks.push("same-PTY-and-Surface");
+  checks.push(
+    options.macosLifecycle
+      ? "surviving-PTY-and-Surface"
+      : "same-PTY-and-Surface",
+  );
+  assert.equal(
+    await js(
+      "(() => { const surface = document.activeElement?.closest('.terminal-surface'); const rect = surface?.getBoundingClientRect(); return !!rect && rect.width > 0 && rect.height > 0 && !surface.closest('[hidden], [inert]') && !document.querySelector('.settings-dialog'); })()",
+    ),
+    true,
+  );
   await writeFile(
     path.join(options.evidence, "terminal-after.png"),
     (await core.capturePage()).toPNG(),
   );
+  if (options.macosLifecycle) {
+    await settings();
+    await click(core, "Install local .omxext…");
+    await state("generation 6");
+    assert.equal(approvals, 3);
+    assert.equal(children.length, 2, "third install remains dormant");
+    view = await openFiles();
+    assert.equal(children.length, 3);
+    assert.equal(children[2].exit, null);
+    assert.equal(children[2].closed, false);
+    assert.equal(view.isDestroyed(), false);
+    checks.push("third-consent-active-Files-at-Quit");
+  }
   if (catalogTransport) {
     assert.deepEqual(catalogTransport.requests, [
       "/catalog",
@@ -696,8 +836,10 @@ async function run(options) {
       : null,
     checks,
     approvals,
+    archiveSha256: options.archiveSha256,
     children,
     shell: { ...shell, start: identity.start },
+    ...(options.macosLifecycle ? { initialShell, sourceExited } : {}),
     host: app.getVersion(),
     executable: process.execPath,
     appPath: app.getAppPath(),
@@ -708,14 +850,23 @@ async function run(options) {
     assert.ok(
       !remaining ||
         remaining.start !== identity.start ||
-        remaining.state === "Z",
+        /^[ZXx]/.test(remaining.state),
       "shell kernel exit before will-quit",
     );
     children.forEach(assertNormalBackendRetirement);
     writeFileSync(
       path.join(options.evidence, "quit.json"),
       JSON.stringify(
-        { ...result, quit: "joined", shellAtQuit: remaining },
+        {
+          ...result,
+          quit: "joined",
+          joined: true,
+          baselineExited: !processIdentity.alive({
+            pid: initialShell.probePid,
+            start: initialShell.start,
+          }),
+          shellAtQuit: remaining,
+        },
         null,
         2,
       ),
@@ -730,5 +881,10 @@ module.exports = {
   cleanup,
   assertNormalBackendRetirement,
   diagnoseListing,
+  diagnose: () => diagnoseListing(currentRoot),
+  abort: async () => {
+    await cleanup();
+    app.quit();
+  },
   quit: () => app.quit(),
 };

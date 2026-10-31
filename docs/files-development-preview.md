@@ -29,15 +29,72 @@ broadening its manifest range or replacing published bytes. The
 records the unchanged archive's lifecycle check on dev.1. Admission alone is not package or Files lifecycle qualification; earlier host evidence does
 not qualify every admitted version.
 
+## Files 0.5.0 macOS controlled qualification
+
+Source now builds **Files 0.5.0 — ARM64 preview**, requiring host
+`>=0.24.0-dev.21` and API `0.1.x`. It includes the corrected raw-path forwarding
+for optional host trash. This is a new archive identity, not a replacement or
+new qualification of immutable Files0.4.0. The catalog remains Linux-only0.4.0;
+no host/archive publication follows from the controlled native qualification below.
+
+The opt-in [exact-DMG Files fixture](../test/fixtures/files-dmg.md) passed the
+bounded consumer checkpoint against the retained compatible dev.21 host.
+Current source's dev.22 metadata does not relabel or require rebuilding those
+host bytes. The fixture uses local captured-byte trust, actual installed Files
+operations, one-entry Trash recovery, retained companion state, source-terminal
+closure with a distinct surviving PTY, management and an active Files backend
+at normal Quit. It reuses existing package identity and process ownership tools;
+there is no new product service or native-cancellation promise.
+
+On 2026-10-31, ordinary-user macOS27.0.1 ARM64 qualification passed all eleven
+scenario checks using source `a343704c0794cb913fba9ad312e90e5f6daa4bb1`, the
+retained dev.21 DMG SHA-256
+`2d5767510034a8059996762ab72d821c1e139cd0968859e9b15d5d74d79378c1`
+(129,721,647 bytes), and new Files0.5 archive SHA-256
+`82bd4bfe6f5a3ae7c22642741718dea94543f92b636a50b357c13d3c4be6aa18`
+(13,200 bytes). Original archive sidecars retain their supplied-source identity,
+intended dev.22 host and `qualification.status: not-run`; this is separate evidence.
+
+The installed page performed real create/move/conflict, cancel/fresh-confirm
+permanent deletion and native trash. One owned trashed entry was verified by
+exact directory/device/inode/content and no-clobber restored, with destination
+absence confirmed. The isolated-HOME lookup preflight resolved the same accessible
+user Trash directory as ordinary HOME, on the fixture device. Companion state,
+editor draft/caret and backend survived hiding and source-terminal closure while
+a distinct terminal remained usable. Reinstall, Disable, dormant Enable and
+Uninstall passed. A third explicit consent/activation left Files active at normal
+Quit; all three backend exit/close events, main streams and shell exits joined.
+
+Both WebContents captures were inspected: Files operation completion and the
+final surviving terminal's actual painted shell text/prompt. These are not full
+OS-compositor captures. A separate read-only audit verified 1,233 source entries,
+630 copied-bundle entries, the complete ad-hoc seal, dependency/artifact identities,
+restored entry, absent owned mounts and no current scope processes. Test-only
+transient controller/supervisor bundles are bound by source/toolchain inputs,
+not separately retained executed-output hashes. Current absence is not a
+historical escaped-descendant census.
+
+One complete independent review found two fixture/test defects, both corrected:
+hidden cancelled confirmation text could satisfy a fresh-confirmation gate, and
+new tests assumed POSIX-only APIs/modes on Windows. Final full formatting, lint,
+typecheck and 4,450 headless tests passed (66 skipped). This checkpoint uses
+synthetic Chromium input and controlled native consent, not physical dialogs,
+Finder/Gatekeeper/notarization, macOS12, blocked native-I/O cancellation,
+read-only/trash-unavailable volumes, unexpected backend crash or surviving-browser
+main-death exclusion. It does not repeat the primitive matrix or establish public
+installation. The single-release-per-ID catalog compatibility decision and actual
+host/archive distribution remain separate; Linux0.4 stays unchanged.
+
 ## Concrete consumer
 
 `extensions/files` is separately built, not imported into application main or the
 terminal renderer. Maintainers run `node scripts/build-files-extension.mjs` to
-produce `dist/extensions/files-0.4.0.omxext`. This build needs Python 3's ZIP
+produce `dist/extensions/files-0.5.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; source version 0.4.0 requires host
+`extensions/files/extension.json`; source version 0.5.0 requires host
+`0.24.0-dev.21` or later for the macOS trash service. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. The current catalog
 selects the original 0.4.0 archive, not a new build from the catalog commit.
 The historical 0.1.0 release remains immutable; building source alone does not
@@ -92,7 +149,10 @@ Git checkout, commit changes first: the builder requires a clean source tree.
 For an exported source tree, supply the original full commit as the second
 argument after the output filename; the receipt labels it `supplied-commit`,
 not a locally verified Git identity. Maintainers must verify that transport
-against the commit. A build receipt records the intended host/target with
+against the commit. The optional third builder argument selects the intended qualification target
+(`linux-arm64`, the preserved default, or explicit `darwin-arm64`); it is never
+inferred from the builder OS or used as a manifest platform declaration.
+A build receipt records the source host version/intended target with
 `qualification.status: not-run`; it is not native or packaged qualification.
 Keep actual test evidence separately, bound to these exact artifact hashes.
 

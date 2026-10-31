@@ -20,11 +20,16 @@ interface Options {
   archiveSha256: string;
   version: string;
   readiness: string;
-  quartzTool: string;
+  quartzTool?: string;
+  // The same exact-package controller also owns the bounded Files observer.
+  observer?: "files-packaged.cjs";
 }
 export async function runDmgController(optionsFile: string) {
   const options = JSON.parse(await readFile(optionsFile, "utf8")) as Options;
   const { root, evidence, executable, asar } = options;
+  assert.ok(
+    options.observer === undefined || options.observer === "files-packaged.cjs",
+  );
   const json = (name: string, value: unknown) =>
     writeFile(path.join(evidence, name), JSON.stringify(value, null, 2));
   const env: NodeJS.ProcessEnv = {
@@ -74,7 +79,7 @@ export async function runDmgController(optionsFile: string) {
   });
   const owned = new Map<number, FixtureProcess>();
   let client: Awaited<ReturnType<typeof inspector>> | undefined;
-  const observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(path.join(asar, "package.json"))})(${JSON.stringify(path.join(root, "snippets-appimage.cjs"))})`;
+  const observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(path.join(asar, "package.json"))})(${JSON.stringify(path.join(root, options.observer ?? "snippets-appimage.cjs"))})`;
   const failures: unknown[] = [];
   const collect = () => {
     const rows = fixtureProcesses();

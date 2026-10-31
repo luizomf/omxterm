@@ -1,9 +1,9 @@
 {
   "format": 1,
   "id": "omxterm.files",
-  "version": "0.4.0",
-  "name": "Files — Linux ARM64 preview",
-  "engines": { "omxterm": ">=0.24.0-dev.8", "api": "0.1.x" },
+  "version": "0.5.0",
+  "name": "Files — ARM64 preview",
+  "engines": { "omxterm": ">=0.24.0-dev.21", "api": "0.1.x" },
   "backend": "backend.mjs",
   "view": {
     "entry": "index.html",
