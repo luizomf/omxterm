@@ -42,6 +42,8 @@ function valid() {
         repeat: false,
         control: true,
         shift: true,
+        alt: false,
+        meta: false,
         phase: "held",
         prevented: true,
       },
@@ -52,6 +54,8 @@ function valid() {
         repeat: true,
         control: true,
         shift: true,
+        alt: false,
+        meta: false,
         phase: "held",
         prevented: true,
       },
@@ -62,6 +66,8 @@ function valid() {
         repeat: true,
         control: false,
         shift: false,
+        alt: false,
+        meta: false,
         phase: "modifiers-up",
         prevented: true,
       },
@@ -149,6 +155,13 @@ for (const [name, mutate] of Object.entries(faults))
     mutate(r);
     assert.throws(() => assertHeldReceipt(r));
   });
+for (const modifier of ["alt", "meta"])
+  for (const index of [0, 1, 2])
+    test(`rejects unrequested ${modifier} on held event ${index}`, () => {
+      const r = valid();
+      r.events[index][modifier] = true;
+      assert.throws(() => assertHeldReceipt(r), /unrequested/);
+    });
 test("exact PTY ordered fence, including unavailable chord control", () => {
   assertFence("old", "oldx");
   assertFence("old", "old\u001b[18;6~x", "\u001b[18;6~x");

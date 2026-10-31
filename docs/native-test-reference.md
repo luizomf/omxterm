@@ -232,6 +232,17 @@ node node_modules/vitest/vitest.mjs run test/unit/restty-host-window.test.ts tes
 
 ## Auxiliary panel and shortcut capture
 
+The opt-in combined SSH/Files companion shortcut fixture uses assigned Linux
+X11/XTEST input. Before posting input, its read-only X11 query verifies F6=72 and
+F7=73 and their unmodified group-zero keysyms. It injects these function keys as
+literal numeric codes, bypassing libxdo's named-key modifier mapping, which can
+add Alt. Other layouts are not assumed or rewritten. Actual tap/held initial
+receipts must match the requested Control/Shift state with Alt/Meta absent;
+held-repeat receipts also reject extra Alt/Meta. Mapping checks are not native
+qualification: exact config, owned gesture, raw-PTY and fresh-input assertions
+still apply. Cleanup releases only attempted owned keys, never clears unowned
+modifiers, and retains unresolved ownership evidence.
+
 The `auxiliary-panel` suite uses the production window host, real Surfaces/PTYs,
 native menu callbacks and Chromium synthetic input through the main keybind
 matcher (default and remapped). It covers bounded geometry, captured pointer and

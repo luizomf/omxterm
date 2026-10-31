@@ -17,39 +17,68 @@ const KEYS = {
   Escape: 0xff1b,
   x: 0x78,
 };
+// Numeric injection bypasses libxdo's named function-key modifier mapping.
+// state() verifies these codes and their unmodified symbols on the assigned display.
+const FUNCTION_KEYCODES = { F6: 72, F7: 73 };
 const PYTHON = `import ctypes,json,sys
 x=ctypes.CDLL('libX11.so.6')
 x.XOpenDisplay.argtypes=[ctypes.c_char_p]; x.XOpenDisplay.restype=ctypes.c_void_p
 x.XKeysymToKeycode.argtypes=[ctypes.c_void_p,ctypes.c_ulong]; x.XKeysymToKeycode.restype=ctypes.c_ubyte
 x.XQueryKeymap.argtypes=[ctypes.c_void_p,ctypes.c_void_p]; x.XCloseDisplay.argtypes=[ctypes.c_void_p]
+x.XkbKeycodeToKeysym.argtypes=[ctypes.c_void_p,ctypes.c_ubyte,ctypes.c_int,ctypes.c_int]; x.XkbKeycodeToKeysym.restype=ctypes.c_ulong
 d=x.XOpenDisplay(None)
 if not d: raise SystemExit('No assigned X display')
 try:
  keys=(ctypes.c_ubyte*32)()
  if x.XQueryKeymap(d,keys)!=1: raise SystemExit('XQueryKeymap failed')
  result={}
+ functionKeys={}
  for name,sym in json.loads(sys.argv[1]).items():
   code=x.XKeysymToKeycode(d,sym)
   if not code: raise SystemExit('Missing keycode '+name)
   result[name]=bool(keys[code//8] & (1<<(code%8)))
- print(json.dumps(result))
+  if name in ('F6','F7'): functionKeys[name]={'code':code,'keysym':x.XkbKeycodeToKeysym(d,code,0,0)}
+ print(json.dumps({'keys':result,'functionKeys':functionKeys}))
 finally: x.XCloseDisplay(d)
 `;
 function state() {
-  return JSON.parse(
+  const result = JSON.parse(
     execFileSync(
       "/usr/bin/python3",
       ["-I", "-c", PYTHON, JSON.stringify(KEYS)],
       { encoding: "utf8", timeout: 3000 },
     ),
   );
+  for (const [key, code] of Object.entries(FUNCTION_KEYCODES)) {
+    assert.equal(
+      result.functionKeys?.[key]?.code,
+      code,
+      `${key} assigned X11 keycode`,
+    );
+    assert.equal(
+      result.functionKeys?.[key]?.keysym,
+      KEYS[key],
+      `${key} unmodified X11 keysym`,
+    );
+  }
+  return result.keys;
 }
 function send(operation, key) {
   assert.ok(["keydown", "keyup"].includes(operation));
   assert.ok(Object.hasOwn(KEYS, key));
-  execFileSync("/usr/bin/xdotool", [operation, key], { timeout: 3000 });
+  execFileSync(
+    "/usr/bin/xdotool",
+    [operation, String(FUNCTION_KEYCODES[key] ?? key)],
+    { timeout: 3000 },
+  );
 }
 const down = (e) => e.type === "keyDown" || e.type === "rawKeyDown";
+function assertChord(event, control, shift) {
+  assert.equal(event.control, control, "native chord Control matches request");
+  assert.equal(event.shift, shift, "native chord Shift matches request");
+  assert.equal(event.alt, false, "native chord has no unrequested Alt");
+  assert.equal(event.meta, false, "native chord has no unrequested Meta");
+}
 function assertHeldReceipt(r) {
   const shifted = r.shiftExpected !== false;
   assert.ok(
@@ -94,6 +123,10 @@ function assertHeldReceipt(r) {
   const base = r.events.filter(
     (e) => e.key === r.key && (down(e) || e.type === "keyUp"),
   );
+  for (const event of base.filter(down)) {
+    assert.equal(event.alt, false, "held base event has no unrequested Alt");
+    assert.equal(event.meta, false, "held base event has no unrequested Meta");
+  }
   assert.ok(
     base.every((e) => e.prevented),
     "every delivered base down/repeat/up prevented",
@@ -258,6 +291,7 @@ function createInput({
       sequence: ++sequence,
       events: [],
       osBefore: state(),
+      verifiedFunctionKeycodes: { ...FUNCTION_KEYCODES },
     };
     assert.ok(
       Object.values(receipt.osBefore).every((v) => !v),
@@ -361,6 +395,13 @@ function createInput({
             ),
         "actual native tap initial delivery",
       );
+      for (const event of observer.events
+        .slice(start)
+        .filter(
+          (e) =>
+            e.key.toLowerCase() === key.toLowerCase() && down(e) && !e.repeat,
+        ))
+        assertChord(event, chord, chord && modifiers.includes("Shift_L"));
     });
   }
   async function fence(label) {
@@ -399,6 +440,14 @@ function createInput({
         for (const modifier of modifiers) press(modifier);
         press(key);
         receipt.osHeld = state();
+        await until(() => {
+          const initial = observer.events
+            .slice(eventStart)
+            .find((e) => e.key === key && down(e) && !e.repeat);
+          if (!initial) return false;
+          assertChord(initial, true, receipt.shiftExpected);
+          return true;
+        }, "exact held initial chord");
         await settled();
         await until(
           () =>
