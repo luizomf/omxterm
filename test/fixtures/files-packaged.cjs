@@ -120,6 +120,32 @@ function installPublicLink(document, url) {
   button.click();
 }
 
+function extensionsIdle(document, publicCatalog) {
+  // Other tools may be incompatible; their permanently disabled catalog actions
+  // are not pending management. The selected Files action is checked separately.
+  return ![...document.querySelectorAll(".extensions-panel button")].some(
+    (button) =>
+      button.disabled &&
+      !(publicCatalog && button.closest(".extension-catalog-card")),
+  );
+}
+
+function installPublicCatalog(document, action) {
+  const cards = [
+    ...document.querySelectorAll(".extension-catalog-card"),
+  ].filter(
+    (card) =>
+      card.querySelector("h4")?.textContent === "Files — ARM64 preview · 0.5.0",
+  );
+  if (cards.length !== 1) throw Error("exact Files catalog card unavailable");
+  const button = [...cards[0].querySelectorAll("button")].find(
+    (item) => item.textContent === action,
+  );
+  if (!button || button.disabled || button.closest("[hidden], [inert]"))
+    throw Error("Files catalog action unavailable");
+  button.click();
+}
+
 function verifyFilesConsent(prompt, options) {
   assert.equal(prompt.title, "Trust extension code?");
   assert.ok(
@@ -127,7 +153,14 @@ function verifyFilesConsent(prompt, options) {
     "trust must identify exact separate archive",
   );
   assert.match(prompt.detail, /network/);
-  if (options.macosLifecycle || options.publicLink) {
+  if (options.publicCatalog)
+    assert.ok(
+      prompt.detail.includes(
+        "Official means project-maintained, not sandboxed or harmless.",
+      ),
+      "catalog-bound Official trust required",
+    );
+  if (options.macosLifecycle || options.publicLink || options.publicCatalog) {
     assert.equal(
       prompt.message,
       "Install Files — ARM64 preview 0.5.0?",
@@ -141,6 +174,14 @@ function verifyFilesConsent(prompt, options) {
 }
 
 async function run(options) {
+  if (options.publicCatalog) {
+    assert.equal(
+      options.publicCatalog,
+      "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json",
+    );
+    assert.equal(options.catalogMode, "public");
+    assert.ok(!options.publicLink && !options.macosLifecycle);
+  }
   inspect(options);
   currentRoot = options.root;
   const window = BrowserWindow.getAllWindows()[0];
@@ -167,7 +208,7 @@ async function run(options) {
   listeners("initial");
   async function captureCatalog(name, selector, text) {
     const geometry = await js(`(async () => {
-      const element = [...document.querySelectorAll(${JSON.stringify(selector)})].find(item => item.textContent.includes(${JSON.stringify(text)}));
+      const element = [...document.querySelectorAll(${JSON.stringify(selector)})].find(item => ${options.publicCatalog && selector === ".extension-catalog-card" ? `item.querySelector('h4')?.textContent === 'Files — ARM64 preview · 0.5.0'` : `item.textContent.includes(${JSON.stringify(text)})`});
       if (!element) throw Error('catalog capture target missing');
       element.scrollIntoView({ block: 'center' });
       element.querySelector('button')?.focus({ preventScroll: true });
@@ -221,7 +262,7 @@ async function run(options) {
   };
   dialog.showOpenDialog = async () => {
     assert.ok(
-      !options.publicLink,
+      !options.publicLink && !options.publicCatalog,
       "public acquisition must not use local chooser",
     );
     return { canceled: false, filePaths: [options.archive] };
@@ -365,7 +406,7 @@ async function run(options) {
     await until(
       () =>
         js(
-          "![...document.querySelectorAll('.extensions-panel button')].some(b => b.disabled)",
+          `(${extensionsIdle.toString()})(document, ${!!options.publicCatalog})`,
         ),
       "Settings admission",
     );
@@ -374,14 +415,21 @@ async function run(options) {
     await until(
       () =>
         js(
-          `document.querySelector('.extensions-panel').textContent.includes(${JSON.stringify(text)}) && ![...document.querySelectorAll('.extensions-panel button')].some(b => b.disabled)`,
+          `document.querySelector('.extensions-panel').textContent.includes(${JSON.stringify(text)}) && (${extensionsIdle.toString()})(document, ${!!options.publicCatalog})`,
         ),
       text,
     );
   }
   const publicLinkInstalls = [];
-  async function installArchive() {
-    if (options.publicLink) {
+  const publicCatalogInstalls = [];
+  async function installArchive(action = "Install") {
+    if (options.publicCatalog) {
+      assert.ok(!options.publicLink && !options.macosLifecycle);
+      await js(
+        `(${installPublicCatalog.toString()})(document, ${JSON.stringify(action)})`,
+      );
+      publicCatalogInstalls.push(action);
+    } else if (options.publicLink) {
       assert.ok(!options.catalogMode && !options.macosLifecycle);
       await js(
         `(${installPublicLink.toString()})(document, ${JSON.stringify(options.publicLink)})`,
@@ -515,11 +563,12 @@ async function run(options) {
   }
   await settings();
   if (options.catalogMode) {
-    assert.equal(
-      catalogTransport?.requests.length ?? 0,
-      0,
-      "Settings must not fetch the catalog",
-    );
+    if (catalogTransport)
+      assert.equal(
+        catalogTransport.requests.length,
+        0,
+        "Settings must not fetch the catalog",
+      );
     await click(core, "Browse official extensions");
     if (catalogTransport) {
       await state("Catalog unavailable.");
@@ -544,8 +593,13 @@ async function run(options) {
       );
       catalogTransport.validArchive(true);
     }
-    await captureCatalog("catalog.png", ".extension-catalog-card", "Install");
-    await click(core, "Install");
+    await captureCatalog(
+      "catalog.png",
+      ".extension-catalog-card",
+      options.publicCatalog ? "Files — ARM64 preview · 0.5.0" : "Install",
+    );
+    if (options.publicCatalog) await installArchive();
+    else await click(core, "Install");
   } else await installArchive();
   await state("generation 1");
   assert.equal(approvals, 1);
@@ -582,7 +636,7 @@ async function run(options) {
   let view = await openFiles();
   listeners("first-view-active");
   assert.equal(children.length, 1);
-  if (!options.publicLink) {
+  if (!options.publicLink && !options.publicCatalog) {
     view = await closeFiles(view, () => menu("Files"));
     view = await closeFiles(view, () =>
       js("document.querySelector('.auxiliary-close').click()"),
@@ -837,9 +891,10 @@ async function run(options) {
     await captureCatalog(
       "catalog-reinstall.png",
       ".extension-catalog-card",
-      "Reinstall",
+      options.publicCatalog ? "Files — ARM64 preview · 0.5.0" : "Reinstall",
     );
-  if (options.catalogMode) await click(core, "Reinstall");
+  if (options.publicCatalog) await installArchive("Reinstall");
+  else if (options.catalogMode) await click(core, "Reinstall");
   else await installArchive();
   await state("generation 2");
   await until(
@@ -863,7 +918,7 @@ async function run(options) {
     "Disable retirement",
   );
   assertNormalBackendRetirement(children[1]);
-  if (options.macosLifecycle || options.publicLink) {
+  if (options.macosLifecycle || options.publicLink || options.publicCatalog) {
     await click(core, "Enable");
     await state("generation 4");
     assert.equal(children.length, 2, "Enable remains dormant");
@@ -901,7 +956,7 @@ async function run(options) {
     path.join(options.evidence, "terminal-after.png"),
     (await core.capturePage()).toPNG(),
   );
-  if (options.macosLifecycle || options.publicLink) {
+  if (options.macosLifecycle || options.publicLink || options.publicCatalog) {
     await settings();
     await installArchive();
     await state("generation 6");
@@ -940,6 +995,14 @@ async function run(options) {
     checks,
     approvals,
     archiveSha256: options.archiveSha256,
+    ...(options.publicCatalog
+      ? {
+          publicCatalog: {
+            url: options.publicCatalog,
+            installs: publicCatalogInstalls,
+          },
+        }
+      : {}),
     ...(options.publicLink
       ? {
           publicLink: { url: options.publicLink, installs: publicLinkInstalls },

@@ -294,7 +294,10 @@ not a sandbox or independently signed publisher assertion.
 **Official Catalog** — A bounded project-controlled HTTPS release index loaded
 only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
 and manifest identity must match before ordinary one-shot trust. Its in-memory
-last-successful snapshot may be stale. It is not a marketplace or update daemon.
+last-successful snapshot may be stale. Current hosts select one complete schema1
+endpoint by target: macOS ARM64 offers Files0.5, while the unchanged legacy
+endpoint preserves Linux Files0.4. Common SSH/Snippets entries match; no merging
+or fallback occurs. It is not a marketplace or update daemon.
 
 **Third-party Extension** — An Extension maintained by its author rather than
 by the OMXTerm project. Compatibility with OMXTerm does not imply project
@@ -343,7 +346,9 @@ operations, retained companion state, management and active-backend normal Quit.
 Host dev.21 and Files0.5.0 are published as separate immutable, non-Latest
 prereleases; a separate actual Settings HTTPS-link installation checkpoint passed.
 This is [macOS link-first distribution](docs/files-development-preview.md#macos-link-first-distribution),
-not macOS catalog discovery or broader platform qualification.
+not macOS catalog discovery or broader platform qualification. Current source
+adds a separate macOS catalog endpoint; existing dev.21 binaries still use the
+legacy URL. New-host packaged/public discovery qualification remains separate.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
 display metadata, not a manifest platform fence or blanket native qualification. The published Linux0.4.0
 catalog remains unchanged. The host's optional `toggleFiles` shortcut is unbound

@@ -7,6 +7,7 @@ import {
   filesDmgInputs,
   filesDmgChecks,
   filesPublicLinkChecks,
+  filesPublicCatalogUrl,
   runFilesDmgCampaign,
 } from "../fixtures/files-dmg";
 import * as dmg from "../fixtures/snippets-dmg";
@@ -61,14 +62,31 @@ beforeEach(async () => {
     const config = JSON.parse(await fs.readFile(options.args[1]!, "utf8")) as {
       evidence: string;
       publicLink?: string;
+      publicCatalog?: string;
     };
     await fs.writeFile(
       path.join(config.evidence, "scenario.json"),
       JSON.stringify({
-        checks: config.publicLink ? filesPublicLinkChecks : filesDmgChecks,
+        checks:
+          config.publicLink || config.publicCatalog
+            ? filesPublicLinkChecks
+            : filesDmgChecks,
         approvals: 3,
         sourceExited: true,
         archiveSha256: values.ARCHIVE_SHA256,
+        ...(config.publicCatalog
+          ? {
+              publicCatalog: {
+                url: config.publicCatalog,
+                installs: ["Install", "Reinstall", "Install"],
+              },
+              catalog: {
+                mode: "public",
+                requests: null,
+                transportClosed: null,
+              },
+            }
+          : {}),
         ...(config.publicLink
           ? {
               publicLink: {
@@ -79,7 +97,7 @@ beforeEach(async () => {
           : {}),
       }),
     );
-    if (!config.publicLink)
+    if (!config.publicLink && !config.publicCatalog)
       await fs.writeFile(
         path.join(config.evidence, "trash-recovery.json"),
         JSON.stringify({ phase: "restored", verified: true, restored: true }),
@@ -169,44 +187,57 @@ it("accepts only explicit immutable project public-link inputs", () => {
       filesDmgInputs({ ...env, OMXTERM_FILES_DMG_PUBLIC_LINK: url }),
     ).toThrow();
 });
-it("prepares public acquisition without local archive substitution or a Trash compiler/recovery oracle", async () => {
-  values.PUBLIC_LINK = publicLink;
-  const implementation = vi
-    .mocked(runner.runNativeFixture)
-    .getMockImplementation()!;
-  const build = await import("esbuild");
-  vi.mocked(build.build).mockResolvedValue({
-    errors: [],
-    warnings: [],
-    outputFiles: undefined,
-    metafile: undefined,
-    mangleCache: undefined,
-  });
-  vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
-    await options.prepare?.();
-    return implementation(options);
-  });
-  await run();
-  const { directory, result } = await receipt();
-  expect(result.passed).toBe(true);
-  const options: unknown = JSON.parse(
-    await fs.readFile(path.join(directory, "options.json"), "utf8"),
-  );
-  expect(options).toMatchObject({ publicLink, macosLifecycle: false });
-  expect(options).not.toHaveProperty("catalogMode");
-  expect(options).not.toHaveProperty("trashLookup");
-  for (const file of [
-    "fixture/files.omxext",
-    "fixture/files-trash-recovery.cjs",
-    "trash-recovery.json",
-    "trash-lookup.json",
-    "trash-directory",
-  ])
-    await expect(fs.stat(path.join(directory, file))).rejects.toMatchObject({
-      code: "ENOENT",
+it.each(["link", "catalog"])(
+  "prepares public %s acquisition without local archive substitution or a Trash compiler/recovery oracle",
+  async (mode) => {
+    if (mode === "link") values.PUBLIC_LINK = publicLink;
+    else values.PUBLIC_CATALOG = filesPublicCatalogUrl;
+    const implementation = vi
+      .mocked(runner.runNativeFixture)
+      .getMockImplementation()!;
+    const build = await import("esbuild");
+    vi.mocked(build.build).mockResolvedValue({
+      errors: [],
+      warnings: [],
+      outputFiles: undefined,
+      metafile: undefined,
+      mangleCache: undefined,
     });
-  expect(build.build).toHaveBeenCalledTimes(1);
-});
+    vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
+      await options.prepare?.();
+      return implementation(options);
+    });
+    await run();
+    const { directory, result } = await receipt();
+    expect(result.passed).toBe(true);
+    const options: unknown = JSON.parse(
+      await fs.readFile(path.join(directory, "options.json"), "utf8"),
+    );
+    expect(options).toMatchObject({ macosLifecycle: false });
+    if (mode === "link") {
+      expect(options).toMatchObject({ publicLink });
+      expect(options).not.toHaveProperty("catalogMode");
+    } else {
+      expect(options).toMatchObject({
+        publicCatalog: filesPublicCatalogUrl,
+        catalogMode: "public",
+      });
+      expect(options).not.toHaveProperty("publicLink");
+    }
+    expect(options).not.toHaveProperty("trashLookup");
+    for (const file of [
+      "fixture/files.omxext",
+      "fixture/files-trash-recovery.cjs",
+      "trash-recovery.json",
+      "trash-lookup.json",
+      "trash-directory",
+    ])
+      await expect(fs.stat(path.join(directory, file))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    expect(build.build).toHaveBeenCalledTimes(1);
+  },
+);
 it.each([
   "local-checks",
   "missing-link",
@@ -240,6 +271,87 @@ it.each([
       scenario.publicLink = { url: publicLink, installs: [publicLink] };
     if (mode === "wrong-digest") scenario.archiveSha256 = "0".repeat(64);
     if (mode === "missing-consent") scenario.approvals = 2;
+    await fs.writeFile(file, JSON.stringify(scenario));
+    return result;
+  });
+  await expect(run()).rejects.toThrow();
+  expect((await receipt()).result.passed).toBe(false);
+});
+it("accepts only the fixed public catalog endpoint and refuses mixed acquisition", () => {
+  const env = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      "OMXTERM_FILES_DMG_" + key,
+      value,
+    ]),
+  );
+  expect(
+    filesDmgInputs({
+      ...env,
+      OMXTERM_FILES_DMG_PUBLIC_CATALOG: filesPublicCatalogUrl,
+    }),
+  ).toEqual({ ...values, PUBLIC_CATALOG: filesPublicCatalogUrl });
+  for (const url of [
+    "",
+    filesPublicCatalogUrl + "?x=1",
+    filesPublicCatalogUrl.replace("darwin-arm64-", ""),
+    "https://example.org/catalog",
+  ])
+    expect(() =>
+      filesDmgInputs({ ...env, OMXTERM_FILES_DMG_PUBLIC_CATALOG: url }),
+    ).toThrow();
+  expect(() =>
+    filesDmgInputs({
+      ...env,
+      OMXTERM_FILES_DMG_PUBLIC_CATALOG: filesPublicCatalogUrl,
+      OMXTERM_FILES_DMG_PUBLIC_LINK: publicLink,
+    }),
+  ).toThrow();
+});
+it.each([
+  "missing",
+  "endpoint",
+  "actions",
+  "transport",
+  "checks",
+  "digest",
+  "consent",
+  "link",
+])("refuses public catalog success with invalid %s receipt", async (mode) => {
+  values.PUBLIC_CATALOG = filesPublicCatalogUrl;
+  const implementation = vi
+    .mocked(runner.runNativeFixture)
+    .getMockImplementation()!;
+  vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
+    const result = await implementation(options);
+    const config = JSON.parse(await fs.readFile(options.args[1]!, "utf8")) as {
+      evidence: string;
+    };
+    const file = path.join(config.evidence, "scenario.json");
+    const scenario = JSON.parse(await fs.readFile(file, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    if (mode === "missing") delete scenario.publicCatalog;
+    if (mode === "endpoint")
+      scenario.publicCatalog = {
+        url: publicLink,
+        installs: ["Install", "Reinstall", "Install"],
+      };
+    if (mode === "actions")
+      scenario.publicCatalog = {
+        url: filesPublicCatalogUrl,
+        installs: ["Install", "Reinstall"],
+      };
+    if (mode === "transport")
+      scenario.catalog = {
+        mode: "controlled",
+        requests: [],
+        transportClosed: true,
+      };
+    if (mode === "checks") scenario.checks = filesDmgChecks;
+    if (mode === "digest") scenario.archiveSha256 = "0".repeat(64);
+    if (mode === "consent") scenario.approvals = 2;
+    if (mode === "link") scenario.publicLink = { url: publicLink };
     await fs.writeFile(file, JSON.stringify(scenario));
     return result;
   });

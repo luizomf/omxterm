@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "id": "omxterm.files",
+      "name": "Files — ARM64 preview",
+      "description": "Project-maintained local file manager preview: browse, create, rename, move, trash and delete files.",
+      "version": "0.5.0",
+      "engines": {
+        "omxterm": ">=0.24.0-dev.21",
+        "api": "0.1.x"
+      },
+      "targets": ["darwin-arm64"],
+      "archive": {
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext",
+        "sha256": "82bd4bfe6f5a3ae7c22642741718dea94543f92b636a50b357c13d3c4be6aa18",
+        "bytes": 13200
+      },
+      "sourceCommit": "a343704c0794cb913fba9ad312e90e5f6daa4bb1",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.5.0"
+    },
+    {
+      "id": "omxterm.ssh",
+      "name": "SSH Connect",
+      "description": "Project-maintained Linux ARM64 preview: searchable OpenSSH aliases and quick-connect in core-owned terminal tabs. Synthetic-client qualification only; real authentication and remote connectivity are unqualified.",
+      "version": "0.3.0",
+      "engines": {
+        "omxterm": ">=0.24.0-dev.8",
+        "api": "0.1.x"
+      },
+      "targets": ["linux-arm64"],
+      "archive": {
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext",
+        "sha256": "13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf",
+        "bytes": 11572
+      },
+      "sourceCommit": "77937fcf87ae71a68709111df7ace7359fb3f0b6",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0"
+    },
+    {
+      "id": "omxterm.snippets",
+      "name": "Snippets — Linux and macOS ARM64 preview",
+      "description": "Project-maintained optional Snippets preview: search your existing YAML catalog, preview exact text, then Insert or Run. Qualified with OMXTerm 0.24.0-dev.11 on Linux ARM64 and 0.24.0-dev.16 on macOS ARM64. Windows and Linux x64 retain built-in Snippets.",
+      "version": "0.1.0",
+      "engines": {
+        "omxterm": ">=0.24.0-dev.8",
+        "api": "0.1.x"
+      },
+      "targets": ["linux-arm64", "darwin-arm64"],
+      "archive": {
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.0/snippets-0.1.0.omxext",
+        "sha256": "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",
+        "bytes": 76653
+      },
+      "sourceCommit": "805e95dbc77552dc137707578b18b48ad6d047e9",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0"
+    }
+  ]
+}

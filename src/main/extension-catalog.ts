@@ -12,6 +12,8 @@ import { downloadExtension, extensionDownloadUrl } from "./extension-download";
 
 export const OFFICIAL_CATALOG_URL =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
+export const MACOS_OFFICIAL_CATALOG_URL =
+  "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json";
 export const CATALOG_BYTES = 256 * 1024;
 export type CatalogRelease = {
   id: string;
@@ -190,6 +192,10 @@ export function createExtensionCatalog(
   runtime: PackageRuntime,
   target: string,
 ) {
+  const url =
+    target === "darwin-arm64"
+      ? MACOS_OFFICIAL_CATALOG_URL
+      : OFFICIAL_CATALOG_URL;
   let entries: { selection: string; release: CatalogRelease }[] | undefined;
   let stale = false;
   let revision = 0;
@@ -198,7 +204,7 @@ export function createExtensionCatalog(
       const current = ++revision;
       try {
         const releases = parseCatalog(
-          await downloadExtension(OFFICIAL_CATALOG_URL, signal, CATALOG_BYTES),
+          await downloadExtension(url, signal, CATALOG_BYTES),
         );
         if (signal.aborted || current !== revision)
           throw new CatalogError("catalog-selection");

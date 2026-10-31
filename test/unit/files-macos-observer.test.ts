@@ -67,21 +67,21 @@ it.each(
     "view-gone",
     "implicit-activation",
   ].flatMap((state) =>
-    [false, true].map((publicLink) => ({ state, publicLink })),
+    ["local", "link", "catalog"].map((acquisition) => ({ state, acquisition })),
   ),
 )(
-  "requires an actually live third generation before Quit: $state (public=$publicLink)",
-  async ({ state, publicLink }) => {
+  "requires an actually live third generation before Quit: $state ($acquisition)",
+  async ({ state, acquisition }) => {
     const code = await block(
-      "  if (options.macosLifecycle || options.publicLink) {\n    await settings();",
+      "  if (options.macosLifecycle || options.publicLink || options.publicCatalog) {\n    await settings();",
       "  if (catalogTransport) {\n    assert.deepEqual(catalogTransport.requests",
     );
     const run = new Function(
       "assert",
       "mode",
-      "publicLink",
+      "acquisition",
       `return (async () => {
-    const options = { macosLifecycle: !publicLink, publicLink }, checks = [];
+    const options = { macosLifecycle: acquisition === 'local', publicLink: acquisition === 'link', publicCatalog: acquisition === 'catalog' }, checks = [];
     const core = {}, children = [{}, {}]; let view, approvals = 2;
     const settings = async () => {};
     const installArchive = async () => { approvals++; if (mode === 'implicit-activation') children.push({}); };
@@ -93,12 +93,12 @@ it.each(
     ) as (
       assertion: typeof assert,
       state: string,
-      publicLink: boolean,
+      acquisition: string,
     ) => Promise<string[]>;
     if (state === "active")
-      await expect(run(assert, state, publicLink)).resolves.toEqual([
+      await expect(run(assert, state, acquisition)).resolves.toEqual([
         "third-consent-active-Files-at-Quit",
       ]);
-    else await expect(run(assert, state, publicLink)).rejects.toThrow();
+    else await expect(run(assert, state, acquisition)).rejects.toThrow();
   },
 );

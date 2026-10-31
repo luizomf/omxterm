@@ -94,6 +94,51 @@ acquisition is not public catalog
 discovery or physical-input/Gatekeeper qualification. Keep the v1 Linux0.4 catalog
 and all immutable assets unchanged.
 
+## Public-catalog mode
+
+Prepared for a **new macOS host containing target-specific catalog selection**;
+this is not an execution or publication receipt. Published dev.21 still selects
+the legacy Linux Files offer. Its existing local/link qualification cannot prove
+new catalog discovery.
+
+Supply the ordinary DMG/hash/archive/hash/version/evidence inputs, using the exact
+new host version, plus this assignment instead of `PUBLIC_LINK`:
+
+```sh
+OMXTERM_FILES_DMG_PUBLIC_CATALOG=https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json
+```
+
+Only that fixed URL is accepted; mixed public modes refuse. The endpoint value
+is a fixture expectation/receipt, **not an override of production fetching**.
+ROOT separately verifies host selection code and exact public endpoint readback.
+The original immutable Files0.5 archive remains an external digest oracle, never
+copied into the profile or supplied through a local chooser. No transport
+interceptor, fixture CA, archive rebuild or Foundation lookup is involved.
+
+The short six-check public-link scope is reused: real Browse, the exact Files0.5
+card's Install, Reinstall, then Install after Uninstall, with three exact digest,
+manifest and **Official catalog** consents. Clicks and catalog captures select the
+Files card rather than another tool's identically labeled button. Incompatible
+SSH catalog buttons do not count as pending Settings management; the selected
+Files action must still be enabled. No direct-link or local fallback is allowed.
+Dormant installation/Enable, basic create/move/conflict, retirement/management,
+the same PTY/Surface and third-activation active Files at normal Quit retain the
+short-mode assertions and actual exit/stream joins. Trash, source-terminal-close
+and retained-state matrices are not replayed.
+
+`scenario.json` and `quit.json` add `publicCatalog` with the configured URL and
+`["Install", "Reinstall", "Install"]`; the ordinary `catalog` field records public
+mode with null request/transport observations. This is **not a passive network
+trace** and makes no packaged assertion of absent startup/reopen requests. Only
+the controlled transport lane can assert its request counts. ROOT owns public
+byte verification, exact-package provenance and later actual execution.
+
+Inspect captures separately; a DOM success or named image is not final-operation
+paint proof. Existing synthetic-input, controlled-consent, native-I/O cancellation,
+physical/Gatekeeper and main-death limitations remain. Preserve the complete
+legacy endpoint and original immutable releases. This mode neither republishes
+Files0.5 nor teaches already published dev.21 a new endpoint.
+
 ## One-entry Trash oracle
 
 The production Files service intentionally discards Foundation's returned Trash
@@ -165,5 +210,6 @@ physical keyboard/dialog, Finder/Gatekeeper/notarization, catalog promotion or
 public installation is qualified by the local mode. The public-link mode above
 must record its own actual result. The immutable Linux0.4 catalog remains intact.
 Its single Files release slot cannot independently offer Linux0.4/dev11 and
-macOS0.5/dev21; the selected distribution path is deliberate link/local installation,
-not silent replacement of the Linux offer.
+macOS0.5/dev21. Published dev.21 retains deliberate link/local installation;
+the prepared public-catalog mode above requires a new host and separate complete
+macOS schema1 endpoint, not silent replacement of the Linux offer.

@@ -1,14 +1,22 @@
 # Explicit official extension distribution
 
-The Linux ARM64 preview uses a small static project catalog, not a marketplace,
+The Linux and macOS ARM64 previews use small static project catalogs, not a marketplace,
 second installation store or public SDK. Settings uses the existing page controls;
 main reuses HTTPS acquisition and the captured-byte trust/management owner.
 
 ## Authority and limits
 
-The only catalog endpoint is
-`https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json`.
-Only explicit Browse/Refresh requests it. No startup, reopen, polling or automatic
+Main selects one fixed schema1 endpoint from the host target:
+
+- `darwin-arm64`: `https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json`.
+- All other targets retain `https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json`.
+
+Each is a complete catalog with unique package IDs. There is no multi-endpoint
+merge, schema negotiation or fallback to the legacy endpoint after failure.
+The legacy document remains byte-for-byte unchanged by this target split, so
+published Linux hosts retain Files0.4/dev.11. Common SSH/Snippets entries are
+identical in both documents; future promotions must update both together.
+Only explicit Browse/Refresh requests the selected endpoint. No startup, reopen, polling or automatic
 update traffic is added. Responses use the existing 60-second HTTPS/redirect policy
 with a smaller 256 KiB declared/actual body bound. JSON must be valid UTF-8,
 schemaVersion1, at most100 entries, unique IDs and strict known fields. Names,
@@ -61,10 +69,12 @@ must be published and downloaded/hash-verified before promoting the generated
 entry. Empty source catalog integration is useful implementation, not completed
 public distribution. Public-endpoint packaged consumption is a separate required
 milestone; follow the [Files publication procedure](release.md#files-catalog-publication).
-The generator emits only Files: merge its entry into the complete catalog rather
-than replacing SSH or Snippets.
+The generator emits only Files with a Linux ARM64 target: merge its entry into
+the appropriate complete catalog rather than replacing SSH or Snippets. It is
+not a macOS entry generator. The macOS entry is bound to the separately verified
+published0.5 archive and embedded manifest, not a rebuild from current source.
 
-The current Files entry selects the immutable `ext-files-v0.4.0` release,
+The legacy Files entry selects the immutable `ext-files-v0.4.0` release,
 `omxterm-files-language-b6044d6.omxext` (13,188 bytes, SHA-256
 `384de7da4cc2fafe7e42cd4ccf19a455a2e634036069160c75e15b7371d2eb6e`), from original
 source `b6044d65d14345adb8d7ae59340fbca978512107`. It requires host
@@ -77,6 +87,19 @@ consumption checkpoint also passed after reviewed catalog integration; see
 The promotion preserves SSH/Snippets metadata and all historical releases.
 Stable0.23.0 users need the historical Files0.1.0 local/link archive rather than
 the current catalog entry; no host or archive rebuild is part of this promotion.
+
+The macOS endpoint selects immutable Files0.5.0, archive
+`files-0.5.0-a343704c0794.omxext` (13,200 bytes, SHA-256
+`82bd4bfe6f5a3ae7c22642741718dea94543f92b636a50b357c13d3c4be6aa18`),
+source `a343704c0794cb913fba9ad312e90e5f6daa4bb1`, host `>=0.24.0-dev.21`
+and API `0.1.x`, target `darwin-arm64` only. Original assets and receipts remain
+unchanged. Existing dev.21 hosts still fetch the legacy URL: their qualified
+[local/link route](files-development-preview.md#macos-link-first-distribution)
+remains valid, but catalog discovery requires a new host containing this URL
+selection. New-host packaging, publication and actual public-catalog consumption
+remain separate from source implementation and earlier link qualification.
+This split is not a historical compatible-release resolver; revisit a separate
+versioned multi-release format if same-target host generations need different offers.
 
 SSH Connect0.3.0 uses the same catalog/installation owner, with target Linux ARM64
 and host minimum0.24.0-dev.8. The immutable `ext-ssh-v0.3.0` release provides

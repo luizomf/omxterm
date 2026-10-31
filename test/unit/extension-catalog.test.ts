@@ -8,6 +8,7 @@ import {
   catalogAction,
   type CatalogRelease,
   OFFICIAL_CATALOG_URL,
+  MACOS_OFFICIAL_CATALOG_URL,
 } from "../../src/main/extension-catalog";
 import { downloadExtension } from "../../src/main/extension-download";
 import { isExtensionsRequest } from "../../src/shared/extensions";
@@ -34,7 +35,9 @@ const release: CatalogRelease = {
 };
 const bytes = (entries: unknown[] = [release]) =>
   Buffer.from(JSON.stringify({ schemaVersion: 1, entries }));
-beforeEach(() => vi.mocked(downloadExtension).mockReset());
+beforeEach(() => {
+  vi.mocked(downloadExtension).mockReset();
+});
 describe("official catalog", () => {
   it("offers the exact separate SSH preview", async () => {
     const catalog = parseCatalog(
@@ -146,57 +149,93 @@ describe("official catalog", () => {
     for (const version of [release.version, "0.2.0"])
       expect(catalogAction(release, { version, digest: "x" })).toBe("replace");
   });
-  it("does no startup I/O, loads only the fixed endpoint with smaller budget, and preserves stale success", async () => {
-    const catalog = createExtensionCatalog(runtime, "linux-arm64");
+  it.each([
+    ["linux-arm64", OFFICIAL_CATALOG_URL],
+    ["linux-x64", OFFICIAL_CATALOG_URL],
+    ["darwin-arm64", MACOS_OFFICIAL_CATALOG_URL],
+    ["darwin-x64", OFFICIAL_CATALOG_URL],
+    ["win32-arm64", OFFICIAL_CATALOG_URL],
+    ["win32-x64", OFFICIAL_CATALOG_URL],
+    ["unknown", OFFICIAL_CATALOG_URL],
+  ])(
+    "loads only the fixed endpoint for %s and preserves its stale success",
+    async (target, url) => {
+      const catalog = createExtensionCatalog(runtime, target);
+      expect(catalog.snapshot([])).toEqual({
+        loaded: false,
+        stale: false,
+        entries: [],
+      });
+      expect(downloadExtension).not.toHaveBeenCalled();
+      vi.mocked(downloadExtension)
+        .mockResolvedValueOnce(bytes())
+        .mockRejectedValueOnce(new Error("offline"));
+      const signal = new AbortController().signal;
+      await catalog.refresh(signal);
+      expect(downloadExtension).toHaveBeenCalledWith(
+        url,
+        signal,
+        CATALOG_BYTES,
+      );
+      const first = catalog.snapshot([]);
+      await expect(catalog.refresh(signal)).rejects.toThrow("offline");
+      expect(catalog.snapshot([])).toEqual({ ...first, stale: true });
+      expect(downloadExtension).toHaveBeenCalledTimes(2);
+      expect(
+        vi.mocked(downloadExtension).mock.calls.map(([requested]) => requested),
+      ).toEqual([url, url]);
+    },
+  );
+  it("keeps a cold macOS endpoint failure unavailable without legacy fallback", async () => {
+    vi.mocked(downloadExtension).mockRejectedValue(new Error("offline"));
+    const catalog = createExtensionCatalog(runtime, "darwin-arm64");
+    await expect(catalog.refresh(new AbortController().signal)).rejects.toThrow(
+      "offline",
+    );
     expect(catalog.snapshot([])).toEqual({
       loaded: false,
-      stale: false,
+      stale: true,
       entries: [],
     });
-    expect(downloadExtension).not.toHaveBeenCalled();
-    vi.mocked(downloadExtension)
-      .mockResolvedValueOnce(bytes())
-      .mockRejectedValueOnce(new Error("offline"));
-    const signal = new AbortController().signal;
-    await catalog.refresh(signal);
-    expect(downloadExtension).toHaveBeenCalledWith(
-      OFFICIAL_CATALOG_URL,
-      signal,
-      CATALOG_BYTES,
+    expect(downloadExtension).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(downloadExtension).mock.calls[0]![0]).toBe(
+      MACOS_OFFICIAL_CATALOG_URL,
     );
-    const first = catalog.snapshot([]);
-    await expect(catalog.refresh(signal)).rejects.toThrow("offline");
-    expect(catalog.snapshot([])).toEqual({ ...first, stale: true });
   });
-  it("captures immutable selections and refuses stale IDs, owner loss and refresh supersession", async () => {
-    const catalog = createExtensionCatalog(runtime, "linux-arm64");
-    vi.mocked(downloadExtension).mockResolvedValue(bytes());
-    await catalog.refresh(new AbortController().signal);
-    const selection = catalog.snapshot([]).entries[0]!.selection;
-    const captured = catalog.select(selection);
-    captured.archive.sha256 = "c".repeat(64);
-    expect(catalog.select(selection).archive.sha256).toBe(
-      release.archive.sha256,
-    );
-    let resolve!: (value: Buffer) => void;
-    vi.mocked(downloadExtension).mockImplementationOnce(
-      () =>
-        new Promise((done) => {
-          resolve = done;
-        }),
-    );
-    const late = catalog.refresh(new AbortController().signal);
-    await catalog.refresh(new AbortController().signal);
-    resolve(bytes([{ ...release, version: "9.0.0" }]));
-    await expect(late).rejects.toThrow("catalog-selection");
-    expect(() => catalog.select(selection)).toThrow("catalog-selection");
-    const abort = new AbortController();
-    abort.abort();
-    await expect(catalog.refresh(abort.signal)).rejects.toThrow(
-      "catalog-selection",
-    );
-    expect(catalog.snapshot([]).entries[0]!.version).toBe(release.version);
-  });
+  it.each(["linux-arm64", "darwin-arm64"])(
+    "captures immutable selections and refuses stale IDs, owner loss and refresh supersession on %s",
+    async (target) => {
+      const catalog = createExtensionCatalog(runtime, target);
+      vi.mocked(downloadExtension).mockResolvedValue(
+        bytes([{ ...release, targets: [target] }]),
+      );
+      await catalog.refresh(new AbortController().signal);
+      const selection = catalog.snapshot([]).entries[0]!.selection;
+      const captured = catalog.select(selection);
+      captured.archive.sha256 = "c".repeat(64);
+      expect(catalog.select(selection).archive.sha256).toBe(
+        release.archive.sha256,
+      );
+      let resolve!: (value: Buffer) => void;
+      vi.mocked(downloadExtension).mockImplementationOnce(
+        () =>
+          new Promise((done) => {
+            resolve = done;
+          }),
+      );
+      const late = catalog.refresh(new AbortController().signal);
+      await catalog.refresh(new AbortController().signal);
+      resolve(bytes([{ ...release, version: "9.0.0" }]));
+      await expect(late).rejects.toThrow("catalog-selection");
+      expect(() => catalog.select(selection)).toThrow("catalog-selection");
+      const abort = new AbortController();
+      abort.abort();
+      await expect(catalog.refresh(abort.signal)).rejects.toThrow(
+        "catalog-selection",
+      );
+      expect(catalog.snapshot([]).entries[0]!.version).toBe(release.version);
+    },
+  );
   it("does not accept renderer URL/hash/Official authority", () => {
     const token = "a".repeat(36);
     expect(

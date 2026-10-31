@@ -252,7 +252,7 @@ Both immutable non-Latest releases passed all five draft/public asset checks;
 Files publication and anonymous verification preceded host publication. The
 separate six-check public Settings-link checkpoint and read-only audit passed.
 See [actual evidence and capture limits](files-development-preview.md#macos-link-first-distribution).
-Current main's dev.22 metadata does not rebuild or relabel that dev.21 host.
+Later development metadata does not rebuild or relabel that dev.21 host.
 Keep the complete v1 catalog unchanged: Linux0.4/dev.11, SSH and Snippets retain
 their current offers. Its strict one-release-per-ID schema cannot offer distinct
 Linux0.4 and macOS0.5 releases; duplicate IDs or schema changes break old clients.
@@ -291,6 +291,45 @@ local downloaded `.omxext` installation remains available offline. Browse will
 still show Linux Files0.4 as incompatible on macOS. Document this honestly rather
 than calling link delivery macOS catalog discovery. No application-version bump
 is needed for fixture/docs-only work; catalog evolution is a separate host change.
+
+## Files macOS catalog publication
+
+Current source selects a separate complete schema1 endpoint,
+`distribution/official-extensions-darwin-arm64-v1.json`, only for macOS ARM64.
+This is an application change requiring a new host build, not a metadata update
+to published dev.21. Its local/link route remains available. Before claiming
+new public catalog discovery:
+
+1. Bind the macOS entry to the original published Files0.5 archive, embedded
+   manifest, checksum and receipt. Do not rebuild it or change its minimum dev.21.
+   Preserve the legacy catalog byte-for-byte and copy SSH/Snippets entries
+   unchanged; future common-entry promotions update both complete documents.
+   The Files generator currently emits Linux-only metadata, not this macOS entry.
+2. Independently review the complete host/catalog/fixture/docs candidate. Build
+   and verify a new exact macOS DMG, including ordinary FULL startup/PTY/privacy,
+   image integrity, packaged resources and complete ad-hoc seal. Reuse unchanged
+   primitive and Files0.5 lifecycle evidence with explicit input identity, not
+   the old host's FULL result for new bytes.
+3. Promote the reviewed endpoint after original asset verification. Read back
+   both raw endpoints: new bytes must match source, legacy bytes must remain
+   unchanged. Do not redirect legacy clients or add duplicate IDs/schema changes.
+4. Publish the new host as a separate non-Latest preview only after applicable
+   package verification; verify original draft and anonymous public DMG/checksum
+   bytes. Preserve stable Latest and all sealed releases. Record exact build/tag
+   identities rather than relabeling dev.21.
+5. Run the assigned exact-DMG public-catalog fixture using publicly downloaded
+   new host bytes, a fresh profile and actual HTTPS without catalog/archive
+   interception. All three install/reinstall operations must use the Files0.5
+   catalog card and Official captured-byte consent. Verify dormant installation,
+   basic create/move/conflict and exact old-source absence, management, retained
+   PTY and active-backend normal Quit. Inspect actual captures and joined exits;
+   stale captures are not final-state visual proof. Do not replay the eleven-check
+   local lifecycle or native primitive matrices merely for this distribution step.
+
+Source implementation, public endpoint readback, host publication and actual
+packaged consumption are distinct outcomes; pending steps are not qualified.
+See [catalog semantics](extension-distribution.md) and the
+[fixture guide](../test/fixtures/files-dmg.md).
 
 ## Files catalog publication
 

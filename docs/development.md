@@ -375,6 +375,12 @@ dev.21 host separately passed the FULL startup/PTY output/privacy check and DMG
 image verification; see the [exact evidence](files-development-preview.md#macos-link-first-distribution).
 That run used matching dev.21 verifier source, not weakened version checks against
 current main. No rebuild was needed merely because test/docs source advanced to dev.22.
+Current source's macOS-specific catalog endpoint is a host application change:
+public-catalog mode requires a new exact DMG containing that selection and its
+own FULL/package/public-consumption evidence. It reuses the short distribution
+scope, not the local eleven-check Trash/state campaign. The original dev.21
+binary remains link-only for Files0.5; see the
+[publication boundary](release.md#files-macos-catalog-publication).
 
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.
 

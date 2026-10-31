@@ -1734,7 +1734,11 @@ The application makes remote requests only for deliberate official-catalog brows
 and HTTPS extension archive installation on Linux ARM64 and macOS ARM64.
 macOS source composition includes the qualified optional Snippets transition;
 published catalog target restrictions remain unchanged (see [qualification scope](macos-extension-composition.md)).
-The fixed project catalog is fetched only on Browse/Refresh, never startup or
+Main selects the complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`,
+and the unchanged legacy schema1 catalog for every other target. Common
+SSH/Snippets entries remain identical; macOS selects Files0.5 while legacy
+Linux clients retain Files0.4. There is no merge or endpoint fallback.
+The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
 and requires exact archive size/SHA-256 and manifest identity/version/engines
@@ -1990,10 +1994,14 @@ Source Files0.5.0 requires `>=0.24.0-dev.21` / API `0.1.x`, uses a neutral ARM64
 preview name and includes corrected raw-path forwarding for macOS trash. Its
 [controlled exact-DMG consumer checkpoint](files-development-preview.md#files-050-macos-controlled-qualification)
 passed real operations/recoverable trash, retained companion state, management
-and active-backend normal Quit. Public distribution remains separate.
-The compatible retained dev.21 host remains distinct from current source's
-dev.22 metadata; no host rebuild follows from an archive/fixture-only checkpoint.
-The current catalog selects immutable Files0.4.0 for Linux ARM64 with host
+and active-backend normal Quit. The separate immutable dev.21/Files0.5 releases
+and actual public Settings-link checkpoint are delivered; see
+[link-first evidence](files-development-preview.md#macos-link-first-distribution).
+That published dev.21 host still uses the legacy catalog URL. Current source
+selects Files0.5 from a separate complete macOS ARM64 endpoint; usable public
+discovery requires a new packaged/published host and its own public-catalog
+checkpoint. Earlier link and primitive evidence does not establish that checkpoint.
+The unchanged legacy catalog selects immutable Files0.4.0 for Linux ARM64 with host
 `>=0.24.0-dev.8` and API `0.1.x`, preserving historical0.1.0 local/link delivery.
 The [distribution evidence](files-development-preview.md#files-040-distribution-and-controlled-qualification)
 distinguishes published bytes, controlled dev.11 qualification and the separately

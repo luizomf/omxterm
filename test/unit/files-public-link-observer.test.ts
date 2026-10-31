@@ -24,13 +24,19 @@ const install = createInstall();
 const createConsent = new Function(
   "assert",
   `${block("function verifyFilesConsent(", "async function run(")} return verifyFilesConsent;`,
-) as (
-  assertion: typeof assert,
-) => (
+) as (assertion: typeof assert) => (
   prompt: { title: string; message: string; detail: string },
-  options: { publicLink: string; archiveSha256: string },
+  options: {
+    publicLink?: string;
+    publicCatalog?: string;
+    archiveSha256: string;
+  },
 ) => void;
 const consent = createConsent(assert);
+const createCatalogInstall = new Function(
+  `${block("function installPublicCatalog(", "function verifyFilesConsent(")} return installPublicCatalog;`,
+) as () => (document: Document, action: string) => void;
+const catalogInstall = createCatalogInstall();
 afterEach(() => document.body.replaceChildren());
 
 it("uses real Settings HTTPS input/click for install, reinstall and final activation install", async () => {
@@ -109,6 +115,171 @@ it.each(["valid", "digest", "id", "version", "title"])(
       ).toThrow();
   },
 );
+it("does not mistake an incompatible tool card for pending management", () => {
+  const createIdle = new Function(
+    `${block("function extensionsIdle(", "function installPublicCatalog(")} return extensionsIdle;`,
+  ) as () => (document: Document, publicCatalog: boolean) => boolean;
+  const idle = createIdle();
+  document.body.innerHTML =
+    '<section class="extensions-panel"><button>Install local</button><section class="extension-catalog-card"><button disabled>Install</button></section></section>';
+  expect(idle(document, true)).toBe(true);
+  expect(idle(document, false)).toBe(false);
+  document.querySelector("button")!.disabled = true;
+  expect(idle(document, true)).toBe(false);
+});
+it("uses only the exact Files card among other installable catalog entries", async () => {
+  let action: "install" | "reinstall" = "install";
+  const snapshot = (): ExtensionsResult => ({
+    ok: true,
+    pendingCleanup: false,
+    entries: [],
+    catalog: {
+      loaded: true,
+      stale: false,
+      entries: [
+        {
+          selection: "snippets",
+          id: "omxterm.snippets",
+          name: "Snippets",
+          version: "0.1.0",
+          description: "Other",
+          installedVersion: null,
+          compatible: true,
+          action: "install",
+        },
+        {
+          selection: "files",
+          id: "omxterm.files",
+          name: "Files — ARM64 preview",
+          version: "0.5.0",
+          description: "Files",
+          installedVersion: null,
+          compatible: true,
+          action,
+        },
+      ],
+    },
+  });
+  const request = vi
+    .fn<(value: ExtensionsRequest) => Promise<ExtensionsResult>>()
+    .mockImplementation(async () => snapshot());
+  document.body.append(renderExtensions(document, { request }, () => true));
+  await vi.waitFor(() =>
+    expect(document.querySelectorAll(".extension-catalog-card")).toHaveLength(
+      2,
+    ),
+  );
+  for (const label of ["Install", "Reinstall", "Install"]) {
+    action = label === "Install" ? "reinstall" : "install";
+    catalogInstall(document, label);
+    expect(request).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        operation: "catalog-install",
+        selection: "files",
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(
+        document
+          .querySelectorAll(".extension-catalog-card")[1]!
+          .querySelector("button")!.textContent,
+      ).toBe(action === "install" ? "Install" : "Reinstall"),
+    );
+  }
+  expect(
+    request.mock.calls.filter(
+      ([value]) => value.operation === "catalog-install",
+    ),
+  ).toHaveLength(3);
+  expect(
+    request.mock.calls.some(
+      ([value]) =>
+        value.operation === "install-link" || value.operation === "install",
+    ),
+  ).toBe(false);
+});
+it.each([
+  "disabled",
+  "hidden",
+  "inert",
+  "wrong-version",
+  "missing",
+  "duplicate",
+  "wrong-action",
+])("refuses %s catalog controls without selecting another tool", (mode) => {
+  document.body.innerHTML =
+    '<section class="extension-catalog-card"><h4>Snippets · 0.1.0</h4><button>Install</button></section><section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.5.0</h4><button>Install</button></section>';
+  const card = document.querySelectorAll(".extension-catalog-card")[1]!;
+  if (mode === "disabled") card.querySelector("button")!.disabled = true;
+  if (mode === "hidden" || mode === "inert") card.setAttribute(mode, "");
+  if (mode === "wrong-version")
+    card.querySelector("h4")!.textContent = "Files — ARM64 preview · 0.4.0";
+  if (mode === "missing") card.remove();
+  if (mode === "duplicate") document.body.append(card.cloneNode(true));
+  const otherClick = vi.fn();
+  document.querySelector("button")!.addEventListener("click", otherClick);
+  expect(() =>
+    catalogInstall(document, mode === "wrong-action" ? "Reinstall" : "Install"),
+  ).toThrow();
+  expect(otherClick).not.toHaveBeenCalled();
+});
+it("requires Official catalog trust in addition to exact Files manifest and digest", () => {
+  const digest = "a".repeat(64);
+  const prompt = {
+    title: "Trust extension code?",
+    message: "Install Files — ARM64 preview 0.5.0?",
+    detail: `omxterm.files ${digest} network`,
+  };
+  const options = { publicCatalog: "fixed", archiveSha256: digest };
+  expect(() => consent(prompt, options)).toThrow("Official");
+  prompt.detail +=
+    " Official means project-maintained, not sandboxed or harmless.";
+  expect(() => consent(prompt, options)).not.toThrow();
+  for (const field of ["digest", "version", "id"]) {
+    const wrong = { ...prompt };
+    if (field === "digest")
+      wrong.detail = wrong.detail.replace(digest, "b".repeat(64));
+    if (field === "id")
+      wrong.detail = wrong.detail.replace("omxterm.files", "omxterm.other");
+    if (field === "version")
+      wrong.message = wrong.message.replace("0.5.0", "0.4.0");
+    expect(() => consent(wrong, options)).toThrow();
+  }
+});
+it("routes three catalog installs through scoped UI without local or link fallback", async () => {
+  const code = block(
+    "  const publicLinkInstalls = [];",
+    "  async function openFiles()",
+  );
+  const execute = new Function(
+    "assert",
+    "options",
+    "js",
+    "click",
+    "installPublicCatalog",
+    `return (async () => { const core = {}; ${code} await installArchive(); await installArchive("Reinstall"); await installArchive(); return publicCatalogInstalls; })();`,
+  ) as (...args: unknown[]) => Promise<string[]>;
+  const js = vi.fn(async (expression: string) => {
+    expect(expression).toContain("exact Files catalog card unavailable");
+  });
+  const click = vi.fn(async () => {
+    throw Error("fallback forbidden");
+  });
+  await expect(
+    execute(assert, { publicCatalog: "fixed" }, js, click, catalogInstall),
+  ).resolves.toEqual(["Install", "Reinstall", "Install"]);
+  expect(js).toHaveBeenCalledTimes(3);
+  expect(click).not.toHaveBeenCalled();
+  await expect(
+    execute(
+      assert,
+      { publicCatalog: "fixed", publicLink: url },
+      js,
+      click,
+      catalogInstall,
+    ),
+  ).rejects.toThrow();
+});
 it("routes every public install through the renderer, never the local chooser or catalog", async () => {
   const code = block(
     "  const publicLinkInstalls = [];",

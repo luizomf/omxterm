@@ -2,7 +2,10 @@
 import { packageArchive } from "../fixtures/extension-package-archive";
 import { EventEmitter } from "node:events";
 import { catalogBytes as catalogFixture } from "../fixtures/extension-catalog";
-import { OFFICIAL_CATALOG_URL } from "../../src/main/extension-catalog";
+import {
+  MACOS_OFFICIAL_CATALOG_URL,
+  OFFICIAL_CATALOG_URL,
+} from "../../src/main/extension-catalog";
 import { translatorFor, type SupportedLanguage } from "../../src/shared/i18n";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -142,30 +145,47 @@ let window: BrowserWindow;
 let archive: string;
 let language: SupportedLanguage = "en-US";
 const catalogBytes = () => catalogFixture(manifest, bytes());
-it("catalog selection composes exact-byte trust, remains captured over refresh and stays dormant", async () => {
-  const token = "a".repeat(36);
-  adapters.download.mockImplementation(async (url) =>
-    url === OFFICIAL_CATALOG_URL ? catalogBytes() : bytes(),
-  );
-  const loaded = await request({ operation: "catalog-refresh", token });
-  const selection = loaded.catalog!.entries[0]!.selection;
-  adapters.consent.mockImplementationOnce(async (_window, options) => {
-    expect(options.detail).toContain("not an independent publisher signature");
-    await request({ operation: "catalog-refresh", token });
-    return { response: 1 };
-  });
-  const installed = await request({
-    operation: "catalog-install",
-    selection,
-    token,
-  });
-  expect(installed.ok).toBe(true);
-  expect(installed.entries?.[0]?.local).toBe("dormant");
-  expect(adapters.activate).not.toHaveBeenCalled();
-  expect(
-    (await request({ operation: "catalog-install", selection, token })).error,
-  ).toBe("catalog-selection");
-});
+it.each(["linux", "darwin"])(
+  "%s catalog selection composes exact-byte trust, remains captured over refresh and stays dormant",
+  async (platform) => {
+    if (platform === "darwin") {
+      await service.dispose();
+      await startService(platform);
+    }
+    const token = "a".repeat(36);
+    const endpoint =
+      platform === "darwin" ? MACOS_OFFICIAL_CATALOG_URL : OFFICIAL_CATALOG_URL;
+    const fixture = JSON.parse(catalogBytes().toString()) as {
+      entries: { targets: string[] }[];
+    };
+    fixture.entries[0]!.targets = [`${platform}-arm64`];
+    adapters.download.mockImplementation(async (url) =>
+      url === endpoint ? Buffer.from(JSON.stringify(fixture)) : bytes(),
+    );
+    expect(adapters.download).not.toHaveBeenCalled();
+    const loaded = await request({ operation: "catalog-refresh", token });
+    expect(adapters.download.mock.calls[0]![0]).toBe(endpoint);
+    const selection = loaded.catalog!.entries[0]!.selection;
+    adapters.consent.mockImplementationOnce(async (_window, options) => {
+      expect(options.detail).toContain(
+        "not an independent publisher signature",
+      );
+      await request({ operation: "catalog-refresh", token });
+      return { response: 1 };
+    });
+    const installed = await request({
+      operation: "catalog-install",
+      selection,
+      token,
+    });
+    expect(installed.ok).toBe(true);
+    expect(installed.entries?.[0]?.local).toBe("dormant");
+    expect(adapters.activate).not.toHaveBeenCalled();
+    expect(
+      (await request({ operation: "catalog-install", selection, token })).error,
+    ).toBe("catalog-selection");
+  },
+);
 it("rejects substituted catalog bytes before consent without generic-link fallback", async () => {
   const token = "a".repeat(36);
   adapters.download
@@ -225,13 +245,16 @@ beforeEach(async () => {
   adapters.activate.mockImplementation(() =>
     applicationBackend(adapters.root, adapters.backendLifetime.signal),
   );
+  await startService("linux");
+});
+async function startService(platform: string) {
   // Model preview admission/catalog targeting, not the host filesystem. Startup
   // captures both synchronously before its first await; Windows store operations
   // must retain their native directory-sync policy after that boundary.
   let starting: ReturnType<typeof startApplicationExtensions>;
   try {
     Object.defineProperty(process, "platform", {
-      value: "linux",
+      value: platform,
       configurable: true,
     });
     Object.defineProperty(process, "arch", {
@@ -248,7 +271,7 @@ beforeEach(async () => {
       },
       translator: () => translatorFor(language),
       sendAction: adapters.sendOpen,
-      isTrustedSender: (event) => event.sender === contents,
+      isTrustedSender: (event) => event.sender === window.webContents,
       changed() {},
       keybind() {},
     });
@@ -262,7 +285,7 @@ beforeEach(async () => {
     signal: new AbortController().signal,
     terminalDirectory: "/captured",
   }));
-});
+}
 afterEach(async () => {
   await service?.dispose();
   await rm(adapters.root, { recursive: true, force: true });

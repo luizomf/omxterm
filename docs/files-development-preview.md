@@ -34,8 +34,10 @@ not qualify every admitted version.
 Source now builds **Files 0.5.0 — ARM64 preview**, requiring host
 `>=0.24.0-dev.21` and API `0.1.x`. It includes the corrected raw-path forwarding
 for optional host trash. This is a new archive identity, not a replacement or
-new qualification of immutable Files0.4.0. The catalog remains Linux-only0.4.0;
-macOS uses the separately published link-first pair described below.
+new qualification of immutable Files0.4.0. The legacy catalog remains Linux-only0.4.0;
+macOS published dev.21 uses the separately published link-first pair described below.
+Current source selects a separate macOS0.5 catalog; its new-host distribution
+checkpoint remains separate.
 
 The opt-in [exact-DMG Files fixture](../test/fixtures/files-dmg.md) passed the
 bounded consumer checkpoint against the retained compatible dev.21 host.
@@ -139,9 +141,9 @@ Synthetic Chromium input, controlled native consent and WebContents captures do
 not qualify physical input, Finder/Gatekeeper/notarization, macOS12, blocked
 native-I/O cancellation or surviving-browser main-death exclusion.
 
-The complete v1 catalog stays unchanged, preserving Linux0.4/dev.11 and
+The legacy v1 catalog stays unchanged, preserving Linux0.4/dev.11 and
 SSH/Snippets. Its one-release-per-ID format cannot independently select Linux0.4
-and macOS0.5. On host dev.21, macOS users can paste the
+and macOS0.5 within the same document. On host dev.21, macOS users can paste the
 [Files0.5 archive URL](https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext)
 into Settings → Extensions → **HTTPS archive link**, choose **Install from link**
 and compare the displayed digest to the release checksum. Local downloaded archive
@@ -160,8 +162,9 @@ not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
 `extensions/files/extension.json`; source version 0.5.0 requires host
 `0.24.0-dev.21` or later for the macOS trash service. Historical0.4.0 requires
-`0.24.0-dev.8` or later for the hosted-language subscription. The current catalog
-selects the original 0.4.0 archive, not a new build from the catalog commit.
+`0.24.0-dev.8` or later for the hosted-language subscription. The legacy catalog
+selects the original0.4.0 archive; the new macOS endpoint selects original0.5.0.
+Neither is rebuilt from the catalog commit.
 The historical 0.1.0 release remains immutable; building source alone does not
 update the published catalog.
 
@@ -385,7 +388,15 @@ last successful in-memory snapshot with a stale warning; cold offline failure is
 unavailable, not an empty catalog. Local-file installation and installed management
 remain usable. en-US/pt-BR controls relabel without repeating requests.
 
-Main owns the fixed project HTTPS endpoint and captured release selections. Before
+Main owns the fixed project HTTPS endpoints and captured release selections.
+Current source chooses the complete `official-extensions-darwin-arm64-v1.json`
+for macOS ARM64; every other target retains `official-extensions-v1.json`.
+Only one endpoint is fetched, with no merge or fallback. The new endpoint
+selects original Files0.5 for macOS and copies SSH/Snippets unchanged; common
+entries must remain equal across both documents. Published dev.21 still embeds
+the legacy URL. It does not gain discovery from the new JSON: a newly packaged
+host and separate actual public-catalog checkpoint are required. Earlier
+link-first qualification is not evidence for this new route. Before
 trust, downloaded length/SHA-256 and manifest ID/version/engine strings must match
 exactly; there is no fallback to unchecked link installation. The same native
 trusted-code warning applies. Official means project-maintained, not harmless,
@@ -396,7 +407,9 @@ Installation/replacement remains dormant. Cancel or owner loss before approval
 revokes consent; publication already dispatched cannot be recalled or retried
 implicitly. Refresh cannot retarget a captured installation.
 
-The current Files0.4.0 entry excludes stable0.23.0 and the older preview hosts.
+The legacy Files0.4.0 entry excludes stable0.23.0 and the older preview hosts.
+The macOS Files0.5 entry requires at least dev.21, independently of which new
+host first delivers the endpoint selection.
 Historical Files0.1.0 remains available for local/link installation from
 0.23.0-dev.8; catalog-capable host source started at 0.23.0-dev.9. The catalog
 is not an index of every historical release. Declared compatibility is not

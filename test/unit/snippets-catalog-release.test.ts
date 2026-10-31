@@ -4,6 +4,8 @@ import { downloadExtension } from "../../src/main/extension-download";
 import {
   catalogCompatible,
   createExtensionCatalog,
+  MACOS_OFFICIAL_CATALOG_URL,
+  OFFICIAL_CATALOG_URL,
   parseCatalog,
   type CatalogRelease,
 } from "../../src/main/extension-catalog";
@@ -99,10 +101,19 @@ describe("published Snippets catalog candidate", () => {
   it.each([
     ["linux-arm64", "0.24.0-dev.11"],
     ["darwin-arm64", "0.24.0-dev.16"],
+    ["darwin-arm64", "0.24.0-dev.26"],
   ])(
     "offers the same captured archive on %s / %s",
     async (target, appVersion) => {
-      vi.mocked(downloadExtension).mockResolvedValue(catalogBytes);
+      // This exercises current source with supplied runtime metadata, not the
+      // endpoint embedded in the historical dev.16 executable.
+      vi.mocked(downloadExtension).mockImplementation(async (url) => {
+        if (url === OFFICIAL_CATALOG_URL) return catalogBytes;
+        expect(url).toBe(MACOS_OFFICIAL_CATALOG_URL);
+        return readFile(
+          "distribution/official-extensions-darwin-arm64-v1.json",
+        );
+      });
       const catalog = createExtensionCatalog(
         { appVersion, apiVersion: "0.1.0" },
         target,
@@ -128,8 +139,13 @@ describe("published Snippets catalog candidate", () => {
         for (const other of catalog
           .snapshot([])
           .entries.filter((entry) => entry.id !== snippets.id)) {
-          expect(other.compatible).toBe(false);
-          expect(() => catalog.select(other.selection)).toThrow("incompatible");
+          const compatible =
+            other.id === "omxterm.files" && appVersion === "0.24.0-dev.26";
+          expect(other.compatible).toBe(compatible);
+          if (!compatible)
+            expect(() => catalog.select(other.selection)).toThrow(
+              "incompatible",
+            );
         }
       }
     },
