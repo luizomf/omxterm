@@ -17,6 +17,7 @@ let abort: AbortController;
 let values: NonNullable<ReturnType<typeof dmg.dmgInputs>>;
 const platform = process.platform,
   arch = process.arch;
+const getuidDescriptor = Object.getOwnPropertyDescriptor(process, "getuid");
 const checks = [
   "absent-package-management-no-activation",
   "ordinary-archive-trust-enabled-activation",
@@ -38,7 +39,10 @@ beforeEach(async () => {
     ...os.userInfo(),
     shell: "/bin/sh",
   });
-  vi.spyOn(process, "getuid").mockReturnValue(501);
+  Object.defineProperty(process, "getuid", {
+    configurable: true,
+    value: () => 501,
+  });
   await fs.writeFile(path.join(root, "dmg"), "dmg");
   await fs.writeFile(path.join(root, "archive"), "archive");
   const binary = path.join(root, "quartz");
@@ -101,6 +105,9 @@ beforeEach(async () => {
 afterEach(async () => {
   Object.defineProperty(process, "platform", { value: platform });
   Object.defineProperty(process, "arch", { value: arch });
+  if (getuidDescriptor)
+    Object.defineProperty(process, "getuid", getuidDescriptor);
+  else Reflect.deleteProperty(process, "getuid");
   vi.restoreAllMocks();
   await fs.rm(root, { recursive: true, force: true });
   // No real runner launch occurs. Its unhanded launcher directories are ours.

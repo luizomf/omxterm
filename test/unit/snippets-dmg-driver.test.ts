@@ -135,14 +135,17 @@ it("joins actual normal Quit, main exit, streams and descendants with sanitized 
   expect(executable).toBe("/sealed/OMXTerm");
   expect(args).toEqual([
     "--inspect=127.0.0.1:0",
-    `--user-data-dir=${root}/profile`,
+    `--user-data-dir=${path.join(root, "profile")}`,
     "-e",
     "/bin/sh",
-    `${root}/shell.sh`,
-    `${root}/shell.json`,
+    path.join(root, "shell.sh"),
+    path.join(root, "shell.json"),
   ]);
   expect(spawnOptions).toMatchObject({
-    env: { HOME: `${root}/home`, PATH: "/usr/bin:/bin:/usr/sbin:/sbin" },
+    env: {
+      HOME: path.join(root, "home"),
+      PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+    },
   });
   expect(spawnOptions?.env).not.toHaveProperty("NODE_OPTIONS");
   expect(spawnOptions?.env).not.toHaveProperty("ELECTRON_RUN_AS_NODE");
