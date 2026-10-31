@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   filesDmgInputs,
   filesDmgChecks,
+  filesPublicLinkChecks,
   runFilesDmgCampaign,
 } from "../fixtures/files-dmg";
 import * as dmg from "../fixtures/snippets-dmg";
@@ -59,20 +60,30 @@ beforeEach(async () => {
   vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
     const config = JSON.parse(await fs.readFile(options.args[1]!, "utf8")) as {
       evidence: string;
+      publicLink?: string;
     };
     await fs.writeFile(
       path.join(config.evidence, "scenario.json"),
       JSON.stringify({
-        checks: filesDmgChecks,
+        checks: config.publicLink ? filesPublicLinkChecks : filesDmgChecks,
         approvals: 3,
         sourceExited: true,
         archiveSha256: values.ARCHIVE_SHA256,
+        ...(config.publicLink
+          ? {
+              publicLink: {
+                url: config.publicLink,
+                installs: Array(3).fill(config.publicLink),
+              },
+            }
+          : {}),
       }),
     );
-    await fs.writeFile(
-      path.join(config.evidence, "trash-recovery.json"),
-      JSON.stringify({ phase: "restored", verified: true, restored: true }),
-    );
+    if (!config.publicLink)
+      await fs.writeFile(
+        path.join(config.evidence, "trash-recovery.json"),
+        JSON.stringify({ phase: "restored", verified: true, restored: true }),
+      );
     return {
       exitCode: 0,
       signal: null,
@@ -94,6 +105,8 @@ afterEach(async () => {
   for (const call of vi.mocked(runner.runNativeFixture).mock.calls)
     await fs.rm(call[0].root, { recursive: true, force: true });
 });
+const publicLink =
+  "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext";
 const run = () =>
   runFilesDmgCampaign(values, {
     signal: abort.signal,
@@ -130,6 +143,108 @@ it("requires complete explicit inputs and does not infer target or reuse another
   expect(() =>
     filesDmgInputs({ ...env, OMXTERM_FILES_PACKAGED_APPIMAGE: "/other" }),
   ).toThrow();
+});
+it("accepts only explicit immutable project public-link inputs", () => {
+  const env = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      "OMXTERM_FILES_DMG_" + key,
+      value,
+    ]),
+  );
+  expect(
+    filesDmgInputs({ ...env, OMXTERM_FILES_DMG_PUBLIC_LINK: publicLink }),
+  ).toEqual({ ...values, PUBLIC_LINK: publicLink });
+  for (const url of [
+    "",
+    "http://github.com/a",
+    publicLink + "?x=1",
+    publicLink + "#x",
+    publicLink.replace("github.com", "user@github.com"),
+    publicLink.replace("v0.5.0", "latest"),
+    publicLink.replace("v0.5.0", "v0.4.0"),
+    publicLink.replace("github.com", "example.org"),
+    " " + publicLink,
+  ])
+    expect(() =>
+      filesDmgInputs({ ...env, OMXTERM_FILES_DMG_PUBLIC_LINK: url }),
+    ).toThrow();
+});
+it("prepares public acquisition without local archive substitution or a Trash compiler/recovery oracle", async () => {
+  values.PUBLIC_LINK = publicLink;
+  const implementation = vi
+    .mocked(runner.runNativeFixture)
+    .getMockImplementation()!;
+  const build = await import("esbuild");
+  vi.mocked(build.build).mockResolvedValue({
+    errors: [],
+    warnings: [],
+    outputFiles: undefined,
+    metafile: undefined,
+    mangleCache: undefined,
+  });
+  vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
+    await options.prepare?.();
+    return implementation(options);
+  });
+  await run();
+  const { directory, result } = await receipt();
+  expect(result.passed).toBe(true);
+  const options: unknown = JSON.parse(
+    await fs.readFile(path.join(directory, "options.json"), "utf8"),
+  );
+  expect(options).toMatchObject({ publicLink, macosLifecycle: false });
+  expect(options).not.toHaveProperty("catalogMode");
+  expect(options).not.toHaveProperty("trashLookup");
+  for (const file of [
+    "fixture/files.omxext",
+    "fixture/files-trash-recovery.cjs",
+    "trash-recovery.json",
+    "trash-lookup.json",
+    "trash-directory",
+  ])
+    await expect(fs.stat(path.join(directory, file))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  expect(build.build).toHaveBeenCalledTimes(1);
+});
+it.each([
+  "local-checks",
+  "missing-link",
+  "wrong-link",
+  "missing-reinstall",
+  "wrong-digest",
+  "missing-consent",
+])("rejects successful public process with %s evidence", async (mode) => {
+  values.PUBLIC_LINK = publicLink;
+  const implementation = vi
+    .mocked(runner.runNativeFixture)
+    .getMockImplementation()!;
+  vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
+    const result = await implementation(options);
+    const config = JSON.parse(await fs.readFile(options.args[1]!, "utf8")) as {
+      evidence: string;
+    };
+    const file = path.join(config.evidence, "scenario.json");
+    const scenario = JSON.parse(await fs.readFile(file, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    if (mode === "local-checks") scenario.checks = filesDmgChecks;
+    if (mode === "missing-link") delete scenario.publicLink;
+    if (mode === "wrong-link")
+      scenario.publicLink = {
+        url: "https://example.org/a",
+        installs: Array(3).fill(publicLink),
+      };
+    if (mode === "missing-reinstall")
+      scenario.publicLink = { url: publicLink, installs: [publicLink] };
+    if (mode === "wrong-digest") scenario.archiveSha256 = "0".repeat(64);
+    if (mode === "missing-consent") scenario.approvals = 2;
+    await fs.writeFile(file, JSON.stringify(scenario));
+    return result;
+  });
+  await expect(run()).rejects.toThrow();
+  expect((await receipt()).result.passed).toBe(false);
 });
 it("retains the copied application/profile and records actual host separately from source", async () => {
   await run();

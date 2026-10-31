@@ -365,6 +365,17 @@ recoverable Trash semantics require the separate assigned
 whose bounded exact-package evidence is recorded there. These probes are not full macOS Files,
 backend activation, production platform admission or Snippets qualification.
 
+The [Files exact-DMG fixture](../test/fixtures/files-dmg.md) keeps its qualified
+local eleven-check lifecycle mode separate from the six-check qualified
+[public-link mode](../test/fixtures/files-dmg.md#public-link-mode).
+The latter uses real Settings HTTPS install/reinstall and the unchanged qualified
+archive/host pair; it does not replay Trash/state matrices or alter the v1 catalog.
+Neither mode substitutes for ordinary FULL package verification. The retained
+dev.21 host separately passed the FULL startup/PTY output/privacy check and DMG
+image verification; see the [exact evidence](files-development-preview.md#macos-link-first-distribution).
+That run used matching dev.21 verifier source, not weakened version checks against
+current main. No rebuild was needed merely because test/docs source advanced to dev.22.
+
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.
 
 ### Linux packaged startup teardown

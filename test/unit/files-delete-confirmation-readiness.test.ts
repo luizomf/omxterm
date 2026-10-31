@@ -10,7 +10,7 @@ type Reply = Awaited<
 it("waits for the fresh visible confirmation rather than cancelled editor text", async () => {
   const source = await readFile("test/fixtures/files-packaged.cjs", "utf8");
   const start = source.indexOf("function deleteConfirmationReady(document)");
-  const end = source.indexOf("\nasync function run(options)", start);
+  const end = source.indexOf("\nfunction installPublicLink(", start);
   expect(start).toBeGreaterThan(0);
   expect(end).toBeGreaterThan(start);
   const createReady = new Function(

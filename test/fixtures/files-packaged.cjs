@@ -3,7 +3,7 @@
 const { app, BrowserWindow, Menu, dialog, webContents } = require("electron");
 const assert = require("node:assert/strict");
 const { syncBuiltinESMExports } = require("node:module");
-const { readFile, writeFile, stat } = require("node:fs/promises");
+const { readFile, writeFile, stat, lstat } = require("node:fs/promises");
 const { writeFileSync } = require("node:fs");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
@@ -102,6 +102,44 @@ function deleteConfirmationReady(document) {
   );
 }
 
+function installPublicLink(document, url) {
+  const input = document.querySelector('.extensions-panel input[type="url"]');
+  const button = [
+    ...document.querySelectorAll(".extensions-panel button"),
+  ].find((item) => item.textContent === "Install from link");
+  if (
+    !input ||
+    !button ||
+    input.disabled ||
+    button.disabled ||
+    input.closest("[hidden], [inert]") ||
+    button.closest("[hidden], [inert]")
+  )
+    throw Error("public link controls unavailable");
+  input.value = url;
+  button.click();
+}
+
+function verifyFilesConsent(prompt, options) {
+  assert.equal(prompt.title, "Trust extension code?");
+  assert.ok(
+    prompt.detail.includes(options.archiveSha256),
+    "trust must identify exact separate archive",
+  );
+  assert.match(prompt.detail, /network/);
+  if (options.macosLifecycle || options.publicLink) {
+    assert.equal(
+      prompt.message,
+      "Install Files — ARM64 preview 0.5.0?",
+      "new Files archive version shown before consent",
+    );
+    assert.ok(
+      prompt.detail.includes("omxterm.files"),
+      "manifest ID before consent",
+    );
+  }
+}
+
 async function run(options) {
   inspect(options);
   currentRoot = options.root;
@@ -181,23 +219,15 @@ async function run(options) {
       return approvals;
     },
   };
-  dialog.showOpenDialog = async () => ({
-    canceled: false,
-    filePaths: [options.archive],
-  });
-  dialog.showMessageBox = async (_owner, prompt) => {
-    assert.equal(prompt.title, "Trust extension code?");
+  dialog.showOpenDialog = async () => {
     assert.ok(
-      prompt.detail.includes(options.archiveSha256),
-      "trust must identify exact separate archive",
+      !options.publicLink,
+      "public acquisition must not use local chooser",
     );
-    assert.match(prompt.detail, /network/);
-    if (options.macosLifecycle)
-      assert.equal(
-        prompt.message,
-        "Install Files — ARM64 preview 0.5.0?",
-        "new Files archive version shown before consent",
-      );
+    return { canceled: false, filePaths: [options.archive] };
+  };
+  dialog.showMessageBox = async (_owner, prompt) => {
+    verifyFilesConsent(prompt, options);
     approvals++;
     return { response: 1, checkboxChecked: false };
   };
@@ -349,6 +379,16 @@ async function run(options) {
       text,
     );
   }
+  const publicLinkInstalls = [];
+  async function installArchive() {
+    if (options.publicLink) {
+      assert.ok(!options.catalogMode && !options.macosLifecycle);
+      await js(
+        `(${installPublicLink.toString()})(document, ${JSON.stringify(options.publicLink)})`,
+      );
+      publicLinkInstalls.push(options.publicLink);
+    } else await click(core, "Install local .omxext…");
+  }
   async function openFiles() {
     await js("document.querySelector('.settings-close').click()");
     await until(
@@ -463,7 +503,7 @@ async function run(options) {
     }
     await captureCatalog("catalog.png", ".extension-catalog-card", "Install");
     await click(core, "Install");
-  } else await click(core, "Install local .omxext…");
+  } else await installArchive();
   await state("generation 1");
   assert.equal(approvals, 1);
   assert.equal(children.length, 0);
@@ -499,105 +539,118 @@ async function run(options) {
   let view = await openFiles();
   listeners("first-view-active");
   assert.equal(children.length, 1);
-  await filesAction(view, "Use terminal directory");
-  await until(
-    () => view.executeJavaScript(listingReady(options.root)),
-    "initial captured OSC 7 directory",
-  );
-  const initialDirectory = options.root;
-  // Already-visible pixels cannot acknowledge asynchronous repeated admission.
-  // Observe its delivered open before testing the following Close gesture.
-  await js(`(() => {
+  if (!options.publicLink) {
+    await filesAction(view, "Use terminal directory");
+    await until(
+      () => view.executeJavaScript(listingReady(options.root)),
+      "initial captured OSC 7 directory",
+    );
+    const initialDirectory = options.root;
+    // Already-visible pixels cannot acknowledge asynchronous repeated admission.
+    // Observe its delivered open before testing the following Close gesture.
+    await js(`(() => {
     window.__filesReopened = false;
     window.__removeFilesReopen = window.omxterm.terminal.hostedContent.onOpen(() => {
       window.__filesReopened = true;
     });
   })()`);
-  try {
+    try {
+      menu("Files");
+      await until(
+        () => js("window.__filesReopened"),
+        "repeated Files admission",
+      );
+    } finally {
+      await js("window.__removeFilesReopen(); void 0;");
+    }
+    await panel(view, true, "child");
+    await js("document.querySelector('.auxiliary-header button').click()");
+    await panel(view, false, "core");
     menu("Files");
-    await until(() => js("window.__filesReopened"), "repeated Files admission");
-  } finally {
-    await js("window.__removeFilesReopen(); void 0;");
-  }
-  await panel(view, true, "child");
-  await js("document.querySelector('.auxiliary-header button').click()");
-  await panel(view, false, "core");
-  menu("Files");
-  await panel(view, true, "child");
-  await settings();
-  await js("document.querySelector('.settings-close').click()");
-  await panel(view, true, "core");
-  menu("New Tab");
-  await until(async () => (await tabCount()) === 2, "second terminal selected");
-  await panel(view, true, "core");
-  // Change the new terminal's directory, then prove the old package still uses
-  // its captured initial directory rather than silently acquiring live context.
-  const receipt = path.join(options.root, "second-shell");
-  await until(
-    () => js("!!document.activeElement?.closest('.terminal-surface')"),
-    "new terminal DOM focus",
-  );
-  await core.insertText(
-    `cd ${quote(options.files)}; printf '\\033]7;%s\\007' ${quote(pathToFileURL(options.files).href)}; printf '%s' "$$" > ${quote(receipt)}`,
-  );
-  core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
-  core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
-  await until(
-    async () => /^\d+$/.test(await readFile(receipt, "utf8").catch(() => "")),
-    "new shell receipt",
-  );
-  const secondPid = Number(await readFile(receipt, "utf8"));
-  assert.notEqual(secondPid, shell.probePid);
-  const secondIdentity = processIdentity.identity(secondPid);
-  assert.ok(secondIdentity && processIdentity.alive(secondIdentity));
-  menu("Files");
-  await panel(view, true, "child");
-  await view.executeJavaScript(
-    `document.querySelector('[aria-label=Directory]').value = ${JSON.stringify(options.files)}; document.querySelector('form.location').requestSubmit()`,
-  );
-  await until(
-    () =>
-      view.executeJavaScript(`!!${entryQuery(options.files, "source.txt")}`),
-    "second directory listing",
-  );
-  await filesAction(view, "Use terminal directory");
-  await until(
-    () => view.executeJavaScript(listingReady(initialDirectory)),
-    "legacy captured initial directory",
-  );
-  // Selecting the second tab must return actual native input to core without
-  // hiding the retained tool. Do not call core.focus() to repair production.
-  await js("document.querySelectorAll('#tab-strip [role=tab]')[0].click()");
-  await panel(view, true, "core");
-  await js("document.querySelectorAll('#tab-strip [role=tab]')[1].click()");
-  await panel(view, true, "core");
-  if (options.macosLifecycle)
-    await js("document.querySelectorAll('#tab-strip [role=tab]')[0].click()");
-  const closingIdentity = options.macosLifecycle ? identity : secondIdentity;
-  menu("Close Tab");
-  await until(async () => (await tabCount()) === 1, "selected terminal closed");
-  await until(
-    () => !processIdentity.alive(closingIdentity),
-    "closed shell kernel exit",
-  );
-  if (options.macosLifecycle) {
-    sourceExited = true;
-    shell.probePid = secondPid;
-    identity = secondIdentity;
-    assert.ok(processIdentity.alive(identity));
-    await js(
-      "window.__packagedCanvas = document.querySelector('.terminal-surface canvas')",
+    await panel(view, true, "child");
+    await settings();
+    await js("document.querySelector('.settings-close').click()");
+    await panel(view, true, "core");
+    menu("New Tab");
+    await until(
+      async () => (await tabCount()) === 2,
+      "second terminal selected",
     );
-    checks.push("source-terminal-closed-same-companion-distinct-surviving-PTY");
+    await panel(view, true, "core");
+    // Change the new terminal's directory, then prove the old package still uses
+    // its captured initial directory rather than silently acquiring live context.
+    const receipt = path.join(options.root, "second-shell");
+    await until(
+      () => js("!!document.activeElement?.closest('.terminal-surface')"),
+      "new terminal DOM focus",
+    );
+    await core.insertText(
+      `cd ${quote(options.files)}; printf '\\033]7;%s\\007' ${quote(pathToFileURL(options.files).href)}; printf '%s' "$$" > ${quote(receipt)}`,
+    );
+    core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+    core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    await until(
+      async () => /^\d+$/.test(await readFile(receipt, "utf8").catch(() => "")),
+      "new shell receipt",
+    );
+    const secondPid = Number(await readFile(receipt, "utf8"));
+    assert.notEqual(secondPid, shell.probePid);
+    const secondIdentity = processIdentity.identity(secondPid);
+    assert.ok(secondIdentity && processIdentity.alive(secondIdentity));
+    menu("Files");
+    await panel(view, true, "child");
+    await view.executeJavaScript(
+      `document.querySelector('[aria-label=Directory]').value = ${JSON.stringify(options.files)}; document.querySelector('form.location').requestSubmit()`,
+    );
+    await until(
+      () =>
+        view.executeJavaScript(`!!${entryQuery(options.files, "source.txt")}`),
+      "second directory listing",
+    );
+    await filesAction(view, "Use terminal directory");
+    await until(
+      () => view.executeJavaScript(listingReady(initialDirectory)),
+      "legacy captured initial directory",
+    );
+    // Selecting the second tab must return actual native input to core without
+    // hiding the retained tool. Do not call core.focus() to repair production.
+    await js("document.querySelectorAll('#tab-strip [role=tab]')[0].click()");
+    await panel(view, true, "core");
+    await js("document.querySelectorAll('#tab-strip [role=tab]')[1].click()");
+    await panel(view, true, "core");
+    if (options.macosLifecycle)
+      await js("document.querySelectorAll('#tab-strip [role=tab]')[0].click()");
+    const closingIdentity = options.macosLifecycle ? identity : secondIdentity;
+    menu("Close Tab");
+    await until(
+      async () => (await tabCount()) === 1,
+      "selected terminal closed",
+    );
+    await until(
+      () => !processIdentity.alive(closingIdentity),
+      "closed shell kernel exit",
+    );
+    if (options.macosLifecycle) {
+      sourceExited = true;
+      shell.probePid = secondPid;
+      identity = secondIdentity;
+      assert.ok(processIdentity.alive(identity));
+      await js(
+        "window.__packagedCanvas = document.querySelector('.terminal-surface canvas')",
+      );
+      checks.push(
+        "source-terminal-closed-same-companion-distinct-surviving-PTY",
+      );
+    }
+    await panel(view, true, "core");
+    menu("Files");
+    await panel(view, true, "child");
+    assert.equal(children.length, 1, "reopen never restarts backend");
+    checks.push(
+      "panel-outside-tabs-native-focus-reopen-close-settings-terminal-switch",
+      "legacy-captured-initial-directory",
+    );
   }
-  await panel(view, true, "core");
-  menu("Files");
-  await panel(view, true, "child");
-  assert.equal(children.length, 1, "reopen never restarts backend");
-  checks.push(
-    "panel-outside-tabs-native-focus-reopen-close-settings-terminal-switch",
-    "legacy-captured-initial-directory",
-  );
   await view.executeJavaScript(
     `document.querySelector('[aria-label=Directory]').value = ${JSON.stringify(options.files)}; document.querySelector('form.location').requestSubmit()`,
   );
@@ -629,6 +682,9 @@ async function run(options) {
     await readFile(path.join(options.files, "moved.txt"), "utf8"),
     "source",
   );
+  await assert.rejects(lstat(path.join(options.files, "source.txt")), {
+    code: "ENOENT",
+  });
   checks.push("packaged-backend-create-move-conflict");
   if (options.macosLifecycle) {
     await filesAction(view, "New folder");
@@ -734,10 +790,8 @@ async function run(options) {
       ".extension-catalog-card",
       "Reinstall",
     );
-  await click(
-    core,
-    options.catalogMode ? "Reinstall" : "Install local .omxext…",
-  );
+  if (options.catalogMode) await click(core, "Reinstall");
+  else await installArchive();
   await state("generation 2");
   await until(
     () => hosted().length === 0 && children[0].closed,
@@ -760,7 +814,7 @@ async function run(options) {
     "Disable retirement",
   );
   assertNormalBackendRetirement(children[1]);
-  if (options.macosLifecycle) {
+  if (options.macosLifecycle || options.publicLink) {
     await click(core, "Enable");
     await state("generation 4");
     assert.equal(children.length, 2, "Enable remains dormant");
@@ -798,9 +852,9 @@ async function run(options) {
     path.join(options.evidence, "terminal-after.png"),
     (await core.capturePage()).toPNG(),
   );
-  if (options.macosLifecycle) {
+  if (options.macosLifecycle || options.publicLink) {
     await settings();
-    await click(core, "Install local .omxext…");
+    await installArchive();
     await state("generation 6");
     assert.equal(approvals, 3);
     assert.equal(children.length, 2, "third install remains dormant");
@@ -837,6 +891,11 @@ async function run(options) {
     checks,
     approvals,
     archiveSha256: options.archiveSha256,
+    ...(options.publicLink
+      ? {
+          publicLink: { url: options.publicLink, installs: publicLinkInstalls },
+        }
+      : {}),
     children,
     shell: { ...shell, start: identity.start },
     ...(options.macosLifecycle ? { initialShell, sourceExited } : {}),

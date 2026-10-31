@@ -1,6 +1,6 @@
 # Files development preview implementation
 
-Files is a separately installed Linux ARM64 development preview
+Files is a separately installed Linux and macOS ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
 The current catalog offers [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0)
@@ -35,7 +35,7 @@ Source now builds **Files 0.5.0 — ARM64 preview**, requiring host
 `>=0.24.0-dev.21` and API `0.1.x`. It includes the corrected raw-path forwarding
 for optional host trash. This is a new archive identity, not a replacement or
 new qualification of immutable Files0.4.0. The catalog remains Linux-only0.4.0;
-no host/archive publication follows from the controlled native qualification below.
+macOS uses the separately published link-first pair described below.
 
 The opt-in [exact-DMG Files fixture](../test/fixtures/files-dmg.md) passed the
 bounded consumer checkpoint against the retained compatible dev.21 host.
@@ -82,8 +82,73 @@ synthetic Chromium input and controlled native consent, not physical dialogs,
 Finder/Gatekeeper/notarization, macOS12, blocked native-I/O cancellation,
 read-only/trash-unavailable volumes, unexpected backend crash or surviving-browser
 main-death exclusion. It does not repeat the primitive matrix or establish public
-installation. The single-release-per-ID catalog compatibility decision and actual
-host/archive distribution remain separate; Linux0.4 stays unchanged.
+installation. The later public checkpoint below is separate; Linux0.4 stays
+unchanged. Link-first delivery is not a catalog promotion.
+
+### macOS link-first distribution
+
+On 2026-10-31, [host dev.21](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.21)
+and [Files0.5](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.5.0)
+were published as separate immutable, non-Latest prereleases. All five original
+assets passed draft and anonymous public size/SHA-256 readback; Files was
+published and anonymously verified before the host. Stable0.23.0 remains Latest.
+The pair uses the unchanged DMG and archive identified above, not a rebuild for
+current dev.22 metadata. Host tag `cd01e9cf775aab46df58dd41da8398b2058e2e4e`
+differs from actual build `8b9eab97a82d6ea01982fb79062b5642a10e2b7a` only in
+six factual documentation files; the Files tag retains original source `a343704`.
+Original notes and build-time receipts remain unchanged, not retrofitted with
+the subsequent public checkpoint.
+
+On 2026-10-31, that exact retained DMG separately passed `hdiutil verify` and the
+unchanged ordinary **FULL** package verifier using matching source `8b9eab9`
+(dev.21). A fresh readonly-mounted copy matched all 630 staged/mounted/copied
+bundle entries and was detached before execution. One FULL run on the sealed copy
+established four startup events, real PTY/Terminal Surface cell-size response and
+launch-data non-disclosure; staged byte equality replaced a duplicate same-byte
+FULL launch. Actual main exit/stream close and process-group absence passed.
+Independent read-only audit verified all 18 stage joins, 1,224 source entries,
+unchanged dependencies/build/artifact/bundle, complete ad-hoc seal, absent image
+and startup profile, and current observed-process absence. The verifier's bounded
+termination is distinct from the prior Files normal-Quit checkpoint; neither is a
+historical escaped-descendant census. Earlier inspection-only receipts remain
+inspection-only. No rebuild or public acquisition occurred in this FULL run.
+
+The separate [public-link checkpoint](../test/fixtures/files-dmg.md#public-link-mode)
+then passed all six checks on ordinary-user macOS27.0.1 ARM64 using fixture source
+`ad6adc01dfe7cc4337f59e253e1b72c3c77d303b` and five fresh anonymous downloads.
+The exact DMG-derived detached app performed three real Settings HTTPS-link
+installations with exact manifest/digest consent, dormant install, create/move/
+conflict, reinstall retirement, Disable/Enable/Uninstall, same-PTY/Surface
+continuity and third-activation normal Quit. Destination bytes and exact source
+`ENOENT` established the successful move. All three backend exit/close outcomes
+and main exit/close were `0`/null; shell exit and all 17 direct stages joined.
+No fixture CA, transport interception or local-file installation substituted for
+production HTTPS. Earlier Trash recovery, source-terminal closure, retained draft
+and primitive matrices were reused, not replayed.
+
+Independent read-only audit verified 1,235 source entries, 630 bundle entries,
+source/toolchain/dependency/public-byte identities, complete ad-hoc seal, and
+current absence of owned images/processes. Transient fixture output is bound by
+source/toolchain inputs, not a separately retained executed-output hash; this is
+not a historical escaped-descendant census. The inspected terminal capture shows
+actual before/after shell text and prompt. **The Files capture is stale**, showing
+an earlier operation-in-progress state, and is excluded as final-move visual
+proof; independent filesystem assertions passed. Capture follow-up is queued in
+[#670](https://github.com/luizomf/omxterm/issues/670#issuecomment-6536963599).
+Synthetic Chromium input, controlled native consent and WebContents captures do
+not qualify physical input, Finder/Gatekeeper/notarization, macOS12, blocked
+native-I/O cancellation or surviving-browser main-death exclusion.
+
+The complete v1 catalog stays unchanged, preserving Linux0.4/dev.11 and
+SSH/Snippets. Its one-release-per-ID format cannot independently select Linux0.4
+and macOS0.5. On host dev.21, macOS users can paste the
+[Files0.5 archive URL](https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext)
+into Settings → Extensions → **HTTPS archive link**, choose **Install from link**
+and compare the displayed digest to the release checksum. Local downloaded archive
+installation is also available; Browse still shows an incompatible Linux Files
+offer. Direct-link trust shows captured bytes/digest but is not catalog-bound
+Official selection. No macOS catalog discovery, automatic update, new host build
+or qualification of other platforms is implied.
 
 ## Concrete consumer
 

@@ -13,8 +13,8 @@ it.each([true, false])(
   "closes the source only for the macOS scenario=%s and preserves a distinct survivor",
   async (macosLifecycle) => {
     const code = await block(
-      "  if (options.macosLifecycle)\n    await js",
-      '  await panel(view, true, "core");\n  menu("Files");',
+      "    if (options.macosLifecycle)\n      await js",
+      '    await panel(view, true, "core");\n    menu("Files");',
     );
     const shell = { probePid: 11 };
     let selected = 22;
@@ -59,37 +59,46 @@ it.each([true, false])(
     expect(result.checks).toHaveLength(macosLifecycle ? 1 : 0);
   },
 );
-it.each([
-  "active",
-  "already-exited",
-  "already-closed",
-  "view-gone",
-  "implicit-activation",
-])(
-  "requires an actually live third generation before Quit: %s",
-  async (state) => {
+it.each(
+  [
+    "active",
+    "already-exited",
+    "already-closed",
+    "view-gone",
+    "implicit-activation",
+  ].flatMap((state) =>
+    [false, true].map((publicLink) => ({ state, publicLink })),
+  ),
+)(
+  "requires an actually live third generation before Quit: $state (public=$publicLink)",
+  async ({ state, publicLink }) => {
     const code = await block(
-      "  if (options.macosLifecycle) {\n    await settings();",
+      "  if (options.macosLifecycle || options.publicLink) {\n    await settings();",
       "  if (catalogTransport) {\n    assert.deepEqual(catalogTransport.requests",
     );
     const run = new Function(
       "assert",
       "mode",
+      "publicLink",
       `return (async () => {
-    const options = { macosLifecycle: true }, checks = [];
+    const options = { macosLifecycle: !publicLink, publicLink }, checks = [];
     const core = {}, children = [{}, {}]; let view, approvals = 2;
     const settings = async () => {};
-    const click = async () => { approvals++; if (mode === 'implicit-activation') children.push({}); };
+    const installArchive = async () => { approvals++; if (mode === 'implicit-activation') children.push({}); };
     const state = async value => assert.equal(value, 'generation 6');
     const openFiles = async () => { children.push({ exit: mode === 'already-exited' ? {code: 0} : null, closed: mode === 'already-closed' }); return { isDestroyed: () => mode === 'view-gone' }; };
     ${code}
     return checks;
   })();`,
-    ) as (assertion: typeof assert, state: string) => Promise<string[]>;
+    ) as (
+      assertion: typeof assert,
+      state: string,
+      publicLink: boolean,
+    ) => Promise<string[]>;
     if (state === "active")
-      await expect(run(assert, state)).resolves.toEqual([
+      await expect(run(assert, state, publicLink)).resolves.toEqual([
         "third-consent-active-Files-at-Quit",
       ]);
-    else await expect(run(assert, state)).rejects.toThrow();
+    else await expect(run(assert, state, publicLink)).rejects.toThrow();
   },
 );

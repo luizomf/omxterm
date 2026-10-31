@@ -46,6 +46,54 @@ under `runNativeFixture`. The controller selects the actual Files CommonJS
 observer through a loopback inspector. Snippets retains its original default
 observer and input assertions. A new generic campaign framework is not introduced.
 
+## Public-link mode
+
+The default local eleven-check campaign above is unchanged. The separate bounded
+public-acquisition mode passed all six checks on 2026-10-31 using exact public
+dev.21/Files0.5 bytes and fixture source `ad6adc0`; see the
+[actual outcome and limitations](../../docs/files-development-preview.md#macos-link-first-distribution).
+This is not qualification of other inputs. After release asset verification,
+supply all ordinary inputs above plus:
+
+```sh
+OMXTERM_FILES_DMG_PUBLIC_LINK=https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext
+```
+
+Export that variable for the test invocation (or add it as another inline
+assignment). The URL must be an exact immutable project Files0.5 HTTPS archive,
+without credentials, query or fragment. `ARCHIVE` is the separately downloaded
+public archive used only as a hash oracle; the fixture does **not** copy it into
+the app's profile or return it through a local chooser. `DMG` must also be the
+verified public download. Root records their public readback provenance separately.
+The example identifies the published immutable Files0.5 asset.
+
+The observer fills the real Settings **HTTPS archive link** field and clicks
+**Install from link** for initial install, reinstall and the final install before
+Quit. Production HTTPS/download/validation runs unchanged; no fixture CA, catalog
+server, transport interception, preload install shortcut or mocked archive bytes.
+Native consent remains controlled and asserts Files0.5 name/version, package ID
+and exact captured digest before approval. Direct links do not carry an Official
+catalog descriptor. Local chooser use in this mode fails the fixture.
+
+Six scenario checks cover exact-byte dormant install, real create/move/conflict,
+reinstall retirement/dormancy, activation/Disable/dormant Enable/Uninstall, the
+same PTY/Surface and third-consent active Files at normal Quit. Existing controller
+and observer joins still require three normal backend exit/close outcomes, shell
+exit, normal main exit, stream closure and descendant settlement. `scenario.json`
+and `quit.json` record the public URL and three submitted link installations;
+artifact hashes, consent counts and selected checks must match. Failure preserves
+the existing lane ownership/evidence rules, never substitutes local installation.
+
+This mode does not compile the Foundation lookup, prepare a recovery entry, trash,
+permanently delete, close the source terminal, or replay retained draft/transition
+matrices. No `trash-lookup.json` or `trash-recovery.json` is expected. Inspect actual
+Files/terminal captures separately. In the actual checkpoint, terminal paint was
+accepted but the Files operation capture was stale and is not final-move visual
+proof; destination bytes and source `ENOENT` passed independently. Public link
+acquisition is not public catalog
+discovery or physical-input/Gatekeeper qualification. Keep the v1 Linux0.4 catalog
+and all immutable assets unchanged.
+
 ## One-entry Trash oracle
 
 The production Files service intentionally discards Foundation's returned Trash
@@ -114,6 +162,8 @@ cannot publish PASS. Missing/truncated/finalizing receipts are not success.
 No primitive nine-group replay, unexpected backend crash, blocked native-I/O
 cancellation, read-only/unavailable volume, macOS12, surviving-browser main-death,
 physical keyboard/dialog, Finder/Gatekeeper/notarization, catalog promotion or
-public installation is qualified. The immutable Linux0.4 catalog remains intact.
+public installation is qualified by the local mode. The public-link mode above
+must record its own actual result. The immutable Linux0.4 catalog remains intact.
 Its single Files release slot cannot independently offer Linux0.4/dev11 and
-macOS0.5/dev21; later distribution requires an explicit compatibility decision.
+macOS0.5/dev21; the selected distribution path is deliberate link/local installation,
+not silent replacement of the Linux offer.

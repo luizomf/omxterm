@@ -216,10 +216,12 @@ OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
 so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
 sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.4.0` with minimum host `0.24.0-dev.8`; its original archive is now
-published separately as `ext-files-v0.4.0` (see below). The historical published Files
-`0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; neither archive
-supports `v0.22.0`. When building an exported source
+Files `0.5.0` with minimum host `0.24.0-dev.21`; its macOS controlled
+qualification is separate from publication. The original Files `0.4.0` archive
+(minimum host `0.24.0-dev.8`) is published separately as `ext-files-v0.4.0`
+(see below). The historical published Files
+`0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; none of these
+archives supports `v0.22.0`. When building an exported source
 archive, pass `OUTPUT.omxext FULL_SOURCE_COMMIT` to the Files builder and verify
 the export's source correspondence. The receipt distinguishes supplied source
 identity from a clean local Git HEAD.
@@ -240,6 +242,55 @@ platform/SDK/catalog qualification. Do not mutate an already published release t
 add it. Public readback/checksums and a compatible public host are needed before
 claiming distribution; neither a branch, local artifact nor CI upload is shipment.
 The normal stable-release procedure and its complete asset set remain unchanged.
+
+## Files macOS link-first preview preparation
+
+The link-first preview was published on 2026-10-31 using the retained dev.21
+macOS ARM64 DMG and original Files0.5 archive from the
+[controlled checkpoint](files-development-preview.md#files-050-macos-controlled-qualification).
+Both immutable non-Latest releases passed all five draft/public asset checks;
+Files publication and anonymous verification preceded host publication. The
+separate six-check public Settings-link checkpoint and read-only audit passed.
+See [actual evidence and capture limits](files-development-preview.md#macos-link-first-distribution).
+Current main's dev.22 metadata does not rebuild or relabel that dev.21 host.
+Keep the complete v1 catalog unchanged: Linux0.4/dev.11, SSH and Snippets retain
+their current offers. Its strict one-release-per-ID schema cannot offer distinct
+Linux0.4 and macOS0.5 releases; duplicate IDs or schema changes break old clients.
+
+The completed sequence below records the separate publication boundaries; it is
+not an instruction to recreate sealed releases or replay executed fixtures.
+
+1. Revalidate retained source/artifact identities and image integrity. Obtain the
+   ordinary **FULL** package-verifier result on the exact DMG-derived app with a
+   matching dev.21 source context, without `--inspection-only`. Existing staged
+   and copied-app inspections, native primitives and local Files lifecycle evidence
+   remain reusable for unchanged inputs but do not claim that FULL result.
+   The selected dev.21 pair subsequently passed this separate image/FULL check;
+   [the preview evidence](files-development-preview.md#macos-link-first-distribution)
+   records exact-copy equality, startup/PTY/privacy and independent audit limits.
+2. After review/qualification, check tag/release absence and prepare separate
+   non-Latest draft prereleases: host `v0.24.0-dev.21` with DMG/checksum, and
+   `ext-files-v0.5.0` with the original archive/checksum/JSON. Preserve original
+   filenames, source identities and build-time `not-run` qualification field.
+   Compare build/tag inputs; never tag dev.21 bytes as dev.22 or replace a sealed
+   release. Stable Latest remains unchanged.
+3. Verify all five draft assets by exact byte size/SHA-256; publish and verify
+   anonymous public downloads again. Make Files available before advertising the
+   host/archive pair. This is a partial macOS preview, not the stable asset set.
+4. Run the separately assigned [public-link checkpoint](../test/fixtures/files-dmg.md#public-link-mode)
+   using that publicly downloaded pair and the actual versioned archive URL.
+   It exercises Settings **Install from link**, captured-byte trust, dormant
+   install/reinstall, basic operations, management, retained terminal and normal
+   joined Quit. No transport interception or local archive substitution. Record
+   actual outcomes separately; public download checks alone do not establish app
+   acquisition. Do not replay the settled local Trash/state matrix.
+
+The published macOS pair uses Settings → Extensions → **HTTPS archive link** →
+**Install from link**, comparing the captured digest to the release checksum;
+local downloaded `.omxext` installation remains available offline. Browse will
+still show Linux Files0.4 as incompatible on macOS. Document this honestly rather
+than calling link delivery macOS catalog discovery. No application-version bump
+is needed for fixture/docs-only work; catalog evolution is a separate host change.
 
 ## Files catalog publication
 
