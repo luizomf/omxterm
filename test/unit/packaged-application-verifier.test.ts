@@ -312,7 +312,9 @@ describe("packaged application verifier", () => {
       wrongDimensions: ["icon_128x128@2x.png (expected 256x256, got 512x512)"],
     });
   });
+});
 
+describe("packaged runtime inventory", () => {
   it("accepts only the native runtime required by each POSIX package", () => {
     expect(
       inspectAsarEntries(

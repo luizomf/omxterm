@@ -158,6 +158,73 @@ afterEach(async () => {
     await rm(directory, { recursive: true, force: true });
 });
 
+function inspectionCommands(
+  platform: string,
+  applicationRoot: string,
+  root: string,
+) {
+  return vi.fn(
+    async (
+      file: string,
+      args: string[],
+      options: { env?: NodeJS.ProcessEnv },
+    ) => {
+      if (file === "file")
+        return { stdout: "ELF 64-bit LSB executable, x86-64", stderr: "" };
+      if (
+        file === "readelf" ||
+        args[0] === "--appimage-extract" ||
+        args[0] === "--appimage-signature"
+      )
+        return { stdout: "", stderr: "" };
+      expect(file).toBe(
+        path.join(
+          applicationRoot,
+          platform === "linux" ? "omxterm" : "OMXTerm.exe",
+        ),
+      );
+      expect(options.env?.ELECTRON_RUN_AS_NODE).toBe("1");
+      if (args[0] === "--input-type=module") {
+        expect(platform).toBe("linux");
+        expect(args.slice(0, 3)).toEqual([
+          "--input-type=module",
+          "-e",
+          "same licensed/icon bytes",
+        ]);
+        expect(args.slice(3)).toEqual([
+          "--",
+          path.join(applicationRoot, "resources", "app.asar"),
+          root,
+          "1.2.3",
+        ]);
+        expect(options.env?.PATH).toBe(path.join(root, "empty-path"));
+        return {
+          stdout: JSON.stringify({
+            target: "linux-x64",
+            checks: [
+              "packaged-store-and-lease",
+              "bootstrap-missing-IPC-refusal",
+            ],
+          }),
+          stderr: "",
+        };
+      }
+      expect(args).toEqual([
+        path.resolve("scripts/inspect-packaged-runtime.cjs"),
+        path.join(applicationRoot, "resources", "app.asar"),
+      ]);
+      return {
+        stdout: JSON.stringify({
+          versions: { electron: "43.8.1" },
+          platform,
+          arch: "x64",
+        }),
+        stderr: "",
+      };
+    },
+  );
+}
+
 it.each(["linux", "win32"])(
   "%s x64 inspection loads only the packaged runtime, never provisions or starts a desktop",
   async (platform) => {
@@ -305,66 +372,7 @@ it.each(["linux", "win32"])(
         return { isFile: () => true };
       }),
     }));
-    const execute = vi.fn(
-      async (
-        file: string,
-        args: string[],
-        options: { env?: NodeJS.ProcessEnv },
-      ) => {
-        if (file === "file")
-          return { stdout: "ELF 64-bit LSB executable, x86-64", stderr: "" };
-        if (
-          file === "readelf" ||
-          args[0] === "--appimage-extract" ||
-          args[0] === "--appimage-signature"
-        )
-          return { stdout: "", stderr: "" };
-        expect(file).toBe(
-          path.join(
-            applicationRoot,
-            platform === "linux" ? "omxterm" : "OMXTerm.exe",
-          ),
-        );
-        expect(options.env?.ELECTRON_RUN_AS_NODE).toBe("1");
-        if (args[0] === "--input-type=module") {
-          expect(platform).toBe("linux");
-          expect(args.slice(0, 3)).toEqual([
-            "--input-type=module",
-            "-e",
-            "same licensed/icon bytes",
-          ]);
-          expect(args.slice(3)).toEqual([
-            "--",
-            path.join(applicationRoot, "resources", "app.asar"),
-            root,
-            "1.2.3",
-          ]);
-          expect(options.env?.PATH).toBe(path.join(root, "empty-path"));
-          return {
-            stdout: JSON.stringify({
-              target: "linux-x64",
-              checks: [
-                "packaged-store-and-lease",
-                "bootstrap-missing-IPC-refusal",
-              ],
-            }),
-            stderr: "",
-          };
-        }
-        expect(args).toEqual([
-          path.resolve("scripts/inspect-packaged-runtime.cjs"),
-          path.join(applicationRoot, "resources", "app.asar"),
-        ]);
-        return {
-          stdout: JSON.stringify({
-            versions: { electron: "43.8.1" },
-            platform,
-            arch: "x64",
-          }),
-          stderr: "",
-        };
-      },
-    );
+    const execute = inspectionCommands(platform, applicationRoot, root);
     const execFile = Object.assign(vi.fn(), {
       [Symbol.for("nodejs.util.promisify.custom")]: execute,
     });
