@@ -203,7 +203,12 @@ async function combinedInputs(root: string, receipts: string) {
     `dist/extensions/files-${manifest.version}.omxext`,
   );
   const filesArchiveSha256 = digest(await readFile(filesArchive));
-  for (const helper of ["companion-combined.cjs", "companion-native-input.cjs"])
+  for (const helper of [
+    "companion-combined.cjs",
+    "companion-native-input.cjs",
+    "companion-shortcuts.cjs",
+    "companion-shortcut-input.cjs",
+  ])
     await cp(path.join("test/fixtures", helper), path.join(root, helper));
   const inputs = {
     filesArchive,

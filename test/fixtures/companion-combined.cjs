@@ -261,5 +261,6 @@ async function runCombined(s) {
   checks.push(
     "native-child-Escape-header-Hide-Close-held-repeat-release-exact-raw-client-fresh-control",
   );
+  await require("./companion-shortcuts.cjs").runShortcuts(s);
 }
 module.exports = { runCombined };
