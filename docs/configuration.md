@@ -407,12 +407,14 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Linux ARM64 and macOS ARM64 source use the optional Snippets extension; other
-targets retain built-in Snippets. The macOS source transition has passed bounded
-native qualification, but no matching macOS host is published. See the [migration guide](snippets-migration.md) for explicit
-installation, offline archives and existing catalogs. No catalog conversion or
-automatic installation occurs. Published host versions retain their documented
-behavior until a matching host/package migration is released.
+Linux ARM64 and macOS ARM64 source, along with the published Linux ARM64
+**0.24.0-dev.11** and macOS ARM64 **0.24.0-dev.16** previews, use the optional
+Snippets extension. Stable **0.23.0**, Windows and Linux x64 retain built-in
+Snippets. Both previews offer official-catalog and explicit local/offline archive
+installation. See the [migration guide](snippets-migration.md) for matching host
+and package downloads, installation steps, existing catalogs and qualification
+limits. No catalog conversion, automatic installation or automatic enablement
+occurs.
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 

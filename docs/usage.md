@@ -272,12 +272,15 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 ### Insert, run or preview a snippet
 
-Linux ARM64 and macOS ARM64 source use optional installed Snippets; other targets
-retain the built-in tool. The macOS source transition has passed bounded native
-qualification; published macOS hosts still retain built-in Snippets.
-The [migration guide](snippets-migration.md) explains
-installation, disabled/unavailable states and unchanged catalogs. The existing
-shortcut opens Extensions management when no enabled package is available.
+Linux ARM64 and macOS ARM64 source, along with the published Linux ARM64
+**0.24.0-dev.11** and macOS ARM64 **0.24.0-dev.16** previews, use optional installed
+Snippets. Stable **0.23.0**, Windows and Linux x64 retain the built-in tool.
+Both previews offer Snippets through **Settings → Extensions → Browse official
+extensions**; explicit local/offline archive installation also remains available.
+The [migration guide](snippets-migration.md) links the matching previews and explains
+installation, disabled/unavailable states, unchanged catalogs and qualification
+limits. On optional-Snippets hosts, the existing shortcut opens Extensions
+management when no enabled package is available.
 
 Each snippet row shows what clicking it does: **Insert** types the snippet without pressing Enter, and **Run · adds Enter** types it and presses Enter (`execute: true` in `snippets.yaml`). Click **Preview** to see the exact text first, then choose **Insert — no added Enter** or **Run — adds Enter**; that choice wins over the snippet's default. The snippet goes only to the focused pane captured when you opened the preview, never to a later selected or replacement pane. If that terminal ends, fails or is removed, the actions are disabled and nothing is sent, even if its pane remains visible for failure acknowledgement. Insert only skips the final Enter: a snippet with several lines can still run each line, and multiline text may still ask for paste confirmation.
 
