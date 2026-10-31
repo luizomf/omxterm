@@ -149,14 +149,15 @@ GUI composition; the following checkpoint exercised the retained package.
 
 🤖 AI-assisted.
 
-A separate Interactive/Limited Windows ARM64 task launched the retained unpacked
-app built from `7f9fde17b6e966fec07bed5e168cc99d086ec15e`
-(`0.24.0-dev.32`); it did not rebuild the package. Its fixture source was
-`099d3444c0f80124989fbe3388fa0d066107db78`, with a private adapted scenario and
-observer: the executed fixture was **not byte-identical** to the tracked source
-fixture. Complete before/after inventories matched the previously inspected
-110 entries, including 97 files and the executable, ASAR and lease-addon hashes
-above. The minimal local extension archive had SHA-256
+A separate Interactive/Limited Windows ARM64 task passed a bounded GUI
+composition checkpoint using the retained unpacked app built from
+`7f9fde17b6e966fec07bed5e168cc99d086ec15e` (`0.24.0-dev.32`); it did not
+rebuild the package. Its fixture source was
+`099d3444c0f80124989fbe3388fa0d066107db78`, with a separately frozen private
+adapted scenario and observer: the executed fixture was **not byte-identical**
+to the tracked source fixture. Complete before/after inventories matched the
+previously inspected 110 entries, including 97 files and the executable, ASAR
+and lease-addon hashes above. The minimal local extension archive had SHA-256
 `3468705b26b344ed404bd8af34ddd492f1ee10fc5ef89601af2674b8d018b609`.
 
 Preflight observed a non-elevated user in the active console, an available input
@@ -173,18 +174,29 @@ installation and enablement remaining dormant, explicit hosted/backend
 activation with editing, and disable/uninstall while retaining the same selected
 Surface and observed ConPTY. The private adapter bound that Surface to the
 second PTY through probe input and readiness, and the retained PTY returned the
-expected ACK. Two controlled approvals checked the exact archive digest. The
-scenario asserted a second backend was active before it returned; a subsequent
-`app.quit()` joined shutdown. No separate receipt establishes that backend's
-liveness at the exact instant Quit was invoked.
+expected ACK. Two controlled approvals checked the exact archive digest. A
+separate fifth witness recorded the expected second backend's matching
+PID/creation identity and observed child state (`closed: false`, `exit: null`)
+in the same synchronous main-process callback that then invoked `app.quit()`.
+The witness was written before that call, without returning to the event loop;
+normal Quit join was verified separately. This is an OS process snapshot and
+observed child state, **not atomic OS liveness**: the backend could exit after
+the snapshot, and an exit callback could be pending while the main thread was
+blocked.
 
 The observed PTY reported `onExit`, and both backend children reported exit
 code zero and child close. Four captured PTY/backend creation identities were
 absent at Quit; no separate PTY close-event receipt was exported. The packaged
 main recorded exit and close, both stream EOFs and no truncation or capture
 error. The native supervisor reported the driver exit and no cleanup errors. A
-later read-only snapshot found all 88 distinct recorded owner/driver/PTY/backend
+later read-only snapshot found all 92 recorded owner/driver/PTY/backend
 creation identities absent; it was not an arbitrary-descendant census.
+
+An earlier, separately frozen packaged-GUI run on this retained package recorded
+four named checks and joined Quit, but its backend-liveness assertion preceded
+the Quit callback and did not supply the new witness. That earlier result
+remains partial for the Quit-request observation; this later run does not rewrite
+it.
 
 The actual hosted capture visibly shows the edited input, caret and focus
 outline; its heading and output were not readable in the black region. The
