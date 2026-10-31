@@ -207,7 +207,7 @@ export const englishMessages = {
   "settings.page.general": "General",
   "settings.page.appearance": "Appearance",
   "settings.page.terminal": "Terminal",
-  "settings.page.window": "New Windows",
+  "settings.page.window": "Window",
   "settings.page.file": "Config File",
   "settings.page.extensions": "Extensions",
   "extensions.heading": "Local extensions · development preview",

@@ -35,6 +35,7 @@ export function createHostedContentPresentation(
   let pendingOverlay = false;
   let disposed = false;
   let scheduled = false;
+  let layoutPending = false;
   let transitioning = false;
   let failed = false;
   // Only rejected identity-bearing requests can be reconciled. False hide ACKs,
@@ -128,11 +129,15 @@ export function createHostedContentPresentation(
       !pendingOverlay &&
       selected &&
       !selected.removed
-    )
+    ) {
+      layoutPending = false;
       void present(selected, focus);
+    }
   };
   const layout = () => {
-    if (scheduled || disposed) return;
+    if (disposed) return;
+    layoutPending = true;
+    if (scheduled) return;
     scheduled = true;
     page.requestAnimationFrame(() => {
       scheduled = false;
@@ -187,6 +192,9 @@ export function createHostedContentPresentation(
         transitioning = false;
         activate(focusAllowed);
         if (!shown) show(focus);
+        // A retained selection may have sent its bounds before a position-only
+        // update. Preserve that update across the pending acknowledgement.
+        if (layoutPending) layout();
       };
       if (retained) {
         if (focus === false) finish(true);

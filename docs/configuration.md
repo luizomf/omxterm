@@ -48,8 +48,9 @@ Settings uses the full content area with independent category/content scrolling.
 Small windows use compact navigation; opening it does not resize your window or
 change its native minimum. Terminal-only pane, Find, zoom, snippet and file-drop
 actions do nothing there. Copy/Paste/Select All edit the focused Settings field,
-never a hidden terminal. Selecting Settings hides Snippets; returning to a
-terminal does not reopen it. About and menu-opened image previews can appear
+never a hidden terminal. Selecting Settings suspends the shared Auxiliary Panel;
+returning to a terminal restores its retained selected tool without reopening a
+closed tool. About and menu-opened image previews can appear
 over Settings, making it inert and restoring its focused control on dismissal.
 The [Command Palette](usage.md#command-palette) can also open above Settings;
 its dismissal preserves the retained editor and restores a surviving focused control.

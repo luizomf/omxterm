@@ -217,7 +217,7 @@ describe("settings dialog", () => {
       "General",
       "Appearance",
       "Terminal",
-      "New Windows",
+      "Window",
       "Shortcuts",
       "Config File",
     ]);

@@ -219,7 +219,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.page.general": "Geral",
   "settings.page.appearance": "Aparência",
   "settings.page.terminal": "Terminal",
-  "settings.page.window": "Novas Janelas",
+  "settings.page.window": "Janela",
   "settings.page.file": "Arquivo de Configuração",
   "settings.page.extensions": "Extensões",
   "extensions.heading": "Extensões locais · prévia de desenvolvimento",

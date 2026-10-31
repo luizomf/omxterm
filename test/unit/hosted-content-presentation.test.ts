@@ -155,6 +155,41 @@ it("refreshes position-only moves without observer notification or focus intent"
   });
 });
 
+it("flushes an x-only refresh after a retained selection acknowledgement", async () => {
+  const frames: FrameRequestCallback[] = [];
+  vi.spyOn(window, "requestAnimationFrame").mockImplementation((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const h = fixture();
+  const target = h.slot("panel");
+  let x = 700;
+  vi.spyOn(target.slot, "getBoundingClientRect").mockImplementation(
+    () => ({ x, y: 80, width: 280, height: 500 }) as DOMRect,
+  );
+  h.owner.select(target, () => {}, target);
+  await settle();
+  const ack = deferred<boolean>();
+  h.bridge.present.mockImplementationOnce(() => ack.promise);
+  h.owner.select(target, () => {}, target, "core");
+  x = 12;
+  h.owner.layout();
+  frames.shift()!(0);
+  expect(h.bridge.present).toHaveBeenCalledTimes(2);
+  ack.resolve(true);
+  await settle();
+  expect(frames).toHaveLength(1);
+  frames.shift()!(0);
+  await settle();
+  expect(h.bridge.present).toHaveBeenCalledTimes(3);
+  expect(h.bridge.present.mock.lastCall?.[0]).toMatchObject({
+    id: "panel",
+    activeId: "panel",
+    focus: false,
+    bounds: { x: 12, y: 80, width: 280, height: 500 },
+  });
+});
+
 it.each([
   "blocked",
   "overlay",

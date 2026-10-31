@@ -221,8 +221,9 @@ prompt is introduced. Escape is not application-tab closure; the visible Close
 control retains its Enter repeats/release in a document-owned gesture guard
 that outlives the removed view.
 
-Settings selection hides/deactivates Snippets, retaining memory state but not
-automatically restoring visibility. It leaves window and application-tab actions
+Settings selection suspends the shared Auxiliary Panel, retaining its selected
+tool and memory state. Returning to a terminal restores that retained selection,
+without reopening a closed tool. It leaves window and application-tab actions
 available, and prevents terminal pane/Find/zoom/snippet/file-drop delivery. About
 and menu-opened images may cover it with the ordinary modal guards. Retained
 views distinguish alive from interactive: saves can settle hidden, but loading,
