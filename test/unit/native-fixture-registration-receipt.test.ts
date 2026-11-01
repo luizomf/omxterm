@@ -30,9 +30,9 @@ beforeAll(async () => {
 
 it.each([
   ["normal", "completed-write", "close"],
-  ["normal", "completed-replacement", "rename"],
+  ["normal", "completed-publication", "rename"],
   ["early-exit", "completed-write", "close"],
-  ["early-exit", "completed-replacement", "rename"],
+  ["early-exit", "completed-publication", "rename"],
 ] as const)(
   "delivers %s %s metadata through the actual external-child supervisor receipt without settling pending ownership",
   async (branch, phase, syscall) => {
@@ -52,9 +52,11 @@ it.each([
       parent: owner.pid,
       identity: String(100 + offset),
     }));
+    const code = syscall === "rename" ? "EBUSY" : "EIO";
+    const errno = syscall === "rename" ? -4082 : -5;
     const primary = Object.assign(
       new Error("private original message/path/argv"),
-      { code: "EIO", errno: -5, syscall },
+      { code, errno, syscall },
     );
     const require = createRequire(import.meta.url);
     let stderr = "";
@@ -97,7 +99,7 @@ it.each([
                       processes?: unknown;
                     }
                   ).processes &&
-                  phase === "completed-replacement"
+                  phase === "completed-publication"
                 )
                   throw primary;
                 fs.renameSync(from, to);
@@ -206,7 +208,7 @@ it.each([
         JSON.parse(
           lines[0]!.slice("__OMXTERM_FIXTURE_REGISTRATION_FAILURE__".length),
         ),
-      ).toEqual({ version: 1, branch, phase, code: "EIO", errno: -5, syscall });
+      ).toEqual({ version: 1, branch, phase, code, errno, syscall });
       if (branch === "early-exit")
         expect(
           JSON.parse(
@@ -216,8 +218,8 @@ it.each([
           version: 1,
           branch,
           phase: "exit-observation",
-          code: "EIO",
-          errno: -5,
+          code,
+          errno,
           syscall,
         });
       expect(result!.stderr).not.toContain("private");
@@ -241,6 +243,7 @@ it.each([
 
 it.each([
   "settled",
+  "held-pending",
   "survived",
   "reused",
   "inspection",
@@ -299,6 +302,15 @@ it.each([
               renameSync: (from: fs.PathLike, to: fs.PathLike) => {
                 if (observing && mode === "rename")
                   throw new Error("controlled publication failure");
+                if (observing && mode === "held-pending" && fs.existsSync(to))
+                  throw Object.assign(
+                    new Error("pending reader holds destination"),
+                    {
+                      code: "EPERM",
+                      errno: -4048,
+                      syscall: "rename",
+                    },
+                  );
                 fs.renameSync(from, to);
               },
             };
@@ -378,8 +390,25 @@ it.each([
               // then remove owner before any further supervisor inventory.
               expect(inventories).toEqual([[parent, owner]]);
               producerRows = [parent, owner, child];
+              const pendingPath = path.join(
+                registry,
+                fs
+                  .readdirSync(registry)
+                  .find((name) => name.endsWith(".json"))!,
+              );
+              const originalPending = fs.readFileSync(pendingPath, "utf8");
               observing = true;
               failedStart();
+              if (mode === "held-pending") {
+                expect(fs.readFileSync(pendingPath, "utf8")).toBe(
+                  originalPending,
+                );
+                expect(
+                  fs
+                    .readdirSync(registry)
+                    .some((name) => name.endsWith(".complete.json")),
+                ).toBe(true);
+              }
               live = pending ? [parent] : [parent, { ...child, parent: 1 }];
               fs.writeFileSync(path.join(root, "native-stderr"), stderr);
               fs.writeFileSync(
@@ -481,7 +510,9 @@ it.each([
             : [parent],
       );
       expect(supervisor.exit).toHaveBeenCalledExactlyOnceWith(
-        mode === "settled" || mode === "reused" ? 0 : 1,
+        mode === "settled" || mode === "held-pending" || mode === "reused"
+          ? 0
+          : 1,
       );
       expect(fs.existsSync(root)).toBe(pending || mode === "survived");
       if (pending)

@@ -17,6 +17,11 @@ import {
 const io = vi.hoisted(() => ({
   files: new Map<string, string>(),
   observeWrite: undefined as (() => void) | undefined,
+  heldPending: undefined as string | undefined,
+  afterList: undefined as (() => void) | undefined,
+  omitPendingFromList: false,
+  heldCompletionSource: false,
+  completionReadError: undefined as string | undefined,
 }));
 const { files } = io;
 vi.mock("node:fs", () => ({
@@ -29,15 +34,47 @@ vi.mock("node:fs", () => ({
     files.set(name, text);
     io.observeWrite?.();
   },
+  lstatSync: (name: string) => {
+    if (!files.has(name))
+      throw Object.assign(new Error("missing"), { code: "ENOENT" });
+    return {};
+  },
   readFileSync: (name: string) => {
-    if (!files.has(name)) throw new Error("Missing ownership record");
+    if (name.endsWith(".complete.json") && io.completionReadError)
+      throw Object.assign(new Error("unreadable completion"), {
+        code: io.completionReadError,
+      });
+    if (!files.has(name))
+      throw Object.assign(new Error("Missing ownership record"), {
+        code: "ENOENT",
+      });
     return files.get(name)!;
   },
   renameSync: (from: string, to: string) => {
+    if (io.heldCompletionSource && from.endsWith(".complete.json.tmp"))
+      throw Object.assign(new Error("held completion source"), {
+        code: "EBUSY",
+        errno: -4082,
+        syscall: "rename",
+      });
+    if (to === io.heldPending)
+      throw Object.assign(new Error("held pending record"), {
+        code: "EPERM",
+        errno: -4048,
+        syscall: "rename",
+      });
     files.set(to, files.get(from)!);
     files.delete(from);
   },
-  readdirSync: () => [...files.keys()].map((name) => path.basename(name)),
+  readdirSync: () => {
+    const names = [...files.keys()]
+      .map((name) => path.basename(name))
+      .filter(
+        (name) => !io.omitPendingFromList || name.endsWith(".complete.json"),
+      );
+    io.afterList?.();
+    return names;
+  },
 }));
 vi.mock("../fixtures/native-fixture-processes", async (importOriginal) => ({
   ...(await importOriginal<
@@ -60,6 +97,11 @@ const unrelated: FixtureProcess = {
 beforeEach(() => {
   files.clear();
   io.observeWrite = undefined;
+  io.heldPending = undefined;
+  io.afterList = undefined;
+  io.omitPendingFromList = false;
+  io.heldCompletionSource = false;
+  io.completionReadError = undefined;
   vi.mocked(writeSync).mockClear();
   vi.stubEnv("OMXTERM_NATIVE_FIXTURE_ROOT", root);
   vi.mocked(fixtureProcesses).mockReturnValue([owner, child, unrelated]);
@@ -108,6 +150,240 @@ describe("native fixture spawn ownership", () => {
     expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(0);
   });
 
+  it("acquires readiness while a reader holds the pending record, before notifying the caller", () => {
+    const spawned = { pid: 0 };
+    let ready!: () => boolean;
+    const retire = vi.fn();
+    const registered = vi.fn(() => {
+      const owned = new Map<number, FixtureProcess>();
+      expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
+      expect([...owned.values()]).toEqual([owner, child]);
+    });
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exited, observeReady) => {
+        ready = observeReady;
+        return retire;
+      },
+      registered,
+    );
+    const [pendingPath, pendingText] = [...files.entries()][0]!;
+    io.heldPending = pendingPath;
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+    spawned.pid = child.pid;
+    expect(ready()).toBe(true);
+    expect(files.get(pendingPath)).toBe(pendingText);
+    expect(registered).toHaveBeenCalledExactlyOnceWith(spawned);
+    expect(retire).toHaveBeenCalledOnce();
+    expect(observationRecords()).toEqual([]);
+  });
+
+  it("acquires a completion published after directory enumeration without adopting a staged snapshot", () => {
+    const spawned = { pid: 0 };
+    let ready!: () => boolean;
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exit, atReady) => {
+        ready = atReady;
+      },
+    );
+    spawned.pid = child.pid;
+    io.afterList = () => {
+      io.afterList = undefined;
+      expect(ready()).toBe(true);
+    };
+    const owned = new Map<number, FixtureProcess>();
+    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
+    expect([...owned.values()]).toEqual([owner, child]);
+  });
+
+  it("acquires the matching pending record even when enumeration omitted it", () => {
+    spawnFixtureProcess(() => ({ pid: child.pid }));
+    io.omitPendingFromList = true;
+    const owned = new Map<number, FixtureProcess>();
+    expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
+    expect([...owned.values()]).toEqual([owner, child]);
+    const unverified = new Map<number, FixtureProcess>();
+    expect(collectFixtureRegistrations(root, undefined, unverified)).toBe(1);
+    expect(unverified.size).toBe(0);
+  });
+
+  it.each(["EACCES", "ENOENT"])(
+    "fails safely when a listed completion becomes unreadable (%s)",
+    (code) => {
+      spawnFixtureProcess(() => ({ pid: child.pid }));
+      io.completionReadError = code;
+      const owned = new Map<number, FixtureProcess>();
+      expect(() =>
+        collectFixtureRegistrations(root, owner.pid, owned),
+      ).toThrow();
+      expect(owned.has(child.pid)).toBe(false);
+    },
+  );
+
+  it("retains pending ownership and later listeners when the completion source cannot be renamed", () => {
+    const events = new EventEmitter();
+    const spawned = { pid: 0 };
+    const registered = vi.fn();
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exit, ready) => {
+        events.on("ready", ready);
+        return () => events.removeListener("ready", ready);
+      },
+      registered,
+    );
+    const laterListener = vi.fn();
+    events.on("ready", laterListener);
+    spawned.pid = child.pid;
+    io.heldCompletionSource = true;
+    expect(() => events.emit("ready")).not.toThrow();
+    expect(laterListener).toHaveBeenCalledOnce();
+    expect(registered).not.toHaveBeenCalled();
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+    expect(
+      [...files.keys()].some((name) => name.endsWith(".complete.json.tmp")),
+    ).toBe(true);
+    expect(observationRecords()).toEqual([
+      {
+        version: 1,
+        branch: "normal",
+        phase: "completed-publication",
+        code: "EBUSY",
+        errno: -4082,
+        syscall: "rename",
+      },
+      {
+        version: 1,
+        branch: "normal",
+        phase: "ready-observation",
+        code: "EBUSY",
+        errno: -4082,
+        syscall: "rename",
+      },
+    ]);
+    io.heldCompletionSource = false;
+    events.emit("ready");
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+    expect(registered).not.toHaveBeenCalled();
+    expect(laterListener).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not overwrite a pre-existing contradictory completion", () => {
+    const spawned = { pid: 0 };
+    let ready!: () => boolean;
+    const registered = vi.fn();
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exit, atReady) => {
+        ready = atReady;
+      },
+      registered,
+    );
+    const pending = [...files.keys()][0]!;
+    const completion = `${pending.slice(0, -5)}.complete.json`;
+    files.set(completion, "contradictory retained evidence");
+    spawned.pid = child.pid;
+    expect(ready()).toBe(false);
+    expect(files.get(completion)).toBe("contradictory retained evidence");
+    expect(registered).not.toHaveBeenCalled();
+    expect(() =>
+      collectFixtureRegistrations(root, owner.pid, new Map()),
+    ).toThrow();
+  });
+
+  it("does not notify readiness when the acquired process snapshot is malformed", () => {
+    const spawned = { pid: 0 };
+    let ready!: () => boolean;
+    const registered = vi.fn();
+    const retire = vi.fn();
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exit, atReady) => {
+        ready = atReady;
+        return retire;
+      },
+      registered,
+    );
+    spawned.pid = child.pid;
+    vi.mocked(fixtureProcesses).mockReturnValue([
+      owner,
+      { ...child, identity: "" },
+    ]);
+    expect(ready()).toBe(false);
+    expect(registered).not.toHaveBeenCalled();
+    expect(retire).toHaveBeenCalledOnce();
+    expect(
+      collectFixtureRegistrations(root, owner.pid, new Map(), [owner]),
+    ).toBe(1);
+    expect(observationRecords()).toEqual([
+      { version: 1, branch: "normal", phase: "ready-observation" },
+    ]);
+  });
+
+  it("does not acquire readiness from an inventory with conflicting owner incarnations", () => {
+    const spawned = { pid: 0 };
+    let ready!: () => boolean;
+    const registered = vi.fn();
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exit, atReady) => {
+        ready = atReady;
+      },
+      registered,
+    );
+    spawned.pid = child.pid;
+    vi.mocked(fixtureProcesses).mockReturnValue([
+      owner,
+      { ...owner, identity: "999" },
+      child,
+    ]);
+    expect(ready()).toBe(false);
+    expect(registered).not.toHaveBeenCalled();
+    expect(
+      collectFixtureRegistrations(root, owner.pid, new Map(), [owner]),
+    ).toBe(1);
+  });
+
+  it("does not spawn without a valid write-ahead owner identity", () => {
+    vi.mocked(fixtureProcesses).mockReturnValue([{ ...owner, identity: "" }]);
+    const spawn = vi.fn(() => ({ pid: child.pid }));
+    expect(() => spawnFixtureProcess(spawn)).toThrow();
+    expect(spawn).not.toHaveBeenCalled();
+    expect(files.size).toBe(0);
+  });
+
+  it("does not spawn with conflicting write-ahead owner incarnations", () => {
+    vi.mocked(fixtureProcesses).mockReturnValue([
+      owner,
+      { ...owner, identity: "999" },
+      child,
+    ]);
+    const spawn = vi.fn(() => ({ pid: child.pid }));
+    expect(() => spawnFixtureProcess(spawn)).toThrow();
+    expect(spawn).not.toHaveBeenCalled();
+    expect(files.size).toBe(0);
+  });
+
+  it("never treats the owner PID as a verified spawned child", () => {
+    const spawned = { pid: 0 };
+    let ready!: () => boolean;
+    const registered = vi.fn();
+    spawnFixtureProcess(
+      () => spawned,
+      (_child, _exit, atReady) => {
+        ready = atReady;
+      },
+      registered,
+    );
+    spawned.pid = owner.pid;
+    expect(ready()).toBe(false);
+    expect(registered).not.toHaveBeenCalled();
+    expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+  });
+});
+
+describe("native fixture registration and lifecycle", () => {
   it("defers Windows ownership until launcher metadata arrives without adopting unverified processes", () => {
     spawnFixtureProcess(() => ({ pid: child.pid }));
     const owned = new Map<number, FixtureProcess>();
@@ -320,7 +596,9 @@ describe("native fixture spawn ownership", () => {
 
   it("rejects malformed and unrelated process records instead of declaring cleanup safe", () => {
     spawnFixtureProcess(() => ({ pid: child.pid }));
-    const name = [...files.keys()][0]!;
+    const name = [...files.keys()].find((entry) =>
+      entry.endsWith(".complete.json"),
+    )!;
     for (const processes of [[owner, unrelated], [{ pid: -1 }], "invalid"]) {
       files.set(name, JSON.stringify({ owner, processes }));
       expect(() =>

@@ -27,8 +27,16 @@ vi.mock("node:fs", () => ({
     files.set(name, text);
     if (io.failure === "write") throw new Error("private publication details");
   },
+  lstatSync: (name: string) => {
+    if (!files.has(name))
+      throw Object.assign(new Error("missing"), { code: "ENOENT" });
+    return {};
+  },
   readFileSync: (name: string) => {
-    if (!files.has(name)) throw new Error("Missing ownership record");
+    if (!files.has(name))
+      throw Object.assign(new Error("Missing ownership record"), {
+        code: "ENOENT",
+      });
     return files.get(name)!;
   },
   renameSync: (from: string, to: string) => {
@@ -317,7 +325,7 @@ describe("prepared PTY, ownership adapter and real session-owner composition", (
                 phase:
                   failure === "write"
                     ? "completed-write"
-                    : "completed-replacement",
+                    : "completed-publication",
               },
             ]
           : []),

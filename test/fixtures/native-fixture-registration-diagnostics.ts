@@ -2,9 +2,9 @@ import { writeSync } from "node:fs";
 
 const phases = [
   "pending-write",
-  "pending-replacement",
+  "pending-publication",
   "completed-write",
-  "completed-replacement",
+  "completed-publication",
   "ready-observation",
   "exit-observation",
   "failed-start-observation",
@@ -32,7 +32,7 @@ const codes = new Set([
   "EROFS",
   "UNKNOWN",
 ]);
-const syscalls = new Set(["open", "write", "close", "rename"]);
+const syscalls = new Set(["open", "write", "close", "lstat", "rename"]);
 
 // Own primitive data only: never invoke getters, coercion or raw-error JSON.
 function field(error: unknown, name: string): unknown {

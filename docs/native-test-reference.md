@@ -594,6 +594,36 @@ confirming its disappearance. The fixture PTY adapter alone knows beta.18's
 `ready_datapipe` ordering; it never waits for payload or a prompt. Production
 session/shutdown interfaces and their actual-exit barrier remain unchanged.
 
+Each registration publishes its pending write-ahead record before spawning, then
+atomically renames a separately staged, validated completion snapshot to its own
+final name. The original pending record is not replaced or unlinked. The
+supervisor pairs the final snapshot with that exact registration and owner; a
+`.tmp` is never acquisition. It also accepts legacy completed base records.
+Malformed, orphaned, mismatched or contradictory final records fail cleanup;
+unpublished completions stay pending. Directory listings are not transactions:
+the collector checks for a completion published after the listing and reads the
+corresponding pending record even when only the completion was listed. Until the
+leader identity is known, it retains uncertainty without adopting processes.
+The actual identity, descendant, reused-PID, cleanup and receipt checks still
+apply. This cooperative protocol does not defend against arbitrary modification
+of its private files or contain unobserved orphan trees.
+
+A Windows ARM64 NTFS non-elevated interactive control at the #759 base showed
+that a separate Node v26 read-only holder coincided with Electron 43.8.1
+pending-record replacement failing with `EPERM` / `rename` in 3/3 attempts; a
+restrictive no-delete-share holder had the same result. Baseline replacement
+and publication to a distinct name with the pending handle held succeeded in
+3/3 each. Holding the rename source instead produced `EBUSY` in 3/3. These
+bounded controls do not identify the historical holder. Separately, the Windows
+Surface font-ownership fixture passed with a temporary diagnostic holding each
+pending record through its PTY completion publication: both pending records
+remained unchanged, and the real supervisor joined with no cleanup errors.
+The same fixture passed once more without instrumentation. These runs do not
+retroactively pass the failed default suite or qualify unrelated scenarios.
+New rename failures report `completed-publication` (or `pending-publication`),
+not the historical `completed-replacement` phase. They remain failures; no retry
+is introduced.
+
 Only the pinned prepared **Windows** `execFailed === true` agent-error event
 selects failed-start acquisition. Reviewed dependency ordering consumes the
 attempt's deferred-connect admission before that notification, so late worker
@@ -627,7 +657,7 @@ with literal no-profile, bounded, non-spawning arguments while preserving its
 real unavailable-cwd failure oracle. Unknown escaping ancestry is a blocker, not
 permission to invent identities or clear historical blocked receipts.
 Headless composition and receipt coverage:
-`npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
+`npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-publication.test.ts test/unit/native-fixture-registration-diagnostics.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
 Passing those controlled cases does not qualify Windows native D9 or its baseline.
 
 ## Windows cleanup diagnostics

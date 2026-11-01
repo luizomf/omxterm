@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import {
+  lstatSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { recordFixtureRegistrationFailure } from "./native-fixture-registration-diagnostics";
 import {
@@ -11,6 +17,18 @@ import {
 
 export const FIXTURE_PROCESS_DIRECTORY = "native-process-ownership";
 
+function requireUnpublished(destination: string): void {
+  try {
+    lstatSync(destination);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  throw Object.assign(new Error("Native fixture completion already exists"), {
+    code: "EEXIST",
+  });
+}
+
 function publishRegistration(
   record: string,
   branch: Parameters<typeof recordFixtureRegistrationFailure>[0],
@@ -19,15 +37,23 @@ function publishRegistration(
     readonly processes?: readonly FixtureProcess[];
   },
 ): void {
-  const temporary = `${record}.tmp`;
   const completed = data.processes !== undefined;
+  if (data.processes !== undefined)
+    validateSnapshot(data.owner, data.processes);
+  const destination = completed
+    ? `${record.slice(0, -5)}.complete.json`
+    : record;
+  const temporary = `${destination}.tmp`;
   let phase: Parameters<typeof recordFixtureRegistrationFailure>[1] = completed
     ? "completed-write"
     : "pending-write";
   try {
     writeFileSync(temporary, JSON.stringify(data), { flag: "wx" });
-    phase = completed ? "completed-replacement" : "pending-replacement";
-    renameSync(temporary, record);
+    phase = completed ? "completed-publication" : "pending-publication";
+    // Each UUID has one cooperative writer. Do not overwrite a completion
+    // already present when publication is attempted.
+    if (completed) requireUnpublished(destination);
+    renameSync(temporary, destination);
   } catch (error) {
     recordFixtureRegistrationFailure(branch, phase, error);
     throw error;
@@ -49,8 +75,11 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
 ): T {
   const root = process.env["OMXTERM_NATIVE_FIXTURE_ROOT"];
   if (!root) throw new Error("Native fixture ownership root is missing");
-  const owner = fixtureProcesses().find((row) => row.pid === process.pid);
-  if (!owner) throw new Error("Cannot identify native fixture process owner");
+  const initial = fixtureProcesses();
+  assertUniqueProcessIds(initial);
+  const owner = initial.find((row) => row.pid === process.pid);
+  if (!isProcess(owner))
+    throw new Error("Cannot identify native fixture process owner");
   const record = path.join(
     root,
     FIXTURE_PROCESS_DIRECTORY,
@@ -77,9 +106,15 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
   const ready = (observed = false) => {
     if (settled) return true;
     if (failed) return false;
-    if (!Number.isSafeInteger(child.pid) || child.pid <= 0) return false;
+    if (
+      !Number.isSafeInteger(child.pid) ||
+      child.pid <= 0 ||
+      child.pid === owner.pid
+    )
+      return false;
     try {
       const rows = fixtureProcesses();
+      assertUniqueProcessIds(rows);
       collectFixtureDescendants(rows, owned);
       if (!owned.has(child.pid)) return false;
       publishRegistration(record, "normal", {
@@ -107,9 +142,16 @@ export function spawnFixtureProcess<T extends { readonly pid: number }>(
       try {
         // An ordinary exit needs a positive child and disappearance. Only the
         // adapter's distinct terminal failed-start path can acquire at PID 0.
-        if (!Number.isSafeInteger(child.pid) || child.pid <= 0)
-          throw new Error("Early-exit fixture has no verified positive PID");
+        if (
+          !Number.isSafeInteger(child.pid) ||
+          child.pid <= 0 ||
+          child.pid === owner.pid
+        )
+          throw new Error(
+            "Early-exit fixture has no verified positive child PID",
+          );
         const remaining = fixtureProcesses();
+        assertUniqueProcessIds(remaining);
         if (remaining.some((row) => row.pid === child.pid))
           throw new Error("Early-exit fixture PID remains observable");
         collectFixtureDescendants(remaining, owned);
@@ -184,6 +226,92 @@ function isProcess(value: unknown): value is FixtureProcess {
   );
 }
 
+function assertUniqueProcessIds(rows: readonly FixtureProcess[]): void {
+  const pids = rows.filter((row) => row.pid > 0).map((row) => row.pid);
+  if (new Set(pids).size !== pids.length)
+    throw new Error("Conflicting native fixture process inventory");
+}
+
+function validateSnapshot(
+  owner: FixtureProcess,
+  processes: unknown,
+): Map<number, FixtureProcess> {
+  if (
+    !isProcess(owner) ||
+    !Array.isArray(processes) ||
+    !processes.every(isProcess) ||
+    new Set(processes.map((row) => row.pid)).size !== processes.length ||
+    !processes.some(
+      (row) =>
+        row.pid === owner.pid &&
+        row.parent === owner.parent &&
+        row.identity === owner.identity,
+    )
+  )
+    throw new Error("Invalid native fixture process snapshot");
+  const registered = new Map([[owner.pid, owner]]);
+  collectFixtureDescendants(processes, registered);
+  if (
+    processes.some((row) => registered.get(row.pid)?.identity !== row.identity)
+  )
+    throw new Error("Unrelated process in native fixture ownership record");
+  return registered;
+}
+
+function readRegistration(
+  directory: string,
+  name: string,
+  names: Set<string>,
+  leaderPid: number,
+  owned: Map<number, FixtureProcess>,
+): { owner: FixtureProcess; registered?: Map<number, FixtureProcess> } {
+  let record: unknown = JSON.parse(
+    readFileSync(path.join(directory, name), "utf8"),
+  );
+  if (
+    typeof record !== "object" ||
+    record === null ||
+    !("owner" in record) ||
+    !isProcess(record.owner) ||
+    record.owner.pid !== leaderPid ||
+    (owned.has(leaderPid) &&
+      owned.get(leaderPid)!.identity !== record.owner.identity)
+  )
+    throw new Error("Invalid native fixture ownership record");
+  const owner = record.owner;
+  const completedName = `${name.slice(0, -5)}.complete.json`;
+  let completedText: string | undefined;
+  try {
+    // A completion can be published after the non-transactional listing.
+    completedText = readFileSync(path.join(directory, completedName), "utf8");
+  } catch (error) {
+    if (
+      (error as NodeJS.ErrnoException).code !== "ENOENT" ||
+      names.has(completedName)
+    )
+      throw error;
+  }
+  if (completedText !== undefined) {
+    if ("processes" in record)
+      throw new Error("Contradictory native fixture ownership records");
+    record = JSON.parse(completedText) as unknown;
+    if (
+      typeof record !== "object" ||
+      record === null ||
+      !("owner" in record) ||
+      !isProcess(record.owner) ||
+      record.owner.pid !== owner.pid ||
+      record.owner.parent !== owner.parent ||
+      record.owner.identity !== owner.identity ||
+      !("processes" in record)
+    )
+      throw new Error("Invalid native fixture completion record");
+  }
+  return "processes" in record
+    ? { owner, registered: validateSnapshot(owner, record.processes) }
+    : { owner };
+}
+
 export function collectFixtureRegistrations(
   root: string,
   leaderPid: number | undefined,
@@ -194,42 +322,35 @@ export function collectFixtureRegistrations(
   if (current === undefined) current = fixtureProcesses(failureContext);
   let pending = 0;
   const directory = path.join(root, FIXTURE_PROCESS_DIRECTORY);
-  for (const name of readdirSync(directory)) {
-    if (!name.endsWith(".json")) continue;
+  const names = new Set(readdirSync(directory));
+  const records = new Set(
+    [...names]
+      .filter((name) => name.endsWith(".json"))
+      .map((name) =>
+        name.endsWith(".complete.json")
+          ? `${name.slice(0, -".complete.json".length)}.json`
+          : name,
+      ),
+  );
+  for (const name of records) {
     // The Windows launcher publishes its independently inspected leader after
     // spawn. A fixture can register first; defer adoption, not the uncertainty.
     if (leaderPid === undefined) {
       pending += 1;
       continue;
     }
-    const record: unknown = JSON.parse(
-      readFileSync(path.join(directory, name), "utf8"),
+    const { owner, registered } = readRegistration(
+      directory,
+      name,
+      names,
+      leaderPid,
+      owned,
     );
-    if (
-      typeof record !== "object" ||
-      record === null ||
-      !("owner" in record) ||
-      !isProcess(record.owner) ||
-      record.owner.pid !== leaderPid ||
-      (owned.has(leaderPid) &&
-        owned.get(leaderPid)!.identity !== record.owner.identity)
-    )
-      throw new Error("Invalid native fixture ownership record");
-    owned.set(record.owner.pid, record.owner);
-    if (!("processes" in record)) {
+    owned.set(owner.pid, owner);
+    if (!registered) {
       pending += 1;
       continue;
     }
-    if (!Array.isArray(record.processes) || !record.processes.every(isProcess))
-      throw new Error("Invalid native fixture process snapshot");
-    const registered = new Map([[record.owner.pid, record.owner]]);
-    collectFixtureDescendants(record.processes, registered);
-    if (
-      record.processes.some(
-        (row) => registered.get(row.pid)?.identity !== row.identity,
-      )
-    )
-      throw new Error("Unrelated process in native fixture ownership record");
     for (const row of registered.values()) {
       // Keep exited identities too: a short-lived relaunch can finish before
       // sampling, but its final outcome still needs historical ownership proof.

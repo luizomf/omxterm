@@ -17,9 +17,10 @@ const io = vi.hoisted(() => ({
   fault: "" as
     | ""
     | "pending-write"
-    | "pending-replacement"
+    | "pending-publication"
     | "completed-write"
-    | "completed-replacement",
+    | "completed-publication"
+    | "completion-stat",
   error: undefined as unknown,
   rows: [] as { pid: number; parent: number; identity: string }[],
 }));
@@ -42,13 +43,23 @@ vi.mock("node:fs", () => ({
   renameSync: (from: string, to: string) => {
     const phase = (JSON.parse(io.files.get(from)!) as { processes?: unknown })
       .processes
-      ? "completed-replacement"
-      : "pending-replacement";
+      ? "completed-publication"
+      : "pending-publication";
     if (io.fault === phase) throw io.error;
     io.files.set(to, io.files.get(from)!);
     io.files.delete(from);
   },
-  readFileSync: (name: string) => io.files.get(name)!,
+  lstatSync: (name: string) => {
+    if (io.fault === "completion-stat") throw io.error;
+    if (!io.files.has(name))
+      throw Object.assign(new Error("missing"), { code: "ENOENT" });
+    return {};
+  },
+  readFileSync: (name: string) => {
+    if (!io.files.has(name))
+      throw Object.assign(new Error("missing"), { code: "ENOENT" });
+    return io.files.get(name)!;
+  },
   readdirSync: () => [...io.files.keys()].map((name) => path.basename(name)),
 }));
 const root = path.resolve("synthetic-profile");
@@ -88,9 +99,9 @@ afterEach(() => {
 
 it.each([
   ["normal", "completed-write", "close"],
-  ["normal", "completed-replacement", "rename"],
+  ["normal", "completed-publication", "rename"],
   ["early-exit", "completed-write", "close"],
-  ["early-exit", "completed-replacement", "rename"],
+  ["early-exit", "completed-publication", "rename"],
 ] as const)(
   "distinguishes %s %s with pending records, throwing synchronously but recording observer failures",
   async (branch, phase, syscall) => {
@@ -147,7 +158,7 @@ it.each([
   },
 );
 
-it.each(["pending-write", "pending-replacement"] as const)(
+it.each(["pending-write", "pending-publication"] as const)(
   "reports %s without invoking native spawn or completing ownership",
   (phase) => {
     io.fault = phase;
@@ -179,7 +190,7 @@ it.each(["pending-write", "pending-replacement"] as const)(
 );
 
 it.each(["normal", "early-exit"] as const)(
-  "preserves successful %s publication without diagnostics or additional registry files",
+  "preserves both successful %s publications without diagnostics or temporary files",
   async (branch) => {
     let completed!: () => void;
     const child = {
@@ -200,14 +211,50 @@ it.each(["normal", "early-exit"] as const)(
     const owned = new Map<number, FixtureProcess>();
     expect(collectFixtureRegistrations(root, owner.pid, owned)).toBe(0);
     expect([...owned.values()]).toEqual([owner, ...children]);
-    expect(io.files.size).toBe(1);
-    expect([...io.files.keys()][0]).toMatch(/\.json$/u);
+    expect(io.files.size).toBe(2);
+    const entries = [...io.files.entries()];
+    const pending = entries.find(([name]) => !name.endsWith(".complete.json"))!;
+    const completion = entries.find(([name]) =>
+      name.endsWith(".complete.json"),
+    )!;
+    expect(completion[0]).toBe(`${pending[0].slice(0, -5)}.complete.json`);
+    expect(JSON.parse(pending[1])).toEqual({ owner });
+    expect(JSON.parse(completion[1])).toEqual({
+      owner,
+      processes: [owner, ...children],
+    });
     expect(output).toEqual([]);
   },
 );
 
+it("reports a failed completion destination check as lstat, without claiming rename", () => {
+  io.fault = "completion-stat";
+  io.error = Object.assign(new Error("private path"), {
+    code: "EACCES",
+    errno: -13,
+    syscall: "lstat",
+  });
+  let received: unknown;
+  try {
+    spawnFixtureProcess(() => ({ pid: children[0]!.pid }));
+  } catch (error) {
+    received = error;
+  }
+  expect(received).toBe(io.error);
+  expect(collectFixtureRegistrations(root, owner.pid, new Map())).toBe(1);
+  expect(output).toHaveLength(1);
+  expect(JSON.parse(output[0]!.slice(prefix.length))).toEqual({
+    version: 1,
+    branch: "normal",
+    phase: "completed-publication",
+    code: "EACCES",
+    errno: -13,
+    syscall: "lstat",
+  });
+});
+
 it("never replaces the original exception when the diagnostic sink throws", () => {
-  io.fault = "completed-replacement";
+  io.fault = "completed-publication";
   vi.mocked(writeSync).mockImplementation(() => {
     throw new Error("sink failure");
   });
@@ -242,7 +289,10 @@ it("does not retry a short diagnostic write or replace the publication exception
 it("does not retry, overwrite or delete a competing exclusive temporary entry", () => {
   const spawn = () => {
     const record = [...io.files.keys()][0]!;
-    io.files.set(`${record}.tmp`, "untouched competing temporary entry");
+    io.files.set(
+      `${record.slice(0, -5)}.complete.json.tmp`,
+      "untouched competing temporary entry",
+    );
     return { pid: children[0]!.pid };
   };
   expect(() => spawnFixtureProcess(spawn)).toThrow("exists");
@@ -260,7 +310,7 @@ it("does not retry, overwrite or delete a competing exclusive temporary entry", 
 });
 
 it("captures publication metadata before explicit-command normalization without widening the safe production error", () => {
-  io.fault = "completed-replacement";
+  io.fault = "completed-publication";
   const nativeSpawn = vi.fn(() => ({ pid: children[0]!.pid }));
   let received: unknown;
   try {
@@ -292,7 +342,7 @@ it("captures publication metadata before explicit-command normalization without 
   });
   expect((received as Error).cause).toBeUndefined();
   expect(output).toHaveLength(1);
-  expect(output[0]).toContain('"phase":"completed-replacement"');
+  expect(output[0]).toContain('"phase":"completed-publication"');
   expect(output[0]).not.toContain("private");
 });
 
@@ -387,7 +437,7 @@ it.each([
 it.each([-2147483648, 2147483647])(
   "retains bounded numeric errno %s and fixed maximal fields",
   (errno) => {
-    io.fault = "completed-replacement";
+    io.fault = "completed-publication";
     io.error = {
       code: "ENAMETOOLONG",
       errno,
@@ -400,7 +450,7 @@ it.each([-2147483648, 2147483647])(
     expect(JSON.parse(output[0]!.slice(prefix.length))).toEqual({
       version: 1,
       branch: "normal",
-      phase: "completed-replacement",
+      phase: "completed-publication",
       code: "ENAMETOOLONG",
       errno,
       syscall: "rename",
