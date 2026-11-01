@@ -234,7 +234,7 @@ export async function exerciseSettingsDialog(
     "[...document.querySelectorAll('.restty-terminal-surface')].some((surface) => surface.style.getPropertyValue('--terminal-padding-top') === '24px')",
   );
 
-  await tab("New Windows");
+  await tab("Window");
   await evaluate(
     `(() => { const input = ${field("Show tab bar")}; input.checked = false; input.dispatchEvent(new Event("change")); })()`,
   );
