@@ -178,10 +178,24 @@ it("resolves only executable regular files under absolute application PATH entri
   const home = await fixture();
   await writeFile(path.join(home, "client"), "not executed", { mode: 0o700 });
   await symlink("client", path.join(home, "ssh"));
-  expect(await findSsh({ PATH: `:.:relative:${home}` })).toBe(
-    path.join(home, "ssh"),
-  );
-  expect(await findSsh({ PATH: ":.:relative" })).toBeUndefined();
+  expect(
+    await findSsh({ PATH: ["", ".", "relative", home].join(path.delimiter) }),
+  ).toBe(path.join(home, "ssh"));
+  expect(
+    await findSsh({ PATH: ["", ".", "relative"].join(path.delimiter) }),
+  ).toBeUndefined();
+});
+
+it("does not infer an ssh executable from PATHEXT or an ssh directory", async () => {
+  const home = await fixture();
+  await writeFile(path.join(home, "ssh.exe"), "not executed", { mode: 0o700 });
+  const environment = { PATH: home, PATHEXT: ".EXE;.CMD" };
+  expect(await findSsh(environment)).toBeUndefined();
+  await mkdir(path.join(home, "ssh"));
+  expect(await findSsh(environment)).toBeUndefined();
+  await rm(path.join(home, "ssh"), { recursive: true });
+  await writeFile(path.join(home, "ssh"), "not executed", { mode: 0o700 });
+  expect(await findSsh(environment)).toBe(path.join(home, "ssh"));
 });
 
 it("transfers to the original core owner once, independently of later extension revocation", async () => {

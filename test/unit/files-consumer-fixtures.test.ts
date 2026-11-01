@@ -59,7 +59,8 @@ async function helpers(file: string) {
       outcome?: string,
     ): Promise<void>;
   };
-  return create(path, until, view, assert);
+  // These Linux/macOS preview pages and their synthetic directories are POSIX.
+  return create(path.posix, until, view, assert);
 }
 it.each([
   "settled",

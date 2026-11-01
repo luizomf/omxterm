@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { transformSync } from "esbuild";
-import { afterAll, afterEach, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { createRequire } from "node:module";
 
 const { JSDOM } = createRequire(import.meta.url)("jsdom") as {
@@ -18,7 +18,7 @@ type View = {
   getURL(): string;
   executeJavaScript(script: string): Promise<unknown>;
 };
-async function observer(views: View[]) {
+async function observer(views: View[], paths: typeof path = path.posix) {
   const source = await readFile("test/fixtures/files-packaged.cjs", "utf8");
   const start = source.indexOf("async function diagnoseListing(");
   const end = source.indexOf("function assertNormalBackendRetirement(", start);
@@ -32,7 +32,7 @@ async function observer(views: View[]) {
     contents: { getAllWebContents(): View[] },
     paths: typeof path,
   ) => (root: string) => Promise<{ hostedCount: number; views: unknown[] }>;
-  return create({ getAllWebContents: () => views }, path);
+  return create({ getAllWebContents: () => views }, paths);
 }
 const evaluate = async (script: string): Promise<unknown> => {
   const run = new Function("document", `return (${script});`) as (
@@ -47,37 +47,79 @@ const view: View = {
 };
 afterEach(() => document.body.replaceChildren());
 
-it("captures bounded cloneable listing state without returning directory paths", async () => {
-  document.body.innerHTML =
-    '<form class="location"><input value="/fixture/home"></form><div class="entries" role="tree" aria-busy="false"><div class="file-row"></div></div><p class="summary">1 visible entry</p>';
-  const diagnose = await observer([
-    view,
-    { ...view, isDestroyed: () => true },
-    { ...view, getURL: () => "file:///private/host/path" },
-  ]);
-  const snapshot = await diagnose("/fixture");
-  expect(snapshot).toEqual({
-    hostedCount: 1,
-    views: [
-      {
-        locationPresent: true,
-        role: "tree",
-        busy: "false",
-        summary: "1 visible entry",
-        rowCount: 1,
-        ownedDirectory: true,
-      },
-    ],
-  });
-  expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot);
-  expect(JSON.stringify(snapshot)).not.toContain("/fixture");
-  document.querySelector("input")!.value = "/private/not-owned";
-  document.querySelector(".summary")!.textContent =
-    "Directory unavailable: /private/not-owned";
-  expect((await diagnose("/fixture")).views).toEqual([
-    expect.objectContaining({ ownedDirectory: false, summary: "[redacted]" }),
-  ]);
-});
+const pathCases = [
+  {
+    platform: "POSIX",
+    paths: path.posix,
+    root: "/fixture",
+    home: "/fixture/home",
+    ownedFiles: "/fixture/owned-files",
+    outside: "/private/not-owned",
+    evidence: "/evidence",
+    receipt: "/evidence/listing-failure.json",
+  },
+  {
+    platform: "Windows",
+    paths: path.win32,
+    root: "C:\\fixture",
+    home: "C:\\fixture\\home",
+    ownedFiles: "C:\\fixture\\owned-files",
+    outside: "C:\\private\\not-owned",
+    evidence: "C:\\evidence",
+    receipt: "C:\\evidence\\listing-failure.json",
+  },
+] as const;
+
+it.each(pathCases)(
+  "$platform listing snapshot identifies owned directories without returning paths",
+  async ({ paths, root, home, ownedFiles, outside }) => {
+    document.body.innerHTML =
+      '<form class="location"><input></form><div class="entries" role="tree" aria-busy="false"><div class="file-row"></div></div><p class="summary">1 visible entry</p>';
+    document.querySelector("input")!.value = home;
+    const diagnose = await observer(
+      [
+        view,
+        { ...view, isDestroyed: () => true },
+        { ...view, getURL: () => "file:///private/host/path" },
+      ],
+      paths,
+    );
+    const snapshot = await diagnose(root);
+    expect(snapshot).toEqual({
+      hostedCount: 1,
+      views: [
+        {
+          locationPresent: true,
+          role: "tree",
+          busy: "false",
+          summary: "1 visible entry",
+          rowCount: 1,
+          ownedDirectory: true,
+        },
+      ],
+    });
+    expect(JSON.parse(JSON.stringify(snapshot))).toEqual(snapshot);
+    expect(JSON.stringify(snapshot)).not.toContain(
+      JSON.stringify(root).slice(1, -1),
+    );
+    for (const owned of [root, ownedFiles]) {
+      document.querySelector("input")!.value = owned;
+      expect((await diagnose(root)).views).toEqual([
+        expect.objectContaining({ ownedDirectory: true }),
+      ]);
+    }
+    document.querySelector("input")!.value = outside;
+    document.querySelector(".summary")!.textContent =
+      `Directory unavailable: ${outside}`;
+    const redacted = await diagnose(root);
+    expect(redacted.views).toEqual([
+      expect.objectContaining({ ownedDirectory: false, summary: "[redacted]" }),
+    ]);
+    expect(JSON.stringify(redacted)).not.toContain(
+      JSON.stringify(outside).slice(1, -1),
+    );
+  },
+);
 
 it("bounds view count/text and records destroyed-during-observation failure without native errors", async () => {
   document.body.innerHTML = '<p class="summary"></p>';
@@ -106,6 +148,7 @@ type Client = {
 };
 async function capture(
   write: (file: string, contents: string) => Promise<void>,
+  paths: typeof path,
 ) {
   const source = await readFile(
     "test/integration/files-packaged.test.ts",
@@ -129,43 +172,48 @@ async function capture(
     root: string,
     evidence: string,
   ) => Promise<void>;
-  return create(write, path);
+  return create(write, paths);
 }
 
-it.each(["success", "inspector-failure", "write-failure"])(
-  "failure capture preserves the primary outcome on %s",
-  async (mode) => {
-    const write = vi.fn(async () => {
-      if (mode === "write-failure") throw Error("private /write/path");
-    });
-    const collect = await capture(write);
-    const client = {
-      evaluate: vi.fn(async () => {
-        if (mode === "inspector-failure")
-          throw Error("private /inspector/path");
-        return { hostedCount: 0, views: [] };
-      }),
-    };
-    await expect(
-      collect(client, "observer", "/fixture", "/evidence"),
-    ).resolves.toBeUndefined();
-    expect(client.evaluate).toHaveBeenCalledWith(
-      'observer.diagnoseListing("/fixture")',
-      3000,
+describe.each(pathCases)(
+  "$platform failure capture",
+  ({ paths, root, evidence, receipt }) => {
+    it.each(["success", "inspector-failure", "write-failure"])(
+      "preserves the primary outcome on %s",
+      async (mode) => {
+        const write = vi.fn(async () => {
+          if (mode === "write-failure") throw Error("private /write/path");
+        });
+        const collect = await capture(write, paths);
+        const client = {
+          evaluate: vi.fn(async () => {
+            if (mode === "inspector-failure")
+              throw Error("private /inspector/path");
+            return { hostedCount: 0, views: [] };
+          }),
+        };
+        await expect(
+          collect(client, "observer", root, evidence),
+        ).resolves.toBeUndefined();
+        expect(client.evaluate).toHaveBeenCalledWith(
+          `observer.diagnoseListing(${JSON.stringify(root)})`,
+          3000,
+        );
+        expect(write).toHaveBeenCalledWith(
+          receipt,
+          JSON.stringify(
+            mode === "inspector-failure"
+              ? { snapshotError: "observer-unavailable" }
+              : { hostedCount: 0, views: [] },
+            null,
+            2,
+          ),
+        );
+        client.evaluate.mockClear();
+        await collect(undefined, "observer", root, evidence);
+        await collect(client, undefined, root, evidence);
+        expect(client.evaluate).not.toHaveBeenCalled();
+      },
     );
-    expect(write).toHaveBeenCalledWith(
-      "/evidence/listing-failure.json",
-      JSON.stringify(
-        mode === "inspector-failure"
-          ? { snapshotError: "observer-unavailable" }
-          : { hostedCount: 0, views: [] },
-        null,
-        2,
-      ),
-    );
-    client.evaluate.mockClear();
-    await collect(undefined, "observer", "/fixture", "/evidence");
-    await collect(client, undefined, "/fixture", "/evidence");
-    expect(client.evaluate).not.toHaveBeenCalled();
   },
 );

@@ -9,6 +9,11 @@ const calls = vi.hoisted(() => {
   return { moveNoReplace, trash, load, createRequire: vi.fn(() => load) };
 });
 vi.mock("node:module", () => ({ createRequire: calls.createRequire }));
+// The mocked Darwin backend must use Darwin's POSIX paths even on Windows.
+vi.mock("node:path", async (original) => {
+  const actual = await original<typeof import("node:path")>();
+  return { ...actual, default: actual.posix };
+});
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const arch = Object.getOwnPropertyDescriptor(process, "arch")!;
@@ -34,7 +39,7 @@ it.each(["darwin", "linux"])(
     await services.moveNoReplace("/second", "/other");
     expect(calls.load).toHaveBeenCalledTimes(1);
     expect(calls.load).toHaveBeenCalledWith(
-      expect.stringMatching(/\/files-move\.node$/),
+      expect.stringMatching(/[\\/]files-move\.node$/),
     );
     expect(calls.moveNoReplace.mock.calls).toEqual([
       ["/source", "/destination"],

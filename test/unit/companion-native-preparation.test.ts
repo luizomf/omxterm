@@ -160,27 +160,33 @@ for (const [key, target] of [
   });
 }
 
-it.each([
-  "valid-source",
-  "valid-package",
-  "packaged-lie",
-  "wrong-app-path",
-  "wrong-executable",
-  "wrong-argv",
-  "wrong-version",
-  "changed-entry",
-  "changed-runtime",
-  "changed-executable",
-  "wrong-main",
-  "missing-hash",
-])("SSH admission validates actual identity: %s", async (fault) => {
+const sshIdentityCases = [
+  { platform: "POSIX", paths: path.posix, sourceRoot: "/fixture/source" },
+  { platform: "Windows", paths: path.win32, sourceRoot: "C:\\fixture\\source" },
+].flatMap((fixture) =>
+  [
+    "valid-source",
+    "valid-package",
+    "packaged-lie",
+    "wrong-app-path",
+    "wrong-executable",
+    "wrong-argv",
+    "wrong-version",
+    "changed-entry",
+    "changed-runtime",
+    "changed-executable",
+    "wrong-main",
+    "missing-hash",
+  ].map((fault) => ({ ...fixture, fault })),
+);
+it.each(sshIdentityCases)("$platform SSH identity: $fault", async (fixture) => {
+  const { paths, sourceRoot, fault } = fixture;
   const source = await readFile("test/fixtures/ssh-packaged.cjs", "utf8");
   const block = source.slice(
     source.indexOf("function inspect(options)"),
     source.indexOf("function identity(pid)"),
   );
-  const sourceRoot = "/fixture/source";
-  const executable = path.join(
+  const executable = paths.join(
     sourceRoot,
     "node_modules/electron/dist/electron",
   );
@@ -225,9 +231,9 @@ it.each([
           ? fault === "changed-executable"
             ? "changed"
             : "electron"
-          : files[path.relative(sourceRoot, name)],
+          : files[paths.relative(sourceRoot, name).split(paths.sep).join("/")],
     },
-    path,
+    path: paths,
     assert,
     require,
   };

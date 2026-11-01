@@ -99,7 +99,8 @@ function harness(publicMode: "link" | "catalog" | "local" = "link") {
         },
         until,
         write,
-        path,
+        // Model the POSIX preview page and evidence paths, regardless of host.
+        path.posix,
       ),
   };
 }
@@ -109,7 +110,13 @@ it.each(["link", "catalog"] as const)(
     await readyPage();
     const h = harness(mode);
     const result = h.start();
-    await vi.waitFor(() => expect(h.frames).toHaveLength(1));
+    // Surface readiness failures immediately, even if no frame is scheduled.
+    await Promise.race([
+      vi.waitFor(() => expect(h.frames).toHaveLength(1)),
+      result.then(() => {
+        throw Error("capture preceded render opportunities");
+      }),
+    ]);
     expect(h.capturePage).not.toHaveBeenCalled();
     h.frames.shift()!(0);
     expect(h.capturePage).not.toHaveBeenCalled();
@@ -118,7 +125,7 @@ it.each(["link", "catalog"] as const)(
     await result;
     expect(h.capturePage).toHaveBeenCalledOnce();
     expect(h.write).toHaveBeenCalledWith(
-      path.join("/private-evidence", "files.png"),
+      "/private-evidence/files.png",
       Buffer.from("image"),
     );
   },
