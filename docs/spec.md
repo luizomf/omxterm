@@ -551,8 +551,9 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
   below full-width title/tab chrome. Linux ARM64/x64 and macOS/Windows ARM64 source use the
   separately installed Snippets extension; other targets retain the built-in view.
-  Windows ARM64 source qualification is pending; published Windows hosts retain
-  built-in Snippets.
+  Windows ARM64 passed the bounded ordinary [Snippets source checkpoint](snippets-migration.md#windows-arm64-source-transition);
+  full portable, exact-package and public-consumption qualification remain separate.
+  Published Windows hosts retain built-in Snippets.
   The published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and
   Linux x64 `0.24.0-dev.30` previews use optional Snippets; stable `0.23.0` retains
   the built-in view. All three previews offer the same immutable archive through
@@ -1938,8 +1939,10 @@ Node-mode store/lease/bootstrap loading, not packaged GUI activation or an
 installer. A later [packaged-GUI checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
 exercised a minimal local extension on that retained directory. A later separate
 [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
-passed on a new installer built from an independent copy; Windows Snippets
-migration remains separate and unqualified on the changed source. Linux x64 now admits explicit extension
+passed on a new installer built from an independent copy. The later Windows
+Snippets [ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition)
+passed on exact dev.33 source, with synthetic-input and capture limits. Its full
+portable, exact-package and public-consumption gates remain separate. Linux x64 now admits explicit extension
 installation and activation through the existing production owners; its
 [composition qualification](linux-x64-extension-composition.md) remains distinct
 from earlier module, hosted-view and package checks. That historical composition

@@ -36,13 +36,15 @@ minimal fixture. Its historical built-in Snippets receipt predates the separate
 Snippets source transition; existing package restrictions are unchanged.
 The earlier [Windows ARM64 source composition](windows-arm64-extension-composition.md)
 retained built-in Snippets and passed a bounded ordinary-user native checkpoint.
-Current Windows ARM64 source selects optional Snippets; its transition remains
-unqualified.
+Current Windows ARM64 source selects optional Snippets and has passed a bounded
+[ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition),
+with synthetic-input, lifecycle and visual limits.
 A separate [unpacked-package runtime inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
 passed, followed by a bounded [packaged-GUI composition checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
 on that exact retained package. A separate [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
-passed for a new installer built from an independent copy; Windows Snippets
-migration remains unqualified.
+passed for a new installer built from an independent copy. Those built-in-Snippets
+artifacts do not qualify the later transition's exact package or public consumption;
+its full portable baseline also remains separate.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

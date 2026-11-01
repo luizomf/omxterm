@@ -224,12 +224,47 @@ Finder/Gatekeeper/notarization, physical-keyboard, natural-autorepeat, Kitty,
 OS-compositor, macOS Files/SSH or the full portable suite. No immutable archive
 or original build receipt was changed.
 
-## Windows ARM64 source transition — qualification pending
+## Windows ARM64 source transition
+
+🤖 AI-assisted.
+
+The full ordinary ten-check source scenario passed on **2026-11-01** with
+`684d3ee9ca07a5bddade18d147fd3b23d6af2bfb` (tree
+`a679a0e3f04edb873c7954207963b6a9ff714724`, `0.24.0-dev.33`). This is a bounded
+source checkpoint, not a complete `check:portable`, package/NSIS or public-catalog
+qualification. All child-input, Insert, readiness and memory diagnostic flags were
+absent from the actual selected subprocess environment.
+
+The unchanged Snippets `0.1.0` archive was 76,653 bytes, SHA-256
+`6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`.
+Ordinary local trust/dormant installation and explicit activation, missing/disabled
+guidance, Close versus Hide, exact Insert/Run, held Enter/repeat/release, preview
+intent overrides/Cancel, retained search, live en-US/pt-BR relabeling and
+retirement with unchanged YAML all passed. Seven action windows and the whole
+interaction retained exact semantic input and separately checked child receipts;
+the same Surface and creation-identified ConPTY remained usable after retirement.
+
+The run used a non-elevated interactive Windows ARM64 session, synthetic SendInput,
+controlled consent and a controlled Node console probe. Trusted child activation,
+a prevented core Enter repeat and independently observed held-to-up states were
+recorded. Normal application Quit joined PTY onExit, backend exit/close and
+Electron exit/close/both stream EOFs. The captured PTY/backend identities were
+absent afterward; no separate PTY close-event or arbitrary-descendant census is
+claimed. Build, typecheck and lint passed, with 303 focused passes and one documented
+skip, 29 Installed Packages passes, one runtime pass and this one ordinary scenario.
+Those selected suites and earlier headless tests are not the complete default suite.
+
+All three actual captures were inspected: search/items, the preview's literal text
+and Cancel/Insert/Run controls, focus and host chrome were legible without visible
+clipping. Core and native-child images were captured separately, not as one
+flattened native-view screenshot or proof of unpictured interaction. This does not
+qualify physical keyboards/autorepeat, account-shell or bracketed-paste behavior,
+Kitty, broad GPU/compositor behavior, Files/SSH or other platforms.
 
 Windows ARM64 source selects the same optional implementation and preserves the
 existing shortcut, user-owned YAML and deliberate installation/enablement. The
-unchanged published Snippets `0.1.0` archive is the intended qualification input,
-not evidence of Windows compatibility by itself. Its historical bundled example
+unchanged published Snippets `0.1.0` archive is the qualified input for this
+source checkpoint, not evidence of compatibility with every admitted host. Its historical bundled example
 uses POSIX `printf`; choose commands appropriate for the configured Windows shell.
 
 The attempted source campaign at `fac36ba` timed out at its original exact-write
@@ -259,9 +294,16 @@ diagnostic or its extra marker. It may perturb timing, may continue through the
 ordinary scenario, and is not proof of uninstrumented behavior or qualification
 by itself.
 
-No Windows Snippets source, exact-package or public-consumption qualification
-has yet passed for this transition. Earlier Windows composition, packaged-GUI and
-exact-NSIS checkpoints used built-in Snippets and remain distinct. Published
+Later ordinary capture-off campaigns also genuinely lacked the first draft
+receipt. A memory-instrumented occurrence received the exact bytes and emitted its
+receipt, but changed timing/liveness; it was not an ordinary qualification. The
+subsequent full ordinary pass above satisfies the source scenario gate without
+establishing a causal fix for historical intermittence. Earlier failures remain
+failures, not retroactive passes.
+
+Exact-package and public-consumption qualification have not passed for this
+transition. Earlier Windows composition, packaged-GUI and exact-NSIS checkpoints
+used built-in Snippets and remain distinct. Published
 Windows hosts and Windows x64 retain built-in Snippets; no host, catalog or archive
 has been published or changed by this source transition.
 

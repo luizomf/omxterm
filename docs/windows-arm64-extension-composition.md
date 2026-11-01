@@ -4,7 +4,9 @@ Windows ARM64 source admits production extension management and builds the
 app-owned backend runtime and lease addon with the ordinary application build.
 Startup, installation and enablement remain dormant; explicit shared actions
 activate trusted installed code. Windows ARM64 source selects optional Snippets
-and omits its starter example; this transition is not yet natively qualified.
+and omits its starter example; its separate bounded [ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition)
+passed on exact dev.33 source. That is not a full portable, exact-package or
+public-consumption qualification.
 Published Windows hosts and Windows x64 retain built-in Snippets. Windows x64
 remains outside extension admission. The separate Files
 move primitive remains unsupported on Windows, with no overwrite fallback.

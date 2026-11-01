@@ -47,8 +47,9 @@ passed for runtime loading only; a later [packaged-GUI composition checkpoint](.
 exercised that retained package with a minimal local extension. A later separate
 [exact-NSIS checkpoint](../windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
 passed on a new installer built from an independent copy. Windows ARM64 source
-now selects optional Snippets; its migration qualification remains separate and
-unrun.
+now selects optional Snippets; its separate bounded [ordinary source checkpoint](../snippets-migration.md#windows-arm64-source-transition)
+passed on exact dev.33 source. Full portable, exact-package and public-consumption
+qualification remain separate; earlier intermittent failures are not claimed fixed.
 The delivered [macOS composition](../macos-extension-composition.md) prerequisite
 did not select installed Snippets or change its starter kit. The subsequent source
 transition reuses its ordinary production owners and the existing optional-Snippets
@@ -201,7 +202,9 @@ in a distributed host.
 
 Linux ARM64 is the first qualification target, not permission to drop Snippets
 on other distributed platforms. Published Windows hosts and Windows x64 keep the
-current built-in experience; Windows ARM64 source qualification remains pending.
+current built-in experience. Windows ARM64's bounded ordinary source checkpoint
+has passed; its full portable, exact-package and public-consumption gates remain
+separate.
 Other targets retain the built-in experience until their extension infrastructure
 and equivalent migration are qualified. This
 transitional duplication must reuse parser/UI source where practical, not fork

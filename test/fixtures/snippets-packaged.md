@@ -546,8 +546,12 @@ hashes. It does not qualify exact-DMG GUI execution or public-HTTPS acquisition.
 
 Windows uses the controlled line probe described above. Its fixed responses prove
 that the selected ConPTY received the fixture's exact synthetic lines, not that a
-normal Windows shell executed them. The actual Windows repeat/release mechanism
-and the resulting fixture remain unqualified until a native campaign runs.
+normal Windows shell executed them. The full ordinary Windows ARM64 campaign on
+`684d3ee9ca07a5bddade18d147fd3b23d6af2bfb` passed with independently observed
+held/released state, a prevented core repeat, exact action/global windows and
+joined shutdown. The [source checkpoint](../../docs/snippets-migration.md#windows-arm64-source-transition)
+records the inspected captures, synthetic-input limits and unresolved historical
+intermittence; it is not a complete portable or exact-package qualification.
 
 There is a bounded post-delivery drain assertion, not proof against
 arbitrarily delayed events. This fixture does not cover Kitty protocol, Protected

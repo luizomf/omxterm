@@ -171,7 +171,8 @@ Published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and Linux x64
 official catalog or a local archive. See the [delivery evidence and limits](docs/snippets-migration.md).
 Stable `0.23.0` remains Latest with built-in Snippets; published Windows hosts and
 Windows x64 retain the built-in view. Windows ARM64 source selects optional
-Snippets, pending its own native and package qualification. Published artifacts
+Snippets and has passed the bounded ordinary [source checkpoint](docs/snippets-migration.md#windows-arm64-source-transition);
+full portable, exact-package and public-consumption qualification remain separate. Published artifacts
 and original receipts remain immutable. Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).

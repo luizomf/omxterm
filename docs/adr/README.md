@@ -64,8 +64,9 @@ OMXTerm `0.24.0-dev.16` and Linux x64 OMXTerm `0.24.0-dev.30` previews use the
 optional installed Snippets `0.1.0` companion. Separate bounded public-HTTPS
 catalog checkpoints passed on all three host/archive pairs; the [migration guide](../snippets-migration.md)
 records installation, qualification evidence and limits. Windows ARM64 source
-selects optional Snippets but remains unqualified; published Windows hosts and
-Windows x64 retain the built-in view. #741 remains open.
+selects optional Snippets and has passed its bounded ordinary source checkpoint;
+full portable, exact-package and public-consumption qualification remain separate.
+Published Windows hosts and Windows x64 retain the built-in view. #741 remains open.
 
 ## Related boundaries
 
