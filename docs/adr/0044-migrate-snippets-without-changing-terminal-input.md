@@ -46,8 +46,9 @@ passed with built-in Snippets retained. A separate [unpacked-package inspection]
 passed for runtime loading only; a later [packaged-GUI composition checkpoint](../windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
 exercised that retained package with a minimal local extension. A later separate
 [exact-NSIS checkpoint](../windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
-passed on a new installer built from an independent copy. Windows Snippets
-migration remains a separate, unqualified checkpoint.
+passed on a new installer built from an independent copy. Windows ARM64 source
+now selects optional Snippets; its migration qualification remains separate and
+unrun.
 The delivered [macOS composition](../macos-extension-composition.md) prerequisite
 did not select installed Snippets or change its starter kit. The subsequent source
 transition reuses its ordinary production owners and the existing optional-Snippets
@@ -170,7 +171,7 @@ removing built-in access from any shipping platform. Development qualification
 selects one implementation at a time; it must not register duplicate production
 actions or compete for the panel. The package's separate action is withheld from production composition: the
 existing `toggleSnippets` command is the sole Snippets menu/palette action.
-Linux ARM64/x64 and macOS ARM64 source composition omit the built-in view and invoke the installed tool
+Linux ARM64/x64 and macOS/Windows ARM64 source composition omit the built-in view and invoke the installed tool
 through ordinary captured-target/token admission. Like Files and SSH Connect,
 invocation closes the selected-visible companion; otherwise it opens or reveals
 that tool. Close discards view state, while Hide/Escape and the independent panel
@@ -199,8 +200,10 @@ offline users and publish the compatible package before removing built-in access
 in a distributed host.
 
 Linux ARM64 is the first qualification target, not permission to drop Snippets
-on other platforms. Other targets keep the current built-in experience until
-their extension infrastructure and equivalent migration are qualified. This
+on other distributed platforms. Published Windows hosts and Windows x64 keep the
+current built-in experience; Windows ARM64 source qualification remains pending.
+Other targets retain the built-in experience until their extension infrastructure
+and equivalent migration are qualified. This
 transitional duplication must reuse parser/UI source where practical, not fork
 behavior or establish two permanently maintained products. Full #741 completion
 requires optional delivery on every supported host target; platform groundwork

@@ -34,8 +34,10 @@ from Snippets qualification and does not qualify macOS Files/SSH.
 [Linux x64 production composition](linux-x64-extension-composition.md) shares that
 minimal fixture. Its historical built-in Snippets receipt predates the separate
 Snippets source transition; existing package restrictions are unchanged.
-[Windows ARM64 source composition](windows-arm64-extension-composition.md)
-retains built-in Snippets and passed a bounded ordinary-user native checkpoint.
+The earlier [Windows ARM64 source composition](windows-arm64-extension-composition.md)
+retained built-in Snippets and passed a bounded ordinary-user native checkpoint.
+Current Windows ARM64 source selects optional Snippets; its transition remains
+unqualified.
 A separate [unpacked-package runtime inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
 passed, followed by a bounded [packaged-GUI composition checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
 on that exact retained package. A separate [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)

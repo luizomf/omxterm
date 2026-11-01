@@ -1,9 +1,33 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
+import { createInputHandler } from "restty/internal";
 import { describe, expect, it, vi } from "vitest";
+import { createElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
+import type { TerminalBridge } from "../../src/shared/terminal-bridge";
+
+const require = createRequire(import.meta.url);
+const { startWindowsProbeReadiness } =
+  require("../fixtures/snippets-windows-readiness.cjs") as {
+    startWindowsProbeReadiness(options: object): {
+      record(event: object): void;
+      ready(core: object, session: object): boolean;
+      snapshot(
+        core: object,
+        session: object,
+      ): {
+        events: Array<{ kind: string; data?: string }>;
+        checks: Record<string, boolean | null>;
+      };
+      dispose(): void;
+    };
+  };
 
 const source = readFileSync("test/fixtures/snippets-observer.cjs", "utf8");
 function harness(initialPid = 123, nativePath: typeof path = path) {
@@ -42,13 +66,23 @@ function harness(initialPid = 123, nativePath: typeof path = path) {
   };
   const sync = vi.fn();
   type Observation = {
-    ptys: { pid: number; writes: string[]; output: string; exited: boolean }[];
+    ptys: {
+      pid: number;
+      writes: string[];
+      output: string;
+      outputTruncated: boolean;
+      outputLimitCodeUnits: number;
+      cprTrace?: { snapshot(): object };
+      cprTraceError?: string;
+      exited: boolean;
+    }[];
     children: {
       pid: number;
       closed: boolean;
       exit: { code: number; signal: null } | null;
     }[];
     approvalCount(): number;
+    readinessTraceFailures(): number;
     restore(): void;
   };
   const exports = {} as {
@@ -64,6 +98,8 @@ function harness(initialPid = 123, nativePath: typeof path = path) {
         "node:child_process": childProcess,
         "node:module": { syncBuiltinESMExports: sync },
         "node:path": nativePath,
+        "./snippets-windows-cpr.cjs":
+          require("../fixtures/snippets-windows-cpr.cjs") as unknown,
       };
       assert.ok(Object.hasOwn(modules, name));
       return modules[name];
@@ -112,6 +148,7 @@ describe("Snippets fixture observation", () => {
     expect(observation.ptys[0]).toMatchObject({
       writes: [" exact\r"],
       output: "a".repeat(65536),
+      outputTruncated: true,
       exited: false,
     });
     session.emit("exit");
@@ -123,7 +160,130 @@ describe("Snippets fixture observation", () => {
     expect(session.listenerCount("exit")).toBe(0);
     expect(h.childProcess.fork).toBe(h.originalFork);
   });
+});
 
+it("observes split query and CPR order without changing the forwarded writes", () => {
+  const h = harness();
+  const observed = h.observe({ windowsCpr: true });
+  const terminal = new h.Terminal();
+  try {
+    terminal.emit("data", "prefix\u001b[6");
+    terminal.emit("data", "n");
+    terminal.write("\u001b[7;1R");
+    expect(terminal.writes).toEqual(["\u001b[7;1R"]);
+    expect(observed.ptys[0]!.cprTrace?.snapshot()).toMatchObject({
+      outputLength: 10,
+      writeEnd: 1,
+      incomplete: false,
+      requests: [{ offset: 6 }],
+      replies: [{ index: 0, requestIndex: 0 }],
+    });
+  } finally {
+    observed.restore();
+  }
+});
+
+it("retains observation errors without preventing PTY output or writes", () => {
+  const h = harness();
+  const observed = h.observe({ windowsCpr: true });
+  const terminal = new h.Terminal();
+  try {
+    const trace = observed.ptys[0]!.cprTrace!;
+    Object.assign(trace, {
+      output() {
+        throw Error("output observation failed");
+      },
+      write() {
+        throw Error("write observation failed");
+      },
+    });
+    terminal.emit("data", "raw output");
+    expect(terminal.write("raw input")).toBe("forwarded");
+    expect(terminal.writes).toEqual(["raw input"]);
+    expect(observed.ptys[0]!.output).toBe("raw output");
+    expect(observed.ptys[0]!.cprTraceError).toContain(
+      "output observation failed",
+    );
+  } finally {
+    observed.restore();
+  }
+});
+
+it("retains real probe receipt output with the selected writes and an explicit bound", async () => {
+  const { snapshotWindowsPtyOutput, retainWindowsPtyEvidence } =
+    require("../fixtures/snippets-scenario.cjs") as {
+      snapshotWindowsPtyOutput(session: object): object;
+      retainWindowsPtyEvidence(
+        evidence: string,
+        session: object,
+        checks: object[],
+        output: object,
+      ): Promise<void>;
+    };
+  const h = harness();
+  const observed = h.observe();
+  const terminal = new h.Terminal();
+  const env = { ...process.env };
+  delete env.OMXTERM_SNIPPETS_PACKAGED_INSERT_DIAGNOSTIC;
+  delete env.OMXTERM_SNIPPETS_PACKAGED_CHILD_INPUT_CAPTURE;
+  const output = execFileSync(
+    process.execPath,
+    [path.resolve("test/fixtures/snippets-windows-probe.cjs")],
+    { input: "  SNIPPETS_INSERT  ", encoding: "utf8", env, timeout: 5000 },
+  );
+  const root = await mkdtemp(path.join(os.tmpdir(), "snippets-output-"));
+  try {
+    terminal.emit("data", output);
+    terminal.write("  SNIPPETS_INSERT  ");
+    const selected = observed.ptys[0]!;
+    const snapshot = snapshotWindowsPtyOutput(selected);
+    terminal.emit("data", "later cleanup output");
+    await retainWindowsPtyEvidence(root, selected, [], snapshot);
+    const saved = JSON.parse(
+      await readFile(path.join(root, "pty-writes.json"), "utf8"),
+    ) as {
+      writes: string[];
+      childOutput: {
+        text: string;
+        truncated: boolean;
+        limitCodeUnits: number;
+      };
+    };
+    expect(saved.writes).toEqual(["  SNIPPETS_INSERT  "]);
+    expect(saved.childOutput).toMatchObject({
+      text: output,
+      truncated: false,
+      limitCodeUnits: 65536,
+    });
+    expect(saved.childOutput.text).toContain("SNIPPETS_INSERT_DRAFT_RECEIPT\n");
+    expect(saved.childOutput.text).not.toContain("later cleanup output");
+    terminal.emit("data", "x".repeat(70000));
+    const truncated = snapshotWindowsPtyOutput(selected) as {
+      text: string;
+      truncated: boolean;
+      limitCodeUnits: number;
+    };
+    expect(truncated.truncated).toBe(true);
+    expect(truncated.text.length).toBe(truncated.limitCodeUnits);
+    const truncatedRoot = await mkdtemp(
+      path.join(os.tmpdir(), "snippets-truncated-"),
+    );
+    try {
+      await retainWindowsPtyEvidence(truncatedRoot, selected, [], truncated);
+      const savedTruncated = JSON.parse(
+        await readFile(path.join(truncatedRoot, "pty-writes.json"), "utf8"),
+      ) as { childOutput: typeof truncated };
+      expect(savedTruncated.childOutput).toEqual(truncated);
+    } finally {
+      await rm(truncatedRoot, { recursive: true, force: true });
+    }
+  } finally {
+    observed.restore();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+describe("Snippets fixture observation lifecycle", () => {
   it("refuses a nonpackaged backend before spawn and records exit separately from stream close", () => {
     const h = harness(123, path.posix);
     const observation = h.observe();
@@ -146,6 +306,134 @@ describe("Snippets fixture observation", () => {
     });
     h.child.emit("close");
     expect(observation.children[0]?.closed).toBe(true);
+    observation.restore();
+  });
+
+  it("optionally records ordered PTY output and writes without changing forwarding", () => {
+    const h = harness();
+    const events: unknown[] = [];
+    const observation = h.observe({
+      readinessTrace: (event: unknown) => events.push(event),
+    });
+    const session = new h.Terminal();
+    session.emit("data", "\u001b[?1004h");
+    expect(session.write("\u001b[I")).toBe("forwarded");
+    expect(events).toEqual([
+      { kind: "pty-attached", ptyIndex: 0, pid: 123 },
+      { kind: "pty-output", ptyIndex: 0, pid: 123, data: "\u001b[?1004h" },
+      { kind: "pty-write", ptyIndex: 0, pid: 123, data: "\u001b[I" },
+    ]);
+    expect(observation.ptys[0]?.output).toBe("\u001b[?1004h");
+    expect(session.writes).toEqual(["\u001b[I"]);
+    observation.restore();
+  });
+
+  it("correlates the real observer with the real renderer adapter and input parser", async () => {
+    const h = harness();
+    const app = new EventEmitter();
+    const ipcMain = new EventEmitter();
+    let readiness!: ReturnType<typeof startWindowsProbeReadiness>;
+    const observation = h.observe({
+      readinessTrace: (event: object) => readiness.record(event),
+    });
+    readiness = startWindowsProbeReadiness({
+      app,
+      ipcMain,
+      ptys: observation.ptys,
+      createInputHandler,
+      diagnostic: true,
+    });
+    try {
+      const pending: Array<{ sessionId: string; data: string; end: number }> =
+        [];
+      const core = {
+        id: 7,
+        mainFrame: {},
+        send(_channel: string, payload: (typeof pending)[number]) {
+          pending.push(payload);
+        },
+      };
+      app.emit("browser-window-created", {}, { webContents: core });
+      const terminal = new h.Terminal();
+      const parser = createInputHandler();
+      let onOutput: (
+        source: string,
+        data: string,
+        end: number,
+      ) => void = () => {};
+      const bridge = {
+        onOutput(listener: typeof onOutput) {
+          onOutput = listener;
+          return () => {};
+        },
+        onExit() {
+          return () => {};
+        },
+        async start() {
+          return "s1";
+        },
+        acknowledgeOutput(sessionId: string, end: number) {
+          ipcMain.emit(
+            "terminal:output-ack",
+            { sender: core, senderFrame: core.mainFrame },
+            { sessionId, end },
+          );
+        },
+      } as unknown as TerminalBridge;
+      const adapter = createElectronTerminalAdapter(bridge);
+      await adapter.start({
+        onOutput(data) {
+          parser.filterOutput(data);
+        },
+        onExit() {},
+      });
+      const output = "\u001b[?1004h\u001b[?2004lSNIPPETS_SHELL_READY\r\n";
+      terminal.emit("data", output);
+      expect(terminal.write("\u001b[I")).toBe("forwarded");
+      core.send("terminal:output", {
+        sessionId: "s1",
+        data: output,
+        end: Buffer.byteLength(output),
+      });
+      const item = pending[0]!;
+      onOutput(item.sessionId, item.data, item.end);
+      const snapshot = readiness.snapshot(core, observation.ptys[0]!);
+      expect(snapshot.events.map((event) => event.kind)).toEqual([
+        "core-attached",
+        "pty-attached",
+        "pty-output",
+        "pty-write",
+        "main-output",
+        "renderer-ack",
+      ]);
+      expect(snapshot.events[2]?.data).toBe(output);
+      expect(snapshot.events[4]?.data).toBe(output);
+      expect(snapshot.checks).toMatchObject({
+        markerSeen: true,
+        acknowledgedAll: true,
+        focusResetBeforeMarker: false,
+        focusReporting: true,
+      });
+      expect(readiness.ready(core, observation.ptys[0]!)).toBe(false);
+    } finally {
+      readiness.dispose();
+      observation.restore();
+    }
+  });
+
+  it("preserves PTY forwarding and records unavailable observation if a trace callback fails", () => {
+    const h = harness();
+    const observation = h.observe({
+      readinessTrace: () => {
+        throw Error("trace unavailable");
+      },
+    });
+    const session = new h.Terminal();
+    session.emit("data", "output");
+    expect(session.write("input")).toBe("forwarded");
+    expect(session.writes).toEqual(["input"]);
+    expect(observation.ptys[0]?.output).toBe("output");
+    expect(observation.readinessTraceFailures()).toBe(3);
     observation.restore();
   });
 

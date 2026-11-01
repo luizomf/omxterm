@@ -5,6 +5,7 @@ const { dialog } = require("electron");
 const childProcess = require("node:child_process");
 const { syncBuiltinESMExports } = require("node:module");
 const path = require("node:path");
+const OUTPUT_LIMIT_CODE_UNITS = 65536;
 
 function observe(options, packageRequire) {
   const { Terminal } = packageRequire("node-pty/lib/terminal.js");
@@ -18,6 +19,7 @@ function observe(options, packageRequire) {
   const ptys = [];
   const children = [];
   let approvals = 0;
+  let readinessTraceFailures = 0;
   const subscriptions = [];
   Terminal.prototype._forwardEvents = function (...args) {
     const result = original.forward.apply(this, args);
@@ -29,19 +31,64 @@ function observe(options, packageRequire) {
       },
       writes: [],
       output: "",
+      outputTruncated: false,
+      outputLimitCodeUnits: OUTPUT_LIMIT_CODE_UNITS,
       exited: false,
     };
+    if (options.windowsCpr) {
+      try {
+        record.cprTrace =
+          require("./snippets-windows-cpr.cjs").createWindowsCprTrace();
+      } catch (error) {
+        record.cprTraceError = String(error);
+      }
+    }
+    const ptyIndex = ptys.length;
     ptys.push(record);
+    const trace = (kind, data) => {
+      if (!options.readinessTrace) return;
+      try {
+        const pid = session.pid;
+        options.readinessTrace({
+          kind,
+          ptyIndex,
+          pid: Number.isSafeInteger(pid) ? pid : null,
+          ...(data === undefined
+            ? {}
+            : typeof data === "string"
+              ? { data }
+              : { data: null, dataType: typeof data }),
+        });
+      } catch {
+        readinessTraceFailures++;
+      }
+    };
+    trace("pty-attached");
     const write = session.write;
     session.write = function (data) {
       record.writes.push(data);
+      try {
+        record.cprTrace?.write(record.writes.length - 1, data);
+      } catch (error) {
+        record.cprTraceError ??= String(error);
+      }
+      trace("pty-write", data);
       return write.call(this, data);
     };
     subscriptions.push(() => {
       session.write = write;
     });
     const data = session.onData((text) => {
-      record.output = (record.output + text).slice(-65536);
+      try {
+        record.cprTrace?.output(text);
+      } catch (error) {
+        record.cprTraceError ??= String(error);
+      }
+      const output = record.output + text;
+      if (output.length > OUTPUT_LIMIT_CODE_UNITS)
+        record.outputTruncated = true;
+      record.output = output.slice(-OUTPUT_LIMIT_CODE_UNITS);
+      trace("pty-output", text);
     });
     const exit = session.onExit(() => {
       record.exited = true;
@@ -92,6 +139,7 @@ function observe(options, packageRequire) {
     ptys,
     children,
     approvalCount: () => approvals,
+    readinessTraceFailures: () => readinessTraceFailures,
     restore() {
       Terminal.prototype._forwardEvents = original.forward;
       childProcess.fork = original.fork;

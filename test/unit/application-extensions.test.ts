@@ -340,7 +340,7 @@ it.each([
       expect(adapters.consent).not.toHaveBeenCalled();
       return;
     }
-    expect(usesOptionalSnippets(platform, arch)).toBe(platform !== "win32");
+    expect(usesOptionalSnippets(platform, arch)).toBe(true);
     expect(await request({ operation: "install" })).toMatchObject({
       ok: true,
       entries: [{ enabled: true, local: "dormant" }],

@@ -272,7 +272,7 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 ### Insert, run or preview a snippet
 
-Linux ARM64/x64 and macOS ARM64 source, along with the published Linux ARM64
+Linux ARM64/x64 and macOS/Windows ARM64 source, along with the published Linux ARM64
 **0.24.0-dev.11**, macOS ARM64 **0.24.0-dev.16** and Linux x64 **0.24.0-dev.30**
 previews, use optional installed Snippets. Stable **0.23.0** and published Windows
 hosts retain the built-in tool. All three previews offer Snippets through **Settings →

@@ -3,7 +3,7 @@
 > [!TIP]
 > **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio) lets you import, customize, and export your settings, themes, and shortcuts in the browser.
 
-OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Targets with built-in Snippets also create the example catalog below; Linux ARM64/x64 and macOS ARM64 source with optional Snippets leave it user-owned and absent until you create it:
+OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Targets with built-in Snippets also create the example catalog below; Linux ARM64/x64 and macOS/Windows ARM64 source with optional Snippets leave it user-owned and absent until you create it:
 
 ```text
 omxterm/
@@ -421,14 +421,16 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Linux ARM64/x64 and macOS ARM64 source, along with the published Linux ARM64
+Linux ARM64/x64 and macOS/Windows ARM64 source, along with the published Linux ARM64
 **0.24.0-dev.11**, macOS ARM64 **0.24.0-dev.16** and Linux x64 **0.24.0-dev.30**
 previews, use the optional Snippets extension. Stable **0.23.0** and published
 Windows hosts retain built-in Snippets. All three previews offer Snippets through
 the official catalog or an explicit local archive, which also works offline after
 download. See the [migration guide](snippets-migration.md) for matching host and
 package downloads, installation steps, existing catalogs and qualification limits.
-No catalog conversion, automatic installation or automatic enablement occurs.
+Windows ARM64 source qualification is pending; published Windows hosts retain
+their existing behavior. No catalog conversion, automatic installation or
+automatic enablement occurs.
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 
@@ -444,6 +446,7 @@ snippets:
     description: Insert a command that prints the current directory
 ```
 
+- The example uses POSIX `printf`; choose literal commands appropriate for your configured shell, including Windows PowerShell. Snippets do not translate commands.
 - Literal blocks preserve shell quotes and line breaks without JSON escaping. `|-` strips trailing line breaks, `|` keeps one, and `|+` keeps all trailing line breaks. Indent body lines beneath `body:`.
 - `execute: false` (the default) appends no Enter; `execute: true` appends Enter after the body. Embedded line breaks or control characters may themselves execute commands even with `false`. Multiline/control-character bodies use the existing Protected Paste confirmation when bracketed paste is disabled.
 - Up to 512 snippets are supported: `name` is 1–128 characters, `body` is 1–65,536, and optional `description` is at most 512 (UTF-16 code units). `execute` must be a boolean. Unknown fields are rejected.

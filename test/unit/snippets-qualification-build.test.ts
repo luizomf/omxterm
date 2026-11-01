@@ -17,11 +17,11 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 // Exercise the real builder CLI and filesystem layout, not Electron or a GUI.
-// Like the builder itself, this lane admits Linux ARM64/x64 and macOS ARM64.
+// Like the builder itself, this lane admits Linux ARM64/x64 and macOS/Windows ARM64.
 it.skipIf(
   !(
     (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
-    (process.platform === "darwin" && process.arch === "arm64")
+    (["darwin", "win32"].includes(process.platform) && process.arch === "arm64")
   ),
 )(
   "isolates a qualification build with the real development icon at the main entry's relative path",
@@ -64,6 +64,7 @@ it.skipIf(
       await symlink(
         await realpath("node_modules"),
         path.join(source, "node_modules"),
+        process.platform === "win32" ? "junction" : "dir",
       );
       const build = () =>
         promisify(execFile)(process.execPath, [builder, output], {

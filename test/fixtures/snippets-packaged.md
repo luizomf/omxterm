@@ -12,13 +12,14 @@ uses software rendering.
 ## Composition supplied by the integration owner
 
 `OMXTERM_SNIPPETS_PACKAGED_ENTRY` must be an absolute path to a built Electron
-main entry with unchanged production Linux ARM64/x64 or macOS ARM64 composition, lifecycle and
+main entry with unchanged production Linux ARM64/x64 or macOS/Windows ARM64 composition, lifecycle and
 assets. Production routes the ordinary Snippets command to the optional installed
 companion or Extensions guidance, with no duplicate action or built-in view. Retain production
 `registerSemanticInputIpc`, renderer semantic capture/preview, native gesture
 ownership and hosted presentation wiring. Do not bypass admission or expose a
 fixture terminal-injection API. The entry must honor the isolated configuration
-root and `-e /bin/sh -i` arguments and join normal shutdown.
+root and the adapter's literal `-e` arguments and join normal shutdown. Linux and
+macOS use `/bin/sh -i`; Windows starts a controlled Node line probe in ConPTY.
 
 The fixture imports this entry after installing test-only observers for PTY writes,
 backend retirement, native chooser and trust responses. Observed PTY writes are
@@ -30,13 +31,13 @@ installation and records it as `SNIPPETS_SOURCE_HOST`; Electron's fallback versi
 is not matching-host evidence. The archive digest is checked before launch, at consent, in
 the result, and after execution; the entry digest is checked before/after.
 
-On an assigned disposable Linux ARM64/x64 or macOS ARM64 desktop only, run the normal source build,
+On an assigned disposable Linux ARM64/x64 or macOS/Windows ARM64 desktop only, run the normal source build,
 then `node test/fixtures/snippets-qualification-build.mjs /absolute/new/qualification`
 to copy its artifacts and rebuild main/renderer without source substitutions.
 The builder refuses output reuse and records source hashes (including the real
 application icon) and `differences: []`. Its owned output preserves the development
-layout: `dist/`, `assets/application-icon.png`, `node_modules` (a dependency link),
-`package.json` and `qualification.json`. Main still resolves its normal relative
+layout: `dist/`, `assets/application-icon.png`, `node_modules` (a dependency link;
+a junction on Windows), `package.json` and `qualification.json`. Main still resolves its normal relative
 assets; no parent-directory writes, dummy icon or product fallback are used.
 It leaves shipping `dist` unchanged. The copied host uses the source's installed
 dependencies; keep both until qualification settles.
@@ -55,6 +56,218 @@ launch, timeout, cancellation and cleanup. A successful result requires normal
 exit, no cleanup errors, joined backend/PTY shutdown and exactly one scenario
 receipt. The integration owner should retain the supervisor receipts alongside
 host commit/build and archive provenance.
+
+On Windows ARM64, set the same inputs with absolute Windows paths in the assigned
+Interactive/Limited console. The source adapter uses a Node launcher that joins
+actual Electron exit, close and both bounded output streams. It runs the native
+ARM64 Node executable with a fixed probe script as literal arguments. The byte-oriented
+probe accepts only the fixture's known lines and reports their exact receipts. It
+requests child-facing focus reporting and bracketed paste off; it is not a shell
+or an account-shell qualification. ConPTY may immediately request outer focus
+reporting on. The source fixture requires the original child reset followed by
+outer enable and the plain-paste ready marker, then the core's same-session
+output acknowledgement and two render opportunities before first Insert. It
+requires the mirrored outer focus mode to be on and bracketed paste off; a missing,
+partial or unacknowledged sequence, later outer reset, or ambiguous ownership
+fails closed. The probe's exact child-byte receipts independently test delivery;
+outer output and ACK alone do not prove the child's mode or consumption.
+
+The Windows write assertion preserves all original ordered node-pty writes. It
+classifies complete standalone `ESC[O` or `ESC[I` writes as focus shapes, and a
+complete standalone `ESC[<row>;<column>R` as a cursor-position-report (CPR) shape
+only when the observer paired that write with a previously observed, unused
+`ESC[6n` query shape. Row and column are canonical positive decimals bounded to
+1–1000, matching the Terminal Adapter's grid limits. Split, mixed, malformed,
+unsolicited or excess CPR writes and every other escape-bearing write fail closed.
+Two identical CPRs require two distinct earlier queries; unanswered queries are
+allowed. The observer incrementally records query offsets and write indices in
+main-process callback order, with a 65,536-code-unit output limit and at most
+1,024 queries and replies. Validation requires enough callback slots for every
+write and each distinct observed query callback before, between and after replies;
+multiple queries can share one output callback. Nonempty output without queries
+requires at least one output callback, while additional unrecorded output
+callbacks are allowed. This is a consistency lower bound, not a complete event
+history. Observation forwards the original data unchanged but can perturb timing.
+Missing, truncated, overflowed, inconsistent or errored CPR observation fails the
+oracle, including for an empty action window.
+All remaining bytes must equal the exact expected Insert, Run or Enter sequence;
+the historical `nonFocus` evidence field now holds those remaining semantic bytes,
+with focus and CPR metadata retained separately. The existing 150 ms post-action
+drain remains; a final whole-interaction check
+also rejects delayed extra input between checkpoints. The retained CPR metadata
+is an explicit **lexical** correlation, not a provenance tag or a VT parser:
+node-pty's shared write boundary does not independently prove whether a standalone
+focus- or CPR-shaped write came from Restty or semantic input. An `ESC[6n`
+substring inside another control string can look like a query to this narrow
+observer, and a semantic CPR-shaped write can consume a pending query credit.
+The byte-oriented probe separately requires the exact 19-byte
+Insert draft before Enter, exact submitted lines, and expected receipt counts.
+Receipt counting reads the accumulated, untruncated output without modifying it.
+A complete marker must end with LF or CRLF and start at the output beginning,
+after LF, or immediately after a complete `ESC[<positive-decimal-row>;1H` cursor
+position. The last form accounts for ConPTY moving to column one before a probe
+receipt, even without a preceding newline. Other cursor forms and marker
+substrings are not receipts; an occurrence with invalid complete framing fails
+closed. Distinct complete markers are counted separately, while an unfinished
+marker or line terminator at a recognized boundary is not treated as a completed
+count. This is a narrow decoded-string shape contract for this controlled probe,
+not a VT screen parser or proof of the marker's provenance. It cannot predict later output
+or claim completeness of an open stream. Unsupported control sequences can still
+make a run inconclusive; no input escapes or semantic text are filtered.
+With private evidence enabled, `pty-writes.json` retains the original writes and
+classified check windows through input cleanup, plus the selected PTY's observed
+output captured before cleanup (or on failure before diagnostics). The associated
+`cprTrace` snapshots query offsets, reply write indices and observation order at
+that same boundary; `writeEnd` distinguishes later cleanup writes. That output is
+a node-pty decoded string, bounded to the last 65,536 UTF-16 code units with an
+explicit truncation flag; it retains child receipt markers when observed, not a
+complete recording of child stdin or evidence of write provenance. If the process
+stops before finalization, the file may be absent. It is synthetic private
+evidence, not a product log. ConPTY delivery and the full scenario still require
+native verification. The Windows catalog contains synthetic probe lines, not the immutable
+archive's POSIX example.
+The observed ConPTY PID and creation identity must remain the same through
+retirement; normal Quit checks PTY `onExit`, backend exit/close and recorded
+identity absence. No separate PTY close event or arbitrary-descendant census is
+claimed.
+
+For a separately selected first-Insert diagnosis, Windows ARM64 may additionally
+set `OMXTERM_SNIPPETS_PACKAGED_INSERT_DIAGNOSTIC=1` and an absolute, private
+`OMXTERM_SNIPPETS_PACKAGED_EVIDENCE` directory. This runs the same installation,
+presentation and the same classified-write assertion once, captures bounded
+synthetic PTY writes, output tail and semantic request/reply observations, and
+requires the ordinary exact child-draft receipt and a separate diagnostic receipt
+before deliberately stopping
+**before** explicit Enter or the held-key scenario. It retains
+`insert-diagnostic.json` independently of screenshot/DOM capture. A timeout
+retains its original error; an exact first Insert stops with
+`SNIPPETS_INSERT_DIAGNOSTIC_STOP_AFTER_EXACT_BYTES`. Either outcome makes the
+ordinary integration test fail because it is diagnostic, **not qualification**.
+The instrumentation observes scoped handler registration and replies without
+admitting or retrying requests. A bounded local request ID and captured sender ID
+correlate each recorded hosted request with its outcome; neither establishes PTY
+delivery. `observedHandlerIds`, truncation and `observationUnavailable` limit
+what missing events can establish.
+
+The controlled Node probe can also capture input on the ordinary Windows scenario
+path with `OMXTERM_SNIPPETS_PACKAGED_CHILD_INPUT_CAPTURE=1` and an absolute,
+private `OMXTERM_SNIPPETS_PACKAGED_EVIDENCE` directory. Without the separate
+first-Insert or readiness diagnostic flags, this does not install the stopping
+diagnostic, emit its extra receipt, or stop before Enter: the ordinary scenario
+may continue through the held-key checks. The capture-only checkpoint is written
+synchronously before the click without an extra event-loop yield, but that I/O
+and child capture can still perturb timing. This is a diagnostic observation,
+not proof of uninstrumented behavior or qualification by itself.
+
+Either child-input capture flag or the first-Insert diagnostic flag makes the
+probe create `child-input-diagnostic.jsonl` exclusively and synchronously record
+its own startup, requested capture/stop flags, raw-mode request, each
+Node-delivered stdin `Buffer` chunk as base64, line lengths, draft timer and
+probe-error events. It does not strip or
+modify input. A `child-input-checkpoint.json` is written by the scenario before
+the first Insert click; each child event reports whether that file was visible at
+callback time. File visibility does not establish when bytes entered an OS buffer,
+prove cross-process clock ordering or identify provenance. Compare the checkpoint
+PID with the selected PTY and child-start PID; a missing, invalid or failed
+checkpoint is unknown, not an implicit pre-click phase.
+
+The journal is bounded to 256 events, 65,536 input bytes and 262,144 serialized
+bytes, with a reserved explicit `capture-truncated` event; a non-Buffer callback,
+partial record, `child-input-capture-error.json` or absent journal makes exact
+capture incomplete. Existing evidence is never overwritten. Writes are incremental
+but process termination may prevent an exit record or leave OS-buffered input
+unobserved. Capture errors and checkpoint-write errors are retained where possible
+without replacing the original scenario failure. A checkpoint-write failure is
+recorded when possible in `child-input-checkpoint-error.json` and the selected
+PTY evidence; an error writing that sidecar is separately retained in PTY
+evidence when possible. Existing files are never overwritten. Missing or
+failed evidence remains inconclusive. Synchronous diagnostic writes and
+file-visibility checks can perturb timing; this trace is not a native qualification
+or proof of every byte sent. All captured synthetic input and paths remain private.
+Neither flag alters the ordinary scenario's classified-write, exact child-receipt
+or drain requirements.
+
+### Capture-off first-Insert memory diagnostic
+
+For a separately selected Windows ARM64 source diagnostic, set
+`OMXTERM_SNIPPETS_PACKAGED_MEMORY_INPUT` to a fresh 32-character lowercase hex
+nonce and use an absolute private evidence directory. Leave the child-input,
+Insert and readiness capture flags **unset**, not `0`. The ordinary GUI/focus
+prefix, readiness predicate, exact-write drain, child parser and 150 ms draft
+timer remain in use. The ordinary first-Insert receipt wait still has its
+15-second deadline. Both receipt and timeout stop before explicit Enter; later
+Snippets scenarios are not exercised.
+
+The inline child recorder adds no module loads, stdio getter reads, journal I/O
+or checkpoint checks before its one delayed dump turn. It retains raw callbacks,
+full parser lines before/after, cancellation/scheduling/firing and receipt-write
+invocation/return in memory (256 events, 65,536 input bytes, 262,144 serialized
+event bytes). It preserves the ordinary `stdin -> raw request -> stdout` order.
+At 60 seconds after listener attachment, it makes one dump attempt. The parent
+publishes `memory-observation.json` exclusively only after its original
+observation finishes. The child first attempts exclusive creation of that same
+file with an early-dump sentinel: if the child wins, the run is inconclusive;
+otherwise the dump must contain the exact completed parent outcome and nonce.
+A concurrent partial parent write also fails validation rather than being retried.
+No shared clock between processes is assumed. Child event times are relative to
+its own monotonic start; `dump-boundary` ends the capture in the synchronous dump
+turn, and subsequent callbacks cannot mutate the retained event array.
+
+The parent saves the pre-collection PTY snapshot, then waits at most 65 seconds
+for the single atomically published `memory-child.json`. The existing 120-second
+native-fixture deadline and 150-second test deadline remain outer bounds; slow
+startup or a dump arriving before observation completes is not made successful
+by extending or restarting those bounds. `memory-result.json` keeps the initial
+receipt/timeout/error separate from collection status. `memory-lifecycle.json`
+records owned shutdown separately, alongside the existing supervisor receipt.
+Missing, malformed, early, overflowing or mismatched evidence is inconclusive.
+Validation checks required event fields and synchronous producer ordering:
+callback/cancellation/processing, optional scheduling, timer firing, and paired
+receipt-write invocation/return. A pending timer at the dump boundary and
+post-observation callback tails remain valid; no cross-process clock is inferred.
+The opt-in test can pass for a completely collected timeout with joined shutdown;
+it never emits `SNIPPETS_PACKAGED_RESULT` or establishes full source qualification.
+
+Memory allocation, serialization and timers can still perturb behavior. No
+callbacks in a complete dump means no Node callbacks observed in this bounded
+window, not proof of OS nondelivery. Trace callbacks can include traffic after
+the parent's initial outcome and before the dump; compare the retained initial
+PTY snapshot and do not infer a shared cross-process event clock. Keep all raw
+synthetic evidence private. This mode does not fix or filter terminal input.
+
+For a separately selected Windows startup-readiness diagnosis, set
+`OMXTERM_SNIPPETS_PACKAGED_READINESS_DIAGNOSTIC=1` and the private evidence
+location, without the first-Insert diagnostic flag. This observes the same
+controlled startup and readiness predicate, then deliberately stops before the
+render-opportunity barrier and before opening or activating Snippets. It writes
+`readiness-diagnostic.json` on an observed timeout or diagnostic stop, with a
+bounded ordered trace of PTY output/writes, main-to-renderer output and ACKs,
+selected identity, mirrored parser modes and individual readiness conditions.
+The trace is limited to 128 events and 65,536 serialized bytes; at most four
+PTYs are summarized with 2,048-code-unit output tails and at most 32 writes /
+2,048 UTF-8 bytes each. The main-output tail has the same 2,048-code-unit cap.
+Truncation or observation failure is reported. Captured synthetic terminal
+bytes and identities remain private. Sequence numbers represent main-process
+callback observation order, not a cross-process causal clock. The post-timeout
+snapshot may differ from the last readiness poll. Instrumentation can perturb
+timing; the mirrored parser and ACK observation are not independent proof of
+child input consumption or compositor freshness. An
+absent, truncated or unavailable snapshot is inconclusive. The test deliberately
+fails after the diagnostic stop and is **not qualification**; ordinary runs are
+unchanged when the flag is absent.
+
+The Windows held-Enter adapter uses the existing Windows scan-code `SendInput`
+mechanism against the owned foreground window. Separate helper invocations query
+`GetAsyncKeyState` for a held-to-up transition. The scenario also requires trusted
+child activation, an observed and prevented Chromium core repeat, exact PTY
+no-leak checks and a fresh Enter. An injected repeat is not assumed to produce a
+Chromium repeat: failure of any observation fails the campaign. The input marker
+is written outside the disposable profile before posting and remains after an
+uncertain or failed scenario. An independently observed release remains recorded
+as such, not as a successful gesture or an unknown key state merely because the
+scenario failed. Cleanup release is not a successful receipt. This is synthetic
+session input, not physical-keyboard or natural-autorepeat evidence.
+No Windows source campaign has yet passed.
 
 The macOS ARM64 source transition passed all nine ordinary scenarios on the exact
 host/archive pair recorded in the [migration guide](../../docs/snippets-migration.md#macos-arm64-source-transition).
@@ -174,13 +387,14 @@ shared scenario. The initial readiness session remains alive and is independentl
 checked for kernel exit at Quit. The scenario session and backend must join too.
 The source adapter observes its initial session before importing production main.
 Neither observer exposes a product input API or bypasses semantic admission.
-Before the shared scenario, ordinary terminal text and Enter replace the scenario
-shell with `/bin/sh -i` in the same PTY. A preceding shell output marker explicitly
+On Linux and macOS, ordinary terminal text and Enter replace the scenario shell
+with `/bin/sh -i` in the same PTY. A preceding shell output marker explicitly
 disables bracketed paste; the fixture verifies that marker and that plain-paste
 mode remains selected at every exact-byte assertion. This makes source and
 account-shell launches comparable without stripping framing from observed writes
-or accepting either encoding. Account-shell startup and bracketed-paste delivery
-are not qualified by this controlled-shell scenario.
+or accepting either encoding. The Windows source adapter starts its controlled
+probe directly instead. Account-shell startup and bracketed-paste delivery are
+not qualified by either controlled scenario.
 
 ## Exact macOS ARM64 DMG adapter
 
@@ -269,11 +483,17 @@ release. Exact native DMG execution remains an integration-owner gate.
   retained compatibility toggle with catalog readiness before row interaction.
 - Dormant install, exact archive trust, one active native child/backend, and no
   built-in Snippets DOM in the core renderer.
-- Exact PTY bytes for Insert and Run, with shell output receipts proving actual
-  execution. Native Enter activation, repeat after focus handoff, and release
-  must not append additional input. Chromium repeat receipt is checked explicitly.
+- Exact PTY bytes for Insert and Run on POSIX. On Windows, original ordered
+  writes are retained; standalone focus shapes and bounded CPR shapes correlated
+  with earlier lexical query observations are recorded separately. Exact semantic
+  bytes and the full interaction still reject prefixes, duplicates, newlines and
+  delayed leakage. POSIX shell output receipts
+  prove execution; Windows probe receipts prove the fixed child bytes/lines within
+  the observed windows. Native Enter activation, repeat after focus handoff, and
+  release must not append extra input. Chromium repeat receipt is checked explicitly.
 - Both preview intent overrides; literal preview body; native-child exclusion;
-  Cancel emits no bytes and restores the initiating control's native focus.
+  Cancel emits no semantic bytes and restores the initiating control's native
+  focus. Separately classified Windows protocol writes may still be observed.
 - Retained query across hide/reactivate; live en-US/pt-BR labels via real Settings
   language changes without replacing the query.
 - Disable/uninstall joins backend retirement, preserves catalog bytes, and leaves
@@ -323,6 +543,11 @@ captures are not OS-compositor evidence. The full ordinary nine-scenario macOS
 source campaign passed with inspected child/core/preview captures, joined native
 cleanup, final session/HID-up state, no unsettled-input marker and verified tool
 hashes. It does not qualify exact-DMG GUI execution or public-HTTPS acquisition.
+
+Windows uses the controlled line probe described above. Its fixed responses prove
+that the selected ConPTY received the fixture's exact synthetic lines, not that a
+normal Windows shell executed them. The actual Windows repeat/release mechanism
+and the resulting fixture remain unqualified until a native campaign runs.
 
 There is a bounded post-delivery drain assertion, not proof against
 arbitrarily delayed events. This fixture does not cover Kitty protocol, Protected

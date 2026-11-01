@@ -10,7 +10,8 @@ const output = process.argv[2];
 assert.ok(output && path.isAbsolute(output), "absolute new output required");
 assert.ok(
   (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
-    (process.platform === "darwin" && process.arch === "arm64"),
+    (["darwin", "win32"].includes(process.platform) &&
+      process.arch === "arm64"),
 );
 await mkdir(output);
 // Preserve the ordinary development layout: main resolves ../.. / assets
@@ -24,6 +25,7 @@ await cp(path.join(source, icon), path.join(output, icon));
 await symlink(
   path.join(source, "node_modules"),
   path.join(output, "node_modules"),
+  process.platform === "win32" ? "junction" : "dir",
 );
 await writeFile(path.join(output, "package.json"), '{"type":"module"}\n');
 const inputs = {

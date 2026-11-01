@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "snippets": [
+    {
+      "name": "Exact insert",
+      "body": "  SNIPPETS_INSERT  ",
+      "execute": false
+    },
+    {
+      "name": "Exact run",
+      "body": "SNIPPETS_RUN",
+      "execute": true
+    }
+  ]
+}

@@ -20,6 +20,7 @@ it.each([
   ["linux", "arm64", true],
   ["darwin", "arm64", true],
   ["linux", "x64", true],
+  ["win32", "arm64", true],
   ["win32", "x64", false],
 ] as const)(
   "%s %s preserves shipping optional=%s but explicitly qualifies built-in composition",

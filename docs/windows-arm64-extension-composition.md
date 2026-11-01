@@ -3,8 +3,10 @@
 Windows ARM64 source admits production extension management and builds the
 app-owned backend runtime and lease addon with the ordinary application build.
 Startup, installation and enablement remain dormant; explicit shared actions
-activate trusted installed code. Windows retains built-in Snippets and its
-starter kit. Windows x64 remains outside this admission. The separate Files
+activate trusted installed code. Windows ARM64 source selects optional Snippets
+and omits its starter example; this transition is not yet natively qualified.
+Published Windows hosts and Windows x64 retain built-in Snippets. Windows x64
+remains outside extension admission. The separate Files
 move primitive remains unsupported on Windows, with no overwrite fallback.
 
 A bounded ordinary-user, source-launched Windows ARM64 composition checkpoint
@@ -37,8 +39,9 @@ npm.cmd test -- test/integration/extension-production-composition.test.ts
 ```
 
 The fixture imports `dist/main/index.js` unchanged and uses a real, minimal
-local archive. Its controlled consent binds the exact digest. It checks built-in
-Snippets without extension activation; dormant install/enable; explicit backend
+local archive. Its controlled consent binds the exact digest. On current source it
+checks optional-Snippets management guidance without extension activation; it then
+checks dormant install/enable; explicit backend
 and hosted-view activation; isolated editing; disable/uninstall while retaining
 the same Surface and ConPTY; and a second active backend during `app.quit()`.
 A controlled Node line/ACK probe runs inside the real ConPTY. The observer waits
@@ -68,7 +71,7 @@ runtime used Electron `43.8.1`. The corrected preparation also passed the full
 10-case simulated build matrix, 135 focused tests, 29 native Installed Packages
 tests and one native backend-runtime test, without skips.
 
-All five fixture checks and two exact-digest consents passed: built-in Snippets,
+On that earlier source, all five fixture checks and two exact-digest consents passed: built-in Snippets,
 dormant installation, explicit hosted/backend activation and editing,
 disable/uninstall with the same Surface and ConPTY, and `app.quit()` with a
 second backend active. The controlled ConPTY line probe received its expected

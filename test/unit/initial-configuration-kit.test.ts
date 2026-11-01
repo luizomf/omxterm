@@ -47,7 +47,7 @@ describe("initial configuration kit", () => {
     ["linux", "x64", false],
     ["darwin", "arm64", false],
     ["darwin", "x64", true],
-    ["win32", "arm64", true],
+    ["win32", "arm64", false],
     ["win32", "x64", true],
   ] as const)(
     "seeds Snippets for %s/%s: %s",
@@ -78,7 +78,8 @@ describe("initial configuration kit", () => {
       !(
         (process.platform === "linux" &&
           ["arm64", "x64"].includes(process.arch)) ||
-        (process.platform === "darwin" && process.arch === "arm64")
+        (["darwin", "win32"].includes(process.platform) &&
+          process.arch === "arm64")
       ),
     );
   });
@@ -90,6 +91,8 @@ describe("initial configuration kit", () => {
     ["linux", "x64", true],
     ["darwin", "arm64", false],
     ["darwin", "arm64", true],
+    ["win32", "arm64", false],
+    ["win32", "arm64", true],
   ] as const)(
     "preserves arbitrary existing catalog bytes on %s/%s (config exists: %s)",
     async (platform, architecture, existingConfig) => {

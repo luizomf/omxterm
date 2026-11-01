@@ -7,6 +7,7 @@ export function usesOptionalSnippets(
   return (
     (platform === "linux" &&
       (architecture === "arm64" || architecture === "x64")) ||
-    (platform === "darwin" && architecture === "arm64")
+    ((platform === "darwin" || platform === "win32") &&
+      architecture === "arm64")
   );
 }

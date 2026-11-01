@@ -21,7 +21,7 @@ assert.ok(
     (process.platform === "linux" && process.arch === "x64") ||
     (process.platform === "win32" && process.arch === "arm64"),
 );
-assert.equal(fixture.optionalSnippets, process.platform !== "win32");
+assert.equal(fixture.optionalSnippets, true);
 await mkdir(path.join(root, "config/omxterm"), { recursive: true });
 await writeFile(
   path.join(root, "config/omxterm/config.json"),

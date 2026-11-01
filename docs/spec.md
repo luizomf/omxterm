@@ -549,8 +549,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) opens, reveals or closes the
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
-  below full-width title/tab chrome. Linux ARM64/x64 and macOS ARM64 source use the
+  below full-width title/tab chrome. Linux ARM64/x64 and macOS/Windows ARM64 source use the
   separately installed Snippets extension; other targets retain the built-in view.
+  Windows ARM64 source qualification is pending; published Windows hosts retain
+  built-in Snippets.
   The published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and
   Linux x64 `0.24.0-dev.30` previews use optional Snippets; stable `0.23.0` retains
   the built-in view. All three previews offer the same immutable archive through
@@ -1239,7 +1241,7 @@ common built-in defaults (including explicit `window.blur: false` and
 `window.transparency: 0`) and `theme.path` set to `themes/omtheme.json`, one
 copy of the bundled theme at `themes/omtheme.json`. Targets retaining built-in
 Snippets also create one non-executing literal-block example in `snippets.yaml`;
-Linux ARM64/x64 and macOS ARM64 source leave that user-owned catalog absent and the optional package
+Linux ARM64/x64 and macOS/Windows ARM64 source leave that user-owned catalog absent and the optional package
 provides an example instead. Existing sibling files are never replaced. Files are
 published complete without overwriting concurrent creations; configuration is
 published last. Shell, font family and shortcuts retain their implicit platform
@@ -1504,7 +1506,7 @@ actionable problem, including the resolved path and schema field location or
 syntax line/column coordinates, in place of the list, and the terminal is
 unaffected. Parser excerpts and arbitrary parser messages are never displayed.
 For built-in Snippets, Electron main reads and validates the file and sends only
-validated, typed data over the preload bridge. On Linux ARM64/x64 and macOS ARM64 source, the installed
+validated, typed data over the preload bridge. On Linux ARM64/x64 and macOS/Windows ARM64 source, the installed
 Snippets backend reuses that parser and configuration-root resolution, returning
 complete activation-scoped catalog snapshots in bounded pages. Installation,
 disabling and uninstalling never modify the catalog. Core retains captured-target
@@ -1730,8 +1732,8 @@ input/output, clipboard data, environment contents, configuration contents,
 executable names, command arguments, commands, titles, secrets, or transcripts.
 
 The application makes remote requests only for deliberate official-catalog browsing
-and HTTPS extension archive installation on Linux ARM64/x64 and macOS ARM64.
-macOS source composition includes the qualified optional Snippets transition
+and HTTPS extension archive installation on Linux ARM64/x64 and macOS/Windows ARM64 source.
+Windows public consumption remains unqualified. macOS source composition includes the qualified optional Snippets transition
 (see [qualification scope](macos-extension-composition.md)). Main selects the
 complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
 schema1 catalog for every other target. Common
@@ -1790,7 +1792,7 @@ not revoke accepted Surface-owned input or end sessions. This preparatory
 capability does not install an optional Snippets package or cut over any platform.
 `extensions/snippets` source builds a separate archive using the shared
 Snippets UI/CSS and bounded catalog client. Its separate action is withheld from
-production; Linux ARM64/x64 and macOS ARM64 source composition route
+production; Linux ARM64/x64 and macOS/Windows ARM64 source composition route
 the existing Snippets command to the optional installed companion or Extensions
 guidance. Linux x64 source migration alone does not establish exact-package
 qualification, catalog availability or distributed cutover. Other targets retain
@@ -1928,8 +1930,8 @@ and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 A separately owned backend runtime consumes Installed Packages through an
 app-owned bootstrap. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64 builds
 include its artifacts and native lease addon. Windows ARM64 source admits the
-same explicit management and activation while retaining built-in Snippets. Its
-[bounded native source composition](windows-arm64-extension-composition.md#evidence-boundary)
+same explicit management and activation and now selects optional Snippets. Its
+earlier [bounded native source composition](windows-arm64-extension-composition.md#evidence-boundary)
 passed separately from an [unpacked Windows ARM64 package inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint).
 That inspection checked runtime bytes, lease-addon unpacking and packaged
 Node-mode store/lease/bootstrap loading, not packaged GUI activation or an
@@ -1937,7 +1939,7 @@ installer. A later [packaged-GUI checkpoint](windows-arm64-extension-composition
 exercised a minimal local extension on that retained directory. A later separate
 [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
 passed on a new installer built from an independent copy; Windows Snippets
-migration remains separate and unqualified. Linux x64 now admits explicit extension
+migration remains separate and unqualified on the changed source. Linux x64 now admits explicit extension
 installation and activation through the existing production owners; its
 [composition qualification](linux-x64-extension-composition.md) remains distinct
 from earlier module, hosted-view and package checks. That historical composition

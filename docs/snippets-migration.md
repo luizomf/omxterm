@@ -18,7 +18,7 @@ delete that file. YAML v1, exact text, search, Insert/Run, preview and Protected
 Paste remain the same. There is no conversion or second Commands catalog.
 
 **View → Toggle Snippets**, its Command Palette entry and existing shortcut
-(`Ctrl+Shift+S` on Linux, `Cmd+Shift+S` on macOS, including custom remaps or
+(`Ctrl+Shift+S` on Linux/Windows, `Cmd+Shift+S` on macOS, including custom remaps or
 `null`) remain supported.
 An enabled package opens in the shared companion panel. In the published ARM64
 previews, invoking the command again hides it. The published Linux x64 dev.30 host
@@ -224,6 +224,47 @@ Finder/Gatekeeper/notarization, physical-keyboard, natural-autorepeat, Kitty,
 OS-compositor, macOS Files/SSH or the full portable suite. No immutable archive
 or original build receipt was changed.
 
+## Windows ARM64 source transition — qualification pending
+
+Windows ARM64 source selects the same optional implementation and preserves the
+existing shortcut, user-owned YAML and deliberate installation/enablement. The
+unchanged published Snippets `0.1.0` archive is the intended qualification input,
+not evidence of Windows compatibility by itself. Its historical bundled example
+uses POSIX `printf`; choose commands appropriate for the configured Windows shell.
+
+The attempted source campaign at `fac36ba` timed out at its original exact-write
+Insert assertion; a later diagnostic observed the exact 19-byte literal followed
+by four focus reports but did not prove child consumption. The `659d4b7` campaign
+then timed out on its outer-focus-off readiness predicate before Snippets. A
+separate single-session ConPTY experiment observed the exact literal without
+focus bytes in its child-disabled phase, and the focus pair followed by that
+literal in its child-enabled phase. Its two input-mode snapshots had VT input
+set; equal snapshots do not prove continuous mode. The experiment used synthetic
+input and an intentionally closed owned PTY, not product GUI or graceful Quit.
+It supports the fixture's distinction between child focus and ConPTY's outer
+focus protocol; it does not turn either earlier failure into a pass. The revised
+[fixture contract](../test/fixtures/snippets-packaged.md#composition-supplied-by-the-integration-owner)
+retains raw writes and a bounded, truncation-marked selected-PTY output snapshot
+containing the separately asserted child receipts when observed. That decoded
+output is not a complete child-stdin recording or semantic-write provenance.
+The fixture also records bounded standalone CPR-shaped writes paired with prior
+lexical cursor-query observations; this does not establish their provenance or
+relax the exact semantic and child-receipt assertions.
+The separate, opt-in first-Insert diagnostic can additionally retain bounded raw
+Node-delivered child stdin chunks from startup, with explicit truncation and a
+pre-click checkpoint hint; this does not alter the ordinary input oracle or
+retroactively qualify the earlier failures. A separate capture-only fixture flag
+can retain the same bounded child observations without enabling the stopping
+diagnostic or its extra marker. It may perturb timing, may continue through the
+ordinary scenario, and is not proof of uninstrumented behavior or qualification
+by itself.
+
+No Windows Snippets source, exact-package or public-consumption qualification
+has yet passed for this transition. Earlier Windows composition, packaged-GUI and
+exact-NSIS checkpoints used built-in Snippets and remain distinct. Published
+Windows hosts and Windows x64 retain built-in Snippets; no host, catalog or archive
+has been published or changed by this source transition.
+
 ## Linux x64 source transition
 
 Linux x64 source selects the same optional Snippets implementation as ARM64.
@@ -416,7 +457,7 @@ consent, synthetic input, ANGLE SwiftShader and an isolated plain-paste shell;
 this does not expand the earlier keyboard/GPU/platform limits or requalify
 Files/SSH. No archive, host package or original build receipt was changed.
 
-[#741](https://github.com/luizomf/omxterm/issues/741) remains open: Windows
-retains built-in Snippets until its own prerequisites are met, and the remaining
+[#741](https://github.com/luizomf/omxterm/issues/741) remains open: published Windows
+hosts retain built-in Snippets until their own prerequisites are met, and the remaining
 platform gates are separate. Existing published artifacts remain immutable; these
 previews are not a stable SDK.
