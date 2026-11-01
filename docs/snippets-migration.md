@@ -301,6 +301,25 @@ subsequent full ordinary pass above satisfies the source scenario gate without
 establishing a causal fix for historical intermittence. Earlier failures remain
 failures, not retroactive passes.
 
+### Default baseline and fixture follow-up
+
+The subsequent unfiltered Windows ARM64 default suite on `a59f28f` failed: 5,304
+assertions passed, 33 failed and 214 were skipped. Two unhandled Files readiness
+rejections were recorded separately. The earlier ten-check pass and inspected
+visuals above remain evidence for `684d3ee`; they did not pass this default suite.
+
+On `ca45a58`, five corrected fixture cases passed separately: two tab-removal
+variants, theme-appearance reload, host lifecycle/refit and image-palette refit.
+Their enclosing host diagnostic gate failed on nonempty diagnostic stderr. A
+separate bounded retrospective review accepted the retained absence observation
+as evidence; it did not change the failed host outcome into a machine pass or
+rewrite the earlier baseline. The other 28 historical failed assertions were not
+rerun or waived: Files/SSH controls ([#761](https://github.com/luizomf/omxterm/issues/761)),
+DMG identity controls ([#758](https://github.com/luizomf/omxterm/issues/758)),
+fixture ownership and cascading refusals ([#759](https://github.com/luizomf/omxterm/issues/759)),
+and a Settings renderer failure ([#760](https://github.com/luizomf/omxterm/issues/760))
+remain tracked. These results do not establish a full portable pass.
+
 Exact-package and public-consumption qualification have not passed for this
 transition. Earlier Windows composition, packaged-GUI and exact-NSIS checkpoints
 used built-in Snippets and remain distinct. Published

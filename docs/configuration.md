@@ -428,9 +428,9 @@ Windows hosts retain built-in Snippets. All three previews offer Snippets throug
 the official catalog or an explicit local archive, which also works offline after
 download. See the [migration guide](snippets-migration.md) for matching host and
 package downloads, installation steps, existing catalogs and qualification limits.
-Windows ARM64 source qualification is pending; published Windows hosts retain
-their existing behavior. No catalog conversion, automatic installation or
-automatic enablement occurs.
+Windows ARM64 has a [bounded ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition);
+its default suite failed and package qualification remains separate. No catalog
+conversion, automatic installation or automatic enablement occurs.
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 

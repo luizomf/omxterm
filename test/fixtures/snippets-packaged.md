@@ -267,7 +267,8 @@ uncertain or failed scenario. An independently observed release remains recorded
 as such, not as a successful gesture or an unknown key state merely because the
 scenario failed. Cleanup release is not a successful receipt. This is synthetic
 session input, not physical-keyboard or natural-autorepeat evidence.
-No Windows source campaign has yet passed.
+The [Windows ARM64 source checkpoint](../../docs/snippets-migration.md#windows-arm64-source-transition)
+records the later ordinary pass and its limits.
 
 The macOS ARM64 source transition passed all nine ordinary scenarios on the exact
 host/archive pair recorded in the [migration guide](../../docs/snippets-migration.md#macos-arm64-source-transition).
