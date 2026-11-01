@@ -11,10 +11,11 @@ A bounded ordinary-user, source-launched Windows ARM64 composition checkpoint
 passed with the limits below. A separate [packaged runtime checkpoint](#packaged-runtime-checkpoint)
 inspected one exact unpacked ARM64 app directory, followed by a separate
 [packaged-GUI composition checkpoint](#packaged-gui-composition-checkpoint)
-using that retained directory. These do not establish compatibility of existing
-published archives, a Snippets cutover, Windows x64, installer behavior, public
-catalog consumption, physical input or full portable qualification. Existing
-releases are unchanged.
+using that retained directory. A later, separate [exact-NSIS installer checkpoint](#exact-nsis-installer-checkpoint)
+built and verified an installer from an independent copy of that package. These
+bounded results do not establish compatibility of existing published archives,
+a Snippets cutover, Windows x64, public catalog consumption, physical input or
+full portable qualification. Existing releases are unchanged.
 
 ## Installed-package production fixture
 
@@ -214,5 +215,69 @@ resolve [#746](https://github.com/luizomf/omxterm/issues/746). The SSH
 key-exchange warning and legacy-encoded PowerShell progress remain separate
 transport diagnostics. This checkpoint does not execute NSIS or qualify an
 installer, Windows x64, Files, public catalog consumption, Snippets migration or
-full portable behavior. Exact installer verification remains a separate task
-subject to the [disposable-VM and recovery requirements](release.md#windows-arm64-and-x64).
+full portable behavior. The following exact-installer checkpoint is separate.
+
+## Exact-NSIS installer checkpoint
+
+🤖 AI-assisted.
+
+A separately executed Windows ARM64 checkpoint built and ran the exact NSIS
+installer from an independent copy of the retained unpacked app from source
+`7f9fde17b6e966fec07bed5e168cc99d086ec15e` (`0.24.0-dev.32`). The
+155,131,924-byte installer SHA-256 was
+`371e20e3387871ddae2cae2876bcfde9bd0747cd5e064915a38b93ebe32e11ec`.
+The copied stage preserved all original app entries; the builder added only
+`resources/elevate.exe` (107,520 bytes, SHA-256
+`9b1fbf0c11c520ae714af8aa9af12cfd48503eedecd7398d8992ee94d1b4dc37`).
+The original 110-entry output inventory, including 97 files, remained unchanged.
+The stage with the added helper differs from the original packaged-GUI
+directory. The installer is a separate artifact; the earlier GUI result is not
+relabeled.
+
+A non-elevated Interactive/Limited account in the active Windows 11 ARM64
+console passed the input-desktop, owned-foreground and synthetic-F6 preflight.
+The stock FULL package verifier passed on the new installer and its copied
+stage: it inspected runtime/resources, version and architecture, exercised the
+packaged Node-mode store/lease/bootstrap probe, checked prepared/package
+node-pty bytes, and verified both staged and installed startup using explicit
+Node-command readiness, operational events and launch-data non-disclosure
+checks. Its outer summary reported four operational events, not
+extension-composition scenario checks.
+
+The unchanged installer transaction bound the exact installer digest, checked
+known registration/shortcut/process and cache state, compared each staged
+payload file to its installed counterpart, and ran the installed verifier. It
+then used the owned relocated uninstaller, removed only the unchanged owned
+installer cache, and checked registration/shortcut/process cleanup and removal
+of the custom install root. The verifier reported no existing installation
+replaced and the owned cache removed. A later independent read-only collection
+rehashed the retained installer, original output, copied stage, source and
+prepared inputs; it observed the known footprint empty and the real installer cache
+absent. The original package and the new installer remain distinct artifacts.
+
+Fourteen direct runner steps and one bootstrap child recorded exit, close and
+both stream EOFs without truncation. These receipts do not separately observe
+all nested installer, uninstaller or Electron child lifecycles. Seventeen
+recorded PIDs were later absent, but their creation identities were not
+recorded, and the snapshot was not an arbitrary-descendant census. The
+installed-payload comparison is one-directional: it does not establish the
+absence of additional installed files. Windows startup cleanup used forced
+PID-tree termination, not joined application Quit. Nested startup stderr was
+buffered/capped and not exported on success; intermediate installed-tree and
+registration/cache observations were not separately exported. A listed
+recovery snapshot was not restored or tested, and the retained temporary scope
+was not empty.
+
+The first subsequent read-only collector failed before its artifact/footprint
+checks because of Windows-path escaping; it was not a failed installer
+transaction. A separately selected later read-only collection passed without
+rerunning the native workload. npm deprecation/install-script-approval
+warnings, a builder output-lock warning, the verifier's replacement warning, SSH
+key-exchange and PowerShell progress diagnostics remain recorded; the builder's
+possible antivirus explanation is not an established cause. The earlier
+[#746](https://github.com/luizomf/omxterm/issues/746) diagnostic remains open.
+
+This bounded exact-installer result does not publish a release or establish
+Windows x64, Files, public catalog consumption, Snippets migration, physical
+input, a default hardware GPU or full portable behavior. Exact-installer
+verification continues to require the [disposable-VM and recovery requirements](release.md#windows-arm64-and-x64).

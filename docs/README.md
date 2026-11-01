@@ -38,7 +38,9 @@ Snippets source transition; existing package restrictions are unchanged.
 retains built-in Snippets and passed a bounded ordinary-user native checkpoint.
 A separate [unpacked-package runtime inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
 passed, followed by a bounded [packaged-GUI composition checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
-on that exact retained package. Installer and Snippets migration remain separate.
+on that exact retained package. A separate [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
+passed for a new installer built from an independent copy; Windows Snippets
+migration remains unqualified.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

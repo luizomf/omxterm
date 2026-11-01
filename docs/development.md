@@ -410,7 +410,9 @@ access. Inspection does not execute NSIS or itself qualify graphical composition
 installer behavior or Snippets migration. A later, separately bounded
 [packaged-GUI checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
 exercised that retained package with a minimal local extension; it did not run an
-installer or qualify a Snippets migration.
+installer or qualify a Snippets migration. A subsequent [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
+built a new installer from an independent copy and passed the stock FULL
+verifier; the earlier inspection and GUI results retain their original scope.
 
 macOS ARM64 package verification (also with `--inspection-only`) checks the
 unpacked extension lease and Files move addons, complete ad-hoc seal,
