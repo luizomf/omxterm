@@ -167,7 +167,10 @@ export async function inspectDmgApplication(
     executableSha256: sha256(await readFile(executable)),
     asarSha256: sha256(await readFile(asar)),
     backendSha256: sha256(
-      extractFile(asar, "dist/extension-runtime/bootstrap.mjs"),
+      extractFile(
+        asar,
+        path.join("dist", "extension-runtime", "bootstrap.mjs"),
+      ),
     ),
   };
 }

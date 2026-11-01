@@ -1,5 +1,14 @@
+import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, writeFileSync } from "node:fs";
-import { chmod, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdtemp,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -59,33 +68,49 @@ describe("exact DMG opt-in", () => {
   });
 });
 describe("DMG packaged identity refusal", () => {
-  it("binds executable/ASAR/backend and rejects changed version, architecture or seal", async () => {
-    const root = await scope();
+  async function createApplication(root: string, includeBackend = true) {
     const input = path.join(root, "input");
     mkdirSync(path.join(input, "dist/extension-runtime"), { recursive: true });
     writeFileSync(
       path.join(input, "package.json"),
       JSON.stringify({ version: "1.0.0" }),
     );
-    writeFileSync(
-      path.join(input, "dist/extension-runtime/bootstrap.mjs"),
-      "backend",
-    );
+    writeFileSync(path.join(input, "dist/bootstrap.mjs"), "decoy");
+    if (includeBackend)
+      writeFileSync(
+        path.join(input, "dist/extension-runtime/bootstrap.mjs"),
+        "backend",
+      );
     mkdirSync(path.join(root, "Contents/Resources"), { recursive: true });
     mkdirSync(path.join(root, "Contents/MacOS"));
     writeFileSync(path.join(root, "Contents/MacOS/OMXTerm"), "executable");
     await createPackage(input, path.join(root, "Contents/Resources/app.asar"));
-    const command = vi.fn((file: string): string =>
+  }
+  function inspectionCommand() {
+    return vi.fn((file: string): string =>
       file.endsWith("lipo")
         ? "arm64\n"
         : file.endsWith("plutil")
           ? "1.0.0\n"
           : "",
     );
+  }
+  it("binds executable/ASAR/backend and rejects changed version, architecture or seal", async () => {
+    const root = await scope();
+    await createApplication(root);
+    const command = inspectionCommand();
     const identity = await inspectDmgApplication(root, "1.0.0", command);
-    expect(identity.executableSha256).toMatch(/^[a-f0-9]{64}$/);
-    expect(identity.asarSha256).toMatch(/^[a-f0-9]{64}$/);
-    expect(identity.backendSha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(identity.executableSha256).toBe(
+      "a29c2123a01df1d0febb9d308a20d8a2fe3d40a91ca8b1294f59f08f9773ebea",
+    );
+    expect(identity.asarSha256).toBe(
+      createHash("sha256")
+        .update(await readFile(path.join(root, "Contents/Resources/app.asar")))
+        .digest("hex"),
+    );
+    expect(identity.backendSha256).toBe(
+      "10e08a419e850eba1ebba18fdd28eb7ec1b7e8baa9bcc3b973e2b8891ec726be",
+    );
     await expect(
       inspectDmgApplication(root, "2.0.0", command),
     ).rejects.toThrow();
@@ -95,29 +120,50 @@ describe("DMG packaged identity refusal", () => {
     await expect(
       inspectDmgApplication(root, "1.0.0", command),
     ).rejects.toThrow();
-    command.mockImplementation(() => {
-      throw new Error("broken seal");
+    command.mockImplementation((file) => {
+      if (file.endsWith("codesign")) throw new Error("broken seal");
+      return file.endsWith("lipo") ? "arm64" : "1.0.0";
     });
     await expect(inspectDmgApplication(root, "1.0.0", command)).rejects.toThrow(
       "broken seal",
     );
   });
+  it("rejects an archive without the exact backend, even with a decoy", async () => {
+    const root = await scope();
+    await createApplication(root, false);
+    await expect(
+      inspectDmgApplication(root, "1.0.0", inspectionCommand()),
+    ).rejects.toThrow("bootstrap.mjs");
+  });
 });
 describe("DMG byte/layout identity and finite mount ownership", () => {
-  it("binds contents, executable mode and symlink targets without traversing links", async () => {
+  it("binds file contents", async () => {
     const root = await scope();
     await writeFile(path.join(root, "app"), "first");
-    await symlink("absent", path.join(root, "link"));
     const first = await bundleIdentity(root);
-    await chmod(path.join(root, "app"), 0o755);
-    expect(await bundleIdentity(root)).not.toBe(first);
-    const executable = await bundleIdentity(root);
     await writeFile(path.join(root, "app"), "second");
-    expect(await bundleIdentity(root)).not.toBe(executable);
-    const second = await bundleIdentity(root);
-    await rm(path.join(root, "link"));
-    await symlink("other", path.join(root, "link"));
-    expect(await bundleIdentity(root)).not.toBe(second);
+    expect(await bundleIdentity(root)).not.toBe(first);
+  });
+  // Windows chmod does not represent POSIX executable permission bits.
+  it.skipIf(process.platform === "win32")("binds executable mode", async () => {
+    const root = await scope();
+    const file = path.join(root, "app");
+    await writeFile(file, "contents");
+    await chmod(file, 0o644);
+    expect((await lstat(file)).mode & 0o777).toBe(0o644);
+    const first = await bundleIdentity(root);
+    await chmod(file, 0o755);
+    expect((await lstat(file)).mode & 0o777).toBe(0o755);
+    expect(await bundleIdentity(root)).not.toBe(first);
+  });
+  it("binds symlink targets without traversing links", async () => {
+    const root = await scope();
+    const link = path.join(root, "link");
+    await symlink("absent", link);
+    const first = await bundleIdentity(root);
+    await rm(link);
+    await symlink("other", link);
+    expect(await bundleIdentity(root)).not.toBe(first);
   });
   function mount(root: string, fail?: "attach" | "copy" | "detach" | "tamper") {
     return vi.fn((executable: string, args: string[]) => {
