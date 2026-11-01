@@ -115,7 +115,11 @@ describe("DMG packaged identity refusal", () => {
       inspectDmgApplication(root, "2.0.0", command),
     ).rejects.toThrow();
     command.mockImplementation((file) =>
-      file.endsWith("lipo") ? "arm64 x86_64" : "",
+      file.endsWith("lipo")
+        ? "arm64 x86_64"
+        : file.endsWith("plutil")
+          ? "1.0.0"
+          : "",
     );
     await expect(
       inspectDmgApplication(root, "1.0.0", command),
