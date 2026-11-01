@@ -128,6 +128,7 @@ it("forwards the native image reply before issuing a synthetic cell query after 
   expect(pending).toEqual([]);
 });
 
+// These values model fixture ports only; they do not prove native geometry or pixels.
 const pixels: ResttyImagePixelEvidence = {
   bitmapSize: [800, 400],
   cellSize: [20, 20],
@@ -141,13 +142,29 @@ const pixels: ResttyImagePixelEvidence = {
   greenOutsideChafaPlacement: 0,
 };
 
-function fixture(stuckGrid = false, missingPixels = false) {
+function fixture({
+  stuckGrid = false,
+  missingPixels = false,
+  optionalSnippets = false,
+  missingGeometryView = false,
+  stuckRestore = false,
+  missingRestoredPixels = false,
+} = {}) {
   let cols = 40;
-  let sidebarVisible = false;
+  let panelVisible = false;
   let width = 800;
   let input = "";
+  let shrunkOnce = false;
   const toggles: boolean[] = [];
   const zooms: string[] = [];
+  const snippetCommands: string[] = [];
+  const setPanelVisible = (visible: boolean) => {
+    panelVisible = visible;
+    if (visible) shrunkOnce = true;
+    toggles.push(visible);
+    width = visible ? 560 : 800;
+    if (!stuckGrid && (visible || !stuckRestore)) cols = visible ? 28 : 40;
+  };
   const window = {
     getSize: () => [800, 400],
     setSize() {
@@ -160,19 +177,31 @@ function fixture(stuckGrid = false, missingPixels = false) {
           cols = action === "in" ? 38 : 40;
         }
         if (channel === terminalIpc.snippetsToggle) {
-          sidebarVisible = !sidebarVisible;
-          toggles.push(sidebarVisible);
-          width = sidebarVisible ? 560 : 800;
-          if (!stuckGrid) cols = sidebarVisible ? 28 : 40;
+          snippetCommands.push(channel);
+          if (!optionalSnippets) setPanelVisible(!panelVisible);
         }
       },
       async executeJavaScript(script: string) {
+        if (script === "globalThis.__resttyImageGeometryPanel.show()") {
+          setPanelVisible(true);
+          return;
+        }
+        if (script === "globalThis.__resttyImageGeometryPanel.close()") {
+          if (panelVisible) setPanelVisible(false);
+          return;
+        }
         if (script.includes("atob("))
-          return missingPixels && sidebarVisible
+          return (missingPixels && panelVisible) ||
+            (missingRestoredPixels && shrunkOnce && !panelVisible)
             ? { ...pixels, greenInChafaPlacement: 0 }
             : pixels;
-        if (script.includes("#snippets-sidebar"))
-          return { sidebarVisible, sidebarReady: true, width, height: 400 };
+        if (script.includes("data-restty-image-geometry-fixture"))
+          return {
+            panelVisible,
+            geometryViewVisible: panelVisible && !missingGeometryView,
+            width,
+            height: 400,
+          };
         return { x: 0, y: 0, width, height: 400 };
       },
       async capturePage() {
@@ -195,10 +224,10 @@ function fixture(stuckGrid = false, missingPixels = false) {
         if (!(await predicate())) throw new Error(`Not ready: ${label}`);
       },
     });
-  return { run, toggles, zooms };
+  return { run, toggles, zooms, snippetCommands };
 }
 
-it("prepares native-client reply and both placement pixels without unrelated zoom/refit for reload-only controls", async () => {
+it("keeps the modeled reload-only driver free of zoom and refit", async () => {
   const { run, toggles, zooms } = fixture();
   const evidence = await run(true);
   expect(evidence).toEqual({
@@ -211,10 +240,23 @@ it("prepares native-client reply and both placement pixels without unrelated zoo
   expect(zooms).toEqual([]);
 });
 
-it("shrinks and restores image content through the production sidebar route without native size requests", async () => {
-  const { run, toggles } = fixture();
+it("accepts a modeled refit without invoking absent optional Snippets", async () => {
+  const { run, snippetCommands } = fixture({ optionalSnippets: true });
+  const evidence = await run();
+  expect(snippetCommands).toEqual([]);
+  expect(evidence.contentRefit?.shrunk.width).toBeLessThan(
+    evidence.contentRefit!.before.width,
+  );
+  expect(evidence.contentRefit?.restored.grid).toEqual(
+    evidence.contentRefit?.before.grid,
+  );
+});
+
+it("accepts a modeled refit without invoking built-in Snippets or native window sizing", async () => {
+  const { run, toggles, snippetCommands } = fixture();
   const evidence = await run();
   expect(toggles).toEqual([true, false]);
+  expect(snippetCommands).toEqual([]);
   expect(evidence).toMatchObject({
     contentRefit: {
       before: { grid: { cols: 40, rows: 20 }, width: 800 },
@@ -226,16 +268,36 @@ it("shrinks and restores image content through the production sidebar route with
   });
 });
 
-it("reports unchanged PTY geometry separately from valid image pixels and restores the sidebar", async () => {
-  const { run, toggles } = fixture(true);
+it("rejects modeled shrink without the geometry-only view and restores the panel", async () => {
+  const { run, toggles } = fixture({ missingGeometryView: true });
   await expect(run()).rejects.toThrow("Image content/PTY refit failed");
   expect(toggles).toEqual([true, false]);
 });
 
-it("reports missing image pixels only after observed content and grid shrink, then restores the sidebar", async () => {
-  const { run, toggles } = fixture(false, true);
+it("rejects modeled unchanged PTY geometry and restores the panel", async () => {
+  const { run, toggles } = fixture({ stuckGrid: true });
+  await expect(run()).rejects.toThrow("Image content/PTY refit failed");
+  expect(toggles).toEqual([true, false]);
+});
+
+it("rejects modeled missing pixels after shrink and restores the panel", async () => {
+  const { run, toggles } = fixture({ missingPixels: true });
   await expect(run()).rejects.toThrow(
     "Image pixels failed at Pi and Chafa images after content shrink",
+  );
+  expect(toggles).toEqual([true, false]);
+});
+
+it("rejects a modeled panel restore without the original PTY grid", async () => {
+  const { run, toggles } = fixture({ stuckRestore: true });
+  await expect(run()).rejects.toThrow("Image content/PTY refit failed");
+  expect(toggles).toEqual([true, false]);
+});
+
+it("rejects modeled missing pixels after content and grid restore", async () => {
+  const { run, toggles } = fixture({ missingRestoredPixels: true });
+  await expect(run()).rejects.toThrow(
+    "Image pixels failed at Pi and Chafa images after content restore",
   );
   expect(toggles).toEqual([true, false]);
 });

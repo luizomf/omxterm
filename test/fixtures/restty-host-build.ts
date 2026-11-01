@@ -1,7 +1,7 @@
 import { cp, mkdir, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { build } from "esbuild";
+import { build, type Plugin } from "esbuild";
 import { resttyImageEmitterSource } from "./restty-host-images";
 import { resttyFontMutationProbe } from "./restty-font-mutation-probe";
 import { resttyHoverProbe } from "./restty-hover-observer";
@@ -19,6 +19,26 @@ import {
 } from "./restty-gesture-routing-mutation";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
+
+// Only this fixture bundle wraps the host's production companion-content seam.
+export const resttyImageGeometryPanelPlugin: Plugin = {
+  name: "restty-image-geometry-panel",
+  setup(api) {
+    api.onResolve({ filter: /^\.\/companion-content$/ }, (args) =>
+      args.importer ===
+      path.join(projectRoot, "src", "renderer", "terminal-window-host.ts")
+        ? {
+            path: path.join(
+              projectRoot,
+              "test",
+              "fixtures",
+              "restty-host-image-panel.ts",
+            ),
+          }
+        : undefined,
+    );
+  },
+};
 
 export async function buildHostFixture(
   root: string,
@@ -66,6 +86,7 @@ export async function buildHostFixture(
         format: "iife",
         loader: { ".ttf": "binary" },
         plugins: [
+          ...(!focusedCancellation ? [resttyImageGeometryPanelPlugin] : []),
           resttyLinkReadinessProbe,
           ...(focusedCancellation
             ? [resttyHoverProbe]

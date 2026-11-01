@@ -17,12 +17,15 @@ const phases = [
   "snippet-loaded",
   "snippet-click",
   "snippet-delivered",
+  "snippet-focus",
   "verification",
   "control-held-surface",
   "control-release-surface",
 ] as const;
 export type TabRemovalPhase = (typeof phases)[number];
 export const TAB_REMOVAL_STEP_TIMEOUT = 5000;
+// Opening installed Snippets also starts a real backend and native child view.
+const SNIPPETS_START_TIMEOUT = 15_000;
 export const TAB_REMOVAL_PHASE_PREFIX = "__OMXTERM_TAB_REMOVAL_PHASE__";
 export const TAB_REMOVAL_CONTROL_PREFIX = "__OMXTERM_TAB_REMOVAL_CONTROL__";
 
@@ -88,7 +91,9 @@ export function createTabRemovalReadiness(
         new Promise<never>((_, reject) => {
           timer = setTimeout(
             () => reject(new TabRemovalDeadline(phase)),
-            TAB_REMOVAL_STEP_TIMEOUT,
+            phase === "snippet-loaded"
+              ? SNIPPETS_START_TIMEOUT
+              : TAB_REMOVAL_STEP_TIMEOUT,
           );
         }),
       ]);

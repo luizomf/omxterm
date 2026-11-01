@@ -1,11 +1,16 @@
 import { buildFixture } from "../fixtures/window-chrome-build";
 import type { SettingsEvidence } from "../fixtures/settings-dialog-exercise";
 import { createRequire } from "node:module";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
+import {
+  prepareFixtureSnippets,
+  prepareFixtureSnippetsRuntime,
+} from "../fixtures/fixture-snippets-build";
 import {
   runNativeFixture,
   type NativeFixtureTestContext,
@@ -44,6 +49,9 @@ async function runChrome(
     });
     if (process.platform === "linux") args.push("--ozone-platform=x11");
     testContext.signal.throwIfAborted();
+    const optionalSnippets =
+      mode === "theme-appearance" &&
+      usesOptionalSnippets(process.platform, process.arch);
     supervised = true;
     return await runNativeFixture({
       executable,
@@ -67,7 +75,23 @@ async function runChrome(
       root,
       timeout: mode === "fail-fast" ? 10_000 : 100_000,
       testContext,
-      prepare: () => buildFixture(root, "runner"),
+      prepare: async () => {
+        await buildFixture(root, "runner", undefined, { optionalSnippets });
+        testContext.signal.throwIfAborted();
+        if (!optionalSnippets) return;
+        const { version } = await prepareFixtureSnippets(root);
+        testContext.signal.throwIfAborted();
+        await prepareFixtureSnippetsRuntime(root);
+        testContext.signal.throwIfAborted();
+        await writeFile(
+          path.join(root, "package.json"),
+          JSON.stringify({
+            name: "omxterm-window-chrome-fixture",
+            version,
+            main: "main.cjs",
+          }),
+        );
+      },
     });
   } finally {
     if (!supervised) await rm(root, { recursive: true, force: true });
@@ -247,7 +271,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
     );
     it(
       "reloads theme appearance without losing separator focus, resize targets or native grids",
-      { timeout: 120_000 },
+      { timeout: 180_000 },
       async (testContext) => {
         const execution = await runChrome(
           "theme-appearance",
@@ -271,6 +295,16 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           appearance: "file-reload-three-roles-both-axes-panel-focus-and-grids",
           input: "synthetic-chromium-not-physical",
         });
+        const markers = execution.stdout
+          .split("\n")
+          .filter((line) => line.startsWith("__OMXTERM_THEME_SNIPPETS__"));
+        expect(markers).toEqual(
+          usesOptionalSnippets(process.platform, process.arch)
+            ? ["installed", "activated", "joined"].map(
+                (name) => `__OMXTERM_THEME_SNIPPETS__${name}`,
+              )
+            : [],
+        );
       },
     );
     it(FEATURE_SMOKE_CASE, { timeout: 120_000 }, async (testContext) => {

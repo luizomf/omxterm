@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { BrowserWindow } from "electron";
+import type { BrowserWindow, WebContentsView } from "electron";
 import {
   DEFAULT_USER_CONFIGURATION,
   loadUserConfiguration,
@@ -17,6 +17,7 @@ import {
 import type { TerminalApplication } from "../../src/main/terminal-application";
 import { waitFor } from "./window-chrome-exercise";
 import { focusThemeSeparator } from "./theme-appearance-keyboard";
+import { createThemeSearch } from "./theme-appearance-search";
 
 const pane = ".terminal-tab:not([hidden]) .terminal-surface";
 const dividers = [
@@ -27,7 +28,12 @@ const dividers = [
 const hidden = "rgba(0, 0, 0, 0)";
 type Sizes = ReadonlyArray<ReadonlyArray<{ cols: number; rows: number }>>;
 
-function createScene(window: BrowserWindow, sizes: Sizes) {
+function createScene(
+  window: BrowserWindow,
+  sizes: Sizes,
+  search: () => ReturnType<typeof createThemeSearch>,
+  hosted: boolean,
+) {
   const contents = window.webContents;
   const evaluate = <T>(script: string, target = window) =>
     target.webContents.executeJavaScript(script) as Promise<T>;
@@ -48,7 +54,7 @@ function createScene(window: BrowserWindow, sizes: Sizes) {
     );
   const idle = async () => {
     contents.sendInputEvent({ type: "mouseMove", x: 10, y: 100 });
-    await evaluate(`document.querySelector('#snippets-sidebar input').focus()`);
+    await search().focus();
     await until(
       `!document.querySelector('.terminal-pane-divider:hover, .auxiliary-separator:hover')`,
     );
@@ -60,7 +66,65 @@ function createScene(window: BrowserWindow, sizes: Sizes) {
         events.at(-1)!.cols !== before[i]!.cols ||
         events.at(-1)!.rows !== before[i]!.rows,
     );
-  return { contents, evaluate, until, key, paint, point, idle, grid, changed };
+  return {
+    contents,
+    evaluate,
+    until,
+    key,
+    paint,
+    point,
+    idle,
+    grid,
+    changed,
+    hosted,
+  };
+}
+
+export async function openThemeSearch(
+  window: BrowserWindow,
+  until: (script: string) => Promise<void>,
+  snippets?: { assertActivated(): void },
+) {
+  await until("!document.querySelector('#snippets-sidebar').hidden");
+  if (!snippets) {
+    await until("!!document.querySelector('#snippets-sidebar input')");
+    return createThemeSearch(
+      window.webContents,
+      "#snippets-sidebar input",
+      () => !window.isDestroyed(),
+    );
+  }
+  const hosted = () =>
+    window.contentView.children.filter(
+      (view): view is WebContentsView =>
+        "webContents" in view &&
+        !(view as WebContentsView).webContents.isDestroyed() &&
+        (view as WebContentsView).webContents
+          .getURL()
+          .startsWith("omx-extension://"),
+    );
+  await waitFor(async () => {
+    const views = hosted();
+    return (
+      views.length === 1 &&
+      views[0]!.getVisible() &&
+      views[0]!.webContents.isFocused() &&
+      (await views[0]!.webContents.executeJavaScript(
+        "document.querySelectorAll('li .snippet-activate').length === 1 && !!document.querySelector('input[type=search]')",
+      )) === true
+    );
+  }, "installed Snippets child and catalog");
+  const view = hosted()[0]!;
+  snippets.assertActivated();
+  return createThemeSearch(
+    view.webContents,
+    "input[type=search]",
+    () =>
+      !window.isDestroyed() &&
+      window.contentView.children.includes(view) &&
+      !view.webContents.isDestroyed() &&
+      view.getVisible(),
+  );
 }
 
 // Real file loader/reloader, production fan-out and retained hosts/PTYs. Input
@@ -71,13 +135,20 @@ export async function exerciseTheme(
     application: TerminalApplication<BrowserWindow>;
     second: () => BrowserWindow;
     sizes: Sizes;
+    hostedSnippets?: { targetReady(): boolean; assertActivated(): void };
   },
   root: string,
   apply: (state: ActiveUserConfiguration, committed: boolean) => void,
   outputs: ReadonlyArray<(data: string) => void>,
 ) {
   const { window, application, sizes } = options;
-  const scene = createScene(window, sizes);
+  let search!: ReturnType<typeof createThemeSearch>;
+  const scene = createScene(
+    window,
+    sizes,
+    () => search,
+    !!options.hostedSnippets,
+  );
   const { contents, evaluate, until, paint, point, idle } = scene;
   window.setContentSize(1200, 800);
   window.focus();
@@ -89,18 +160,22 @@ export async function exerciseTheme(
   application.splitSelectedPane("down");
   await until(`document.querySelectorAll('${pane} canvas').length === 3`);
   await waitFor(() => (sizes[2]?.length ?? 0) > 0, "down split grid");
+  if (options.hostedSnippets)
+    await waitFor(
+      options.hostedSnippets.targetReady,
+      "focused third pane invocation target",
+    );
   application.toggleSelectedSnippets();
-  await until(
-    "!document.querySelector('#snippets-sidebar').hidden && !!document.querySelector('#snippets-sidebar input')",
-  );
+  search = await openThemeSearch(window, until, options.hostedSnippets);
   await application.newWindow();
   const peer = options.second();
   await evaluate("globalThis.__windowChromeHostReady()", peer);
   window.focus();
   await idle();
   await evaluate(
-    `globalThis.appearanceCanvases = [...document.querySelectorAll('canvas')]; globalThis.appearanceInput = document.querySelector('#snippets-sidebar input'); appearanceInput.value = 'retained query'; appearanceInput.dispatchEvent(new Event('input'));`,
+    `globalThis.appearanceCanvases = [...document.querySelectorAll('canvas')]`,
   );
+  await search.retain();
   const directory = path.join(root, "appearance-xdg", "omxterm");
   await mkdir(directory, { recursive: true });
   await writeFile(
@@ -173,6 +248,7 @@ export async function exerciseTheme(
     const color =
       selector === dividers[2] ? "rgb(101, 67, 33)" : "rgb(18, 52, 86)";
     assert.equal(await paint(selector), color);
+    if (scene.hosted) contents.focus();
     await evaluate("document.activeElement.blur()");
     contents.sendInputEvent({
       type: "mouseDown",
@@ -210,10 +286,7 @@ export async function exerciseTheme(
     counts,
     "Appearance-only reload must not resize PTYs",
   );
-  assert.equal(
-    await evaluate("document.activeElement === appearanceInput"),
-    true,
-  );
+  assert.equal(await search.focused(), true);
   for (const selector of dividers) assert.equal(await paint(selector), hidden);
   assert.equal(await paint(accent, "::after"), hidden);
   assert.equal(
@@ -261,10 +334,11 @@ export async function exerciseTheme(
   );
   assert.equal(
     await evaluate(
-      "appearanceCanvases.every((canvas, i) => document.querySelectorAll('canvas')[i] === canvas) && appearanceInput === document.querySelector('#snippets-sidebar input') && appearanceInput.value === 'retained query'",
+      "appearanceCanvases.every((canvas, i) => document.querySelectorAll('canvas')[i] === canvas)",
     ),
     true,
   );
+  assert.equal(await search.retained(), true);
   assert.equal(sizes.length, 4);
   return {
     appearance: "file-reload-three-roles-both-axes-panel-focus-and-grids",
@@ -314,8 +388,18 @@ export async function assertTopPaint(window: BrowserWindow, selector: string) {
 }
 
 async function exerciseHiddenDividers(s: ReturnType<typeof createScene>) {
-  const { contents, evaluate, until, key, paint, point, idle, grid, changed } =
-    s;
+  const {
+    contents,
+    evaluate,
+    until,
+    key,
+    paint,
+    point,
+    idle,
+    grid,
+    changed,
+    hosted,
+  } = s;
   for (const [index, selector] of dividers.entries()) {
     const element = `document.querySelector(${JSON.stringify(selector)})`;
     await idle();
@@ -330,6 +414,7 @@ async function exerciseHiddenDividers(s: ReturnType<typeof createScene>) {
     const before = grid();
     // A text field carries focus-visible when focus is moved by script in
     // pointerdown. Blur it first to isolate non-keyboard decorative paint.
+    if (hosted) contents.focus();
     await evaluate("document.activeElement.blur()");
     contents.sendInputEvent({
       type: "mouseDown",
@@ -376,7 +461,11 @@ async function exerciseHiddenDividers(s: ReturnType<typeof createScene>) {
     await until(`!${element}.classList.contains('dragging')`);
     // Chromium receives Tab from an existing control. Programmatic focus then
     // selects each separator in that keyboard modality (not OS tab traversal).
-    await focusThemeSeparator(contents, selector);
+    await focusThemeSeparator(
+      contents,
+      selector,
+      hosted ? ".auxiliary-hide" : undefined,
+    );
     assert.equal(await paint(selector), "rgb(240, 240, 255)");
     const keyboardGrid = grid();
     key(index === 1 ? "Up" : "Left");
@@ -396,7 +485,11 @@ async function exerciseHiddenDividers(s: ReturnType<typeof createScene>) {
     await until(`${element}.classList.contains('dragging')`);
     // Chromium may switch modality on mouseDown; restore keyboard modality
     // during captured drag to exercise simultaneous dragging/focus-visible.
-    await focusThemeSeparator(contents, selector);
+    await focusThemeSeparator(
+      contents,
+      selector,
+      hosted ? ".auxiliary-hide" : undefined,
+    );
     assert.equal(
       await evaluate(
         `${element}.matches(':focus-visible') && ${element}.classList.contains('dragging')`,

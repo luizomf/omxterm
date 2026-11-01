@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { focusThemeSeparator } from "../fixtures/theme-appearance-keyboard";
 
 function fixture() {
-  document.body.innerHTML = `<aside id="snippets-sidebar"><input></aside><button>Tab destination</button><div class="separator" tabindex="0"></div>`;
+  document.body.innerHTML = `<aside id="snippets-sidebar"><input></aside><button class="auxiliary-hide">Tab destination</button><div class="separator" tabindex="0"></div>`;
   const separator = document.querySelector<HTMLElement>(".separator")!;
   const focus = vi.spyOn(separator, "focus");
   // JSDOM cannot establish Chromium keyboard modality. Double only that native
@@ -42,9 +42,11 @@ function fixture() {
   const evaluate = vi.fn(
     async (script: string) => runInNewContext(script, renderer) as unknown,
   );
+  const focusContents = vi.fn();
   const contents = {
     sendInputEvent,
     executeJavaScript: evaluate,
+    focus: focusContents,
   } as unknown as Parameters<typeof focusThemeSeparator>[0];
   // This is the external Chromium event-delivery boundary, not a fake proof of
   // native trust/modality. Native qualification exercises real sendInputEvent.
@@ -67,6 +69,7 @@ function fixture() {
   return {
     contents,
     focus,
+    focusContents,
     separator,
     submission,
     sendInputEvent,
@@ -99,6 +102,26 @@ it("does not focus the separator until the submitted Tab down/default/up has act
   f.deliver("keyup");
   await operation;
   expect(f.focus).toHaveBeenCalledOnce();
+  expect(document.activeElement).toBe(f.separator);
+  expect(f.listeners.size).toBe(0);
+});
+
+it("uses the real core panel control for keyboard modality when search is hosted", async () => {
+  const f = fixture();
+  const operation = focusThemeSeparator(
+    f.contents,
+    ".separator",
+    ".auxiliary-hide",
+  );
+  await f.submission;
+  expect(f.focusContents).toHaveBeenCalledOnce();
+  expect(document.activeElement).toBe(
+    document.querySelector(".auxiliary-hide"),
+  );
+  expect(f.focus).not.toHaveBeenCalled();
+  f.deliver("keydown");
+  f.deliver("keyup");
+  await operation;
   expect(document.activeElement).toBe(f.separator);
   expect(f.listeners.size).toBe(0);
 });

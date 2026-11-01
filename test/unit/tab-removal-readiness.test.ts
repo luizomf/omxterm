@@ -108,6 +108,52 @@ it("rejects an actually held renderer operation at its named main deadline", asy
   expect(vi.getTimerCount()).toBe(0);
 });
 
+it("gives installed Snippets startup a bounded deadline without changing the negative controls", async () => {
+  let failure: unknown;
+  const pending = createTabRemovalReadiness(observation)
+    .waitFor("snippet-loaded", () => false)
+    .catch((error: unknown) => {
+      failure = error;
+    });
+  await vi.advanceTimersByTimeAsync(TAB_REMOVAL_STEP_TIMEOUT + 1);
+  expect(failure).toBeUndefined();
+  await vi.advanceTimersByTimeAsync(10_000);
+  await pending;
+  expect(failure).toMatchObject({
+    message: "Tab removal fixture operation-timeout at snippet-loaded",
+  });
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it("waits for the Snippets focus condition before completing its named phase", async () => {
+  const lines: string[] = [];
+  let focused = false;
+  let completed = false;
+  const pending = createTabRemovalReadiness(observation, (line) => {
+    lines.push(line);
+  })
+    .waitFor("snippet-focus", () => focused)
+    .then(() => {
+      completed = true;
+    });
+  await vi.advanceTimersByTimeAsync(50);
+  expect(completed).toBe(false);
+  focused = true;
+  await vi.advanceTimersByTimeAsync(25);
+  await pending;
+  expect(completed).toBe(true);
+  expect(
+    lines.map(
+      (line) =>
+        JSON.parse(line.slice(TAB_REMOVAL_PHASE_PREFIX.length)) as unknown,
+    ),
+  ).toEqual([
+    expect.objectContaining({ phase: "snippet-focus", status: "begin" }),
+    expect.objectContaining({ phase: "snippet-focus", status: "complete" }),
+  ]);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 it("does not replace acknowledged readiness with an arbitrary quiet delay", async () => {
   const events: string[] = [];
   await createTabRemovalReadiness(observation).initial(

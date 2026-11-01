@@ -1,10 +1,16 @@
 import { buildFixture } from "../fixtures/tab-removal-build";
 import { createRequire } from "node:module";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
+import {
+  prepareFixtureSnippetCatalog,
+  prepareFixtureSnippets,
+  prepareFixtureSnippetsRuntime,
+} from "../fixtures/fixture-snippets-build";
 import {
   runNativeFixture,
   type NativeFixtureTestContext,
@@ -33,18 +39,38 @@ async function runRemoval(
       },
     });
     if (process.platform === "linux") args.push("--ozone-platform=x11");
+    const positive = control === undefined || control === "held-surface";
     supervised = true;
     const execution = await runNativeFixture({
       executable,
       args: [
         ...args,
         root,
+        ...(positive ? ["--tab-removal-positive"] : []),
         ...(control ? [`--tab-removal-control=${control}`] : []),
       ],
       root,
       timeout: 90_000,
       testContext,
-      prepare: () => buildFixture(root, "runner"),
+      prepare: async () => {
+        await buildFixture(root, "runner");
+        testContext.signal.throwIfAborted();
+        if (!positive) return;
+        if (usesOptionalSnippets(process.platform, process.arch)) {
+          const { version } = await prepareFixtureSnippets(root);
+          testContext.signal.throwIfAborted();
+          await prepareFixtureSnippetsRuntime(root);
+          testContext.signal.throwIfAborted();
+          await writeFile(
+            path.join(root, "package.json"),
+            JSON.stringify({
+              name: "omxterm-tab-removal-fixture",
+              version,
+              main: "main.cjs",
+            }),
+          );
+        } else await prepareFixtureSnippetCatalog(root);
+      },
     });
     await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
     const phases = execution.stdout
@@ -72,7 +98,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
     // bare undefined row as an empty list of formatting arguments.
     it.for([[undefined], ["held-surface"]] as const)(
       "keeps A selected and receiving Paste, native keyboard and Snippet after ordinary C exit (%s)",
-      { timeout: 110_000 },
+      { timeout: 180_000 },
       async ([control], testContext) => {
         const { execution, phases, controls } = await runRemoval(
           testContext,
@@ -99,7 +125,24 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
           snippet: true,
           backgroundIsolated: true,
         });
+        const snippetsMarkers = execution.stdout
+          .split("\n")
+          .filter((line) =>
+            line.startsWith("__OMXTERM_TAB_REMOVAL_SNIPPETS__"),
+          );
+        expect(snippetsMarkers).toEqual(
+          usesOptionalSnippets(process.platform, process.arch)
+            ? ["installed", "activated", "joined"].map(
+                (name) => `__OMXTERM_TAB_REMOVAL_SNIPPETS__${name}`,
+              )
+            : [],
+        );
         expect(phases.some((p) => p.status === "failure")).toBe(false);
+        expect(
+          phases.filter(
+            (p) => p.phase === "snippet-focus" && p.status === "complete",
+          ),
+        ).toHaveLength(1);
         expect(phases.at(-1)).toMatchObject({
           phase: "verification",
           status: "complete",

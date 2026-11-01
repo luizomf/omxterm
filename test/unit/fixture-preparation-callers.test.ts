@@ -277,6 +277,28 @@ it.each(ordinaryCases)(
   },
 );
 
+function fixtureLeaseCompiler(name: string, recordPreparation: () => void) {
+  return (...args: unknown[]) => {
+    if (
+      ["tab-removal", "window-chrome"].includes(name) &&
+      Array.isArray(args[1]) &&
+      String(args[1][0]).endsWith("build-extension-leases.mjs") &&
+      typeof args[3] === "function"
+    ) {
+      recordPreparation();
+      queueMicrotask(() =>
+        (args[3] as (error: null, stdout: string, stderr: string) => void)(
+          null,
+          "",
+          "",
+        ),
+      );
+      return {};
+    }
+    throw new Error("Unexpected native command");
+  };
+}
+
 async function observeCaller(
   name: string,
   failure:
@@ -399,6 +421,18 @@ async function observeCaller(
               recordPreparation();
               preparedRoots.add(root!);
               if (failure === "build failure") throw stopped;
+              // The tab-removal and theme preparations bundle the real package
+              // with write:false. This external build port stays unexecuted in
+              // the caller-ownership control; no backend is launched here.
+              if (
+                ["tab-removal", "window-chrome"].includes(name) &&
+                options.write === false
+              )
+                return {
+                  outputFiles: [
+                    { contents: Buffer.from("controlled build output") },
+                  ],
+                };
               return {};
             },
           };
@@ -462,9 +496,7 @@ async function observeCaller(
             spawn: () => {
               throw new Error("Unexpected native spawn");
             },
-            execFile: () => {
-              throw new Error("Unexpected native command");
-            },
+            execFile: fixtureLeaseCompiler(name, recordPreparation),
             fork: () =>
               Object.assign(new EventEmitter(), {
                 connected: false,

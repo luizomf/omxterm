@@ -32,6 +32,11 @@ import {
   nativeFixturePlatform,
 } from "./restty-host-platform";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
+import { registerExtensionViewScheme } from "../../src/main/extension-view-host";
+import { startFixtureSnippetsHost } from "./fixture-snippets-host";
+import { createThemeCompletion } from "./theme-appearance-lifecycle";
+import { createThemeSessionTracking } from "./theme-appearance-session";
 import { createAboutExercise } from "./about-dialog-exercise";
 import { createWindowChromeFeatureScenario } from "./window-chrome-feature-scenario";
 import {
@@ -43,7 +48,7 @@ import {
   fixtureSnippetsRouter,
 } from "./window-chrome-configuration";
 import { exerciseAboutKeyboardWithInput } from "./about-keyboard-exercise";
-import { exerciseWindowChrome } from "./window-chrome-exercise";
+import { exerciseWindowChrome, waitFor } from "./window-chrome-exercise";
 import { createFixtureSessionInput } from "./fixture-session-input";
 import { exerciseAuxiliaryPanel } from "./auxiliary-panel-exercise";
 import { exerciseTheme } from "./theme-appearance-exercise";
@@ -86,6 +91,10 @@ type ChromeOptions = Parameters<typeof exerciseWindowChrome>[0];
 const root = __dirname;
 const auxiliaryOnly = process.argv.includes("--fixture-auxiliary-only");
 const themeAppearance = process.argv.includes("--fixture-theme-appearance");
+const themeScenario = themeAppearance && !extensionViewOnly && !paletteOnly;
+const optionalThemeSnippets =
+  themeScenario && usesOptionalSnippets(process.platform, process.arch);
+if (optionalThemeSnippets) registerExtensionViewScheme();
 const featureSmoke = createWindowChromeFeatureScenario();
 const panelClipboard = { text: "", writes: [] as string[], reads: 0 };
 const actionOrdinals = new WeakMap<
@@ -124,8 +133,67 @@ let cursor = { x: -100_000, y: -100_000 };
 let nativeCursor = false;
 let application: TerminalApplication<BrowserWindow>;
 let failing = false;
+let themeRouter: TerminalIpcRouter | undefined;
+let themeHost: Awaited<ReturnType<typeof startFixtureSnippetsHost>> | undefined;
+let themeSetup: Promise<void> | undefined;
+let themeStartupWork: Promise<unknown> | undefined;
+let themePrepareWork: Promise<unknown> | undefined;
+let themeExerciseWork: Promise<unknown> | undefined;
+let themeQuitAllowed = false;
+const themeSessions = createThemeSessionTracking<BrowserWindow>(
+  () => (optionalThemeSnippets ? windows[0] : undefined),
+  () => themeHost,
+);
+const themeCompletion = createThemeCompletion<unknown>({
+  requestClose() {
+    let closed = true;
+    for (const session of sessions) {
+      try {
+        session.close();
+      } catch {
+        closed = false;
+      }
+    }
+    return closed;
+  },
+  async retire() {
+    await themeSetup?.catch(() => {});
+    if (!themeHost) return true;
+    const settled = await themeHost.dispose();
+    if (settled) writeSync(1, "__OMXTERM_THEME_SNIPPETS__joined\n");
+    return settled;
+  },
+  closeWindows() {
+    if (application)
+      for (const window of windows) application.forceCloseWindow(window);
+    themeRouter?.dispose();
+  },
+  async joinSessions() {
+    await Promise.all([
+      ...sessionExits,
+      themeStartupWork?.catch(() => {}),
+      themePrepareWork?.catch(() => {}),
+      themeExerciseWork?.catch(() => {}),
+    ]);
+  },
+  publish(result) {
+    writeSync(1, `__OMXTERM_WINDOW_CHROME_RESULT__${JSON.stringify(result)}\n`);
+  },
+  quit() {
+    themeQuitAllowed = true;
+    app.quit();
+  },
+  exit: (code) => app.exit(code),
+  report(error) {
+    process.stderr.write(
+      `Theme fixture ownership not settled: ${String(error)}\n`,
+    );
+    process.exitCode = 1;
+  },
+});
 function createChromeSession(callbacks: SessionCallbacks) {
-  if (failing) throw new Error("Chrome fixture is completing");
+  if (failing || (themeScenario && themeCompletion.started()))
+    throw new Error("Chrome fixture is completing");
   const index = sessions.length;
   sizes[index] = [];
   sessionOutputs[index] = callbacks.onOutput;
@@ -204,6 +272,69 @@ const applyFixtureConfiguration = (router: TerminalIpcRouter) =>
     application,
     backgroundEffects.apply,
   );
+function chromeScenarioOptions(
+  router: TerminalIpcRouter,
+  nativeExpectation: ChromeOptions["nativeExpectation"] | undefined,
+  showAbout: () => void,
+): Omit<ChromeOptions, "nativeExpectation"> & Partial<ChromeOptions> {
+  return {
+    ...(nativeExpectation !== undefined ? { nativeExpectation } : {}),
+    window: windows[0]!,
+    cells,
+    queryCell: (index) => cellQueries[index]!(),
+    application,
+    sessions,
+    sizes,
+    ended: () => ended,
+    confirmations: () => confirmations,
+    cursor: (point) => (cursor = point),
+    async nativeDrag() {
+      try {
+        return await exerciseWindowsHandleDrag(windows[0]!, () => {
+          nativeCursor = true;
+        });
+      } finally {
+        nativeCursor = false;
+      }
+    },
+    reload() {
+      configuration = {
+        ...configuration,
+        showTitleBar: false,
+        showTabBar: false,
+        blur: true,
+        transparency: 0.5,
+        terminalTheme: {
+          ...configuration.terminalTheme,
+          colors: {
+            ...configuration.terminalTheme.colors,
+            background: auxiliaryOnly
+              ? configuration.terminalTheme.colors.background === "#f5f5f5"
+                ? "#000000"
+                : "#f5f5f5"
+              : "#123456",
+            ...(auxiliaryOnly
+              ? {
+                  foreground:
+                    configuration.terminalTheme.colors.background === "#f5f5f5"
+                      ? "#f0f0ff"
+                      : "#161616",
+                }
+              : {}),
+          },
+        },
+      };
+      applyFixtureConfiguration(router)(
+        { configuration, userFileErrors: [] },
+        true,
+      );
+    },
+    second: () => windows[1]!,
+    backgroundOpacity: (window) => 1 - backgroundTransparencies.get(window)!(),
+    exerciseMenu: () => exerciseMenu(showAbout),
+  };
+}
+
 async function exerciseScenario(
   about: ReturnType<typeof createAboutExercise>,
   router: TerminalIpcRouter,
@@ -243,7 +374,26 @@ async function exerciseScenario(
         },
       });
     if (themeAppearance)
-      return await exerciseTheme(options, root, apply, sessionOutputs);
+      return await exerciseTheme(
+        {
+          ...options,
+          ...(optionalThemeSnippets
+            ? {
+                hostedSnippets: {
+                  targetReady: () => themeHost?.hasLiveTarget("s3") === true,
+                  assertActivated() {
+                    assert.ok(themeHost);
+                    themeHost.assertActivated();
+                    writeSync(1, "__OMXTERM_THEME_SNIPPETS__activated\n");
+                  },
+                },
+              }
+            : {}),
+        },
+        root,
+        apply,
+        sessionOutputs,
+      );
     if (featureSmoke.enabled)
       return await featureSmoke.run({ ...options, root, router, apply });
     if (process.argv.includes("--fixture-settings-only"))
@@ -331,6 +481,16 @@ async function exerciseScenario(
   }
 }
 function fail(error: unknown) {
+  if (themeScenario) {
+    if (!failing) {
+      failing = true;
+      process.stderr.write(
+        `${error instanceof Error ? error.stack : String(error)}\n`,
+      );
+    }
+    void themeCompletion.complete(1);
+    return;
+  }
   if (failing) return;
   failing = true;
   process.stderr.write(
@@ -356,20 +516,35 @@ process.on("unhandledRejection", fail);
 for (const [signal, code] of [
   ["SIGINT", 130],
   ["SIGTERM", 143],
-] as const)
-  process.once(signal, () => {
+] as const) {
+  const interrupt = () => {
+    if (themeScenario) {
+      failing = true;
+      void themeCompletion.complete(code);
+      return;
+    }
     process.send?.({ type: "fixture-interrupted", signal });
     for (const session of sessions) session.close();
     app.exit(code);
-  });
+  };
+  if (themeScenario) process.on(signal, interrupt);
+  else process.once(signal, interrupt);
+}
 
 // The fixture owns successful completion until all PTYs have exited.
 // Electron's default last-window quit must not bypass the awaited PTY exits.
 app.on("window-all-closed", () => {});
+app.on("before-quit", (event) => {
+  if (themeScenario && !themeQuitAllowed) {
+    event.preventDefault();
+    void themeCompletion.complete(1);
+  }
+});
 
 app
   .whenReady()
   .then(async () => {
+    if (themeScenario && themeCompletion.started()) return;
     if (process.argv.includes("--fixture-fail-fast")) {
       setImmediate(() => {
         throw new Error("Controlled fixture failure");
@@ -392,9 +567,12 @@ app
       registerTerminalIpcRouter(ipcMain),
       auxiliaryOnly,
     );
+    if (themeScenario) themeRouter = router;
     const about = createAboutExercise(router, () => windows[0]!, sendAction);
     application = startTerminalApplication<BrowserWindow>({
       createWindow(lifecycle) {
+        if (themeScenario && themeCompletion.started())
+          throw new Error("Chrome fixture is completing");
         const nativeOptions = terminalWindowOptions(
           path.join(root, "preload.cjs"),
           configuration,
@@ -409,6 +587,15 @@ app
           },
         });
         windows.push(window);
+        const primaryThemeWindow =
+          optionalThemeSnippets && window === windows[0];
+        if (primaryThemeWindow) {
+          themeSetup = startFixtureSnippetsHost(root, window, router).then(
+            (host) => {
+              themeHost = host;
+            },
+          );
+        }
         const backgroundTransparency = backgroundEffects.register(
           window,
           configuration,
@@ -446,18 +633,24 @@ app
             process.platform === "darwin" ? 30 : 0,
           ),
           createSession: createChromeSession,
-          onSessionStarted: title.sessionStarted,
-          onSettingsSelected: () =>
+          onSessionStarted(sessionId, fallbackTitle) {
+            title.sessionStarted(sessionId, fallbackTitle);
+            themeSessions.started(window, sessionId);
+          },
+          onSettingsSelected: () => {
             title.selectSettings(
               createTranslator(configuration.language).t("settings.title"),
-            ),
-          onSessionSelected: featureSmoke.trackFocus(
-            window,
-            title.selectSession,
-          ),
+            );
+            themeSessions.selected(window, null);
+          },
+          onSessionSelected: featureSmoke.trackFocus(window, (sessionId) => {
+            title.selectSession(sessionId);
+            themeSessions.selected(window, sessionId);
+          }),
           onSessionStartError: lifecycle.onSessionStartError,
           onSessionExit(exit, context) {
             ended += 1;
+            themeSessions.ended(window, context.sessionId);
             lifecycle.onSessionExit(exit, context);
           },
           onTitleRequest: title.requestTitle,
@@ -499,6 +692,9 @@ app
           window,
           sessionActivity: controller,
           load: async () => {
+            if (primaryThemeWindow) await themeSetup;
+            if (themeScenario && themeCompletion.started())
+              throw new Error("Chrome fixture is completing");
             await window.loadFile(path.join(root, "renderer", "index.html"));
             window.showInactive();
           },
@@ -535,7 +731,13 @@ app
         noteAction(window, "clipboard");
       },
       sendSnippetsToggle: (window) => {
-        window.webContents.send(terminalIpc.snippetsToggle);
+        if (themeScenario && themeCompletion.started())
+          throw new Error("Chrome fixture is completing");
+        if (optionalThemeSnippets) {
+          if (window !== windows[0] || !themeHost)
+            throw new Error("Theme Snippets owner unavailable");
+          themeHost.toggle();
+        } else window.webContents.send(terminalIpc.snippetsToggle);
         noteAction(window, "toggle");
       },
       sendLocalImageOpen: (window) =>
@@ -543,69 +745,46 @@ app
       toggleDeveloperTools() {},
       quit() {},
     });
-    await application.newWindow();
+    const startup = application.newWindow();
+    if (themeScenario) themeStartupWork = startup;
+    await startup;
     if (process.platform === "darwin" && !app.isActive()) {
       app.focus({ steal: true });
       windows[0]!.focus();
     }
-    const result = await exerciseScenario(about, router, {
-      ...(nativeExpectation !== undefined ? { nativeExpectation } : {}),
-      window: windows[0]!,
-      cells,
-      queryCell: (index) => cellQueries[index]!(),
-      application,
-      sessions,
-      sizes,
-      ended: () => ended,
-      confirmations: () => confirmations,
-      cursor: (point) => (cursor = point),
-      async nativeDrag() {
-        try {
-          return await exerciseWindowsHandleDrag(windows[0]!, () => {
-            nativeCursor = true;
-          });
-        } finally {
-          nativeCursor = false;
-        }
-      },
-      reload() {
-        configuration = {
-          ...configuration,
-          showTitleBar: false,
-          showTabBar: false,
-          blur: true,
-          transparency: 0.5,
-          terminalTheme: {
-            ...configuration.terminalTheme,
-            colors: {
-              ...configuration.terminalTheme.colors,
-              background: auxiliaryOnly
-                ? configuration.terminalTheme.colors.background === "#f5f5f5"
-                  ? "#000000"
-                  : "#f5f5f5"
-                : "#123456",
-              ...(auxiliaryOnly
-                ? {
-                    foreground:
-                      configuration.terminalTheme.colors.background ===
-                      "#f5f5f5"
-                        ? "#f0f0ff"
-                        : "#161616",
-                  }
-                : {}),
-            },
-          },
-        };
-        applyFixtureConfiguration(router)(
-          { configuration, userFileErrors: [] },
-          true,
+    if (themeScenario && themeCompletion.started()) {
+      about.dispose();
+      return;
+    }
+    if (optionalThemeSnippets) {
+      themePrepareWork = (async () => {
+        windows[0]!.focus();
+        await waitFor(
+          () => windows[0]!.isFocused(),
+          "focused theme owner for Snippets installation",
         );
-      },
-      second: () => windows[1]!,
-      backgroundOpacity: (window) =>
-        1 - backgroundTransparencies.get(window)!(),
-      exerciseMenu: () => exerciseMenu(about.show),
-    });
+        if (themeCompletion.started()) return;
+        assert.ok(themeHost);
+        await themeHost.install();
+        writeSync(1, "__OMXTERM_THEME_SNIPPETS__installed\n");
+      })();
+      await themePrepareWork;
+      if (themeCompletion.started()) {
+        about.dispose();
+        return;
+      }
+    }
+    const scenario = exerciseScenario(
+      about,
+      router,
+      chromeScenarioOptions(router, nativeExpectation, about.show),
+    );
+    if (themeScenario) themeExerciseWork = scenario;
+    const result = await scenario;
+    if (themeScenario) {
+      await themeCompletion.complete(0, result);
+      return;
+    }
     for (const window of windows) application.forceCloseWindow(window);
     router.dispose();
     // Closing requests native termination; wait for every PTY to actually exit.

@@ -8,6 +8,9 @@ import { createFixtureSessionInput } from "../fixtures/fixture-session-input";
 import { explicitFixtureReadyMarker } from "../fixtures/restty-host-platform";
 import { createWindowChromeFeatureScenario } from "../fixtures/window-chrome-feature-scenario";
 import { fixtureSnippetsRouter } from "../fixtures/window-chrome-configuration";
+import { createThemeCompletion } from "../fixtures/theme-appearance-lifecycle";
+import { createThemeSessionTracking } from "../fixtures/theme-appearance-session";
+import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
 
 // The added observer is real; its native-only scenario is not invoked here.
 vi.mock("electron", () => ({ ipcMain: {}, Menu: {} }));
@@ -37,6 +40,8 @@ function harness(
     failFast?: boolean;
     createPeer?: boolean;
     auxiliaryOnly?: boolean;
+    themeAppearance?: boolean;
+    holdTheme?: boolean;
   } = {},
 ) {
   const require = createRequire(import.meta.url);
@@ -56,12 +61,15 @@ function harness(
   });
   const processPort = Object.assign(new EventEmitter(), {
     platform: options.platform ?? "win32",
+    arch: "x64",
     env: {},
     argv: options.failFast
       ? ["--fixture-fail-fast"]
       : options.auxiliaryOnly
         ? ["--fixture-auxiliary-only"]
-        : [],
+        : options.themeAppearance
+          ? ["--fixture-theme-appearance"]
+          : [],
     stdout: { write: vi.fn() },
     stderr: { write: vi.fn() },
     exit: vi.fn(),
@@ -92,6 +100,14 @@ function harness(
     if (!options.exerciseSucceeds) throw original;
     return { controlled: true };
   });
+  let stopHeldTheme = () => {};
+  const exerciseTheme = vi.fn(() =>
+    options.holdTheme
+      ? new Promise<never>((_resolve, reject) => {
+          stopHeldTheme = () => reject(new Error("controlled theme stopped"));
+        })
+      : Promise.resolve({ appearance: "controlled-theme" }),
+  );
   const ports: Record<string, unknown> = {
     electron: {
       app,
@@ -184,9 +200,14 @@ function harness(
       explicitFixtureLaunchRequest: () => ({}),
     },
     "../../src/shared/terminal-ipc": { terminalIpc: {} },
+    "../../src/shared/snippets-mode": { usesOptionalSnippets },
+    "../../src/main/extension-view-host": {},
+    "./fixture-snippets-host": {},
+    "./theme-appearance-lifecycle": { createThemeCompletion },
+    "./theme-appearance-session": { createThemeSessionTracking },
     "./window-chrome-exercise": { exerciseWindowChrome },
     "./auxiliary-panel-exercise": { exerciseAuxiliaryPanel: vi.fn() },
-    "./theme-appearance-exercise": { exerciseTheme: vi.fn() },
+    "./theme-appearance-exercise": { exerciseTheme },
     "./window-chrome-construction": { assertNativeChromeConstruction() {} },
     "./window-policy": {
       chromeNativeExpectation: () => "native-maximize-observed",
@@ -233,6 +254,8 @@ function harness(
     events,
     windows,
     exerciseWindowChrome,
+    exerciseTheme,
+    stopHeldTheme: () => stopHeldTheme(),
     sessions,
     original,
     callbacks,
@@ -434,6 +457,81 @@ it("successful completion still publishes its result and quits after all acknowl
   expect(h.app.quit).toHaveBeenCalledOnce();
   expect(h.app.exit).not.toHaveBeenCalled();
   expect(h.processPort.stderr.write).not.toHaveBeenCalled();
+});
+
+it.each(["SIGINT", "SIGTERM"] as const)(
+  "theme %s waits for every owned PTY before exiting",
+  async (signal) => {
+    const h = harness(2, { themeAppearance: true, holdTheme: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.exerciseTheme).toHaveBeenCalledOnce();
+    h.processPort.emit(signal);
+    expect(h.processPort.listenerCount(signal)).toBe(1);
+    h.processPort.emit(signal);
+    expect(
+      h.sessions.every((session) => session.close.mock.calls.length === 1),
+    ).toBe(true);
+    expect(h.app.exit).not.toHaveBeenCalled();
+    h.sessions[0]!.exit();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.app.exit).not.toHaveBeenCalled();
+    h.sessions[1]!.exit();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.app.exit).not.toHaveBeenCalled();
+    h.stopHeldTheme();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(
+      signal === "SIGINT" ? 130 : 143,
+    );
+    expect(h.writeSync).not.toHaveBeenCalled();
+    expect(h.app.quit).not.toHaveBeenCalled();
+  },
+);
+
+it("theme before-quit prevents early exit and joins the in-flight scenario and PTYs", async () => {
+  const h = harness(1, { themeAppearance: true, holdTheme: true });
+  await vi.advanceTimersByTimeAsync(0);
+  const event = { preventDefault: vi.fn() };
+  h.app.emit("before-quit", event);
+  expect(event.preventDefault).toHaveBeenCalledOnce();
+  expect(h.sessions[0]!.close).toHaveBeenCalledOnce();
+  h.sessions[0]!.exit();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.app.exit).not.toHaveBeenCalled();
+  h.stopHeldTheme();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+  expect(h.writeSync).not.toHaveBeenCalled();
+});
+
+it("theme success publishes only after the original PTYs exit", async () => {
+  const h = harness(2, { themeAppearance: true });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(
+    h.sessions.every((session) => session.close.mock.calls.length === 1),
+  ).toBe(true);
+  expect(h.writeSync).not.toHaveBeenCalled();
+  for (const session of h.sessions) session.exit();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.writeSync).toHaveBeenCalledExactlyOnceWith(
+    1,
+    '__OMXTERM_WINDOW_CHROME_RESULT__{"appearance":"controlled-theme"}\n',
+  );
+  expect(h.app.quit).toHaveBeenCalledOnce();
+  expect(h.app.exit).not.toHaveBeenCalled();
+});
+
+it("theme failure during its successful PTY join suppresses its result", async () => {
+  const h = harness(2, { themeAppearance: true });
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.exerciseTheme).toHaveBeenCalledOnce();
+  expect(h.writeSync).not.toHaveBeenCalled();
+  h.processPort.emit("uncaughtException", h.original);
+  for (const session of h.sessions) session.exit();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(h.app.exit).toHaveBeenCalledExactlyOnceWith(1);
+  expect(h.writeSync).not.toHaveBeenCalled();
+  expect(h.app.quit).not.toHaveBeenCalled();
 });
 
 it("a zero-session failure exits1 without needing a fabricated PTY event", async () => {

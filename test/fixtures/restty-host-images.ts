@@ -252,8 +252,10 @@ export async function exerciseResttyImages(options: {
   if (screenshotPath) writeFileSync(screenshotPath, finalPng);
 
   const before = { ...(await readImageContentLayout(window)), grid: size() };
-  if (before.sidebarVisible)
-    throw new Error("Image content refit requires an initially hidden sidebar");
+  if (before.panelVisible)
+    throw new Error(
+      "Image content refit requires an initially hidden Auxiliary Panel",
+    );
   const waitForContentRefit = async (restoring: boolean) => {
     let layout: ImageContentLayout | undefined;
     await waitFor(
@@ -261,16 +263,16 @@ export async function exerciseResttyImages(options: {
         layout = { ...(await readImageContentLayout(window)), grid: size() };
         if (Math.abs(layout.height - before.height) > 1) return false;
         return restoring
-          ? !layout.sidebarVisible &&
+          ? !layout.panelVisible &&
               Math.abs(layout.width - before.width) <= 1 &&
               layout.grid.cols === before.grid.cols &&
               layout.grid.rows === before.grid.rows
-          : layout.sidebarVisible &&
-              layout.sidebarReady &&
+          : layout.panelVisible &&
+              layout.geometryViewVisible &&
               layout.width < before.width &&
               layout.grid.cols < before.grid.cols;
       },
-      `image content and PTY grid after sidebar ${restoring ? "restore" : "shrink"}`,
+      `image content and PTY grid after panel ${restoring ? "restore" : "shrink"}`,
     ).catch((cause: unknown) => {
       throw new Error(
         `Image content/PTY refit failed: ${JSON.stringify({ restoring, before, layout })}`,
@@ -279,19 +281,24 @@ export async function exerciseResttyImages(options: {
     });
     return layout!;
   };
-  window.webContents.send(terminalIpc.snippetsToggle);
   let shrunk: ImageContentLayout;
   let shrinkPixels: Awaited<ReturnType<typeof waitForImagePixels>>;
   let restored: ImageContentLayout;
   try {
+    await window.webContents.executeJavaScript(
+      "globalThis.__resttyImageGeometryPanel.show()",
+      true,
+    );
     shrunk = await waitForContentRefit(false);
     shrinkPixels = await waitForImagePixels(
       "Pi and Chafa images after content shrink",
     );
   } finally {
-    // Restore production layout even when the shrink's pixel oracle fails.
-    if ((await readImageContentLayout(window)).sidebarVisible)
-      window.webContents.send(terminalIpc.snippetsToggle);
+    // Close the fixture view, or dismiss its pending selection, on failure too.
+    await window.webContents.executeJavaScript(
+      "globalThis.__resttyImageGeometryPanel.close()",
+      true,
+    );
     restored = await waitForContentRefit(true);
   }
   const restorePixels = await waitForImagePixels(
@@ -384,8 +391,8 @@ export async function readResttyImageCellSize(
 }
 
 interface ImageContentLayout {
-  readonly sidebarVisible: boolean;
-  readonly sidebarReady: boolean;
+  readonly panelVisible: boolean;
+  readonly geometryViewVisible: boolean;
   readonly width: number;
   readonly height: number;
   readonly grid: { readonly cols: number; readonly rows: number };
@@ -396,14 +403,15 @@ async function readImageContentLayout(
 ): Promise<Omit<ImageContentLayout, "grid">> {
   return window.webContents.executeJavaScript(
     `(() => {
-      const sidebar = document.querySelector('#snippets-sidebar');
+      const panel = document.querySelector('.auxiliary-panel');
       const canvas = document.querySelector('.restty-terminal-surface canvas');
-      if (!sidebar || !canvas) throw new Error('Image content layout is unavailable');
+      if (!panel || !canvas) throw new Error('Image content layout is unavailable');
       const bounds = canvas.getBoundingClientRect();
+      const panelVisible = !panel.hidden && panel.getBoundingClientRect().width > 0;
+      const view = panel.querySelector('.auxiliary-body > [data-restty-image-geometry-fixture]');
       return {
-        sidebarVisible: !sidebar.hidden && sidebar.getBoundingClientRect().width > 0,
-        sidebarReady: !!sidebar.querySelector('input[type="search"]') &&
-          !!sidebar.querySelector('.snippets-empty')?.textContent,
+        panelVisible,
+        geometryViewVisible: panelVisible && !!view && !view.hidden,
         width: bounds.width,
         height: bounds.height,
       };

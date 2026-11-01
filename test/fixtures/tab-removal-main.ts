@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, WebContentsView } from "electron";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
@@ -9,6 +9,10 @@ import { terminalRendererConfiguration } from "../../src/main/active-user-config
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import type { LocalTerminalSession } from "../../src/main/local-terminal-session";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
+import { registerExtensionViewScheme } from "../../src/main/extension-view-host";
+import { loadTerminalSnippets } from "../../src/main/snippets";
+import { startFixtureSnippetsHost } from "./fixture-snippets-host";
 import { spawnFixturePty } from "./native-fixture-pty";
 import { nativeFixturePlatform } from "./restty-host-platform";
 import { createResttyHostSessions } from "./restty-host-sessions";
@@ -32,6 +36,12 @@ assert.ok(
   "Unknown tab removal control",
 );
 
+const positive = process.argv.includes("--tab-removal-positive");
+const optionalSnippets =
+  positive && usesOptionalSnippets(process.platform, process.arch);
+assert.ok(!positive || control === undefined || control === "held-surface");
+if (optionalSnippets) registerExtensionViewScheme();
+
 const root = __dirname;
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(root, name);
@@ -45,11 +55,43 @@ const outputs: string[][] = [];
 const exited: number[] = [];
 let selected = "";
 let clipboardReads = 0;
+let snippetsHost:
+  Awaited<ReturnType<typeof startFixtureSnippetsHost>> | undefined;
+let snippetsSetup: Promise<void> | undefined;
+let completion: Promise<void> | undefined;
+let completionCode = 0;
+let ptyDrainStarted = false;
+// The existing PTY owner normally exits directly on these events. Optional
+// Snippets adds a backend owner, so route every exit path through its join first.
+const fixtureApp = optionalSnippets
+  ? ({
+      on(event: string, listener: (...args: never[]) => void) {
+        if (event === "window-all-closed")
+          app.on("window-all-closed", listener);
+        else if (event === "before-quit")
+          app.on("before-quit", (event) => {
+            event.preventDefault();
+            void complete(1);
+          });
+      },
+      exit: (code: number) => app.exit(code),
+    } as unknown as Parameters<typeof createResttyHostSessions>[0]["app"])
+  : app;
+const fixtureSignals = optionalSnippets
+  ? {
+      on(signal: "SIGINT" | "SIGTERM") {
+        process.on(
+          signal,
+          () => void complete(signal === "SIGINT" ? 130 : 143),
+        );
+      },
+    }
+  : process;
 const owner = createResttyHostSessions({
-  app,
+  app: fixtureApp,
   spawn: spawnFixturePty,
   windows: () => windows,
-  signals: process,
+  signals: fixtureSignals,
   reportError: (message) => process.stderr.write(`${message}\n`),
 });
 const readiness = createTabRemovalReadiness(
@@ -83,11 +125,35 @@ const markControl = (
     | "host-ready-surface-pending"
     | "surface-released",
 ) => writeSync(1, `${TAB_REMOVAL_CONTROL_PREFIX}${name}\n`);
+function complete(code: number): Promise<void> {
+  if (code !== 0) {
+    completionCode = code;
+    // Once the PTY owner is draining, it owns the final exit status too.
+    if (ptyDrainStarted) void owner.complete(code);
+  }
+  completion ??= (async () => {
+    await snippetsSetup?.catch(() => {});
+    if (snippetsHost) {
+      if (!(await snippetsHost.dispose()))
+        throw new Error("Snippets backend or view retirement was not settled");
+      writeSync(1, "__OMXTERM_TAB_REMOVAL_SNIPPETS__joined\n");
+    }
+    ptyDrainStarted = true;
+    await owner.complete(completionCode);
+  })().catch((error: unknown) => {
+    process.stderr.write(`Fixture ownership not settled: ${String(error)}\n`);
+    process.exitCode = 1;
+    // Keep the owner alive. The supervisor retains responsibility for the
+    // registered process tree; never report an unjoined backend as success.
+    return new Promise<never>(() => {});
+  });
+  return completion;
+}
 function fail(error: unknown) {
   process.stderr.write(
     `${error instanceof Error ? error.stack : String(error)}\n`,
   );
-  void owner.complete(1);
+  void complete(1);
 }
 process.on("uncaughtException", fail);
 process.on("unhandledRejection", fail);
@@ -113,6 +179,7 @@ function launchRequest(index: number) {
 
 async function run() {
   await step("app-ready", () => app.whenReady());
+  if (completion) throw new Error("Fixture is completing");
   const window = await step("window", async () => {
     const created = new BrowserWindow({
       ...terminalWindowOptions(
@@ -125,6 +192,7 @@ async function run() {
     windows.push(created);
     return created;
   });
+  if (completion) throw new Error("Fixture is completing");
   window.webContents.on("console-message", (details) => {
     if (details.message === `${TAB_REMOVAL_CONTROL_PREFIX}actual-surface-held`)
       markControl("actual-surface-held");
@@ -133,7 +201,7 @@ async function run() {
     )
       markControl("held-renderer-boundary");
   });
-  registerHost(window);
+  await registerHost(window);
   await exerciseRemoval(window);
   writeSync(
     1,
@@ -148,11 +216,21 @@ async function run() {
       }) +
       "\n",
   );
-  await owner.complete(0);
+  await complete(0);
 }
 
-function registerHost(window: BrowserWindow) {
+async function registerHost(window: BrowserWindow) {
+  if (completion) throw new Error("Fixture is completing");
   const router = registerTerminalIpcRouter(ipcMain);
+  if (optionalSnippets) {
+    snippetsSetup = startFixtureSnippetsHost(root, window, router).then(
+      (host) => {
+        snippetsHost = host;
+      },
+    );
+    await snippetsSetup;
+    if (completion) throw new Error("Fixture is completing");
+  }
   const controller = router.registerController({
     webContents: window.webContents,
     configuration: terminalRendererConfiguration(
@@ -189,14 +267,19 @@ function registerHost(window: BrowserWindow) {
         },
       };
     },
-    onSessionStarted() {},
+    onSessionStarted(sessionId) {
+      snippetsHost?.started(sessionId);
+    },
     onSessionSelected(sessionId) {
       selected = sessionId ?? "";
+      snippetsHost?.selected(sessionId);
     },
     onSessionStartError() {
       throw new Error("Unexpected fixture spawn failure");
     },
-    onSessionExit() {},
+    onSessionExit(_exit, context) {
+      snippetsHost?.ended(context.sessionId);
+    },
     onTitleRequest() {},
     onBell() {},
     onUserInteraction() {},
@@ -209,9 +292,11 @@ function registerHost(window: BrowserWindow) {
     showClipboardContextMenu() {},
     openExternalLink: async () => {},
     onExternalLinkOpenError() {},
-    loadSnippets: async () => ({
-      snippets: [{ name: "Synthetic", body: "snippet", execute: true }],
-    }),
+    loadSnippets: () =>
+      loadTerminalSnippets({
+        environment: process.env,
+        homeDirectory: root,
+      }),
     loadLocalImage: async () => null,
   });
   registerTerminalWindowHost(window, controller, () => router.dispose());
@@ -236,7 +321,13 @@ async function exerciseRemoval(window: BrowserWindow) {
     readiness,
     mark: markControl,
   });
+  if (snippetsHost) {
+    await snippetsHost.install();
+    writeSync(1, "__OMXTERM_TAB_REMOVAL_SNIPPETS__installed\n");
+  }
+  if (completion) throw new Error("Fixture is completing");
   for (const count of [2, 3]) {
+    if (completion) throw new Error("Fixture is completing");
     if (!(count === 2 && control === "early-command"))
       window.webContents.send(terminalIpc.tabCommand, { action: "new" });
     await waitFor(
@@ -250,7 +341,7 @@ async function exerciseRemoval(window: BrowserWindow) {
     (await window.webContents.executeJavaScript(script, true)) as T;
   await step("save-canvases", () =>
     evaluate(
-      "globalThis.originalCanvases = [...document.querySelectorAll('.terminal-surface canvas')]",
+      "globalThis.originalCanvases = [...document.querySelectorAll('.terminal-surface canvas')]; if (originalCanvases.length !== 3 || new Set(originalCanvases).size !== 3) throw Error('Expected three distinct Surfaces')",
     ),
   );
   window.webContents.send(terminalIpc.tabCommand, {
@@ -291,7 +382,7 @@ async function exerciseRemoval(window: BrowserWindow) {
     assert.equal(received(1), "", "Paste never reaches B");
     assert.deepEqual(
       await evaluate(`({
-    same: [...document.querySelectorAll('.terminal-surface canvas')].every((canvas, index) => canvas === globalThis.originalCanvases[index]),
+    same: document.querySelectorAll('.terminal-surface canvas').length === 2 && [...document.querySelectorAll('.terminal-surface canvas')].every((canvas, index) => canvas === globalThis.originalCanvases[index]) && !globalThis.originalCanvases[2].isConnected,
     selected: [...document.querySelectorAll('[role=tab]')].map(tab => tab.getAttribute('aria-selected')),
     focused: document.querySelector('.terminal-surface').contains(document.activeElement)
   })`),
@@ -312,22 +403,88 @@ async function exerciseRemoval(window: BrowserWindow) {
   await waitFor("native-keyboard", () =>
     outputs[0]!.join("").includes("RECEIVED:k"),
   );
-  window.webContents.send(terminalIpc.snippetsToggle);
-  await waitFor("snippet-loaded", () =>
-    evaluate<boolean>(
-      "!!document.querySelector('#snippets-sidebar li .snippet-activate')",
-    ),
-  );
-  await step("snippet-click", () =>
-    evaluate(
-      "document.querySelector('#snippets-sidebar li .snippet-activate').click()",
-    ),
-  );
-  await waitFor("snippet-delivered", () =>
-    outputs[0]!.join("").includes("RECEIVED:snippet"),
+  const outputOffset = outputs[0]!.join("").length;
+  const snippetInputOffset = inputs[0]!.length;
+  if (completion) throw new Error("Fixture is completing");
+  if (snippetsHost) {
+    snippetsHost.toggle();
+    const hosted = () =>
+      window.contentView.children.filter(
+        (view): view is WebContentsView =>
+          view instanceof WebContentsView &&
+          !view.webContents.isDestroyed() &&
+          view.webContents.getURL().startsWith("omx-extension://"),
+      );
+    await waitFor("snippet-loaded", async () => {
+      const views = hosted();
+      return (
+        views.length === 1 &&
+        views[0]!.getVisible() &&
+        views[0]!.webContents.isFocused() &&
+        (await views[0]!.webContents.executeJavaScript(
+          "document.querySelectorAll('li .snippet-activate').length === 1",
+        )) === true
+      );
+    });
+    snippetsHost.assertActivated();
+    writeSync(1, "__OMXTERM_TAB_REMOVAL_SNIPPETS__activated\n");
+    await step("snippet-click", () =>
+      hosted()[0]!.webContents.executeJavaScript(
+        "document.querySelector('li .snippet-activate').click()",
+        true,
+      ),
+    );
+  } else {
+    window.webContents.send(terminalIpc.snippetsToggle);
+    await waitFor("snippet-loaded", () =>
+      evaluate<boolean>(
+        "!!document.querySelector('#snippets-sidebar li .snippet-activate')",
+      ),
+    );
+    await step("snippet-click", () =>
+      evaluate(
+        "document.querySelector('#snippets-sidebar li .snippet-activate').click()",
+      ),
+    );
+  }
+  const snippetReceipts = () =>
+    outputs[0]!
+      .join("")
+      .slice(outputOffset)
+      .match(/RECEIVED:snippet\r?\n/g)?.length ?? 0;
+  await waitFor("snippet-delivered", () => snippetReceipts() === 1);
+  await waitFor(
+    "snippet-focus",
+    async () =>
+      window.webContents.isFocused() &&
+      (await evaluate<boolean>(
+        "document.querySelector('.terminal-surface').contains(document.activeElement)",
+      )) &&
+      window.webContents.isFocused(),
   );
   await step("verification", async () => {
     assert.equal(received(1), "");
+    assert.equal(received(2), "");
+    assert.equal(
+      inputs[0]!.slice(snippetInputOffset).join("").split("snippet").length - 1,
+      1,
+    );
+    assert.equal(snippetReceipts(), 1);
+    assert.equal(
+      await evaluate(`(() => {
+      const canvases = [...document.querySelectorAll('.terminal-surface canvas')];
+      return canvases.length === 2 && canvases.every((canvas, index) => canvas === globalThis.originalCanvases[index]) &&
+        !globalThis.originalCanvases[2].isConnected &&
+        document.querySelector('.terminal-surface').contains(document.activeElement);
+    })()`),
+      true,
+      "same Surfaces and A focus survive Snippets delivery",
+    );
+    assert.equal(
+      window.webContents.isFocused(),
+      true,
+      "core WebContents retains native focus after Snippets delivery",
+    );
     assert.equal(selected, "s1");
     assert.deepEqual(exited, [2]);
     assert.equal(sessions.length, 3);

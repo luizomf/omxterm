@@ -23,6 +23,12 @@ export async function buildFixture(
             external: ["electron", "node-pty"],
             format: "cjs",
             platform: "node",
+            // The extension lease loader resolves its native addon with
+            // import.meta.url; preserve that meaning in this CJS fixture.
+            banner: {
+              js: 'const __fixtureMetaUrl = require("node:url").pathToFileURL(__filename).href;',
+            },
+            define: { "import.meta.url": "__fixtureMetaUrl" },
             logLevel: "silent",
             outfile: path.join(root, "main.cjs"),
           }),

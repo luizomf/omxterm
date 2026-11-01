@@ -4,12 +4,18 @@ import { waitFor } from "./window-chrome-exercise";
 // Submission does not order renderer evaluation after Chromium's Tab default.
 // Observe the real down/up pair before moving focus; never synthesize modality.
 export async function focusThemeSeparator(
-  contents: Pick<WebContents, "executeJavaScript" | "sendInputEvent">,
+  contents: Pick<WebContents, "executeJavaScript" | "sendInputEvent" | "focus">,
   selector: string,
+  keyboardStart = "#snippets-sidebar input",
 ) {
+  // A hosted search lives in another WebContents. Establish keyboard modality
+  // in the core with its real panel control, not a synthetic core search input.
+  if (keyboardStart !== "#snippets-sidebar input") contents.focus();
   await contents.executeJavaScript(`(() => {
     if (globalThis.__themeKeyboardReceipt) throw new Error('Theme keyboard receipt already armed');
-    document.querySelector('#snippets-sidebar input').focus();
+    const start = document.querySelector(${JSON.stringify(keyboardStart)});
+    if (!start) throw new Error('Theme keyboard start is missing');
+    start.focus();
     const receipt = globalThis.__themeKeyboardReceipt = {down: false, up: false};
     receipt.listener = (event) => {
       if (!event.isTrusted || event.key !== 'Tab' || !event.shiftKey ||

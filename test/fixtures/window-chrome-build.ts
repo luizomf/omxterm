@@ -10,6 +10,7 @@ export async function buildFixture(
   root: string,
   cleanupOwner: FixtureCleanupOwner = "recipe",
   mainEntry = "test/fixtures/window-chrome-main.ts",
+  options: { optionalSnippets?: boolean } = {},
 ): Promise<void> {
   return prepareFixture(
     root,
@@ -24,6 +25,15 @@ export async function buildFixture(
             external: ["electron", "node-pty"],
             format: "cjs",
             platform: "node",
+            ...(options.optionalSnippets
+              ? {
+                  // The native lease loader uses import.meta.url inside CJS.
+                  banner: {
+                    js: 'const __fixtureMetaUrl = require("node:url").pathToFileURL(__filename).href;',
+                  },
+                  define: { "import.meta.url": "__fixtureMetaUrl" },
+                }
+              : {}),
             logLevel: "silent",
             outfile: path.join(root, "main.cjs"),
           }),
