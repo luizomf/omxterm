@@ -151,6 +151,12 @@ it("requires complete explicit inputs and does not infer target or reuse another
     ]),
   );
   expect(filesDmgInputs(env)).toEqual(values);
+  expect(
+    filesDmgInputs({ ...env, OMXTERM_FILES_DMG_EXTENSION_VERSION: "0.6.0" }),
+  ).toEqual({ ...values, EXTENSION_VERSION: "0.6.0" });
+  expect(() =>
+    filesDmgInputs({ ...env, OMXTERM_FILES_DMG_EXTENSION_VERSION: "" }),
+  ).toThrow();
   expect(() => filesDmgInputs({ OMXTERM_FILES_DMG_DMG: values.DMG })).toThrow();
   expect(() =>
     filesDmgInputs({ ...env, OMXTERM_FILES_DMG_ARCHIVE: "relative" }),
@@ -359,6 +365,7 @@ it.each([
   expect((await receipt()).result.passed).toBe(false);
 });
 it("retains the copied application/profile and records actual host separately from source", async () => {
+  values.EXTENSION_VERSION = "0.6.0";
   await run();
   const { directory, result } = await receipt();
   expect(result.passed).toBe(true);
@@ -370,6 +377,7 @@ it("retains the copied application/profile and records actual host separately fr
   );
   expect(options).toMatchObject({
     version: "0.24.0-dev.21",
+    extensionVersion: "0.6.0",
     observer: "files-packaged.cjs",
     macosLifecycle: true,
   });

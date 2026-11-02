@@ -834,6 +834,51 @@ try {
     console.log(`PASS hidden keyboard ${tag}`);
     console.log(`PASS menu text geometry ${tag}`);
   }
+  async function resizeMenu(tag, scale) {
+    await evaluate("filesFixture.useDotfiles()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=tree]')?.getAttribute('aria-busy') === 'false' && document.querySelector('.file-name')?.textContent === 'visible'",
+        ),
+      "dotfile fixture loaded",
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).focus(),
+      selector("actions"),
+    );
+    await key("Enter", "Enter", 13);
+    await key("End", "End", 35);
+    await assertCheckboxTextFits(`${tag}-before-unchecked`);
+    await send("Emulation.setDeviceMetricsOverride", {
+      width: 196,
+      height: 174,
+      deviceScaleFactor: scale,
+      mobile: false,
+    });
+    await frame();
+    await assertCheckboxTextFits(`${tag}-after-unchecked`);
+    const popup = await evaluate(() => {
+      const rect = document
+        .querySelector('[role="menu"]')
+        .getBoundingClientRect();
+      return {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+      };
+    });
+    assert.ok(
+      popup.left >= 0 &&
+        popup.top >= 0 &&
+        popup.right <= 196 &&
+        popup.bottom <= 174,
+      `menu remains in viewport ${tag}: ${JSON.stringify(popup)}`,
+    );
+    await screenshot(`resize-menu-${tag}`);
+    console.log(`PASS menu viewport resize ${tag}`);
+  }
   async function shortcut(platform) {
     await evaluate("filesFixture.useDotfiles()");
     await until(
@@ -961,11 +1006,16 @@ try {
       "matrix",
       "hidden",
       "short-menu",
+      "resize-menu",
       "shortcut-mac",
       "shortcut-linux",
     ].includes(scenario),
   );
-  if (scenario.startsWith("shortcut-") || scenario === "short-menu") {
+  if (
+    scenario.startsWith("shortcut-") ||
+    scenario === "short-menu" ||
+    scenario === "resize-menu"
+  ) {
     await send("Emulation.setUserAgentOverride", {
       userAgent: await evaluate("navigator.userAgent"),
       platform: scenario === "shortcut-linux" ? "Linux aarch64" : "MacIntel",
@@ -981,15 +1031,21 @@ try {
           [196, 1, 174],
           [196, 2, 174],
         ]
-      : scenario === "matrix" || scenario === "hidden"
+      : scenario === "resize-menu"
         ? [
             [196, 1],
-            [196, 2],
             [320, 1],
+            [196, 2],
           ]
-        : [[196, 1]];
+        : scenario === "matrix" || scenario === "hidden"
+          ? [
+              [196, 1],
+              [196, 2],
+              [320, 1],
+            ]
+          : [[196, 1]];
   for (const [width, scale, height = 400] of sizes)
-    for (const language of scenario === "matrix"
+    for (const language of scenario === "matrix" || scenario === "resize-menu"
       ? ["en-US", "pt-BR"]
       : ["en-US"])
       for (const light of scenario === "matrix" ||
@@ -1007,6 +1063,7 @@ try {
           if (kind === "notice") await notice(language, names, tag);
           if (kind === "scroll") await scroll(width, names, tag);
           if (kind === "hidden" || kind === "short-menu") await hidden(tag);
+          if (kind === "resize-menu") await resizeMenu(tag, scale);
           if (kind === "shortcut-mac") await shortcut("mac");
           if (kind === "shortcut-linux") await shortcut("linux");
         }

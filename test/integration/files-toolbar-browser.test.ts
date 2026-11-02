@@ -25,6 +25,11 @@ const scenarios = [
     "PASS menu text geometry",
   ],
   [
+    "resize-menu",
+    "keeps the focused menu item visible when the viewport height shrinks",
+    "PASS menu viewport resize",
+  ],
+  [
     "pointer",
     "keeps the real Go target clickable under a neighboring tooltip",
     "PASS pointer hover",
@@ -68,6 +73,13 @@ it.skipIf(!process.env.OMXTERM_TOOLBAR_CHROMIUM).each(scenarios)(
             expect(result.stdout).toContain(
               `${receipt} ${size}-en-US-${theme}`,
             );
+    }
+    if (scenario === "resize-menu") {
+      for (const size of ["196x1", "320x1", "196x2"])
+        for (const language of ["en-US", "pt-BR"])
+          expect(result.stdout).toContain(
+            `PASS menu viewport resize ${size}-${language}-dark`,
+          );
     }
     if (scenario === "matrix") {
       for (const size of ["196x1", "196x2", "320x1"])

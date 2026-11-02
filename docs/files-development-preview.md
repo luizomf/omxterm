@@ -31,9 +31,9 @@ not qualify every admitted version.
 
 ## Files 0.5.0 macOS controlled qualification
 
-Source now builds **Files 0.5.0 — ARM64 preview**, requiring host
+The separately published **Files 0.5.0 — ARM64 preview** requires host
 `>=0.24.0-dev.21` and API `0.1.x`. It includes the corrected raw-path forwarding
-for optional host trash. This is a new archive identity, not a replacement or
+for optional host trash. It is a separate archive identity, not a replacement or
 new qualification of immutable Files0.4.0. The legacy catalog remains Linux-only0.4.0;
 macOS published dev.21 uses the separately published link-first pair described below.
 Published dev.26 selects a separate macOS0.5 catalog; its
@@ -156,11 +156,11 @@ or qualification of other platforms is implied.
 
 `extensions/files` is separately built, not imported into application main or the
 terminal renderer. Maintainers run `node scripts/build-files-extension.mjs` to
-produce `dist/extensions/files-0.5.0.omxext`. This build needs Python 3's ZIP
+produce `dist/extensions/files-0.6.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; source version 0.5.0 requires host
+`extensions/files/extension.json`; source version 0.6.0 requires host
 `0.24.0-dev.21` or later for the macOS trash service. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. The legacy catalog
 selects the original0.4.0 archive; the new macOS endpoint selects original0.5.0.
@@ -511,9 +511,17 @@ The legacy Files0.4.0 entry excludes stable0.23.0 and the older preview hosts.
 The macOS Files0.5 entry requires at least dev.21, independently of which new
 host first delivers the endpoint selection.
 Historical Files0.1.0 remains available for local/link installation from
-0.23.0-dev.8; catalog-capable host source started at 0.23.0-dev.9. The catalog
-is not an index of every historical release. Declared compatibility is not
-qualification of every version.
+0.23.0-dev.8; catalog-capable host source started at 0.23.0-dev.9. Its engine
+range excludes host 0.24.0. The catalog is not an index of every historical
+release. Declared compatibility is not qualification of every version.
+
+The selected Files0.6 catalog promotion is pending publication and qualification.
+Once both endpoints select it, Linux hosts 0.24.0-dev.11 through dev.20 will no
+longer have a compatible Files catalog offer: the schema contains only one
+version per ID and Files0.6 requires dev.21 or newer. Those hosts can still
+install the unchanged [Files0.4.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0)
+from a downloaded local file or its direct HTTPS archive link, or upgrade the host.
+Existing installed packages and historical release bytes remain unchanged.
 See [distribution](extension-distribution.md) and the
 [publication procedure](release.md#files-catalog-publication). An empty source
 catalog does not mean a usable public preview has shipped.

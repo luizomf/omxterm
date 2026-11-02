@@ -29,6 +29,8 @@ const createConsent = new Function(
   options: {
     publicLink?: string;
     publicCatalog?: string;
+    macosLifecycle?: boolean;
+    extensionVersion?: string;
     archiveSha256: string;
   },
 ) => void;
@@ -115,6 +117,26 @@ it.each(["valid", "digest", "id", "version", "title"])(
       ).toThrow();
   },
 );
+it("checks the selected local macOS archive version without changing historical public checks", () => {
+  const digest = "a".repeat(64);
+  const prompt = {
+    title: "Trust extension code?",
+    message: "Install Files — ARM64 preview 0.6.0?",
+    detail: `omxterm.files ${digest} network`,
+  };
+  const options = {
+    macosLifecycle: true,
+    extensionVersion: "0.6.0",
+    archiveSha256: digest,
+  };
+  expect(() => consent(prompt, options)).not.toThrow();
+  expect(() =>
+    consent(
+      { ...prompt, message: prompt.message.replace("0.6.0", "0.5.0") },
+      options,
+    ),
+  ).toThrow();
+});
 it("does not mistake an incompatible tool card for pending management", () => {
   const createIdle = new Function(
     `${block("function extensionsIdle(", "function installPublicCatalog(")} return extensionsIdle;`,

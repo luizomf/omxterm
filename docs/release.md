@@ -216,8 +216,8 @@ OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
 so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
 sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.5.0` with minimum host `0.24.0-dev.21`; its macOS controlled
-qualification is separate from publication. The original Files `0.4.0` archive
+Files `0.6.0` with minimum host `0.24.0-dev.21`; its qualification and
+publication are separate from those of Files `0.5.0`. The original Files `0.4.0` archive
 (minimum host `0.24.0-dev.8`) is published separately as `ext-files-v0.4.0`
 (see below). The historical published Files
 `0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; none of these

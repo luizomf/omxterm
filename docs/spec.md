@@ -1867,7 +1867,7 @@ foreground plus effective per-window tint opacity. Initial/latest snapshots
 replay to bounded subscribers, including while views are hidden; epoch
 retirement stops updates. The native child backing is transparent, allowing
 opt-in package CSS to reveal the window's single theme tint without fading
-foreground controls. Existing opaque packages retain their own paint. SSH Connect source 0.3.0 also
+foreground controls. Existing opaque packages retain their own paint. SSH Connect source 0.3.1 also
 consumes the host's read-only Interface Language updates for controls, notices
 and accessible names, including hidden retained views. Relabeling preserves
 literal targets, drafts, focus and pending operations without rediscovery or
@@ -2085,8 +2085,9 @@ moves and one-shot permanent-delete confirmation remain unchanged. See the
 [Files interaction contract](files-development-preview.md#concrete-consumer).
 
 Files archive version/compatibility is maintained separately from the host.
-Source Files0.5.0 requires `>=0.24.0-dev.21` / API `0.1.x`, uses a neutral ARM64
-preview name and includes corrected raw-path forwarding for macOS trash. Its
+Source Files0.6.0 requires `>=0.24.0-dev.21` / API `0.1.x`, uses a neutral ARM64
+preview name and includes corrected raw-path forwarding for macOS trash. The
+published Files0.5.0 archive has the same engine minimum. Its
 [controlled exact-DMG consumer checkpoint](files-development-preview.md#files-050-macos-controlled-qualification)
 passed real operations/recoverable trash, retained companion state, management
 and active-backend normal Quit. The separate immutable dev.21/Files0.5 releases

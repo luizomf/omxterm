@@ -9,7 +9,7 @@ physical-input qualification is selected.
 
 ## Separate immutable inputs
 
-Build corrected Files0.5.0 from committed clean source:
+Build the current Files0.6.0 candidate from committed clean source:
 
 ```sh
 node scripts/build-files-extension.mjs /absolute/new-files.omxext FULL_SOURCE_COMMIT darwin-arm64
@@ -30,6 +30,12 @@ OMXTERM_FILES_DMG_VERSION=0.24.0-dev.21 \
 OMXTERM_FILES_DMG_EVIDENCE=/absolute/private-lane \
   npm test -- test/integration/files-dmg.test.ts
 ```
+
+For the current Files0.6.0 archive, additionally set
+`OMXTERM_FILES_DMG_EXTENSION_VERSION=0.6.0`; omitting it retains the historical
+Files0.5.0 expectation shown in the example. The observer checks this version,
+the manifest ID and the exact archive digest at trust. A source build is not
+qualification or permission to replace a published archive.
 
 No opt-in skips; partial, malformed or mixed adapter inputs refuse. Source
 Node/npm/esbuild and Command Line Tools are fixture preparation dependencies,

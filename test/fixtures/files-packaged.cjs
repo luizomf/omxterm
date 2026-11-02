@@ -163,7 +163,7 @@ function verifyFilesConsent(prompt, options) {
   if (options.macosLifecycle || options.publicLink || options.publicCatalog) {
     assert.equal(
       prompt.message,
-      "Install Files — ARM64 preview 0.5.0?",
+      `Install Files — ARM64 preview ${options.extensionVersion ?? "0.5.0"}?`,
       "new Files archive version shown before consent",
     );
     assert.ok(

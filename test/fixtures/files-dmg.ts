@@ -62,6 +62,13 @@ export function filesDmgInputs(env = process.env) {
     assert.ok(path.isAbsolute(values[name]), `${name} must be absolute`);
   for (const name of ["DMG_SHA256", "ARCHIVE_SHA256"] as const)
     assert.match(values[name], /^[a-f0-9]{64}$/);
+  const extensionVersion = env[prefix + "EXTENSION_VERSION"];
+  if (extensionVersion !== undefined)
+    assert.match(
+      extensionVersion,
+      /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/,
+      "EXTENSION_VERSION must be an explicit version",
+    );
   const publicCatalog = env[prefix + "PUBLIC_CATALOG"];
   if (publicCatalog !== undefined) {
     assert.equal(
@@ -93,6 +100,9 @@ export function filesDmgInputs(env = process.env) {
   }
   return {
     ...values,
+    ...(extensionVersion !== undefined
+      ? { EXTENSION_VERSION: extensionVersion }
+      : {}),
     ...(publicLink !== undefined ? { PUBLIC_LINK: publicLink } : {}),
     ...(publicCatalog !== undefined ? { PUBLIC_CATALOG: publicCatalog } : {}),
   };
@@ -213,6 +223,7 @@ export async function runFilesDmgCampaign(
       bundleSha256: bundle.binding,
       dmgSha256: values.DMG_SHA256,
       archiveSha256: values.ARCHIVE_SHA256,
+      extensionVersion: values.EXTENSION_VERSION ?? "0.5.0",
       version: values.VERSION,
     });
     for (const name of [
@@ -258,6 +269,7 @@ export async function runFilesDmgCampaign(
         version: values.VERSION,
         archive: path.join(root, "files.omxext"),
         archiveSha256: values.ARCHIVE_SHA256,
+        extensionVersion: values.EXTENSION_VERSION ?? "0.5.0",
         readiness: path.join(root, "shell.json"),
         files: path.join(root, "owned-files"),
         observer: "files-packaged.cjs",

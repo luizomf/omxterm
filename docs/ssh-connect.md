@@ -5,7 +5,7 @@ preview**, first supported by OMXTerm **0.24.0-dev.0**. It is not bundled with t
 terminal, a stable SDK, an SSH broker, or a cross-platform availability claim.
 
 Build the committed source with `node scripts/build-ssh-extension.mjs`. The
-builder produces `dist/extensions/ssh-0.3.0.omxext`, a SHA-256 sidecar and an
+builder produces `dist/extensions/ssh-0.3.1.omxext`, a SHA-256 sidecar and an
 unqualified source/tool receipt; existing outputs are never overwritten. Install
 the archive through Settings → Extensions and review the ordinary trusted-code
 warning. Open **SSH Connect** from File, the Command Palette or the terminal
@@ -16,7 +16,7 @@ not consume that key. This host capability does not change published preview
 binaries or broaden SSH platform qualification. Building an archive alone does
 not publish it.
 
-Source version 0.3.0 requires host 0.24.0-dev.8 or later for its read-only
+Source version 0.3.1 requires host 0.24.0-dev.8 or later for its read-only
 appearance and interface-language subscriptions. Compact controls share the terminal's theme tokens;
 the base surface reveals the parent window's single tint rather than painting
 an opaque background. Live theme/opacity updates retain search, quick-connect
@@ -31,10 +31,9 @@ immutable. Updating the host alone does not update a separately installed extens
 review and deliberately install the newer extension. Current source leaves the
 visible SSH Connect identity to the host header while retaining its named child
 region and OpenSSH sections. Published archives keep their original heading,
-including on a newer host. This source change is not a published or qualified
-package: before distribution, the release owner must assign a new version and
-qualify the intended host/archive pair and compatibility range rather than
-replace existing bytes.
+including on a newer host. The new source version is not yet a published or qualified package. Before
+distribution, the release owner must qualify the intended host/archive pair
+and compatibility range rather than replace existing bytes.
 
 ## Installing the distributed preview
 

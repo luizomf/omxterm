@@ -641,13 +641,20 @@ export function mountFilesPage(
     item.focus({ preventScroll: true });
     revealMenuItem(item);
   }
+  function placeMenu(x: number, y: number) {
+    const viewport = document.documentElement;
+    menu.style.left = `${Math.max(0, Math.min(x, viewport.clientWidth - menu.offsetWidth))}px`;
+    menu.style.top = `${Math.max(0, Math.min(y, viewport.clientHeight - menu.offsetHeight))}px`;
+  }
   function revealFocusedMenuItem() {
     if (disposed || menu.hidden) return;
+    const rect = menu.getBoundingClientRect();
+    placeMenu(rect.left, rect.top);
     const active = document.activeElement as HTMLElement | null;
     if (active?.parentElement === menu) revealMenuItem(active);
   }
   // Native child bounds can change after keyboard navigation has revealed an
-  // item. Recheck the new wrapped layout without moving focus or retrying input.
+  // item. Recheck placement and wrapped layout without moving focus or retrying input.
   document.defaultView?.addEventListener("resize", revealFocusedMenuItem);
   function openMenu(
     target?: Target,
@@ -701,9 +708,7 @@ export function mountFilesPage(
     tooltips.suppress(true);
     actionsButton.setAttribute("aria-expanded", "true");
     const rect = menuReturn.getBoundingClientRect();
-    const viewport = document.documentElement;
-    menu.style.left = `${Math.max(0, Math.min(x ?? rect.left, viewport.clientWidth - menu.offsetWidth))}px`;
-    menu.style.top = `${Math.max(0, Math.min(y ?? rect.bottom, viewport.clientHeight - menu.offsetHeight))}px`;
+    placeMenu(x ?? rect.left, y ?? rect.bottom);
     focusMenuItem(
       menu.querySelector<HTMLButtonElement>("button:not(:disabled)") ??
         undefined,
