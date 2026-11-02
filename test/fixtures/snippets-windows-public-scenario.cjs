@@ -237,10 +237,18 @@ async function runPublicScenario({
     contents.executeJavaScript(
       `(() => { const nodes = [...document.querySelectorAll(${JSON.stringify(selector)})]; if (nodes.length !== 1 || nodes[0].disabled || nodes[0].closest('[hidden], [inert]') || !nodes[0].getClientRects().length) throw Error('Unavailable control'); nodes[0].click(); })()`,
     );
-  const button = (text) =>
-    js(
+  const button = async (text) => {
+    await until(
+      () =>
+        js(
+          `(() => { const nodes = [...document.querySelectorAll('.extensions-panel button')].filter(b => b.textContent === ${JSON.stringify(text)} && !b.closest('[hidden], [inert]')); return nodes.length === 1 && !nodes[0].disabled && nodes[0].getClientRects().length > 0; })()`,
+        ),
+      `Extensions button ${text} ready`,
+    );
+    return js(
       `(() => { const nodes = [...document.querySelectorAll('.extensions-panel button')].filter(b => b.textContent === ${JSON.stringify(text)} && !b.closest('[hidden], [inert]')); if (nodes.length !== 1 || nodes[0].disabled || !nodes[0].getClientRects().length) throw Error('Unavailable button'); nodes[0].click(); })()`,
     );
+  };
   const focused = () =>
     until(
       async () =>
@@ -253,6 +261,13 @@ async function runPublicScenario({
     await until(
       () => js("!!document.querySelector('.settings-dialog')"),
       "Settings",
+    );
+    await until(
+      () =>
+        js(
+          "(() => { const nodes = [...document.querySelectorAll('#settings-tab-extensions')]; const button = nodes[0]; return nodes.length === 1 && !button.disabled && !button.closest('[hidden], [inert]') && button.getClientRects().length > 0; })()",
+        ),
+      "Settings Extensions control ready",
     );
     await click(core, "#settings-tab-extensions");
     await until(

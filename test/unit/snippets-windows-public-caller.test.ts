@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -10,24 +11,63 @@ const require = createRequire(import.meta.url);
 const digest =
   "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
 
-// Exercise the real scenario caller against controlled WebContents/process edges.
-// The separate DOM tests execute the actual selection function with real DOM nodes.
-async function exercise(
-  fault?:
-    | "extra-byte"
-    | "duplicate-receipt"
-    | "local-activation"
-    | "changed-yaml"
-    | "replaced-pty"
-    | "backend-failure",
+function deferredSettingsRenderer(
+  phase: "navigation" | "browse",
+  onBrowse: () => void,
 ) {
-  const root = await mkdtemp(path.join(os.tmpdir(), "public-snippets-"));
-  await mkdir(path.join(root, "config/omxterm"), { recursive: true });
-  const yaml = await readFile(
-    "test/fixtures/snippets-windows-catalog.json",
-    "utf8",
-  );
-  await writeFile(path.join(root, "config/omxterm/snippets.yaml"), yaml);
+  let pending = false;
+  return {
+    open() {
+      document.body.innerHTML = '<section class="settings-dialog"></section>';
+      pending = true;
+      if (phase === "browse") {
+        const panel = document.createElement("section");
+        panel.className = "extensions-panel";
+        const browse = document.createElement("button");
+        browse.textContent = "Browse official extensions";
+        browse.disabled = true;
+        Object.defineProperty(browse, "getClientRects", {
+          value: () => [{ width: 40, height: 20 }],
+        });
+        browse.addEventListener("click", onBrowse);
+        panel.append(browse);
+        document.body.append(panel);
+      }
+    },
+    evaluate(code: string): unknown {
+      const result: unknown = runInNewContext(code, { document });
+      if (!pending || code.includes(".click()")) return result;
+      // Resolve the controlled snapshot only after its not-ready state was
+      // observed. The outer page exists before navigation/management is ready.
+      if (phase === "navigation" && code.includes("#settings-tab-extensions")) {
+        const tab = document.createElement("button");
+        tab.id = "settings-tab-extensions";
+        tab.setAttribute("aria-selected", "false");
+        Object.defineProperty(tab, "getClientRects", {
+          value: () => [{ width: 40, height: 20 }],
+        });
+        tab.addEventListener("click", () => {
+          tab.setAttribute("aria-selected", "true");
+          const panel = document.createElement("section");
+          panel.className = "extensions-panel";
+          document.body.append(panel);
+        });
+        document.body.append(tab);
+        pending = false;
+      }
+      if (phase === "browse" && code.includes("Browse official extensions")) {
+        document.querySelector<HTMLButtonElement>(
+          ".extensions-panel button",
+        )!.disabled = false;
+        pending = false;
+      }
+      return result;
+    },
+    dispose: () => document.body.replaceChildren(),
+  };
+}
+
+function controlledSession() {
   const trace = (
     require("../fixtures/snippets-windows-cpr.cjs") as {
       createWindowsCprTrace(): {
@@ -47,14 +87,40 @@ async function exercise(
     cprTrace: trace,
   };
   trace.output(session.output);
-  const recordWrite = (text: string) => {
-    trace.write(session.writes.length, text);
-    session.writes.push(text);
+  return {
+    session,
+    recordWrite(text: string) {
+      trace.write(session.writes.length, text);
+      session.writes.push(text);
+    },
+    output(text: string) {
+      trace.output(text);
+      session.output += text;
+    },
   };
-  const output = (text: string) => {
-    trace.output(text);
-    session.output += text;
-  };
+}
+
+// Exercise the real scenario caller against controlled WebContents/process edges.
+// The separate DOM tests execute the actual selection function with real DOM nodes.
+async function exercise(
+  fault?:
+    | "extra-byte"
+    | "duplicate-receipt"
+    | "local-activation"
+    | "changed-yaml"
+    | "replaced-pty"
+    | "backend-failure"
+    | "late-settings-tab"
+    | "late-browse-button",
+) {
+  const root = await mkdtemp(path.join(os.tmpdir(), "public-snippets-"));
+  await mkdir(path.join(root, "config/omxterm"), { recursive: true });
+  const yaml = await readFile(
+    "test/fixtures/snippets-windows-catalog.json",
+    "utf8",
+  );
+  await writeFile(path.join(root, "config/omxterm/snippets.yaml"), yaml);
+  const { session, recordWrite, output } = controlledSession();
   const children: Array<{
     pid: number;
     closed: boolean;
@@ -68,6 +134,16 @@ async function exercise(
   let coreFocus = true;
   let view: typeof childView | undefined;
   const actions: string[] = [];
+  const deferred =
+    fault === "late-settings-tab" || fault === "late-browse-button"
+      ? deferredSettingsRenderer(
+          fault === "late-settings-tab" ? "navigation" : "browse",
+          () => {
+            actions.push("Browse");
+            browsed = true;
+          },
+        )
+      : undefined;
   const capturePage = async () => ({
     isEmpty: () => false,
     toPNG: () => Buffer.from("controlled-image"),
@@ -184,9 +260,12 @@ async function exercise(
         return;
       }
       if (code.includes("Browse official extensions")) {
-        actions.push("Browse");
-        browsed = true;
-        return;
+        if (fault === "late-browse-button") return deferred!.evaluate(code);
+        if (code.includes(".click()")) {
+          actions.push("Browse");
+          browsed = true;
+        }
+        return true;
       }
       if (code.includes("Catalog loaded.")) return browsed;
       if (code.includes(".settings-close")) {
@@ -194,8 +273,12 @@ async function exercise(
         return;
       }
       if (code.includes("requestAnimationFrame")) return;
-      if (code.includes("#settings-tab-extensions")) return true;
-      if (code.includes(".settings-dialog")) return true;
+      if (code.includes("#settings-tab-extensions")) {
+        if (fault !== "late-settings-tab") return true;
+        return deferred!.evaluate(code);
+      }
+      if (code.includes(".settings-dialog"))
+        return fault === "late-settings-tab" ? deferred!.evaluate(code) : true;
       if (code.includes("window.__snippetsPublicCanvas ===")) return true;
       if (code.includes("window.__snippetsPublicCanvas =")) return;
       if (code.includes(".terminal-surface")) return true;
@@ -215,6 +298,7 @@ async function exercise(
       click() {
         actions.push("Settings");
         coreFocus = true;
+        deferred?.open();
       },
     },
     {
@@ -310,6 +394,7 @@ async function exercise(
       ),
     };
   } finally {
+    deferred?.dispose();
     await rm(root, { recursive: true, force: true });
   }
 }
@@ -351,6 +436,18 @@ it("drives public acquisition, two dormant epochs, retirement and same-session P
       await readFile("test/fixtures/snippets-windows-catalog.json", "utf8"),
     ),
   );
+});
+
+it("waits for Settings navigation built after the outer page becomes visible", async () => {
+  const { result } = await exercise("late-settings-tab");
+  expect(result.checks).toHaveLength(5);
+  expect(result.approvals).toBe(2);
+});
+
+it("waits for the initial Extensions snapshot to unlock Browse", async () => {
+  const { result } = await exercise("late-browse-button");
+  expect(result.checks).toHaveLength(5);
+  expect(result.approvals).toBe(2);
 });
 
 it.each([
