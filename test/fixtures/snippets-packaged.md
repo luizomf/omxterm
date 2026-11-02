@@ -662,6 +662,33 @@ native/evaluation bound for the bounded production HTTPS operations and a
 600-second outer test bound for install/native/uninstall. Ordinary local/probe
 120-second bounds and failed historical deadlines remain unchanged.
 
+### Controlled child-input diagnostic (never qualification)
+
+For an owner-authorized new diagnostic occurrence, keep the complete public recipe
+and same evidence lane above, adding only
+`OMXTERM_SNIPPETS_WINDOWS_PUBLIC_CHILD_STDIN_DIAGNOSTIC=1`. Unset or `0` selects
+ordinary public mode; other values and mixed adapter/diagnostic inputs refuse.
+Remove this variable, or set it to `0`, before a later ordinary qualification.
+This switch does not authorize an automatic rerun of a failed occurrence.
+
+The controller assigns the literal flag only to its known initial controlled Node
+child, not an account shell, backend or Electron environment. The child derives
+`run-XXXXXX/child-input-diagnostic.jsonl` from its owned copied fixture location;
+there is no destination input. The existing bounded synchronous recorder opens a
+new file exclusively and records synthetic child-stdin callback bytes before
+parsing/rejection, separately from observer PTY writes. Keep these raw controlled
+bytes private. An optional `child-input-capture-error.json` reports capture failure.
+Synchronous capture can perturb timing; missing, incomplete, truncated or failed
+evidence is inconclusive, not proof of empty input, upstream provenance or PASS.
+
+Diagnostic mode always withholds public PASS. After an otherwise successful
+transaction it intentionally fails with
+`PUBLIC_CHILD_STDIN_DIAGNOSTIC_NOT_QUALIFICATION`; an earlier actual scenario,
+settlement or cleanup failure remains primary. Neither the journal nor this
+expected diagnostic result authorizes uninstall: the same directly awaited native
+return, fresh same-lane receipt and unchanged stock cleanup fence remain required.
+It is not normal-Quit evidence or a product correction by itself.
+
 ### Five checks and cleanup authority
 
 1. Actual Browse and exact visible catalog-card Install, controlled **Official**
