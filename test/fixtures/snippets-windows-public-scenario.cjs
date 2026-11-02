@@ -517,6 +517,7 @@ async function runPublicScenario({
     checks.push("disable-enable-uninstall-unchanged-catalog");
     await click(core, ".settings-close");
     await focused();
+    await waitReady(session);
     assert.equal(ptys.length, 1);
     assert.equal(session.exited, false);
     const retirementIdentity = identity(session.pid);

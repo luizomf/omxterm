@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/* eslint-disable max-lines -- One caller harness shares lifecycle and fault controls. */
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -8,6 +9,7 @@ import { runInNewContext } from "node:vm";
 import { expect, it } from "vitest";
 import {
   controlledDelivery,
+  controlledFinalBarrier,
   controlledProbe,
   controlledReadiness,
 } from "../fixtures/snippets-windows-controlled-probe";
@@ -82,6 +84,7 @@ function loadPublicScenario(electron: object, simulatedNow?: () => number) {
 }
 
 // Exercise the real scenario caller against controlled WebContents/process edges.
+// eslint-disable-next-line max-lines-per-function -- Keep scenario lifecycle and fault boundaries in one caller.
 async function exercise(
   fault?:
     | "extra-byte"
@@ -99,8 +102,14 @@ async function exercise(
     | "wrong-archive"
     | "snapshot-before-action"
     | "snapshot-between-check-and-click"
-    | "ambiguous-acquisition",
+    | "ambiguous-acquisition"
+    | "final-ack-delayed"
+    | "final-ack-missing"
+    | "final-frame-ack"
+    | "final-invalid-ack",
   recordedActions?: string[],
+  recordedFinalEvents?: string[],
+  recordedWrites?: string[],
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "public-snippets-"));
   await mkdir(path.join(root, "config/omxterm"), { recursive: true });
@@ -110,7 +119,10 @@ async function exercise(
   );
   await writeFile(path.join(root, "config/omxterm/snippets.yaml"), yaml);
   const { session, recordWrite, output } = controlledSession();
-  const { probe, write, attach } = controlledDelivery(recordWrite);
+  const { probe, write, attach } = controlledDelivery((text) => {
+    recordWrite(text);
+    recordedWrites?.push(text);
+  });
   const children: Array<{
     pid: number;
     closed: boolean;
@@ -121,6 +133,7 @@ async function exercise(
   let local = "dormant";
   let approvals = 0;
   let coreFocus = true;
+  const finalEvents: string[] = recordedFinalEvents ?? [];
   let view: typeof childView | undefined;
   const actions: string[] = recordedActions ?? [];
   const catalog = freshPublicCatalog({
@@ -209,6 +222,7 @@ async function exercise(
     capturePage,
     isFocused: () => coreFocus,
     async insertText(text: string) {
+      finalBarrier.ping();
       actions.push("ping");
       write(text);
     },
@@ -267,9 +281,13 @@ async function exercise(
       if (code.includes("Catalog loaded.")) return catalog.evaluate(code);
       if (code.includes(".settings-close")) {
         coreFocus = true;
+        if (actions.includes("Uninstall")) finalBarrier.close();
         return;
       }
-      if (code.includes("requestAnimationFrame")) return;
+      if (code.includes("requestAnimationFrame")) {
+        finalBarrier.frame();
+        return;
+      }
       if (code.includes("#settings-tab-extensions")) {
         if (fault !== "late-settings-tab") return true;
         return deferred!.evaluate(code);
@@ -283,6 +301,13 @@ async function exercise(
     },
   };
   const readiness = controlledReadiness(core, session, output);
+  const finalBarrier = controlledFinalBarrier(
+    fault,
+    readiness,
+    core,
+    session,
+    finalEvents,
+  );
   attach(readiness.deliver);
   const readinessBeforeAck = readiness.beforeAck;
   const window = {
@@ -320,7 +345,7 @@ async function exercise(
   };
   const scenario = loadPublicScenario(
     electron,
-    catalogTestClock(fault, catalog),
+    finalBarrier.clock ?? catalogTestClock(fault, catalog),
   );
   try {
     const result = await scenario.runPublicScenario({
@@ -352,13 +377,14 @@ async function exercise(
             identity: `backend${child.pid}`,
           })),
       ],
-      windowsProbeReady: readiness.ready,
+      windowsProbeReady: finalBarrier.ready,
     });
     return {
       result,
       actions,
       session,
       readinessBeforeAck,
+      finalEvents,
       childInput: Buffer.concat(probe.chunks),
       probeExit: probe.exited,
       evidence: JSON.parse(
@@ -542,6 +568,67 @@ it("refuses ambiguous catalog acquisition controls without clicking either", asy
     "run",
     "Settings",
   ]);
+});
+
+it("waits for the final output ACK and frame recheck before Ping", async () => {
+  const { result, finalEvents, childInput } =
+    await exercise("final-ack-delayed");
+  expect(finalEvents).toEqual([
+    "output-ready:false",
+    "poll:false",
+    "ack",
+    "poll:true",
+    "frames",
+    "poll:true",
+    "ping-ready:true",
+  ]);
+  expect(result.checks).toHaveLength(5);
+  expect(childInput).toEqual(Buffer.from("SNIPPETS_RUN\rSNIPPETS_PING\r"));
+});
+
+it("rechecks ACK progress when new output arrives during the frame opportunity", async () => {
+  const { finalEvents, childInput, result } = await exercise("final-frame-ack");
+  expect(finalEvents).toEqual([
+    "output-ready:false",
+    "poll:false",
+    "ack",
+    "poll:true",
+    "frames",
+    "frame-output-ready:false",
+    "poll:false",
+    "ack",
+    "poll:true",
+    "ping-ready:true",
+  ]);
+  expect(result.checks).toHaveLength(5);
+  expect(childInput).toEqual(Buffer.from("SNIPPETS_RUN\rSNIPPETS_PING\r"));
+});
+
+it("does not release the barrier for foreign or beyond-sent ACKs", async () => {
+  const { finalEvents, childInput } = await exercise("final-invalid-ack");
+  expect(finalEvents).toEqual([
+    "output-ready:false",
+    "poll:false",
+    "invalid-ack-ready:false",
+    "ack",
+    "poll:true",
+    "frames",
+    "poll:true",
+    "ping-ready:true",
+  ]);
+  expect(childInput).toEqual(Buffer.from("SNIPPETS_RUN\rSNIPPETS_PING\r"));
+});
+
+it("does not attempt final Ping or Enter when the output ACK never arrives", async () => {
+  const actions: string[] = [];
+  const events: string[] = [];
+  const writes: string[] = [];
+  await expect(
+    exercise("final-ack-missing", actions, events, writes),
+  ).rejects.toThrow("Timed out: controlled probe ACK and modes");
+  expect(events).toEqual(["output-ready:false", "poll:false"]);
+  expect(actions).not.toContain("ping");
+  expect(writes).toEqual(["SNIPPETS_RUN\r"]);
 });
 
 it("waits for Settings navigation built after the outer page becomes visible", async () => {
