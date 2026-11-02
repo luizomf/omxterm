@@ -533,8 +533,10 @@ was replaced.
 The Linux-oriented procedure below applies to future preview pairs, not permission
 to recreate any sealed release; source transition alone does not establish
 distributed migration. Prepare a partial prerelease, not the complete stable asset
-set. Published Windows hosts retain built-in Snippets; source transition alone
-does not satisfy platform distribution gates. Source-native qualification does
+set. The separately published Windows ARM64 dev.36 [partial preview](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+uses its exact retained NSIS/checksum and optional Snippets; earlier Windows hosts
+and Windows x64 are unchanged. Its installed public-HTTPS checkpoint remains
+separate and pending. Source transition alone does not satisfy platform distribution gates. Source-native qualification does
 not substitute for the exact packaged host/archive pair.
 
 1. Select exact committed host and Snippets source identities. Reuse an already

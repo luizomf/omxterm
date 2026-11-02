@@ -1,6 +1,6 @@
 # Explicit official extension distribution
 
-The Linux and macOS ARM64 previews use small static project catalogs, not a marketplace,
+The Linux, macOS ARM64 and Windows ARM64 previews use small static project catalogs, not a marketplace,
 second installation store or public SDK. Settings uses the existing page controls;
 main reuses HTTPS acquisition and the captured-byte trust/management owner.
 
@@ -151,7 +151,8 @@ promotion left Files/SSH entries unchanged. The fixed endpoint was read back byt
 [packaged public-HTTPS checkpoint](snippets-migration.md#preview-coverage-and-remaining-platforms)
 passed on that exact pair. The [promotion procedure](release.md#snippets-catalog-promotion)
 retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),
-explicit trust/enablement and the published Windows built-in Snippets remain unchanged.
+and explicit trust/enablement remain unchanged. Older Windows releases retain
+built-in Snippets; the separate Windows ARM64 dev.36 preview is described below.
 
 The Linux x64 `0.24.0-dev.30` host offers the same archive through the official
 catalog or local installation. The promoted catalogs add `linux-x64` to the common
@@ -159,3 +160,11 @@ Snippets entry without altering Files/SSH or archive identity. The host selects 
 legacy endpoint listed above; its public readback and a separate bounded packaged
 public-HTTPS checkpoint passed. See the [Linux x64 checkpoint](snippets-migration.md#linux-x64-public-catalog-checkpoint)
 for the exact pair and limits.
+
+The common Snippets candidate also adds `win32-arm64` for the immutable public
+Windows ARM64 dev.36 host. Both complete catalogs retain every other entry and
+the same Snippets archive, source, engine ranges and URLs. That exact host passed
+the staged ten-check scenario plus separate FULL NSIS; anonymous public host and
+archive byte readback passed. ROOT-owned promotion/readback and the new installed
+public-HTTPS checkpoint remain pending at this revision; source/headless tests
+are not that result. See the [Windows boundary and local installation](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).

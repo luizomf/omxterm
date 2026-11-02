@@ -172,10 +172,13 @@ a captured live Surface, never a replacement target. See
 Published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and Linux x64
 `0.24.0-dev.30` previews use optional Snippets `0.1.0`, available through the
 official catalog or a local archive. See the [delivery evidence and limits](docs/snippets-migration.md).
-Stable `0.23.0` remains Latest with built-in Snippets; published Windows hosts and
-Windows x64 retain the built-in view. Windows ARM64 source selects optional
-Snippets and has passed the bounded ordinary [source checkpoint](docs/snippets-migration.md#windows-arm64-source-transition);
-full portable, exact-package and public-consumption qualification remain separate. Published artifacts
+The separately published Windows ARM64 `0.24.0-dev.36` preview also uses optional
+Snippets: its fresh full portable, exact staged ten-check and matching FULL NSIS
+checkpoints passed. Its [publication and common-catalog candidate](docs/snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+are separate from the pending installed public-HTTPS checkpoint. At publication,
+stable `0.23.0` remained Latest with built-in Snippets; older Windows hosts and
+Windows x64 were unchanged. No dev.36 result qualifies later stable bytes.
+Published artifacts
 and original receipts remain immutable. Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
@@ -394,8 +397,9 @@ retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit
 official-catalog browsing and HTTPS extension archive installation on Linux ARM64/x64
-and macOS ARM64, through bounded main-owned acquisition and
-captured-byte trust. No startup/reopen catalog, telemetry or background update
+and macOS/Windows ARM64, through bounded main-owned acquisition and
+captured-byte trust. The published Windows ARM64 dev.36 capability is separate
+from its pending [installed public-consumption checkpoint](docs/snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate). No startup/reopen catalog, telemetry or background update
 requests are made. macOS composition alone does not broaden published catalog
 targets or qualify Files. The published Snippets dev.16 preview now offers the
 same immutable archive through the official catalog on `darwin-arm64`, alongside

@@ -111,7 +111,12 @@ describe("0.24.0 first-party catalog candidate", () => {
       },
     });
     expect(snippets.targets).toEqual(
-      expect.arrayContaining(["linux-arm64", "darwin-arm64", "linux-x64"]),
+      expect.arrayContaining([
+        "linux-arm64",
+        "darwin-arm64",
+        "linux-x64",
+        "win32-arm64",
+      ]),
     );
   });
 

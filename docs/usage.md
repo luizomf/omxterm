@@ -273,11 +273,12 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 ### Insert, run or preview a snippet
 
 Linux ARM64/x64 and macOS/Windows ARM64 source, along with the published Linux ARM64
-**0.24.0-dev.11**, macOS ARM64 **0.24.0-dev.16** and Linux x64 **0.24.0-dev.30**
-previews, use optional installed Snippets. Stable **0.23.0** and published Windows
-hosts retain the built-in tool. All three previews offer Snippets through **Settings →
-Extensions → Browse official extensions**; explicit local/offline archive
-installation also remains available.
+**0.24.0-dev.11**, macOS ARM64 **0.24.0-dev.16**, Linux x64 **0.24.0-dev.30** and
+Windows ARM64 **0.24.0-dev.36** previews, use optional installed Snippets. Stable
+**0.23.0**, earlier Windows hosts and Windows x64 retain the built-in tool. The
+Linux/macOS previews have separate public-catalog checkpoints; Windows installed
+public-HTTPS consumption remains pending. Explicit local/offline archive
+installation is also available.
 The [migration guide](snippets-migration.md) links the matching previews and explains
 installation, disabled/unavailable states, unchanged catalogs and qualification
 limits. On optional-Snippets hosts, the existing shortcut opens Extensions

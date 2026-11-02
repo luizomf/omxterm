@@ -2,11 +2,15 @@
 
 The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
 [OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16),
-and [OMXTerm 0.24.0-dev.30 Linux x64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30)
+[OMXTerm 0.24.0-dev.30 Linux x64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30),
+and [OMXTerm 0.24.0-dev.36 Windows ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.36)
 use the separately installed [Snippets 0.1.0 extension](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
-All are immutable non-Latest prereleases; stable **0.23.0** and published Windows
-hosts retain built-in Snippets. All three previews offer Snippets through the
-official catalog or a local archive, which also works offline after download. See
+All are immutable non-Latest prereleases. At Windows dev.36 publication, stable
+**0.23.0** remained Latest with built-in Snippets; earlier Windows hosts and
+Windows x64 were unchanged. The Linux/macOS previews have public-catalog
+checkpoints; the [Windows publication and catalog candidate](#windows-arm64-published-preview-and-catalog-candidate)
+remains separate from its pending installed public-HTTPS checkpoint. A verified
+local archive also works offline after download. See
 the [Linux x64 public-catalog checkpoint](#linux-x64-public-catalog-checkpoint)
 and [macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
 
@@ -20,9 +24,10 @@ Paste remain the same. There is no conversion or second Commands catalog.
 **View → Toggle Snippets**, its Command Palette entry and existing shortcut
 (`Ctrl+Shift+S` on Linux/Windows, `Cmd+Shift+S` on macOS, including custom remaps or
 `null`) remain supported.
-An enabled package opens in the shared companion panel. In the published ARM64
-previews, invoking the command again hides it. The published Linux x64 dev.30 host
-and current source instead **close** the selected-visible tool, discarding its view's
+An enabled package opens in the shared companion panel. In the published Linux
+ARM64 dev.11 and macOS ARM64 dev.16 previews, invoking the command again hides it.
+The Linux x64 dev.30 and Windows ARM64 dev.36 hosts and current source instead
+**close** the selected-visible tool, discarding its view's
 search/scroll state; **Hide** or
 Escape preserves that state for reopening. Without an enabled package, the command opens **Settings →
 Extensions** with an explanation. It never installs or enables anything for you.
@@ -31,8 +36,9 @@ from a missing installation. Terminal sessions remain usable.
 
 ## Install deliberately
 
-Use the exact preview pair for your platform linked above. On macOS, download the
-ARM64 DMG and checksum; see [macOS installation](#macos-arm64-published-preview).
+Use the exact preview pair for your platform linked above. On Windows ARM64,
+follow the [dev.36 installer, SmartScreen and PowerShell checksum instructions](#windows-arm64-published-preview-and-catalog-candidate).
+On macOS, download the ARM64 DMG and checksum; see [macOS installation](#macos-arm64-published-preview).
 On Linux, download the AppImage for your architecture, its checksum and, if wanted,
 the version-matched application-menu helper and checksum. Follow that release's
 installation instructions, not `/latest/download` or the stable-version filenames in the general installation
@@ -48,8 +54,10 @@ sha256sum --check snippets-0.1.0.omxext.sha256
 
 No source build is required. Older hosts are not qualified for this package, and
 existing Files/SSH packages were not newly qualified on these previews. The official
-catalog lists the same Snippets bytes for all three previews. Separate bounded
-public-HTTPS checkpoints passed on their exact host/archive pairs; see
+catalog uses the same Snippets bytes for all admitted targets; its Windows ARM64
+promotion changes no archive or manifest range. Separate bounded public-HTTPS
+checkpoints passed on the three Linux/macOS pairs; Windows public consumption
+remains pending at this revision. See
 [Linux x64](#linux-x64-public-catalog-checkpoint), [macOS](#macos-arm64-catalog-delivery)
 and [Linux ARM64](#preview-coverage-and-remaining-platforms).
 
@@ -113,8 +121,8 @@ It names the already published macOS `0.24.0-dev.16` / Linux `0.24.0-dev.11`
 hosts without changing the archive, original receipt, source, digest, size,
 immutable URLs or manifest engine ranges. The manifest has no platform restriction;
 its host/API ranges express compatibility, not qualification of every admitted host.
-Stable `0.23.0` and published Windows hosts retain built-in Snippets; the later
-Linux x64 preview is described separately below.
+At that checkpoint, stable `0.23.0` and published Windows hosts retained built-in
+Snippets; the later Linux x64 and Windows ARM64 previews are described separately below.
 
 Catalog source `dbbc1a9814606f72bcaea226ab68564da4a345fb` received complete
 independent review and was integrated. Fixed public endpoint readback matched
@@ -389,6 +397,79 @@ Snippets GUI**. Neither gate qualifies public acquisition/catalog delivery,
 physical input/natural autorepeat, an account shell, Windows x64, Files/SSH or
 later main. No host or extension was published by this checkpoint.
 
+## Windows ARM64 published preview and catalog candidate
+
+🤖 AI-assisted.
+
+The [PARTIAL Windows ARM64 `0.24.0-dev.36` release](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.36)
+was published on **2026-11-02 at 09:17:33 UTC**, with only the NSIS installer and
+its checksum. Its immutable tag points exactly to
+`c04a350fcd5d5a411b1993300cb62eab4a0feace`; these are the retained qualified
+155,134,581-byte installer and ASAR identities above, not a rebuild from later
+main. The draft's two assets were downloaded and hashed before publication;
+anonymous HTTPS readback then matched both public assets. All 39 earlier releases,
+including 36 immutable releases, and 67 existing tag refs remained unchanged.
+Stable `0.23.0` remained Latest. This is not Windows x64 or stable-version evidence.
+
+All three existing public Snippets assets were independently downloaded and
+verified **before** host publication. The archive remains 76,653 bytes with the
+SHA-256 above; its original source, receipt, Linux target and build-time `not-run`
+field were not changed. The preview's ten-check staged GUI and separate FULL
+NSIS results remain distinct from public download and installed public consumption.
+The failed Node26 first-Insert occurrence remains failed, with cause unproved.
+
+### Windows installation and migration
+
+Download `OMXTerm-0.24.0-dev.36-arm64.exe` and its `.exe.sha256` from that exact
+release. On ARM64 Windows 11, with the Microsoft Visual C++ Redistributable,
+verify in PowerShell before running:
+
+```powershell
+$expected = '57a556f64c6665befef6a096e902c1435fcc27c7c2db701b821bd224dd9d8d1b'
+if ((Get-FileHash -Algorithm SHA256 -LiteralPath 'OMXTerm-0.24.0-dev.36-arm64.exe').Hash.ToLowerInvariant() -ne $expected) {
+  throw 'Installer checksum mismatch'
+}
+$expected = '6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7'
+if ((Get-FileHash -Algorithm SHA256 -LiteralPath 'snippets-0.1.0.omxext').Hash.ToLowerInvariant() -ne $expected) {
+  throw 'Snippets checksum mismatch'
+}
+```
+
+Quit OMXTerm before installation. This unsigned per-user installer can replace
+an existing installation and its registration/shortcuts; it is not a side-by-side
+preview. Verify the checksum before choosing **More info → Run anyway** for the
+expected SmartScreen warning; never disable system-wide protections. Automated
+VM evidence does not qualify browser quarantine, SmartScreen/UAC or physical
+first-launch interaction. User configuration/YAML are preserved; keep a backup.
+
+Use **Settings → Extensions → Install local .omxext…** with the verified separate
+Snippets archive, review trusted-code identity, enable deliberately if disabled,
+then **View → Toggle Snippets**. After catalog integration, Browse offers the same
+bytes; no update/enable/activation occurs automatically. Existing YAML/custom
+shortcuts remain in place. New configuration kits omit the example; the immutable
+archive's POSIX example needs commands appropriate for the Windows shell.
+
+### Catalog and public-consumption boundary
+
+This candidate adds only `win32-arm64` and factual Windows dev.36 wording to the
+common Snippets entry in **both complete fixed catalogs**. Linux/macOS targets,
+Files/SSH entries, manifest ranges, archive/version/source/size/digest and immutable
+URLs stay unchanged. Windows uses the legacy endpoint, not the macOS endpoint.
+Manifest admission, including other admitted host versions, is not qualification.
+
+ROOT-owned main integration and exact fixed-endpoint readback must precede the
+new [installed public fixture](../test/fixtures/snippets-packaged.md#windows-arm64-installed-public-catalog-adapter).
+At this revision its headless controls are implementation evidence only:
+**installed public-HTTPS consumption has not run**. That bounded checkpoint will
+use the public-downloaded exact NSIS, the existing guarded installed callback and
+production Browse/Install/Reinstall HTTPS, controlled Official consent, the
+supported Node24 probe, two backend retirements, unchanged YAML, the same usable
+Surface/ConPTY and joined normal Quit, followed by owned NSIS cleanup. A local
+chooser is refused in public mode. Unresolved native ownership refuses uninstall
+and retains the installation/cache and any relocated uninstaller copy; it is not
+a successful cleanup or permission to rerun. The earlier complete ten-check/FULL
+results are reused, not repeated or relabeled as this public milestone.
+
 ## Linux x64 source transition
 
 Linux x64 source selects the same optional Snippets implementation as ARM64.
@@ -581,7 +662,8 @@ consent, synthetic input, ANGLE SwiftShader and an isolated plain-paste shell;
 this does not expand the earlier keyboard/GPU/platform limits or requalify
 Files/SSH. No archive, host package or original build receipt was changed.
 
-[#741](https://github.com/luizomf/omxterm/issues/741) remains open: published Windows
-hosts retain built-in Snippets until their own prerequisites are met, and the remaining
-platform gates are separate. Existing published artifacts remain immutable; these
+[#741](https://github.com/luizomf/omxterm/issues/741) remains open. Windows ARM64
+dev.36 is a separate published optional-Snippets preview with public consumption
+still pending at this revision; older Windows hosts and Windows x64 are unchanged.
+Remaining platform and later stable-version gates are separate. Existing published artifacts remain immutable; these
 previews are not a stable SDK.

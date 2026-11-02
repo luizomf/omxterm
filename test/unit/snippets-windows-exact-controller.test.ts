@@ -250,6 +250,24 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
+it("uses the separate public evaluation deadline without changing the normal or probe deadlines", async () => {
+  const deadlines: Array<[string, number | undefined]> = [];
+  const original = fake.evaluate;
+  fake.evaluate = async (expression: string, timeout?: number) => {
+    deadlines.push([expression, timeout]);
+    return original(expression);
+  };
+  const config = JSON.parse(await fs.readFile(options, "utf8")) as object;
+  await fs.writeFile(
+    options,
+    JSON.stringify({ ...config, publicCatalog: true }),
+  );
+  await runWindowsExactController(options);
+  expect(
+    deadlines.find(([expression]) => expression.includes(".run()"))?.[1],
+  ).toBe(240000);
+});
+
 it("arms the first-entry observer before continuing into the shared campaign and joins normal exit", async () => {
   await runWindowsExactController(options);
   expect(calls.indexOf("arm")).toBeGreaterThan(

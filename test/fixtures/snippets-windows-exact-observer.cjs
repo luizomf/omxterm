@@ -77,7 +77,11 @@ async function run() {
   );
   const { options, observer, readiness, fixtureProcesses } = state;
   const window = await state.window;
-  const result = await runScenario({
+  const runSelected =
+    options.publicCatalog === true
+      ? require("./snippets-windows-public-scenario.cjs").runPublicScenario
+      : runScenario;
+  const result = await runSelected({
     window,
     fixture: options,
     ...observer,
@@ -87,7 +91,11 @@ async function run() {
     windowsProbeSnapshot: readiness.snapshot,
   });
   assert.equal(observer.ptys.length, 1, "one initial session");
-  assert.equal(observer.children.length, 1, "one backend");
+  assert.equal(
+    observer.children.length,
+    options.publicCatalog === true ? 2 : 1,
+    "expected backend epochs",
+  );
   state.result = result;
   const {
     identities: _identities,
@@ -189,14 +197,46 @@ function finishQuit(probeOnly) {
     };
     try {
       assert.equal(observer.ptys.length, 1);
-      assert.equal(observer.children.length, probeOnly ? 0 : 1);
+      const backendCount = probeOnly
+        ? 0
+        : options.publicCatalog === true
+          ? 2
+          : 1;
+      assert.equal(observer.children.length, backendCount);
       assert.ok(observer.ptys[0].exited, "PTY onExit joined");
       let identities;
       if (probeOnly) identities = [state.probeIdentity];
       else {
-        assert.equal(observer.children[0].closed, true, "backend close joined");
-        assert.deepEqual(observer.children[0].exit, { code: 0, signal: null });
-        assert.equal(result.identities.length, 2);
+        for (const child of observer.children) {
+          assert.equal(child.closed, true, "backend close joined");
+          assert.ok(child.exit, "backend exit joined");
+          assert.equal(child.exit.code, 0);
+          assert.equal(child.exit.signal, null);
+        }
+        assert.equal(result.identities.length, backendCount + 1);
+        if (options.publicCatalog === true) {
+          const observed = [observer.ptys[0], ...observer.children];
+          const keys = new Set();
+          for (const [index, owned] of result.identities.entries()) {
+            assert.equal(
+              owned.pid,
+              observed[index].pid,
+              "identity matches observed process",
+            );
+            assert.ok(
+              typeof owned.identity === "string" &&
+                owned.identity &&
+                owned.identity !== "exited",
+              "creation identity required",
+            );
+            keys.add(`${owned.pid}:${owned.identity}`);
+          }
+          assert.equal(
+            keys.size,
+            result.identities.length,
+            "distinct creation identities",
+          );
+        }
         assert.deepEqual(result.retirementIdentity, result.identities[0]);
         identities = result.identities;
       }

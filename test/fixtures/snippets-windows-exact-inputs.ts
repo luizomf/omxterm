@@ -14,14 +14,17 @@ const names = [
 export function windowsExactInputs(env: NodeJS.ProcessEnv = process.env) {
   if (
     !Object.keys(env).some(
-      (key) => key.startsWith(prefix) && env[key] !== undefined,
+      (key) =>
+        key.startsWith(prefix) &&
+        !key.startsWith(`${prefix}PUBLIC_`) &&
+        env[key] !== undefined,
     )
   )
     return undefined;
   assert.ok(
     !Object.keys(env).some(
       (key) =>
-        /^(OMXTERM_SNIPPETS_PACKAGED_|OMXTERM_SNIPPETS_APPIMAGE_|OMXTERM_SNIPPETS_DMG_)/.test(
+        /^(OMXTERM_SNIPPETS_PACKAGED_|OMXTERM_SNIPPETS_APPIMAGE_|OMXTERM_SNIPPETS_DMG_|OMXTERM_SNIPPETS_WINDOWS_PUBLIC_)/.test(
           key,
         ) && env[key] !== undefined,
     ),
