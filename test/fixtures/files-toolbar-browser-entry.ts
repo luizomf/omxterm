@@ -68,7 +68,9 @@ Object.assign(window, {
     useDotfiles() {
       dotfiles = true;
       document
-        .querySelector<HTMLButtonElement>('[aria-label="Refresh"]')!
+        .querySelector<HTMLButtonElement>(
+          '[aria-describedby="files-toolbar-refresh-tooltip"]',
+        )!
         .click();
     },
     failNextHome() {
