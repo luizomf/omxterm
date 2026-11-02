@@ -627,6 +627,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   explains those limits and asks before opening it locally. Compatible installed
   Files archives use the host behavior without modified package bytes; the renamed
   action and dynamically localized host-coded notices require a future archive.
+  The current 0.24.1-dev.0 baseline does not satisfy the published Files0.6
+  prerelease engine range ([#781](https://github.com/luizomf/omxterm/issues/781)).
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
   core while the panel remains visible; a background result does not steal focus.

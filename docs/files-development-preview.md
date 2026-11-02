@@ -409,6 +409,10 @@ archives use this host behavior without changing their published bytes; their
 original action label and already-displayed literal error text do not change.
 Current Files source labels the action as a reported directory and relabels
 host-coded unavailable notices. A future archive needs a new immutable version.
+The current `0.24.1-dev.0` host baseline does not satisfy the published Files0.6
+engine range under standard prerelease semantics; see [#781](https://github.com/luizomf/omxterm/issues/781).
+The action-time behavior is not evidence that this specific dev host can install
+the published archive.
 Closing the source terminal preserves the panel; window loss, backend loss and
 package management still retire it. Hiding retains state and does not cancel or
 replay accepted filesystem mutations. Views reserve a 34-DIP core-owned recovery

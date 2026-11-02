@@ -329,6 +329,8 @@ or for a known SSH Connect pane, it explains the unavailable directory and
 leaves the browsing location alone; use Home or enter a path if needed. It does
 not follow later terminal changes or retarget an operation already started.
 These source changes are not a release and do not replace published archives.
+The current `0.24.1-dev.0` baseline cannot admit published Files0.6 under its
+prerelease engine range; see [#781](https://github.com/luizomf/omxterm/issues/781).
 
 Closing the opening terminal leaves the tool available; disabling or removing
 the extension retires its view. In current Files source, **Actions… → Show dotfiles (names
