@@ -17,7 +17,7 @@ vi.mock("../../src/main/extension-download", async (original) => ({
 let files: CatalogRelease;
 let catalogBytes: Buffer;
 beforeAll(async () => {
-  catalogBytes = await readFile("distribution/official-extensions-v1.json");
+  catalogBytes = await readFile("test/fixtures/catalog-files-0.4-linux.json");
   const catalog = parseCatalog(catalogBytes);
   expect(catalog.map((entry) => entry.id)).toEqual([
     "omxterm.files",
@@ -27,8 +27,8 @@ beforeAll(async () => {
   files = catalog.find((entry) => entry.id === "omxterm.files")!;
 });
 
-describe("published Files catalog candidate", () => {
-  it("binds the original immutable archive and embedded manifest, not a rebuild", async () => {
+describe("historical Files 0.4 catalog", () => {
+  it("records historical archive metadata separately from current source", async () => {
     expect(files).toMatchObject({
       id: "omxterm.files",
       version: "0.4.0",
@@ -49,7 +49,7 @@ describe("published Files catalog candidate", () => {
     );
     // Source advances independently; never relabel the published 0.4 bytes.
     expect(manifest.id).toBe(files.id);
-    expect(manifest.version).toBe("0.5.0");
+    expect(manifest.version).toBe("0.6.0");
     expect(manifest.engines.omxterm).toBe(">=0.24.0-dev.21");
     expect(files.name).toBe("Files — Linux ARM64 preview");
   });

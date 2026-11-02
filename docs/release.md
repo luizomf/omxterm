@@ -339,7 +339,22 @@ See [catalog semantics](extension-distribution.md) and the
 
 ## Files catalog publication
 
-### Current Files 0.4.0 promotion
+### Files0.6 / SSH0.3.1 source candidate
+
+The prepared catalogs bind the separately built Files0.6.0 and SSH0.3.1 archive
+trios to their original receipts and immutable versioned URLs; see
+[distribution](extension-distribution.md#files06-and-ssh031-candidate). They are
+not bundled into the stable host. Verify the exact intended host/archive pairs,
+publish and anonymously verify all three original assets for each extension,
+then integrate the catalog candidate. Merge with concurrent Snippets promotion:
+keep its newest supported targets and identical SSH/Snippets entries in both
+complete endpoints. Read back both endpoints, then separately exercise actual
+public HTTPS consumption on each newly promoted target. Do not infer that result
+from local qualification or asset upload. Preserve historical release bytes and
+receipts. Files0.6 replaces the Linux0.4 catalog offer; dev.11–dev.20 users retain
+the older archive by explicit local/link installation or can upgrade the host.
+
+### Historical Files 0.4.0 promotion
 
 `ext-files-v0.4.0` was published on 2026-10-30 as an immutable non-Latest
 prerelease at original archive source `b6044d65d14345adb8d7ae59340fbca978512107`.

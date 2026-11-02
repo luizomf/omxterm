@@ -3,15 +3,17 @@
 Files is a separately installed Linux and macOS ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
-The current catalog offers [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0)
-for Linux ARM64, requiring host `>=0.24.0-dev.8` and API `0.1.x`. The exact
-controlled-qualified pair uses the already-public
+The prepared catalog candidate selects Files0.6.0 for Linux and macOS ARM64,
+requiring host `>=0.24.0-dev.21` and API `0.1.x`; promotion follows separate
+qualification and public archive verification. The earlier Linux catalog offered
+[Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
+requiring host `>=0.24.0-dev.8`. Its exact controlled-qualified pair uses the already-public
 [host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
 AppImage, not a new host build. The archive and both original sidecars were
 published and anonymously byte-verified on 2026-10-30. The separate actual
 public-HTTPS consumption checkpoint after catalog integration also passed;
 it is distinct from controlled transport and release downloads. See
-[current qualification](#files-040-distribution-and-controlled-qualification).
+[historical qualification](#files-040-distribution-and-controlled-qualification).
 
 The historical published [Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
 works with the separately published [host dev.9](https://github.com/luizomf/omxterm/releases/tag/v0.23.0-dev.9)
@@ -34,9 +36,10 @@ not qualify every admitted version.
 The separately published **Files 0.5.0 — ARM64 preview** requires host
 `>=0.24.0-dev.21` and API `0.1.x`. It includes the corrected raw-path forwarding
 for optional host trash. It is a separate archive identity, not a replacement or
-new qualification of immutable Files0.4.0. The legacy catalog remains Linux-only0.4.0;
-macOS published dev.21 uses the separately published link-first pair described below.
-Published dev.26 selects a separate macOS0.5 catalog; its
+new qualification of immutable Files0.4.0. At that checkpoint the legacy catalog
+remained Linux-only0.4.0; macOS published dev.21 used the separately published
+link-first pair described below. Published dev.26 selected a separate macOS0.5
+catalog; its
 [public-catalog checkpoint](#macos-catalog-distribution) passed separately.
 
 The opt-in [exact-DMG Files fixture](../test/fixtures/files-dmg.md) passed the
@@ -162,17 +165,16 @@ not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
 `extensions/files/extension.json`; source version 0.6.0 requires host
 `0.24.0-dev.21` or later for the macOS trash service. Historical0.4.0 requires
-`0.24.0-dev.8` or later for the hosted-language subscription. The legacy catalog
-selects the original0.4.0 archive; the new macOS endpoint selects original0.5.0.
-Neither is rebuilt from the catalog commit.
-The historical 0.1.0 release remains immutable; building source alone does not
-update the published catalog. Current source removes the Files page's redundant
-visible identity in favor of the host's panel header, while retaining a named
-child region. Published Files0.4.0/0.5.0 archives keep their original heading,
-including on a newer host. The changed source has not been published or qualified
-as a new Files package. Before distributing it, the release owner must assign a
-new version and qualify the intended host/archive pair and compatibility range;
-do not replace or republish existing versioned bytes.
+`0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
+catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives. The
+prepared Files0.6 entries bind new immutable bytes and do not rebuild either
+historical release. Building source alone does not update the public catalog.
+Current source removes the Files page's redundant visible identity in favor of
+the host's panel header, while retaining a named child region. Published
+Files0.4.0/0.5.0 archives keep their original heading, including on a newer host.
+A local macOS0.24.0/Files0.6 exact-pair checkpoint passed; Linux qualification,
+publication and public-catalog consumption are separate. Never replace or
+republish existing versioned bytes.
 
 Files 0.4.0 retains compact shared controls and a read-only host appearance
 subscription. Its base surface reveals the parent window's theme tint; text,
@@ -491,12 +493,12 @@ remain usable. en-US/pt-BR controls relabel without repeating requests.
 Main owns the fixed project HTTPS endpoints and captured release selections.
 Current source chooses the complete `official-extensions-darwin-arm64-v1.json`
 for macOS ARM64; every other target retains `official-extensions-v1.json`.
-Only one endpoint is fetched, with no merge or fallback. The new endpoint
-selects original Files0.5 for macOS and copies SSH/Snippets unchanged; common
-entries must remain equal across both documents. Published dev.21 still embeds
-the legacy URL. It does not gain discovery from the new JSON. Published dev.26
-and its [separate public-catalog checkpoint](#macos-catalog-distribution) now
-establish this route; earlier link-first qualification remains distinct. Before
+Only one endpoint is fetched, with no merge or fallback. The prepared catalog
+selects Files0.6 on both ARM64 endpoints and keeps SSH/Snippets identical between
+them. Published dev.21 still embeds the legacy URL; its Linux-only Files entry
+does not offer macOS discovery. The earlier dev.26/Files0.5
+[public-catalog checkpoint](#macos-catalog-distribution) establishes that exact
+historical route; it does not qualify Files0.6. Before
 trust, downloaded length/SHA-256 and manifest ID/version/engine strings must match
 exactly; there is no fallback to unchecked link installation. The same native
 trusted-code warning applies. Official means project-maintained, not harmless,
@@ -507,15 +509,14 @@ Installation/replacement remains dormant. Cancel or owner loss before approval
 revokes consent; publication already dispatched cannot be recalled or retried
 implicitly. Refresh cannot retarget a captured installation.
 
-The legacy Files0.4.0 entry excludes stable0.23.0 and the older preview hosts.
-The macOS Files0.5 entry requires at least dev.21, independently of which new
-host first delivers the endpoint selection.
+The candidate Files0.6 entries require at least dev.21; compatibility is separate
+from which endpoint a particular host fetches and from actual qualification.
 Historical Files0.1.0 remains available for local/link installation from
 0.23.0-dev.8; catalog-capable host source started at 0.23.0-dev.9. Its engine
 range excludes host 0.24.0. The catalog is not an index of every historical
 release. Declared compatibility is not qualification of every version.
 
-The selected Files0.6 catalog promotion is pending publication and qualification.
+Files0.6 catalog promotion must follow archive publication and qualification.
 Once both endpoints select it, Linux hosts 0.24.0-dev.11 through dev.20 will no
 longer have a compatible Files catalog offer: the schema contains only one
 version per ID and Files0.6 requires dev.21 or newer. Those hosts can still

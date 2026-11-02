@@ -5,37 +5,37 @@
       "id": "omxterm.files",
       "name": "Files — ARM64 preview",
       "description": "Project-maintained local file manager preview: browse, create, rename, move, trash and delete files.",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "engines": {
         "omxterm": ">=0.24.0-dev.21",
         "api": "0.1.x"
       },
       "targets": ["darwin-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext",
-        "sha256": "82bd4bfe6f5a3ae7c22642741718dea94543f92b636a50b357c13d3c4be6aa18",
-        "bytes": 13200
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.6.0/files-0.6.0.omxext",
+        "sha256": "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
+        "bytes": 17331
       },
-      "sourceCommit": "a343704c0794cb913fba9ad312e90e5f6daa4bb1",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.5.0"
+      "sourceCommit": "cfc9073010df586eec321641ba5013862734f8fe",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.6.0"
     },
     {
       "id": "omxterm.ssh",
       "name": "SSH Connect",
       "description": "Project-maintained Linux ARM64 preview: searchable OpenSSH aliases and quick-connect in core-owned terminal tabs. Synthetic-client qualification only; real authentication and remote connectivity are unqualified.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext",
-        "sha256": "13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf",
-        "bytes": 11572
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext",
+        "sha256": "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b",
+        "bytes": 11606
       },
-      "sourceCommit": "77937fcf87ae71a68709111df7ace7359fb3f0b6",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0"
+      "sourceCommit": "8717d47327eeab14f522b1b2a448216860d0923d",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1"
     },
     {
       "id": "omxterm.snippets",

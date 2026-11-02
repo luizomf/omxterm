@@ -39,9 +39,9 @@ beforeEach(() => {
   vi.mocked(downloadExtension).mockReset();
 });
 describe("official catalog", () => {
-  it("offers the exact separate SSH preview", async () => {
+  it("retains the historical separate SSH preview metadata", async () => {
     const catalog = parseCatalog(
-      await readFile("distribution/official-extensions-v1.json"),
+      await readFile("test/fixtures/catalog-files-0.4-linux.json"),
     );
     const ssh = catalog.find((entry) => entry.id === "omxterm.ssh")!;
     expect(ssh).toMatchObject({

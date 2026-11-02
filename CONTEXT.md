@@ -369,8 +369,10 @@ legacy URL. Published dev.26 passed its separate exact-package
 including three Official consents and normal joined Quit; prior link evidence
 is not relabeled.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
-display metadata, not a manifest platform fence or blanket native qualification. The published Linux0.4.0
-catalog remains unchanged. The host's optional `toggleFiles` shortcut is unbound
+display metadata, not a manifest platform fence or blanket native qualification.
+The earlier Linux catalog selected Files0.4.0; the source candidate prepares
+Files0.6.0 on both ARM64 endpoints after separate publication and qualification.
+The host's optional `toggleFiles` shortcut is unbound
 by default and reuses the existing tool entry point; unavailable tools do not
 consume it. No startup code activation, default shortcut or stable SDK is implied;
 see [the preview contract](docs/files-development-preview.md) for qualification limits.

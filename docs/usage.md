@@ -298,8 +298,8 @@ configured key or install/enable themselves.
 In current source, one open tool is named in the panel header. With multiple
 open tools, the header's labeled buttons identify and switch between them without
 closing them; buttons wrap in a narrow panel. The Files and SSH Connect source
-pages rely on that host identity, but already published extension archives retain
-their own headings. Updating only the host does not update those packages.
+pages rely on that host identity, while the earlier Files0.4/0.5 and SSH0.3.0
+archives retain their own headings. Updating only the host does not update those packages.
 **Hide panel** (−) or Escape retains their state. **Close tool** (×) closes the
 selected tool and hides the panel, retaining any other open tools. Invoking a
 tool's ordinary entry point closes it only when it is already selected and
@@ -328,8 +328,9 @@ operation editor. Type a hidden directory path to open it directly. The setting
 stays while navigating or hiding the panel, but resets when the view is closed.
 On both Linux and macOS, the filter uses names only; it does not interpret
 macOS Finder hidden flags or the `.hidden` name lists used by some Linux desktops.
-Published archives retain their own styling and do not gain this source-only
-behavior from a host update.
+Earlier Files0.4/0.5 archives retain their own styling and do not gain this
+behavior from a host update. Files0.6 is a separately built archive; its release
+and catalog promotion are separate from the host.
 
 ### Resize or close Snippets
 

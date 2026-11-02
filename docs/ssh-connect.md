@@ -26,14 +26,14 @@ Controls, accessible names and notices follow the host's `en-US` or `pt-BR`
 interface language. Live language changes retain drafts, selected aliases, focus
 and pending operations without rediscovery or automatic connection retries.
 Alias names and connection targets remain literal, untranslated data.
-Version 0.3.0 is now separately published; the historical 0.1.0 archive remains
+Version 0.3.0 is separately published; the historical 0.1.0 archive remains
 immutable. Updating the host alone does not update a separately installed extension:
 review and deliberately install the newer extension. Current source leaves the
 visible SSH Connect identity to the host header while retaining its named child
-region and OpenSSH sections. Published archives keep their original heading,
-including on a newer host. The new source version is not yet a published or qualified package. Before
-distribution, the release owner must qualify the intended host/archive pair
-and compatibility range rather than replace existing bytes.
+region and OpenSSH sections. The published 0.3.0 archive keeps its original
+heading, including on a newer host. The source catalogs prepare a new 0.3.1
+entry; archive publication, intended host/archive qualification and public
+catalog consumption are separate milestones, not consequences of that entry.
 
 ## Installing the distributed preview
 
@@ -43,10 +43,11 @@ Neither is Latest; stable 0.23.0 and 0.23.0-dev.9 cannot run SSH Connect.
 The new archive requires host 0.24.0-dev.8 or later; dev.11 is the exact qualified
 Linux ARM64 host, not a claim of qualification for every admitted version.
 Install the published archive locally or through **Install from link** and review
-the version/digest and trusted-code warning. **Browse official extensions** also
-offers the new version for a deliberate install/update; fixed-endpoint readback
-and the bounded public packaged checkpoint passed on this exact pair. Installation is dormant; open SSH Connect separately
-to activate it. Official does not mean sandboxed.
+the version/digest and trusted-code warning. At the 0.3.0 promotion checkpoint,
+**Browse official extensions** offered that version and the bounded public
+packaged checkpoint passed on this exact pair. A later 0.3.1 promotion replaces
+the catalog offer, not the historical archive. Installation is dormant; open SSH
+Connect separately to activate it. Official does not mean sandboxed.
 
 The published [ssh-0.3.0-77937fc.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext)
 is 11,572 bytes, SHA-256

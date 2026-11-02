@@ -19,16 +19,14 @@ vi.mock("../../src/main/extension-download", async (original) => ({
 let files: CatalogRelease;
 let catalogBytes: Buffer;
 beforeAll(async () => {
-  catalogBytes = await readFile(
-    "distribution/official-extensions-darwin-arm64-v1.json",
-  );
+  catalogBytes = await readFile("test/fixtures/catalog-files-0.5-macos.json");
   files = parseCatalog(catalogBytes)[0]!;
 });
 
-describe("macOS Files catalog publication candidate", () => {
+describe("historical macOS Files 0.5 catalog", () => {
   it("preserves legacy Files/SSH metadata and every common release", async () => {
     const legacyBytes = await readFile(
-      "distribution/official-extensions-v1.json",
+      "test/fixtures/catalog-files-0.4-linux.json",
     );
     const legacy = parseCatalog(legacyBytes);
     // Snippets promotion must not change any other legacy entry.
