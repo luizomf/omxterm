@@ -68,11 +68,18 @@ responsibility.
 
 The [Linux ARM64 host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
 [macOS ARM64 host 0.24.0-dev.16](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16),
-and [Linux x64 host 0.24.0-dev.30](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30)
+[Linux x64 host 0.24.0-dev.30](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30),
+and [Windows ARM64 host 0.24.0-dev.36](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.36)
 use the separate [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)
-instead of built-in Snippets. All are non-Latest prereleases; stable 0.23.0 remains
-Latest, and published Windows hosts retain built-in Snippets. These pairings do not
-newly qualify Files/SSH.
+instead of built-in Snippets. All are non-Latest prereleases; at dev.36 publication,
+stable 0.23.0 remained Latest and older Windows hosts/Windows x64 were unchanged.
+These pairings do not newly qualify Files/SSH.
+
+For Windows ARM64, download the exact NSIS/checksum and follow the
+[PowerShell verification, unsigned SmartScreen and deliberate local Snippets steps](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).
+The installer can replace an existing per-user installation; it is not isolated
+side-by-side. Windows catalog promotion and the installed public-HTTPS checkpoint
+remain separate pending milestones at this revision.
 
 Download the versioned host DMG/checksum for macOS, or AppImage/checksum and optional
 matching helper for Linux, from the respective release, not `/latest/download`.
@@ -85,7 +92,7 @@ download and verify the Snippets archive and checksum, then choose
 Linux, use `sha256sum --check snippets-0.1.0.omxext.sha256`. Local installation
 works offline after download. Review trust, enable deliberately if disabled, and
 open **View → Toggle Snippets**. No source build or automatic installation is involved.
-Separate bounded public-HTTPS checkpoints passed on all three exact preview pairs;
+Separate bounded public-HTTPS checkpoints passed on the three Linux/macOS pairs;
 see [macOS coverage](snippets-migration.md#macos-arm64-catalog-delivery) and
 [Linux x64 coverage](snippets-migration.md#linux-x64-public-catalog-checkpoint).
 This does not qualify Finder/Gatekeeper first launch.

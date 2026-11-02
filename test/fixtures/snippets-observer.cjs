@@ -125,13 +125,34 @@ function observe(options, packageRequire) {
     return child;
   };
   syncBuiltinESMExports();
-  dialog.showOpenDialog = async () => ({
-    canceled: false,
-    filePaths: [options.archive],
-  });
+  dialog.showOpenDialog = async () => {
+    assert.notEqual(
+      options.publicCatalog,
+      true,
+      "public catalog forbids local chooser",
+    );
+    return { canceled: false, filePaths: [options.archive] };
+  };
   dialog.showMessageBox = async (_owner, prompt) => {
     assert.equal(prompt.title, "Trust extension code?");
-    assert.ok(prompt.detail.includes(options.archiveSha256));
+    if (options.publicCatalog === true) {
+      const digest =
+        "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
+      assert.equal(options.archiveSha256, digest);
+      assert.ok(approvals < 2, "only two public approvals");
+      assert.equal(prompt.type, "warning");
+      assert.equal(prompt.message, "Install Snippets 0.1.0?");
+      assert.equal(
+        prompt.detail,
+        `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.snippets\nSHA-256: ${digest}\nCurrent generation: ${approvals}\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.`,
+      );
+      assert.ok(Array.isArray(prompt.buttons));
+      assert.equal(prompt.buttons.length, 2);
+      assert.equal(prompt.buttons[0], "Cancel");
+      assert.equal(prompt.buttons[1], "Trust and install");
+      assert.equal(prompt.defaultId, 0);
+      assert.equal(prompt.cancelId, 0);
+    } else assert.ok(prompt.detail.includes(options.archiveSha256));
     approvals++;
     return { response: 1, checkboxChecked: false };
   };

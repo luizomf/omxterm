@@ -600,6 +600,128 @@ normal Quit. The separate stock FULL verifier on the matching NSIS installer and
 stage remains required where applicable; it does not run installed-path Snippets
 GUI, and this staged campaign does not replace it.
 
+## Windows ARM64 installed public-catalog adapter
+
+🤖 AI-assisted.
+
+`test/integration/snippets-windows-public.test.ts` is a separate five-check
+public-consumption fixture, **not a native PASS**. It reuses the verified exact
+Windows startup/controller/worker/PTY seams above but runs the actual installed
+executable from the existing guarded exact-NSIS transaction callback. The retained
+stage is only that transaction's payload reference. Do not feed an installed root
+to the ordinary staged adapter and describe it as installed-public evidence.
+
+This checkpoint is pinned to the public dev.36 product/tag
+`c04a350fcd5d5a411b1993300cb62eab4a0feace`, the 155,134,581-byte NSIS/SHA-256
+`57a556f64c6665befef6a096e902c1435fcc27c7c2db701b821bd224dd9d8d1b`
+and the unchanged public Snippets identity above. The fixture source is separate:
+use the reviewed dev.36 fixture branch and matching locked dependencies, not a
+later stable-version checkout relabeled as the published product. Public archive
+bytes are an independently downloaded **identity reference**, never a chooser
+fallback. Installation and Reinstall use the packaged application's production
+HTTPS catalog/archive downloader, with no transport interception or test CA.
+
+### Preconditions and invocation
+
+ROOT must first integrate the reviewed common Snippets promotion into both
+complete catalogs. Read back both exact fixed endpoints, compare against their
+actual integrated source and verify the unchanged Snippets identity/Windows ARM64
+target. Windows uses the legacy endpoint. Do not mistake a source JSON edit,
+helper output or public-download hash alone for this packaged HTTPS checkpoint.
+
+Use the authorized disposable ARM64 VM, an idle unlocked Interactive/Limited
+ordinary-user desktop and the native prerequisites above. Inspect the actual
+recovery snapshot, complete known installation/cache/registry/shortcut/process
+footprint and ownership/input guards before installation; snapshot listing is not
+restoration evidence. The installer can replace a known prior installation.
+`/D=` and isolated userData do not isolate machine-wide registration/cache effects.
+Use the already verified official Node24.22.0 ARM64 controller and controlled child;
+the prior Node26 first-Insert failure remains failed, without a proven cause.
+The earlier same-pair readiness, ten-check and FULL NSIS evidence is reusable;
+this public scenario is not an automatic rerun of them.
+
+Supply absolute paths to a freshly public-downloaded installer/archive and the
+unchanged qualified stage. Leave ordinary source/AppImage/DMG/Windows adapter and
+diagnostic variables unset. Keep the configured evidence lane stable across
+attempts; public-only variables do not opt into the old staged test.
+
+```powershell
+$env:OMXTERM_SNIPPETS_WINDOWS_PUBLIC_STAGE = 'C:\private\qualified\win-arm64-unpacked'
+$env:OMXTERM_SNIPPETS_WINDOWS_PUBLIC_INSTALLER = 'C:\private\public-download\OMXTerm-0.24.0-dev.36-arm64.exe'
+$env:OMXTERM_SNIPPETS_WINDOWS_PUBLIC_INSTALLER_SHA256 = '57a556f64c6665befef6a096e902c1435fcc27c7c2db701b821bd224dd9d8d1b'
+$env:OMXTERM_SNIPPETS_WINDOWS_PUBLIC_ARCHIVE = 'C:\private\public-download\snippets-0.1.0.omxext'
+$env:OMXTERM_SNIPPETS_WINDOWS_PUBLIC_VERSION = '0.24.0-dev.36'
+$env:OMXTERM_SNIPPETS_WINDOWS_PUBLIC_EVIDENCE = 'C:\private\public-snippets-evidence'
+$env:OMXTERM_SNIPPETS_WINDOWS_PUBLIC_DISPOSABLE_VM = '1'
+& 'C:\private\tools\node24\node.exe' '.\node_modules\vitest\vitest.mjs' run test/integration/snippets-windows-public.test.ts
+```
+
+No opt-in variables skips without network/installation. Partial, mixed, unknown or
+non-disposable configuration refuses. Public mode has a new fixed 240-second
+native/evaluation bound for the bounded production HTTPS operations and a
+600-second outer test bound for install/native/uninstall. Ordinary local/probe
+120-second bounds and failed historical deadlines remain unchanged.
+
+### Five checks and cleanup authority
+
+1. Actual Browse and exact visible catalog-card Install, controlled **Official**
+   ID/version/digest consent at generation0, then dormant installed generation1.
+2. Explicit Toggle, existing YAML and one exact `SNIPPETS_RUN\r`, with one framed
+   child receipt and no other semantic writes.
+3. Actual public Reinstall, controlled consent at generation1, joined first
+   backend and dormant installed generation2.
+4. Explicit activation of the second backend, Disable/join, dormant Enable and
+   Uninstall; the YAML remains byte-identical.
+5. The original canvas/Surface/s1 ConPTY remains usable for exact
+   `SNIPPETS_PING\r` and its one framed receipt, without leaked semantic input.
+
+The observer separately joins **normal Quit**: one PTY onExit, both retired
+backend exit0/close identities absent, actual main exit0/close/both EOFs and
+clean bounded captured/registered supervisor settlement. Two backends have already
+retired through management; this is not an active-backend-at-Quit witness.
+Lexical focus/CPR classification, raw writes, ACK/mode/render barriers and
+150ms drains remain as documented above. No held-input/preview/locale matrix is
+repeated. Controlled Chromium input is not physical keyboard/autorepeat or an
+ordinary account-shell qualification.
+
+A small fixture-local execute fence preserves the stock NSIS registry/cache/hash/
+process guards. The installed callback enters unresolved state **before** native
+handoff. Only the same directly awaited native runner's returned validated clean
+outcome, matched to its fresh same-lane receipt, can authorize the relocated owned
+uninstaller. A receipt alone, rejected runner, stale/malformed/mismatched journal
+or cleanup error never unlocks it. Joined forced cleanup can authorize uninstall
+after a failed scenario; it can never qualify normal Quit or public PASS. The
+stock transaction may create an owned relocated uninstaller copy before the fence;
+on refusal, retain and identify it with the installed payload/cache. Preserve both
+primary and cleanup failures. Never reset permission, delete payload broadly,
+change lanes, rerun or launch a staged fallback automatically.
+
+Profiles, Node/controller/launcher/supervisor and evidence remain outside NSIS's
+case-insensitive **string** termination prefix, not merely outside its directory
+tree. A clean supervisor result is bounded captured/registered ownership evidence,
+not universal containment of arbitrary escaping descendants. Installed executable,
+ASAR and runtime identities—not the reference stage's paths—must match before/
+after. Stock payload comparison remains one-way, allowing the owned uninstaller;
+it is not proof that no extra installed file existed.
+
+### Receipts and interpretation
+
+Inspect fresh `public-*/result.json` plus `inputs.json`, its `innerEvidence`
+`run-*` directory, `native-association.json`, `artifacts.json`, actual entry/loader/
+worker attachments, `scenario.json`, raw `pty-writes.json`, `quit.json`, controller
+and supervisor receipts. Inspect the actual public catalog/active child/core/
+management/terminal PNGs, not merely their existence or mock captures. Keep before/
+after installer, archive, Node, reference-stage and installed-tree identities.
+
+The inner public run deliberately never publishes `passed:true`; the outer
+`public-*` owner can do so only after guarded uninstall/cache/destination cleanup,
+all final identities and cancellation checks complete. Missing, failed,
+`finalizing`, malformed or cancelled evidence is not PASS. Profiles/evidence and
+failed ownership scopes remain retained for the owner, not silently removed.
+Independent known-footprint and OS key-state checks remain operator work. This
+fixture does not qualify SmartScreen/UAC, compositor freshness, Windows x64,
+Files/SSH, later main or stable-version bytes.
+
 ## Oracles and limits
 
 - Absent/disabled package guidance without implicit installation or enablement;

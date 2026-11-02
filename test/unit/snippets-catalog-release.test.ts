@@ -29,13 +29,32 @@ beforeAll(async () => {
 });
 
 describe("published Snippets catalog candidate", () => {
+  it("keeps complete fixed catalogs with synchronized common entries", async () => {
+    const legacy = parseCatalog(catalogBytes);
+    const macos = parseCatalog(
+      await readFile("distribution/official-extensions-darwin-arm64-v1.json"),
+    );
+    expect(macos.map((entry) => entry.id)).toEqual(
+      legacy.map((entry) => entry.id),
+    );
+    for (const id of ["omxterm.ssh", "omxterm.snippets"])
+      expect(macos.find((entry) => entry.id === id)).toEqual(
+        legacy.find((entry) => entry.id === id),
+      );
+    expect(snippets.name).toBe(
+      "Snippets — Linux, macOS and Windows ARM64 preview",
+    );
+    expect(snippets.description).toContain("0.24.0-dev.36 on Windows ARM64");
+    expect(snippets.description).toContain("Windows x64 is unqualified");
+  });
+
   it("binds the verified immutable archive, original receipt and embedded manifest", () => {
     // Recorded from public archive/checksum/receipt readback, not a new build.
     expect(snippets).toMatchObject({
       id: "omxterm.snippets",
       version: "0.1.0",
       engines: { omxterm: ">=0.24.0-dev.8", api: "0.1.x" },
-      targets: ["linux-arm64", "darwin-arm64", "linux-x64"],
+      targets: ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
       sourceCommit: "805e95dbc77552dc137707578b18b48ad6d047e9",
       releaseUrl:
         "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0",
@@ -48,7 +67,7 @@ describe("published Snippets catalog candidate", () => {
     });
   });
 
-  describe.each(["linux-arm64", "darwin-arm64", "linux-x64"])(
+  describe.each(["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"])(
     "%s admission",
     (target) => {
       it.each([
@@ -60,6 +79,7 @@ describe("published Snippets catalog candidate", () => {
         ["0.24.0-dev.30", true],
         ["0.24.0-dev.31", true],
         ["0.24.0-dev.32", true],
+        ["0.24.0-dev.36", true],
         ["0.24.0", true],
         ["0.24.1-dev.0", false],
         ["0.25.0-dev.0", false],
@@ -91,7 +111,7 @@ describe("published Snippets catalog candidate", () => {
     },
   );
 
-  it.each(["darwin-x64", "win32-arm64", "win32-x64"])(
+  it.each(["darwin-x64", "win32-x64"])(
     "does not admit the installed preview on %s",
     (target) => {
       expect(
@@ -109,6 +129,7 @@ describe("published Snippets catalog candidate", () => {
     ["linux-x64", "0.24.0-dev.30"],
     ["darwin-arm64", "0.24.0-dev.16"],
     ["darwin-arm64", "0.24.0-dev.26"],
+    ["win32-arm64", "0.24.0-dev.36"],
   ])(
     "offers the same captured archive on %s / %s",
     async (target, appVersion) => {
@@ -147,7 +168,11 @@ describe("published Snippets catalog candidate", () => {
           ])
           .entries.find((entry) => entry.id === snippets.id)?.action,
       ).toBe("reinstall");
-      if (target === "darwin-arm64" || target === "linux-x64") {
+      if (
+        target === "darwin-arm64" ||
+        target === "linux-x64" ||
+        target === "win32-arm64"
+      ) {
         for (const other of catalog
           .snapshot([])
           .entries.filter((entry) => entry.id !== snippets.id)) {

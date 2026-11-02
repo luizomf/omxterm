@@ -32,6 +32,7 @@ interface Options {
   };
   inputMarker: string;
   probe?: boolean;
+  publicCatalog?: boolean;
 }
 interface Pause {
   reason: string;
@@ -368,7 +369,10 @@ export async function runWindowsExactController(optionsFile: string) {
     } else {
       await json(
         "scenario.json",
-        await client.evaluate(`${observer}.run()`, 120000),
+        await client.evaluate(
+          `${observer}.run()`,
+          options.publicCatalog === true ? 240000 : 120000,
+        ),
       );
     }
     await workers.finish();

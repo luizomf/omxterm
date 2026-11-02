@@ -551,9 +551,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
   below full-width title/tab chrome. Linux ARM64/x64 and macOS/Windows ARM64 source use the
   separately installed Snippets extension; other targets retain the built-in view.
-  Windows ARM64 passed the bounded ordinary [Snippets source checkpoint](snippets-migration.md#windows-arm64-source-transition);
-  full portable, exact-package and public-consumption qualification remain separate.
-  Published Windows hosts retain built-in Snippets.
+  Windows ARM64 passed the bounded ordinary [Snippets source checkpoint](snippets-migration.md#windows-arm64-source-transition)
+  and later fresh full portable, exact staged ten-check and matching FULL NSIS gates
+  for its published [dev.36 preview](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).
+  Common-catalog promotion and installed public-HTTPS consumption remain separate
+  pending milestones at this revision; older Windows hosts and Windows x64 are unchanged.
   The published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and
   Linux x64 `0.24.0-dev.30` previews use optional Snippets; stable `0.23.0` retains
   the built-in view. All three previews offer the same immutable archive through
@@ -1777,6 +1779,10 @@ SSH/Snippets entries remain identical; macOS selects Files0.5 while legacy
 Linux clients retain Files0.4. The promoted catalog adds `linux-x64` to Snippets;
 public endpoint readback and the separate packaged public-HTTPS checkpoint passed
 for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).
+The common Snippets candidate additionally admits `win32-arm64` for the public
+Windows dev.36 host without changing archive identity, manifest ranges or any
+Files/SSH entry in either complete endpoint. Public byte readback passed; the new
+installed public-catalog fixture has headless controls, not a native PASS.
 There is no merge or endpoint fallback.
 The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;

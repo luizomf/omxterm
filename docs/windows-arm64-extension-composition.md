@@ -7,8 +7,12 @@ activate trusted installed code. Windows ARM64 source selects optional Snippets
 and omits its starter example; its separate bounded [ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition)
 passed on exact dev.33 source. That is not a full portable, exact-package or
 public-consumption qualification.
-Published Windows hosts and Windows x64 retain built-in Snippets. Windows x64
-remains outside extension admission. The separate Files
+The later [Windows ARM64 dev.36 preview](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+is published with optional Snippets after a fresh full portable pass, exact staged
+ten-check GUI and separate FULL NSIS verification. Its common-catalog promotion
+and installed public-HTTPS checkpoint remain separate pending milestones at this
+revision. Older Windows hosts and Windows x64 are unchanged. Windows x64
+remains outside this extension qualification. The separate Files
 move primitive remains unsupported on Windows, with no overwrite fallback.
 
 A bounded ordinary-user, source-launched Windows ARM64 composition checkpoint
@@ -17,9 +21,10 @@ inspected one exact unpacked ARM64 app directory, followed by a separate
 [packaged-GUI composition checkpoint](#packaged-gui-composition-checkpoint)
 using that retained directory. A later, separate [exact-NSIS installer checkpoint](#exact-nsis-installer-checkpoint)
 built and verified an installer from an independent copy of that package. These
-bounded results do not establish compatibility of existing published archives,
-a Snippets cutover, Windows x64, public catalog consumption, physical input or
-full portable qualification. Existing releases are unchanged.
+historical dev.31/dev.32 results do not establish compatibility of existing
+published archives, a Snippets cutover, Windows x64, public catalog consumption,
+physical input or full portable qualification. The separate later dev.36 evidence
+above does not rewrite them or mutate earlier releases.
 
 ## Installed-package production fixture
 

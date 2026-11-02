@@ -132,6 +132,58 @@ function harness(initialPid = 123, nativePath: typeof path = path) {
   };
 }
 
+it("refuses local selection and binds both public approvals to the exact Official identity and generation", async () => {
+  const h = harness();
+  const digest =
+    "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
+  const observation = h.observe({ publicCatalog: true, archiveSha256: digest });
+  const prompt = (generation: number) => ({
+    title: "Trust extension code?",
+    message: "Install Snippets 0.1.0?",
+    detail: `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.snippets\nSHA-256: ${digest}\nCurrent generation: ${generation}\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.`,
+    buttons: ["Cancel", "Trust and install"],
+    defaultId: 0,
+    cancelId: 0,
+    type: "warning",
+  });
+  try {
+    await expect(h.dialog.showOpenDialog()).rejects.toThrow();
+    await expect(h.dialog.showMessageBox(null, prompt(1))).rejects.toThrow();
+    await expect(
+      h.dialog.showMessageBox(null, {
+        ...prompt(0),
+        message: "Install Snippets 0.1.1?",
+      }),
+    ).rejects.toThrow();
+    await expect(
+      h.dialog.showMessageBox(null, {
+        ...prompt(0),
+        detail: prompt(0).detail.replace(
+          "omxterm.snippets",
+          "omxterm.snippets.fake",
+        ),
+      }),
+    ).rejects.toThrow();
+    await expect(
+      h.dialog.showMessageBox(null, {
+        ...prompt(0),
+        detail: prompt(0).detail.replace("Official means", "Unofficial means"),
+      }),
+    ).rejects.toThrow();
+    expect(observation.approvalCount()).toBe(0);
+    await expect(
+      h.dialog.showMessageBox(null, prompt(0)),
+    ).resolves.toMatchObject({ response: 1 });
+    await expect(
+      h.dialog.showMessageBox(null, prompt(1)),
+    ).resolves.toMatchObject({ response: 1 });
+    await expect(h.dialog.showMessageBox(null, prompt(1))).rejects.toThrow();
+    expect(observation.approvalCount()).toBe(2);
+  } finally {
+    observation.restore();
+  }
+});
+
 describe("Snippets fixture observation", () => {
   it("observes post-attachment instances without replacing a captured spawn binding", () => {
     const h = harness();
