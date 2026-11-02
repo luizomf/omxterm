@@ -58,6 +58,28 @@ function launch(probe: string, input: Buffer, diagnostic: boolean) {
   });
 }
 
+it("still rejects the observed 003 prefix before Run while accepting plain Run then Ping", () => {
+  withFixture((_evidence, probe) => {
+    const contaminated = launch(
+      probe,
+      Buffer.from("\u001b[[CSNIPPETS_RUN\r"),
+      false,
+    );
+    expect(contaminated.status).toBe(1);
+    expect(contaminated.stderr).toContain("Unexpected controlled probe input");
+    expect(contaminated.stdout).not.toContain("SNIPPETS_RUN_RECEIPT");
+    const plain = launch(
+      probe,
+      Buffer.from("SNIPPETS_RUN\rSNIPPETS_PING\r"),
+      false,
+    );
+    expect(plain.status).toBe(0);
+    expect(plain.stdout).toContain(
+      "SNIPPETS_RUN_RECEIPT\nSNIPPETS_AFTER_RETIREMENT\n",
+    );
+  });
+});
+
 it("retains actual rejected child stdin and exit metadata in the run evidence", () => {
   withFixture((evidence, probe) => {
     const input = Buffer.from("\u001b[ISNIPPETS_RUN\r");

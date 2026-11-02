@@ -681,6 +681,21 @@ bytes private. An optional `child-input-capture-error.json` reports capture fail
 Synchronous capture can perturb timing; missing, incomplete, truncated or failed
 evidence is inconclusive, not proof of empty input, upstream provenance or PASS.
 
+The same opt-in also creates `run-XXXXXX/parent-pty-diagnostic.jsonl` before
+observer installation. It records attachment, observed output and pre-call
+`PTY.write` attempts with sequence, UTC/monotonic timestamps, PTY index and
+current PID; `pidKnown:false` explicitly includes the late-PID interval. Data
+is the exact JavaScript string's UTF-16LE code units encoded as base64, not raw
+socket bytes. Chunks are not joined. The observer attaches after node-pty creates
+its agent, so it cannot prove the absence of pre-attachment activity. A write
+record proves only an attempted call, not successful forwarding, deferred socket
+delivery, ConPTY transformation or child stdin. This separate private journal is
+bounded to 256 events, 65,536 combined encoded PTY-data bytes and 262,144
+serialized bytes; truncation, unexpected PTYs or non-string data mark it
+incomplete. `parent-pty-capture-error.json`, missing or partial records likewise
+mean unknown. The journal is exclusive; failures do not alter PTY forwarding.
+No additional PTY's data is retained.
+
 Diagnostic mode always withholds public PASS. After an otherwise successful
 transaction it intentionally fails with
 `PUBLIC_CHILD_STDIN_DIAGNOSTIC_NOT_QUALIFICATION`; an earlier actual scenario,

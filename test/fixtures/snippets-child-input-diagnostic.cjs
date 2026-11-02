@@ -7,9 +7,18 @@ const maxInputBytes = 65536;
 const maxSerializedBytes = 262144;
 const reserveBytes = 2048;
 
-function startChildInputDiagnostic(directory) {
-  const journalPath = path.join(directory, "child-input-diagnostic.jsonl");
-  const errorPath = path.join(directory, "child-input-capture-error.json");
+function startJournal(directory, parent) {
+  const journalPath = path.join(
+    directory,
+    parent ? "parent-pty-diagnostic.jsonl" : "child-input-diagnostic.jsonl",
+  );
+  const errorPath = path.join(
+    directory,
+    parent ? "parent-pty-capture-error.json" : "child-input-capture-error.json",
+  );
+  const classification = parent
+    ? "synthetic-parent-pty-attempts-not-qualification"
+    : "synthetic-child-input-diagnostic-not-qualification";
   const checkpointPath = path.join(directory, "child-input-checkpoint.json");
   let fd;
   let sequence = 0;
@@ -22,13 +31,15 @@ function startChildInputDiagnostic(directory) {
       fs.writeFileSync(
         errorPath,
         JSON.stringify({
-          classification: "synthetic-child-input-diagnostic-not-qualification",
+          classification,
           stage,
           error: String(error),
           completeEvents: sequence,
-          capturedInputBytes: inputBytes,
+          ...(parent
+            ? { capturedPtyDataBytes: inputBytes }
+            : { capturedInputBytes: inputBytes }),
         }),
-        { flag: "wx" },
+        { flag: "wx", ...(parent ? { mode: 0o600 } : {}) },
       );
     } catch {
       // An absent/partial journal or sidecar remains unknown, never success.
@@ -58,7 +69,9 @@ function startChildInputDiagnostic(directory) {
         sequence: sequence + 1,
         monotonicNs: process.hrtime.bigint().toString(),
         utc: new Date().toISOString(),
-        checkpointVisible: fs.existsSync(checkpointPath),
+        ...(!parent
+          ? { checkpointVisible: fs.existsSync(checkpointPath) }
+          : {}),
         kind,
         ...fields,
       }) + "\n",
@@ -70,7 +83,9 @@ function startChildInputDiagnostic(directory) {
       write(
         makeEvent("capture-truncated", {
           reason,
-          capturedInputBytes: inputBytes,
+          ...(parent
+            ? { capturedPtyDataBytes: inputBytes }
+            : { capturedInputBytes: inputBytes }),
           ...fields,
         }),
       );
@@ -107,7 +122,9 @@ function startChildInputDiagnostic(directory) {
   return {
     limits: {
       events: maxEvents,
-      inputBytes: maxInputBytes,
+      ...(parent
+        ? { ptyDataBytes: maxInputBytes }
+        : { inputBytes: maxInputBytes }),
       serializedBytes: maxSerializedBytes,
     },
     record,
@@ -131,9 +148,57 @@ function startChildInputDiagnostic(directory) {
       )
         inputBytes += chunk.length;
     },
+    trace(event) {
+      if (stopped) return;
+      try {
+        const { kind, ptyIndex, pid, data, dataType } = event;
+        const fields = {
+          ptyIndex,
+          pid,
+          pidKnown: Number.isSafeInteger(pid) && pid > 0,
+          boundary:
+            kind === "pty-write"
+              ? "pre-call-write"
+              : kind === "pty-output"
+                ? "observed-output"
+                : "attachment",
+        };
+        if (ptyIndex !== 0) {
+          record("unexpected-pty", { ...fields, incomplete: true });
+          truncate("unexpected-pty-index");
+          return;
+        }
+        if (kind === "pty-attached") {
+          record(kind, fields);
+          return;
+        }
+        if (typeof data !== "string") {
+          record(kind, { ...fields, data: null, dataType, incomplete: true });
+          truncate("non-string-pty-data");
+          return;
+        }
+        const bytes = data.length * 2;
+        if (inputBytes + bytes > maxInputBytes) {
+          truncate("pty-data-byte-bound", { observedChunkBytes: bytes });
+          return;
+        }
+        if (
+          record(kind, {
+            ...fields,
+            encoding: "utf16le-base64",
+            bytes,
+            data: Buffer.from(data, "utf16le").toString("base64"),
+          })
+        )
+          inputBytes += bytes;
+      } catch (error) {
+        reportError("trace", error);
+      }
+    },
     close(code) {
       if (stopped) return;
-      record("process-exit", { phase: "exit", code });
+      if (parent) record("capture-closed");
+      else record("process-exit", { phase: "exit", code });
       if (stopped) return;
       try {
         fs.closeSync(fd);
@@ -145,4 +210,17 @@ function startChildInputDiagnostic(directory) {
     },
   };
 }
-module.exports = { startChildInputDiagnostic };
+function startChildInputDiagnostic(directory) {
+  return startJournal(directory, false);
+}
+
+function startParentPtyDiagnostic(directory) {
+  const journal = startJournal(directory, true);
+  journal.record("start", {
+    classification: "synthetic-parent-pty-attempts-not-qualification",
+    observation: "pty-write-before-original-call-not-child-stdin",
+    limits: journal.limits,
+  });
+  return journal;
+}
+module.exports = { startChildInputDiagnostic, startParentPtyDiagnostic };

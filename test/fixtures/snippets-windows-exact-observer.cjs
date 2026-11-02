@@ -25,8 +25,45 @@ function arm(options) {
     0,
     "arm before any window",
   );
+  let parentTrace;
+  if (options.publicChildInputDiagnostic === true) {
+    assert.equal(options.publicCatalog, true, "public diagnostic only");
+    try {
+      parentTrace =
+        require("./snippets-child-input-diagnostic.cjs").startParentPtyDiagnostic(
+          options.evidence,
+        );
+    } catch (error) {
+      try {
+        fs.writeFileSync(
+          path.join(options.evidence, "parent-pty-capture-error.json"),
+          JSON.stringify({
+            classification: "synthetic-parent-pty-attempts-not-qualification",
+            stage: "setup",
+            error: String(error),
+          }),
+          { flag: "wx", mode: 0o600 },
+        );
+      } catch {
+        // Missing evidence remains unknown; do not alter the observed run.
+      }
+    }
+  }
   const packageRequire = createRequire(path.join(options.asar, "package.json"));
-  const observer = observe({ ...options, windowsCpr: true }, packageRequire);
+  let observer;
+  try {
+    observer = observe(
+      {
+        ...options,
+        windowsCpr: true,
+        ...(parentTrace ? { readinessTrace: parentTrace.trace } : {}),
+      },
+      packageRequire,
+    );
+  } catch (error) {
+    parentTrace?.close();
+    throw error;
+  }
   let readiness;
   try {
     const { createInputHandler } = require("./snippets-windows-parser.cjs");
@@ -47,6 +84,7 @@ function arm(options) {
       options,
       observer,
       readiness,
+      parentTrace,
       window,
       fixtureProcesses,
       result: undefined,
@@ -54,6 +92,7 @@ function arm(options) {
   } catch (error) {
     readiness?.dispose();
     observer.restore();
+    parentTrace?.close();
     throw error;
   }
   return {
@@ -268,6 +307,7 @@ function finishQuit(probeOnly) {
       }
       readiness.dispose();
       observer.restore();
+      state.parentTrace?.close();
     }
   });
   app.quit();
@@ -299,6 +339,7 @@ function abort() {
   app.once("will-quit", () => {
     state?.readiness.dispose();
     state?.observer.restore();
+    state?.parentTrace?.close();
   });
   app.quit();
 }
