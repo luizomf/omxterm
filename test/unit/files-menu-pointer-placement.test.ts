@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page";
+import type { SupportedLanguage } from "../../src/shared/i18n";
 
 let dispose: (() => void) | undefined;
 afterEach(() => {
@@ -8,72 +9,125 @@ afterEach(() => {
   dispose = undefined;
   document.body.replaceChildren();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
-it("keeps the pointer target still during a press and reveals the hint after release outside", async () => {
+async function fixture() {
+  let language!: (value: SupportedLanguage) => void;
   const request = vi.fn(async (value: unknown) =>
     (value as { operation: string }).operation === "home"
       ? { ok: true, directory: "/root" }
       : { ok: true, directory: "/root", rows: [], total: 0 },
   );
-  const page = mountFilesPage(document, { request });
+  const page = mountFilesPage(document, {
+    request,
+    onLanguage(listener) {
+      language = listener;
+      listener("en-US");
+      return () => {};
+    },
+  });
   dispose = page.dispose;
   await page.ready;
   const actions = document.querySelector<HTMLButtonElement>(
     'button[aria-label="Actions…"]',
   )!;
-  const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
-  vi.spyOn(document.documentElement, "clientWidth", "get").mockReturnValue(196);
-  vi.spyOn(document.documentElement, "clientHeight", "get").mockReturnValue(
-    174,
-  );
-  vi.spyOn(actions, "getBoundingClientRect").mockReturnValue(
-    new DOMRect(10, 50, 34, 34),
-  );
-  Object.defineProperties(menu, {
-    offsetWidth: { configurable: true, value: 181 },
-    offsetHeight: {
-      configurable: true,
-      get: () =>
-        menu.querySelector(".menu-action-hint:not([hidden])") ? 166 : 90,
-    },
-    clientTop: { configurable: true, value: 1 },
-    clientHeight: { configurable: true, get: () => menu.offsetHeight - 2 },
-  });
-  vi.spyOn(menu, "getBoundingClientRect").mockImplementation(
-    () =>
-      new DOMRect(
-        Number.parseFloat(menu.style.left) || 0,
-        Number.parseFloat(menu.style.top) || 0,
-        menu.offsetWidth,
-        menu.offsetHeight,
-      ),
-  );
   actions.click();
+  const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
   const item = menu.querySelector<HTMLButtonElement>(
-    'button[aria-label="Use last reported terminal directory"]',
+    'button[aria-label="Use last reported path"]',
   )!;
-  vi.spyOn(item, "getBoundingClientRect").mockImplementation(
-    () =>
-      new DOMRect(
-        5,
-        menu.getBoundingClientRect().top + 100 - menu.scrollTop,
-        156,
-        80,
-      ),
+  return { actions, language, menu, item, request };
+}
+
+it("keeps the inline hint stable while a different menu item is pressed", async () => {
+  const f = await fixture();
+  const hint = f.item.querySelector<HTMLElement>(".menu-action-hint")!;
+  const checkbox = f.menu.querySelector<HTMLButtonElement>(
+    '[role="menuitemcheckbox"]',
+  )!;
+  f.item.focus();
+  expect(hint.hidden).toBe(false);
+  checkbox.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+  checkbox.focus();
+  expect(hint.hidden).toBe(false);
+  checkbox.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+  checkbox.click();
+  expect(f.menu.hidden).toBe(true);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
+
+it("cancels the pressed menu rather than moving its target on language change", async () => {
+  const f = await fixture();
+  f.item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+  f.item.focus();
+  f.language("pt-BR");
+  expect(f.menu.hidden).toBe(true);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+  expect(f.actions.getAttribute("aria-label")).toBe("Ações…");
+});
+
+it("keeps the gesture guarded through pointerup until the click turn ends", async () => {
+  vi.useFakeTimers();
+  const f = await fixture();
+  f.item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+  f.item.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+  f.language("pt-BR");
+  expect(f.menu.hidden).toBe(true);
+  vi.runAllTimers();
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
+
+it("cancels the pressed menu rather than moving its target on viewport resize", async () => {
+  const f = await fixture();
+  f.item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+  f.item.focus();
+  window.dispatchEvent(new Event("resize"));
+  expect(f.menu.hidden).toBe(true);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
+
+it.each(["pointercancel", "blur"])(
+  "cancels an active gesture on %s without activation",
+  async (event) => {
+    const f = await fixture();
+    f.item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+    if (event === "blur") window.dispatchEvent(new Event("blur"));
+    else document.body.dispatchEvent(new MouseEvent(event, { bubbles: true }));
+    expect(f.menu.hidden).toBe(true);
+    expect(f.request).not.toHaveBeenCalledWith({
+      operation: "terminal-directory",
+    });
+  },
+);
+
+it("does not let a stale release move or close a reopened menu during a new press", async () => {
+  vi.useFakeTimers();
+  const f = await fixture();
+  f.item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+  f.item.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+  f.item.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
   );
-  expect(menu.style.top).toBe("84px");
-  item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
-  item.focus();
-  expect(menu.style.top).toBe("84px");
-  document.body.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
-  await vi.waitFor(() => expect(menu.style.top).toBe("8px"));
-  expect(document.activeElement).toBe(item);
-  expect(menu.hidden).toBe(false);
-  item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
-  item.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
-  item.click();
-  expect(menu.hidden).toBe(true);
-  expect(request).toHaveBeenCalledWith({ operation: "terminal-directory" });
-  await vi.waitFor(() => expect(menu.hidden).toBe(true));
+  expect(f.menu.hidden).toBe(true);
+  f.actions.click();
+  const next = f.menu.querySelector<HTMLButtonElement>(
+    'button[aria-label="Use last reported path"]',
+  )!;
+  next.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+  vi.runAllTimers();
+  expect(f.menu.hidden).toBe(false);
+  f.language("pt-BR");
+  expect(f.menu.hidden).toBe(true);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
 });

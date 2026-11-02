@@ -44,7 +44,7 @@ it("explains a repeated terminal-directory request without reporting an unknown 
       .click();
     document
       .querySelector<HTMLButtonElement>(
-        'button[aria-label="Use last reported terminal directory"]',
+        'button[aria-label="Use last reported path"]',
       )!
       .click();
   };

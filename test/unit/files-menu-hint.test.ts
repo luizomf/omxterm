@@ -11,7 +11,7 @@ afterEach(() => {
   document.head.replaceChildren();
 });
 
-it("shows the reported-directory limitations on keyboard focus and hides them after focus moves", async () => {
+it("keeps active/local and stale/remote context visible and accessible across keyboard focus and language changes", async () => {
   const style = document.createElement("style");
   style.textContent = readFileSync("extensions/files/files.css", "utf8");
   document.head.append(style);
@@ -34,10 +34,10 @@ it("shows the reported-directory limitations on keyboard focus and hides them af
   )!;
   actions.click();
   const item = document.querySelector<HTMLButtonElement>(
-    'button[aria-label="Use last reported terminal directory"]',
+    'button[aria-label="Use last reported path"]',
   )!;
   const hint = item.querySelector<HTMLElement>(".menu-action-hint")!;
-  expect(getComputedStyle(hint).display).toBe("none");
+  expect(getComputedStyle(hint).display).toBe("block");
   const focused = document.activeElement as HTMLElement;
   focused.dispatchEvent(
     new KeyboardEvent("keydown", { key: "End", bubbles: true }),
@@ -47,15 +47,17 @@ it("shows the reported-directory limitations on keyboard focus and hides them af
   );
   expect(document.activeElement).toBe(item);
   expect(getComputedStyle(hint).display).toBe("block");
-  expect(hint.textContent).toBe("May be stale or remote.");
+  expect(hint.textContent).toBe(
+    "Active terminal; opens locally. Report may be stale or remote.",
+  );
   expect(item.title).toContain("active terminal's last reported path");
   expect(item.title).toContain("stale or come from a remote session");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
   language("pt-BR");
-  expect(item.getAttribute("aria-label")).toBe(
-    "Usar último diretório informado pelo terminal",
+  expect(item.getAttribute("aria-label")).toBe("Usar último caminho informado");
+  expect(hint.textContent).toBe(
+    "Terminal ativo; abre localmente. Pode ser antigo ou remoto.",
   );
-  expect(hint.textContent).toBe("Pode ser antigo ou remoto.");
   expect(item.title).toContain("terminal ativo");
   expect(item.title).toContain("desatualizado ou vir de uma sessão remota");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
@@ -63,5 +65,5 @@ it("shows the reported-directory limitations on keyboard focus and hides them af
   item.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
   );
-  expect(getComputedStyle(hint).display).toBe("none");
+  expect(getComputedStyle(hint).display).toBe("block");
 });

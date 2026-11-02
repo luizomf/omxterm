@@ -172,9 +172,6 @@
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
-.menu-action-hint[hidden] {
-  display: none;
-}
 .file-menu [role="menuitemcheckbox"] {
   display: grid;
   grid-template-columns: 1em minmax(0, 1fr);

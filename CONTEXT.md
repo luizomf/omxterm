@@ -366,9 +366,9 @@ with the core renderer before opening a fixed reported path locally without a mo
 no usable report is explained without navigating. Reports can be stale or produced
 by arbitrary output, and ordinary shell-launched SSH may be indistinguishable.
 Current Files source labels the action as the last reported path and explains those
-limits in a focus-visible hint, tooltip and accessible description. There is no automatic follow or
+limits in an inline hint, tooltip and accessible description. There is no automatic follow or
 retargeting of started operations. Compatible installed archives use this host
-behavior without modification; the renamed action, focus-visible hint, tooltip and
+behavior without modification; the renamed action, inline hint, tooltip and
 relocalizable host-coded notices require a future archive. Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.

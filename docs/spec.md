@@ -625,9 +625,9 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   can report it, ordinary shell-launched SSH may be indistinguishable and reports
   may be stale. The explicit action opens the fixed path locally without a modal;
   current Files source labels it as the last reported path and exposes those
-  limitations in a focus-visible hint, tooltip and accessible description. Compatible installed Files
+  limitations in an inline hint, tooltip and accessible description. Compatible installed Files
   archives use the host behavior without modified package bytes, but retain their
-  earlier label and lack the new focus-visible hint and tooltip. The renamed action,
+  earlier label and lack the new inline hint and tooltip. The renamed action,
   hint, tooltip and dynamically localized host-coded notices require a future archive.
   The narrow [maintenance bridge](extension-installation-foundation.md#archive-contract)
   admits unchanged Files0.6 on recognized 0.24.1-dev.N hosts; admission alone

@@ -404,11 +404,11 @@ identity or current process inspection: any program may emit OSC7, an ordinary
 shell-launched SSH session may not be recognized, and a shell that stops reporting
 can leave a stale value. The explicit action opens the captured path locally without
 a confirmation dialog. Current Files source labels it as the last reported path;
-its focus-visible hint, tooltip and accessible description state the stale/remote
+its inline hint, tooltip and accessible description state the stale/remote
 limitations. The host
 never configures the shell. Compatible installed Files archives use the host
 behavior without changing their published bytes; their original action label,
-missing focus-visible hint and tooltip, and already-displayed literal error text
+missing inline hint and tooltip, and already-displayed literal error text
 do not change. Current
 Files source also relabels host-coded unavailable notices. A future archive needs
 a new immutable version.

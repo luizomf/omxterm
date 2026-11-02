@@ -31,8 +31,9 @@ const english = {
   trash: "Move to Trash",
   prepareDelete: "Delete permanently…",
   delete: "Delete permanently",
-  terminalDirectory: "Use last reported terminal directory",
-  terminalDirectoryHint: "May be stale or remote.",
+  terminalDirectory: "Use last reported path",
+  terminalDirectoryHint:
+    "Active terminal; opens locally. Report may be stale or remote.",
   terminalDirectoryTooltip:
     "Open the active terminal's last reported path as a local folder. It may be stale or come from a remote session.",
   terminalDirectoryUnavailable:
@@ -106,8 +107,9 @@ const portuguese: FilesMessages = {
   trash: "Mover para a Lixeira",
   prepareDelete: "Excluir permanentemente…",
   delete: "Excluir permanentemente",
-  terminalDirectory: "Usar último diretório informado pelo terminal",
-  terminalDirectoryHint: "Pode ser antigo ou remoto.",
+  terminalDirectory: "Usar último caminho informado",
+  terminalDirectoryHint:
+    "Terminal ativo; abre localmente. Pode ser antigo ou remoto.",
   terminalDirectoryTooltip:
     "Abra o último caminho informado pelo terminal ativo como pasta local. Ele pode estar desatualizado ou vir de uma sessão remota.",
   terminalDirectoryUnavailable:

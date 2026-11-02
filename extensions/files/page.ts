@@ -114,8 +114,9 @@ export function mountFilesPage(
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
-  let menuPointerDown = false;
-  let menuRevealTimer: ReturnType<typeof setTimeout> | undefined;
+  const menuPointers = new Set<number>();
+  let menuReleaseTimer: ReturnType<typeof setTimeout> | undefined;
+  let menuGeneration = 0;
   let state: FilesTreeSnapshot;
   const message = (
     text: Label,
@@ -635,7 +636,16 @@ export function mountFilesPage(
       },
     ];
   }
+  function resetMenuGesture() {
+    menuGeneration++;
+    menuPointers.clear();
+    if (menuReleaseTimer !== undefined) clearTimeout(menuReleaseTimer);
+    menuReleaseTimer = undefined;
+  }
+  const menuGestureActive = () =>
+    menuPointers.size > 0 || menuReleaseTimer !== undefined;
   function closeMenu(restore = true) {
+    resetMenuGesture();
     if (menu.hidden) return;
     menu.hidden = true;
     tooltips.suppress(false);
@@ -668,21 +678,16 @@ export function mountFilesPage(
   }
   function revealFocusedMenuItem() {
     if (disposed || menu.hidden) return;
+    if (menuGestureActive()) {
+      closeMenu(false);
+      return;
+    }
     const rect = menu.getBoundingClientRect();
     placeMenu(rect.left, rect.top);
     const active = document.activeElement as HTMLElement | null;
     if (active?.parentElement === menu) revealMenuItem(active);
   }
-  function scheduleMenuReveal() {
-    if (disposed || menuRevealTimer !== undefined) return;
-    // Defer until after pointerup/click so placement cannot move the pressed target.
-    menuRevealTimer = setTimeout(() => {
-      menuRevealTimer = undefined;
-      revealFocusedMenuItem();
-    }, 0);
-  }
-  // Native child bounds can change after keyboard navigation has revealed an
-  // item. Recheck placement and wrapped layout without moving focus or retrying input.
+  // A resize during a press cancels the menu rather than moving its target.
   document.defaultView?.addEventListener("resize", revealFocusedMenuItem);
   function openMenu(
     target?: Target,
@@ -690,6 +695,7 @@ export function mountFilesPage(
     y?: number,
     anchor?: HTMLElement,
   ) {
+    resetMenuGesture();
     menuReturn = anchor ?? actionsButton;
     clear(menu);
     label(menu, (m) => m.fileActions, "aria-label");
@@ -707,12 +713,6 @@ export function mountFilesPage(
         const hint = document.createElement("span");
         hint.className = "menu-action-hint";
         hint.id = `files-menu-hint-${menu.childElementCount}`;
-        hint.hidden = true;
-        item.addEventListener("focus", () => {
-          hint.hidden = false;
-          if (!menuPointerDown) scheduleMenuReveal();
-        });
-        item.addEventListener("blur", () => (hint.hidden = true));
         labels.delete(item);
         label(item, action.label, "aria-label", action.tooltip ?? action.hint);
         label(caption, action.label);
@@ -761,6 +761,10 @@ export function mountFilesPage(
     );
   }
   menu.addEventListener("keydown", (event) => {
+    if (menuGestureActive() && event.key !== "Escape") {
+      event.preventDefault();
+      return;
+    }
     const items = [
       ...menu.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
     ];
@@ -782,18 +786,32 @@ export function mountFilesPage(
     }
   });
   const dismissMenu = (event: PointerEvent) => {
-    menuPointerDown = menu.contains(event.target as Node);
-    if (!menuPointerDown) closeMenu(false);
+    if (!menu.contains(event.target as Node)) {
+      closeMenu(false);
+      return;
+    }
+    if (menuReleaseTimer !== undefined) clearTimeout(menuReleaseTimer);
+    menuReleaseTimer = undefined;
+    menuPointers.add(event.pointerId);
   };
-  const finishMenuPointer = () => {
-    if (!menuPointerDown) return;
-    menuPointerDown = false;
-    scheduleMenuReveal();
+  const finishMenuPointer = (event: PointerEvent) => {
+    if (!menuPointers.delete(event.pointerId) || menuPointers.size) return;
+    const generation = menuGeneration;
+    // Let the browser dispatch click before revealing any remaining clipped item.
+    menuReleaseTimer = setTimeout(() => {
+      menuReleaseTimer = undefined;
+      if (disposed || generation !== menuGeneration || menuPointers.size)
+        return;
+      revealFocusedMenuItem();
+    }, 0);
   };
-  document.addEventListener("pointerdown", dismissMenu);
-  document.addEventListener("pointerup", finishMenuPointer);
-  document.addEventListener("pointercancel", finishMenuPointer);
-  document.defaultView?.addEventListener("blur", finishMenuPointer);
+  const cancelMenuPointer = () => {
+    if (menuGestureActive()) closeMenu(false);
+  };
+  document.addEventListener("pointerdown", dismissMenu, true);
+  document.addEventListener("pointerup", finishMenuPointer, true);
+  document.addEventListener("pointercancel", cancelMenuPointer, true);
+  document.defaultView?.addEventListener("blur", cancelMenuPointer);
   entries.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     openMenu(undefined, event.clientX, event.clientY, entries);
@@ -944,6 +962,7 @@ export function mountFilesPage(
   document.documentElement.lang = "en-US";
   const unsubscribeLanguage = bridge.onLanguage?.((language) => {
     if (disposed) return;
+    if (menuGestureActive()) closeMenu(false);
     document.documentElement.lang = language;
     messages = filesMessages(language);
     for (const update of labels.values()) update();
@@ -967,11 +986,11 @@ export function mountFilesPage(
         "resize",
         revealFocusedMenuItem,
       );
-      if (menuRevealTimer !== undefined) clearTimeout(menuRevealTimer);
-      document.removeEventListener("pointerdown", dismissMenu);
-      document.removeEventListener("pointerup", finishMenuPointer);
-      document.removeEventListener("pointercancel", finishMenuPointer);
-      document.defaultView?.removeEventListener("blur", finishMenuPointer);
+      resetMenuGesture();
+      document.removeEventListener("pointerdown", dismissMenu, true);
+      document.removeEventListener("pointerup", finishMenuPointer, true);
+      document.removeEventListener("pointercancel", cancelMenuPointer, true);
+      document.defaultView?.removeEventListener("blur", cancelMenuPointer);
       document.removeEventListener("keydown", onShortcut);
       document.removeEventListener("compositionstart", startComposition);
       document.removeEventListener("compositionend", endComposition);
