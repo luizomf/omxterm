@@ -9,7 +9,9 @@ project that same catalog snapshot. The native menu registers and displays
 accelerators but no longer owns a separate behavior definition. Recognized keys invoke the same action and are consumed before
 Terminal Surface/PTY input. `preventDefault` suppresses page input and menu
 shortcut dispatch, preventing duplicate invocation. Unrecognized keys retain
-native menu and terminal routing.
+native menu and terminal routing. New events reported as composing are not
+claimed by shortcut recording or the main matcher, although native-menu routing
+and composition states not exposed by Electron remain outside that guarantee.
 
 This handles valid accelerators that a native menu refuses, notably macOS
 `Control+Tab`, without putting application policy inside the portable Surface or

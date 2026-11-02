@@ -353,7 +353,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.padding.right": "Espaçamento direito",
   "settings.padding.bottom": "Espaçamento inferior",
   "settings.padding.left": "Espaçamento esquerdo",
-  "settings.optionAlt": "Tecla Option funciona como Alt",
+  "settings.optionAlt": "Tecla Option funciona como Alt no terminal",
   "settings.option.none": "Nenhuma",
   "settings.option.left": "Option esquerda",
   "settings.option.right": "Option direita",
@@ -402,8 +402,12 @@ export const brazilianPortugueseMessages: Readonly<
   "shortcuts.hint":
     "Padrão segue o atalho embutido. Sem atalho mantém a ação no menu sem tecla. Atalhos do aplicativo recebem a tecla antes dos programas do terminal.",
   "shortcuts.prompt": "Pressione o novo atalho, ou Escape para cancelar.",
+  "shortcuts.promptMac":
+    "Pressione o novo atalho, ou Escape para cancelar. Caracteres produzidos por Option e teclas mortas podem não ser graváveis; tente Option com uma seta ou tecla de função. A opção de usar Option como Alt afeta apenas a entrada no terminal.",
   "shortcuts.invalid":
     "Essa combinação de teclas não é compatível. Use Ctrl, Alt, Cmd ou AltGr com uma tecla compatível, ou use F1–F24.",
+  "shortcuts.invalidMac":
+    "Essa combinação de teclas não é compatível. Caracteres produzidos por Option e teclas mortas podem não ser graváveis; tente Option com uma seta ou tecla de função, outro modificador, ou F1–F24.",
   "shortcuts.cancelled": "Gravação cancelada.",
   "shortcuts.pressing": "Pressione um atalho…",
   "shortcuts.none": "Nenhum",

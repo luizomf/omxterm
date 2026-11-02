@@ -123,12 +123,21 @@ export function renderShortcuts(
     if (again) return;
     recording = action;
     syncAll();
-    context.report("shortcuts.prompt");
+    context.report(
+      context.platform === "darwin"
+        ? "shortcuts.promptMac"
+        : "shortcuts.prompt",
+    );
     stopCapture = context.captureShortcut((shortcut) => {
       if (!context.live() || !context.interactive() || recording !== action)
         return;
       if ("invalid" in shortcut) {
-        context.report("shortcuts.invalid", true);
+        context.report(
+          context.platform === "darwin"
+            ? "shortcuts.invalidMac"
+            : "shortcuts.invalid",
+          true,
+        );
         return;
       }
       stopCapture = undefined;

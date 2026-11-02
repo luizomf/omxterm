@@ -341,7 +341,7 @@ export const englishMessages = {
   "settings.padding.right": "Padding right",
   "settings.padding.bottom": "Padding bottom",
   "settings.padding.left": "Padding left",
-  "settings.optionAlt": "Option key acts as Alt",
+  "settings.optionAlt": "Option key acts as terminal Alt",
   "settings.option.none": "Neither",
   "settings.option.left": "Left Option",
   "settings.option.right": "Right Option",
@@ -389,8 +389,12 @@ export const englishMessages = {
   "shortcuts.hint":
     "Default follows the built-in shortcut. Unbound keeps the action in the menu without a key. App shortcuts take their key before terminal programs see it.",
   "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",
+  "shortcuts.promptMac":
+    "Press the new shortcut, or Escape to cancel. Option-generated characters and dead keys may not be recordable; try Option with an arrow or function key. The Option as Alt setting affects terminal input only.",
   "shortcuts.invalid":
     "That key combination is not supported. Use Ctrl, Alt, Cmd or AltGr with a supported key, or use F1–F24.",
+  "shortcuts.invalidMac":
+    "That key combination is not supported. Option-generated characters and dead keys may not be recordable; try Option with an arrow or function key, another modifier, or F1–F24.",
   "shortcuts.cancelled": "Recording cancelled.",
   "shortcuts.pressing": "Press a shortcut…",
   "shortcuts.none": "None",

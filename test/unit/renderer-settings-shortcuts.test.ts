@@ -25,12 +25,15 @@ beforeAll(() => {
 });
 afterEach(() => document.body.replaceChildren());
 
-const snapshot = (find: {
-  effective: string | null;
-  state: "inherit" | "custom" | "unbound";
-}): SettingsSnapshot => ({
+const snapshot = (
+  find: {
+    effective: string | null;
+    state: "inherit" | "custom" | "unbound";
+  },
+  platform = "linux",
+): SettingsSnapshot => ({
   configurationPath: "/synthetic/omxterm/config.json",
-  platform: "linux",
+  platform,
   revision: "r1",
   text: '{ "version": 1 }\n',
   values: {},
@@ -43,8 +46,11 @@ const snapshot = (find: {
   },
 });
 
-async function open(language?: RendererLanguage) {
-  let current = snapshot({ effective: "Control+Shift+F", state: "inherit" });
+async function open(language?: RendererLanguage, platform = "linux") {
+  let current = snapshot(
+    { effective: "Control+Shift+F", state: "inherit" },
+    platform,
+  );
   let deliver: ((shortcut: CapturedShortcut) => void) | undefined;
   const stopCapture = vi.fn();
   const changeKeybind = vi.fn(
@@ -56,6 +62,7 @@ async function open(language?: RendererLanguage) {
           : choice.state === "unbound"
             ? { effective: null, state: "unbound" }
             : { effective: "Control+Shift+F", state: "inherit" },
+        platform,
       );
       return {
         status: "saved",
@@ -222,6 +229,33 @@ describe("Shortcuts page", () => {
     });
     expect(view.cells("find")).toEqual(["F2", "Custom"]);
     expect(view.status()).toBe("Saved.");
+  });
+
+  it("explains macOS Option recording limits before and after an unsupported key", async () => {
+    const view = await open(undefined, "darwin");
+    view.button("find", "record").click();
+    expect(view.status()).toBe(
+      "Press the new shortcut, or Escape to cancel. Option-generated characters and dead keys may not be recordable; try Option with an arrow or function key. The Option as Alt setting affects terminal input only.",
+    );
+    view.deliver({ invalid: true });
+    expect(view.status()).toBe(
+      "That key combination is not supported. Option-generated characters and dead keys may not be recordable; try Option with an arrow or function key, another modifier, or F1–F24.",
+    );
+    expect(view.button("find", "record").textContent).toBe("Cancel");
+    expect(view.changeKeybind).not.toHaveBeenCalled();
+  });
+
+  it("relabels the macOS Option limitation while recording", async () => {
+    const language = createRendererLanguage("en-US");
+    const view = await open(language, "darwin");
+    view.button("find", "record").click();
+    language.set("pt-BR");
+    expect(view.status()).toContain("teclas mortas podem não ser graváveis");
+    expect(view.status()).toContain("afeta apenas a entrada no terminal");
+    view.deliver({ invalid: true });
+    expect(view.status()).toContain("teclas mortas podem não ser graváveis");
+    language.set("en-US");
+    expect(view.status()).toContain("dead keys may not be recordable");
   });
 
   it("cancels recording without saving and unbinds or restores the default", async () => {

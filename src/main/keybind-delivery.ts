@@ -15,6 +15,7 @@ export interface KeybindKeyEvent {
 export interface KeybindKeyboardInput extends AcceleratorKeyboardInput {
   readonly type: string;
   readonly isAutoRepeat?: boolean;
+  readonly isComposing?: boolean;
 }
 
 type CaptureLifetimeEvent =
@@ -65,7 +66,11 @@ export function deliverKeybindsFromKeyEvents(
       event.preventDefault();
       return;
     }
-    if (input.type !== "keyDown" && input.type !== "rawKeyDown") return;
+    if (
+      input.isComposing ||
+      (input.type !== "keyDown" && input.type !== "rawKeyDown")
+    )
+      return;
     const action = terminalActionForKeyboardInput(
       keybinds(),
       { ...input, altGr: hasNativeAltGr(input) },

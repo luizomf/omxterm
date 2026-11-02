@@ -91,6 +91,9 @@ export function createKeybindCapture(
         if (input.isAutoRepeat) return true;
         held.delete(identity);
       }
+      // Already-owned gestures keep their releases above, but a new composing
+      // key is text input, not a shortcut candidate.
+      if (input.isComposing) return false;
       if (input.type !== "keyDown" && input.type !== "rawKeyDown") return false;
       const active = recordings.get(target);
       if (!active) return false;

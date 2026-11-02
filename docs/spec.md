@@ -1638,15 +1638,24 @@ has a custom binding or is explicitly unbound: Default removes the action's
 `keybinds` entry (and an emptied group), Unbind writes `null` and a recorded
 key writes its accelerator, through the same validated save; collisions report
 the loader's actionable message. Recording is main-owned: while a window
-captures, its `before-input-event` reports the next press, with the native
-identity delivery matches (including AltGr and bare F1–F24), instead of
-running a keybind, a menu shortcut or reaching the terminal, and consumes that
-key's held repeats and release, including overlapping invalid/modifier gestures.
-A fresh press after a lost release remains new input. Only unmodified Escape
-cancels; modified Escape, including native AltGr, can be recorded. A key that
-cannot round-trip through the supported accelerator identity reports invalid and
-keeps capture open; arbitrary layout translation is not added, and the existing
-logical Plus/keypad exceptions remain. Capture ends after one accepted key, on
+captures, an observable candidate `before-input-event` is reported with the
+native identity delivery matches (including AltGr and bare F1–F24), rather than
+running its keybind, a menu shortcut or reaching the terminal. Its held repeats
+and release are consumed, including overlapping invalid/modifier gestures.
+A fresh press after a lost release remains new input. A new event reported as
+composing is not claimed by capture or the main key matcher; already-owned
+repeats and releases remain consumed. This flag does not establish every native
+composition state, and unmatched events retain normal native-menu routing.
+Only unmodified Escape cancels; modified Escape, including native AltGr, can be
+recorded. A key that cannot round-trip through the supported accelerator identity
+reports invalid and keeps capture open; arbitrary layout translation is not added,
+and the existing logical Plus/keypad exceptions remain. On macOS, the recording
+prompt and invalid feedback explain that Option-generated characters and dead
+keys may be unsupported, suggest Option with an arrow or function key, and
+distinguish terminal Option Key Mode from application shortcuts. Some native
+dead-key sequences do not provide a candidate keydown to main and can continue
+composition without a recording result; the prompt remains until another
+candidate, cancellation or timeout. Capture ends after one accepted key, on
 cancel, button/window blur, category/tab departure, overlay activation, editor disposal or at a real
 30-second timeout that notifies the current view without waiting for another
 key. Ending a recording retains its consumed gestures until release or a fresh

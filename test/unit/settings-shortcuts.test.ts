@@ -7,6 +7,7 @@ import { createKeybindCapture } from "../../src/main/keybind-capture";
 import { deliverKeybindsFromKeyEvents } from "../../src/main/keybind-delivery";
 import { createSettingsService } from "../../src/main/settings-service";
 import { startSettings } from "../../src/main/settings-wiring";
+import { loadUserConfiguration } from "../../src/main/user-configuration";
 import { createSettingsBridge } from "../../src/preload/settings-bridge";
 import { settingsIpc } from "../../src/shared/settings";
 import {
@@ -30,7 +31,7 @@ afterEach(async () => {
   );
 });
 
-async function service(contents?: string) {
+async function service(contents?: string, platform = "linux") {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-shortcuts-"));
   roots.push(root);
   const file = path.join(root, "omxterm", "config.json");
@@ -38,15 +39,17 @@ async function service(contents?: string) {
     await mkdir(path.dirname(file), { recursive: true });
     await writeFile(file, contents);
   }
+  const loadOptions = {
+    environment: { XDG_CONFIG_HOME: root },
+    homeDirectory: root,
+    platform,
+    getInstalledFontFamilyMetrics: async () => undefined,
+  };
   return {
     file,
+    loadOptions,
     service: createSettingsService({
-      loadOptions: {
-        environment: { XDG_CONFIG_HOME: root },
-        homeDirectory: root,
-        platform: "linux",
-        getInstalledFontFamilyMetrics: async () => undefined,
-      },
+      loadOptions,
       reload: vi.fn(async () => ({ applied: true as const, notices: [] })),
     }),
   };
@@ -91,6 +94,25 @@ describe("recorded accelerators", () => {
           "linux",
         ),
       ).toBe("find");
+    },
+  );
+
+  it.each([
+    ["å", "KeyA", "Alt+A"],
+    ["ª", "Digit9", "Alt+9"],
+    ["Dead", "KeyE", "Alt+E"],
+  ])(
+    "does not guess a shortcut from Option-produced %s at %s",
+    (logical, code, binding) => {
+      const input = key({ key: logical, code, alt: true });
+      expect(acceleratorForKeyboardInput(input, "darwin")).toBeUndefined();
+      expect(
+        terminalActionForKeyboardInput(
+          { ...terminalDefaultKeybinds("darwin"), find: binding },
+          input,
+          "darwin",
+        ),
+      ).toBeUndefined();
     },
   );
 
@@ -339,6 +361,98 @@ describe("main-owned capture", () => {
       shortcut: { cancelled: true },
     });
   });
+
+  it("leaves reported composition alone during recording and shortcut delivery", () => {
+    const capture = createKeybindCapture("darwin");
+    const window = target();
+    const contents = Object.assign(new EventEmitter(), { send: window.send });
+    const invoke = vi.fn();
+    deliverKeybindsFromKeyEvents(
+      contents,
+      () => ({ ...terminalDefaultKeybinds("darwin"), find: "Alt+Left" }),
+      invoke,
+      "darwin",
+      capture,
+    );
+    const press = (input: Record<string, unknown>) => {
+      const event = { preventDefault: vi.fn() };
+      contents.emit("before-input-event", event, key(input));
+      return event.preventDefault;
+    };
+    const optionLeft = { key: "ArrowLeft", code: "ArrowLeft", alt: true };
+
+    capture.set(contents, { captureId: "composition", active: true });
+    expect(press({ ...optionLeft, isComposing: true })).not.toHaveBeenCalled();
+    expect(window.sent).toEqual([]);
+    expect(invoke).not.toHaveBeenCalled();
+    expect(press(optionLeft)).toHaveBeenCalledOnce();
+    expect(window.sent).toEqual([
+      { captureId: "composition", shortcut: { accelerator: "Alt+Left" } },
+    ]);
+    expect(
+      press({ ...optionLeft, type: "keyUp", isComposing: true }),
+    ).toHaveBeenCalledOnce();
+    expect(press({ ...optionLeft, isComposing: true })).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
+    expect(press(optionLeft)).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("find", expect.anything());
+  });
+
+  it.each(
+    ["none", "left", "right", "both"].flatMap((optionAsAlt) =>
+      ["Left", "Right"].map((side) => ({ optionAsAlt, side })),
+    ),
+  )(
+    "records and delivers Option+$side arrow with terminal Option mode $optionAsAlt",
+    async ({ optionAsAlt, side }) => {
+      const view = await service(
+        JSON.stringify({ version: 1, keyboard: { optionAsAlt } }),
+        "darwin",
+      );
+      const capture = createKeybindCapture("darwin");
+      const window = target();
+      const contents = Object.assign(new EventEmitter(), { send: window.send });
+      const invoke = vi.fn();
+      let bindings = terminalDefaultKeybinds("darwin");
+      deliverKeybindsFromKeyEvents(
+        contents,
+        () => bindings,
+        invoke,
+        "darwin",
+        capture,
+      );
+      const press = (input: Record<string, unknown>) => {
+        const event = { preventDefault: vi.fn() };
+        contents.emit("before-input-event", event, key(input));
+        return event.preventDefault;
+      };
+      const modifier = { key: "Alt", code: `Alt${side}`, alt: true };
+      const shortcut = { key: "ArrowLeft", code: "ArrowLeft", alt: true };
+      capture.set(contents, { captureId: "option", active: true });
+      expect(press(modifier)).toHaveBeenCalledOnce();
+      expect(press(shortcut)).toHaveBeenCalledOnce();
+      expect(window.sent).toEqual([
+        { captureId: "option", shortcut: { accelerator: "Alt+Left" } },
+      ]);
+      expect(invoke).not.toHaveBeenCalled();
+      const saved = await view.service.changeKeybind({
+        action: "find",
+        choice: { state: "custom", accelerator: "Alt+Left" },
+      });
+      expect(saved.status).toBe("saved");
+      const loaded = await loadUserConfiguration(view.loadOptions);
+      expect(loaded.fallback).toBeUndefined();
+      expect(loaded.configuration.optionKeyMode).toBe(optionAsAlt);
+      expect(loaded.configuration.keybinds.find).toBe("Alt+Left");
+      bindings = loaded.configuration.keybinds;
+      expect(press({ ...shortcut, type: "keyUp" })).toHaveBeenCalledOnce();
+      expect(press({ ...modifier, type: "keyUp" })).toHaveBeenCalledOnce();
+      expect(press(shortcut)).toHaveBeenCalledOnce();
+      expect(invoke).toHaveBeenCalledExactlyOnceWith("find", expect.anything());
+      expect(press({ ...shortcut, alt: false })).not.toHaveBeenCalled();
+      expect(invoke).toHaveBeenCalledOnce();
+    },
+  );
 
   it("accepts capture only from a trusted sender with an exact bounded generation request", async () => {
     const handlers = new Map<
