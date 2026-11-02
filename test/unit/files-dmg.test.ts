@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as syncFs from "node:fs";
 import path from "node:path";
@@ -133,6 +134,13 @@ const run = () =>
     signal: abort.signal,
     onTestFinished: () => {},
   });
+const inputEnv = () =>
+  Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      "OMXTERM_FILES_DMG_" + key,
+      value,
+    ]),
+  );
 async function receipt() {
   const name = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
@@ -147,12 +155,7 @@ async function receipt() {
 }
 it("requires complete explicit inputs and does not infer target or reuse another adapter", () => {
   expect(filesDmgInputs({})).toBeUndefined();
-  const env = Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      "OMXTERM_FILES_DMG_" + key,
-      value,
-    ]),
-  );
+  const env = inputEnv();
   expect(filesDmgInputs(env)).toEqual(values);
   expect(
     filesDmgInputs({ ...env, OMXTERM_FILES_DMG_EXTENSION_VERSION: "0.6.0" }),
@@ -172,12 +175,7 @@ it("requires complete explicit inputs and does not infer target or reuse another
   ).toThrow();
 });
 it("accepts only explicit immutable project public-link inputs", () => {
-  const env = Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      "OMXTERM_FILES_DMG_" + key,
-      value,
-    ]),
-  );
+  const env = inputEnv();
   expect(
     filesDmgInputs({ ...env, OMXTERM_FILES_DMG_PUBLIC_LINK: publicLink }),
   ).toEqual({ ...values, PUBLIC_LINK: publicLink });
@@ -287,12 +285,7 @@ it.each([
   expect((await receipt()).result.passed).toBe(false);
 });
 it("binds the Files0.6 public catalog checkpoint to its exact archive identity", () => {
-  const env = Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      "OMXTERM_FILES_DMG_" + key,
-      value,
-    ]),
-  );
+  const env = inputEnv();
   const selected = {
     ...env,
     OMXTERM_FILES_DMG_PUBLIC_CATALOG: filesPublicCatalogUrl,
@@ -314,13 +307,42 @@ it("binds the Files0.6 public catalog checkpoint to its exact archive identity",
   ).toThrow(/Files0\.6.*digest/);
 });
 
-it("refuses unsupported public catalog versions instead of relabeling a checkpoint", () => {
-  const env = Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      "OMXTERM_FILES_DMG_" + key,
-      value,
-    ]),
+it("forwards the selected Files0.6 identity to the bounded public catalog observer", async () => {
+  // Synthetic bytes and a stubbed hash isolate options/receipt forwarding; the
+  // release archive itself is verified separately, never replaced or rebuilt.
+  await fs.writeFile(values.ARCHIVE, Buffer.alloc(17331, 42));
+  const selected =
+    "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
+  vi.mocked(dmg.sha256).mockImplementation((bytes) =>
+    bytes.length === 17331
+      ? selected
+      : createHash("sha256").update(bytes).digest("hex"),
   );
+  values.PUBLIC_CATALOG = filesPublicCatalogUrl;
+  values.EXTENSION_VERSION = "0.6.0";
+  values.ARCHIVE_SHA256 = selected;
+  await run();
+  const { directory, result } = await receipt();
+  expect(result.passed).toBe(true);
+  const options: unknown = JSON.parse(
+    await fs.readFile(path.join(directory, "options.json"), "utf8"),
+  );
+  expect(options).toMatchObject({
+    observer: "files-packaged.cjs",
+    extensionVersion: "0.6.0",
+    archiveSha256: selected,
+    publicCatalog: filesPublicCatalogUrl,
+    catalogMode: "public",
+    macosLifecycle: false,
+  });
+  expect(options).not.toHaveProperty("publicLink");
+  await expect(
+    fs.stat(path.join(directory, "fixture/files.omxext")),
+  ).rejects.toMatchObject({ code: "ENOENT" });
+});
+
+it("refuses unsupported public catalog versions instead of relabeling a checkpoint", () => {
+  const env = inputEnv();
   expect(() =>
     filesDmgInputs({
       ...env,
@@ -352,12 +374,7 @@ it("refuses the wrong-sized Files0.6 public archive before native preparation", 
 });
 
 it("accepts only the fixed public catalog endpoint and refuses mixed acquisition", () => {
-  const env = Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [
-      "OMXTERM_FILES_DMG_" + key,
-      value,
-    ]),
-  );
+  const env = inputEnv();
   expect(
     filesDmgInputs({
       ...env,
