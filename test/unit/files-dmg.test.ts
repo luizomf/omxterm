@@ -63,6 +63,7 @@ beforeEach(async () => {
       evidence: string;
       publicLink?: string;
       publicCatalog?: string;
+      extensionVersion?: string;
     };
     await fs.writeFile(
       path.join(config.evidence, "scenario.json"),
@@ -70,7 +71,9 @@ beforeEach(async () => {
         checks:
           config.publicLink || config.publicCatalog
             ? filesPublicLinkChecks
-            : filesDmgChecks,
+            : config.extensionVersion === "0.6.0"
+              ? [...filesDmgChecks, "current-Files-toolbar-dotfiles-draft"]
+              : filesDmgChecks,
         approvals: 3,
         sourceExited: true,
         archiveSha256: values.ARCHIVE_SHA256,
@@ -383,10 +386,38 @@ it("retains the copied application/profile and records actual host separately fr
   });
   expect(options).not.toHaveProperty("quartzTool");
   expect(
+    await fs.readFile(
+      path.join(directory, "fixture/owned-files/.release-dotfile"),
+      "utf8",
+    ),
+  ).toBe("dotfile");
+  expect(
     path.dirname(
       vi.mocked(runner.runNativeFixture).mock.calls[0]![0].evidencePath!,
     ),
   ).toBe(values.EVIDENCE);
+});
+it("refuses a Files0.6 local result that omits the changed UI check", async () => {
+  values.EXTENSION_VERSION = "0.6.0";
+  const implementation = vi
+    .mocked(runner.runNativeFixture)
+    .getMockImplementation()!;
+  vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
+    const result = await implementation(options);
+    const config = JSON.parse(await fs.readFile(options.args[1]!, "utf8")) as {
+      evidence: string;
+    };
+    const file = path.join(config.evidence, "scenario.json");
+    const scenario = JSON.parse(await fs.readFile(file, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    scenario.checks = filesDmgChecks;
+    await fs.writeFile(file, JSON.stringify(scenario));
+    return result;
+  });
+  await expect(run()).rejects.toThrow();
+  expect((await receipt()).result.passed).toBe(false);
 });
 it.each(["digest", "detach"])(
   "refuses %s before native launch",

@@ -138,11 +138,14 @@ async function verifyScenario(
   const scenario = JSON.parse(
     await readFile(path.join(evidence, "scenario.json"), "utf8"),
   ) as Record<string, unknown>;
+  const publicAcquisition = !!(values.PUBLIC_LINK || values.PUBLIC_CATALOG);
   assert.deepEqual(
     scenario.checks,
-    values.PUBLIC_LINK || values.PUBLIC_CATALOG
+    publicAcquisition
       ? filesPublicLinkChecks
-      : filesDmgChecks,
+      : values.EXTENSION_VERSION === "0.6.0"
+        ? [...filesDmgChecks, "current-Files-toolbar-dotfiles-draft"]
+        : filesDmgChecks,
   );
   assert.equal(scenario.approvals, 3);
   assert.equal(scenario.archiveSha256, values.ARCHIVE_SHA256);
@@ -171,6 +174,25 @@ async function verifyScenario(
     assert.equal(recovery.restored, true);
     assert.equal(recovery.phase, "restored");
   }
+}
+
+function extensionVersion(
+  values: NonNullable<ReturnType<typeof filesDmgInputs>>,
+) {
+  return values.EXTENSION_VERSION ?? "0.5.0";
+}
+async function prepareOwnedFiles(
+  root: string,
+  values: NonNullable<ReturnType<typeof filesDmgInputs>>,
+) {
+  await writeFile(path.join(root, "owned-files/source.txt"), "source");
+  await writeFile(path.join(root, "owned-files/conflict.txt"), "preserved");
+  if (
+    !values.PUBLIC_LINK &&
+    !values.PUBLIC_CATALOG &&
+    values.EXTENSION_VERSION === "0.6.0"
+  )
+    await writeFile(path.join(root, "owned-files/.release-dotfile"), "dotfile");
 }
 
 // Preparation/ownership/observer paths are the same ones exercised by headless
@@ -223,7 +245,7 @@ export async function runFilesDmgCampaign(
       bundleSha256: bundle.binding,
       dmgSha256: values.DMG_SHA256,
       archiveSha256: values.ARCHIVE_SHA256,
-      extensionVersion: values.EXTENSION_VERSION ?? "0.5.0",
+      extensionVersion: extensionVersion(values),
       version: values.VERSION,
     });
     for (const name of [
@@ -253,8 +275,7 @@ export async function runFilesDmgCampaign(
     // Public mode retains only the external digest oracle, never local chooser bytes.
     if (!publicAcquisition)
       await cp(values.ARCHIVE, path.join(root, "files.omxext"));
-    await writeFile(path.join(root, "owned-files/source.txt"), "source");
-    await writeFile(path.join(root, "owned-files/conflict.txt"), "preserved");
+    await prepareOwnedFiles(root, values);
     await writeFile(
       path.join(root, "shell.sh"),
       'printf \'{"mainPid":%s,"probePid":%s}\' "$PPID" "$$" > "$1"\nexec /bin/sh -i\n',
@@ -269,7 +290,7 @@ export async function runFilesDmgCampaign(
         version: values.VERSION,
         archive: path.join(root, "files.omxext"),
         archiveSha256: values.ARCHIVE_SHA256,
-        extensionVersion: values.EXTENSION_VERSION ?? "0.5.0",
+        extensionVersion: extensionVersion(values),
         readiness: path.join(root, "shell.json"),
         files: path.join(root, "owned-files"),
         observer: "files-packaged.cjs",

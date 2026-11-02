@@ -195,6 +195,7 @@ async function run(options) {
     }
   };
   const checks = [];
+  let currentFilesUi = false;
   const renderedCatalog = [];
   const destroyedListeners = [];
   function listeners(phase) {
@@ -785,6 +786,85 @@ async function run(options) {
       view.executeJavaScript(`!!${entryQuery(options.files, "source.txt")}`),
     "owned directory list",
   );
+  if (options.macosLifecycle && options.extensionVersion === "0.6.0") {
+    assert.equal(
+      await js("document.querySelector('.auxiliary-header h2')?.textContent"),
+      "Files",
+      "host owns the visible Files title",
+    );
+    const toolbar = await view.executeJavaScript(`(() => {
+      const icons = ['home', 'up', 'refresh', 'new-folder', 'actions', 'go'];
+      return {
+        names: icons.map(icon => document.querySelector('[aria-describedby="files-toolbar-' + icon + '-tooltip"]')?.getAttribute('aria-label')),
+        hasIcons: icons.every(icon => !!document.querySelector('[aria-describedby="files-toolbar-' + icon + '-tooltip"] svg')),
+        childHeading: !!document.querySelector('h1'),
+        regionName: document.querySelector('[role=region]')?.getAttribute('aria-label'),
+      };
+    })()`);
+    assert.deepEqual(toolbar, {
+      names: ["Home", "Up", "Refresh", "New folder", "Actions…", "Go"],
+      hasIcons: true,
+      childHeading: false,
+      regionName: "Files",
+    });
+    const tooltip = await view.executeJavaScript(`(() => {
+      const button = document.querySelector('[aria-describedby="files-toolbar-go-tooltip"]');
+      button.focus();
+      const tip = document.getElementById(button.getAttribute('aria-describedby'));
+      return { hidden: tip.hidden, text: tip.textContent };
+    })()`);
+    assert.deepEqual(tooltip, {
+      hidden: false,
+      text: "Open the entered directory (Enter in the address field)",
+    });
+    await writeFile(
+      path.join(options.evidence, "files-toolbar.png"),
+      (await view.capturePage()).toPNG(),
+    );
+    await writeFile(
+      path.join(options.evidence, "files-host-header.png"),
+      (await core.capturePage()).toPNG(),
+    );
+    assert.equal(
+      await readFile(path.join(options.files, ".release-dotfile"), "utf8"),
+      "dotfile",
+    );
+    const dotfile = `!![...document.querySelectorAll('[role=treeitem][data-path]')].find(row => row.dataset.path === ${JSON.stringify(path.join(options.files, ".release-dotfile"))})`;
+    assert.equal(await view.executeJavaScript(dotfile), false);
+    await view.executeJavaScript(`(() => {
+      const input = document.querySelector('form.location input');
+      input.value = 'unsubmitted address';
+      input.focus();
+      input.setSelectionRange(2, 8, 'backward');
+    })()`);
+    for (const shown of [true, false]) {
+      await click(view, "Actions…");
+      assert.equal(
+        await view.executeJavaScript(
+          "document.querySelector('[role=menuitemcheckbox]')?.getAttribute('aria-checked')",
+        ),
+        String(!shown),
+      );
+      await view.executeJavaScript(
+        "document.querySelector('[role=menuitemcheckbox]').click()",
+      );
+      await until(
+        () => view.executeJavaScript(`${dotfile} === ${shown}`),
+        "dotfile visibility toggled",
+      );
+      assert.deepEqual(
+        await view.executeJavaScript(`(() => {
+          const input = document.querySelector('form.location input');
+          return [input.value, input.selectionStart, input.selectionEnd, input.selectionDirection];
+        })()`),
+        ["unsubmitted address", 2, 8, "backward"],
+      );
+    }
+    await view.executeJavaScript(
+      `document.querySelector('form.location input').value = ${JSON.stringify(options.files)}`,
+    );
+    currentFilesUi = true;
+  }
   await filesAction(view, "New file");
   await apply(view, "created.txt");
   assert.equal(
@@ -1005,6 +1085,7 @@ async function run(options) {
     ]);
     await cleanup();
   }
+  if (currentFilesUi) checks.push("current-Files-toolbar-dotfiles-draft");
   const result = {
     renderedCatalog,
     destroyedListeners,

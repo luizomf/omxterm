@@ -34,8 +34,10 @@ OMXTERM_FILES_DMG_EVIDENCE=/absolute/private-lane \
 For the current Files0.6.0 archive, additionally set
 `OMXTERM_FILES_DMG_EXTENSION_VERSION=0.6.0`; omitting it retains the historical
 Files0.5.0 expectation shown in the example. The observer checks this version,
-the manifest ID and the exact archive digest at trust. A source build is not
-qualification or permission to replace a published archive.
+the manifest ID and the exact archive digest at trust. This local mode adds a
+fixture-owned dotfile and checks the packaged host title, icon controls, visible
+Go explanation, default filtering, toggle and retained address draft/caret.
+A source build is not qualification or permission to replace a published archive.
 
 No opt-in skips; partial, malformed or mixed adapter inputs refuse. Source
 Node/npm/esbuild and Command Line Tools are fixture preparation dependencies,
