@@ -23,9 +23,14 @@ afterEach(async () => {
     await rm(directory, { recursive: true, force: true });
 });
 
-it("inspects a Windows directory without an installer and reaches the packaged probe", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "omxterm-directory-only-"));
-  temporary.push(root);
+async function inspectWindowsDirectory(dotAncestor: boolean) {
+  const temporaryRoot = await mkdtemp(
+    path.join(tmpdir(), "omxterm-directory-only-"),
+  );
+  temporary.push(temporaryRoot);
+  const root = dotAncestor
+    ? path.join(temporaryRoot, ".hidden")
+    : temporaryRoot;
   const project = path.join(root, "project");
   const application = path.join(root, "win-arm64-unpacked");
   const members = path.join(root, "members");
@@ -111,7 +116,9 @@ it("inspects a Windows directory without an installer and reaches the packaged p
   }
   await mkdir(path.dirname(archive), { recursive: true });
   await asar.createPackageWithOptions(members, archive, {
-    unpack: "**/*.node",
+    // ASAR matches absolute paths with matchBase; avoid globstar rejecting a
+    // dot-prefixed temporary ancestor.
+    unpack: "*.node",
   });
   for (const file of ["conpty/conpty.dll", "conpty/OpenConsole.exe"]) {
     await put(
@@ -205,4 +212,23 @@ it("inspects a Windows directory without an installer and reaches the packaged p
     verifyPackagedApplication(application, { inspectionOnly: true }),
   ).rejects.toThrow("differs from source package version");
   expect(packagedProbe).toHaveBeenCalledTimes(2);
+
+  await put(path.join(project, "package.json"), '{"version":"1.2.3"}');
+  const native = path.join(
+    `${archive}.unpacked`,
+    "node_modules/node-pty/prebuilds/win32-arm64/conpty.node",
+  );
+  await rm(native);
+  await expect(
+    verifyPackagedApplication(application, { inspectionOnly: true }),
+  ).rejects.toMatchObject({ code: "ENOENT", path: native });
+  expect(packagedProbe).toHaveBeenCalledTimes(2);
+}
+
+it("inspects a Windows directory without an installer and reaches the packaged probe", async () => {
+  await inspectWindowsDirectory(false);
+});
+
+it("inspects a Windows directory beneath a dot-ancestor and reaches the packaged probe", async () => {
+  await inspectWindowsDirectory(true);
 });
