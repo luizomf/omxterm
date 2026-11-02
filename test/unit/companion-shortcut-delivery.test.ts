@@ -143,6 +143,24 @@ it.each(["core", "child"] as const)(
   },
 );
 
+it.each(["core", "child"] as const)(
+  "leaves fresh composing keys alone in %s while containing owned gestures",
+  (route) => {
+    const f = fixture();
+    const otherRoute = route === "core" ? "child" : "core";
+    expect(f.send(route, { isComposing: true })).not.toHaveBeenCalled();
+    expect(f.invoke).not.toHaveBeenCalled();
+    expect(f.send(route)).toHaveBeenCalledOnce();
+    expect(
+      f.send(otherRoute, { isComposing: true, isAutoRepeat: true }),
+    ).toHaveBeenCalledOnce();
+    expect(
+      f.send(otherRoute, { type: "keyUp", isComposing: true }),
+    ).toHaveBeenCalledOnce();
+    expect(f.invoke).toHaveBeenCalledOnce();
+  },
+);
+
 it("keeps unbound tools out of native child and core delivery", () => {
   const f = fixture();
   f.unbind();

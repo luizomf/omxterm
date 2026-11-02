@@ -26,7 +26,11 @@ export function deliverExtensionKeybind(
     event.preventDefault();
     return;
   }
-  if (input.type !== "keyDown" && input.type !== "rawKeyDown") return;
+  if (
+    input.isComposing ||
+    (input.type !== "keyDown" && input.type !== "rawKeyDown")
+  )
+    return;
   const action = coreActionForKeyboardInput(
     catalog,
     { ...input, altGr: hasNativeAltGr(input) },
