@@ -62,11 +62,7 @@ export function mountFilesPage(
     const update = () => {
       if (attribute) element.setAttribute(attribute, read(messages));
       else element.textContent = read(messages);
-      if (hint) {
-        const description = hint(messages);
-        element.title = description;
-        element.setAttribute("aria-description", description);
-      }
+      if (hint) element.title = hint(messages);
     };
     labels.set(element, update);
     update();
@@ -142,6 +138,8 @@ export function mountFilesPage(
         return m.terminalDirectoryUnavailable;
       if (reply.reason === "terminal-directory-changed")
         return m.terminalDirectoryChanged;
+      if (reply.reason === "terminal-directory-busy")
+        return m.terminalDirectoryBusy;
       return reply.error === "outcome-unknown"
         ? m.unknown
         : m.failed(reply.error ?? "failed");
@@ -151,10 +149,9 @@ export function mountFilesPage(
     text: Label,
     action: () => void,
     container: HTMLElement = toolbar,
-    hint?: Label,
   ) {
     const element = createPageButton(document);
-    label(element, text, undefined, hint);
+    label(element, text);
     element.addEventListener("click", action);
     container.append(element);
     return element;
@@ -658,7 +655,7 @@ export function mountFilesPage(
   function focusMenuItem(item?: HTMLButtonElement) {
     if (!item) return;
     item.focus({ preventScroll: true });
-    revealMenuItem(item);
+    revealFocusedMenuItem();
   }
   function placeMenu(x: number, y: number) {
     const viewport = document.documentElement;
@@ -692,8 +689,22 @@ export function mountFilesPage(
           action.run();
         },
         menu,
-        action.hint,
       );
+      if (action.hint) {
+        const caption = document.createElement("span");
+        const hint = document.createElement("span");
+        hint.className = "menu-action-hint";
+        hint.id = `files-menu-hint-${menu.childElementCount}`;
+        hint.hidden = true;
+        item.addEventListener("focus", () => (hint.hidden = false));
+        item.addEventListener("blur", () => (hint.hidden = true));
+        labels.delete(item);
+        label(item, action.label, "aria-label", action.hint);
+        label(caption, action.label);
+        label(hint, action.hint);
+        item.setAttribute("aria-describedby", hint.id);
+        item.replaceChildren(caption, hint);
+      }
       item.setAttribute(
         "role",
         action.checked === undefined ? "menuitem" : "menuitemcheckbox",

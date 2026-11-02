@@ -22,16 +22,9 @@ export function createFilesTerminalDirectory(options: {
     error: options.translator().t("extensions.noActiveTerminalDirectory"),
   });
   async function resolve(
-    value: Record<string, Value>,
     context: ExtensionViewRequestContext,
     signal: AbortSignal,
   ): Promise<Value> {
-    if (
-      Object.keys(value).length !== 1 ||
-      !context.isCurrentVisible() ||
-      BrowserWindow.getFocusedWindow() !== options.window
-    )
-      throw new PackageError("unavailable");
     const active = options.currentTarget();
     if (
       !active ||
@@ -85,10 +78,21 @@ export function createFilesTerminalDirectory(options: {
     context: ExtensionViewRequestContext,
     signal: AbortSignal,
   ): Promise<Value> => {
-    if (pending) throw new PackageError("unavailable");
+    if (
+      Object.keys(value).length !== 1 ||
+      !context.isCurrentVisible() ||
+      BrowserWindow.getFocusedWindow() !== options.window
+    )
+      throw new PackageError("unavailable");
+    if (pending)
+      return {
+        ok: false,
+        reason: "terminal-directory-busy",
+        error: options.translator().t("extensions.terminalDirectoryBusy"),
+      };
     pending = true;
     try {
-      return await resolve(value, context, signal);
+      return await resolve(context, signal);
     } finally {
       pending = false;
     }

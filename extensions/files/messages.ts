@@ -38,6 +38,8 @@ const english = {
     "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path.",
   terminalDirectoryChanged:
     "The active terminal changed or could not be confirmed. Try again.",
+  terminalDirectoryBusy:
+    "A terminal directory request is already in progress. Try again.",
   apply: "Apply",
   cancel: "Cancel",
   folder: "Folder",
@@ -110,6 +112,8 @@ const portuguese: FilesMessages = {
     "Nenhum diretório local foi informado pelo terminal ativo. Ele pode ser remoto ou não informar seu diretório. Use Pasta pessoal ou digite um caminho.",
   terminalDirectoryChanged:
     "O terminal ativo mudou ou não pôde ser confirmado. Tente novamente.",
+  terminalDirectoryBusy:
+    "Uma solicitação de diretório do terminal já está em andamento. Tente novamente.",
   apply: "Aplicar",
   cancel: "Cancelar",
   folder: "Pasta",

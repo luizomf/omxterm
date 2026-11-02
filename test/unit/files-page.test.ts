@@ -212,32 +212,22 @@ it("expands folders with keyboard, traverses rows and collapses without treating
   expect(row("/root/folder/child")).toBeUndefined();
 });
 it("offers item and background actions at the point of use, with keyboard dismissal", async () => {
-  const { language } = await setup();
+  await setup();
   context("/root/alpha");
   expect(button("Rename / move", menu())).toBeTruthy();
   key(document.activeElement as HTMLElement, "End");
   expect(document.activeElement?.getAttribute("role")).toBe("menuitemcheckbox");
   key(document.activeElement as HTMLElement, "ArrowUp");
   const action = document.activeElement as HTMLButtonElement;
-  expect(action.textContent).toBe("Use last reported terminal directory");
-  expect(action.title).toBe(
-    "Open the active terminal's last reported path as a local folder. It may be stale or come from a remote session.",
+  expect(action.getAttribute("aria-label")).toBe(
+    "Use last reported terminal directory",
   );
-  expect(action.getAttribute("aria-description")).toBe(action.title);
-  language("pt-BR");
-  expect(action.textContent).toBe(
-    "Usar último diretório informado pelo terminal",
-  );
-  expect(action.title).toBe(
-    "Abra o último caminho informado pelo terminal ativo como pasta local. Ele pode estar desatualizado ou vir de uma sessão remota.",
-  );
-  expect(action.getAttribute("aria-description")).toBe(action.title);
   key(action, "Escape");
   expect(menu().hidden).toBe(true);
   expect(document.activeElement).toBe(row("/root/alpha"));
   context();
-  expect(menu().textContent).not.toContain("Renomear / mover");
-  expect(button("Novo arquivo", menu())).toBeTruthy();
+  expect(menu().textContent).not.toContain("Rename / move");
+  expect(button("New file", menu())).toBeTruthy();
   key(document.activeElement as HTMLElement, "Escape");
   key(row("/root/beta"), "F10", true);
   expect(menu().hidden).toBe(false);

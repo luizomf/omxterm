@@ -652,7 +652,18 @@ it("bounds concurrent reported-directory selection confirmations in one Files vi
     );
   const first = requestDirectory();
   await vi.waitFor(() => expect(finish).toBeDefined());
-  await expect(requestDirectory()).rejects.toThrow("unavailable");
+  await expect(requestDirectory()).resolves.toEqual({
+    ok: false,
+    reason: "terminal-directory-busy",
+    error: "A terminal directory request is already in progress. Try again",
+  });
+  await expect(
+    adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory", sessionId: "s2" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).rejects.toThrow("unavailable");
   finish(true);
   await expect(first).resolves.toEqual({ ok: true, directory: "/captured" });
   await expect(requestDirectory()).resolves.toEqual({
