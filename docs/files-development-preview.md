@@ -399,16 +399,17 @@ explicit paths remain available. There is no continuous following, and a later
 selection does not retarget a request or mutation already started. Other extension
 invocation contexts remain captured at invocation.
 
-This is the last completed report, not authenticated shell identity or current
-process inspection: any program may emit OSC7, an ordinary shell-launched SSH
-session may not be recognized, and a shell that stops reporting can leave a stale
-value. Before opening any report-based path, a host-owned confirmation shows the
-captured path, explains these limits and asks whether to open it locally; Cancel
-is the default. The host never configures the shell. Compatible installed Files
-archives use this host behavior without changing their published bytes; their
-original action label and already-displayed literal error text do not change.
-Current Files source labels the action as a reported directory and relabels
-host-coded unavailable notices. A future archive needs a new immutable version.
+This is the last completed report accepted as local, not authenticated shell
+identity or current process inspection: any program may emit OSC7, an ordinary
+shell-launched SSH session may not be recognized, and a shell that stops reporting
+can leave a stale value. The explicit action opens the captured path locally without
+a confirmation dialog. Current Files source labels it as the last reported path;
+its tooltip and accessible description state the stale/remote limitations. The host
+never configures the shell. Compatible installed Files archives use the host
+behavior without changing their published bytes; their original action label,
+missing tooltip and already-displayed literal error text do not change. Current
+Files source also relabels host-coded unavailable notices. A future archive needs
+a new immutable version.
 The current `0.24.1-dev.0` host baseline does not satisfy the published Files0.6
 engine range under standard prerelease semantics; see [#781](https://github.com/luizomf/omxterm/issues/781).
 The action-time behavior is not evidence that this specific dev host can install

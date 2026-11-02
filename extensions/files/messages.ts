@@ -31,12 +31,13 @@ const english = {
   trash: "Move to Trash",
   prepareDelete: "Delete permanently…",
   delete: "Delete permanently",
-  terminalDirectory: "Use reported terminal directory…",
+  terminalDirectory: "Use last reported terminal directory",
+  terminalDirectoryHint:
+    "Open the active terminal's last reported path as a local folder. It may be stale or come from a remote session.",
   terminalDirectoryUnavailable:
     "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path.",
   terminalDirectoryChanged:
     "The active terminal changed or could not be confirmed. Try again.",
-  terminalDirectoryCancelled: "Opening the suggested folder was cancelled.",
   apply: "Apply",
   cancel: "Cancel",
   folder: "Folder",
@@ -102,12 +103,13 @@ const portuguese: FilesMessages = {
   trash: "Mover para a Lixeira",
   prepareDelete: "Excluir permanentemente…",
   delete: "Excluir permanentemente",
-  terminalDirectory: "Usar diretório informado pelo terminal…",
+  terminalDirectory: "Usar último diretório informado pelo terminal",
+  terminalDirectoryHint:
+    "Abra o último caminho informado pelo terminal ativo como pasta local. Ele pode estar desatualizado ou vir de uma sessão remota.",
   terminalDirectoryUnavailable:
     "Nenhum diretório local foi informado pelo terminal ativo. Ele pode ser remoto ou não informar seu diretório. Use Pasta pessoal ou digite um caminho.",
   terminalDirectoryChanged:
     "O terminal ativo mudou ou não pôde ser confirmado. Tente novamente.",
-  terminalDirectoryCancelled: "A abertura da pasta sugerida foi cancelada.",
   apply: "Aplicar",
   cancel: "Cancelar",
   folder: "Pasta",

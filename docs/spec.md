@@ -623,10 +623,12 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   operation. Other extension invocation contexts stay captured at invocation.
   OSC7 is not authenticated or current-process inspection: an arbitrary program
   can report it, ordinary shell-launched SSH may be indistinguishable and reports
-  may be stale. A host-owned default-Cancel confirmation displays the fixed path,
-  explains those limits and asks before opening it locally. Compatible installed
-  Files archives use the host behavior without modified package bytes; the renamed
-  action and dynamically localized host-coded notices require a future archive.
+  may be stale. The explicit action opens the fixed path locally without a modal;
+  current Files source labels it as the last reported path and exposes those
+  limitations in a tooltip and accessible description. Compatible installed Files
+  archives use the host behavior without modified package bytes, but retain their
+  earlier label and lack the new tooltip. The renamed action, tooltip and dynamically
+  localized host-coded notices require a future archive.
   The current 0.24.1-dev.0 baseline does not satisfy the published Files0.6
   prerelease engine range ([#781](https://github.com/luizomf/omxterm/issues/781)).
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the

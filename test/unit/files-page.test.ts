@@ -212,21 +212,32 @@ it("expands folders with keyboard, traverses rows and collapses without treating
   expect(row("/root/folder/child")).toBeUndefined();
 });
 it("offers item and background actions at the point of use, with keyboard dismissal", async () => {
-  await setup();
+  const { language } = await setup();
   context("/root/alpha");
   expect(button("Rename / move", menu())).toBeTruthy();
   key(document.activeElement as HTMLElement, "End");
   expect(document.activeElement?.getAttribute("role")).toBe("menuitemcheckbox");
   key(document.activeElement as HTMLElement, "ArrowUp");
-  expect(document.activeElement?.textContent).toBe(
-    "Use reported terminal directory…",
+  const action = document.activeElement as HTMLButtonElement;
+  expect(action.textContent).toBe("Use last reported terminal directory");
+  expect(action.title).toBe(
+    "Open the active terminal's last reported path as a local folder. It may be stale or come from a remote session.",
   );
-  key(document.activeElement as HTMLElement, "Escape");
+  expect(action.getAttribute("aria-description")).toBe(action.title);
+  language("pt-BR");
+  expect(action.textContent).toBe(
+    "Usar último diretório informado pelo terminal",
+  );
+  expect(action.title).toBe(
+    "Abra o último caminho informado pelo terminal ativo como pasta local. Ele pode estar desatualizado ou vir de uma sessão remota.",
+  );
+  expect(action.getAttribute("aria-description")).toBe(action.title);
+  key(action, "Escape");
   expect(menu().hidden).toBe(true);
   expect(document.activeElement).toBe(row("/root/alpha"));
   context();
-  expect(menu().textContent).not.toContain("Rename / move");
-  expect(button("New file", menu())).toBeTruthy();
+  expect(menu().textContent).not.toContain("Renomear / mover");
+  expect(button("Novo arquivo", menu())).toBeTruthy();
   key(document.activeElement as HTMLElement, "Escape");
   key(row("/root/beta"), "F10", true);
   expect(menu().hidden).toBe(false);
@@ -244,7 +255,7 @@ it("keeps the browsing directory and explains an unavailable active terminal", a
   navigate("/other");
   await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
   button("Actions…").click();
-  button("Use reported terminal directory…", menu()).click();
+  button("Use last reported terminal directory", menu()).click();
   await vi.waitFor(() =>
     expect(document.body.textContent).toContain(
       "No local directory was reported for the active terminal",
@@ -265,7 +276,7 @@ it("relabels an unavailable terminal directory notice when the language changes"
       : undefined,
   );
   button("Actions…").click();
-  button("Use reported terminal directory…", menu()).click();
+  button("Use last reported terminal directory", menu()).click();
   await vi.waitFor(() =>
     expect(document.body.textContent).toContain(
       "No local directory was reported",
@@ -288,7 +299,7 @@ it("keeps an open rename target when using a different terminal directory", asyn
   context("/root/alpha");
   button("Rename / move", menu()).click();
   button("Actions…").click();
-  button("Use reported terminal directory…", menu()).click();
+  button("Use last reported terminal directory", menu()).click();
   await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
   apply("/root/renamed");
   await vi.waitFor(() =>

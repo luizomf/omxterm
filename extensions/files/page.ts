@@ -23,6 +23,7 @@ type Reply = FilesTreeReply & {
 type Target = { path: string; kind: string };
 type Action = {
   label: Label;
+  hint?: Label;
   run: () => void;
   disabled?: boolean;
   checked?: boolean;
@@ -52,10 +53,20 @@ export function mountFilesPage(
       ? { platform: "mac", display: "Cmd+Shift+.", keys: "Meta+Shift+." }
       : undefined;
   const labels = new Map<HTMLElement, () => void>();
-  function label(element: HTMLElement, read: Label, attribute?: string) {
+  function label(
+    element: HTMLElement,
+    read: Label,
+    attribute?: string,
+    hint?: Label,
+  ) {
     const update = () => {
       if (attribute) element.setAttribute(attribute, read(messages));
       else element.textContent = read(messages);
+      if (hint) {
+        const description = hint(messages);
+        element.title = description;
+        element.setAttribute("aria-description", description);
+      }
     };
     labels.set(element, update);
     update();
@@ -131,8 +142,6 @@ export function mountFilesPage(
         return m.terminalDirectoryUnavailable;
       if (reply.reason === "terminal-directory-changed")
         return m.terminalDirectoryChanged;
-      if (reply.reason === "terminal-directory-cancelled")
-        return m.terminalDirectoryCancelled;
       return reply.error === "outcome-unknown"
         ? m.unknown
         : m.failed(reply.error ?? "failed");
@@ -142,9 +151,10 @@ export function mountFilesPage(
     text: Label,
     action: () => void,
     container: HTMLElement = toolbar,
+    hint?: Label,
   ) {
     const element = createPageButton(document);
-    label(element, text);
+    label(element, text, undefined, hint);
     element.addEventListener("click", action);
     container.append(element);
     return element;
@@ -611,6 +621,7 @@ export function mountFilesPage(
       },
       {
         label: (m) => m.terminalDirectory,
+        hint: (m) => m.terminalDirectoryHint,
         run: () => {
           void navigateFrom("terminal-directory");
         },
@@ -681,6 +692,7 @@ export function mountFilesPage(
           action.run();
         },
         menu,
+        action.hint,
       );
       item.setAttribute(
         "role",

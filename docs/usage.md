@@ -318,16 +318,16 @@ Switching terminal tabs keeps the panel visible. Connecting through SSH opens a
 new terminal tab without replacing the current session or closing the panel.
 Settings and general extension tabs temporarily suspend it.
 
-Files initially opens Home. In current Files source, **Actions… → Use reported
-terminal directory…** offers the selected pane's last local OSC 7 report, even
-if the panel was opened for another pane. Compatible installed archives retain
-their original **Use terminal directory** label. The current host shows the
-reported path and asks before opening it as a local folder: a report is not
-authenticated, can be stale, and may come from a remote session. OMXTerm does
-not inspect the current process or configure the shell. Without a usable report
-or for a known SSH Connect pane, it explains the unavailable directory and
-leaves the browsing location alone; use Home or enter a path if needed. It does
-not follow later terminal changes or retarget an operation already started.
+Files initially opens Home. In current Files source, **Actions… → Use last
+reported terminal directory** opens the active pane's last locally accepted OSC 7
+path as a local folder, even if the panel was opened for another pane. Its tooltip
+explains that the path can be stale or come from a remote session. A report is not
+authenticated; OMXTerm does not inspect the current process or configure the shell.
+Without a usable report or for a known SSH Connect pane, Files explains the
+unavailable directory and leaves the browsing location alone; use Home or enter
+a path if needed. It does not follow later terminal changes or retarget an
+operation already started. Compatible installed archives retain their original
+**Use terminal directory** label and do not gain the new tooltip from a host update.
 These source changes are not a release and do not replace published archives.
 The current `0.24.1-dev.0` baseline cannot admit published Files0.6 under its
 prerelease engine range; see [#781](https://github.com/luizomf/omxterm/issues/781).

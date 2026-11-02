@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog } from "electron";
+import { BrowserWindow } from "electron";
 import { PackageError } from "../installed-packages/installed-packages";
 import type { Value } from "../extension-runtime/protocol";
 import type { ApplicationExtensionsOptions } from "./application-extensions";
@@ -60,40 +60,25 @@ export function createFilesTerminalDirectory(options: {
         reason: "terminal-directory-changed",
         error: options.translator().t("extensions.activeTerminalChanged"),
       };
-    let decision!: Promise<Electron.MessageBoxReturnValue>;
     await options.admit(lifetime, () => {
       if (
+        lifetime.aborted ||
         !context.isCurrentVisible() ||
         BrowserWindow.getFocusedWindow() !== options.window
       )
         throw new PackageError("unavailable");
-      const t = options.translator();
-      decision = dialog.showMessageBox(options.window, {
-        type: "warning",
-        title: t.t("extensions.reportedDirectoryTitle"),
-        message: t.t("extensions.reportedDirectoryMessage"),
-        detail: t.t("extensions.reportedDirectoryDetail", { path: directory }),
-        buttons: [
-          t.t("common.cancel"),
-          t.t("extensions.reportedDirectoryOpen"),
-        ],
-        defaultId: 0,
-        cancelId: 0,
-        noLink: true,
-        signal: lifetime,
-      });
     });
-    const result = await decision;
-    if (lifetime.aborted || !context.isCurrentVisible()) return unavailable();
-    return result.response === 1
-      ? { ok: true, directory }
-      : {
-          ok: false,
-          reason: "terminal-directory-cancelled",
-          error: options
-            .translator()
-            .t("extensions.reportedDirectoryCancelled"),
-        };
+    if (
+      lifetime.aborted ||
+      !context.isCurrentVisible() ||
+      BrowserWindow.getFocusedWindow() !== options.window
+    )
+      return {
+        ok: false,
+        reason: "terminal-directory-changed",
+        error: options.translator().t("extensions.activeTerminalChanged"),
+      };
+    return { ok: true, directory };
   }
   return async (
     value: Record<string, Value>,

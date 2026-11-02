@@ -589,27 +589,21 @@ it("refuses reordered core selection and child requests rather than using the pr
   }
 });
 
-it("requires an explicit warning before opening an unverified reported path", async () => {
+it("opens the last reported terminal directory without a confirmation dialog", async () => {
   await installTool("omxterm.files", "Files");
   service.actions()[0]!.invoke();
   await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
   adapters.consent.mockClear();
-  adapters.consent.mockResolvedValueOnce({ response: 0 });
   const reply = await adapters.hosts[0]!.options.onRequest!(
     { operation: "terminal-directory" },
     new AbortController().signal,
     { id: "hosted-view", isCurrentVisible: () => true },
   );
-  expect(reply).toMatchObject({ ok: false });
-  expect(adapters.consent).toHaveBeenCalledOnce();
-  const [owner, options] = adapters.consent.mock.calls[0]!;
-  expect(owner).toBe(window);
-  expect(options.detail).toContain("/captured");
-  expect(options.defaultId).toBe(0);
-  expect(options.cancelId).toBe(0);
+  expect(reply).toEqual({ ok: true, directory: "/captured" });
+  expect(adapters.consent).not.toHaveBeenCalled();
 });
 
-it("revokes a confirmed path if its source session ends before consent", async () => {
+it("refuses the captured path if its source session ends during selection confirmation", async () => {
   await installTool("omxterm.files", "Files");
   const active = new AbortController();
   const owner = new AbortController();
@@ -621,31 +615,34 @@ it("revokes a confirmed path if its source session ends before consent", async (
   }));
   service.actions()[0]!.invoke();
   await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
-  let decide!: (value: { response: number }) => void;
-  adapters.consent.mockImplementationOnce(
-    () => new Promise((resolve) => (decide = resolve)),
+  let finish!: (value: boolean) => void;
+  let capturedSignal!: AbortSignal;
+  adapters.semanticConfirm.mockImplementationOnce(
+    (_window, _session, _source, signal) => {
+      capturedSignal = signal;
+      return new Promise((resolve) => (finish = resolve));
+    },
   );
   const pending = adapters.hosts[0]!.options.onRequest!(
     { operation: "terminal-directory" },
     new AbortController().signal,
     { id: "hosted-view", isCurrentVisible: () => true },
   );
-  await vi.waitFor(() => expect(decide).toBeDefined());
-  const dialogOptions = adapters.consent.mock.calls.at(-1)![1];
-  expect(dialogOptions.signal?.aborted).toBe(false);
+  await vi.waitFor(() => expect(finish).toBeDefined());
+  expect(capturedSignal.aborted).toBe(false);
   active.abort();
-  expect(dialogOptions.signal?.aborted).toBe(true);
-  decide({ response: 1 });
+  expect(capturedSignal.aborted).toBe(true);
+  finish(true);
   await expect(pending).resolves.toMatchObject({ ok: false });
 });
 
-it("does not stack reported-directory confirmations for one Files view", async () => {
+it("bounds concurrent reported-directory selection confirmations in one Files view", async () => {
   await installTool("omxterm.files", "Files");
   service.actions()[0]!.invoke();
   await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
-  let decide!: (value: { response: number }) => void;
-  adapters.consent.mockImplementationOnce(
-    () => new Promise((resolve) => (decide = resolve)),
+  let finish!: (value: boolean) => void;
+  adapters.semanticConfirm.mockImplementationOnce(
+    () => new Promise((resolve) => (finish = resolve)),
   );
   const requestDirectory = () =>
     adapters.hosts[0]!.options.onRequest!(
@@ -654,10 +651,14 @@ it("does not stack reported-directory confirmations for one Files view", async (
       { id: "hosted-view", isCurrentVisible: () => true },
     );
   const first = requestDirectory();
-  await vi.waitFor(() => expect(decide).toBeDefined());
+  await vi.waitFor(() => expect(finish).toBeDefined());
   await expect(requestDirectory()).rejects.toThrow("unavailable");
-  decide({ response: 0 });
-  await expect(first).resolves.toMatchObject({ ok: false });
+  finish(true);
+  await expect(first).resolves.toEqual({ ok: true, directory: "/captured" });
+  await expect(requestDirectory()).resolves.toEqual({
+    ok: true,
+    directory: "/captured",
+  });
 });
 
 it("refuses a directory if the core renderer cannot confirm its selected pane", async () => {

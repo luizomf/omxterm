@@ -358,12 +358,14 @@ updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal
 directory action captures the selected live pane's last local OSC7 report when
 requested, not the retained view's initial context. Main confirms the selection
-with the core renderer and asks before opening a fixed reported path locally;
+with the core renderer before opening a fixed reported path locally without a modal;
 no usable report is explained without navigating. Reports can be stale or produced
 by arbitrary output, and ordinary shell-launched SSH may be indistinguishable.
-There is no automatic follow or retargeting of started operations. Compatible
-installed archives use this host behavior without modification; the renamed action
-and relocalizable host-coded notices require a future archive. Its application owner composes independent
+Current Files source labels the action as the last reported path and explains those
+limits in its tooltip and accessible description. There is no automatic follow or
+retargeting of started operations. Compatible installed archives use this host
+behavior without modification; the renamed action, tooltip and relocalizable
+host-coded notices require a future archive. Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.
 Its separately built archive/checksum/receipt are not bundled into the host;

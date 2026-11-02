@@ -312,13 +312,6 @@ export const englishMessages = {
     "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
   "extensions.activeTerminalChanged":
     "The active terminal changed or could not be confirmed. Try again",
-  "extensions.reportedDirectoryTitle": "Unverified terminal directory",
-  "extensions.reportedDirectoryMessage": "Open this path as a local folder?",
-  "extensions.reportedDirectoryDetail":
-    "Last reported path: {path}\n\nThis path may be stale or come from a remote session. OMXTerm cannot verify the terminal's current directory. Files browses only this computer.",
-  "extensions.reportedDirectoryOpen": "Open local folder",
-  "extensions.reportedDirectoryCancelled":
-    "Opening the suggested folder was cancelled",
   "extensions.unavailable": "Extension unavailable",
   "extensions.unavailableDetail":
     "Refresh Extensions in Settings to inspect the installed state. No operation was automatically retried.",
