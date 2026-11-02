@@ -96,8 +96,8 @@ Files/terminal captures separately. In the actual checkpoint, terminal paint was
 accepted but the Files operation capture was stale and is not final-move visual
 proof; destination bytes and source `ENOENT` passed independently. Public link
 acquisition is not public catalog
-discovery or physical-input/Gatekeeper qualification. Keep the v1 Linux0.4 catalog
-and all immutable assets unchanged.
+discovery or physical-input/Gatekeeper qualification. That historical checkpoint
+did not modify the v1 Linux0.4 catalog or any immutable asset.
 
 ## Public-catalog mode
 
@@ -255,8 +255,8 @@ No primitive nine-group replay, unexpected backend crash, blocked native-I/O
 cancellation, read-only/unavailable volume, macOS12, surviving-browser main-death,
 physical keyboard/dialog, Finder/Gatekeeper/notarization, catalog promotion or
 public installation is qualified by the local mode. The public-link mode above
-must record its own actual result. The immutable Linux0.4 catalog remains intact.
-Its single Files release slot cannot independently offer Linux0.4/dev11 and
+must record its own actual result. At the historical link-first checkpoint the Linux0.4 catalog remained unchanged.
+The single Files release slot cannot independently offer Linux0.4/dev11 and
 macOS0.5/dev21. Published dev.21 retains deliberate link/local installation;
-the prepared public-catalog mode above requires a new host and separate complete
-macOS schema1 endpoint, not silent replacement of the Linux offer.
+public-catalog mode requires a host selecting the separate complete macOS schema1
+endpoint. Later catalog promotion does not rewrite historical capture evidence.
