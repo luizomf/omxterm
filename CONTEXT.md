@@ -368,8 +368,8 @@ by arbitrary output, and ordinary shell-launched SSH may be indistinguishable.
 Current Files source labels the action as the last reported path and explains those
 limits in a focus-visible hint, tooltip and accessible description. There is no automatic follow or
 retargeting of started operations. Compatible installed archives use this host
-behavior without modification; the renamed action, tooltip and relocalizable
-host-coded notices require a future archive. Its application owner composes independent
+behavior without modification; the renamed action, focus-visible hint, tooltip and
+relocalizable host-coded notices require a future archive. Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.
 Its separately built archive/checksum/receipt are not bundled into the host;

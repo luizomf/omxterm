@@ -408,7 +408,8 @@ its focus-visible hint, tooltip and accessible description state the stale/remot
 limitations. The host
 never configures the shell. Compatible installed Files archives use the host
 behavior without changing their published bytes; their original action label,
-missing tooltip and already-displayed literal error text do not change. Current
+missing focus-visible hint and tooltip, and already-displayed literal error text
+do not change. Current
 Files source also relabels host-coded unavailable notices. A future archive needs
 a new immutable version.
 The host's narrow [maintenance bridge](extension-installation-foundation.md#archive-contract)

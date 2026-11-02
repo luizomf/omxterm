@@ -24,6 +24,7 @@ type Target = { path: string; kind: string };
 type Action = {
   label: Label;
   hint?: Label;
+  tooltip?: Label;
   run: () => void;
   disabled?: boolean;
   checked?: boolean;
@@ -113,6 +114,8 @@ export function mountFilesPage(
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
+  let menuPointerDown = false;
+  let menuRevealTimer: ReturnType<typeof setTimeout> | undefined;
   let state: FilesTreeSnapshot;
   const message = (
     text: Label,
@@ -619,6 +622,7 @@ export function mountFilesPage(
       {
         label: (m) => m.terminalDirectory,
         hint: (m) => m.terminalDirectoryHint,
+        tooltip: (m) => m.terminalDirectoryTooltip,
         run: () => {
           void navigateFrom("terminal-directory");
         },
@@ -669,6 +673,14 @@ export function mountFilesPage(
     const active = document.activeElement as HTMLElement | null;
     if (active?.parentElement === menu) revealMenuItem(active);
   }
+  function scheduleMenuReveal() {
+    if (disposed || menuRevealTimer !== undefined) return;
+    // Defer until after pointerup/click so placement cannot move the pressed target.
+    menuRevealTimer = setTimeout(() => {
+      menuRevealTimer = undefined;
+      revealFocusedMenuItem();
+    }, 0);
+  }
   // Native child bounds can change after keyboard navigation has revealed an
   // item. Recheck placement and wrapped layout without moving focus or retrying input.
   document.defaultView?.addEventListener("resize", revealFocusedMenuItem);
@@ -696,10 +708,13 @@ export function mountFilesPage(
         hint.className = "menu-action-hint";
         hint.id = `files-menu-hint-${menu.childElementCount}`;
         hint.hidden = true;
-        item.addEventListener("focus", () => (hint.hidden = false));
+        item.addEventListener("focus", () => {
+          hint.hidden = false;
+          if (!menuPointerDown) scheduleMenuReveal();
+        });
         item.addEventListener("blur", () => (hint.hidden = true));
         labels.delete(item);
-        label(item, action.label, "aria-label", action.hint);
+        label(item, action.label, "aria-label", action.tooltip ?? action.hint);
         label(caption, action.label);
         label(hint, action.hint);
         item.setAttribute("aria-describedby", hint.id);
@@ -767,9 +782,18 @@ export function mountFilesPage(
     }
   });
   const dismissMenu = (event: PointerEvent) => {
-    if (!menu.contains(event.target as Node)) closeMenu(false);
+    menuPointerDown = menu.contains(event.target as Node);
+    if (!menuPointerDown) closeMenu(false);
+  };
+  const finishMenuPointer = () => {
+    if (!menuPointerDown) return;
+    menuPointerDown = false;
+    scheduleMenuReveal();
   };
   document.addEventListener("pointerdown", dismissMenu);
+  document.addEventListener("pointerup", finishMenuPointer);
+  document.addEventListener("pointercancel", finishMenuPointer);
+  document.defaultView?.addEventListener("blur", finishMenuPointer);
   entries.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     openMenu(undefined, event.clientX, event.clientY, entries);
@@ -943,7 +967,11 @@ export function mountFilesPage(
         "resize",
         revealFocusedMenuItem,
       );
+      if (menuRevealTimer !== undefined) clearTimeout(menuRevealTimer);
       document.removeEventListener("pointerdown", dismissMenu);
+      document.removeEventListener("pointerup", finishMenuPointer);
+      document.removeEventListener("pointercancel", finishMenuPointer);
+      document.defaultView?.removeEventListener("blur", finishMenuPointer);
       document.removeEventListener("keydown", onShortcut);
       document.removeEventListener("compositionstart", startComposition);
       document.removeEventListener("compositionend", endComposition);

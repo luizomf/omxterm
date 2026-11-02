@@ -327,7 +327,8 @@ Without a usable report or for a known SSH Connect pane, Files explains the
 unavailable directory and leaves the browsing location alone; use Home or enter
 a path if needed. It does not follow later terminal changes or retarget an
 operation already started. Compatible installed archives retain their original
-**Use terminal directory** label and do not gain the new tooltip from a host update.
+**Use terminal directory** label and do not gain the new focus-visible hint or
+tooltip from a host update.
 These source changes are not a release and do not replace published archives.
 Recognized `0.24.1-dev.N` hosts admit unchanged Files0.6 through the narrow
 [maintenance bridge](extension-installation-foundation.md#archive-contract).

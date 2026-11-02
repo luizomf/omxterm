@@ -47,19 +47,17 @@ it("shows the reported-directory limitations on keyboard focus and hides them af
   );
   expect(document.activeElement).toBe(item);
   expect(getComputedStyle(hint).display).toBe("block");
-  expect(hint.textContent).toContain(
-    "may be stale or come from a remote session",
-  );
-  expect(item.title).toBe(hint.textContent);
+  expect(hint.textContent).toBe("May be stale or remote.");
+  expect(item.title).toContain("active terminal's last reported path");
+  expect(item.title).toContain("stale or come from a remote session");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
   language("pt-BR");
   expect(item.getAttribute("aria-label")).toBe(
     "Usar último diretório informado pelo terminal",
   );
-  expect(hint.textContent).toContain(
-    "pode estar desatualizado ou vir de uma sessão remota",
-  );
-  expect(item.title).toBe(hint.textContent);
+  expect(hint.textContent).toBe("Pode ser antigo ou remoto.");
+  expect(item.title).toContain("terminal ativo");
+  expect(item.title).toContain("desatualizado ou vir de uma sessão remota");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
   expect(getComputedStyle(hint).display).toBe("block");
   item.dispatchEvent(
