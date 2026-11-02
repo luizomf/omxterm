@@ -1397,7 +1397,7 @@ async function run(options) {
     children.forEach(assertNormalBackendRetirement);
     if (publicObservation) {
       assert.deepEqual(publicObservation.summary(), publicBinding);
-      publicObservation.stop();
+      publicObservation.stop({ allowRemoved: true });
       publicObservation = undefined;
     }
     writeFileSync(

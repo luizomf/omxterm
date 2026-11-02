@@ -9,7 +9,7 @@ const { startSshPublicObservation } =
     startSshPublicObservation: (options: unknown) => {
       verifyTrust(prompt: unknown): void;
       summary(): unknown;
-      stop(): void;
+      stop(options?: { allowRemoved?: boolean }): void;
     };
   };
 const endpoint =
@@ -292,12 +292,26 @@ it("follows the production archive redirect only when the observed HTTPS chain m
   failed.stop();
 });
 
-it("removes diagnostics listeners without overwriting a changed IPC owner", () => {
+it("accepts only explicitly expected production handler removal at joined Quit", () => {
+  const f = fixture();
+  const observer = f.start();
+  f.handlers.delete("omxterm:extensions");
+  expect(() => observer.stop({ allowRemoved: true })).not.toThrow();
+  expect(f.handlers.has("omxterm:extensions")).toBe(false);
+  expect([...f.listeners.values()].every((set) => set.size === 0)).toBe(true);
+
+  const early = fixture();
+  const beforeQuit = early.start();
+  early.handlers.delete("omxterm:extensions");
+  expect(() => beforeQuit.stop()).toThrow(/hook changed/);
+});
+
+it("removes diagnostics listeners without overwriting a changed IPC owner even at Quit", () => {
   const f = fixture();
   const observer = f.start();
   const replacement = async () => ({});
   f.handlers.set("omxterm:extensions", replacement);
-  expect(() => observer.stop()).toThrow(/hook changed/);
+  expect(() => observer.stop({ allowRemoved: true })).toThrow(/hook changed/);
   expect(f.handlers.get("omxterm:extensions")).toBe(replacement);
   expect([...f.listeners.values()].every((set) => set.size === 0)).toBe(true);
 });

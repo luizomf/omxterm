@@ -362,10 +362,12 @@ function startPublicCatalogObservation({
           "observer ordinal for the one successful production refresh; selection is the host's opaque snapshot identity",
       };
     },
-    stop() {
+    stop({ allowRemoved = false } = {}) {
       if (stopped) return;
       stopped = true;
       const ownsHandler = ipcMain._invokeHandlers.get(channel) === handler;
+      const removedForQuit =
+        allowRemoved && !ipcMain._invokeHandlers.has(channel);
       try {
         diagnostics.unsubscribe("http.client.request.start", onRequest);
       } finally {
@@ -378,7 +380,10 @@ function startPublicCatalogObservation({
           }
         }
       }
-      assert.ok(ownsHandler, `${release.label} observation hook changed`);
+      assert.ok(
+        ownsHandler || removedForQuit,
+        `${release.label} observation hook changed`,
+      );
     },
   };
 }

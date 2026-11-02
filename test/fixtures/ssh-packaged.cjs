@@ -18,8 +18,8 @@ const childProcess = require("node:child_process");
 const { syncBuiltinESMExports } = require("node:module");
 let restore = () => {};
 let requestQuit;
-function cleanup() {
-  restore();
+function cleanup(options) {
+  restore(options);
 }
 async function diagnose() {
   const views = await Promise.all(
@@ -39,7 +39,7 @@ async function diagnose() {
   return { ...globalThis.__omxtermPackagedState, views };
 }
 function abort() {
-  app.once("will-quit", cleanup);
+  app.once("will-quit", () => cleanup({ allowRemoved: true }));
   app.quit();
 }
 function inspect(options) {
@@ -391,9 +391,9 @@ async function run(options) {
     open: dialog.showOpenDialog,
     message: dialog.showMessageBox,
   };
-  restore = () => {
+  restore = (options) => {
     try {
-      publicObservation?.stop();
+      publicObservation?.stop(options);
     } finally {
       childProcess.fork = original.fork;
       syncBuiltinESMExports();
@@ -1652,8 +1652,12 @@ async function run(options) {
   prepareQuit();
   function prepareQuit() {
     app.once("will-quit", () => {
-      if (options.stablePublic)
+      if (options.stablePublic) {
         assert.deepEqual(publicObservation.summary(), publicBinding);
+        publicObservation.stop({ allowRemoved: true });
+        publicObservation = undefined;
+        cleanup();
+      }
       save("quit.json", {
         ...state,
         joined:
@@ -1665,7 +1669,7 @@ async function run(options) {
               child.exit.signal === null,
           ),
       });
-      cleanup();
+      if (!options.stablePublic) cleanup();
     });
     requestQuit = () => {
       // Production builds this label from app.name, not the dialog's brand title.
