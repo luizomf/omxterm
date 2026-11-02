@@ -14,6 +14,7 @@ const observer = {
       linuxCurrentFilesUi?: boolean;
       extensionVersion?: string;
     }) => boolean;
+    run: (options: unknown) => Promise<unknown>;
     verifyFilesConsent: (
       prompt: { title: string; message: string; detail: string },
       options: {
@@ -32,6 +33,12 @@ runInNewContext(source, {
 });
 const verify = observer.exports.verifyFilesConsent;
 const currentUi = observer.exports.checksCurrentFilesUi;
+
+it("refuses public catalog mode without its explicit endpoint before app attachment", async () => {
+  await expect(observer.exports.run({ catalogMode: "public" })).rejects.toThrow(
+    /public catalog endpoint required/,
+  );
+});
 
 it("runs the existing current Files UI checks for the explicit Linux stable pair", () => {
   expect(

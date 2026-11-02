@@ -422,7 +422,7 @@ async function run(options) {
   };
   syncBuiltinESMExports();
   if (options.stablePublic) {
-    const publicCatalog = require("./ssh-public-catalog.cjs");
+    const publicCatalog = require("./public-catalog-observer.cjs");
     sshPublicManagementState = publicCatalog.sshPublicManagementState;
     publicObservation = publicCatalog.startSshPublicObservation({
       ipcMain,

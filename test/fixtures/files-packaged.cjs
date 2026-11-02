@@ -9,10 +9,17 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 let catalogTransport;
+let publicObservation;
 let currentRoot;
 const processIdentity = require("./snippets-process-identity.cjs");
 async function cleanup() {
-  await catalogTransport?.close();
+  const observation = publicObservation;
+  publicObservation = undefined;
+  try {
+    observation?.stop();
+  } finally {
+    await catalogTransport?.close();
+  }
 }
 
 // Runtime.evaluate has no dynamic-import callback. Load this ordinary CommonJS
@@ -147,6 +154,46 @@ function installPublicCatalog(document, action, version = "0.5.0") {
   button.click();
 }
 
+// Serialized into Settings: other extensions must not satisfy a Files state.
+function filesPublicManagementState(
+  document,
+  generation,
+  state,
+  action,
+  click,
+) {
+  const rows = [
+    ...document.querySelectorAll(".extensions-panel section"),
+  ].filter((row) =>
+    [...row.querySelectorAll(":scope > p")].some((paragraph) =>
+      paragraph.textContent.startsWith("omxterm.files · generation "),
+    ),
+  );
+  if (rows.length !== 1 || rows[0].closest("[hidden], [inert]")) return false;
+  const row = rows[0];
+  const text = [...row.querySelectorAll(":scope > p")].find((paragraph) =>
+    paragraph.textContent.startsWith("omxterm.files · generation "),
+  )?.textContent;
+  if (
+    text !==
+      `omxterm.files · generation ${generation} · ${state} · local dormant · other instances unknown` ||
+    (state !== "uninstalled" &&
+      row.querySelector(":scope > h3")?.textContent !==
+        "Files — ARM64 preview · 0.6.0")
+  )
+    return false;
+  if (!action) return !click;
+  const buttons = [...row.querySelectorAll("button")].filter(
+    (button) =>
+      button.textContent === action &&
+      !button.disabled &&
+      !button.closest("[hidden], [inert]"),
+  );
+  if (buttons.length !== 1) return false;
+  if (click) buttons[0].click();
+  return true;
+}
+
 function verifyFilesConsent(prompt, options, approvals) {
   assert.equal(prompt.title, "Trust extension code?");
   assert.ok(
@@ -252,13 +299,46 @@ function dispatchLinuxFilesShortcut(document, expectedPath) {
 }
 
 async function run(options) {
+  if (options.catalogMode === "public") {
+    if (options.linuxHistoricalPublic) {
+      assert.equal(options.version, "0.24.0-dev.11");
+      assert.equal(options.extensionVersion, "0.4.0");
+      assert.equal(options.extensionName, "Files — Linux ARM64 preview");
+      assert.equal(
+        options.archiveSha256,
+        "384de7da4cc2fafe7e42cd4ccf19a455a2e634036069160c75e15b7371d2eb6e",
+      );
+      assert.ok(
+        options.linuxExpectedIdentity &&
+          !options.publicCatalog &&
+          !options.publicLink,
+      );
+    } else {
+      assert.ok(options.publicCatalog, "public catalog endpoint required");
+      if (process.platform === "linux")
+        assert.equal(
+          options.linuxPublicCatalog,
+          true,
+          "Linux public observation required",
+        );
+    }
+  }
   if (options.publicCatalog) {
     assert.equal(
       options.publicCatalog,
-      "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json",
+      options.linuxPublicCatalog
+        ? "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json"
+        : "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json",
     );
     assert.equal(options.catalogMode, "public");
     assert.ok(!options.publicLink && !options.macosLifecycle);
+  }
+  if (options.linuxPublicCatalog) {
+    assert.ok(options.publicCatalog);
+    assert.equal(options.version, "0.24.0");
+    assert.equal(options.extensionVersion, "0.6.0");
+    assert.equal(options.extensionName, "Files — ARM64 preview");
+    assert.equal(options.linuxCurrentFilesUi, false);
   }
   inspect(options);
   currentRoot = options.root;
@@ -340,15 +420,29 @@ async function run(options) {
       return approvals;
     },
   };
+  if (options.linuxPublicCatalog) {
+    publicObservation =
+      require("./public-catalog-observer.cjs").startFilesPublicObservation({
+        ipcMain: require("electron").ipcMain,
+        diagnostics: require("node:diagnostics_channel"),
+        catalogSha256: options.catalogSha256,
+        archiveSha256: options.archiveSha256,
+        verifyTrust: (prompt, _digest, index) =>
+          verifyFilesConsent(prompt, options, index),
+      });
+  }
   dialog.showOpenDialog = async () => {
     assert.ok(
-      !options.publicLink && !options.publicCatalog,
+      !options.publicLink &&
+        !options.publicCatalog &&
+        options.catalogMode !== "public",
       "public acquisition must not use local chooser",
     );
     return { canceled: false, filePaths: [options.archive] };
   };
   dialog.showMessageBox = async (_owner, prompt) => {
     verifyFilesConsent(prompt, options, approvals);
+    publicObservation?.verifyTrust(prompt);
     approvals++;
     return { response: 1, checkboxChecked: false };
   };
@@ -498,7 +592,24 @@ async function run(options) {
           `document.querySelector('.extensions-panel').textContent.includes(${JSON.stringify(text)}) && (${extensionsIdle.toString()})(document, ${!!options.publicCatalog})`,
         ),
       text,
+      options.linuxPublicCatalog ? 65000 : 15000,
     );
+  }
+  async function publicManagement(generation, state, action, click = false) {
+    if (!options.linuxPublicCatalog) return;
+    const expression = `(${filesPublicManagementState.toString()})(document, ${generation}, ${JSON.stringify(state)}, ${JSON.stringify(action)}, ${click})`;
+    if (click)
+      assert.equal(await js(expression), true, "exact Files management action");
+    else
+      await until(
+        () => js(expression),
+        `Files generation ${generation} ${state}`,
+      );
+  }
+  async function manageFiles(label, generation, state) {
+    if (options.linuxPublicCatalog)
+      await publicManagement(generation, state, label, true);
+    else await click(core, label);
   }
   const publicLinkInstalls = [];
   const publicCatalogInstalls = [];
@@ -707,6 +818,7 @@ async function run(options) {
     else await click(core, "Install");
   } else await installArchive();
   await state("generation 1");
+  await publicManagement(1, "enabled", "Disable");
   assert.equal(approvals, 1);
   assert.equal(children.length, 0);
   assert.equal(hosted().length, 0);
@@ -1124,6 +1236,7 @@ async function run(options) {
     "replacement retired actual backend/view",
   );
   assertNormalBackendRetirement(children[0]);
+  await publicManagement(2, "enabled", "Disable");
   assert.equal(children.length, 1, "replacement remains dormant");
   assert.equal(approvals, 2);
   checks.push("explicit-reinstall-actual-retirement-dormant");
@@ -1133,21 +1246,28 @@ async function run(options) {
   assert.equal(children.length, 2);
   assert.notEqual(children[0].pid, children[1].pid);
   await settings();
-  await click(core, "Disable");
+  await manageFiles("Disable", 2, "enabled");
   await state("generation 3");
   await until(
     () => hosted().length === 0 && children[1].closed,
     "Disable retirement",
   );
   assertNormalBackendRetirement(children[1]);
+  await publicManagement(3, "disabled", "Enable");
   if (options.macosLifecycle || options.publicLink || options.publicCatalog) {
-    await click(core, "Enable");
+    await manageFiles("Enable", 3, "disabled");
     await state("generation 4");
+    await publicManagement(4, "enabled", "Uninstall");
     assert.equal(children.length, 2, "Enable remains dormant");
     assert.equal(hosted().length, 0);
   }
-  await click(core, "Uninstall");
+  await manageFiles(
+    "Uninstall",
+    options.publicCatalog ? 4 : 3,
+    options.publicCatalog ? "enabled" : "disabled",
+  );
   await state("uninstalled");
+  await publicManagement(5, "uninstalled");
   checks.push("fresh-activation-disable-uninstall");
   listeners("uninstalled");
   await js("document.querySelector('.settings-close').click()");
@@ -1182,6 +1302,8 @@ async function run(options) {
     await settings();
     await installArchive();
     await state("generation 6");
+    if (options.linuxPublicCatalog)
+      await publicManagement(6, "enabled", "Disable");
     assert.equal(approvals, 3);
     assert.equal(children.length, 2, "third install remains dormant");
     view = await openFiles();
@@ -1207,6 +1329,14 @@ async function run(options) {
   if (currentFilesUi) checks.push("current-Files-toolbar-dotfiles-draft");
   if (linuxFilesShortcut)
     checks.push("linux-Files-Ctrl-H-dotfiles-draft-focus");
+  let publicBinding;
+  if (publicObservation) {
+    publicBinding = publicObservation.summary();
+    assert.equal(publicBinding.catalogGeneration, 1);
+    assert.equal(publicBinding.approvals, 3);
+    assert.equal(publicBinding.installed, 3);
+    assert.equal(publicBinding.attempts.length, 3);
+  }
   const result = {
     renderedCatalog,
     destroyedListeners,
@@ -1219,6 +1349,7 @@ async function run(options) {
       : null,
     checks,
     approvals,
+    ...(publicBinding ? { publicBinding } : {}),
     archiveSha256: options.archiveSha256,
     ...(options.linuxExpectedIdentity
       ? {
@@ -1256,6 +1387,11 @@ async function run(options) {
       "shell kernel exit before will-quit",
     );
     children.forEach(assertNormalBackendRetirement);
+    if (publicObservation) {
+      assert.deepEqual(publicObservation.summary(), publicBinding);
+      publicObservation.stop();
+      publicObservation = undefined;
+    }
     writeFileSync(
       path.join(options.evidence, "quit.json"),
       JSON.stringify(
@@ -1280,6 +1416,7 @@ async function run(options) {
 module.exports = {
   inspect,
   verifyFilesConsent,
+  filesPublicManagementState,
   checksCurrentFilesUi,
   focusLinuxFilesRow,
   dispatchLinuxFilesShortcut,

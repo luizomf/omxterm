@@ -5,7 +5,7 @@ import { expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
 const { startSshPublicObservation } =
-  require("../fixtures/ssh-public-catalog.cjs") as {
+  require("../fixtures/public-catalog-observer.cjs") as {
     startSshPublicObservation: (options: unknown) => {
       verifyTrust(prompt: unknown): void;
       summary(): unknown;
@@ -15,9 +15,9 @@ const { startSshPublicObservation } =
 const endpoint =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
 const archiveUrl =
-  "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh.omxext";
+  "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext";
 const sha = (data: Buffer) => createHash("sha256").update(data).digest("hex");
-const archive = Buffer.from("synthetic downloaded bytes");
+const archive = Buffer.alloc(11606, 42);
 const selection = "a".repeat(36);
 const official =
   "Official means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.";
@@ -243,18 +243,20 @@ it("records each actual download and consent against the same selection and cata
   observer.stop();
 });
 
-it("binds the exact offered immutable archive URL without assuming an unrevealed tag name", async () => {
-  const f = fixture();
-  f.release.archive.url = archiveUrl.replace(
-    "ext-ssh-v0.3.1",
-    "ext-ssh-original-0.3.1",
-  );
-  f.changeCatalog();
-  const observer = f.start();
-  await f.invoke({ operation: "catalog-refresh" });
-  await f.invoke({ operation: "catalog-install", selection });
-  expect(observer.summary()).toMatchObject({ approvals: 1, installed: 1 });
-  observer.stop();
+it("rejects a different archive URL or size even when the catalog digest matches", async () => {
+  for (const change of [
+    { url: archiveUrl.replace("ext-ssh-v0.3.1", "ext-ssh-original-0.3.1") },
+    { bytes: 11607 },
+  ]) {
+    const f = fixture();
+    Object.assign(f.release.archive, change);
+    f.changeCatalog();
+    const observer = f.start();
+    await expect(f.invoke({ operation: "catalog-refresh" })).rejects.toThrow(
+      /release archive (URL|size)/,
+    );
+    observer.stop();
+  }
 });
 
 it("follows the production archive redirect only when the observed HTTPS chain matches", async () => {
@@ -306,6 +308,17 @@ it("preserves production IPC argument validation rather than dropping extra argu
   expect(f.fetch).not.toHaveBeenCalled();
   observer.stop();
 });
+
+it.each(["install", "install-link"])(
+  "refuses %s instead of falling back from the public catalog",
+  async (operation) => {
+    const f = fixture();
+    const observer = f.start();
+    await expect(f.invoke({ operation })).rejects.toThrow(/fallback/);
+    expect(f.fetch).not.toHaveBeenCalled();
+    observer.stop();
+  },
+);
 
 it("refuses another refresh rather than silently changing the captured catalog generation", async () => {
   const f = fixture();

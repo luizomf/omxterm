@@ -8,11 +8,57 @@ const endpoint =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
 const channel = "omxterm:extensions";
 
-function startSshPublicObservation({
+function startSshPublicObservation(options) {
+  return startPublicCatalogObservation({
+    ...options,
+    release: {
+      id: "omxterm.ssh",
+      name: "SSH Connect",
+      version: "0.3.1",
+      targets: ["linux-arm64"],
+      archiveUrl:
+        "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext",
+      archiveBytes: 11606,
+      label: "SSH",
+      generations: [0, 1],
+      forbidFallback: true,
+      verifyTrust: (prompt, digest, _index, generation) =>
+        assertPublicSshTrust(prompt, digest, generation),
+    },
+  });
+}
+
+function startFilesPublicObservation(options) {
+  assert.equal(
+    options.archiveSha256,
+    "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
+    "original Files 0.6.0 digest",
+  );
+  assert.equal(typeof options.verifyTrust, "function");
+  return startPublicCatalogObservation({
+    ...options,
+    release: {
+      id: "omxterm.files",
+      name: "Files — ARM64 preview",
+      version: "0.6.0",
+      targets: ["linux-arm64"],
+      archiveUrl:
+        "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.6.0/files-0.6.0.omxext",
+      archiveBytes: 17331,
+      label: "Files",
+      generations: [0, 1, 5],
+      forbidFallback: true,
+      verifyTrust: options.verifyTrust,
+    },
+  });
+}
+
+function startPublicCatalogObservation({
   ipcMain,
   diagnostics,
   catalogSha256,
   archiveSha256,
+  release,
 }) {
   assert.match(catalogSha256, /^[a-f0-9]{64}$/);
   assert.match(archiveSha256, /^[a-f0-9]{64}$/);
@@ -137,9 +183,9 @@ function startSshPublicObservation({
     assert.equal(result.catalog?.loaded, true);
     assert.equal(result.catalog?.stale, false);
     const cards = result.catalog.entries.filter(
-      (card) => card.id === "omxterm.ssh",
+      (card) => card.id === release.id,
     );
-    assert.equal(cards.length, 1, "one SSH card");
+    assert.equal(cards.length, 1, `one ${release.label} card`);
     const card = cards[0];
     assert.equal(card.name, offer.name);
     assert.equal(card.version, offer.version);
@@ -156,6 +202,13 @@ function startSshPublicObservation({
   }
   const handler = async (event, ...args) => {
     const value = args[0];
+    if (
+      release.forbidFallback &&
+      ["install", "install-link"].includes(value?.operation)
+    ) {
+      unexpected.push({ error: "unapproved installation fallback" });
+      throw Error("public catalog forbids installation fallback");
+    }
     if (!["catalog-refresh", "catalog-install"].includes(value?.operation))
       return originalHandler(event, ...args);
     assert.equal(active, undefined, "overlapping catalog operation");
@@ -170,7 +223,10 @@ function startSshPublicObservation({
         "clicked catalog selection mismatch",
       );
       assert.equal(approvals, installed, "previous consent incomplete");
-      assert.ok(installed < 2, "unexpected additional catalog install");
+      assert.ok(
+        installed < release.generations.length,
+        "unexpected additional catalog install",
+      );
     }
     const operation = { kind: isCatalog ? "catalog" : "archive", requests: [] };
     active = operation;
@@ -190,13 +246,13 @@ function startSshPublicObservation({
         );
         assert.equal(parsed.schemaVersion, 1);
         const releases = parsed.entries.filter(
-          (entry) => entry.id === "omxterm.ssh",
+          (entry) => entry.id === release.id,
         );
-        assert.equal(releases.length, 1, "one SSH offer");
+        assert.equal(releases.length, 1, `one ${release.label} offer`);
         offer = releases[0];
-        assert.equal(offer.name, "SSH Connect");
-        assert.equal(offer.version, "0.3.1");
-        assert.deepEqual(offer.targets, ["linux-arm64"]);
+        assert.equal(offer.name, release.name);
+        assert.equal(offer.version, release.version);
+        assert.deepEqual(offer.targets, release.targets);
         assert.equal(offer.archive.sha256, archiveSha256);
         assert.ok(
           Number.isSafeInteger(offer.archive.bytes) && offer.archive.bytes > 0,
@@ -206,8 +262,20 @@ function startSshPublicObservation({
             /^https:\/\/github\.com\/luizomf\/omxterm\/releases\/download\/ext-[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+\.omxext$/.test(
               offer.archive.url,
             ),
-          "invalid SSH release archive URL",
+          `invalid ${release.label} release archive URL`,
         );
+        if (release.archiveUrl)
+          assert.equal(
+            offer.archive.url,
+            release.archiveUrl,
+            "release archive URL",
+          );
+        if (release.archiveBytes)
+          assert.equal(
+            offer.archive.bytes,
+            release.archiveBytes,
+            "release archive size",
+          );
         checkCard(result, false);
         catalogGeneration++;
       } else {
@@ -251,11 +319,17 @@ function startSshPublicObservation({
         offer.archive.sha256,
         "actual archive byte hash",
       );
-      assertPublicSshTrust(prompt, offer.archive.sha256, installed);
+      const expectedGeneration = release.generations[installed];
+      release.verifyTrust(
+        prompt,
+        offer.archive.sha256,
+        installed,
+        expectedGeneration,
+      );
       attempts.push({
         selection,
         catalogGeneration,
-        expectedGeneration: installed,
+        expectedGeneration,
         sha256: response.digest,
         bytes: response.size,
       });
@@ -263,6 +337,8 @@ function startSshPublicObservation({
     },
     summary() {
       assert.equal(unexpected.length, 0, "unexpected HTTPS request");
+      assert.equal(pending.size, 0, "unfinished HTTPS request observation");
+      assert.equal(active, undefined, "catalog operation still active");
       return {
         catalogGeneration,
         selection,
@@ -293,7 +369,7 @@ function startSshPublicObservation({
           }
         }
       }
-      assert.ok(ownsHandler, "SSH observation hook changed");
+      assert.ok(ownsHandler, `${release.label} observation hook changed`);
     },
   };
 }
@@ -332,4 +408,9 @@ function sshPublicManagementState(document, generation, state, local, action) {
   return buttons.length === 1;
 }
 
-module.exports = { startSshPublicObservation, sshPublicManagementState };
+module.exports = {
+  startPublicCatalogObservation,
+  startSshPublicObservation,
+  startFilesPublicObservation,
+  sshPublicManagementState,
+};

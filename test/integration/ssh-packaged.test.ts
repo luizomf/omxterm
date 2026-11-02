@@ -369,8 +369,8 @@ it.skipIf(!enabled)(
         path.join(root, "ssh-packaged-header.cjs"),
       );
       await cp(
-        "test/fixtures/ssh-public-catalog.cjs",
-        path.join(root, "ssh-public-catalog.cjs"),
+        "test/fixtures/public-catalog-observer.cjs",
+        path.join(root, "public-catalog-observer.cjs"),
       );
       const env: NodeJS.ProcessEnv = {
         HOME: path.join(root, "home"),

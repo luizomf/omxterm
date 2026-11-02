@@ -9,7 +9,7 @@ import { renderExtensions } from "../../src/renderer/settings/settings-extension
 const source = readFileSync("test/fixtures/ssh-packaged.cjs", "utf8");
 const require = createRequire(path.resolve("package.json"));
 const { sshPublicManagementState } =
-  require("./test/fixtures/ssh-public-catalog.cjs") as {
+  require("./test/fixtures/public-catalog-observer.cjs") as {
     sshPublicManagementState: (
       document: Document,
       generation: number,
