@@ -320,11 +320,74 @@ fixture ownership and cascading refusals ([#759](https://github.com/luizomf/omxt
 and a Settings renderer failure ([#760](https://github.com/luizomf/omxterm/issues/760))
 remain tracked. These results do not establish a full portable pass.
 
-Exact-package and public-consumption qualification have not passed for this
-transition. Earlier Windows composition, packaged-GUI and exact-NSIS checkpoints
-used built-in Snippets and remain distinct. Published
+At that historical boundary, exact-package and public-consumption qualification
+had not passed for this transition. Earlier Windows composition, packaged-GUI and
+exact-NSIS checkpoints used built-in Snippets and remain distinct. Published
 Windows hosts and Windows x64 retain built-in Snippets; no host, catalog or archive
-has been published or changed by this source transition.
+was published or changed by this source transition.
+
+## Windows ARM64 exact-stage and NSIS checkpoint
+
+🤖 AI-assisted.
+
+On **2026-11-02**, the frozen host
+`c04a350fcd5d5a411b1993300cb62eab4a0feace` (tree
+`e80f2acec00988f390779e1b25d1d3e3d2439825`, `0.24.0-dev.36`) passed a fresh
+complete Windows ARM64 `check:portable`: **5,535 passed, 215 skipped, zero failed**,
+with all 518 discovered files accounted for. Its native stage and exact NSIS were
+built and inspected from that clean source, separately from the fixture-only
+adapter changes. This fresh result does not rewrite the earlier failed baseline.
+
+The exact installer was **155,134,581 bytes**, SHA-256
+`57a556f64c6665befef6a096e902c1435fcc27c7c2db701b821bd224dd9d8d1b`;
+`resources/app.asar` was **18,344,994 bytes**, SHA-256
+`d9d3b4d67ebfb7aed7dbbf50f2b74f7282637e720ba670d2c6e57c34f61ea709`.
+The actual staged executable ran the shared ten-check optional-Snippets scenario
+with the unchanged public `0.1.0` archive above. The controller and controlled
+ConPTY child used official **Node 24.22.0 ARM64**, SHA-256
+`df4b0e71e4e4d022bf8582fbe75f6061feb9c4a111a86f3fec6300d24b6fe5e0`.
+The host itself used locked Electron **43.8.1** / embedded Node **24.22.0**.
+The source build/default suite and stock NSIS verifier instead used Node 26.12.1;
+these are distinct toolchain roles, not interchangeable receipts.
+
+The [exact Windows fixture](../test/fixtures/snippets-packaged.md#exact-windows-arm64-staged-adapter-provisional-qualification)
+attached at the verified ESM instantiation pause, before the production entry
+body, window and first ConPTY. It released only the inspector-induced startup
+pause of the exact node-pty output worker. No package entry, dependency bytes,
+input admission or scenario oracle was replaced. Stage, installer, archive and
+controlled-Node identities matched before and after. All diagnostic capture/stop
+flags were absent from the successful ordinary campaign.
+
+All ten checks passed, including ordinary local install/trust, missing/disabled
+guidance, Close versus Hide, exact Insert/Run and full-interaction no-leak checks,
+held Enter/prevented repeat/independent held-to-up observation, preview overrides
+and Cancel, retained search, live locale changes, and disable/uninstall with
+unchanged catalog and the same usable Surface/ConPTY. Normal Quit joined PTY
+onExit, backend exit/close, actual main exit 0, close and both stream EOFs; captured
+creation identities were absent and the supervisor reported no cleanup errors.
+The actual child, core and preview captures were inspected: child search/items and
+the preview's literal `SNIPPETS_RUN` body and Cancel/Insert/Run controls were
+visible. Core and child WebContents were captured separately; this is not an
+OS-compositor claim.
+
+The first ordinary exact-stage occurrence with a **Node 26.12.1** controller/child
+had failed: the observer recorded the exact 19-byte first Insert, but the child
+draft receipt never appeared within its unchanged deadline. The separately chosen
+Node 24 pair passed without changed package bytes, timeouts or input oracles.
+One occurrence per pair does not establish a Node-version cause, prove OS byte
+consumption in the failed case, or eliminate historical intermittence. That failed
+occurrence and its black failure capture remain unqualified.
+
+The matching stock **FULL NSIS** verifier separately passed exact payload
+comparison, installed startup, owned uninstall and cache cleanup in the authorized
+non-elevated disposable Windows ARM64 VM with a recovery snapshot. It replaced no
+existing installation; registry/shortcuts/default paths/process inspection and
+custom temporary destination cleanup were empty afterward. Package bytes remained
+unchanged through both campaigns and the installer transaction. This is a staged
+Snippets GUI campaign plus matching installed-host verification, **not installed-path
+Snippets GUI**. Neither gate qualifies public acquisition/catalog delivery,
+physical input/natural autorepeat, an account shell, Windows x64, Files/SSH or
+later main. No host or extension was published by this checkpoint.
 
 ## Linux x64 source transition
 

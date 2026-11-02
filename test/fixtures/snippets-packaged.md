@@ -487,10 +487,13 @@ dependency Electron importing an ASAR entry. The source adapter above remains
 separate evidence. No package, catalog, public archive or version is changed.
 
 **The early-arm/readiness-only probe completed on Electron 43.8.1 / Node
-24.22.0, but the first ordinary exact-stage campaign failed at the controlled
-child's first-Insert receipt.** The exact Snippets GUI is not qualified. These
-outcomes do not supersede earlier source receipts or turn any failed attempt
-into a pass. First run the readiness-only probe below for a new exact pair; its
+24.22.0. The first ordinary exact-stage campaign using a Node 26.12.1 controller
+and controlled child failed at the first-Insert receipt; a separately selected
+Node 24.22.0 ARM64 pair then passed all ten checks.** The
+[exact-stage checkpoint](../../docs/snippets-migration.md#windows-arm64-exact-stage-and-nsis-checkpoint)
+records both outcomes and the matching FULL NSIS result. The comparison does not
+establish a Node-version cause or eliminate historical intermittence. Earlier
+failures remain failed; no other controller/child runtime is silently qualified. First run the readiness-only probe below for a new exact pair; its
 completion is not a Snippets campaign. It must establish the real process, entry breakpoint,
 synchronous observer/readiness installation before the first window and PTY,
 first `-e` controlled-Node session, renderer ACK/mode barrier and normal joined
