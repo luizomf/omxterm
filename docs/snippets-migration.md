@@ -464,17 +464,20 @@ archive's POSIX example needs commands appropriate for the Windows shell.
 
 ### Catalog and public-consumption boundary
 
-This candidate adds only `win32-arm64` and factual Windows dev.36 wording to the
-common Snippets entry in **both complete fixed catalogs**. Linux/macOS targets,
-Files/SSH entries, manifest ranges, archive/version/source/size/digest and immutable
-URLs stay unchanged. Windows uses the legacy endpoint, not the macOS endpoint.
+The Windows promotion added `win32-arm64` and factual Windows dev.36 wording to
+the common Snippets entry in **both complete fixed catalogs**. Its integration
+and exact fixed-endpoint readback completed. The promotion preserved other
+entries and Snippets archive identity; subsequent Files/SSH promotions are
+separate changes. Windows uses the legacy endpoint, not the macOS endpoint.
 Manifest admission, including other admitted host versions, is not qualification.
 
-ROOT-owned main integration and exact fixed-endpoint readback must precede the
-new [installed public fixture](../test/fixtures/snippets-packaged.md#windows-arm64-installed-public-catalog-adapter).
-At this revision its headless controls are implementation evidence only:
-**installed public-HTTPS consumption has not run**. That bounded checkpoint will
-use the public-downloaded exact NSIS, the existing guarded installed callback and
+The first [installed public fixture](../test/fixtures/snippets-packaged.md#windows-arm64-installed-public-catalog-adapter)
+occurrence used the publicly downloaded dev.36 NSIS but **failed before Browse,
+trust or backend activation**, with a renderer script error while Settings General
+was selected. Guarded failure cleanup is not normal Quit or a public-consumption
+pass. The failure is retained; its cause and a successful public checkpoint remain
+pending at this revision. Headless controls do not establish native success.
+The intended bounded checkpoint uses the exact NSIS, the guarded installed callback and
 production Browse/Install/Reinstall HTTPS, controlled Official consent, the
 supported Node24 probe, two backend retirements, unchanged YAML, the same usable
 Surface/ConPTY and joined normal Quit, followed by owned NSIS cleanup. A local

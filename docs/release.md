@@ -440,7 +440,10 @@ is implied.
 
 ## SSH preview publication
 
-### Current SSH 0.3.0 publication
+### Historical SSH 0.3.0 publication
+
+For the current SSH 0.3.1 selection, see
+[Files0.6 / SSH0.3.1 promotion](#files06--ssh031-promotion).
 
 SSH `ext-ssh-v0.3.0` was published on 2026-10-30 at 20:07:34 UTC as an immutable,
 non-Latest prerelease. Its tag identifies original build source
