@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- One shared transaction harness exercises guarded and diagnostic outcomes. */
 import * as fs from "node:fs/promises";
 import * as syncFs from "node:fs";
 import os from "node:os";
@@ -238,10 +239,22 @@ beforeEach(async () => {
       executable: string;
       asar: string;
       publicCatalog: boolean;
+      publicChildInputDiagnostic?: boolean;
+      root: string;
     };
     expect(config.executable).toBe(path.join(installed, "OMXTerm.exe"));
     expect(config.asar).toBe(path.join(installed, "resources/app.asar"));
     expect(config.publicCatalog).toBe(true);
+    expect(config.publicChildInputDiagnostic).toBe(
+      values.childInputDiagnostic ? true : undefined,
+    );
+    if (values.childInputDiagnostic)
+      expect(
+        await fs.readFile(
+          path.join(config.root, "snippets-child-input-diagnostic.cjs"),
+          "utf8",
+        ),
+      ).toContain("startChildInputDiagnostic");
     expect(options.timeout).toBe(240000);
     await fs.writeFile(
       path.join(config.evidence, "attachment.json"),
@@ -373,6 +386,37 @@ it("awaits the installed-root public run and stock guarded cleanup before PASS",
   ).toBe(true);
   await expect(fs.stat(installed)).rejects.toMatchObject({ code: "ENOENT" });
 });
+it("keeps a diagnostic observation non-qualifying after guarded cleanup", async () => {
+  values.childInputDiagnostic = true;
+  await expect(run()).rejects.toThrow(
+    "Public Windows Snippets campaign failed",
+  );
+  const result = await publicResult();
+  expect(result.passed).toBe(false);
+  expect(JSON.stringify(result.failures)).toContain(
+    "PUBLIC_CHILD_STDIN_DIAGNOSTIC_NOT_QUALIFICATION",
+  );
+  expect(
+    execute.mock.calls.some(
+      ([file]) => path.basename(file) === "Uninstall OMXTerm.exe",
+    ),
+  ).toBe(true);
+});
+
+it("does not let child diagnostics turn a scenario failure into success", async () => {
+  values.childInputDiagnostic = true;
+  mode = "scenario";
+  await expect(run()).rejects.toThrow(
+    "Public Windows Snippets campaign failed",
+  );
+  const result = await publicResult();
+  expect(result.passed).toBe(false);
+  expect(result.failures.length).toBeGreaterThan(0);
+  expect(JSON.stringify(result.failures)).not.toContain(
+    "PUBLIC_CHILD_STDIN_DIAGNOSTIC_NOT_QUALIFICATION",
+  );
+});
+
 it("controls controller metadata independently of the headless runtime", async () => {
   expect(process.versions.node).toBe("24.22.0");
   expect(process.version).toBe("v24.22.0");

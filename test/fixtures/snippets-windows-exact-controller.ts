@@ -33,6 +33,7 @@ interface Options {
   inputMarker: string;
   probe?: boolean;
   publicCatalog?: boolean;
+  publicChildInputDiagnostic?: boolean;
 }
 interface Pause {
   reason: string;
@@ -50,10 +51,30 @@ interface Pause {
   }>;
 }
 
+function validatePublicDiagnostic(options: Options) {
+  const { root, evidence } = options;
+  assert.ok(
+    options.publicChildInputDiagnostic === undefined ||
+      typeof options.publicChildInputDiagnostic === "boolean",
+    "Invalid public child input diagnostic option",
+  );
+  if (options.publicChildInputDiagnostic) {
+    assert.equal(options.publicCatalog, true, "Public diagnostic only");
+    assert.notEqual(options.probe, true, "Not a readiness-only probe");
+    assert.ok(path.isAbsolute(evidence), "Absolute run evidence required");
+    assert.equal(
+      root,
+      path.join(evidence, "fixture"),
+      "Generated fixture root required",
+    );
+  }
+}
+
 // eslint-disable-next-line max-lines-per-function -- One owner keeps paused-entry ordering and actual child settlement together.
 export async function runWindowsExactController(optionsFile: string) {
   const options = JSON.parse(await readFile(optionsFile, "utf8")) as Options;
   const { root, evidence, executable, asar } = options;
+  validatePublicDiagnostic(options);
   const systemRoot = process.env.SystemRoot;
   assert.ok(
     systemRoot && path.isAbsolute(systemRoot),
@@ -87,6 +108,9 @@ export async function runWindowsExactController(optionsFile: string) {
         "-e",
         options.node,
         path.join(root, "snippets-windows-probe.cjs"),
+        ...(options.publicChildInputDiagnostic
+          ? ["--omxterm-public-child-stdin-diagnostic"]
+          : []),
       ],
       { env, stdio: ["ignore", "pipe", "pipe"] },
     );

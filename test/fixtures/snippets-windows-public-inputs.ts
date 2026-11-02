@@ -22,7 +22,8 @@ export function windowsPublicInputs(env: NodeJS.ProcessEnv = process.env) {
   if (!keys.some((key) => key.startsWith(prefix))) return undefined;
   for (const key of keys.filter((item) => item.startsWith(prefix)))
     assert.ok(
-      names.some((name) => key === prefix + name),
+      names.some((name) => key === prefix + name) ||
+        key === prefix + "CHILD_STDIN_DIAGNOSTIC",
       `Unknown public input: ${key}`,
     );
   assert.ok(
@@ -49,5 +50,15 @@ export function windowsPublicInputs(env: NodeJS.ProcessEnv = process.env) {
     "1",
     "Explicit disposable VM opt-in required",
   );
-  return values;
+  const diagnostic = env[prefix + "CHILD_STDIN_DIAGNOSTIC"];
+  assert.ok(
+    diagnostic === undefined || diagnostic === "0" || diagnostic === "1",
+    "CHILD_STDIN_DIAGNOSTIC must be 0 or 1",
+  );
+  return {
+    ...values,
+    ...(diagnostic === undefined
+      ? {}
+      : { childInputDiagnostic: diagnostic === "1" }),
+  };
 }

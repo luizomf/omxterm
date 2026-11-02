@@ -57,6 +57,7 @@ export type InstalledPublicMode = {
   kind: "installed-public";
   installedRoot: string;
   runNative: PublicNativeRun;
+  childInputDiagnostic?: boolean;
 };
 
 // eslint-disable-next-line max-lines-per-function, complexity -- Keep artifact checks and failure finalization around the same supervised campaign.
@@ -67,6 +68,17 @@ export async function runWindowsExactCampaign(
 ) {
   assert.equal(process.platform, "win32");
   assert.equal(process.arch, "arm64");
+  assert.ok(
+    mode?.childInputDiagnostic === undefined ||
+      typeof mode.childInputDiagnostic === "boolean",
+    "Invalid child input diagnostic option",
+  );
+  if (mode?.childInputDiagnostic)
+    assert.notEqual(
+      values.probe,
+      true,
+      "Public diagnostic is not readiness-only",
+    );
   await mkdir(values.EVIDENCE, { recursive: true });
   const stageReal = await realpath(mode ? mode.installedRoot : values.STAGE);
   const evidenceReal = await realpath(values.EVIDENCE);
@@ -237,6 +249,11 @@ export async function runWindowsExactCampaign(
       "snippets-windows-catalog.json",
     ])
       await cp(path.join("test/fixtures", name), path.join(root, name));
+    if (mode?.childInputDiagnostic)
+      await cp(
+        "test/fixtures/snippets-child-input-diagnostic.cjs",
+        path.join(root, "snippets-child-input-diagnostic.cjs"),
+      );
     const parser = path.join(root, "snippets-windows-parser.cjs");
     const parserBuild = await build({
       entryPoints: ["test/fixtures/snippets-windows-parser.ts"],
@@ -304,6 +321,9 @@ export async function runWindowsExactCampaign(
         inputMarker,
         probe: values.probe,
         ...(mode ? { publicCatalog: true } : {}),
+        ...(mode?.childInputDiagnostic
+          ? { publicChildInputDiagnostic: true }
+          : {}),
       }),
     );
     const launcher = await mkdtemp(

@@ -24,6 +24,28 @@ it("skips only without public configuration and excludes public keys from the ol
   expect(windowsPublicInputs(inputs())?.VERSION).toBe("0.24.0-dev.36");
 });
 
+it("accepts only an explicit public child-stdin diagnostic boolean", () => {
+  expect(
+    windowsPublicInputs({
+      ...inputs(),
+      [prefix + "CHILD_STDIN_DIAGNOSTIC"]: "1",
+    })?.childInputDiagnostic,
+  ).toBe(true);
+  expect(
+    windowsPublicInputs({
+      ...inputs(),
+      [prefix + "CHILD_STDIN_DIAGNOSTIC"]: "0",
+    })?.childInputDiagnostic,
+  ).toBe(false);
+  for (const value of ["", "true", "2"])
+    expect(() =>
+      windowsPublicInputs({
+        ...inputs(),
+        [prefix + "CHILD_STDIN_DIAGNOSTIC"]: value,
+      }),
+    ).toThrow();
+});
+
 it("refuses incomplete, mixed, relative or unpinned configuration", () => {
   for (const [key, value] of Object.entries(inputs()))
     expect(() => windowsPublicInputs({ [key]: value })).toThrow();

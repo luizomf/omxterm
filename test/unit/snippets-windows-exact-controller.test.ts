@@ -250,6 +250,71 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
+it("assigns the child-only diagnostic argument solely to the controlled public probe", async () => {
+  const config = JSON.parse(await fs.readFile(options, "utf8")) as object;
+  await fs.writeFile(
+    options,
+    JSON.stringify({
+      ...config,
+      root: path.join(root, "fixture"),
+      publicCatalog: true,
+      publicChildInputDiagnostic: true,
+    }),
+  );
+  await runWindowsExactController(options);
+  const [executable, args, spawnOptions] = vi.mocked(childProcess.spawn).mock
+    .calls[0]!;
+  expect(executable).toBe(path.join(root, "OMXTerm.exe"));
+  expect(args).toContain(
+    path.join(root, "fixture", "snippets-windows-probe.cjs"),
+  );
+  expect(args).toContain("--omxterm-public-child-stdin-diagnostic");
+  expect(spawnOptions?.env).not.toHaveProperty(
+    "OMXTERM_SNIPPETS_PACKAGED_EVIDENCE",
+  );
+  expect(spawnOptions?.env).not.toHaveProperty(
+    "OMXTERM_SNIPPETS_PACKAGED_CHILD_INPUT_CAPTURE",
+  );
+});
+
+it.each([
+  { publicChildInputDiagnostic: "true", publicCatalog: true },
+  { publicChildInputDiagnostic: true, publicCatalog: false },
+  { publicChildInputDiagnostic: true, publicCatalog: true, probe: true },
+  { publicChildInputDiagnostic: true, publicCatalog: true, root: "other" },
+])(
+  "rejects invalid diagnostic configuration before spawning: %j",
+  async (override) => {
+    const config = JSON.parse(await fs.readFile(options, "utf8")) as object;
+    await fs.writeFile(
+      options,
+      JSON.stringify({
+        ...config,
+        root: path.join(root, "fixture"),
+        ...override,
+      }),
+    );
+    await expect(runWindowsExactController(options)).rejects.toThrow();
+    expect(childProcess.spawn).not.toHaveBeenCalled();
+  },
+);
+
+it("keeps the controlled child argument absent by default and for explicit false", async () => {
+  const config = JSON.parse(await fs.readFile(options, "utf8")) as object;
+  await fs.writeFile(
+    options,
+    JSON.stringify({
+      ...config,
+      publicCatalog: true,
+      publicChildInputDiagnostic: false,
+    }),
+  );
+  await runWindowsExactController(options);
+  expect(vi.mocked(childProcess.spawn).mock.calls[0]![1]).not.toContain(
+    "--omxterm-public-child-stdin-diagnostic",
+  );
+});
+
 it("uses the separate public evaluation deadline without changing the normal or probe deadlines", async () => {
   const deadlines: Array<[string, number | undefined]> = [];
   const original = fake.evaluate;

@@ -81,6 +81,11 @@ export async function runWindowsPublicCampaign(
   assert.equal(process.arch, "arm64");
   assert.equal(values.DISPOSABLE_VM, "1");
   assert.equal(values.VERSION, PUBLIC_VERSION);
+  assert.ok(
+    values.childInputDiagnostic === undefined ||
+      typeof values.childInputDiagnostic === "boolean",
+    "Invalid child input diagnostic option",
+  );
   for (const value of [
     values.STAGE,
     values.INSTALLER,
@@ -113,8 +118,9 @@ export async function runWindowsPublicCampaign(
     failures: failures.map(describeFailure),
     innerEvidence,
     transaction,
-    scope:
-      "Installed public Windows ARM64 Snippets checkpoint; controlled consent and synthetic Node ConPTY input, not physical keyboard or general descendant containment",
+    scope: values.childInputDiagnostic
+      ? "Child stdin diagnostic only; not qualification or uninstall permission"
+      : "Installed public Windows ARM64 Snippets checkpoint; controlled consent and synthetic Node ConPTY input, not physical keyboard or general descendant containment",
   });
   await writeFile(resultFile, JSON.stringify(result(false, true), null, 2));
   try {
@@ -191,11 +197,20 @@ export async function runWindowsPublicCampaign(
               probe: false,
             },
             testContext,
-            { kind: "installed-public", installedRoot, runNative },
+            {
+              kind: "installed-public",
+              installedRoot,
+              runNative,
+              ...(values.childInputDiagnostic
+                ? { childInputDiagnostic: true }
+                : {}),
+            },
           );
           innerEvidence = run.evidence;
         }),
     });
+    if (values.childInputDiagnostic)
+      throw Error("PUBLIC_CHILD_STDIN_DIAGNOSTIC_NOT_QUALIFICATION");
   } catch (error) {
     failures.push(error);
   } finally {

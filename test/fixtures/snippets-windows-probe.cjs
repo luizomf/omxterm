@@ -3,7 +3,29 @@ let line = [];
 let diagnosticReported = false;
 let draftTimer;
 let childInputDiagnostic;
-const evidence = process.env.OMXTERM_SNIPPETS_PACKAGED_EVIDENCE;
+// Only the exact public fixture passes this literal argument. Its copied probe
+// lives in the generated run's fixture directory; no destination comes from
+// inherited environment or a caller-supplied path.
+const publicInputDiagnostic =
+  process.argv?.length === 3 &&
+  process.argv[2] === "--omxterm-public-child-stdin-diagnostic";
+if (
+  publicInputDiagnostic &&
+  Object.keys(process.env).some((key) =>
+    /^OMXTERM_SNIPPETS_(PACKAGED|APPIMAGE|DMG|WINDOWS)_/.test(key),
+  )
+)
+  throw Error("Conflicting Snippets diagnostic environment");
+let evidence = process.env.OMXTERM_SNIPPETS_PACKAGED_EVIDENCE;
+if (publicInputDiagnostic) {
+  const path = require("node:path");
+  evidence = path.dirname(__dirname);
+  if (
+    path.basename(__dirname) !== "fixture" ||
+    !/^run-[a-zA-Z0-9]{6}$/.test(path.basename(evidence))
+  )
+    throw Error("Invalid generated public diagnostic fixture location");
+}
 // Inline deliberately: no module loading, filesystem calls or stdio getters
 // are added before the ordinary stdin -> raw -> stdout initialization.
 const memoryNonce = process.env.OMXTERM_SNIPPETS_PACKAGED_MEMORY_INPUT;
@@ -98,7 +120,8 @@ function createMemoryCapture() {
   };
 }
 if (
-  (process.env.OMXTERM_SNIPPETS_PACKAGED_INSERT_DIAGNOSTIC === "1" ||
+  (publicInputDiagnostic ||
+    process.env.OMXTERM_SNIPPETS_PACKAGED_INSERT_DIAGNOSTIC === "1" ||
     process.env.OMXTERM_SNIPPETS_PACKAGED_CHILD_INPUT_CAPTURE === "1") &&
   evidence &&
   require("node:path").isAbsolute(evidence)
@@ -129,7 +152,14 @@ childInputDiagnostic?.record("start", {
   platform: process.platform,
   arch: process.arch,
   childInputCapture:
+    publicInputDiagnostic ||
     process.env.OMXTERM_SNIPPETS_PACKAGED_CHILD_INPUT_CAPTURE === "1",
+  ...(publicInputDiagnostic
+    ? {
+        publicInputDiagnostic: true,
+        classification: "synthetic-child-input-diagnostic-not-qualification",
+      }
+    : {}),
   insertDiagnostic:
     process.env.OMXTERM_SNIPPETS_PACKAGED_INSERT_DIAGNOSTIC === "1",
   readinessDiagnostic:
