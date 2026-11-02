@@ -20,6 +20,31 @@ local archive also works offline after download. See
 the [Linux x64 public-catalog checkpoint](#linux-x64-public-catalog-checkpoint)
 and [macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
 
+## Stable 0.24.0 release disposition
+
+The maintainer selected the complete stable host release with the Windows ARM64
+installed public-catalog checkpoint **still unresolved**, tracked in [#741](https://github.com/luizomf/omxterm/issues/741).
+This is an explicit release-risk decision, not a passing qualification result.
+The exact dev.36 stage/local-archive ten-check campaign and its matching FULL
+NSIS verification passed separately. Stable 0.24.0 was rebuilt and passed FULL
+NSIS verification; unchanged host inputs support reuse of the bounded behavioral
+evidence, not relabeling it as a stable installed-public test.
+
+Several ordinary public runs ended when the controlled terminal child exited
+unexpectedly. One diagnostic captured an unexpected prefix before the exact Run
+text; its source remains unknown. A diagnostic run completed the entire scenario,
+but instrumentation changes timing and that run remains non-qualifying. Neither
+a product defect nor a fixture-only explanation has been demonstrated. This does
+not establish that ordinary user shells crash, or that the behavior is harmless.
+
+Windows ARM64 users who require the previous built-in Snippets experience can
+remain on [0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0)
+while the investigation continues. Upgrading selects optional Snippets and
+requires deliberate installation; the local-archive route below remains available.
+The catalog listing is not proof that the unresolved public scenario passed.
+No terminal-input assertion, historical failure or package identity was changed
+to authorize this release. Windows x64 retains built-in Snippets.
+
 ## Existing catalogs and shortcuts
 
 Keep `snippets.yaml` beside `config.json`, at the same configuration location as

@@ -218,6 +218,18 @@ behavior or establish two permanently maintained products. Full #741 completion
 requires optional delivery on every supported host target; platform groundwork
 and publication remain explicit prerequisites, not evidence inferred from Linux.
 
+### Stable 0.24.0 release-risk decision
+
+The maintainer selected stable 0.24.0 using the accepted exact-stage/local-archive
+Windows ARM64 qualification and separately verified new stable NSIS bytes. The
+additional installed public-HTTPS checkpoint remains unresolved after ordinary
+failures and non-qualifying diagnostic observations. It is deferred as a host
+publication blocker, not declared passed or removed from #741's completion work.
+See the [migration disclosure](../snippets-migration.md#stable-0240-release-disposition).
+No input invariant or failed observation is waived as successful; a catalog
+listing remains distinct from demonstrated public consumption. Users depending
+on the previous Windows ARM64 built-in experience may remain on 0.23.0.
+
 ## Acceptance evidence
 
 Use the current Snippets parser, panel, preview, target lifetime and Protected
