@@ -817,6 +817,10 @@ async function run(options) {
       hidden: false,
       text: "Open the entered directory (Enter in the address field)",
     });
+    await view.executeJavaScript(`(async () => {
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      if (document.getElementById('files-toolbar-go-tooltip').hidden) throw Error('tooltip disappeared before capture');
+    })()`);
     await writeFile(
       path.join(options.evidence, "files-toolbar.png"),
       (await view.capturePage()).toPNG(),
