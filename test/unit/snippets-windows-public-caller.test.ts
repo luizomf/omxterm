@@ -37,8 +37,9 @@ function deferredSettingsRenderer(
     evaluate(code: string): unknown {
       const result: unknown = runInNewContext(code, { document });
       if (!pending || code.includes(".click()")) return result;
-      // Resolve the controlled snapshot only after its not-ready state was
-      // observed. The outer page exists before navigation/management is ready.
+      // Resolve controlled availability after its not-ready state was observed.
+      // Navigation models the Settings snapshot; disabled Browse is a generic
+      // synthetic condition, not an initial-management-snapshot dependency.
       if (phase === "navigation" && code.includes("#settings-tab-extensions")) {
         const tab = document.createElement("button");
         tab.id = "settings-tab-extensions";
@@ -444,7 +445,7 @@ it("waits for Settings navigation built after the outer page becomes visible", a
   expect(result.approvals).toBe(2);
 });
 
-it("waits for the initial Extensions snapshot to unlock Browse", async () => {
+it("waits for a temporarily disabled Browse control before activation", async () => {
   const { result } = await exercise("late-browse-button");
   expect(result.checks).toHaveLength(5);
   expect(result.approvals).toBe(2);
