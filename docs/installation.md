@@ -58,8 +58,9 @@ warning and deliberately install/update the extension; upgrading the host alone
 does not update it. Open SSH Connect separately from File or the Command Palette;
 installation remains dormant. The earlier catalog offered 0.3.0; fixed-endpoint
 readback and bounded public installation/management qualification passed on the
-exact dev.11 host. The source candidate selects SSH0.3.1 after its separate
-qualification and publication. Historical0.1.0 assets remain immutable.
+exact dev.11 host. The separately published SSH0.3.1 is selected by the prepared
+catalog candidate; its promotion and public-consumption checkpoint are separate.
+Historical0.1.0 assets remain immutable.
 No source build is needed. Both releases are non-Latest previews;
 only Linux ARM64 is qualified, with synthetic clients rather than real SSH
 authentication/connectivity. See [SSH Connect](ssh-connect.md) for requirements,

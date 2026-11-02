@@ -31,9 +31,15 @@ immutable. Updating the host alone does not update a separately installed extens
 review and deliberately install the newer extension. Current source leaves the
 visible SSH Connect identity to the host header while retaining its named child
 region and OpenSSH sections. The published 0.3.0 archive keeps its original
-heading, including on a newer host. The source catalogs prepare a new 0.3.1
-entry; archive publication, intended host/archive qualification and public
-catalog consumption are separate milestones, not consequences of that entry.
+heading, including on a newer host. The separately published
+[SSH0.3.1 archive](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1)
+uses the shared panel header. The exact Linux ARM64 host0.24.0/SSH0.3.1 local
+pair and a bounded older dev.11/local-archive pair passed with synthetic clients;
+this does not establish real SSH authentication or remote connectivity. The
+original archive/checksum/receipt were byte-verified separately, and the receipt
+remains `not-run`. Catalog promotion and public-HTTPS consumption are separate
+milestones. The stable-pair [#746](https://github.com/luizomf/omxterm/issues/746)
+diagnostic remains unexplained.
 
 ## Installing the distributed preview
 
@@ -127,7 +133,7 @@ npm test -- test/integration/ssh-packaged.test.ts
 ```
 
 `OMXTERM_SSH_PACKAGED_EXTENSION_VERSION` selects the expected archive version
-(default `0.1.0`). With version `0.3.0`, optional
+(default `0.1.0`). With version `0.3.0` or `0.3.1`, optional
 `OMXTERM_SSH_PACKAGED_APPEARANCE=1` adds normal/narrow dark/light opacity and
 visible/hidden language checks before the synthetic Connect campaign. It requires
 an assigned single-screen desktop lane, retains captures for visual inspection,
@@ -135,6 +141,9 @@ and does not establish native blur in a noncomposited nested lane. It cannot be
 combined with public-catalog mode. Exact-package appearance/language qualification
 is separate from public catalog consumption; neither a source build nor the
 historical compact 0.2.0 rendering campaign proves a new archive's Connect behavior.
+The explicit `0.24.0` / `0.3.1` pair also checks captured trust identity and the
+visible host header, named child region and controls, retaining separate host and
+child images for inspection. This does not qualify other compatible host versions.
 
 The public mode verifies a separate fixed-endpoint readback, then the unchanged
 packaged app independently browses the production endpoint and installs the SSH

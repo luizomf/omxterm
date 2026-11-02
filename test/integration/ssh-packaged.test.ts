@@ -14,10 +14,10 @@ import {
   writeFile,
 } from "node:fs/promises";
 import os from "node:os";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { promisify } from "node:util";
 import { it } from "vitest";
-import { valid } from "semver";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
 import {
@@ -26,6 +26,18 @@ import {
   parseCatalog,
 } from "../../src/main/extension-catalog.js";
 import { downloadExtension } from "../../src/main/extension-download.js";
+
+const { checkpointOptions } = createRequire(import.meta.url)(
+  "../fixtures/ssh-packaged-options.cjs",
+) as {
+  checkpointOptions(env: NodeJS.ProcessEnv): {
+    extensionVersion: string;
+    appearance: boolean;
+    catalogMode: "public" | undefined;
+    timeout: number;
+    scope: string;
+  };
+};
 
 const prefix = "OMXTERM_SSH_PACKAGED_";
 const names = [
@@ -65,53 +77,6 @@ const execute = promisify(execFile);
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 
-function publicCatalogMode() {
-  const mode = process.env.OMXTERM_SSH_PACKAGED_CATALOG;
-  const sha256 = process.env.OMXTERM_SSH_PACKAGED_CATALOG_SHA256;
-  assert.ok(mode === undefined || mode === "public");
-  if (mode) assert.match(sha256 ?? "", /^[a-f0-9]{64}$/);
-  else assert.equal(sha256, undefined);
-  return {
-    mode,
-    timeout: mode ? 180000 : 120000,
-    scope: mode
-      ? "unchanged extracted AppImage; public SSH catalog consumption; controlled input/consent; no SSH client execution"
-      : "unchanged extracted AppImage; separate SSH; synthetic client, no connectivity",
-  };
-}
-function checkpointOptions() {
-  const extensionVersion = process.env[prefix + "EXTENSION_VERSION"] ?? "0.1.0";
-  assert.equal(
-    valid(extensionVersion),
-    extensionVersion,
-    "canonical extension SemVer required",
-  );
-  const appearance = process.env[prefix + "APPEARANCE"];
-  assert.ok(
-    appearance === undefined || appearance === "1",
-    "APPEARANCE must be 1 or unset",
-  );
-  const { mode: catalogMode, timeout, scope } = publicCatalogMode();
-  if (appearance) {
-    assert.equal(
-      extensionVersion,
-      "0.3.0",
-      "appearance/language checkpoint targets SSH 0.3.0",
-    );
-    assert.equal(
-      catalogMode,
-      undefined,
-      "appearance checkpoint must continue the synthetic Connect campaign",
-    );
-  }
-  return {
-    extensionVersion,
-    appearance: !!appearance,
-    catalogMode,
-    timeout: appearance ? 240000 : timeout,
-    scope,
-  };
-}
 async function prepareAppearance(appearance: boolean, root: string) {
   if (appearance)
     await cp("docs/omtheme.json", path.join(root, "theme-template.json"));
@@ -298,7 +263,7 @@ it.skipIf(!enabled)(
       "Prepared guest needs a POSIX sh/bash account shell",
     );
     const { extensionVersion, appearance, catalogMode, timeout, scope } =
-      checkpointOptions();
+      checkpointOptions(process.env);
     const root = await mkdtemp(path.join(os.tmpdir(), "omxterm-ssh-packaged-"));
     const evidence = values.EVIDENCE;
     await mkdir(evidence, { recursive: true });
@@ -380,6 +345,10 @@ it.skipIf(!enabled)(
       await cp(
         "test/fixtures/ssh-packaged.cjs",
         path.join(root, "observer.cjs"),
+      );
+      await cp(
+        "test/fixtures/ssh-packaged-header.cjs",
+        path.join(root, "ssh-packaged-header.cjs"),
       );
       const env: NodeJS.ProcessEnv = {
         HOME: path.join(root, "home"),

@@ -86,7 +86,16 @@ it("combined Files readiness uses the archive manifest display name", async () =
     true,
   );
   expect(
-    ready({ querySelectorAll: () => [{ textContent: "Files · 0.5.0" }] }),
+    ready({
+      querySelectorAll: () => [{ textContent: `Files · ${manifest.version}` }],
+    }),
+  ).toBe(false);
+  expect(
+    ready({
+      querySelectorAll: () => [
+        { textContent: `${manifest.name} · ${manifest.version}-other` },
+      ],
+    }),
   ).toBe(false);
   expect(ready({ querySelectorAll: () => [] })).toBe(false);
 });

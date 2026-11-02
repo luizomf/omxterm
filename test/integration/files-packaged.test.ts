@@ -17,21 +17,20 @@ import { promisify } from "node:util";
 import { expect, it } from "vitest";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
+import {
+  assertLinuxFilesHost,
+  assertLinuxFilesScenario,
+  linuxFilesInputs,
+  prepareLinuxFiles,
+} from "../fixtures/files-packaged-linux-options.js";
 
 const execute = promisify(execFile);
-const appImage = process.env.OMXTERM_FILES_PACKAGED_APPIMAGE;
-const archive = process.env.OMXTERM_FILES_PACKAGED_ARCHIVE;
-const attachOnly = process.env.OMXTERM_FILES_PACKAGED_ATTACH_ONLY === "1";
-const terminalOnly = process.env.OMXTERM_FILES_PACKAGED_TERMINAL_ONLY === "1";
-const catalogMode = process.env.OMXTERM_FILES_PACKAGED_CATALOG;
-assert.ok(
-  !catalogMode || ["controlled", "public"].includes(catalogMode),
-  "Unknown catalog qualification mode",
-);
-assert.ok(
-  !catalogMode || (!attachOnly && !terminalOnly),
-  "Catalog mode requires the full lifecycle",
-);
+const inputs = linuxFilesInputs(process.env);
+const appImage = inputs?.appImage;
+const archive = inputs?.archive;
+const attachOnly = inputs?.attachOnly ?? false;
+const terminalOnly = inputs?.terminalOnly ?? false;
+const catalogMode = inputs?.catalogMode;
 const scope = catalogMode
   ? `Files-catalog-${catalogMode}`
   : attachOnly
@@ -39,10 +38,6 @@ const scope = catalogMode
     : terminalOnly
       ? "terminal-entry-only"
       : "Files-lifecycle";
-assert.ok(
-  !(attachOnly && terminalOnly),
-  "Choose only one diagnostic stopping point",
-);
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 async function prepareCatalog(root: string) {
@@ -121,7 +116,13 @@ async function closeObserver(
 async function observeScenario(
   client: Awaited<ReturnType<typeof inspector>>,
   observer: string,
-  options: Record<string, unknown>,
+  options: Record<string, unknown> & {
+    version: string;
+    archiveSha256: string;
+    extensionVersion: string;
+    extensionName: string;
+    linuxCurrentFilesUi: boolean;
+  },
   evidence: string,
 ) {
   const attached = await client.evaluate(
@@ -163,19 +164,12 @@ async function observeScenario(
       children: 0,
     });
   else
-    expect(result).toMatchObject({
-      approvals: 2,
-      checks: [
-        "exact-archive-trust-dormant-install",
-        "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
-        "panel-outside-tabs-hide-reveal-settings-terminal-switch-selected-visible-close",
-        "selected-visible-toggle-header-close-destroy-fresh-view-same-backend-PTY",
-        "legacy-captured-initial-directory",
-        "packaged-backend-create-move-conflict",
-        "explicit-reinstall-actual-retirement-dormant",
-        "fresh-activation-disable-uninstall",
-        "same-PTY-and-Surface",
-      ],
+    assertLinuxFilesScenario(result, {
+      version: options.version,
+      archiveSha256: options.archiveSha256,
+      extensionVersion: options.extensionVersion,
+      extensionName: options.extensionName,
+      currentUi: options.linuxCurrentFilesUi,
     });
 }
 
@@ -220,17 +214,21 @@ it.skipIf(
         appImage: { bytes: appBytes.length, sha256: digest(appBytes) },
         archive: { bytes: archiveBytes.length, sha256: digest(archiveBytes) },
       };
-      assert.equal(
-        identities.appImage.sha256,
-        process.env.OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256,
-      );
-      assert.equal(
-        identities.archive.sha256,
-        process.env.OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256,
-      );
+      assert.equal(identities.appImage.sha256, inputs!.appImageSha256);
+      assert.equal(identities.archive.sha256, inputs!.archiveSha256);
       await writeFile(
         path.join(evidence, "artifacts.json"),
-        JSON.stringify(identities, null, 2),
+        JSON.stringify(
+          {
+            ...identities,
+            expectedHostVersion: inputs!.version,
+            expectedExtensionVersion: inputs!.extensionVersion,
+            expectedExtensionName: inputs!.extensionName,
+            currentUi: inputs!.currentUi,
+          },
+          null,
+          2,
+        ),
       );
       await execute(path.resolve(appImage!), ["--appimage-extract"], {
         cwd: root,
@@ -239,6 +237,10 @@ it.skipIf(
       });
       const executable = path.join(root, "squashfs-root/omxterm");
       const asar = path.join(root, "squashfs-root/resources/app.asar");
+      const embedded: unknown = JSON.parse(
+        extractFile(asar, "package.json").toString("utf8"),
+      );
+      assertLinuxFilesHost(embedded, inputs!.version);
       const readonlyAsarHash = digest(await readFile(asar));
       for (const name of [
         "home",
@@ -270,8 +272,10 @@ it.skipIf(
       );
       const localArchive = path.join(root, "files.omxext");
       await writeFile(localArchive, archiveBytes);
-      await writeFile(path.join(root, "owned-files/source.txt"), "source");
-      await writeFile(path.join(root, "owned-files/conflict.txt"), "preserved");
+      await prepareLinuxFiles(
+        path.join(root, "owned-files"),
+        inputs!.currentUi,
+      );
       await cp(
         "test/fixtures/files-packaged.cjs",
         path.join(root, "observer.cjs"),
@@ -367,11 +371,11 @@ it.skipIf(
         executable,
         archive: localArchive,
         archiveSha256: identities.archive.sha256,
-        version: (
-          JSON.parse(extractFile(asar, "package.json").toString("utf8")) as {
-            version: string;
-          }
-        ).version,
+        version: inputs!.version,
+        extensionVersion: inputs!.extensionVersion,
+        extensionName: inputs!.extensionName,
+        linuxExpectedIdentity: true,
+        linuxCurrentFilesUi: inputs!.currentUi,
         files: path.join(root, "owned-files"),
         readiness,
         terminalOnly,

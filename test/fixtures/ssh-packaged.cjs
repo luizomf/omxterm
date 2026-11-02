@@ -326,6 +326,15 @@ async function catalogInstall(core, extensionTitle, label, saveImage) {
 }
 async function run(options) {
   inspect(options);
+  const {
+    usesChangedSshHeader,
+    assertChangedSshTrust,
+    captureSshHeader,
+  } = require("./ssh-packaged-header.cjs");
+  const changedHeader = usesChangedSshHeader(
+    options.version,
+    options.extensionVersion,
+  );
   const window = BrowserWindow.getAllWindows()[0];
   assert.ok(window);
   const core = window.webContents;
@@ -393,6 +402,7 @@ async function run(options) {
   dialog.showMessageBox = async (_owner, prompt) => {
     if (prompt.title === "Trust extension code?") {
       assert.ok(prompt.detail.includes(options.archiveSha256));
+      if (changedHeader) assertChangedSshTrust(prompt, options.archiveSha256);
       state.approvals++;
       return { response: 1, checkboxChecked: false };
     }
@@ -671,6 +681,34 @@ async function run(options) {
     true,
   );
   assert.ok(alive(ptys[0]), "opening panel preserves original PTY");
+  if (changedHeader) {
+    const evidence = await captureSshHeader(window, core, view);
+    fs.writeFileSync(
+      path.join(options.evidence, "ssh-header-host.png"),
+      evidence.hostImage.toPNG(),
+    );
+    fs.writeFileSync(
+      path.join(options.evidence, "ssh-header-child.png"),
+      evidence.childImage.toPNG(),
+    );
+    save("ssh-header.json", {
+      hostVersion: options.version,
+      extensionVersion: options.extensionVersion,
+      extensionId: "omxterm.ssh",
+      archiveSha256: options.archiveSha256,
+      host: evidence.host,
+      child: evidence.child,
+      native: evidence.native,
+      hostCrop: evidence.crop,
+      frameOpportunities: evidence.frameOpportunities,
+      viewId: view.id,
+      captures: ["ssh-header-host.png", "ssh-header-child.png"],
+      limitation:
+        "Host image is cropped to the header; child image is the isolated SSH view. Pixels require owner inspection; this is not desktop blur or transparency qualification.",
+    });
+    await panel(view, true, "child");
+    checks.push("exact-pair-SSH-host-header-child-region-controls");
+  }
   await closeSsh(() => menu("SSH Connect"));
   await view.executeJavaScript(
     "window.__sshDraft = document.querySelector('.quick-connect input'); window.__sshDraft.value = 'retained-unsaved';",

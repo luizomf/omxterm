@@ -172,9 +172,13 @@ historical release. Building source alone does not update the public catalog.
 Current source removes the Files page's redundant visible identity in favor of
 the host's panel header, while retaining a named child region. Published
 Files0.4.0/0.5.0 archives keep their original heading, including on a newer host.
-A local macOS0.24.0/Files0.6 exact-pair checkpoint passed; Linux qualification,
-publication and public-catalog consumption are separate. Never replace or
-republish existing versioned bytes.
+The local macOS and Linux ARM64 host0.24.0/Files0.6 exact-pair checkpoints
+passed with controlled consent and synthetic input. The original Files0.6 archive,
+checksum and receipt were separately published and byte-verified; the receipt
+remains `not-run`. Public-catalog consumption is a separate checkpoint, not a
+consequence of local pairing or asset publication. The hosted-view diagnostic
+in [#746](https://github.com/luizomf/omxterm/issues/746) remains unexplained.
+Never replace or republish existing versioned bytes.
 
 Files 0.4.0 retains compact shared controls and a read-only host appearance
 subscription. Its base surface reveals the parent window's theme tint; text,
@@ -741,11 +745,27 @@ For exact-package qualification, the separate opt-in
 `test/integration/files-packaged.test.ts` takes absolute
 `OMXTERM_FILES_PACKAGED_APPIMAGE` and `OMXTERM_FILES_PACKAGED_ARCHIVE` paths, plus
 `OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256` and `OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256`
-from the retained artifact receipts. Set `OMXTERM_FILES_PACKAGED_EVIDENCE` to a
-separate evidence directory. Run it alone on the assigned idle ordinary-user
-Linux ARM64 desktop. It extracts the exact AppImage, launches its unchanged
-executable/app.asar, and checks package identity and unchanged bytes; it does not
-qualify FUSE launch or Linux helper installation.
+from the retained artifact receipts. Set `OMXTERM_FILES_PACKAGED_VERSION` to the
+expected host version, `OMXTERM_FILES_PACKAGED_EXTENSION_VERSION` to the expected
+archive version, and `OMXTERM_FILES_PACKAGED_EXTENSION_NAME` to its exact display
+name. All three are required; neither version is inferred from the package under
+test. For the stable source pair, these values are `0.24.0`, `0.6.0`, and
+`Files — ARM64 preview`. Historical Linux Files0.4 uses the explicit name
+`Files — Linux ARM64 preview`. The fixture checks the extracted host metadata and
+running app against the expected host version. Before each Linux consent it checks
+the displayed Files ID, expected name/version and selected archive SHA-256.
+
+Set `OMXTERM_FILES_PACKAGED_EVIDENCE` to a separate evidence directory. Run the
+fixture alone on the assigned idle ordinary-user Linux ARM64 desktop. It extracts
+the exact AppImage, launches its unchanged executable/app.asar, and checks package
+identity and unchanged bytes; it does not qualify FUSE launch or Linux helper
+installation. For the exact `0.24.0` / Files `0.6.0` full lifecycle, it creates
+an owned synthetic dotfile and requires the existing host-header, child-region,
+toolbar, dotfile and address-draft checks in the scenario receipt. It also sends
+fixture-controlled DOM `Ctrl+H` gestures to the focused child tree, checking both
+visibility transitions, retained address draft/caret and native child focus. This
+is not physical-keyboard or native shortcut-routing qualification. Attachment and
+terminal-only diagnostics do not run or qualify these Files UI checks.
 
 This fixture attaches only to a randomly assigned loopback main-inspector port
 to observe backend retirement and supply native-dialog responses. The observer is
