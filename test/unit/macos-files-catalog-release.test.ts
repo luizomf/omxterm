@@ -19,6 +19,8 @@ vi.mock("../../src/main/extension-download", async (original) => ({
 let files: CatalogRelease;
 let catalogBytes: Buffer;
 beforeAll(async () => {
+  // Snapshot from cfc9073, before the later Windows Snippets promotion. The
+  // current complete catalogs are checked separately by the 0.24 release tests.
   catalogBytes = await readFile("test/fixtures/catalog-files-0.5-macos.json");
   files = parseCatalog(catalogBytes)[0]!;
 });

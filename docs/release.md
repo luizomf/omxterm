@@ -253,9 +253,10 @@ Files publication and anonymous verification preceded host publication. The
 separate six-check public Settings-link checkpoint and read-only audit passed.
 See [actual evidence and capture limits](files-development-preview.md#macos-link-first-distribution).
 Later development metadata does not rebuild or relabel that dev.21 host.
-Keep the complete v1 catalog unchanged: Linux0.4/dev.11, SSH and Snippets retain
-their current offers. Its strict one-release-per-ID schema cannot offer distinct
-Linux0.4 and macOS0.5 releases; duplicate IDs or schema changes break old clients.
+At that link-first checkpoint, the complete v1 catalog remained unchanged:
+Linux0.4/dev.11, SSH and Snippets retained their then-current offers. Its strict
+one-release-per-ID schema cannot offer distinct Linux0.4 and macOS0.5 releases;
+duplicate IDs or schema changes break old clients.
 
 The completed sequence below records the separate publication boundaries; it is
 not an instruction to recreate sealed releases or replay executed fixtures.
@@ -346,14 +347,15 @@ See [catalog semantics](extension-distribution.md) and the
 The prepared catalogs bind the separately built Files0.6.0 and SSH0.3.1 archive
 trios to their original receipts and immutable versioned URLs; see
 [distribution](extension-distribution.md#files06-and-ssh031-candidate). They are
-not bundled into the stable host. Verify the exact intended host/archive pairs,
-publish and anonymously verify all three original assets for each extension,
-then integrate the catalog candidate. Merge with concurrent Snippets promotion:
-keep its newest supported targets and identical SSH/Snippets entries in both
-complete endpoints. Read back both endpoints, then separately exercise actual
-public HTTPS consumption on each newly promoted target. Do not infer that result
-from local qualification or asset upload. Preserve historical release bytes and
-receipts. Files0.6 replaces the Linux0.4 catalog offer; dev.11–dev.20 users retain
+not bundled into the stable host. The selected local host/archive pair checks
+passed, and the original three assets for each extension were published and
+anonymously byte-verified; the original receipts remain `not-run`. Do not replay
+publication or replace those assets. Integrate the reviewed candidate while
+preserving newer Snippets targets and identical SSH/Snippets entries in both
+complete endpoints, then read back both endpoints. Actual public HTTPS consumption
+on each newly promoted target is a separate checkpoint requiring ROOT's explicit
+authorization after endpoint verification. Do not infer it from local qualification
+or asset readback. Preserve historical release bytes and receipts. Files0.6 replaces the Linux0.4 catalog offer; dev.11–dev.20 users retain
 the older archive by explicit local/link installation or can upgrade the host.
 
 ### Historical Files 0.4.0 promotion

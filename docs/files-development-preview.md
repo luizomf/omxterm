@@ -144,8 +144,9 @@ Synthetic Chromium input, controlled native consent and WebContents captures do
 not qualify physical input, Finder/Gatekeeper/notarization, macOS12, blocked
 native-I/O cancellation or surviving-browser main-death exclusion.
 
-The legacy v1 catalog stays unchanged, preserving Linux0.4/dev.11 and
-SSH/Snippets. Its one-release-per-ID format cannot independently select Linux0.4
+At that link-first checkpoint the legacy v1 catalog remained unchanged, preserving
+Linux0.4/dev.11 and the then-current SSH/Snippets offers. Its one-release-per-ID
+format cannot independently select Linux0.4
 and macOS0.5 within the same document. On host dev.21, macOS users can paste the
 [Files0.5 archive URL](https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext)
 into Settings → Extensions → **HTTPS archive link**, choose **Install from link**

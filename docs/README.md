@@ -22,10 +22,11 @@ Optional Linux ARM64 development extensions: [Files](files-development-preview.m
 [Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md).
 They are separately installed, not bundled
 features or a stable extension SDK. The [published Snippets previews](installation.md#optional-snippets-preview)
-pair Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16 or Linux x64
-host 0.24.0-dev.30 with Snippets 0.1.0. All three pairs offer Snippets through the
-official catalog and passed separate bounded public-HTTPS checkpoints; local
-archive installation remains available. Stable 0.23.0 and published Windows hosts
+pair Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16, Linux x64
+host 0.24.0-dev.30 or Windows ARM64 host 0.24.0-dev.36 with Snippets 0.1.0.
+The Linux/macOS pairs passed separate bounded public-HTTPS checkpoints; Windows
+public consumption remains separate from its published preview. Local archive
+installation remains available. Stable 0.23.0, earlier Windows hosts and Windows x64
 retain built-in Snippets.
 Follow each guide's exact host/package pairing rather than assuming all
 preview packages share qualification. The earlier
@@ -44,8 +45,9 @@ passed, followed by a bounded [packaged-GUI composition checkpoint](windows-arm6
 on that exact retained package. A separate [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
 passed for a new installer built from an independent copy. Those built-in-Snippets
 artifacts do not qualify the later transition's exact package or public consumption.
-The [subsequent default suite failed](snippets-migration.md#default-baseline-and-fixture-follow-up);
-a full portable pass is not established.
+An [earlier default suite failed](snippets-migration.md#default-baseline-and-fixture-follow-up);
+the later dev.36 exact-stage checkpoint passed a separate full portable run. It
+does not turn the earlier failure into a pass or establish public consumption.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

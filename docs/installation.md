@@ -18,8 +18,10 @@ previews, not a stable SDK or Files support for Linux x64.
 
 The separate release provides `omxterm-files-language-b6044d6.omxext`, its checksum
 and original build receipt. Verify the checksum and use **Install local .omxext…**
-or **Install from link** if not browsing the catalog. Exact-pair controlled
-installation/operations/management/Quit qualification passed, followed by a
+or **Install from link** for dev.11–dev.20 after Files0.6 promotion: the catalog's
+single Files entry no longer offers a compatible version to these hosts. Upgrading
+the host is another option when a compatible release is available. Exact-pair
+controlled installation/operations/management/Quit qualification passed, followed by a
 separate actual public-HTTPS consumption checkpoint on the same pair. See
 [the checkpoint and its limits](files-development-preview.md#public-files-040-checkpoint);
 publication and checksum readback alone are not native qualification.

@@ -1780,10 +1780,10 @@ for Linux and macOS ARM64 and SSH0.3.1 for Linux ARM64; publication and actual
 public-consumption qualification remain separate. The earlier catalog promotion
 added `linux-x64` to Snippets; public endpoint readback and the separate packaged public-HTTPS checkpoint passed
 for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).
-The common Snippets candidate additionally admits `win32-arm64` for the public
-Windows dev.36 host without changing archive identity, manifest ranges or any
-Files/SSH entry in either complete endpoint. Public byte readback passed; the new
-installed public-catalog fixture has headless controls, not a native PASS.
+The earlier common Snippets promotion admitted `win32-arm64` for the public
+Windows dev.36 host without changing archive identity, manifest ranges or the
+then-current Files/SSH entries. Public byte readback passed; the installed
+public-catalog fixture has headless controls, not a native PASS.
 There is no merge or endpoint fallback.
 The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;

@@ -107,12 +107,12 @@ These are not release gates for the build-only lanes.
 
 ### Optional Snippets previews
 
-[Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16 and Linux x64 host 0.24.0-dev.30](docs/installation.md#optional-snippets-preview)
-use the separate Snippets 0.1.0 archive. These are non-Latest prereleases requiring
-deliberate Snippets installation; existing catalogs stay intact. All three previews
-offer Snippets through the official catalog or a local archive, with separate bounded
-public-HTTPS checkpoints on the exact host/archive pairs. Stable **0.23.0** and
-published Windows hosts retain built-in Snippets.
+[Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16, Linux x64 host 0.24.0-dev.30 and Windows ARM64 host 0.24.0-dev.36](docs/installation.md#optional-snippets-preview)
+use the separate Snippets 0.1.0 archive. These non-Latest prereleases require
+deliberate installation; existing catalogs stay intact. Separate bounded
+public-HTTPS checkpoints passed for the three Linux/macOS pairs. Windows public
+consumption is separate from its published preview and catalog source. Stable
+**0.23.0**, earlier Windows hosts and Windows x64 retain built-in Snippets.
 Follow the [migration guide](docs/snippets-migration.md) for exact pairings and
 qualification limits.
 

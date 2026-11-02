@@ -86,11 +86,12 @@ SHA-256 `be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`,
 and source `8717d47327eeab14f522b1b2a448216860d0923d`. Original build receipts
 remain `not-run`; qualification evidence is separate.
 
-These source entries are a publication candidate, not proof that either archive
-is public or that every advertised pair has been qualified. Publish and anonymously
-verify each archive, checksum and original receipt before integrating the catalog;
-then read back both endpoints and run the separately scoped public-consumption
-checks. Preserve newer supported Snippets targets when reconciling concurrent
+These source entries are a catalog candidate, not proof that every advertised
+pair has been qualified. The original archive, checksum and receipt for each
+extension were separately published and anonymously byte-verified; their receipts
+remain `not-run`. After integrating the catalog, read back both endpoints. Actual
+public-HTTPS consumption is separate and requires ROOT's authorization after
+endpoint verification. Preserve newer supported Snippets targets when reconciling concurrent
 promotions. Schema1 has one release per ID: promoting Files0.6 removes a compatible
 catalog offer for Linux dev.11–dev.20. Those users can upgrade their host or install
 the unchanged Files0.4 archive locally or by its direct HTTPS link. Files0.1 does
@@ -161,10 +162,9 @@ legacy endpoint listed above; its public readback and a separate bounded package
 public-HTTPS checkpoint passed. See the [Linux x64 checkpoint](snippets-migration.md#linux-x64-public-catalog-checkpoint)
 for the exact pair and limits.
 
-The common Snippets candidate also adds `win32-arm64` for the immutable public
-Windows ARM64 dev.36 host. Both complete catalogs retain every other entry and
-the same Snippets archive, source, engine ranges and URLs. That exact host passed
+The earlier common Snippets promotion added `win32-arm64` for the immutable public
+Windows ARM64 dev.36 host. At that checkpoint both complete catalogs retained
+every other entry and the same Snippets archive, source, engine ranges and URLs. That exact host passed
 the staged ten-check scenario plus separate FULL NSIS; anonymous public host and
-archive byte readback passed. ROOT-owned promotion/readback and the new installed
-public-HTTPS checkpoint remain pending at this revision; source/headless tests
-are not that result. See the [Windows boundary and local installation](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).
+archive byte readback passed. The installed public-HTTPS checkpoint remains
+separate from catalog integration; source/headless tests are not that result. See the [Windows boundary and local installation](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).

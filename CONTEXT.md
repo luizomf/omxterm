@@ -302,9 +302,10 @@ not a sandbox or independently signed publisher assertion.
 **Official Catalog** — A bounded project-controlled HTTPS release index loaded
 only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
 and manifest identity must match before ordinary one-shot trust. Its in-memory
-last-successful snapshot may be stale. Current hosts select one complete schema1
-endpoint by target: macOS ARM64 offers Files0.5, while the unchanged legacy
-endpoint preserves Linux Files0.4. Common SSH/Snippets entries match; no merging
+last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
+by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
+endpoint offered Linux Files0.4; the prepared candidate selects Files0.6 for each
+ARM64 target and SSH0.3.1 for Linux. Common SSH/Snippets entries match; no merging
 or fallback occurs. It is not a marketplace or update daemon.
 
 **Third-party Extension** — An Extension maintained by its author rather than

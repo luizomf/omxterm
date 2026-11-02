@@ -63,10 +63,11 @@ prerequisites. The published Linux ARM64 OMXTerm `0.24.0-dev.11`, macOS ARM64
 OMXTerm `0.24.0-dev.16` and Linux x64 OMXTerm `0.24.0-dev.30` previews use the
 optional installed Snippets `0.1.0` companion. Separate bounded public-HTTPS
 catalog checkpoints passed on all three host/archive pairs; the [migration guide](../snippets-migration.md)
-records installation, qualification evidence and limits. Windows ARM64 source
-selects optional Snippets and has passed its bounded ordinary source checkpoint;
-full portable, exact-package and public-consumption qualification remain separate.
-Published Windows hosts and Windows x64 retain the built-in view. #741 remains open.
+records installation, qualification evidence and limits. The published Windows
+ARM64 dev.36 preview also selects optional Snippets; its exact-stage full portable
+run and separate FULL NSIS check passed. Installed public consumption remains a
+separate checkpoint. Older Windows hosts and Windows x64 retain the built-in view;
+#741 remains open.
 
 ## Related boundaries
 
