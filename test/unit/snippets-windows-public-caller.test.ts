@@ -6,6 +6,11 @@ import os from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
 import { expect, it } from "vitest";
+import {
+  controlledDelivery,
+  controlledProbe,
+  controlledReadiness,
+} from "../fixtures/snippets-windows-controlled-probe";
 
 const require = createRequire(import.meta.url);
 const digest =
@@ -81,13 +86,12 @@ function controlledSession() {
   const session = {
     pid: 1,
     exited: false,
-    output: "\u001b[?2004lSNIPPETS_SHELL_READY\r\n",
+    output: "",
     outputTruncated: false,
     outputLimitCodeUnits: 65536,
     writes: [] as string[],
     cprTrace: trace,
   };
-  trace.output(session.output);
   return {
     session,
     recordWrite(text: string) {
@@ -122,6 +126,7 @@ async function exercise(
   );
   await writeFile(path.join(root, "config/omxterm/snippets.yaml"), yaml);
   const { session, recordWrite, output } = controlledSession();
+  const { probe, write, attach } = controlledDelivery(recordWrite);
   const children: Array<{
     pid: number;
     closed: boolean;
@@ -161,12 +166,12 @@ async function exercise(
       if (code.includes("li:last-child .snippet-activate")) {
         actions.push("run");
         coreFocus = true;
-        recordWrite("SNIPPETS_RUN\r");
-        if (fault === "extra-byte") recordWrite("x");
-        output(
-          "SNIPPETS_RUN_RECEIPT\r\n" +
-            (fault === "duplicate-receipt" ? "SNIPPETS_RUN_RECEIPT\r\n" : ""),
-        );
+        write("SNIPPETS_RUN\r");
+        if (fault === "extra-byte") write("x");
+        // Simulated duplicate delivery after the observer boundary, not a
+        // fabricated receipt or a claim about native ConPTY behavior.
+        if (fault === "duplicate-receipt")
+          probe.feed(Buffer.from("SNIPPETS_RUN\r"));
         return;
       }
       throw Error(`unexpected child expression ${code}`);
@@ -182,13 +187,10 @@ async function exercise(
     isFocused: () => coreFocus,
     async insertText(text: string) {
       actions.push("ping");
-      recordWrite(text);
+      write(text);
     },
     sendInputEvent(event: { type: string }) {
-      if (event.type === "keyDown") {
-        recordWrite("\r");
-        output("SNIPPETS_AFTER_RETIREMENT\r\n");
-      }
+      if (event.type === "keyDown") write("\r");
     },
     // eslint-disable-next-line complexity -- Controlled WebContents boundary covers the scenario's fixed expressions.
     async executeJavaScript(code: string) {
@@ -286,6 +288,9 @@ async function exercise(
       throw Error(`unexpected core expression ${code}`);
     },
   };
+  const readiness = controlledReadiness(core, session, output);
+  attach(readiness.deliver);
+  const readinessBeforeAck = readiness.beforeAck;
   const window = {
     webContents: core,
     contentView: { children: [native] },
@@ -372,12 +377,15 @@ async function exercise(
             identity: `backend${child.pid}`,
           })),
       ],
-      windowsProbeReady: () => true,
+      windowsProbeReady: readiness.ready,
     });
     return {
       result,
       actions,
       session,
+      readinessBeforeAck,
+      childInput: Buffer.concat(probe.chunks),
+      probeExit: probe.exited,
       evidence: JSON.parse(
         await readFile(path.join(root, "pty-writes.json"), "utf8"),
       ) as {
@@ -395,14 +403,87 @@ async function exercise(
       ),
     };
   } finally {
+    readiness.dispose();
     deferred?.dispose();
     await rm(root, { recursive: true, force: true });
   }
 }
 
+it("accepts public Run then Ping without Insert and the ordinary full byte sequence", () => {
+  for (const [input, expected] of [
+    [
+      "SNIPPETS_RUN\rSNIPPETS_PING\r",
+      "SNIPPETS_RUN_RECEIPT\nSNIPPETS_AFTER_RETIREMENT\n",
+    ],
+    [
+      "  SNIPPETS_INSERT  \rSNIPPETS_RUN\r\rSNIPPETS_RUN\u0003  SNIPPETS_INSERT  \rSNIPPETS_PING\r",
+      "SNIPPETS_INSERT_RECEIPT\nSNIPPETS_RUN_RECEIPT\nSNIPPETS_DRAFT_CLEARED\nSNIPPETS_INSERT_RECEIPT\nSNIPPETS_AFTER_RETIREMENT\n",
+    ],
+  ] as const) {
+    let output = "";
+    const probe = controlledProbe((chunk) => (output += chunk));
+    const bytes = Buffer.from(input);
+    for (let i = 0; i < bytes.length; i += 3)
+      probe.feed(bytes.subarray(i, i + 3));
+    expect(Buffer.concat(probe.chunks)).toEqual(bytes);
+    expect(probe.exited).toBeUndefined();
+    expect(probe.error).toBe("");
+    expect(output).toBe(
+      "\u001b[?1004l\u001b[?2004lSNIPPETS_SHELL_READY\n" + expected,
+    );
+  }
+});
+
+it.each([
+  [
+    "unknown terminated line",
+    Buffer.from("unknown\r"),
+    "Unexpected controlled probe input",
+  ],
+  [
+    "overflow",
+    Buffer.alloc(4097, 0x78),
+    "Controlled probe input exceeded bound",
+  ],
+])("rejects %s at the actual child stdin", (_name, input, error) => {
+  let output = "";
+  const probe = controlledProbe((chunk) => (output += chunk));
+  probe.feed(input);
+  expect(probe.exited).toBe(1);
+  expect(probe.error).toContain(error);
+  expect(output).not.toContain("SNIPPETS_RUN_RECEIPT");
+});
+
+it("distinguishes an observed focus write from hypothetical child stdin delivery", () => {
+  const { session, recordWrite, output } = controlledSession();
+  let childOutput = "";
+  const probe = controlledProbe((chunk) => (childOutput += chunk));
+  output("\u001b[?2004lSNIPPETS_SHELL_READY\r\n");
+  recordWrite("\u001b[I");
+  recordWrite("SNIPPETS_RUN\r");
+  // This is one hypothetical identity transformation, not a native capture.
+  probe.feed(Buffer.from(session.writes.join("")));
+  expect(session.writes).toEqual(["\u001b[I", "SNIPPETS_RUN\r"]);
+  expect(Buffer.concat(probe.chunks)).toEqual(
+    Buffer.from("\u001b[ISNIPPETS_RUN\r"),
+  );
+  expect(probe.exited).toBe(1);
+  expect(probe.error).toContain("Unexpected controlled probe input");
+  expect(childOutput).not.toContain("SNIPPETS_RUN_RECEIPT");
+});
+
 it("drives public acquisition, two dormant epochs, retirement and same-session Ping before Quit", async () => {
-  const { result, actions, session, yaml, evidence, capturedCatalog } =
-    await exercise();
+  const {
+    result,
+    actions,
+    session,
+    readinessBeforeAck,
+    childInput,
+    probeExit,
+    yaml,
+    evidence,
+    capturedCatalog,
+  } = await exercise();
   expect(result.checks).toEqual([
     "public-catalog-install-official-trust-dormant",
     "explicit-toggle-exact-run-child-receipt",
@@ -428,6 +509,10 @@ it("drives public acquisition, two dormant epochs, retirement and same-session P
     "ping",
   ]);
   expect(session.writes.join("")).toBe("SNIPPETS_RUN\rSNIPPETS_PING\r");
+  expect(readinessBeforeAck.length).toBeGreaterThan(1);
+  expect(readinessBeforeAck.every((ready) => !ready)).toBe(true);
+  expect(childInput).toEqual(Buffer.from("SNIPPETS_RUN\rSNIPPETS_PING\r"));
+  expect(probeExit).toBeUndefined();
   expect(evidence.writes).toEqual(["SNIPPETS_RUN\r", "SNIPPETS_PING", "\r"]);
   expect(evidence.childOutput.text).toContain("SNIPPETS_AFTER_RETIREMENT\r\n");
   expect(evidence.cprTrace).toMatchObject({ incomplete: false, writeEnd: 3 });
