@@ -322,6 +322,15 @@ export const brazilianPortugueseMessages: Readonly<
     "Abra pelo menos dois painéis ativos na mesma aba e abra Espelhar digitação.",
   "extensions.noActiveTerminalDirectory":
     "Nenhum diretório local foi informado pelo terminal ativo. Ele pode ser remoto ou não informar seu diretório. Use Pasta pessoal ou digite um caminho",
+  "extensions.activeTerminalChanged":
+    "O terminal ativo mudou ou não pôde ser confirmado. Tente novamente",
+  "extensions.reportedDirectoryTitle": "Diretório do terminal não verificado",
+  "extensions.reportedDirectoryMessage": "Abrir este caminho como pasta local?",
+  "extensions.reportedDirectoryDetail":
+    "Último caminho informado: {path}\n\nEste caminho pode estar desatualizado ou vir de uma sessão remota. O OMXTerm não consegue verificar o diretório atual do terminal. O Files navega apenas neste computador.",
+  "extensions.reportedDirectoryOpen": "Abrir pasta local",
+  "extensions.reportedDirectoryCancelled":
+    "A abertura da pasta sugerida foi cancelada",
   "extensions.unavailable": "Extensão indisponível",
   "extensions.unavailableDetail":
     "Atualize Extensões nas Configurações para consultar a instalação. Nenhuma operação foi repetida automaticamente.",

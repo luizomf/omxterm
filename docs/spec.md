@@ -611,18 +611,22 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   hosted tabs suspend the panel and restore its selected view on terminal return.
   Panel tools are window-owned, independently of the opening terminal's lifetime;
   backend/window loss and disable/update/uninstall still retire their views.
-  In current host source, Files initially opens Home; its explicit **Use terminal
-  directory** request captures the selected live pane's latest local OSC7 report
-  at action time. No report, a known SSH Connect pane or an incomplete, remote or
-  invalid report produces an explanation without changing the browsing location.
+  In current source, Files initially opens Home; its explicit reported-directory
+  action captures the selected live pane's latest local OSC7 report at action
+  time. Main asks the core renderer to confirm the captured session and selection
+  revision, rejecting reordered or changed selection rather than retargeting.
+  No report, a known SSH Connect pane or an incomplete recognized OSC7, remote
+  or invalid report produces an explanation without changing the browsing location.
   Only the visible Files panel in its focused window can make this request; main
   chooses the window and pane, never a caller-supplied target. It is not continuous
   following and does not retarget an already-started request or filesystem
   operation. Other extension invocation contexts stay captured at invocation.
   OSC7 is not authenticated or current-process inspection: an arbitrary program
   can report it, ordinary shell-launched SSH may be indistinguishable and reports
-  may be stale when the shell stops reporting. Compatible installed Files archives
-  use the host change without modified package bytes.
+  may be stale. A host-owned default-Cancel confirmation displays the fixed path,
+  explains those limits and asks before opening it locally. Compatible installed
+  Files archives use the host behavior without modified package bytes; the renamed
+  action and dynamically localized host-coded notices require a future archive.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
   core while the panel remains visible; a background result does not steal focus.

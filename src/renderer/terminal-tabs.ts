@@ -142,6 +142,7 @@ export interface TerminalTabs {
   // The selected live terminal, captured for one snippet action.
   captureSnippetTarget(): SnippetTarget | undefined;
   selectionRevision(): number;
+  selectedSessionId(): TerminalSessionId | undefined;
   captureActionTarget(): { isCurrent(): boolean };
   toggleTabBar(): void;
   focusSelected(): void;
@@ -460,6 +461,10 @@ export function createTerminalTabs(
     injectText: (text) => void interactivePane()?.surface?.inject(text),
     captureSnippetTarget: () => snippetTarget(interactivePane()),
     selectionRevision: () => actionGeneration,
+    selectedSessionId: () => {
+      const pane = interactivePane();
+      return pane && !pane.ended ? pane.adapter.sessionId() : undefined;
+    },
     captureActionTarget: () =>
       captureActionTarget(
         selectedApplicationTab,

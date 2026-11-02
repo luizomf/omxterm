@@ -1,5 +1,5 @@
 import { isSemanticInputRequest } from "../shared/semantic-input";
-import { BrowserWindow, ipcMain } from "electron";
+import { ipcMain, type BrowserWindow } from "electron";
 import type { HostedContentDescriptor } from "../shared/extension-view";
 import path from "node:path";
 import { PackageError } from "../installed-packages/installed-packages";
@@ -11,7 +11,7 @@ import type {
 import type { ApplicationExtensionsOptions } from "./application-extensions";
 import { extensionResourceOwner } from "./extension-view-reader";
 import { startExtensionViewHost } from "./extension-view-ipc";
-import type { ExtensionViewRequestContext } from "./extension-view-host";
+import { createFilesTerminalDirectory } from "./files-terminal-directory";
 
 /** Own-view capability dispatch; ordinary extension data goes to its backend. */
 export function applicationViews(
@@ -27,36 +27,18 @@ export function applicationViews(
   currentTarget: (window: BrowserWindow) => ExtensionTarget | undefined,
 ) {
   const window = target.owner as BrowserWindow;
-  function terminalDirectoryRequest(
-    value: Record<string, Value>,
-    context: ExtensionViewRequestContext,
-  ): Promise<Value> {
-    const filesPanel =
-      target.presentation === "panel" && pin.manifest.id === "omxterm.files";
-    if (
-      filesPanel &&
-      (Object.keys(value).length !== 1 ||
-        !context.isCurrentVisible() ||
-        BrowserWindow.getFocusedWindow() !== window)
-    )
-      return Promise.reject(new PackageError("unavailable"));
-    const active = filesPanel ? currentTarget(window) : undefined;
-    const directory = filesPanel
-      ? active && !active.signal.aborted
-        ? active.terminalDirectory
-        : null
-      : target.terminalDirectory;
-    return Promise.resolve(
-      directory
-        ? { ok: true, directory }
-        : {
-            ok: false,
-            error: filesPanel
-              ? options.translator().t("extensions.noActiveTerminalDirectory")
-              : "No local terminal directory was reported at invocation. Use Home or enter a path.",
-          },
-    );
-  }
+  const filesDirectory =
+    target.presentation === "panel" && pin.manifest.id === "omxterm.files"
+      ? createFilesTerminalDirectory({
+          window,
+          currentTarget: () => currentTarget(window),
+          translator: options.translator,
+          semanticInput: options.semanticInput,
+          ownerSignal: target.signal,
+          epochSignal,
+          admit,
+        })
+      : undefined;
   const view = pin.manifest.view!;
   const viewOwner = {};
   if (target.mirrorContext)
@@ -88,7 +70,17 @@ export function applicationViews(
         if (value.operation === "terminal.semanticInput.v1")
           return semanticRequest(value, signal, context);
         if (value.operation === "terminal-directory")
-          return terminalDirectoryRequest(value, context);
+          return filesDirectory
+            ? filesDirectory(value, context, signal)
+            : Promise.resolve(
+                target.terminalDirectory
+                  ? { ok: true, directory: target.terminalDirectory }
+                  : {
+                      ok: false,
+                      error:
+                        "No local terminal directory was reported at invocation. Use Home or enter a path.",
+                    },
+              );
         if (
           value.operation === "host.capabilities" &&
           Object.keys(value).length === 1

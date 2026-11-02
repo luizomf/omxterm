@@ -15,7 +15,11 @@ import { filesMessages, type FilesMessages } from "./messages.js";
 import { createFilesToolbar } from "./toolbar.js";
 
 type Label = (messages: FilesMessages) => string;
-type Reply = FilesTreeReply & { path?: string; token?: string };
+type Reply = FilesTreeReply & {
+  path?: string;
+  token?: string;
+  reason?: string;
+};
 type Target = { path: string; kind: string };
 type Action = {
   label: Label;
@@ -122,13 +126,17 @@ export function mountFilesPage(
     }
   }
   function report(reply: Reply) {
-    message(
-      (m) =>
-        reply.error === "outcome-unknown"
-          ? m.unknown
-          : m.failed(reply.error ?? "failed"),
-      "error",
-    );
+    message((m) => {
+      if (reply.reason === "terminal-directory-unavailable")
+        return m.terminalDirectoryUnavailable;
+      if (reply.reason === "terminal-directory-changed")
+        return m.terminalDirectoryChanged;
+      if (reply.reason === "terminal-directory-cancelled")
+        return m.terminalDirectoryCancelled;
+      return reply.error === "outcome-unknown"
+        ? m.unknown
+        : m.failed(reply.error ?? "failed");
+    }, "error");
   }
   function button(
     text: Label,

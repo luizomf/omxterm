@@ -14,6 +14,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
 import type {
   BrowserWindow,
+  MessageBoxOptions,
   OpenDialogOptions,
   OpenDialogReturnValue,
 } from "electron";
@@ -44,6 +45,11 @@ import { startApplicationExtensions } from "../../src/main/application-extension
 import type { ExtensionRuntime } from "../../src/extension-runtime/runtime";
 import { createTerminalContextMenuTarget } from "../../src/main/terminal-context-menu";
 import { extensionInvocationTarget } from "../../src/main/extension-invocation-target";
+import { registerSemanticInputIpc } from "../../src/main/semantic-input-ipc";
+import { subscribeNativeSemanticInput } from "../../src/renderer/native-semantic-input";
+import { createSemanticInputBridge } from "../../src/preload/semantic-input-bridge";
+import { semanticInputIpc } from "../../src/shared/semantic-input";
+import { createIpcHarness } from "../fixtures/terminal-ipc-harness";
 const adapters = vi.hoisted(() => ({
   root: "",
   selected: undefined as unknown,
@@ -60,7 +66,7 @@ const adapters = vi.hoisted(() => ({
     vi.fn<
       (
         _window: unknown,
-        options: { detail?: string },
+        options: MessageBoxOptions,
       ) => Promise<{ response: number }>
     >(),
   download: vi.fn<(url: string, signal: AbortSignal) => Promise<Buffer>>(),
@@ -75,6 +81,12 @@ const adapters = vi.hoisted(() => ({
       NonNullable<
         Parameters<typeof startApplicationExtensions>[0]["semanticInput"]
       >["request"]
+    >(),
+  semanticConfirm:
+    vi.fn<
+      NonNullable<
+        Parameters<typeof startApplicationExtensions>[0]["semanticInput"]
+      >["confirmSelection"]
     >(),
   retire: vi.fn(),
   hosts: [] as Host[],
@@ -228,6 +240,7 @@ beforeEach(async () => {
   adapters.download.mockResolvedValue(bytes());
   adapters.retire.mockResolvedValue(null);
   adapters.consent.mockResolvedValue({ response: 1 });
+  adapters.semanticConfirm.mockResolvedValue(true);
   const contents = Object.assign(new EventEmitter(), {
     mainFrame: {},
     send: vi.fn(),
@@ -265,7 +278,10 @@ async function startService(platform: string) {
     starting = startApplicationExtensions({
       applicationRoot: adapters.root,
       ssh: { open: adapters.sshOpen },
-      semanticInput: { request: adapters.semanticRequest },
+      semanticInput: {
+        request: adapters.semanticRequest,
+        confirmSelection: adapters.semanticConfirm,
+      },
       layout: {
         capture: vi.fn(() => Promise.reject(new Error("unavailable"))),
         open: vi.fn(async () => ({ ok: false, error: "unavailable" })),
@@ -285,6 +301,7 @@ async function startService(platform: string) {
     owner: window,
     signal: new AbortController().signal,
     terminalDirectory: "/captured",
+    sourceSessionId: "s1",
   }));
 }
 afterEach(async () => {
@@ -408,6 +425,7 @@ it.each([
       owner: window,
       signal: new AbortController().signal,
       terminalDirectory: directory,
+      sourceSessionId: "s1",
     }));
     const [action] = service.actions();
     expect(action).toMatchObject({
@@ -493,6 +511,168 @@ it("uses the active pane's last reported directory when a retained Files view re
   ).toEqual({ ok: true, directory: "/second-later" });
 });
 
+it("refuses reordered core selection and child requests rather than using the prior pane", async () => {
+  await installTool("omxterm.files", "Files");
+  const targets = extensionInvocationTarget(window);
+  targets.started("s1");
+  targets.started("s2");
+  targets.selected("s1");
+  service.registerWindow(window, (source, context) =>
+    targets.capture(
+      (id) => (id === "s1" ? "/first" : "/second"),
+      source,
+      context,
+    ),
+  );
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  const ipc = createIpcHarness();
+  const native = registerSemanticInputIpc({
+    ipc: ipc.ipcMain,
+    trusted: (event) => event.sender === window.webContents,
+    quitting: () => false,
+  });
+  native.register(window);
+  const event = {
+    sender: window.webContents,
+    senderFrame: window.webContents.mainFrame,
+  };
+  const handlers = new Map<string, (event: unknown, value: unknown) => void>();
+  const bridge = createSemanticInputBridge({
+    send(channel, value) {
+      ipc.listeners.get(channel)!(event, value);
+    },
+    on(channel, listener) {
+      handlers.set(channel, listener);
+    },
+    removeListener(channel) {
+      handlers.delete(channel);
+    },
+  });
+  let rendererSession = "s2";
+  let rendererRevision = 2;
+  const unsubscribe = subscribeNativeSemanticInput(
+    bridge,
+    {} as Parameters<typeof subscribeNativeSemanticInput>[1],
+    () => rendererRevision,
+    () => false,
+    () => rendererSession,
+  );
+  vi.mocked(window.webContents.send).mockImplementation((channel, value) => {
+    handlers.get(channel)?.({}, value);
+  });
+  adapters.semanticConfirm.mockImplementation(native.confirmSelection);
+  const requestDirectory = () =>
+    adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    );
+  try {
+    bridge.selection(1);
+    await expect(requestDirectory()).resolves.toMatchObject({ ok: false });
+    // New revision may arrive before its matching tab-selection notification.
+    bridge.selection(2);
+    await expect(requestDirectory()).resolves.toMatchObject({ ok: false });
+    targets.selected("s2");
+    await expect(requestDirectory()).resolves.toEqual({
+      ok: true,
+      directory: "/second",
+    });
+    // A later selection cannot turn an older request into a different target.
+    rendererSession = "s1";
+    rendererRevision = 3;
+    await expect(requestDirectory()).resolves.toMatchObject({ ok: false });
+  } finally {
+    unsubscribe();
+    native.dispose();
+  }
+});
+
+it("requires an explicit warning before opening an unverified reported path", async () => {
+  await installTool("omxterm.files", "Files");
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  adapters.consent.mockClear();
+  adapters.consent.mockResolvedValueOnce({ response: 0 });
+  const reply = await adapters.hosts[0]!.options.onRequest!(
+    { operation: "terminal-directory" },
+    new AbortController().signal,
+    { id: "hosted-view", isCurrentVisible: () => true },
+  );
+  expect(reply).toMatchObject({ ok: false });
+  expect(adapters.consent).toHaveBeenCalledOnce();
+  const [owner, options] = adapters.consent.mock.calls[0]!;
+  expect(owner).toBe(window);
+  expect(options.detail).toContain("/captured");
+  expect(options.defaultId).toBe(0);
+  expect(options.cancelId).toBe(0);
+});
+
+it("revokes a confirmed path if its source session ends before consent", async () => {
+  await installTool("omxterm.files", "Files");
+  const active = new AbortController();
+  const owner = new AbortController();
+  service.registerWindow(window, (_source, context) => ({
+    owner: window,
+    signal: context === "window" ? owner.signal : active.signal,
+    terminalDirectory: "/captured",
+    sourceSessionId: "s1",
+  }));
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  let decide!: (value: { response: number }) => void;
+  adapters.consent.mockImplementationOnce(
+    () => new Promise((resolve) => (decide = resolve)),
+  );
+  const pending = adapters.hosts[0]!.options.onRequest!(
+    { operation: "terminal-directory" },
+    new AbortController().signal,
+    { id: "hosted-view", isCurrentVisible: () => true },
+  );
+  await vi.waitFor(() => expect(decide).toBeDefined());
+  const dialogOptions = adapters.consent.mock.calls.at(-1)![1];
+  expect(dialogOptions.signal?.aborted).toBe(false);
+  active.abort();
+  expect(dialogOptions.signal?.aborted).toBe(true);
+  decide({ response: 1 });
+  await expect(pending).resolves.toMatchObject({ ok: false });
+});
+
+it("does not stack reported-directory confirmations for one Files view", async () => {
+  await installTool("omxterm.files", "Files");
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  let decide!: (value: { response: number }) => void;
+  adapters.consent.mockImplementationOnce(
+    () => new Promise((resolve) => (decide = resolve)),
+  );
+  const requestDirectory = () =>
+    adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    );
+  const first = requestDirectory();
+  await vi.waitFor(() => expect(decide).toBeDefined());
+  await expect(requestDirectory()).rejects.toThrow("unavailable");
+  decide({ response: 0 });
+  await expect(first).resolves.toMatchObject({ ok: false });
+});
+
+it("refuses a directory if the core renderer cannot confirm its selected pane", async () => {
+  await installTool("omxterm.files", "Files");
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  adapters.semanticConfirm.mockResolvedValue(false);
+  const response = await adapters.hosts[0]!.options.onRequest!(
+    { operation: "terminal-directory" },
+    new AbortController().signal,
+    { id: "hosted-view", isCurrentVisible: () => true },
+  );
+  expect(response).toMatchObject({ ok: false });
+});
+
 it("does not disclose the active terminal directory to a hidden Files view", async () => {
   await installTool("omxterm.files", "Files");
   service.actions()[0]!.invoke();
@@ -554,7 +734,7 @@ it.each([
         new AbortController().signal,
         { id: "hosted-view", isCurrentVisible: () => true },
       ),
-    ).toEqual({ ok: false, error });
+    ).toEqual({ ok: false, error, reason: "terminal-directory-unavailable" });
   },
 );
 
@@ -580,6 +760,7 @@ it("does not use a directory from an ended active session", async () => {
     ok: false,
     error:
       "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
+    reason: "terminal-directory-unavailable",
   });
 });
 

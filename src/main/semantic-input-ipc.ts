@@ -10,6 +10,7 @@ import {
 } from "../shared/semantic-input";
 import type { IpcEvent, IpcMainPort } from "./terminal-ipc-types";
 import type { ExtensionViewRequestContext } from "./extension-view-host";
+import { isTerminalSessionId } from "../shared/terminal-contract";
 
 type Pending = {
   id: string;
@@ -86,6 +87,60 @@ export function registerSemanticInputIpc(options: {
       owners.set(contents, owner);
       contents.on("did-start-navigation", navigation);
       unsubscribeLoss = subscribeWindowOwnerLoss(window, lost);
+    },
+    confirmSelection(
+      window: BrowserWindow,
+      sessionId: string,
+      source: ExtensionViewRequestContext,
+      signal: AbortSignal,
+    ): Promise<boolean> {
+      const owner = owners.get(window.webContents);
+      if (
+        !owner ||
+        owner.pending ||
+        owner.revision === undefined ||
+        signal.aborted ||
+        options.quitting() ||
+        !source.isCurrentVisible() ||
+        !isTerminalSessionId(sessionId)
+      )
+        return Promise.resolve(false);
+      const revision = owner.revision;
+      const id = randomUUID();
+      return new Promise((resolve) => {
+        let settled = false;
+        const finish = (available: boolean) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          signal.removeEventListener("abort", cancel);
+          if (owner.pending?.id === id) delete owner.pending;
+          resolve(
+            available &&
+              owners.get(owner.contents) === owner &&
+              owner.revision === revision &&
+              !signal.aborted &&
+              !options.quitting() &&
+              source.isCurrentVisible(),
+          );
+        };
+        const cancel = () => finish(false);
+        const timer = setTimeout(cancel, 5000);
+        owner.pending = { id, started() {}, finish, cancel };
+        signal.addEventListener("abort", cancel, { once: true });
+        try {
+          if (owner.contents.isDestroyed()) cancel();
+          else
+            owner.contents.send(semanticInputIpc.command, {
+              kind: "confirm-selection",
+              id,
+              revision,
+              sessionId,
+            });
+        } catch {
+          cancel();
+        }
+      });
     },
     request(
       window: BrowserWindow,

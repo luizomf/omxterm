@@ -318,16 +318,17 @@ Switching terminal tabs keeps the panel visible. Connecting through SSH opens a
 new terminal tab without replacing the current session or closing the panel.
 Settings and general extension tabs temporarily suspend it.
 
-Files initially opens Home. In current host source, **Actions… → Use terminal
-directory** explicitly uses the selected pane's last local OSC 7 report at that
-moment, even if the panel was opened for another pane. Without a usable report
+Files initially opens Home. In current Files source, **Actions… → Use reported
+terminal directory…** offers the selected pane's last local OSC 7 report, even
+if the panel was opened for another pane. Compatible installed archives retain
+their original **Use terminal directory** label. The current host shows the
+reported path and asks before opening it as a local folder: a report is not
+authenticated, can be stale, and may come from a remote session. OMXTerm does
+not inspect the current process or configure the shell. Without a usable report
 or for a known SSH Connect pane, it explains the unavailable directory and
-leaves the current browsing location alone. It does not follow later terminal
-changes or retarget an operation already started. A report is not authenticated
-and can be stale if the shell stops reporting; an ordinary shell-launched SSH
-session cannot always be recognized. OMXTerm does not inspect the current process
-or configure the shell. Enter a path or use Home if needed. This host change
-also works with compatible installed Files archives; it does not replace them.
+leaves the browsing location alone; use Home or enter a path if needed. It does
+not follow later terminal changes or retarget an operation already started.
+These source changes are not a release and do not replace published archives.
 
 Closing the opening terminal leaves the tool available; disabling or removing
 the extension retires its view. In current Files source, **Actions… → Show dotfiles (names

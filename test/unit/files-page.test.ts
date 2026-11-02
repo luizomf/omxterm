@@ -218,7 +218,9 @@ it("offers item and background actions at the point of use, with keyboard dismis
   key(document.activeElement as HTMLElement, "End");
   expect(document.activeElement?.getAttribute("role")).toBe("menuitemcheckbox");
   key(document.activeElement as HTMLElement, "ArrowUp");
-  expect(document.activeElement?.textContent).toBe("Use terminal directory");
+  expect(document.activeElement?.textContent).toBe(
+    "Use reported terminal directory…",
+  );
   key(document.activeElement as HTMLElement, "Escape");
   expect(menu().hidden).toBe(true);
   expect(document.activeElement).toBe(row("/root/alpha"));
@@ -242,13 +244,38 @@ it("keeps the browsing directory and explains an unavailable active terminal", a
   navigate("/other");
   await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
   button("Actions…").click();
-  button("Use terminal directory", menu()).click();
+  button("Use reported terminal directory…", menu()).click();
   await vi.waitFor(() =>
     expect(document.body.textContent).toContain(
       "No local directory was reported for the active terminal",
     ),
   );
   expect(row("/other/elsewhere")).toBeTruthy();
+});
+
+it("relabels an unavailable terminal directory notice when the language changes", async () => {
+  const { handle, language } = await setup();
+  handle((value) =>
+    value.operation === "terminal-directory"
+      ? Promise.resolve({
+          ok: false,
+          error: "English fallback for older Files archives",
+          reason: "terminal-directory-unavailable",
+        })
+      : undefined,
+  );
+  button("Actions…").click();
+  button("Use reported terminal directory…", menu()).click();
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "No local directory was reported",
+    ),
+  );
+  language("pt-BR");
+  expect(document.body.textContent).toContain(
+    "Nenhum diretório local foi informado pelo terminal ativo",
+  );
+  expect(document.body.textContent).not.toContain("English fallback");
 });
 
 it("keeps an open rename target when using a different terminal directory", async () => {
@@ -261,7 +288,7 @@ it("keeps an open rename target when using a different terminal directory", asyn
   context("/root/alpha");
   button("Rename / move", menu()).click();
   button("Actions…").click();
-  button("Use terminal directory", menu()).click();
+  button("Use reported terminal directory…", menu()).click();
   await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
   apply("/root/renamed");
   await vi.waitFor(() =>

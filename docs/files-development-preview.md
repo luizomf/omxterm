@@ -385,22 +385,30 @@ publisher trust or additional capabilities. General extensions retain Applicatio
 Tab presentation and independent per-invocation context/view pins.
 
 Companion view lifetime follows the window rather than the terminal that opened
-it. In current host source, Files' explicit **Use terminal directory** request
-captures the selected live pane's last local OSC7 report at request time, rather
-than the retained view's initial invocation. Main accepts this request only from
-the visible Files panel in its focused window, without a caller-supplied target;
-a pending or ended pane, known SSH Connect pane, remote/invalid report, or
-missing local report gives an explicit unavailable result without navigating.
-An incomplete new OSC7 report does not expose the earlier one. The page starts
-at Home; Home and explicit paths remain available. There is no continuous
-following, and a later selection does not retarget a request or mutation already
-started. Other extension invocation contexts remain captured at invocation.
+it. In current host source, Files' explicit directory request captures the
+selected live pane's last local OSC7 report at request time, rather than the
+retained view's initial invocation. Main accepts it only from the visible Files
+panel in its focused window, without a caller-supplied target. It asks the core
+renderer to confirm the captured session and selection revision before offering
+the fixed path; reordered, missing or changed selection is refused instead of
+retargeted. A pending or ended pane, known SSH Connect pane, remote/invalid
+report, or missing local report gives an explicit unavailable result without
+navigating. After the full OSC7 introducer is recognized, an incomplete new
+report does not expose the earlier one. The page starts at Home; Home and
+explicit paths remain available. There is no continuous following, and a later
+selection does not retarget a request or mutation already started. Other extension
+invocation contexts remain captured at invocation.
 
 This is the last completed report, not authenticated shell identity or current
 process inspection: any program may emit OSC7, an ordinary shell-launched SSH
 session may not be recognized, and a shell that stops reporting can leave a stale
-value. The host never configures the shell. Compatible installed Files archives
-use the updated host behavior without changing their published bytes.
+value. Before opening any report-based path, a host-owned confirmation shows the
+captured path, explains these limits and asks whether to open it locally; Cancel
+is the default. The host never configures the shell. Compatible installed Files
+archives use this host behavior without changing their published bytes; their
+original action label and already-displayed literal error text do not change.
+Current Files source labels the action as a reported directory and relabels
+host-coded unavailable notices. A future archive needs a new immutable version.
 Closing the source terminal preserves the panel; window loss, backend loss and
 package management still retire it. Hiding retains state and does not cancel or
 replay accepted filesystem mutations. Views reserve a 34-DIP core-owned recovery

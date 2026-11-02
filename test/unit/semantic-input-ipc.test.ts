@@ -134,6 +134,56 @@ it.each(["insert", "run"] as const)(
   },
 );
 
+it("requires the core renderer to confirm the exact selected session and revision", async () => {
+  const owner = fixture().owner();
+  owner.selection(7);
+  const pending = services
+    .at(-1)!
+    .confirmSelection(owner.window, "s1", owner.source, owner.abort.signal);
+  const command = owner.contents.send.mock.calls.at(-1)![1];
+  expect(command).toMatchObject({
+    kind: "confirm-selection",
+    revision: 7,
+    sessionId: "s1",
+  });
+  expect(isSemanticInputCommand(command)).toBe(true);
+  owner.reply({ kind: "finished", id: command.id, available: true });
+  await expect(pending).resolves.toBe(true);
+});
+
+it.each([
+  "selection",
+  "hidden",
+  "abort",
+  "quit",
+  "retired",
+  "timeout",
+] as const)(
+  "refuses a pending selection confirmation after %s",
+  async (change) => {
+    const test = fixture();
+    const owner = test.owner();
+    owner.selection(7);
+    const pending = test.service.confirmSelection(
+      owner.window,
+      "s1",
+      owner.source,
+      owner.abort.signal,
+    );
+    const command = owner.contents.send.mock.calls.at(-1)![1];
+    if (change === "selection") owner.selection(8);
+    if (change === "hidden") owner.hide();
+    if (change === "abort") owner.abort.abort();
+    if (change === "quit") test.quit();
+    if (change === "retired") owner.native.emit("closed");
+    if (change === "timeout" || change === "quit")
+      await vi.advanceTimersByTimeAsync(5000);
+    owner.reply({ kind: "finished", id: command.id, available: true });
+    await expect(pending).resolves.toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  },
+);
+
 it("accepts only trusted monotonic selection revisions", async () => {
   const test = fixture();
   const owner = test.owner();
