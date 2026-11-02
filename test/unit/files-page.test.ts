@@ -83,7 +83,10 @@ async function setup(initialLanguage: SupportedLanguage = "en-US") {
 }
 function button(label: string, scope: ParentNode = document) {
   const result = [...scope.querySelectorAll<HTMLButtonElement>("button")].find(
-    (node) => node.textContent === label && !node.closest("[hidden]"),
+    (node) =>
+      (node.getAttribute("aria-label") === label ||
+        node.textContent === label) &&
+      !node.closest("[hidden]"),
   );
   expect(result, label).toBeTruthy();
   return result!;

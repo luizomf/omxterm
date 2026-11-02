@@ -398,6 +398,17 @@ describe.each(["files-production.mjs", "files-packaged.cjs"])(
       });
       dispose = page.dispose;
       await page.ready;
+      await fixture.filesAction(view, "New folder");
+      expect(
+        document.querySelector(".operation-editor label")?.textContent,
+      ).toBe("Create folder in /owned");
+      [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          ".operation-editor button",
+        ),
+      ]
+        .find((button) => button.textContent === "Cancel")!
+        .click();
       await fixture.filesAction(view, "New file");
       await fixture.apply(view, "created.txt");
       expect(

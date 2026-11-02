@@ -157,7 +157,7 @@ void ready.then(async (window) => {
   }
   function click(contents, label) {
     return contents.executeJavaScript(
-      `(() => { const button = [...document.querySelectorAll('button')].find(b => b.textContent === ${JSON.stringify(label)} && !b.closest('[hidden]')); if (!button) throw Error('button missing'); if (button.disabled || button.closest('[inert]')) throw Error('button unavailable'); button.click(); })()`,
+      `(() => { const button = [...document.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') === ${JSON.stringify(label)} || b.textContent === ${JSON.stringify(label)}) && !b.closest('[hidden]')); if (!button) throw Error('button missing'); if (button.disabled || button.closest('[inert]')) throw Error('button unavailable'); button.click(); })()`,
     );
   }
   const hosted = () =>
@@ -305,7 +305,7 @@ void ready.then(async (window) => {
   // These DOM-driven gestures qualify fixture-controlled input, not physical keys.
   async function filesAction(contents, label) {
     const visible = await contents.executeJavaScript(
-      `!![...document.querySelectorAll('button')].find(b => b.textContent === ${JSON.stringify(label)} && !b.closest('[hidden]'))`,
+      `!![...document.querySelectorAll('button')].find(b => (b.getAttribute('aria-label') === ${JSON.stringify(label)} || b.textContent === ${JSON.stringify(label)}) && !b.closest('[hidden]'))`,
     );
     if (!visible) await click(contents, "Actions…");
     await click(contents, label);

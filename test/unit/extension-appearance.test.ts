@@ -99,8 +99,8 @@ it("projects Files appearance without replacing its listing or operation draft",
     );
     const row = document.querySelector<HTMLElement>(".file-row")!;
     row.click();
-    [...document.querySelectorAll("button")]
-      .find((button) => button.textContent === "Actions…")!
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="Actions…"]')!
       .click();
     [...document.querySelectorAll("button")]
       .find((button) => button.textContent === "New file")!

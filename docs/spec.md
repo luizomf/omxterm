@@ -2040,8 +2040,14 @@ official catalog reuses the same installation owner/store; there is no public
 SDK or extension shortcut configuration. An empty source catalog is valid but
 does not constitute public distribution.
 Files provides an expandable local folder tree with keyboard
-navigation, discoverable Actions and item/background context menus. Operation
-editors retain captured targets. The page follows the host's explicit en-US/pt-BR
+navigation, discoverable Actions and item/background context menus. Its source
+navigation toolbar uses quiet icon buttons with localized accessible names and
+visible explanations on hover or focus; Go identifies Enter in the address field,
+not a global shortcut. Controls needing a root are disabled until one exists, Up
+is disabled but remains focusable at the filesystem root, and New folder is
+disabled while a mutation is pending. Refresh remains available during listing. Existing menu and destructive
+confirmation labels remain explicit. Operation editors retain captured targets.
+The page follows the host's explicit en-US/pt-BR
 language and relabels retained controls, accessible names, menus, confirmations and
 notices without rereading listings, replaying operations or resetting focus/caret,
 drafts, selection or deletion tokens. Names, paths and technical error codes remain

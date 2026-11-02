@@ -12,6 +12,7 @@ import {
 
 import type { SupportedLanguage } from "../../src/shared/i18n.js";
 import { filesMessages, type FilesMessages } from "./messages.js";
+import { createFilesToolbar } from "./toolbar.js";
 
 type Label = (messages: FilesMessages) => string;
 type Reply = FilesTreeReply & { path?: string; token?: string };
@@ -53,6 +54,8 @@ export function mountFilesPage(
   const content = document.createElement("section");
   const toolbar = document.createElement("div");
   toolbar.className = "toolbar";
+  const tooltips = createFilesToolbar(document);
+  const controlHints = new Map<HTMLButtonElement, HTMLElement>();
   const location = document.createElement("form");
   location.className = "location";
   const address = document.createElement("input");
@@ -116,6 +119,34 @@ export function mountFilesPage(
     container.append(element);
     return element;
   }
+  function iconButton(
+    icon: Parameters<typeof tooltips.create>[0],
+    name: Label,
+    description: Label,
+    action: () => void,
+    container: HTMLElement = toolbar,
+  ) {
+    const control = tooltips.create(icon);
+    label(control.button, name, "aria-label");
+    label(control.tooltip, description);
+    controlHints.set(control.button, control.tooltip);
+    control.button.addEventListener("click", action);
+    container.append(control.wrapper);
+    return control.button;
+  }
+  function syncControls() {
+    // Reaching root must not discard focus from the just-activated Up button.
+    upButton.disabled = !state.root;
+    if (state.root === "/") upButton.setAttribute("aria-disabled", "true");
+    else upButton.removeAttribute("aria-disabled");
+    refreshButton.disabled = !state.root;
+    newFolderButton.disabled = !state.root || mutationPending;
+    for (const button of [upButton, refreshButton, newFolderButton]) {
+      const hint = controlHints.get(button);
+      if (hint) labels.get(hint)?.();
+    }
+    tooltips.refresh();
+  }
   function rowElement(path: string) {
     return [...entries.querySelectorAll<HTMLElement>("[data-path]")].find(
       (row) => row.dataset.path === path,
@@ -137,6 +168,7 @@ export function mountFilesPage(
       ? active?.dataset.path
       : undefined;
     state = snapshot;
+    syncControls();
     if (selected) {
       const current = state.rows.find((row) => row.path === selected?.path);
       selected = current
@@ -310,6 +342,7 @@ export function mountFilesPage(
   async function mutate(value: unknown) {
     if (mutationPending) return;
     mutationPending = true;
+    syncControls();
     discardConfirmation();
     editor.inert = true;
     message((m) => m.pending);
@@ -333,6 +366,7 @@ export function mountFilesPage(
       } else report(reply);
     } finally {
       mutationPending = false;
+      syncControls();
       editor.inert = false;
     }
   }
@@ -502,6 +536,7 @@ export function mountFilesPage(
   function closeMenu(restore = true) {
     if (menu.hidden) return;
     menu.hidden = true;
+    tooltips.suppress(false);
     actionsButton.setAttribute("aria-expanded", "false");
     if (restore)
       (menuReturn?.isConnected
@@ -532,6 +567,7 @@ export function mountFilesPage(
       item.tabIndex = -1;
     }
     menu.hidden = false;
+    tooltips.suppress(true);
     actionsButton.setAttribute("aria-expanded", "true");
     const rect = menuReturn.getBoundingClientRect();
     const viewport = document.documentElement;
@@ -583,38 +619,65 @@ export function mountFilesPage(
       dismissEditor();
     }
   });
-  button(
+  iconButton(
+    "home",
     (m) => m.home,
+    (m) => m.homeHint,
     () => {
       void navigateFrom("home");
     },
   );
-  button(
+  const upButton = iconButton(
+    "up",
     (m) => m.up,
+    (m) =>
+      !state.root ? m.noRootHint : state.root === "/" ? m.atRootHint : m.upHint,
     () => {
-      if (state.root) void navigate(parent(state.root));
+      if (state.root && state.root !== "/") void navigate(parent(state.root));
     },
   );
-  button(
+  const refreshButton = iconButton(
+    "refresh",
     (m) => m.refresh,
+    (m) => (!state.root ? m.noRootHint : m.refreshHint),
     () => {
       void tree.refresh();
     },
   );
-  button(
+  const actionPair = document.createElement("span");
+  actionPair.className = "toolbar-pair";
+  toolbar.append(actionPair);
+  const newFolderButton = iconButton(
+    "new-folder",
     (m) => m.newFolder,
+    (m) =>
+      mutationPending
+        ? m.mutationPendingHint
+        : !state.root
+          ? m.noRootHint
+          : m.newFolderHint,
     () => creation("create-directory"),
+    actionPair,
   );
-  const actionsButton = button(
+  const actionsButton = iconButton(
+    "actions",
     (m) => m.actions,
+    (m) => m.actionsHint,
     () => openMenu(selected),
+    actionPair,
   );
   actionsButton.setAttribute("aria-haspopup", "menu");
   actionsButton.setAttribute("aria-expanded", "false");
-  const go = createPageButton(document);
+  location.append(address);
+  const go = iconButton(
+    "go",
+    (m) => m.go,
+    (m) => m.goHint,
+    () => {},
+    location,
+  );
   go.type = "submit";
-  label(go, (m) => m.go);
-  location.append(address, go);
+  syncControls();
   location.addEventListener("submit", (event) => {
     event.preventDefault();
     void navigate(address.value);
@@ -628,7 +691,10 @@ export function mountFilesPage(
   // Native Escape belongs to the companion host, not this DOM menu. Hiding
   // dismisses transient menus while operation drafts remain retained.
   const unsubscribeVisibility = bridge.onVisibility?.((visible) => {
-    if (!visible) closeMenu(false);
+    if (!visible) {
+      closeMenu(false);
+      tooltips.reset();
+    }
   });
   document.documentElement.lang = "en-US";
   const unsubscribeLanguage = bridge.onLanguage?.((language) => {
@@ -636,6 +702,7 @@ export function mountFilesPage(
     document.documentElement.lang = language;
     messages = filesMessages(language);
     for (const update of labels.values()) update();
+    tooltips.refresh();
   });
   const ready = navigateFrom("home");
   return {
@@ -647,6 +714,8 @@ export function mountFilesPage(
       discardConfirmation();
       unsubscribeVisibility?.();
       unsubscribeLanguage?.();
+      tooltips.dispose();
+      controlHints.clear();
       labels.clear();
       document.removeEventListener("pointerdown", dismissMenu);
     },

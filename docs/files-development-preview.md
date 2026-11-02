@@ -193,8 +193,15 @@ The current Files page presents expandable folders and nested file rows. Click
 an entry to select it; use its disclosure arrow, double-click a folder, or use
 Right/Left to expand/collapse. Up/Down and Home/End move through visible rows;
 Enter/Space toggles a folder. Symbolic links remain labeled, not implicitly
-expanded. **Open directory** changes the browsing root; Home, Up and the absolute
-address field remain available.
+expanded. **Open directory** changes the browsing root. The source toolbar uses
+quiet icons for Home, Up, Refresh, New folder and Actions; the address field has
+an adjacent Go icon. Each has a localized accessible name and a visible,
+explanatory tooltip on hover or focus. Go also works by pressing Enter in the
+address field; the other toolbar buttons have no assigned shortcuts. Up is
+disabled but remains focusable at the filesystem root, so reaching root does not
+drop focus. Controls requiring a browsing root are disabled until one is available. New folder is also disabled during a mutation;
+Refresh remains available while listings load. These source changes do not alter
+already published Files archives.
 
 **Actions…** exposes operations for the selection; right-click an item or blank
 listing space for actions at that location. Shift+F10/the context-menu key opens

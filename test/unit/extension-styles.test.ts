@@ -21,3 +21,19 @@ it.each(["files", "ssh"])(
     expect(css).not.toContain("#111923");
   },
 );
+
+it("bundles the Files toolbar pair and emphasized Actions glyph", async () => {
+  const result = await build({
+    entryPoints: ["extensions/files/files.css"],
+    bundle: true,
+    write: false,
+  });
+  const css = result.outputFiles[0]!.text;
+  const pair = css.match(/\.toolbar-pair\s*\{([^}]*)\}/)?.[1];
+  expect(pair).toContain("display: flex;");
+  expect(pair).toContain("flex-wrap: wrap;");
+  expect(pair).toContain("max-width: 100%;");
+  expect(css).toMatch(
+    /\.toolbar-button \.toolbar-icon-actions\s*\{\s*stroke-width: 2\.5;/,
+  );
+});

@@ -6,12 +6,75 @@
 .toolbar,
 .location {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 10px;
 }
+.toolbar {
+  flex-wrap: wrap;
+}
+.toolbar-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 100%;
+}
+.toolbar-control {
+  display: inline-flex;
+  flex: none;
+}
+.toolbar-button.page-control {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 7px;
+  background: transparent;
+  border-color: transparent;
+}
+.toolbar-button.page-control:hover:not(:disabled):not([aria-disabled="true"]) {
+  background: var(--tool-hover);
+}
+.toolbar-button[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+.toolbar-button:focus-visible {
+  outline-offset: -2px;
+}
+.toolbar-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.toolbar-button .toolbar-icon-actions {
+  stroke-width: 2.5;
+}
+.toolbar-tooltip {
+  position: fixed;
+  z-index: 4;
+  width: max-content;
+  max-width: calc(100vw - 8px);
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 5px 8px;
+  color: var(--ui-text);
+  background: var(--ui-raised);
+  border: 1px solid var(--ui-input-border);
+  border-radius: 4px;
+  box-shadow: 0 3px 12px #0004;
+  font-size: 12px;
+  line-height: 1.35;
+}
 .location input {
-  flex: 1;
+  flex: 1 1 0;
+  width: 0;
   font-family: ui-monospace, monospace;
 }
 .entries {
