@@ -95,19 +95,105 @@ it("cancels the pressed menu rather than moving its target on viewport resize", 
   });
 });
 
-it.each(["pointercancel", "blur"])(
-  "cancels an active gesture on %s without activation",
-  async (event) => {
-    const f = await fixture();
-    f.item.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
-    if (event === "blur") window.dispatchEvent(new Event("blur"));
-    else document.body.dispatchEvent(new MouseEvent(event, { bubbles: true }));
-    expect(f.menu.hidden).toBe(true);
-    expect(f.request).not.toHaveBeenCalledWith({
-      operation: "terminal-directory",
-    });
-  },
-);
+function pointer(target: EventTarget, type: string, id: number) {
+  const event = new MouseEvent(type, { bubbles: true });
+  Object.defineProperty(event, "pointerId", { value: id });
+  target.dispatchEvent(event);
+}
+
+it("keeps a scrollable menu open when a touch pan cancels its pointer", async () => {
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 10);
+  pointer(f.item, "pointercancel", 10);
+  expect(f.menu.hidden).toBe(false);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+  f.language("pt-BR");
+  expect(f.menu.hidden).toBe(false);
+  expect(f.actions.getAttribute("aria-label")).toBe("Ações…");
+});
+
+it("preserves scrolling and cancels activation if a held target moves", async () => {
+  vi.useFakeTimers();
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 1);
+  f.menu.scrollTop = 45;
+  f.menu.dispatchEvent(new Event("scroll"));
+  pointer(f.item, "pointerup", 1);
+  const click = new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    detail: 1,
+  });
+  Object.defineProperty(click, "pointerId", { value: 1 });
+  const checkbox = f.menu.querySelector<HTMLButtonElement>(
+    '[role="menuitemcheckbox"]',
+  )!;
+  checkbox.dispatchEvent(click);
+  vi.runAllTimers();
+  expect(f.menu.hidden).toBe(false);
+  expect(f.menu.scrollTop).toBe(45);
+  expect(checkbox.getAttribute("aria-checked")).toBe("false");
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
+
+it("also guards a scroll between pointerup and the browser click", async () => {
+  vi.useFakeTimers();
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 1);
+  pointer(f.item, "pointerup", 1);
+  f.menu.scrollTop = 20;
+  const click = new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    detail: 1,
+  });
+  Object.defineProperty(click, "pointerId", { value: 1 });
+  f.item.dispatchEvent(click);
+  vi.runAllTimers();
+  expect(f.menu.hidden).toBe(false);
+  expect(f.menu.scrollTop).toBe(20);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
+
+it("delivers an unchanged pointer click normally", async () => {
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 1);
+  pointer(f.item, "pointerup", 1);
+  const click = new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    detail: 1,
+  });
+  Object.defineProperty(click, "pointerId", { value: 1 });
+  f.item.dispatchEvent(click);
+  expect(f.request).toHaveBeenCalledWith({ operation: "terminal-directory" });
+});
+
+it("ignores an unrelated pointer cancellation and delivers the held click", async () => {
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 1);
+  pointer(document.body, "pointercancel", 2);
+  expect(f.menu.hidden).toBe(false);
+  pointer(f.item, "pointerup", 1);
+  f.item.click();
+  expect(f.request).toHaveBeenCalledWith({ operation: "terminal-directory" });
+});
+
+it("cancels an active gesture on window blur without activation", async () => {
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 10);
+  window.dispatchEvent(new Event("blur"));
+  expect(f.menu.hidden).toBe(true);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
 
 it("does not let a stale release move or close a reopened menu during a new press", async () => {
   vi.useFakeTimers();

@@ -114,7 +114,9 @@ export function mountFilesPage(
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
-  const menuPointers = new Set<number>();
+  type MenuPointer = { scrollTop: number; scrolled: boolean };
+  const menuPointers = new Map<number, MenuPointer>();
+  const releasedMenuPointers = new Map<number, MenuPointer>();
   let menuReleaseTimer: ReturnType<typeof setTimeout> | undefined;
   let menuGeneration = 0;
   let state: FilesTreeSnapshot;
@@ -639,6 +641,7 @@ export function mountFilesPage(
   function resetMenuGesture() {
     menuGeneration++;
     menuPointers.clear();
+    releasedMenuPointers.clear();
     if (menuReleaseTimer !== undefined) clearTimeout(menuReleaseTimer);
     menuReleaseTimer = undefined;
   }
@@ -792,26 +795,60 @@ export function mountFilesPage(
     }
     if (menuReleaseTimer !== undefined) clearTimeout(menuReleaseTimer);
     menuReleaseTimer = undefined;
-    menuPointers.add(event.pointerId);
+    menuPointers.set(event.pointerId, {
+      scrollTop: menu.scrollTop,
+      scrolled: false,
+    });
   };
+  menu.addEventListener("scroll", () => {
+    for (const pointer of [
+      ...menuPointers.values(),
+      ...releasedMenuPointers.values(),
+    ])
+      if (menu.scrollTop !== pointer.scrollTop) pointer.scrolled = true;
+  });
   const finishMenuPointer = (event: PointerEvent) => {
-    if (!menuPointers.delete(event.pointerId) || menuPointers.size) return;
+    const pointer = menuPointers.get(event.pointerId);
+    if (!pointer) return;
+    menuPointers.delete(event.pointerId);
+    releasedMenuPointers.set(event.pointerId, pointer);
+    if (menuPointers.size) return;
     const generation = menuGeneration;
     // Let the browser dispatch click before revealing any remaining clipped item.
     menuReleaseTimer = setTimeout(() => {
       menuReleaseTimer = undefined;
       if (disposed || generation !== menuGeneration || menuPointers.size)
         return;
-      revealFocusedMenuItem();
+      const scrolled = [...releasedMenuPointers.values()].some(
+        (released) =>
+          released.scrolled || released.scrollTop !== menu.scrollTop,
+      );
+      releasedMenuPointers.clear();
+      // A wheel or pan is deliberate; do not snap it back to the focused item.
+      if (!scrolled) revealFocusedMenuItem();
     }, 0);
   };
-  const cancelMenuPointer = () => {
+  const guardScrolledMenuClick = (event: MouseEvent) => {
+    if (!event.detail) return; // Keyboard and programmatic activation.
+    const pointer = releasedMenuPointers.get((event as PointerEvent).pointerId);
+    if (!pointer || (!pointer.scrolled && pointer.scrollTop === menu.scrollTop))
+      return;
+    // The browser may target a different item after wheel or momentum scroll.
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  // Touch panning cancels its pointer without dismissing the scrollable menu.
+  const cancelMenuPointer = (event: PointerEvent) => {
+    menuPointers.delete(event.pointerId);
+  };
+  const blurMenu = () => {
     if (menuGestureActive()) closeMenu(false);
   };
   document.addEventListener("pointerdown", dismissMenu, true);
   document.addEventListener("pointerup", finishMenuPointer, true);
   document.addEventListener("pointercancel", cancelMenuPointer, true);
-  document.defaultView?.addEventListener("blur", cancelMenuPointer);
+  document.addEventListener("click", guardScrolledMenuClick, true);
+  document.defaultView?.addEventListener("blur", blurMenu);
   entries.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     openMenu(undefined, event.clientX, event.clientY, entries);
@@ -990,7 +1027,8 @@ export function mountFilesPage(
       document.removeEventListener("pointerdown", dismissMenu, true);
       document.removeEventListener("pointerup", finishMenuPointer, true);
       document.removeEventListener("pointercancel", cancelMenuPointer, true);
-      document.defaultView?.removeEventListener("blur", cancelMenuPointer);
+      document.removeEventListener("click", guardScrolledMenuClick, true);
+      document.defaultView?.removeEventListener("blur", blurMenu);
       document.removeEventListener("keydown", onShortcut);
       document.removeEventListener("compositionstart", startComposition);
       document.removeEventListener("compositionend", endComposition);

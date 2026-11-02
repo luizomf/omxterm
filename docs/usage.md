@@ -321,8 +321,9 @@ Settings and general extension tabs temporarily suspend it.
 Files initially opens Home. In current Files source, **Actions… → Use last
 reported path** opens the active pane's last locally accepted OSC 7 path as a local
 folder, even if the panel was opened for another pane. An inline hint and tooltip
-explain that the path can be stale or come from a remote session. A report is not
-authenticated; OMXTerm does not inspect the current process or configure the shell.
+explain that the report is unverified and can be stale or come from a remote
+session. A report is not authenticated; OMXTerm does not inspect the current
+process or configure the shell.
 Without a usable report or for a known SSH Connect pane, Files explains the
 unavailable directory and leaves the browsing location alone; use Home or enter
 a path if needed. It does not follow later terminal changes or retarget an

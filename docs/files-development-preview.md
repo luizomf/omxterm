@@ -404,8 +404,8 @@ identity or current process inspection: any program may emit OSC7, an ordinary
 shell-launched SSH session may not be recognized, and a shell that stops reporting
 can leave a stale value. The explicit action opens the captured path locally without
 a confirmation dialog. Current Files source labels it as the last reported path;
-its inline hint, tooltip and accessible description state the stale/remote
-limitations. The host
+its inline hint, tooltip and accessible description state that it is unverified
+and may be stale or remote. The host
 never configures the shell. Compatible installed Files archives use the host
 behavior without changing their published bytes; their original action label,
 missing inline hint and tooltip, and already-displayed literal error text

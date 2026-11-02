@@ -11,7 +11,7 @@ afterEach(() => {
   document.head.replaceChildren();
 });
 
-it("keeps active/local and stale/remote context visible and accessible across keyboard focus and language changes", async () => {
+it("keeps active/local and unverified, stale/remote context visible and accessible across language changes", async () => {
   const style = document.createElement("style");
   style.textContent = readFileSync("extensions/files/files.css", "utf8");
   document.head.append(style);
@@ -48,17 +48,19 @@ it("keeps active/local and stale/remote context visible and accessible across ke
   expect(document.activeElement).toBe(item);
   expect(getComputedStyle(hint).display).toBe("block");
   expect(hint.textContent).toBe(
-    "Active terminal; opens locally. Report may be stale or remote.",
+    "Active terminal; local folder. Unverified; may be stale or remote.",
   );
   expect(item.title).toContain("active terminal's last reported path");
+  expect(item.title).toContain("unverified");
   expect(item.title).toContain("stale or come from a remote session");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
   language("pt-BR");
   expect(item.getAttribute("aria-label")).toBe("Usar último caminho informado");
   expect(hint.textContent).toBe(
-    "Terminal ativo; abre localmente. Pode ser antigo ou remoto.",
+    "Terminal ativo; pasta local. Não verificado; pode ser antigo ou remoto.",
   );
   expect(item.title).toContain("terminal ativo");
+  expect(item.title).toContain("não verificado");
   expect(item.title).toContain("desatualizado ou vir de uma sessão remota");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
   expect(getComputedStyle(hint).display).toBe("block");
