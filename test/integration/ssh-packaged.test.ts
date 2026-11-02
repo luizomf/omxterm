@@ -26,6 +26,10 @@ import {
   parseCatalog,
 } from "../../src/main/extension-catalog.js";
 import { downloadExtension } from "../../src/main/extension-download.js";
+import {
+  assertCompletePublicStderr,
+  publicNativeDiagnostics,
+} from "../fixtures/linux-packaged-diagnostics.js";
 
 const { checkpointOptions, stablePublicSsh } = createRequire(import.meta.url)(
   "../fixtures/ssh-packaged-options.cjs",
@@ -296,6 +300,7 @@ it.skipIf(!enabled)(
     const failures: unknown[] = [];
     let outcome: unknown;
     let stderr = "";
+    let stderrTruncated = false;
     let passed = false;
     const json = (name: string, value: unknown) =>
       writeFile(path.join(receipts, name), JSON.stringify(value, null, 2));
@@ -488,7 +493,9 @@ it.skipIf(!enabled)(
       await until(() => exited, "actual Electron main exit", 5000);
       outcome = await owner.stop();
       stderr = owner.stderrText();
+      stderrTruncated = owner.stderrTruncated();
       owner = undefined;
+      assertCompletePublicStderr(stablePublic, stderrTruncated);
       assert.deepEqual(outcome, { code: 0, signal: null });
       passed = true;
     } catch (error) {
@@ -520,6 +527,7 @@ it.skipIf(!enabled)(
           failures.push(error);
         }
         stderr = owner.stderrText();
+        stderrTruncated = owner.stderrTruncated();
       }
       try {
         await unchangedInputs(values, host, asarBefore);
@@ -530,6 +538,10 @@ it.skipIf(!enabled)(
         passed: passed && failures.length === 0,
         outcome,
         stderr,
+        nativeDiagnostics: publicNativeDiagnostics(
+          stablePublic,
+          stderrTruncated,
+        ),
         root,
         asarSha256: asarBefore,
         failures: failures.map((error) =>

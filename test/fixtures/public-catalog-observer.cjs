@@ -2,13 +2,13 @@
 // Diagnostics do not replace or route requests, responses or TLS transport.
 const assert = require("node:assert/strict");
 const { createHash } = require("node:crypto");
-const { assertPublicSshTrust } = require("./ssh-packaged-header.cjs");
 
 const endpoint =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
 const channel = "omxterm:extensions";
 
 function startSshPublicObservation(options) {
+  const { assertPublicSshTrust } = require("./ssh-packaged-header.cjs");
   return startPublicCatalogObservation({
     ...options,
     release: {
@@ -200,7 +200,7 @@ function startPublicCatalogObservation({
       assert.equal(card.selection, selection, "catalog generation changed");
     else selection = card.selection;
   }
-  const handler = async (event, ...args) => {
+  const handle = async (event, ...args) => {
     const value = args[0];
     if (
       release.forbidFallback &&
@@ -286,6 +286,15 @@ function startPublicCatalogObservation({
       return result;
     } finally {
       active = undefined;
+    }
+  };
+  const handler = async (event, ...args) => {
+    try {
+      return await handle(event, ...args);
+    } catch (error) {
+      if (["catalog-refresh", "catalog-install"].includes(args[0]?.operation))
+        unexpected.push({ error: "catalog operation observation failed" });
+      throw error;
     }
   };
   ipcMain.removeHandler(channel);

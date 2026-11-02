@@ -12,6 +12,7 @@ const { filesPublicManagementState } =
       state: string,
       action?: string,
       click?: boolean,
+      local?: string,
     ): boolean;
   };
 
@@ -38,6 +39,27 @@ it("checks and acts only on the exact Files management row and captured generati
     filesPublicManagementState(document, 1, "enabled", "Disable", true),
   ).toBe(false);
   expect(files).toHaveBeenCalledOnce();
+  document.body.replaceChildren();
+});
+
+it("disables the exact active second generation without accepting dormant state", () => {
+  document.body.innerHTML = `<div class="extensions-panel"><section><h3>Files — ARM64 preview · 0.6.0</h3><p>omxterm.files · generation 2 · enabled · local active · other instances unknown</p><button>Disable</button></section></div>`;
+  const clicked = vi.fn();
+  document.querySelector("button")!.addEventListener("click", clicked);
+  expect(
+    filesPublicManagementState(document, 2, "enabled", "Disable", false),
+  ).toBe(false);
+  expect(
+    filesPublicManagementState(
+      document,
+      2,
+      "enabled",
+      "Disable",
+      true,
+      "active",
+    ),
+  ).toBe(true);
+  expect(clicked).toHaveBeenCalledOnce();
   document.body.replaceChildren();
 });
 

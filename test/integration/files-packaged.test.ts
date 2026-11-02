@@ -18,6 +18,10 @@ import { expect, it } from "vitest";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
 import {
+  assertCompletePublicStderr,
+  publicNativeDiagnostics,
+} from "../fixtures/linux-packaged-diagnostics.js";
+import {
   assertLinuxFilesHost,
   assertLinuxFilesScenario,
   linuxFilesInputs,
@@ -111,10 +115,7 @@ async function prepareObserver(root: string, archiveBytes: Buffer) {
     ["files-packaged.cjs", "observer.cjs"],
     ["snippets-process-identity.cjs", "snippets-process-identity.cjs"],
     ...(linuxPublicCatalog
-      ? [
-          ["public-catalog-observer.cjs", "public-catalog-observer.cjs"],
-          ["ssh-packaged-header.cjs", "ssh-packaged-header.cjs"],
-        ]
+      ? [["public-catalog-observer.cjs", "public-catalog-observer.cjs"]]
       : []),
   ])
     await cp(path.join("test/fixtures", source!), path.join(root, target!));
@@ -280,6 +281,7 @@ it.skipIf(
     let observer: string | undefined;
     let outcome: unknown;
     let nativeStderr = "";
+    let nativeStderrTruncated = false;
     let failure: unknown;
     let cleanupFailure: unknown;
     let passed = false;
@@ -483,7 +485,9 @@ it.skipIf(
       );
       outcome = await owner.stop();
       nativeStderr = owner.stderrText();
+      nativeStderrTruncated = owner.stderrTruncated();
       owner = undefined;
+      assertCompletePublicStderr(linuxPublicCatalog, nativeStderrTruncated);
       expect(outcome).toEqual({ code: 0, signal: null });
       expect(digest(await readFile(asar))).toBe(readonlyAsarHash);
       expect(digest(await readFile(appImage!))).toBe(
@@ -518,6 +522,7 @@ it.skipIf(
           cleanupFailure = error;
         }
         nativeStderr = owner.stderrText();
+        nativeStderrTruncated = owner.stderrTruncated();
       }
       await writeFile(
         path.join(evidence, "supervisor.json"),
@@ -526,6 +531,10 @@ it.skipIf(
             passed,
             outcome,
             nativeStderr,
+            nativeDiagnostics: publicNativeDiagnostics(
+              linuxPublicCatalog,
+              nativeStderrTruncated,
+            ),
             failure: failure instanceof Error ? failure.stack : failure,
             cleanupFailure:
               cleanupFailure instanceof Error

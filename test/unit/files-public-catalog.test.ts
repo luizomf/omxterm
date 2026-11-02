@@ -1,6 +1,9 @@
 // Synthetic IPC and streams exercise the passive observer; no public request runs.
 import { createHash } from "node:crypto";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
+import os from "node:os";
+import path from "node:path";
 import { Readable } from "node:stream";
 import { expect, it, vi } from "vitest";
 import { translatorFor } from "../../src/shared/i18n";
@@ -211,6 +214,20 @@ function fixture() {
   };
 }
 
+it("loads the Files observer without an SSH header helper", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "files-public-observer-"));
+  try {
+    const file = path.join(root, "observer.cjs");
+    await cp("test/fixtures/public-catalog-observer.cjs", file);
+    const isolated = createRequire(file)(file) as {
+      startFilesPublicObservation: unknown;
+    };
+    expect(typeof isolated.startFilesPublicObservation).toBe("function");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 it("uses the fixed public Files release profile and never substitutes synthetic archive bytes", async () => {
   const digest =
     "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
@@ -225,7 +242,7 @@ it("uses the fixed public Files release profile and never substitutes synthetic 
   await expect(
     f.invoke({ operation: "catalog-install", selection }),
   ).rejects.toThrow(/archive byte hash/);
-  expect(observer.summary()).toMatchObject({ approvals: 0, installed: 0 });
+  expect(() => observer.summary()).toThrow(/unexpected/);
   await expect(f.invoke({ operation: "install-link" })).rejects.toThrow(
     /fallback/,
   );
@@ -371,7 +388,7 @@ it("rejects a wrong actual catalog digest or archive bytes", async () => {
   await expect(
     files.invoke({ operation: "catalog-install", selection }),
   ).rejects.toThrow(/archive byte hash/);
-  expect(second.summary()).toMatchObject({ approvals: 0, installed: 0 });
+  expect(() => second.summary()).toThrow(/unexpected/);
   second.stop();
 });
 
@@ -402,7 +419,7 @@ it.each(["Official", "generation", "identity", "digest"] as const)(
     await expect(
       f.invoke({ operation: "catalog-install", selection }),
     ).rejects.toThrow();
-    expect(observer.summary()).toMatchObject({ approvals: 0, installed: 0 });
+    expect(() => observer.summary()).toThrow(/unexpected/);
     observer.stop();
   },
 );

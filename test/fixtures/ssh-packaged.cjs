@@ -384,6 +384,7 @@ async function run(options) {
       JSON.stringify(value, null, 2),
     );
   let publicObservation;
+  let publicBinding;
   let sshPublicManagementState;
   const original = {
     fork: childProcess.fork,
@@ -890,12 +891,12 @@ async function run(options) {
     assert.equal(fs.existsSync(file("client-invocations.jsonl")), false);
     await screenshot("public-terminal-after.png");
     if (options.stablePublic) {
-      const binding = publicObservation.summary();
-      assert.equal(binding.catalogGeneration, 1);
-      assert.equal(binding.approvals, 2);
-      assert.equal(binding.installed, 2);
-      assert.equal(binding.attempts.length, 2);
-      save("public-catalog-binding.json", binding);
+      publicBinding = publicObservation.summary();
+      assert.equal(publicBinding.catalogGeneration, 1);
+      assert.equal(publicBinding.approvals, 2);
+      assert.equal(publicBinding.installed, 2);
+      assert.equal(publicBinding.attempts.length, 2);
+      save("public-catalog-binding.json", publicBinding);
       checks.push("actual-catalog-selection-download-and-consent-binding");
     }
     checks.push(
@@ -1651,6 +1652,8 @@ async function run(options) {
   prepareQuit();
   function prepareQuit() {
     app.once("will-quit", () => {
+      if (options.stablePublic)
+        assert.deepEqual(publicObservation.summary(), publicBinding);
       save("quit.json", {
         ...state,
         joined:

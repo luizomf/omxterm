@@ -161,6 +161,7 @@ function filesPublicManagementState(
   state,
   action,
   click,
+  local = "dormant",
 ) {
   const rows = [
     ...document.querySelectorAll(".extensions-panel section"),
@@ -176,7 +177,7 @@ function filesPublicManagementState(
   )?.textContent;
   if (
     text !==
-      `omxterm.files · generation ${generation} · ${state} · local dormant · other instances unknown` ||
+      `omxterm.files · generation ${generation} · ${state} · local ${local} · other instances unknown` ||
     (state !== "uninstalled" &&
       row.querySelector(":scope > h3")?.textContent !==
         "Files — ARM64 preview · 0.6.0")
@@ -595,9 +596,15 @@ async function run(options) {
       options.linuxPublicCatalog ? 65000 : 15000,
     );
   }
-  async function publicManagement(generation, state, action, click = false) {
+  async function publicManagement(
+    generation,
+    state,
+    action,
+    click = false,
+    local = "dormant",
+  ) {
     if (!options.linuxPublicCatalog) return;
-    const expression = `(${filesPublicManagementState.toString()})(document, ${generation}, ${JSON.stringify(state)}, ${JSON.stringify(action)}, ${click})`;
+    const expression = `(${filesPublicManagementState.toString()})(document, ${generation}, ${JSON.stringify(state)}, ${JSON.stringify(action)}, ${click}, ${JSON.stringify(local)})`;
     if (click)
       assert.equal(await js(expression), true, "exact Files management action");
     else
@@ -606,10 +613,11 @@ async function run(options) {
         `Files generation ${generation} ${state}`,
       );
   }
-  async function manageFiles(label, generation, state) {
-    if (options.linuxPublicCatalog)
-      await publicManagement(generation, state, label, true);
-    else await click(core, label);
+  async function manageFiles(label, generation, state, local = "dormant") {
+    if (options.linuxPublicCatalog) {
+      await publicManagement(generation, state, label, false, local);
+      await publicManagement(generation, state, label, true, local);
+    } else await click(core, label);
   }
   const publicLinkInstalls = [];
   const publicCatalogInstalls = [];
@@ -1246,7 +1254,7 @@ async function run(options) {
   assert.equal(children.length, 2);
   assert.notEqual(children[0].pid, children[1].pid);
   await settings();
-  await manageFiles("Disable", 2, "enabled");
+  await manageFiles("Disable", 2, "enabled", "active");
   await state("generation 3");
   await until(
     () => hosted().length === 0 && children[1].closed,

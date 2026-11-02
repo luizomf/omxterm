@@ -22,10 +22,13 @@ const selection = "a".repeat(36);
 const official =
   "Official means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.";
 const prompt = (generation: number) => ({
+  type: "warning",
   title: "Trust extension code?",
   message: "Install SSH Connect 0.3.1?",
-  detail: `Trusted code\n\nPackage: omxterm.ssh\nSHA-256: ${sha(archive)}\nCurrent generation: ${generation}\n\n${official}`,
+  detail: `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.ssh\nSHA-256: ${sha(archive)}\nCurrent generation: ${generation}\n\n${official}`,
   buttons: ["Cancel", "Trust and install"],
+  defaultId: 0,
+  cancelId: 0,
 });
 
 type Request = { operation: string; selection?: string };
@@ -285,7 +288,7 @@ it("follows the production archive redirect only when the observed HTTPS chain m
     /redirect or initial URL mismatch/,
   );
   expect((mismatch as Error).message).not.toContain("signature=synthetic");
-  expect(failed.summary()).toMatchObject({ approvals: 0, installed: 0 });
+  expect(() => failed.summary()).toThrow(/unexpected/);
   failed.stop();
 });
 
@@ -328,6 +331,7 @@ it("refuses another refresh rather than silently changing the captured catalog g
     /unexpected catalog refresh/,
   );
   expect(f.fetch).toHaveBeenCalledTimes(1);
+  expect(() => observer.summary()).toThrow(/unexpected/);
   observer.stop();
 });
 
@@ -339,7 +343,7 @@ it("refuses a changed captured selection before the app can download or approve"
     f.invoke({ operation: "catalog-install", selection: "b".repeat(36) }),
   ).rejects.toThrow(/selection mismatch/);
   expect(f.fetch).toHaveBeenCalledTimes(1);
-  expect(observer.summary()).toMatchObject({ approvals: 0, installed: 0 });
+  expect(() => observer.summary()).toThrow(/unexpected/);
   observer.stop();
 });
 
@@ -386,7 +390,7 @@ it("refuses changed downloaded archive bytes before native trust", async () => {
   await expect(
     f.invoke({ operation: "catalog-install", selection }),
   ).rejects.toThrow(/actual archive byte hash/);
-  expect(observer.summary()).toMatchObject({ approvals: 0, installed: 0 });
+  expect(() => observer.summary()).toThrow(/unexpected/);
   observer.stop();
 });
 
@@ -398,7 +402,7 @@ it("refuses a different installation generation at actual consent", async () => 
   await expect(
     f.invoke({ operation: "catalog-install", selection }),
   ).rejects.toThrow(/generation mismatch/);
-  expect(observer.summary()).toMatchObject({ approvals: 0, installed: 0 });
+  expect(() => observer.summary()).toThrow(/unexpected/);
   observer.stop();
 });
 

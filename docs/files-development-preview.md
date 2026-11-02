@@ -830,8 +830,12 @@ URL, actual archive length/hash and three Official trust prompts at captured
 installation generations 0, 1 and 5. Reinstall, Disable/Enable/Uninstall, the
 original PTY/Surface and a live third activation at normal joined Quit are
 checked; the full local Files UI campaign is not repeated. Fresh `run-*` evidence
-prevents an older Quit receipt from qualifying the run. Captures still need
-independent visual inspection; synthetic Chromium input and controlled consent do
+prevents an older Quit receipt from qualifying the run. The supervisor's pass
+covers the scenario and owned shutdown, not native-diagnostic disposition: a
+truncated stderr fails this public checkpoint, and complete stderr still requires
+manual review. Unknown diagnostics, including the observed #746 presentation
+rejection, are not waived. Captures still need independent visual inspection;
+synthetic Chromium input and controlled consent do
 not qualify physical input or dialogs. A local stable host against public
 extension URLs is **not** a publicly downloaded stable host. This adapter and its
 headless tests are preparation, not a passed public checkpoint. The historical

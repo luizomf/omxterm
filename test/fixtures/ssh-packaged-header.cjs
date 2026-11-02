@@ -18,11 +18,13 @@ function assertPublicSshTrust(prompt, digest, generation) {
     "Official means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.";
   if (
     prompt.title !== "Trust extension code?" ||
+    prompt.type !== "warning" ||
+    prompt.defaultId !== 0 ||
+    prompt.cancelId !== 0 ||
     !Number.isSafeInteger(generation) ||
     generation < 0 ||
-    !prompt.detail.endsWith(
-      `\n\nPackage: omxterm.ssh\nSHA-256: ${digest}\nCurrent generation: ${generation}\n\n${official}`,
-    ) ||
+    prompt.detail !==
+      `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.ssh\nSHA-256: ${digest}\nCurrent generation: ${generation}\n\n${official}` ||
     JSON.stringify(prompt.buttons) !==
       JSON.stringify(["Cancel", "Trust and install"])
   )
