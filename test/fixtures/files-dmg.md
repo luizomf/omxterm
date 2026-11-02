@@ -101,14 +101,15 @@ did not modify the v1 Linux0.4 catalog or any immutable asset.
 
 ## Public-catalog mode
 
-The separate six-check public-catalog checkpoint passed on published dev.26
-on 2026-10-31; see [actual evidence and limits](../../docs/files-development-preview.md#macos-catalog-distribution).
-This procedure alone does not qualify other inputs. Published dev.21 still selects
-the legacy Linux Files offer. Its existing local/link qualification cannot prove
-new catalog discovery.
+The following Files0.5 recipe records the **historical** six-check checkpoint
+that passed on published dev.26 on 2026-10-31; see [actual evidence and limits](../../docs/files-development-preview.md#macos-catalog-distribution).
+The current macOS endpoint selects Files0.6, so the old Files0.5 card is no longer
+available there. For current execution, follow the [Files0.6 checkpoint](#prepared-files06-public-catalog-checkpoint)
+instead. Published dev.21 still selects the legacy Linux Files offer; its existing
+local/link qualification cannot prove macOS catalog discovery.
 
-Supply the ordinary DMG/hash/archive/hash/version/evidence inputs, using the exact
-new host version, plus this assignment instead of `PUBLIC_LINK`:
+For that historical 0.5 run, the ordinary DMG/hash/archive/hash/version/evidence
+inputs used the exact then-selected host plus this assignment instead of `PUBLIC_LINK`:
 
 ```sh
 OMXTERM_FILES_DMG_PUBLIC_CATALOG=https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json

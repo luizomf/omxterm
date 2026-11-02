@@ -490,16 +490,17 @@ replayed or relabeled. Original release notes retain their publication-time stat
 
 ## Files 0.6.0 macOS public-catalog checkpoint
 
-On 2026-11-02, the exact retained **locally built**, not downloaded-public,
-OMXTerm0.24.0 ARM64 DMG (129,751,297 bytes, SHA-256
+On 2026-11-02, an ordinary-user macOS27.0.1 ARM64 guest used the exact retained
+**locally built**, not downloaded-public, OMXTerm0.24.0 ARM64 DMG (129,751,297 bytes, SHA-256
 `88e66b764cc9fc4fa3a6cfb2c0e081dce5089631a8f8b8640ad875214e8bc34f`)
 passed the bounded [public-catalog fixture](../test/fixtures/files-dmg.md#prepared-files06-public-catalog-checkpoint)
 with separately published Files0.6.0 (17,331 bytes, SHA-256
 `50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`).
 The host was built from `8717d47327eeab14f522b1b2a448216860d0923d`; the
 archive was built from `cfc9073010df586eec321641ba5013862734f8fe`.
-Fixture/source was `cf13992ccc730947fed7046cc27ce422920d78b1`. The stable
-host was not publicly released at this checkpoint.
+Fixture/source was `cf13992ccc730947fed7046cc27ce422920d78b1`. The guest OS
+version was rechecked after cleanup on the same boot. The stable host was not
+publicly released at this checkpoint.
 
 The fixed macOS catalog was independently read back at SHA-256
 `0943623c3907516cc3c2affdc73e5cc7247b040845da5de022fa9f3a7058e870`;
