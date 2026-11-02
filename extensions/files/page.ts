@@ -114,7 +114,11 @@ export function mountFilesPage(
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
-  type MenuPointer = { scrollTop: number; scrolled: boolean };
+  type MenuPointer = {
+    scrollTop: number;
+    scrolled: boolean;
+    item: HTMLButtonElement | null;
+  };
   const menuPointers = new Map<number, MenuPointer>();
   const releasedMenuPointers = new Map<number, MenuPointer>();
   let menuReleaseTimer: ReturnType<typeof setTimeout> | undefined;
@@ -699,6 +703,7 @@ export function mountFilesPage(
     anchor?: HTMLElement,
   ) {
     resetMenuGesture();
+    const generation = menuGeneration;
     menuReturn = anchor ?? actionsButton;
     clear(menu);
     label(menu, (m) => m.fileActions, "aria-label");
@@ -706,6 +711,7 @@ export function mountFilesPage(
       const item = button(
         action.label,
         () => {
+          if (menu.hidden || generation !== menuGeneration) return;
           closeMenu();
           action.run();
         },
@@ -795,9 +801,12 @@ export function mountFilesPage(
     }
     if (menuReleaseTimer !== undefined) clearTimeout(menuReleaseTimer);
     menuReleaseTimer = undefined;
+    releasedMenuPointers.delete(event.pointerId);
+    const item = (event.target as Element).closest<HTMLButtonElement>("button");
     menuPointers.set(event.pointerId, {
       scrollTop: menu.scrollTop,
       scrolled: false,
+      item: item?.parentElement === menu ? item : null,
     });
   };
   menu.addEventListener("scroll", () => {
@@ -811,6 +820,9 @@ export function mountFilesPage(
     const pointer = menuPointers.get(event.pointerId);
     if (!pointer) return;
     menuPointers.delete(event.pointerId);
+    // Unknown or evicted pointer clicks are refused, so this cap is fail-closed.
+    if (releasedMenuPointers.size >= 32)
+      releasedMenuPointers.delete(releasedMenuPointers.keys().next().value!);
     releasedMenuPointers.set(event.pointerId, pointer);
     if (menuPointers.size) return;
     const generation = menuGeneration;
@@ -823,17 +835,33 @@ export function mountFilesPage(
         (released) =>
           released.scrolled || released.scrollTop !== menu.scrollTop,
       );
-      releasedMenuPointers.clear();
-      // A wheel or pan is deliberate; do not snap it back to the focused item.
-      if (!scrolled) revealFocusedMenuItem();
+      // Do not undo deliberate scrolling or a stationary scrollbar press.
+      if (scrolled || !pointer.item) return;
+      const before = menu.getBoundingClientRect();
+      const scrollTop = menu.scrollTop;
+      revealFocusedMenuItem();
+      const after = menu.getBoundingClientRect();
+      if (
+        scrollTop !== menu.scrollTop ||
+        before.left !== after.left ||
+        before.top !== after.top
+      )
+        for (const released of releasedMenuPointers.values())
+          released.scrolled = true;
     }, 0);
   };
   const guardScrolledMenuClick = (event: MouseEvent) => {
-    if (!event.detail) return; // Keyboard and programmatic activation.
-    const pointer = releasedMenuPointers.get((event as PointerEvent).pointerId);
-    if (!pointer || (!pointer.scrolled && pointer.scrollTop === menu.scrollTop))
+    if (!event.detail || !menu.contains(event.target as Node)) return;
+    const id = (event as PointerEvent).pointerId;
+    const pointer = releasedMenuPointers.get(id);
+    if (
+      pointer &&
+      !pointer.scrolled &&
+      pointer.scrollTop === menu.scrollTop &&
+      pointer.item?.contains(event.target as Node)
+    )
       return;
-    // The browser may target a different item after wheel or momentum scroll.
+    // Never activate a retargeted or unrecognized pointer click.
     event.preventDefault();
     event.stopImmediatePropagation();
   };

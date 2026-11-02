@@ -161,6 +161,62 @@ it("also guards a scroll between pointerup and the browser click", async () => {
   });
 });
 
+it("refuses a delayed click after a scrolled gesture's release timer", async () => {
+  vi.useFakeTimers();
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 1);
+  f.menu.scrollTop = 45;
+  f.menu.dispatchEvent(new Event("scroll"));
+  pointer(f.item, "pointerup", 1);
+  vi.runAllTimers();
+  const click = new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    detail: 1,
+  });
+  Object.defineProperty(click, "pointerId", { value: 1 });
+  f.item.dispatchEvent(click);
+  expect(f.menu.hidden).toBe(false);
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
+
+it("does not activate a retained item after its pressed menu was dismissed", async () => {
+  const f = await fixture();
+  pointer(f.item, "pointerdown", 10);
+  f.language("pt-BR");
+  expect(f.menu.hidden).toBe(true);
+  pointer(f.item, "pointerup", 10);
+  f.item.click();
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+  f.actions.click();
+  f.item.click();
+  expect(f.request).not.toHaveBeenCalledWith({
+    operation: "terminal-directory",
+  });
+});
+
+it("does not snap back after a stationary scrollbar press", async () => {
+  vi.useFakeTimers();
+  const f = await fixture();
+  Object.defineProperty(f.menu, "clientHeight", { value: 80 });
+  vi.spyOn(f.menu, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 0, 180, 80),
+  );
+  vi.spyOn(document.activeElement!, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, -40, 160, 30),
+  );
+  f.menu.scrollTop = 60;
+  pointer(f.menu, "pointerdown", 1);
+  pointer(f.menu, "pointerup", 1);
+  vi.runAllTimers();
+  expect(f.menu.hidden).toBe(false);
+  expect(f.menu.scrollTop).toBe(60);
+});
+
 it("delivers an unchanged pointer click normally", async () => {
   const f = await fixture();
   pointer(f.item, "pointerdown", 1);
