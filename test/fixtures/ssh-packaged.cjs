@@ -5,6 +5,7 @@ const {
   BrowserWindow,
   Menu,
   dialog,
+  ipcMain,
   webContents,
   clipboard,
   desktopCapturer,
@@ -126,7 +127,7 @@ async function until(check, label, timeout = 15000) {
 }
 // Executed in the real core renderer; retained references fence replacement
 // between frame readiness, capture and the eventual action.
-function prepareCatalogCapture(title, label, token, deadline) {
+function prepareCatalogCapture(title, label, token, deadline, requireOfficial) {
   const fail = () => {
     throw Error("SSH catalog capture target unavailable or changed");
   };
@@ -140,6 +141,9 @@ function prepareCatalogCapture(title, label, token, deadline) {
   const card = cards()[0];
   const heading = card?.querySelector("h4");
   const button = card?.querySelector("button");
+  const catalog = card?.closest(".extension-catalog");
+  const officialHeading = catalog?.querySelector(":scope > h3");
+  const officialExplanation = catalog?.querySelector(":scope > p");
   const visible = (element) => {
     if (!element?.isConnected || element.closest("[hidden], [inert]")) fail();
     for (let node = element; node; node = node.parentElement) {
@@ -217,6 +221,20 @@ function prepareCatalogCapture(title, label, token, deadline) {
     visible(tab);
     visible(panel);
     visible(button);
+    if (requireOfficial) {
+      if (
+        card.closest(".extension-catalog") !== catalog ||
+        catalog?.querySelector(":scope > h3") !== officialHeading ||
+        catalog?.querySelector(":scope > p") !== officialExplanation ||
+        officialHeading?.textContent !== "Official extensions" ||
+        !officialExplanation?.textContent.startsWith(
+          "Official means project-maintained, not sandboxed or harmless.",
+        )
+      )
+        fail();
+      visible(officialHeading);
+      visible(officialExplanation);
+    }
     const controls = panel.querySelector(":scope > .application-page-actions");
     if (
       !controls ||
@@ -266,7 +284,13 @@ function prepareCatalogCapture(title, label, token, deadline) {
   });
 }
 let catalogCaptureSequence = 0;
-async function catalogInstall(core, extensionTitle, label, saveImage) {
+async function catalogInstall(
+  core,
+  extensionTitle,
+  label,
+  saveImage,
+  requireOfficial = false,
+) {
   const deadline = Date.now() + 3000;
   const token = ++catalogCaptureSequence;
   const assertLive = () => {
@@ -298,7 +322,7 @@ async function catalogInstall(core, extensionTitle, label, saveImage) {
   try {
     await bounded(() =>
       core.executeJavaScript(
-        `(${prepareCatalogCapture.toString()})(${JSON.stringify(extensionTitle)}, ${JSON.stringify(label)}, ${token}, ${deadline})`,
+        `(${prepareCatalogCapture.toString()})(${JSON.stringify(extensionTitle)}, ${JSON.stringify(label)}, ${token}, ${deadline}, ${requireOfficial})`,
       ),
     );
     const image = await bounded(() => core.capturePage());
@@ -359,17 +383,23 @@ async function run(options) {
       path.join(options.evidence, name),
       JSON.stringify(value, null, 2),
     );
+  let publicObservation;
+  let sshPublicManagementState;
   const original = {
     fork: childProcess.fork,
     open: dialog.showOpenDialog,
     message: dialog.showMessageBox,
   };
   restore = () => {
-    childProcess.fork = original.fork;
-    syncBuiltinESMExports();
-    dialog.showOpenDialog = original.open;
-    dialog.showMessageBox = original.message;
-    clipboard.clear();
+    try {
+      publicObservation?.stop();
+    } finally {
+      childProcess.fork = original.fork;
+      syncBuiltinESMExports();
+      dialog.showOpenDialog = original.open;
+      dialog.showMessageBox = original.message;
+      clipboard.clear();
+    }
   };
   childProcess.fork = (...args) => {
     const child = original.fork(...args);
@@ -391,6 +421,16 @@ async function run(options) {
     return child;
   };
   syncBuiltinESMExports();
+  if (options.stablePublic) {
+    const publicCatalog = require("./ssh-public-catalog.cjs");
+    sshPublicManagementState = publicCatalog.sshPublicManagementState;
+    publicObservation = publicCatalog.startSshPublicObservation({
+      ipcMain,
+      diagnostics: require("node:diagnostics_channel"),
+      catalogSha256: options.catalogSha256,
+      archiveSha256: options.archiveSha256,
+    });
+  }
   dialog.showOpenDialog = async () => {
     assert.notEqual(
       options.catalogMode,
@@ -403,6 +443,7 @@ async function run(options) {
     if (prompt.title === "Trust extension code?") {
       assert.ok(prompt.detail.includes(options.archiveSha256));
       if (changedHeader) assertChangedSshTrust(prompt, options.archiveSha256);
+      publicObservation?.verifyTrust(prompt);
       state.approvals++;
       return { response: 1, checkboxChecked: false };
     }
@@ -537,14 +578,23 @@ async function run(options) {
       `document.querySelector('.extensions-panel')?.textContent.includes(${JSON.stringify(text)}) === true`,
     );
   const installFromCatalog = (label) =>
-    catalogInstall(core, extensionTitle, label, (image) =>
-      fs.writeFileSync(
-        path.join(
-          options.evidence,
-          `public-catalog-${label.toLowerCase()}.png`,
+    catalogInstall(
+      core,
+      extensionTitle,
+      label,
+      (image) =>
+        fs.writeFileSync(
+          path.join(
+            options.evidence,
+            `public-catalog-${label.toLowerCase()}.png`,
+          ),
+          image.toPNG(),
         ),
-        image.toPNG(),
-      ),
+      !!options.stablePublic,
+    );
+  const publicManagement = (generation, state, local, action) =>
+    js(
+      `(${sshPublicManagementState.toString()})(document, ${generation}, ${JSON.stringify(state)}, ${JSON.stringify(local)}, ${JSON.stringify(action)})`,
     );
   await js(
     "window.__sshPublicCanvas = document.querySelector('.terminal-surface canvas')",
@@ -579,6 +629,11 @@ async function run(options) {
     "installed SSH identity matches selected archive version",
   );
   assert.equal(state.approvals, 1);
+  if (options.stablePublic)
+    await until(
+      () => publicManagement(1, "enabled", "dormant", "Disable"),
+      "exact SSH generation 1 dormant",
+    );
   assert.equal(children.length, 0);
   assert.equal(hosted().length, 0);
   checks.push("exact-archive-trust-dormant-install");
@@ -762,6 +817,11 @@ async function run(options) {
     assert.deepEqual(children[0].exit, { code: 0, signal: null });
     assert.equal(children.length, 1, "reinstall remains dormant");
     assert.equal(state.approvals, 2);
+    if (options.stablePublic)
+      await until(
+        () => publicManagement(2, "enabled", "dormant", "Disable"),
+        "exact SSH generation 2 dormant",
+      );
     await closeSettings();
     menu("SSH Connect");
     await until(
@@ -791,8 +851,18 @@ async function run(options) {
       })()`),
       "completed Disable snapshot and enabled Uninstall",
     );
+    if (options.stablePublic)
+      await until(
+        () => publicManagement(3, "disabled", "dormant", "Uninstall"),
+        "exact SSH generation 3 disabled",
+      );
     await click(core, "Uninstall");
     await until(() => panelContains("uninstalled"), "SSH uninstalled");
+    if (options.stablePublic)
+      await until(
+        () => publicManagement(4, "uninstalled", "dormant"),
+        "exact SSH generation 4 uninstalled",
+      );
     await closeSettings();
     // Closing Settings restores the sole terminal. Single-tab windows have no
     // tab-strip buttons; verify restored focus and the original PTY instead.
@@ -819,6 +889,15 @@ async function run(options) {
     );
     assert.equal(fs.existsSync(file("client-invocations.jsonl")), false);
     await screenshot("public-terminal-after.png");
+    if (options.stablePublic) {
+      const binding = publicObservation.summary();
+      assert.equal(binding.catalogGeneration, 1);
+      assert.equal(binding.approvals, 2);
+      assert.equal(binding.installed, 2);
+      assert.equal(binding.attempts.length, 2);
+      save("public-catalog-binding.json", binding);
+      checks.push("actual-catalog-selection-download-and-consent-binding");
+    }
     checks.push(
       "public-catalog-install-reinstall-dormant-retirement",
       "fresh-activation-disable-uninstall",
@@ -832,8 +911,9 @@ async function run(options) {
         endpoint:
           "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json",
       },
-      scope:
-        "Production public HTTPS; controlled input/consent; no client execution or real authentication",
+      scope: options.stablePublic
+        ? "Locally supplied stable 0.24.0 host; production public HTTPS catalog and archive; controlled input/consent; no client execution or real authentication"
+        : "Production public HTTPS; controlled input/consent; no client execution or real authentication",
     };
   }
   if (options.appearance) {

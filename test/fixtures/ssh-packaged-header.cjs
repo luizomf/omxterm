@@ -12,6 +12,23 @@ function assertChangedSshTrust(prompt, digest) {
     throw Error("SSH trust identity or digest mismatch");
 }
 
+function assertPublicSshTrust(prompt, digest, generation) {
+  assertChangedSshTrust(prompt, digest);
+  const official =
+    "Official means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.";
+  if (
+    prompt.title !== "Trust extension code?" ||
+    !Number.isSafeInteger(generation) ||
+    generation < 0 ||
+    !prompt.detail.endsWith(
+      `\n\nPackage: omxterm.ssh\nSHA-256: ${digest}\nCurrent generation: ${generation}\n\n${official}`,
+    ) ||
+    JSON.stringify(prompt.buttons) !==
+      JSON.stringify(["Cancel", "Trust and install"])
+  )
+    throw Error("SSH public Official trust or generation mismatch");
+}
+
 function observeSshChildHeader() {
   const regions = document.querySelectorAll(
     '.application-page[role="region"][aria-label="SSH Connect"]',
@@ -260,6 +277,7 @@ async function captureSshHeader(window, core, view) {
 module.exports = {
   usesChangedSshHeader,
   assertChangedSshTrust,
+  assertPublicSshTrust,
   observeSshChildHeader,
   observeSshHostHeader,
   captureSshHeader,
