@@ -270,10 +270,10 @@ try {
     assert.ok(node, `accessible name: ${names[icon]}`);
     assert.equal(node.description?.value, names[`${icon}Tip`]);
   }
-  async function load(width, language, light, scale = 1) {
+  async function load(width, language, light, scale = 1, height = 400) {
     await send("Emulation.setDeviceMetricsOverride", {
       width,
-      height: 400,
+      height,
       deviceScaleFactor: scale,
       mobile: false,
     });
@@ -547,9 +547,27 @@ try {
     );
   }
   async function assertCheckboxTextFits(tag) {
-    // Wait for focus-driven scrolling and layout before measuring the text,
-    // matching the frame used by native captures rather than an earlier state.
-    await frame();
+    // Match the settled native captures, including cold font/layout changes.
+    await evaluate("document.fonts.ready.then(() => true)");
+    const settled = await evaluate(
+      () =>
+        new Promise((resolve) => {
+          let previous = -1,
+            stable = 0,
+            frames = 0;
+          function tick() {
+            const current = document.querySelector('[role="menu"]').scrollTop;
+            stable = Math.abs(current - previous) < 0.05 ? stable + 1 : 0;
+            previous = current;
+            frames++;
+            if (frames >= 10 && stable >= 5) resolve(true);
+            else if (frames >= 120) resolve(false);
+            else requestAnimationFrame(tick);
+          }
+          requestAnimationFrame(tick);
+        }),
+    );
+    assert.ok(settled, `menu scroll settled ${tag}`);
     const layout = await evaluate(() => {
       const item = document.querySelector('[role="menuitemcheckbox"]');
       const menu = item.closest('[role="menu"]');
@@ -572,15 +590,34 @@ try {
       };
       const popup = rect(menu.getBoundingClientRect());
       const button = rect(item.getBoundingClientRect());
+      const style = getComputedStyle(item);
+      const outset =
+        parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
       return {
         caption: fragments(caption),
         shortcut: fragments(shortcut),
         check: fragments(check),
         popup,
+        scrollport: {
+          left: popup.left + menu.clientLeft,
+          right: popup.left + menu.clientLeft + menu.clientWidth,
+          top: popup.top + menu.clientTop,
+          bottom: popup.top + menu.clientTop + menu.clientHeight,
+        },
         button,
+        focusRing: {
+          left: button.left - outset,
+          right: button.right + outset,
+          top: button.top - outset,
+          bottom: button.bottom + outset,
+        },
+        scrollTop: menu.scrollTop,
+        scrollHeight: menu.scrollHeight,
+        clientHeight: menu.clientHeight,
         viewport: { left: 0, top: 0, right: innerWidth, bottom: innerHeight },
         focused: document.activeElement === item,
-        outline: getComputedStyle(item).outlineStyle,
+        focusVisible: item.matches(":focus-visible"),
+        outline: style.outlineStyle,
         checked: item.getAttribute("aria-checked"),
         expectsShortcut: /^(Mac|Linux)/.test(navigator.platform),
       };
@@ -596,7 +633,7 @@ try {
       a.top < b.bottom - 0.5 &&
       b.top < a.bottom - 0.5;
     assert.ok(
-      layout.focused && layout.outline !== "none",
+      layout.focused && layout.focusVisible && layout.outline !== "none",
       `focus ${tag}: ${JSON.stringify(layout)}`,
     );
     assert.ok(
@@ -610,12 +647,21 @@ try {
       String(!tag.endsWith("-unchecked")),
       `checked state ${tag}`,
     );
+    for (const boundary of [layout.scrollport, layout.viewport])
+      assert.ok(
+        inside(layout.focusRing, boundary),
+        `clipped focus ring ${tag}: ${JSON.stringify(layout)}`,
+      );
     for (const fragment of [
       ...layout.caption,
       ...layout.shortcut,
       ...layout.check,
     ])
-      for (const boundary of [layout.button, layout.popup, layout.viewport])
+      for (const boundary of [
+        layout.button,
+        layout.scrollport,
+        layout.viewport,
+      ])
         assert.ok(
           inside(fragment, boundary),
           `clipped text ${tag}: ${JSON.stringify(layout)}`,
@@ -914,45 +960,53 @@ try {
       "scroll",
       "matrix",
       "hidden",
+      "short-menu",
       "shortcut-mac",
       "shortcut-linux",
     ].includes(scenario),
   );
-  if (scenario.startsWith("shortcut-")) {
+  if (scenario.startsWith("shortcut-") || scenario === "short-menu") {
     await send("Emulation.setUserAgentOverride", {
       userAgent: await evaluate("navigator.userAgent"),
-      platform: scenario === "shortcut-mac" ? "MacIntel" : "Linux aarch64",
+      platform: scenario === "shortcut-linux" ? "Linux aarch64" : "MacIntel",
     });
     assert.equal(
       await evaluate("navigator.platform"),
-      scenario === "shortcut-mac" ? "MacIntel" : "Linux aarch64",
+      scenario === "shortcut-linux" ? "Linux aarch64" : "MacIntel",
     );
   }
   const sizes =
-    scenario === "matrix" || scenario === "hidden"
+    scenario === "short-menu"
       ? [
-          [196, 1],
-          [196, 2],
-          [320, 1],
+          [196, 1, 174],
+          [196, 2, 174],
         ]
-      : [[196, 1]];
-  for (const [width, scale] of sizes)
+      : scenario === "matrix" || scenario === "hidden"
+        ? [
+            [196, 1],
+            [196, 2],
+            [320, 1],
+          ]
+        : [[196, 1]];
+  for (const [width, scale, height = 400] of sizes)
     for (const language of scenario === "matrix"
       ? ["en-US", "pt-BR"]
       : ["en-US"])
-      for (const light of scenario === "matrix" || scenario === "hidden"
+      for (const light of scenario === "matrix" ||
+      scenario === "hidden" ||
+      scenario === "short-menu"
         ? [false, true]
         : [false]) {
-        const tag = `${width}x${scale}-${language}-${light ? "light" : "dark"}`;
+        const tag = `${width}x${scale}${height === 400 ? "" : `-h${height}`}-${language}-${light ? "light" : "dark"}`;
         const names = labels(language);
         for (const kind of scenario === "matrix"
           ? ["pointer", "notice", "scroll"]
           : [scenario]) {
-          await load(width, language, light, scale);
+          await load(width, language, light, scale, height);
           if (kind === "pointer") await pointer(names, tag);
           if (kind === "notice") await notice(language, names, tag);
           if (kind === "scroll") await scroll(width, names, tag);
-          if (kind === "hidden") await hidden(tag);
+          if (kind === "hidden" || kind === "short-menu") await hidden(tag);
           if (kind === "shortcut-mac") await shortcut("mac");
           if (kind === "shortcut-linux") await shortcut("linux");
         }

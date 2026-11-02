@@ -163,6 +163,111 @@ it.each([
   },
 );
 
+it.each([
+  ["en-US", "Actions…", 107.375],
+  ["pt-BR", "Ações…", 126.21875],
+] as const)(
+  "reveals the whole keyboard-focused checkbox in the short %s menu",
+  async (locale, actionsName, clippedTop) => {
+    const { language, request } = await setup("MacIntel");
+    language(locale);
+    const actions = button(actionsName);
+    const popup = menu();
+    // Replay the retained 196x174-DIP child geometry, not a jsdom layout claim.
+    vi.spyOn(popup, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 8, 181, 166),
+    );
+    Object.defineProperties(popup, {
+      clientTop: { configurable: true, value: 1 },
+      clientHeight: { configurable: true, value: 164 },
+    });
+    const reads = request.mock.calls.length;
+    for (const checked of [false, true]) {
+      actions.click();
+      const item = popup.querySelector<HTMLButtonElement>(
+        '[role="menuitemcheckbox"]',
+      )!;
+      expect(item.getAttribute("aria-checked")).toBe(String(checked));
+      const focus = vi.spyOn(item, "focus");
+      popup.scrollTop = 21;
+      vi.spyOn(item, "getBoundingClientRect").mockImplementation(
+        () =>
+          new DOMRect(5, clippedTop + 21 - popup.scrollTop, 156, 84.4765625),
+      );
+      const assertVisible = () => {
+        const rect = item.getBoundingClientRect();
+        // Include the shared 2-DIP outline plus its 2-DIP offset.
+        expect(rect.top - 4).toBeGreaterThanOrEqual(9);
+        expect(rect.bottom + 4).toBeLessThanOrEqual(173);
+        expect(document.activeElement).toBe(item);
+      };
+      expect(
+        key(document.activeElement as HTMLElement, "End").defaultPrevented,
+      ).toBe(true);
+      assertVisible();
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+      // End on an already-focused item must reveal it again, not depend on a
+      // new native focus event. Arrow wrap and Home keep their existing order.
+      popup.scrollTop = 21;
+      key(item, "End");
+      assertVisible();
+      key(item, "ArrowDown");
+      expect(document.activeElement).toBe(popup.querySelector("button"));
+      key(document.activeElement as HTMLElement, "ArrowUp");
+      assertVisible();
+      key(item, "Home");
+      expect(document.activeElement).toBe(popup.querySelector("button"));
+      key(document.activeElement as HTMLElement, "End");
+      assertVisible();
+      item.click();
+      expect(popup.hidden).toBe(true);
+      expect(document.activeElement).toBe(actions);
+    }
+    expect(request).toHaveBeenCalledTimes(reads);
+  },
+);
+
+it("reveals a retained focused menu item after its localized text grows", async () => {
+  const { language } = await setup("MacIntel");
+  button("Actions…").click();
+  const popup = menu();
+  const item = popup.querySelector<HTMLButtonElement>(
+    '[role="menuitemcheckbox"]',
+  )!;
+  vi.spyOn(popup, "getBoundingClientRect").mockReturnValue(
+    new DOMRect(0, 8, 181, 166),
+  );
+  Object.defineProperties(popup, {
+    clientTop: { configurable: true, value: 1 },
+    clientHeight: { configurable: true, value: 164 },
+  });
+  popup.scrollTop = 0;
+  let height = 60;
+  vi.spyOn(item, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(5, 100 - popup.scrollTop, 156, height),
+  );
+  key(document.activeElement as HTMLElement, "End");
+  expect(popup.scrollTop).toBe(0);
+  height = 90;
+  language("pt-BR");
+  expect(popup.scrollTop).toBe(21);
+  expect(item.getBoundingClientRect().bottom + 4).toBe(173);
+  expect(document.activeElement).toBe(item);
+  expect(item.querySelector(".menu-caption")?.textContent).toBe(
+    "Mostrar itens iniciados por ponto (.)",
+  );
+  expect(item.querySelector(".menu-shortcut")?.textContent).toBe(
+    "Atalho: Cmd+Shift+.",
+  );
+  // An item taller than the scrollport starts at its check/caption; native
+  // PageDown/PageUp remain unclaimed so its remainder can still be scrolled.
+  height = 200;
+  key(item, "End");
+  expect(item.getBoundingClientRect().top - 4).toBe(9);
+  expect(key(item, "PageDown").defaultPrevented).toBe(false);
+  expect(key(item, "PageUp").defaultPrevented).toBe(false);
+});
+
 it("leaves the gesture untouched until a browsing root is available", async () => {
   vi.spyOn(navigator, "platform", "get").mockReturnValue("Linux aarch64");
   let resolve!: (reply: Reply) => void;

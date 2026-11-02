@@ -213,9 +213,12 @@ descendants relative to the current browsing root; it does not classify Finder
 hidden flags or other platform-specific hidden metadata. A directly entered root
 inside a dot-prefixed path remains usable, with the same filter applied to its
 children. Open Actions with Tab and Enter, then use the menu's arrow keys (or
-End) and Enter to change the setting. The menu also shows the view-local
-shortcut: `Ctrl+H` on Linux or `Cmd+Shift+.` on macOS. It works when the visible
-Files browsing page or menu has focus and a root is available; it does not claim
+End) and Enter to change the setting. In short views, keyboard navigation
+scrolls within the menu to reveal the focused item with room for its focus
+outline; an item taller than the menu starts at its top and leaves Page Up/Down
+available for scrolling. The menu also shows the view-local shortcut: `Ctrl+H`
+on Linux or `Cmd+Shift+.` on macOS. It works when the visible Files browsing page
+or menu has focus and a root is available; it does not claim
 text inputs, textareas, selects, editable content, IME composition, operation
 editors, pending confirmations or mutations. Key repeats do not toggle again.
 Core-owned/remappable shortcuts get first refusal and may take precedence. The

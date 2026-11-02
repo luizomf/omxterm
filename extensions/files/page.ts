@@ -626,6 +626,21 @@ export function mountFilesPage(
         : (rowElement(selected?.path ?? "") ?? actionsButton)
       )?.focus();
   }
+  function revealMenuItem(item: HTMLElement) {
+    // Scroll only the popup, using its current wrapped layout. Leave room for
+    // the shared focus outline (2px plus a 2px offset), not just the text.
+    const top = menu.getBoundingClientRect().top + menu.clientTop + 4;
+    const bottom = top + menu.clientHeight - 8;
+    const rect = item.getBoundingClientRect();
+    if (rect.top < top || rect.height > bottom - top)
+      menu.scrollTop += rect.top - top;
+    else if (rect.bottom > bottom) menu.scrollTop += rect.bottom - bottom;
+  }
+  function focusMenuItem(item?: HTMLButtonElement) {
+    if (!item) return;
+    item.focus({ preventScroll: true });
+    revealMenuItem(item);
+  }
   function openMenu(
     target?: Target,
     x?: number,
@@ -681,7 +696,10 @@ export function mountFilesPage(
     const viewport = document.documentElement;
     menu.style.left = `${Math.max(0, Math.min(x ?? rect.left, viewport.clientWidth - menu.offsetWidth))}px`;
     menu.style.top = `${Math.max(0, Math.min(y ?? rect.bottom, viewport.clientHeight - menu.offsetHeight))}px`;
-    menu.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    focusMenuItem(
+      menu.querySelector<HTMLButtonElement>("button:not(:disabled)") ??
+        undefined,
+    );
   }
   menu.addEventListener("keydown", (event) => {
     const items = [
@@ -701,7 +719,7 @@ export function mountFilesPage(
             ? items.length - 1
             : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) %
               items.length;
-      items[next]?.focus();
+      focusMenuItem(items[next]);
     }
   });
   const dismissMenu = (event: PointerEvent) => {
@@ -861,6 +879,8 @@ export function mountFilesPage(
     document.documentElement.lang = language;
     messages = filesMessages(language);
     for (const update of labels.values()) update();
+    const active = document.activeElement as HTMLElement | null;
+    if (!menu.hidden && active?.parentElement === menu) revealMenuItem(active);
     tooltips.refresh();
   });
   const ready = navigateFrom("home");
