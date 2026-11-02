@@ -349,6 +349,7 @@ export async function launchLinuxPackagedProcess({
     stdio: ["ignore", "ignore", "pipe"],
   });
   let stderr = "";
+  let stderrTruncated = false;
   let launchError;
   let outcome;
   let closed = false;
@@ -367,6 +368,7 @@ export async function launchLinuxPackagedProcess({
   });
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk) => {
+    if (stderr.length + chunk.length > 16_384) stderrTruncated = true;
     stderr = (stderr + chunk).slice(0, 16_384);
   });
   let initial;
@@ -439,6 +441,7 @@ export async function launchLinuxPackagedProcess({
   return {
     child,
     stderrText: () => stderr,
+    stderrTruncated: () => stderrTruncated,
     verifyMain,
     async stop() {
       const failures = [];

@@ -26,8 +26,12 @@ import {
   parseCatalog,
 } from "../../src/main/extension-catalog.js";
 import { downloadExtension } from "../../src/main/extension-download.js";
+import {
+  assertCompletePublicStderr,
+  publicNativeDiagnostics,
+} from "../fixtures/linux-packaged-diagnostics.js";
 
-const { checkpointOptions } = createRequire(import.meta.url)(
+const { checkpointOptions, stablePublicSsh } = createRequire(import.meta.url)(
   "../fixtures/ssh-packaged-options.cjs",
 ) as {
   checkpointOptions(env: NodeJS.ProcessEnv): {
@@ -37,6 +41,12 @@ const { checkpointOptions } = createRequire(import.meta.url)(
     timeout: number;
     scope: string;
   };
+  stablePublicSsh(options: {
+    catalogMode: string | undefined;
+    extensionVersion: string;
+    hostVersion: string;
+    archiveSha256: string;
+  }): boolean;
 };
 
 const prefix = "OMXTERM_SSH_PACKAGED_";
@@ -86,6 +96,7 @@ async function recordPublicCatalog(
   receipts: string,
   archiveSha256: string,
   extensionVersion: string,
+  stablePublic: boolean,
 ) {
   if (!mode) return;
   const url = OFFICIAL_CATALOG_URL;
@@ -99,6 +110,10 @@ async function recordPublicCatalog(
   );
   assert.equal(release?.archive.sha256, archiveSha256);
   assert.equal(release?.version, extensionVersion);
+  if (stablePublic) {
+    assert.equal(release?.name, "SSH Connect");
+    assert.deepEqual(release?.targets, ["linux-arm64"]);
+  }
   assert.equal(digest(bytes), process.env.OMXTERM_SSH_PACKAGED_CATALOG_SHA256);
   await writeFile(path.join(receipts, "public-catalog.json"), bytes);
   await writeFile(
@@ -264,6 +279,12 @@ it.skipIf(!enabled)(
     );
     const { extensionVersion, appearance, catalogMode, timeout, scope } =
       checkpointOptions(process.env);
+    const stablePublic = stablePublicSsh({
+      catalogMode,
+      extensionVersion,
+      hostVersion: values.VERSION,
+      archiveSha256: values.ARCHIVE_SHA256,
+    });
     const root = await mkdtemp(path.join(os.tmpdir(), "omxterm-ssh-packaged-"));
     const evidence = values.EVIDENCE;
     await mkdir(evidence, { recursive: true });
@@ -279,6 +300,7 @@ it.skipIf(!enabled)(
     const failures: unknown[] = [];
     let outcome: unknown;
     let stderr = "";
+    let stderrTruncated = false;
     let passed = false;
     const json = (name: string, value: unknown) =>
       writeFile(path.join(receipts, name), JSON.stringify(value, null, 2));
@@ -288,6 +310,7 @@ it.skipIf(!enabled)(
         receipts,
         values.ARCHIVE_SHA256,
         extensionVersion,
+        stablePublic,
       );
       const archiveBytes = await readFile(values.ARCHIVE);
       asarBefore = await preparePackage(values, root, asar);
@@ -349,6 +372,10 @@ it.skipIf(!enabled)(
       await cp(
         "test/fixtures/ssh-packaged-header.cjs",
         path.join(root, "ssh-packaged-header.cjs"),
+      );
+      await cp(
+        "test/fixtures/public-catalog-observer.cjs",
+        path.join(root, "public-catalog-observer.cjs"),
       );
       const env: NodeJS.ProcessEnv = {
         HOME: path.join(root, "home"),
@@ -421,6 +448,8 @@ it.skipIf(!enabled)(
         version: values.VERSION,
         readiness,
         catalogMode,
+        catalogSha256: process.env.OMXTERM_SSH_PACKAGED_CATALOG_SHA256,
+        stablePublic,
         extensionVersion,
         appearance: !!appearance,
         source,
@@ -464,7 +493,9 @@ it.skipIf(!enabled)(
       await until(() => exited, "actual Electron main exit", 5000);
       outcome = await owner.stop();
       stderr = owner.stderrText();
+      stderrTruncated = owner.stderrTruncated();
       owner = undefined;
+      assertCompletePublicStderr(stablePublic, stderrTruncated);
       assert.deepEqual(outcome, { code: 0, signal: null });
       passed = true;
     } catch (error) {
@@ -496,6 +527,7 @@ it.skipIf(!enabled)(
           failures.push(error);
         }
         stderr = owner.stderrText();
+        stderrTruncated = owner.stderrTruncated();
       }
       try {
         await unchangedInputs(values, host, asarBefore);
@@ -506,6 +538,10 @@ it.skipIf(!enabled)(
         passed: passed && failures.length === 0,
         outcome,
         stderr,
+        nativeDiagnostics: publicNativeDiagnostics(
+          stablePublic,
+          stderrTruncated,
+        ),
         root,
         asarSha256: asarBefore,
         failures: failures.map((error) =>

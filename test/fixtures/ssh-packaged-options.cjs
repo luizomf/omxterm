@@ -43,4 +43,20 @@ function checkpointOptions(env) {
   };
 }
 
-module.exports = { checkpointOptions };
+function stablePublicSsh({
+  catalogMode,
+  extensionVersion,
+  hostVersion,
+  archiveSha256,
+}) {
+  if (catalogMode !== "public" || extensionVersion !== "0.3.1") return false;
+  assert.equal(hostVersion, "0.24.0", "stable SSH public host version");
+  assert.equal(
+    archiveSha256,
+    "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b",
+    "original SSH 0.3.1 archive digest",
+  );
+  return true;
+}
+
+module.exports = { checkpointOptions, stablePublicSsh };

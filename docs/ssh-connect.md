@@ -160,6 +160,14 @@ and action dispatch. The fixture saves the exact checked image before clicking;
 unrelated incompatible cards do not block readiness. These ordering and geometry
 checks do not prove compositor presentation: inspect the saved pixels for the
 expected SSH version and Install/Reinstall action before accepting visual evidence.
+For the `0.24.0` / `0.3.1` pair, passive observations bind the actual endpoint
+bytes, captured selection, public archive bytes and exact Official trust warning
+and generations; no request or response transport is substituted. The supervisor
+pass covers scenario and owned shutdown only: truncated native stderr fails this
+checkpoint, and complete stderr requires separate manual review. Unknown
+diagnostics, including the observed #746 presentation rejection, are not waived.
+A locally supplied host is not a publicly downloaded stable host.
+
 Failure receipts/profiles are retained; successful cleanup does not turn a failed
 scenario into a pass. Existing process ownership and exact AppImage/asar checks
 remain in force. Without the public-mode inputs the original synthetic campaign

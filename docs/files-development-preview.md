@@ -846,12 +846,42 @@ newer Files artifact. Listener-count
 checkpoints and warning traces distinguish lifecycle fan-out from retention;
 the observer does not raise or suppress listener limits.
 
-After actual publication, `OMXTERM_FILES_PACKAGED_CATALOG=public` uses the fixed
-public endpoint and release URLs without interception, fixture CA or catalog file.
-It skips the controlled offline/wrong-byte negatives, retaining catalog install,
-reinstall and the full Files/PTY/Quit assertions against the supplied known archive
-hash. Record this as a separate source/artifact/public-readback milestone. Neither
-catalog mode can be combined with attachment/terminal-only diagnostics.
+The prepared `OMXTERM_FILES_PACKAGED_CATALOG=public` adapter is a separate,
+short checkpoint for the locally retained Linux ARM64 stable host `0.24.0` and
+published Files `0.6.0`. In addition to the ordinary exact input paths and host
+hash above, set:
+
+```sh
+OMXTERM_FILES_PACKAGED_CATALOG=public
+OMXTERM_FILES_PACKAGED_CATALOG_SHA256=2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda
+OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256=50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143
+```
+
+The explicit catalog hash is the owner's confirmed readback of the legacy
+endpoint at this promotion, not an assumption that a `main` URL is immutable.
+The separate retained archive is an identity oracle, not a local install source;
+its length must be 17,331 bytes. The fixture uses no controlled transport, fixture
+CA, catalog file, direct-link or local-install fallback. It passively observes the
+actual production IPC and authorized HTTPS response streams: the selected Files
+card and opaque snapshot must match the exact endpoint bytes, immutable archive
+URL, actual archive length/hash and three Official trust prompts at captured
+installation generations 0, 1 and 5. Reinstall, Disable/Enable/Uninstall, the
+original PTY/Surface and a live third activation at normal joined Quit are
+checked; the full local Files UI campaign is not repeated. Fresh `run-*` evidence
+prevents an older Quit receipt from qualifying the run. The supervisor's pass
+covers the scenario and owned shutdown, not native-diagnostic disposition: a
+truncated stderr fails this public checkpoint, and complete stderr still requires
+manual review. Unknown diagnostics, including the observed #746 presentation
+rejection, are not waived. Captures still need independent visual inspection;
+synthetic Chromium input and controlled consent do
+not qualify physical input or dialogs. A local stable host against public
+extension URLs is **not** a publicly downloaded stable host. This adapter and its
+headless tests are preparation, not a passed public checkpoint. The historical
+Files0.4 public result remains separate and unchanged. Its exact dev.11/Files0.4
+fixture path and consent checks remain available as a legacy path, without the
+new passive binding; it cannot qualify the stable pair, and the promoted endpoint
+no longer offers its Files version. Neither catalog mode can be combined with
+attachment/terminal-only diagnostics.
 
 The existing packaged-process owner verifies actual main executable/lineage,
 tracks children and joins exit/streams/owned settlement. `scenario.json` records

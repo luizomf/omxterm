@@ -8,6 +8,16 @@ import { renderExtensions } from "../../src/renderer/settings/settings-extension
 
 const source = readFileSync("test/fixtures/ssh-packaged.cjs", "utf8");
 const require = createRequire(path.resolve("package.json"));
+const { sshPublicManagementState } =
+  require("./test/fixtures/public-catalog-observer.cjs") as {
+    sshPublicManagementState: (
+      document: Document,
+      generation: number,
+      state: string,
+      local: string,
+      action?: string,
+    ) => boolean;
+  };
 const title = "SSH Connect · 0.3.0";
 interface Image {
   isEmpty(): boolean;
@@ -22,6 +32,7 @@ type Install = (
   title: string,
   action: string,
   save: (image: Image) => void,
+  requireOfficial?: boolean,
 ) => Promise<void>;
 const drain = async () => {
   for (let i = 0; i < 30; i++) await Promise.resolve();
@@ -39,6 +50,7 @@ async function fixture(action = "Install") {
   vi.useFakeTimers();
   vi.setSystemTime(0);
   const exports = { exports: {} as { catalogInstall: Install } };
+  const requests: { operation: string; selection?: string }[] = [];
   runInNewContext(source, {
     module: exports,
     require: (name: string): unknown =>
@@ -51,36 +63,39 @@ async function fixture(action = "Install") {
   const panel = renderExtensions(
     document,
     {
-      request: async () => ({
-        ok: true,
-        entries: [],
-        catalog: {
-          loaded: true,
-          stale: false,
-          entries: [
-            {
-              id: "omxterm.ssh",
-              name: "SSH Connect",
-              version: "0.3.0",
-              description: "Synthetic SSH",
-              installedVersion: action === "Reinstall" ? "0.3.0" : null,
-              selection: "a".repeat(36),
-              compatible: true,
-              action: action === "Install" ? "install" : "reinstall",
-            },
-            {
-              id: "omxterm.files",
-              name: "Files",
-              version: "0.1.0",
-              description: "Incompatible",
-              installedVersion: null,
-              selection: "b".repeat(36),
-              compatible: false,
-              action: "install",
-            },
-          ],
-        },
-      }),
+      request: async (request) => {
+        requests.push(request);
+        return {
+          ok: true,
+          entries: [],
+          catalog: {
+            loaded: true,
+            stale: false,
+            entries: [
+              {
+                id: "omxterm.ssh",
+                name: "SSH Connect",
+                version: "0.3.0",
+                description: "Synthetic SSH",
+                installedVersion: action === "Reinstall" ? "0.3.0" : null,
+                selection: "a".repeat(36),
+                compatible: true,
+                action: action === "Install" ? "install" : "reinstall",
+              },
+              {
+                id: "omxterm.files",
+                name: "Files",
+                version: "0.1.0",
+                description: "Incompatible",
+                installedVersion: null,
+                selection: "b".repeat(36),
+                compatible: false,
+                action: "install",
+              },
+            ],
+          },
+        };
+      },
     },
     () => true,
   );
@@ -158,12 +173,20 @@ async function fixture(action = "Install") {
     image,
     save,
     order,
+    requests,
     panel,
     card,
     heading,
     button,
     frames,
-    start: () => exports.exports.catalogInstall(core, title, action, save),
+    start: (requireOfficial = false) =>
+      exports.exports.catalogInstall(
+        core,
+        title,
+        action,
+        save,
+        requireOfficial,
+      ),
     frame: async () => {
       const batch = [...frames.entries()];
       for (const [id, callback] of batch) {
@@ -174,6 +197,57 @@ async function fixture(action = "Install") {
     },
   };
 }
+
+it("checks the exact SSH management row and generation rather than unrelated page text", () => {
+  document.body.innerHTML = `<div class="extensions-panel"><section><h3>SSH Connect · 0.3.1</h3><p>omxterm.ssh · generation 1 · enabled · local dormant · other instances unknown</p><button>Disable</button></section><section><p>omxterm.files · generation 2 · disabled · local dormant · other instances unknown</p></section></div>`;
+  expect(
+    sshPublicManagementState(document, 1, "enabled", "dormant", "Disable"),
+  ).toBe(true);
+  expect(
+    sshPublicManagementState(document, 2, "enabled", "dormant", "Disable"),
+  ).toBe(false);
+  expect(
+    sshPublicManagementState(document, 1, "disabled", "dormant", "Disable"),
+  ).toBe(false);
+  document.querySelector<HTMLButtonElement>("button")!.disabled = true;
+  expect(
+    sshPublicManagementState(document, 1, "enabled", "dormant", "Disable"),
+  ).toBe(false);
+});
+
+it("clicks the visible Official SSH card with its captured production-bridge selection", async () => {
+  const f = await fixture();
+  const running = f.start(true);
+  await drain();
+  await f.frame();
+  await f.frame();
+  await running;
+  expect(
+    f.requests.filter((request) => request.operation === "catalog-install"),
+  ).toMatchObject([
+    { operation: "catalog-install", selection: "a".repeat(36) },
+  ]);
+  expect(
+    f.requests.some((request) => request.operation === "install-link"),
+  ).toBe(false);
+  expect(f.order).toEqual(["scroll", "capture", "save", "click"]);
+});
+
+it("refuses a card not advertised in the Official catalog before capture or click", async () => {
+  const f = await fixture();
+  f.panel.querySelector(".extension-catalog h3")!.textContent =
+    "Other extensions";
+  const result = f.start(true).then(
+    () => "accepted",
+    (error: Error) => error.message,
+  );
+  await drain();
+  await f.frame();
+  await f.frame();
+  expect(await result).toMatch(/unavailable or changed/);
+  expect(f.core.capturePage).not.toHaveBeenCalled();
+  expect(f.order).not.toContain("click");
+});
 
 it.each(["Install", "Reinstall"])(
   "keeps %s capture and action behind both frame opportunities, despite an unrelated incompatible card",

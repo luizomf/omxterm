@@ -13,6 +13,7 @@ const {
   captureSshHeader,
   usesChangedSshHeader,
   assertChangedSshTrust,
+  assertPublicSshTrust,
 } = require("../fixtures/ssh-packaged-header.cjs") as {
   observeSshChildHeader: () => unknown;
   observeSshHostHeader: () => unknown;
@@ -20,6 +21,16 @@ const {
   assertChangedSshTrust: (
     prompt: { message: string; detail: string },
     digest: string,
+  ) => void;
+  assertPublicSshTrust: (
+    prompt: {
+      title: string;
+      message: string;
+      detail: string;
+      buttons: string[];
+    },
+    digest: string,
+    generation: number,
   ) => void;
   captureSshHeader: (
     window: unknown,
@@ -143,6 +154,41 @@ async function captureFixture() {
   const window = { contentView: { children: [native] } };
   return { window, core, view, native, bounds, childDocument, image, frames };
 }
+
+it("requires exact Official SSH 0.3.1 consent and the captured installation generation", () => {
+  const digest =
+    "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b";
+  const prompt = {
+    type: "warning",
+    title: "Trust extension code?",
+    message: "Install SSH Connect 0.3.1?",
+    detail: `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.ssh\nSHA-256: ${digest}\nCurrent generation: 1\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.`,
+    buttons: ["Cancel", "Trust and install"],
+    defaultId: 0,
+    cancelId: 0,
+  };
+  expect(() => assertPublicSshTrust(prompt, digest, 1)).not.toThrow();
+  for (const changed of [
+    { ...prompt, title: "Other" },
+    { ...prompt, type: "info" },
+    { ...prompt, defaultId: 1 },
+    { ...prompt, cancelId: 1 },
+    { ...prompt, detail: prompt.detail.replace("not a sandbox", "safe") },
+    { ...prompt, message: "Install SSH Connect 0.3.0?" },
+    { ...prompt, detail: prompt.detail.replace("omxterm.ssh", "other.ssh") },
+    { ...prompt, detail: prompt.detail.replace(digest, "a".repeat(64)) },
+    {
+      ...prompt,
+      detail: prompt.detail.replace("generation: 1", "generation: 10"),
+    },
+    {
+      ...prompt,
+      detail: prompt.detail.replace("Official means", "Unofficial means"),
+    },
+    { ...prompt, buttons: ["Trust and install", "Cancel"] },
+  ])
+    expect(() => assertPublicSshTrust(changed, digest, 1)).toThrow();
+});
 
 it("rejects a different extension ID even when the selected digest matches", () => {
   const digest = "a".repeat(64);

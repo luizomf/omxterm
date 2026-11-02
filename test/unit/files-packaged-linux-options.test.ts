@@ -98,6 +98,56 @@ it("selects current UI only for the complete stable pair and full lifecycle", ()
   ).toThrow("Expected stable Files name");
 });
 
+it("requires an explicit endpoint digest and the exact stable Files identity for public catalog mode", () => {
+  const publicInputs = {
+    ...inputs(),
+    OMXTERM_FILES_PACKAGED_CATALOG: "public",
+    OMXTERM_FILES_PACKAGED_CATALOG_SHA256:
+      "2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda",
+    OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256:
+      "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
+  };
+  expect(linuxFilesInputs(publicInputs)).toMatchObject({
+    catalogMode: "public",
+    catalogSha256: publicInputs.OMXTERM_FILES_PACKAGED_CATALOG_SHA256,
+    currentUi: false,
+  });
+  for (const changed of [
+    { OMXTERM_FILES_PACKAGED_CATALOG_SHA256: undefined },
+    { OMXTERM_FILES_PACKAGED_CATALOG_SHA256: "bad" },
+    { OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256: "b".repeat(64) },
+    { OMXTERM_FILES_PACKAGED_VERSION: "0.24.0-dev.21" },
+    { OMXTERM_FILES_PACKAGED_EXTENSION_VERSION: "0.5.0" },
+    { OMXTERM_FILES_PACKAGED_EXTENSION_NAME: "Other Files" },
+    { OMXTERM_FILES_PACKAGED_CATALOG_FILE: "/tmp/controlled.json" },
+  ])
+    expect(() => linuxFilesInputs({ ...publicInputs, ...changed })).toThrow();
+  expect(() =>
+    linuxFilesInputs({
+      ...inputs(),
+      OMXTERM_FILES_PACKAGED_CATALOG_SHA256: "a".repeat(64),
+    }),
+  ).toThrow();
+});
+
+it("retains the historical Files0.4 public fixture as a distinct legacy path", () => {
+  expect(
+    linuxFilesInputs({
+      ...inputs(),
+      OMXTERM_FILES_PACKAGED_VERSION: "0.24.0-dev.11",
+      OMXTERM_FILES_PACKAGED_EXTENSION_VERSION: "0.4.0",
+      OMXTERM_FILES_PACKAGED_EXTENSION_NAME: "Files — Linux ARM64 preview",
+      OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256:
+        "384de7da4cc2fafe7e42cd4ccf19a455a2e634036069160c75e15b7371d2eb6e",
+      OMXTERM_FILES_PACKAGED_CATALOG: "public",
+    }),
+  ).toMatchObject({
+    catalogMode: "public",
+    linuxHistoricalPublic: true,
+    linuxPublicCatalog: false,
+  });
+});
+
 it("rejects malformed versions, hashes and incompatible mode choices", () => {
   for (const changed of [
     { OMXTERM_FILES_PACKAGED_VERSION: "v0.24.0" },
@@ -115,6 +165,114 @@ it("rejects malformed versions, hashes and incompatible mode choices", () => {
     },
   ])
     expect(() => linuxFilesInputs({ ...inputs(), ...changed })).toThrow();
+});
+
+it("requires the complete bounded public binding and its three consent generations", () => {
+  const catalogSha256 =
+    "2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda";
+  const archiveSha256 =
+    "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
+  const selection = "a".repeat(36);
+  const expected = {
+    currentUi: false,
+    version: "0.24.0",
+    extensionVersion: "0.6.0",
+    extensionName: "Files — ARM64 preview",
+    archiveSha256,
+    catalogSha256,
+  };
+  const offer = {
+    id: "omxterm.files",
+    name: expected.extensionName,
+    version: "0.6.0",
+    targets: ["linux-arm64"],
+    archive: {
+      url: "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.6.0/files-0.6.0.omxext",
+      bytes: 17331,
+      sha256: archiveSha256,
+    },
+  };
+  const binding = {
+    catalogGeneration: 1,
+    selection,
+    catalogSha256,
+    catalogBytes: 1000,
+    archiveSha256,
+    offer,
+    approvals: 3,
+    installed: 3,
+    attempts: [0, 1, 5].map((expectedGeneration) => ({
+      selection,
+      catalogGeneration: 1,
+      expectedGeneration,
+      sha256: archiveSha256,
+      bytes: 17331,
+    })),
+  };
+  const receipt = {
+    checks: [
+      "exact-archive-trust-dormant-install",
+      "packaged-backend-create-move-conflict",
+      "explicit-reinstall-actual-retirement-dormant",
+      "fresh-activation-disable-uninstall",
+      "same-PTY-and-Surface",
+      "third-consent-active-Files-at-Quit",
+    ],
+    approvals: 3,
+    host: expected.version,
+    extensionVersion: expected.extensionVersion,
+    extensionName: expected.extensionName,
+    archiveSha256,
+    publicCatalog: {
+      url: "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json",
+      installs: ["Install", "Reinstall", "Install"],
+    },
+    catalog: { mode: "public", requests: null, transportClosed: null },
+    publicBinding: binding,
+  };
+  expect(() => assertLinuxFilesScenario(receipt, expected)).not.toThrow();
+  for (const changed of [
+    { ...receipt, approvals: 2 },
+    { ...receipt, publicBinding: undefined },
+    {
+      ...receipt,
+      publicBinding: { ...binding, catalogSha256: "b".repeat(64) },
+    },
+    {
+      ...receipt,
+      publicBinding: { ...binding, attempts: binding.attempts.slice(0, 2) },
+    },
+    {
+      ...receipt,
+      publicBinding: {
+        ...binding,
+        attempts: [
+          binding.attempts[0],
+          binding.attempts[1],
+          { ...binding.attempts[2], expectedGeneration: 4 },
+        ],
+      },
+    },
+    {
+      ...receipt,
+      publicBinding: { ...binding, offer: { ...offer, id: "other.files" } },
+    },
+    {
+      ...receipt,
+      publicBinding: {
+        ...binding,
+        offer: { ...offer, archive: { ...offer.archive, bytes: 17330 } },
+      },
+    },
+    {
+      ...receipt,
+      publicCatalog: {
+        ...receipt.publicCatalog,
+        installs: ["Install", "Reinstall", "local"],
+      },
+    },
+  ])
+    expect(() => assertLinuxFilesScenario(changed, expected)).toThrow();
 });
 
 it("requires the stable UI and shortcut receipt as well as the lifecycle identity", () => {

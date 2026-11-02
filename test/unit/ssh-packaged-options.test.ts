@@ -2,8 +2,14 @@ import { createRequire } from "node:module";
 import { expect, it } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { checkpointOptions } =
+const { checkpointOptions, stablePublicSsh } =
   require("../fixtures/ssh-packaged-options.cjs") as {
+    stablePublicSsh: (options: {
+      catalogMode?: string | undefined;
+      extensionVersion: string;
+      hostVersion: string;
+      archiveSha256: string;
+    }) => boolean;
     checkpointOptions: (env: NodeJS.ProcessEnv) => {
       extensionVersion: string;
       appearance: boolean;
@@ -58,6 +64,25 @@ it("preserves the historical default and canonical version requirement", () => {
   expect(() =>
     checkpointOptions({ OMXTERM_SSH_PACKAGED_APPEARANCE: "1" }),
   ).toThrow("targets SSH 0.3.0 or 0.3.1");
+});
+
+it("pins the stable SSH 0.3.1 public checkpoint without changing historical modes", () => {
+  const input = {
+    catalogMode: "public",
+    extensionVersion: "0.3.1",
+    hostVersion: "0.24.0",
+    archiveSha256:
+      "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b",
+  };
+  expect(stablePublicSsh(input)).toBe(true);
+  expect(() =>
+    stablePublicSsh({ ...input, hostVersion: "0.24.0-dev.11" }),
+  ).toThrow();
+  expect(() =>
+    stablePublicSsh({ ...input, archiveSha256: "a".repeat(64) }),
+  ).toThrow();
+  expect(stablePublicSsh({ ...input, extensionVersion: "0.3.0" })).toBe(false);
+  expect(stablePublicSsh({ ...input, catalogMode: undefined })).toBe(false);
 });
 
 it("requires the public-catalog digest and forbids mixing catalog and appearance", () => {

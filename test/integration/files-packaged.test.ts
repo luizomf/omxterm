@@ -18,9 +18,14 @@ import { expect, it } from "vitest";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
 import {
+  assertCompletePublicStderr,
+  publicNativeDiagnostics,
+} from "../fixtures/linux-packaged-diagnostics.js";
+import {
   assertLinuxFilesHost,
   assertLinuxFilesScenario,
   linuxFilesInputs,
+  linuxFilesPublicEndpoint,
   prepareLinuxFiles,
 } from "../fixtures/files-packaged-linux-options.js";
 
@@ -31,13 +36,19 @@ const archive = inputs?.archive;
 const attachOnly = inputs?.attachOnly ?? false;
 const terminalOnly = inputs?.terminalOnly ?? false;
 const catalogMode = inputs?.catalogMode;
-const scope = catalogMode
-  ? `Files-catalog-${catalogMode}`
-  : attachOnly
-    ? "observer-attachment-only"
-    : terminalOnly
-      ? "terminal-entry-only"
-      : "Files-lifecycle";
+const linuxPublicCatalog = inputs?.linuxPublicCatalog ?? false;
+const linuxHistoricalPublic = inputs?.linuxHistoricalPublic ?? false;
+const scope = linuxPublicCatalog
+  ? "Files0.6-stable-public-HTTPS"
+  : linuxHistoricalPublic
+    ? "Files0.4-historical-public"
+    : catalogMode
+      ? `Files-catalog-${catalogMode}`
+      : attachOnly
+        ? "observer-attachment-only"
+        : terminalOnly
+          ? "terminal-entry-only"
+          : "Files-lifecycle";
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 async function prepareCatalog(root: string) {
@@ -76,6 +87,74 @@ async function prepareCatalog(root: string) {
     { timeout: 15000 },
   );
 }
+function publicObserverOptions() {
+  if (linuxPublicCatalog)
+    return {
+      linuxPublicCatalog: true,
+      publicCatalog: linuxFilesPublicEndpoint,
+      catalogSha256: inputs!.catalogSha256!,
+    };
+  return linuxHistoricalPublic ? { linuxHistoricalPublic: true } : {};
+}
+
+async function prepareEvidence(root: string) {
+  const directory = path.resolve(
+    process.env.OMXTERM_FILES_PACKAGED_EVIDENCE ?? path.join(root, "evidence"),
+  );
+  await mkdir(directory, { recursive: true });
+  // Never accept an older run's Quit receipt as this public run's result.
+  return linuxPublicCatalog ? mkdtemp(path.join(directory, "run-")) : directory;
+}
+
+async function prepareObserver(root: string, archiveBytes: Buffer) {
+  const localArchive = linuxPublicCatalog
+    ? undefined
+    : path.join(root, "files.omxext");
+  if (localArchive) await writeFile(localArchive, archiveBytes);
+  for (const [source, target] of [
+    ["files-packaged.cjs", "observer.cjs"],
+    ["snippets-process-identity.cjs", "snippets-process-identity.cjs"],
+    ...(linuxPublicCatalog
+      ? [["public-catalog-observer.cjs", "public-catalog-observer.cjs"]]
+      : []),
+  ])
+    await cp(path.join("test/fixtures", source!), path.join(root, target!));
+  await prepareCatalog(root);
+  return localArchive;
+}
+
+async function verifyPublicQuit(evidence: string) {
+  if (!linuxPublicCatalog) return;
+  assert.ok(inputs?.catalogSha256);
+  const quit = JSON.parse(
+    await readFile(path.join(evidence, "quit.json"), "utf8"),
+  ) as {
+    joined: boolean;
+    quit: string;
+    baselineExited: boolean;
+    children: {
+      closed: boolean;
+      exit: { code: number; signal: string | null };
+    }[];
+  };
+  assertLinuxFilesScenario(quit, {
+    version: inputs.version,
+    archiveSha256: inputs.archiveSha256,
+    extensionVersion: inputs.extensionVersion,
+    extensionName: inputs.extensionName,
+    currentUi: false,
+    catalogSha256: inputs.catalogSha256,
+  });
+  assert.equal(quit.joined, true);
+  assert.equal(quit.quit, "joined");
+  assert.equal(quit.baselineExited, true);
+  assert.equal(quit.children.length, 3);
+  for (const child of quit.children) {
+    assert.equal(child.closed, true);
+    assert.deepEqual(child.exit, { code: 0, signal: null });
+  }
+}
+
 async function captureListingFailure(
   client: Awaited<ReturnType<typeof inspector>> | undefined,
   observer: string | undefined,
@@ -122,6 +201,7 @@ async function observeScenario(
     extensionVersion: string;
     extensionName: string;
     linuxCurrentFilesUi: boolean;
+    catalogSha256?: string;
   },
   evidence: string,
 ) {
@@ -144,6 +224,7 @@ async function observeScenario(
   if (attachOnly) return;
   const result = await client.evaluate(
     `${observer}.run(${JSON.stringify(options)})`,
+    linuxPublicCatalog ? 330000 : 90000,
   );
   await writeFile(
     path.join(evidence, terminalOnly ? "terminal-entry.json" : "scenario.json"),
@@ -170,6 +251,7 @@ async function observeScenario(
       extensionVersion: options.extensionVersion,
       extensionName: options.extensionName,
       currentUi: options.linuxCurrentFilesUi,
+      ...(linuxPublicCatalog ? { catalogSha256: options.catalogSha256! } : {}),
     });
 }
 
@@ -187,22 +269,19 @@ it.skipIf(
     : terminalOnly
       ? "discriminates single-terminal renderer entry without running Files"
       : "uses separate Files through the exact packaged application and joins normal Quit",
-  { timeout: 240000 },
+  { timeout: 420000 },
   async () => {
     const root = await mkdtemp(
       path.join(os.tmpdir(), "omxterm-files-packaged-"),
     );
-    const evidence = path.resolve(
-      process.env.OMXTERM_FILES_PACKAGED_EVIDENCE ??
-        path.join(root, "evidence"),
-    );
-    await mkdir(evidence, { recursive: true });
+    const evidence = await prepareEvidence(root);
     let owner:
       Awaited<ReturnType<typeof launchLinuxPackagedProcess>> | undefined;
     let client: Awaited<ReturnType<typeof inspector>> | undefined;
     let observer: string | undefined;
     let outcome: unknown;
     let nativeStderr = "";
+    let nativeStderrTruncated = false;
     let failure: unknown;
     let cleanupFailure: unknown;
     let passed = false;
@@ -216,6 +295,12 @@ it.skipIf(
       };
       assert.equal(identities.appImage.sha256, inputs!.appImageSha256);
       assert.equal(identities.archive.sha256, inputs!.archiveSha256);
+      if (linuxPublicCatalog)
+        assert.equal(
+          identities.archive.bytes,
+          17331,
+          "original Files archive size",
+        );
       await writeFile(
         path.join(evidence, "artifacts.json"),
         JSON.stringify(
@@ -224,6 +309,7 @@ it.skipIf(
             expectedHostVersion: inputs!.version,
             expectedExtensionVersion: inputs!.extensionVersion,
             expectedExtensionName: inputs!.extensionName,
+            expectedCatalogSha256: inputs!.catalogSha256,
             currentUi: inputs!.currentUi,
           },
           null,
@@ -270,21 +356,11 @@ it.skipIf(
         path.join(root, "shell.sh"),
         'printf \'{"mainPid":%s,"probePid":%s}\' "$PPID" "$$" > "$1"\nexec /bin/sh -i\n',
       );
-      const localArchive = path.join(root, "files.omxext");
-      await writeFile(localArchive, archiveBytes);
+      const localArchive = await prepareObserver(root, archiveBytes);
       await prepareLinuxFiles(
         path.join(root, "owned-files"),
         inputs!.currentUi,
       );
-      await cp(
-        "test/fixtures/files-packaged.cjs",
-        path.join(root, "observer.cjs"),
-      );
-      await cp(
-        "test/fixtures/snippets-process-identity.cjs",
-        path.join(root, "snippets-process-identity.cjs"),
-      );
-      await prepareCatalog(root);
       const env: NodeJS.ProcessEnv = {
         HOME: path.join(root, "home"),
         PATH: path.join(root, "bin"),
@@ -380,6 +456,7 @@ it.skipIf(
         readiness,
         terminalOnly,
         catalogMode,
+        ...publicObserverOptions(),
         catalogFile: path.join(root, "catalog.json"),
         catalogCertificate: path.join(root, "catalog.crt"),
         catalogKey: path.join(root, "catalog.key"),
@@ -398,6 +475,7 @@ it.skipIf(
             ).length > 0,
           "normal Quit receipt",
         );
+      await verifyPublicQuit(evidence);
       client.close();
       client = undefined;
       await until(
@@ -407,12 +485,15 @@ it.skipIf(
       );
       outcome = await owner.stop();
       nativeStderr = owner.stderrText();
+      nativeStderrTruncated = owner.stderrTruncated();
       owner = undefined;
+      assertCompletePublicStderr(linuxPublicCatalog, nativeStderrTruncated);
       expect(outcome).toEqual({ code: 0, signal: null });
       expect(digest(await readFile(asar))).toBe(readonlyAsarHash);
       expect(digest(await readFile(appImage!))).toBe(
         identities.appImage.sha256,
       );
+      expect(digest(await readFile(archive!))).toBe(identities.archive.sha256);
       passed = true;
     } catch (error) {
       failure = error;
@@ -441,6 +522,7 @@ it.skipIf(
           cleanupFailure = error;
         }
         nativeStderr = owner.stderrText();
+        nativeStderrTruncated = owner.stderrTruncated();
       }
       await writeFile(
         path.join(evidence, "supervisor.json"),
@@ -449,6 +531,10 @@ it.skipIf(
             passed,
             outcome,
             nativeStderr,
+            nativeDiagnostics: publicNativeDiagnostics(
+              linuxPublicCatalog,
+              nativeStderrTruncated,
+            ),
             failure: failure instanceof Error ? failure.stack : failure,
             cleanupFailure:
               cleanupFailure instanceof Error
