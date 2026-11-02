@@ -226,10 +226,11 @@ and revealing the panel and navigating retain the choice in the view; Close and
 a new view reset it. This is not a persisted preference or a filesystem
 security boundary.
 
-Filtering is a view projection; toggling it neither mutates files nor starts a
-new read. It preserves expanded subtrees and pending listing work. A hidden selection is
-cleared; keyboard focus falls back to the nearest visible ancestor or an available
-row/tree, without selecting a new operation target. An existing editor keeps its
+Filtering is a view projection; toggling it does not mutate files, start a new
+read, or replace an unsubmitted address draft. It preserves expanded subtrees and
+pending listing work. A hidden selection is cleared; keyboard focus falls back to
+the nearest visible ancestor or an available row/tree, without selecting a new
+operation target. An existing editor keeps its
 captured target. Counts describe visible rows, while loading, errors and the
 5,000-entry per-folder snapshot/truncation limits still apply to the underlying
 listing. Entries beyond that limit remain unavailable even when many of the

@@ -517,6 +517,117 @@ try {
     await screenshot(`scroll-${tag}`);
     console.log(`PASS actual scroll ${tag}`);
   }
+  async function prepareAddressDraft() {
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/root/.config" });
+    await evaluate(
+      (selector) =>
+        document.querySelector(selector).setSelectionRange(2, 9, "backward"),
+      address,
+    );
+  }
+  async function assertAddressDraft(tag) {
+    const state = await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      return {
+        value: input.value,
+        start: input.selectionStart,
+        end: input.selectionEnd,
+        direction: input.selectionDirection,
+      };
+    }, address);
+    assert.deepEqual(
+      state,
+      { value: "/root/.config", start: 2, end: 9, direction: "backward" },
+      `address draft ${tag}`,
+    );
+  }
+  async function assertCheckboxTextFits(tag) {
+    // Wait for focus-driven scrolling and layout before measuring the text,
+    // matching the frame used by native captures rather than an earlier state.
+    await frame();
+    const layout = await evaluate(() => {
+      const item = document.querySelector('[role="menuitemcheckbox"]');
+      const menu = item.closest('[role="menu"]');
+      const caption = item.querySelector(".menu-caption");
+      const shortcut = item.querySelector(".menu-shortcut");
+      const check = item.querySelector(".menu-check");
+      const rect = (r) => ({
+        left: r.left,
+        right: r.right,
+        top: r.top,
+        bottom: r.bottom,
+      });
+      const fragments = (element) => {
+        if (!element) return [];
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        return [...range.getClientRects()]
+          .filter((r) => r.width > 0 && r.height > 0)
+          .map(rect);
+      };
+      const popup = rect(menu.getBoundingClientRect());
+      const button = rect(item.getBoundingClientRect());
+      return {
+        caption: fragments(caption),
+        shortcut: fragments(shortcut),
+        check: fragments(check),
+        popup,
+        button,
+        viewport: { left: 0, top: 0, right: innerWidth, bottom: innerHeight },
+        focused: document.activeElement === item,
+        outline: getComputedStyle(item).outlineStyle,
+        checked: item.getAttribute("aria-checked"),
+        expectsShortcut: /^(Mac|Linux)/.test(navigator.platform),
+      };
+    });
+    const inside = (text, box) =>
+      text.left >= box.left - 0.5 &&
+      text.right <= box.right + 0.5 &&
+      text.top >= box.top - 0.5 &&
+      text.bottom <= box.bottom + 0.5;
+    const intersects = (a, b) =>
+      a.left < b.right - 0.5 &&
+      b.left < a.right - 0.5 &&
+      a.top < b.bottom - 0.5 &&
+      b.top < a.bottom - 0.5;
+    assert.ok(
+      layout.focused && layout.outline !== "none",
+      `focus ${tag}: ${JSON.stringify(layout)}`,
+    );
+    assert.ok(
+      layout.caption.length && layout.check.length,
+      `visible caption/check ${tag}`,
+    );
+    if (layout.expectsShortcut)
+      assert.ok(layout.shortcut.length, `visible shortcut ${tag}`);
+    assert.equal(
+      layout.checked,
+      String(!tag.endsWith("-unchecked")),
+      `checked state ${tag}`,
+    );
+    for (const fragment of [
+      ...layout.caption,
+      ...layout.shortcut,
+      ...layout.check,
+    ])
+      for (const boundary of [layout.button, layout.popup, layout.viewport])
+        assert.ok(
+          inside(fragment, boundary),
+          `clipped text ${tag}: ${JSON.stringify(layout)}`,
+        );
+    for (const caption of layout.caption)
+      for (const shortcut of layout.shortcut)
+        assert.equal(
+          intersects(caption, shortcut),
+          false,
+          `overlapping text ${tag}: ${JSON.stringify(layout)}`,
+        );
+  }
   async function hidden(tag) {
     await evaluate("filesFixture.useDotfiles()");
     await until(
@@ -540,6 +651,17 @@ try {
       ),
       true,
       "Tab reaches Actions",
+    );
+    await prepareAddressDraft();
+    await key("Tab", "Tab", 9, 8);
+    assert.equal(
+      await evaluate(
+        (selector) =>
+          document.activeElement === document.querySelector(selector),
+        selector("actions"),
+      ),
+      true,
+      "Shift+Tab returns to Actions",
     );
     await key("Enter", "Enter", 13);
     const toggle = '[role="menuitemcheckbox"]';
@@ -582,7 +704,9 @@ try {
       "none",
       "menu item has keyboard focus indication",
     );
+    await assertCheckboxTextFits(`${tag}-en-unchecked`);
     await key("Enter", "Enter", 13);
+    await assertAddressDraft(`${tag}-checkbox`);
     assert.deepEqual(await names(), [".config", ".profile", "visible"]);
     await key("Enter", "Enter", 13);
     assert.equal(
@@ -607,6 +731,7 @@ try {
       "checked state exposed to accessibility tree",
     );
     await key("End", "End", 35);
+    await assertCheckboxTextFits(`${tag}-en-checked`);
     await evaluate("filesFixture.setLanguage('pt-BR')");
     assert.equal(
       await evaluate(
@@ -626,12 +751,17 @@ try {
         toggle,
       ),
     );
+    await assertCheckboxTextFits(`${tag}-pt-checked`);
     await key("Enter", "Enter", 13);
     assert.deepEqual(
       await names(),
       ["visible"],
       "keyboard hides dotfiles again",
     );
+    await key("Enter", "Enter", 13);
+    await key("End", "End", 35);
+    await assertCheckboxTextFits(`${tag}-pt-unchecked`);
+    await key("Escape", "Escape", 27);
     await evaluate((selector) => {
       const input = document.querySelector(selector);
       input.focus();
@@ -656,6 +786,7 @@ try {
       "filter applies relative to typed hidden root",
     );
     console.log(`PASS hidden keyboard ${tag}`);
+    console.log(`PASS menu text geometry ${tag}`);
   }
   async function shortcut(platform) {
     await evaluate("filesFixture.useDotfiles()");
@@ -728,10 +859,31 @@ try {
       prevented: false,
       repeat: false,
     });
-    await evaluate(
-      (selector) => document.querySelector(selector).focus(),
-      selector("actions"),
+    await prepareAddressDraft();
+    await key("Tab", "Tab", 9, 8);
+    assert.equal(
+      await evaluate(
+        (selector) =>
+          document.activeElement === document.querySelector(selector),
+        selector("actions"),
+      ),
+      true,
+      "toolbar shortcut focus",
     );
+    await gesture();
+    assert.deepEqual(
+      await names(),
+      ["visible"],
+      "toolbar shortcut hides dotfiles",
+    );
+    await assertAddressDraft(`${platform}-shortcut-hide`);
+    await gesture();
+    assert.deepEqual(
+      await names(),
+      [".config", ".profile", "visible"],
+      "toolbar shortcut shows dotfiles",
+    );
+    await assertAddressDraft(`${platform}-shortcut-show`);
     await key("Enter", "Enter", 13);
     const ax = await send("Accessibility.getFullAXTree");
     const item = ax.nodes.find(

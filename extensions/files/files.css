@@ -150,6 +150,7 @@
   position: fixed;
   z-index: 3;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   padding: 4px;
   max-width: calc(100vw - 8px);
   max-height: calc(100vh - 8px);
@@ -165,23 +166,29 @@
   text-align: left;
 }
 .file-menu [role="menuitemcheckbox"] {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: 1em minmax(0, 1fr);
+  align-items: start;
+  column-gap: 6px;
+  row-gap: 2px;
 }
 .menu-check {
-  flex: none;
-  width: 1em;
+  grid-column: 1;
+  grid-row: 1;
 }
 .menu-caption {
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
-  flex: 1;
+  overflow-wrap: anywhere;
 }
 .menu-shortcut {
-  flex: none;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
   color: var(--ui-secondary);
   font-size: 11px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 @media (max-width: 300px) {
   .kind {

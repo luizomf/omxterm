@@ -54,9 +54,13 @@ it.skipIf(!process.env.OMXTERM_TOOLBAR_CHROMIUM).each(scenarios)(
     if (scenario === "hidden") {
       for (const size of ["196x1", "196x2", "320x1"])
         for (const theme of ["dark", "light"])
-          expect(result.stdout).toContain(
-            `PASS hidden keyboard ${size}-en-US-${theme}`,
-          );
+          for (const receipt of [
+            "PASS hidden keyboard",
+            "PASS menu text geometry",
+          ])
+            expect(result.stdout).toContain(
+              `${receipt} ${size}-en-US-${theme}`,
+            );
     }
     if (scenario === "matrix") {
       for (const size of ["196x1", "196x2", "320x1"])

@@ -211,7 +211,6 @@ export function mountFilesPage(
         ? { path: current.path, kind: current.kind }
         : undefined;
     }
-    if (document.activeElement !== address) address.value = state.root ?? "";
     entries.setAttribute("aria-busy", String(state.loading));
     clear(entries);
     label(entries, (m) => m.localFiles, "aria-label");
@@ -328,7 +327,10 @@ export function mountFilesPage(
     );
     tooltips.refresh();
   }
-  const tree = createFilesTree(request, render);
+  const tree = createFilesTree(request, (snapshot) => {
+    if (document.activeElement !== address) address.value = snapshot.root ?? "";
+    render(snapshot);
+  });
   state = tree.snapshot();
   function navigate(path: string) {
     navigationRevision++;

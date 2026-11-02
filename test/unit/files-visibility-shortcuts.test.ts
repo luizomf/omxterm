@@ -106,6 +106,63 @@ it("uses Linux Ctrl+H in the active Files tree and describes it in Actions", asy
   expect(item.getAttribute("aria-keyshortcuts")).toBe("Control+H");
 });
 
+it.each([
+  [
+    "en-US",
+    "Actions…",
+    "Show dotfiles (names starting with .)",
+    "Shortcut: Cmd+Shift+.",
+  ],
+  [
+    "pt-BR",
+    "Ações…",
+    "Mostrar itens iniciados por ponto (.)",
+    "Atalho: Cmd+Shift+.",
+  ],
+] as const)(
+  "keeps a focused, accessible checked item in %s",
+  async (locale, actionsName, caption, description) => {
+    const { language } = await setup("MacIntel");
+    language(locale);
+    const actions = button(actionsName);
+    actions.focus();
+    actions.click();
+    const item = menu().querySelector<HTMLButtonElement>(
+      '[role="menuitemcheckbox"]',
+    )!;
+    item.focus();
+    expect(document.activeElement).toBe(item);
+    expect(item.getAttribute("aria-checked")).toBe("false");
+    expect(
+      document.getElementById(item.getAttribute("aria-labelledby")!)
+        ?.textContent,
+    ).toBe(caption);
+    expect(
+      document.getElementById(item.getAttribute("aria-describedby")!)
+        ?.textContent,
+    ).toBe(description);
+    expect(item.querySelector(".menu-check")?.textContent).toBe("□");
+    item.click();
+    expect(document.activeElement).toBe(actions);
+    actions.click();
+    const checked = menu().querySelector<HTMLButtonElement>(
+      '[role="menuitemcheckbox"]',
+    )!;
+    expect(checked.getAttribute("aria-checked")).toBe("true");
+    expect(checked.querySelector(".menu-check")?.textContent).toBe("✓");
+    checked.focus();
+    expect(document.activeElement).toBe(checked);
+    expect(
+      document.getElementById(checked.getAttribute("aria-labelledby")!)
+        ?.textContent,
+    ).toBe(caption);
+    expect(
+      document.getElementById(checked.getAttribute("aria-describedby")!)
+        ?.textContent,
+    ).toBe(description);
+  },
+);
+
 it("leaves the gesture untouched until a browsing root is available", async () => {
   vi.spyOn(navigator, "platform", "get").mockReturnValue("Linux aarch64");
   let resolve!: (reply: Reply) => void;
