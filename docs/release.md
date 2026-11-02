@@ -288,8 +288,8 @@ not an instruction to recreate sealed releases or replay executed fixtures.
 The published macOS pair uses Settings → Extensions → **HTTPS archive link** →
 **Install from link**, comparing the captured digest to the release checksum;
 local downloaded `.omxext` installation remains available offline. Browse will
-still show Linux Files0.4 as incompatible on macOS. Document this honestly rather
-than calling link delivery macOS catalog discovery. No application-version bump
+still show the Linux-targeted Files entry as incompatible on macOS. Document this
+honestly rather than calling link delivery macOS catalog discovery. No application-version bump
 is needed for fixture/docs-only work; catalog evolution is a separate host change.
 
 ## Files macOS catalog publication
@@ -298,13 +298,15 @@ Host dev.26 was published on 2026-10-31 as an immutable non-Latest preview;
 both draft/public assets, both raw endpoints, the new exact-DMG FULL verification
 and the separate six-check public-catalog checkpoint passed. See
 [actual identities, outcomes and limits](files-development-preview.md#macos-catalog-distribution).
-The sequence below governs future promotions, not a request to replay this delivery.
+The sequence below records that historical Files0.5/dev.26 promotion, not a
+procedure for later catalog updates. For the new Files0.6 and SSH0.3.1 candidate,
+follow [Files catalog publication](#files06--ssh031-source-candidate).
 
 Current source selects a separate complete schema1 endpoint,
 `distribution/official-extensions-darwin-arm64-v1.json`, only for macOS ARM64.
 This is an application change requiring a new host build, not a metadata update
-to published dev.21. Its local/link route remains available. Before claiming
-new public catalog discovery:
+to published dev.21. Its local/link route remains available. The historical
+promotion used the following sequence:
 
 1. Bind the macOS entry to the original published Files0.5 archive, embedded
    manifest, checksum and receipt. Do not rebuild it or change its minimum dev.21.
