@@ -46,6 +46,24 @@ function selectPublicCatalogAction(document, action) {
   return button;
 }
 
+function catalogAcquisitionControl(document) {
+  const nodes = [
+    ...document.querySelectorAll(".extensions-panel .extension-catalog button"),
+  ].filter(
+    (button) =>
+      (button.textContent === "Browse official extensions" ||
+        button.textContent === "Refresh catalog") &&
+      !button.closest("[hidden], [inert]"),
+  );
+  if (
+    nodes.length !== 1 ||
+    nodes[0].disabled ||
+    !nodes[0].getClientRects().length
+  )
+    return null;
+  return nodes[0];
+}
+
 function inspectPublicInput(session, offset, expected, run, ping) {
   assert.equal(session.outputTruncated, false, "controlled output retained");
   assert.ok(session.cprTrace, "CPR trace required");
@@ -237,16 +255,11 @@ async function runPublicScenario({
     contents.executeJavaScript(
       `(() => { const nodes = [...document.querySelectorAll(${JSON.stringify(selector)})]; if (nodes.length !== 1 || nodes[0].disabled || nodes[0].closest('[hidden], [inert]') || !nodes[0].getClientRects().length) throw Error('Unavailable control'); nodes[0].click(); })()`,
     );
-  const button = async (text) => {
-    await until(
-      () =>
-        js(
-          `(() => { const nodes = [...document.querySelectorAll('.extensions-panel button')].filter(b => b.textContent === ${JSON.stringify(text)} && !b.closest('[hidden], [inert]')); return nodes.length === 1 && !nodes[0].disabled && nodes[0].getClientRects().length > 0; })()`,
-        ),
-      `Extensions button ${text} ready`,
-    );
+  const acquireCatalog = async () => {
+    const selector = `(${catalogAcquisitionControl.toString()})(document)`;
+    await until(() => js(`!!${selector}`), "catalog acquisition control ready");
     return js(
-      `(() => { const nodes = [...document.querySelectorAll('.extensions-panel button')].filter(b => b.textContent === ${JSON.stringify(text)} && !b.closest('[hidden], [inert]')); if (nodes.length !== 1 || nodes[0].disabled || !nodes[0].getClientRects().length) throw Error('Unavailable button'); nodes[0].click(); })()`,
+      `(() => { const button = ${selector}; if (!button) throw Error('Unavailable catalog acquisition control'); button.click(); })()`,
     );
   };
   const focused = () =>
@@ -287,7 +300,7 @@ async function runPublicScenario({
       `(${clickManagementAction.toString()})(document, ${JSON.stringify(action)})`,
     );
   const browseCatalog = async () => {
-    await button("Browse official extensions");
+    await acquireCatalog();
     await until(
       () =>
         js(

@@ -11,68 +11,15 @@ import {
   controlledProbe,
   controlledReadiness,
 } from "../fixtures/snippets-windows-controlled-probe";
-import { freshPublicCatalog } from "../fixtures/snippets-windows-public-catalog-model";
+import {
+  catalogTestClock,
+  deferredSettingsRenderer,
+  freshPublicCatalog,
+} from "../fixtures/snippets-windows-public-catalog-model";
 
 const require = createRequire(import.meta.url);
 const digest =
   "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
-
-function deferredSettingsRenderer(
-  phase: "navigation" | "browse",
-  onBrowse: () => void,
-) {
-  let pending = false;
-  return {
-    open() {
-      document.body.innerHTML = '<section class="settings-dialog"></section>';
-      pending = true;
-      if (phase === "browse") {
-        const panel = document.createElement("section");
-        panel.className = "extensions-panel";
-        const browse = document.createElement("button");
-        browse.textContent = "Browse official extensions";
-        browse.disabled = true;
-        Object.defineProperty(browse, "getClientRects", {
-          value: () => [{ width: 40, height: 20 }],
-        });
-        browse.addEventListener("click", onBrowse);
-        panel.append(browse);
-        document.body.append(panel);
-      }
-    },
-    evaluate(code: string): unknown {
-      const result: unknown = runInNewContext(code, { document });
-      if (!pending || code.includes(".click()")) return result;
-      // Resolve controlled availability after its not-ready state was observed.
-      // Navigation models the Settings snapshot; disabled Browse is a generic
-      // synthetic condition, not an initial-management-snapshot dependency.
-      if (phase === "navigation" && code.includes("#settings-tab-extensions")) {
-        const tab = document.createElement("button");
-        tab.id = "settings-tab-extensions";
-        tab.setAttribute("aria-selected", "false");
-        Object.defineProperty(tab, "getClientRects", {
-          value: () => [{ width: 40, height: 20 }],
-        });
-        tab.addEventListener("click", () => {
-          tab.setAttribute("aria-selected", "true");
-          const panel = document.createElement("section");
-          panel.className = "extensions-panel";
-          document.body.append(panel);
-        });
-        document.body.append(tab);
-        pending = false;
-      }
-      if (phase === "browse" && code.includes("Browse official extensions")) {
-        document.querySelector<HTMLButtonElement>(
-          ".extensions-panel button",
-        )!.disabled = false;
-        pending = false;
-      }
-      return result;
-    },
-    dispose: () => document.body.replaceChildren(),
-  };
-}
 
 function controlledSession() {
   const trace = (
@@ -149,7 +96,10 @@ async function exercise(
     | "wrong-reinstall-title"
     | "missing-reinstall-card"
     | "wrong-reinstall-generation"
-    | "wrong-archive",
+    | "wrong-archive"
+    | "snapshot-before-action"
+    | "snapshot-between-check-and-click"
+    | "ambiguous-acquisition",
   recordedActions?: string[],
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "public-snippets-"));
@@ -177,8 +127,15 @@ async function exercise(
     failLoad: fault === "catalog-not-ready",
     wrongTitle: fault === "wrong-reinstall-title",
     missingCard: fault === "missing-reinstall-card",
-    browse() {
-      actions.push("Browse");
+    ambiguous: fault === "ambiguous-acquisition",
+    snapshot:
+      fault === "snapshot-before-action"
+        ? "before-action"
+        : fault === "snapshot-between-check-and-click"
+          ? "between-ready-and-click"
+          : undefined,
+    browse(_openCount, label) {
+      actions.push(label === "Refresh catalog" ? "Refresh" : "Browse");
       if (fault === "wrong-reinstall-generation" && catalog.opens === 2)
         generation = 2;
     },
@@ -361,12 +318,9 @@ async function exercise(
     Menu: { getApplicationMenu: () => ({ items: menu }) },
     webContents: { getAllWebContents: () => (view ? [view] : []) },
   };
-  let timedCalls = 0;
   const scenario = loadPublicScenario(
     electron,
-    fault === "catalog-not-ready"
-      ? () => (catalog.browses >= 2 && ++timedCalls > 2 ? 70000 : 0)
-      : undefined,
+    catalogTestClock(fault, catalog),
   );
   try {
     const result = await scenario.runPublicScenario({
@@ -544,6 +498,50 @@ it("drives public acquisition, two dormant epochs, retirement and same-session P
       await readFile("test/fixtures/snippets-windows-catalog.json", "utf8"),
     ),
   );
+});
+
+it.each([
+  "snapshot-before-action",
+  "snapshot-between-check-and-click",
+] as const)(
+  "accepts the reopened cached catalog snapshot %s with one explicit refresh",
+  async (fault) => {
+    const { result, actions, childInput } = await exercise(fault);
+    expect(result.checks).toHaveLength(5);
+    expect(result.approvals).toBe(2);
+    expect(actions).toEqual([
+      "Settings",
+      "Browse",
+      "Install",
+      "Toggle",
+      "run",
+      "Settings",
+      "Refresh",
+      "Reinstall",
+      "Toggle",
+      "Settings",
+      "Disable",
+      "Enable",
+      "Uninstall",
+      "ping",
+    ]);
+    expect(childInput).toEqual(Buffer.from("SNIPPETS_RUN\rSNIPPETS_PING\r"));
+  },
+);
+
+it("refuses ambiguous catalog acquisition controls without clicking either", async () => {
+  const actions: string[] = [];
+  await expect(exercise("ambiguous-acquisition", actions)).rejects.toThrow(
+    "Timed out: catalog acquisition control ready",
+  );
+  expect(actions).toEqual([
+    "Settings",
+    "Browse",
+    "Install",
+    "Toggle",
+    "run",
+    "Settings",
+  ]);
 });
 
 it("waits for Settings navigation built after the outer page becomes visible", async () => {
