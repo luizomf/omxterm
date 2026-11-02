@@ -10,6 +10,7 @@ const { pathToFileURL } = require("node:url");
 
 let catalogTransport;
 let publicObservation;
+let restoreHooks = () => {};
 let currentRoot;
 const processIdentity = require("./snippets-process-identity.cjs");
 async function cleanup() {
@@ -18,7 +19,11 @@ async function cleanup() {
   try {
     observation?.stop();
   } finally {
-    await catalogTransport?.close();
+    try {
+      restoreHooks();
+    } finally {
+      await catalogTransport?.close();
+    }
   }
 }
 
@@ -393,6 +398,27 @@ async function run(options) {
   const children = [];
   const childProcess = require("node:child_process");
   const originalFork = childProcess.fork;
+  const originalOpen = dialog.showOpenDialog;
+  const originalMessage = dialog.showMessageBox;
+  let observedFork;
+  let observedOpen;
+  let observedMessage;
+  if (options.linuxPublicCatalog)
+    restoreHooks = () => {
+      const changed = [];
+      if (observedFork && childProcess.fork === observedFork)
+        childProcess.fork = originalFork;
+      else if (observedFork) changed.push("fork");
+      if (observedOpen && dialog.showOpenDialog === observedOpen)
+        dialog.showOpenDialog = originalOpen;
+      else if (observedOpen) changed.push("open");
+      if (observedMessage && dialog.showMessageBox === observedMessage)
+        dialog.showMessageBox = originalMessage;
+      else if (observedMessage) changed.push("message");
+      restoreHooks = () => {};
+      syncBuiltinESMExports();
+      assert.deepEqual(changed, [], "Files observer hooks changed");
+    };
   childProcess.fork = (...args) => {
     const child = originalFork(...args);
     if (String(args[0]).endsWith("extension-runtime/bootstrap.mjs")) {
@@ -412,6 +438,7 @@ async function run(options) {
     }
     return child;
   };
+  observedFork = childProcess.fork;
   syncBuiltinESMExports();
   let approvals = 0;
   globalThis.__omxtermPackagedState = {
@@ -441,12 +468,14 @@ async function run(options) {
     );
     return { canceled: false, filePaths: [options.archive] };
   };
+  observedOpen = dialog.showOpenDialog;
   dialog.showMessageBox = async (_owner, prompt) => {
     verifyFilesConsent(prompt, options, approvals);
     publicObservation?.verifyTrust(prompt);
     approvals++;
     return { response: 1, checkboxChecked: false };
   };
+  observedMessage = dialog.showMessageBox;
   async function until(check, label, timeout = 15000) {
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
@@ -1387,19 +1416,28 @@ async function run(options) {
     input: "synthetic Chromium; native consent controlled; inspector observer",
   };
   app.once("will-quit", () => {
-    const remaining = shellStat();
-    assert.ok(
-      !remaining ||
-        remaining.start !== identity.start ||
-        /^[ZXx]/.test(remaining.state),
-      "shell kernel exit before will-quit",
-    );
-    children.forEach(assertNormalBackendRetirement);
-    if (publicObservation) {
-      assert.deepEqual(publicObservation.summary(), publicBinding);
-      publicObservation.stop({ allowRemoved: true });
-      publicObservation = undefined;
-    }
+    let remaining;
+    const check = () => {
+      remaining = shellStat();
+      assert.ok(
+        !remaining ||
+          remaining.start !== identity.start ||
+          /^[ZXx]/.test(remaining.state),
+        "shell kernel exit before will-quit",
+      );
+      children.forEach(assertNormalBackendRetirement);
+    };
+    if (publicObservation)
+      require("./public-catalog-observer.cjs").sealPublicObservation(
+        publicObservation,
+        publicBinding,
+        () => {
+          publicObservation = undefined;
+          restoreHooks();
+        },
+        check,
+      );
+    else check();
     writeFileSync(
       path.join(options.evidence, "quit.json"),
       JSON.stringify(
@@ -1437,5 +1475,8 @@ module.exports = {
     await cleanup();
     app.quit();
   },
-  quit: () => app.quit(),
+  quit: () => {
+    publicObservation?.beginQuit();
+    app.quit();
+  },
 };

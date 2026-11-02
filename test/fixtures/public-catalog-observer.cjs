@@ -79,6 +79,32 @@ function startPublicCatalogObservation({
   let catalogBytes;
   const attempts = [];
   let stopped = false;
+  let quitting = false;
+  let removedForQuit = false;
+  const originalRemove = ipcMain.removeHandler;
+  const removeDescriptor = Object.getOwnPropertyDescriptor(
+    ipcMain,
+    "removeHandler",
+  );
+  const observedRemove = function (...args) {
+    if (args[0] === channel) {
+      if (
+        quitting &&
+        !removedForQuit &&
+        ipcMain._invokeHandlers.get(channel) === handler
+      )
+        removedForQuit = true;
+      else unexpected.push({ error: "unexpected IPC handler removal" });
+    }
+    return originalRemove.apply(this, args);
+  };
+  function restoreRemove() {
+    if (ipcMain.removeHandler !== observedRemove) return false;
+    if (removeDescriptor)
+      Object.defineProperty(ipcMain, "removeHandler", removeDescriptor);
+    else delete ipcMain.removeHandler;
+    return true;
+  }
 
   const onRequest = ({ request }) => {
     // Diagnostic callbacks must not throw into the production event loop.
@@ -300,12 +326,14 @@ function startPublicCatalogObservation({
   ipcMain.removeHandler(channel);
   try {
     ipcMain.handle(channel, handler);
+    ipcMain.removeHandler = observedRemove;
     diagnostics.subscribe("http.client.request.start", onRequest);
     diagnostics.subscribe("http.client.response.finish", onResponse);
   } catch (error) {
     diagnostics.unsubscribe("http.client.request.start", onRequest);
     diagnostics.unsubscribe("http.client.response.finish", onResponse);
-    ipcMain.removeHandler(channel);
+    restoreRemove();
+    originalRemove.call(ipcMain, channel);
     ipcMain.handle(channel, originalHandler);
     throw error;
   }
@@ -344,8 +372,34 @@ function startPublicCatalogObservation({
       });
       approvals++;
     },
+    beginQuit() {
+      assert.equal(quitting, false, "Quit already requested");
+      assert.equal(
+        ipcMain.removeHandler,
+        observedRemove,
+        "IPC removal observer changed",
+      );
+      assert.equal(
+        ipcMain._invokeHandlers.get(channel),
+        handler,
+        "IPC handler changed before Quit",
+      );
+      assert.equal(unexpected.length, 0, "unexpected public observation");
+      quitting = true;
+    },
     summary() {
-      assert.equal(unexpected.length, 0, "unexpected HTTPS request");
+      assert.equal(unexpected.length, 0, "unexpected public observation");
+      assert.equal(
+        ipcMain.removeHandler,
+        observedRemove,
+        "IPC removal observer changed",
+      );
+      assert.ok(
+        removedForQuit
+          ? quitting && !ipcMain._invokeHandlers.has(channel)
+          : ipcMain._invokeHandlers.get(channel) === handler,
+        "IPC handler changed during observation",
+      );
       assert.equal(pending.size, 0, "unfinished HTTPS request observation");
       assert.equal(active, undefined, "catalog operation still active");
       return {
@@ -366,26 +420,65 @@ function startPublicCatalogObservation({
       if (stopped) return;
       stopped = true;
       const ownsHandler = ipcMain._invokeHandlers.get(channel) === handler;
-      const removedForQuit =
-        allowRemoved && !ipcMain._invokeHandlers.has(channel);
+      const validQuitRemoval =
+        allowRemoved &&
+        quitting &&
+        removedForQuit &&
+        !ipcMain._invokeHandlers.has(channel) &&
+        unexpected.length === 0;
+      let ownsRemove;
       try {
         diagnostics.unsubscribe("http.client.request.start", onRequest);
       } finally {
         try {
           diagnostics.unsubscribe("http.client.response.finish", onResponse);
         } finally {
+          ownsRemove = restoreRemove();
           if (ownsHandler) {
-            ipcMain.removeHandler(channel);
-            ipcMain.handle(channel, originalHandler);
+            originalRemove.call(ipcMain, channel);
+            if (!allowRemoved) ipcMain.handle(channel, originalHandler);
           }
         }
       }
       assert.ok(
-        ownsHandler || removedForQuit,
+        ownsRemove &&
+          (allowRemoved ? validQuitRemoval : ownsHandler && !quitting),
         `${release.label} observation hook changed`,
       );
     },
   };
+}
+
+// Validate before allowing a receipt, but always attempt observer and hook cleanup.
+function sealPublicObservation(
+  observation,
+  expected,
+  restore,
+  check = () => {},
+) {
+  const failures = [];
+  try {
+    check();
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    assert.deepEqual(observation.summary(), expected);
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    observation.stop({ allowRemoved: true });
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    restore();
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length)
+    throw new AggregateError(failures, "Public observation shutdown failed");
 }
 
 // Serialized into the production Settings renderer; do not match unrelated rows.
@@ -426,5 +519,6 @@ module.exports = {
   startPublicCatalogObservation,
   startSshPublicObservation,
   startFilesPublicObservation,
+  sealPublicObservation,
   sshPublicManagementState,
 };

@@ -17,6 +17,7 @@ const os = require("node:os");
 const childProcess = require("node:child_process");
 const { syncBuiltinESMExports } = require("node:module");
 let restore = () => {};
+let prepareAbort = () => {};
 let requestQuit;
 function cleanup(options) {
   restore(options);
@@ -39,8 +40,15 @@ async function diagnose() {
   return { ...globalThis.__omxtermPackagedState, views };
 }
 function abort() {
+  let failure;
+  try {
+    prepareAbort();
+  } catch (error) {
+    failure = error;
+  }
   app.once("will-quit", () => cleanup({ allowRemoved: true }));
   app.quit();
+  if (failure) throw failure;
 }
 function inspect(options) {
   assert.equal(app.isPackaged, !options.source);
@@ -386,6 +394,7 @@ async function run(options) {
   let publicObservation;
   let publicBinding;
   let sshPublicManagementState;
+  let sealPublicObservation;
   const original = {
     fork: childProcess.fork,
     open: dialog.showOpenDialog,
@@ -425,12 +434,14 @@ async function run(options) {
   if (options.stablePublic) {
     const publicCatalog = require("./public-catalog-observer.cjs");
     sshPublicManagementState = publicCatalog.sshPublicManagementState;
+    sealPublicObservation = publicCatalog.sealPublicObservation;
     publicObservation = publicCatalog.startSshPublicObservation({
       ipcMain,
       diagnostics: require("node:diagnostics_channel"),
       catalogSha256: options.catalogSha256,
       archiveSha256: options.archiveSha256,
     });
+    prepareAbort = () => publicObservation?.beginQuit();
   }
   dialog.showOpenDialog = async () => {
     assert.notEqual(
@@ -1652,12 +1663,11 @@ async function run(options) {
   prepareQuit();
   function prepareQuit() {
     app.once("will-quit", () => {
-      if (options.stablePublic) {
-        assert.deepEqual(publicObservation.summary(), publicBinding);
-        publicObservation.stop({ allowRemoved: true });
-        publicObservation = undefined;
-        cleanup();
-      }
+      if (options.stablePublic)
+        sealPublicObservation(publicObservation, publicBinding, () => {
+          publicObservation = undefined;
+          cleanup();
+        });
       save("quit.json", {
         ...state,
         joined:
@@ -1682,6 +1692,7 @@ async function run(options) {
       };
       collect(Menu.getApplicationMenu().items);
       save("quit-menu.json", { appName: app.name, items });
+      publicObservation?.beginQuit();
       menu(`Quit ${app.name}`);
     };
   }

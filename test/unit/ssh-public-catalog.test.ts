@@ -4,11 +4,18 @@ import { Readable } from "node:stream";
 import { expect, it, vi } from "vitest";
 
 const require = createRequire(import.meta.url);
-const { startSshPublicObservation } =
+const { startSshPublicObservation, sealPublicObservation } =
   require("../fixtures/public-catalog-observer.cjs") as {
+    sealPublicObservation: (
+      observation: unknown,
+      expected: unknown,
+      restore: () => void,
+      check?: () => void,
+    ) => void;
     startSshPublicObservation: (options: unknown) => {
       verifyTrust(prompt: unknown): void;
       summary(): unknown;
+      beginQuit(): void;
       stop(options?: { allowRemoved?: boolean }): void;
     };
   };
@@ -161,6 +168,7 @@ function fixture() {
     host,
     handlers,
     listeners,
+    removeHandler: () => ipcMain.removeHandler("omxterm:extensions"),
     changeCatalog: () => {
       catalogBody = Buffer.from(
         JSON.stringify({ schemaVersion: 1, entries: [release] }),
@@ -292,28 +300,68 @@ it("follows the production archive redirect only when the observed HTTPS chain m
   failed.stop();
 });
 
+it.each(["check", "summary", "stop"] as const)(
+  "restores hooks and withholds the receipt if Quit %s fails",
+  (fault) => {
+    const receipt = vi.fn();
+    const restore = vi.fn();
+    const stop = vi.fn(() => {
+      if (fault === "stop") throw Error("stop failure");
+    });
+    const summary = vi.fn(() => {
+      if (fault === "summary") throw Error("summary failure");
+      return { result: 1 };
+    });
+    const check = vi.fn(() => {
+      if (fault === "check") throw Error("check failure");
+    });
+    expect(() => {
+      sealPublicObservation({ summary, stop }, { result: 1 }, restore, check);
+      receipt();
+    }).toThrow(/Public observation shutdown failed/);
+    expect(check).toHaveBeenCalledOnce();
+    expect(summary).toHaveBeenCalledOnce();
+    expect(stop).toHaveBeenCalledWith({ allowRemoved: true });
+    expect(restore).toHaveBeenCalledOnce();
+    expect(receipt).not.toHaveBeenCalled();
+  },
+);
+
 it("accepts only explicitly expected production handler removal at joined Quit", () => {
   const f = fixture();
   const observer = f.start();
-  f.handlers.delete("omxterm:extensions");
+  observer.beginQuit();
+  f.removeHandler();
   expect(() => observer.stop({ allowRemoved: true })).not.toThrow();
   expect(f.handlers.has("omxterm:extensions")).toBe(false);
   expect([...f.listeners.values()].every((set) => set.size === 0)).toBe(true);
 
   const early = fixture();
   const beforeQuit = early.start();
-  early.handlers.delete("omxterm:extensions");
-  expect(() => beforeQuit.stop()).toThrow(/hook changed/);
+  early.removeHandler();
+  expect(() => beforeQuit.beginQuit()).toThrow();
+  expect(() => beforeQuit.stop({ allowRemoved: true })).toThrow(/hook changed/);
 });
 
 it("removes diagnostics listeners without overwriting a changed IPC owner even at Quit", () => {
   const f = fixture();
   const observer = f.start();
+  observer.beginQuit();
   const replacement = async () => ({});
   f.handlers.set("omxterm:extensions", replacement);
   expect(() => observer.stop({ allowRemoved: true })).toThrow(/hook changed/);
   expect(f.handlers.get("omxterm:extensions")).toBe(replacement);
   expect([...f.listeners.values()].every((set) => set.size === 0)).toBe(true);
+});
+
+it("rejects replacement later removed by production shutdown", () => {
+  const f = fixture();
+  const observer = f.start();
+  observer.beginQuit();
+  f.handlers.set("omxterm:extensions", async () => ({}));
+  f.removeHandler();
+  expect(() => observer.summary()).toThrow();
+  expect(() => observer.stop({ allowRemoved: true })).toThrow(/hook changed/);
 });
 
 it("preserves production IPC argument validation rather than dropping extra arguments", async () => {
