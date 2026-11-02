@@ -26,6 +26,21 @@ import {
 
 export const filesPublicCatalogUrl =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json";
+const files06Sha256 =
+  "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
+function assertPublicCatalogIdentity(
+  publicCatalog: string | undefined,
+  version: string | undefined,
+  digest: string,
+) {
+  if (!publicCatalog) return;
+  assert.ok(
+    ["0.5.0", "0.6.0"].includes(version ?? "0.5.0"),
+    "unsupported public Files version",
+  );
+  if (version === "0.6.0")
+    assert.equal(digest, files06Sha256, "Files0.6 archive digest");
+}
 const prefix = "OMXTERM_FILES_DMG_";
 const names = [
   "DMG",
@@ -80,6 +95,11 @@ export function filesDmgInputs(env = process.env) {
       env[prefix + "PUBLIC_LINK"],
       undefined,
       "Choose one public acquisition mode",
+    );
+    assertPublicCatalogIdentity(
+      publicCatalog,
+      extensionVersion,
+      values.ARCHIVE_SHA256,
     );
   }
   const publicLink = env[prefix + "PUBLIC_LINK"];
@@ -208,6 +228,11 @@ export async function runFilesDmgCampaign(
   );
   if (values.PUBLIC_CATALOG)
     assert.equal(values.PUBLIC_CATALOG, filesPublicCatalogUrl);
+  assertPublicCatalogIdentity(
+    values.PUBLIC_CATALOG,
+    values.EXTENSION_VERSION,
+    values.ARCHIVE_SHA256,
+  );
   assert.equal(process.platform, "darwin");
   assert.equal(process.arch, "arm64");
   assert.notEqual(process.getuid?.(), 0);
@@ -233,7 +258,10 @@ export async function runFilesDmgCampaign(
   let lookupHash: string | undefined;
   try {
     assert.equal(sha256(await readFile(values.DMG)), values.DMG_SHA256);
-    assert.equal(sha256(await readFile(values.ARCHIVE)), values.ARCHIVE_SHA256);
+    const archiveBytes = await readFile(values.ARCHIVE);
+    if (values.PUBLIC_CATALOG && values.EXTENSION_VERSION === "0.6.0")
+      assert.equal(archiveBytes.length, 17331, "Files0.6 archive size");
+    assert.equal(sha256(archiveBytes), values.ARCHIVE_SHA256);
     testContext.signal.throwIfAborted();
     bundle = await copyDmgApplication(values.DMG, evidence);
     const identity = await inspectDmgApplication(

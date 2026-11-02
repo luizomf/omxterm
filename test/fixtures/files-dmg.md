@@ -9,17 +9,14 @@ physical-input qualification is selected.
 
 ## Separate immutable inputs
 
-Build the current Files0.6.0 candidate from committed clean source:
-
-```sh
-node scripts/build-files-extension.mjs /absolute/new-files.omxext FULL_SOURCE_COMMIT darwin-arm64
-```
-
-The supplied commit is labeled `supplied-commit`; the owner verifies exported
-source identity. Omit optional arguments for clean-Git/default Linux intent.
-Archive/checksum/JSON refuse replacement. The receipt's source host version may
-be dev.22 while the actual compatible retained host is dev.21. `not-run` is never
-rewritten after native execution: record actual qualification separately.
+Use the separately retained exact host and Files archive; do not rebuild or
+replace the selected Files0.6.0 release trio. For a different local-only source
+experiment, `node scripts/build-files-extension.mjs /absolute/new-files.omxext
+FULL_SOURCE_COMMIT darwin-arm64` writes new archive/checksum/JSON files and refuses
+replacement. A supplied commit is labeled `supplied-commit`; the owner verifies
+exported source identity. The build receipt's intended host is not proof of the
+actual host used. `not-run` is never rewritten after native execution: record
+actual qualification separately.
 
 ```sh
 OMXTERM_FILES_DMG_DMG=/absolute/retained-host.dmg \
@@ -160,6 +157,34 @@ paint proof. Existing synthetic-input, controlled-consent, native-I/O cancellati
 physical/Gatekeeper and main-death limitations remain. Preserve the complete
 legacy endpoint and original immutable releases. This mode neither republishes
 Files0.5 nor teaches already published dev.21 a new endpoint.
+
+### Prepared Files0.6 public-catalog checkpoint
+
+This adapter is preparation, **not a passed public checkpoint**. Do not execute it
+until ROOT confirms that the original Files0.6 archive, checksum and `not-run`
+receipt have been published and anonymously byte-verified, and that the fixed
+macOS catalog endpoint has been promoted and read back against the selected source.
+Keep the original Files0.5 instructions, receipts and captures as historical
+separate evidence; do not overwrite or relabel them.
+
+Use the exact independently downloaded Files0.6 archive as `ARCHIVE` and set:
+
+```sh
+OMXTERM_FILES_DMG_EXTENSION_VERSION=0.6.0
+OMXTERM_FILES_DMG_ARCHIVE_SHA256=50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143
+OMXTERM_FILES_DMG_PUBLIC_CATALOG=https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json
+```
+
+Export these along with the ordinary absolute DMG/archive/evidence paths, exact DMG
+hash and actual host version above. The adapter refuses a different Files0.6 hash
+or archive length (17,331 bytes), selects and captures only the Files0.6 card, and
+requires the exact Official warning, package ID, digest and captured generations
+0, 1 and 5 before the three approvals. The host enforces catalog size/hash and
+manifest ID/version/engine equality. The six scenario checks, joined shutdown and
+no-fallback boundaries remain the same. Actual captured-image inspection remains
+separate from DOM success; source tests do not establish native rendering or public
+consumption. A local stable host used against public extension endpoints is not a
+freshly downloaded public stable host: record host provenance accordingly.
 
 ## One-entry Trash oracle
 

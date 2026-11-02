@@ -130,12 +130,13 @@ function extensionsIdle(document, publicCatalog) {
   );
 }
 
-function installPublicCatalog(document, action) {
+function installPublicCatalog(document, action, version = "0.5.0") {
   const cards = [
     ...document.querySelectorAll(".extension-catalog-card"),
   ].filter(
     (card) =>
-      card.querySelector("h4")?.textContent === "Files — ARM64 preview · 0.5.0",
+      card.querySelector("h4")?.textContent ===
+      `Files — ARM64 preview · ${version}`,
   );
   if (cards.length !== 1) throw Error("exact Files catalog card unavailable");
   const button = [...cards[0].querySelectorAll("button")].find(
@@ -146,7 +147,7 @@ function installPublicCatalog(document, action) {
   button.click();
 }
 
-function verifyFilesConsent(prompt, options) {
+function verifyFilesConsent(prompt, options, approvals) {
   assert.equal(prompt.title, "Trust extension code?");
   assert.ok(
     prompt.detail.includes(options.archiveSha256),
@@ -185,6 +186,19 @@ function verifyFilesConsent(prompt, options) {
       prompt.detail.includes("omxterm.files"),
       "manifest ID before consent",
     );
+  }
+  if (options.publicCatalog && options.extensionVersion === "0.6.0") {
+    const generations = [0, 1, 5];
+    assert.ok(Number.isInteger(approvals) && approvals >= 0 && approvals < 3);
+    assert.equal(prompt.type, "warning");
+    assert.equal(
+      prompt.detail,
+      `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.files\nSHA-256: ${options.archiveSha256}\nCurrent generation: ${generations[approvals]}\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.`,
+      "exact Files catalog identity, digest and captured generation before consent",
+    );
+    assert.deepEqual(prompt.buttons, ["Cancel", "Trust and install"]);
+    assert.equal(prompt.defaultId, 0);
+    assert.equal(prompt.cancelId, 0);
   }
 }
 
@@ -274,7 +288,7 @@ async function run(options) {
   listeners("initial");
   async function captureCatalog(name, selector, text) {
     const geometry = await js(`(async () => {
-      const element = [...document.querySelectorAll(${JSON.stringify(selector)})].find(item => ${options.publicCatalog && selector === ".extension-catalog-card" ? `item.querySelector('h4')?.textContent === 'Files — ARM64 preview · 0.5.0'` : `item.textContent.includes(${JSON.stringify(text)})`});
+      const element = [...document.querySelectorAll(${JSON.stringify(selector)})].find(item => ${options.publicCatalog && selector === ".extension-catalog-card" ? `item.querySelector('h4')?.textContent === ${JSON.stringify(`Files — ARM64 preview · ${options.extensionVersion ?? "0.5.0"}`)}` : `item.textContent.includes(${JSON.stringify(text)})`});
       if (!element) throw Error('catalog capture target missing');
       element.scrollIntoView({ block: 'center' });
       element.querySelector('button')?.focus({ preventScroll: true });
@@ -334,7 +348,7 @@ async function run(options) {
     return { canceled: false, filePaths: [options.archive] };
   };
   dialog.showMessageBox = async (_owner, prompt) => {
-    verifyFilesConsent(prompt, options);
+    verifyFilesConsent(prompt, options, approvals);
     approvals++;
     return { response: 1, checkboxChecked: false };
   };
@@ -492,7 +506,7 @@ async function run(options) {
     if (options.publicCatalog) {
       assert.ok(!options.publicLink && !options.macosLifecycle);
       await js(
-        `(${installPublicCatalog.toString()})(document, ${JSON.stringify(action)})`,
+        `(${installPublicCatalog.toString()})(document, ${JSON.stringify(action)}, ${JSON.stringify(options.extensionVersion ?? "0.5.0")})`,
       );
       publicCatalogInstalls.push(action);
     } else if (options.publicLink) {
@@ -685,7 +699,9 @@ async function run(options) {
     await captureCatalog(
       "catalog.png",
       ".extension-catalog-card",
-      options.publicCatalog ? "Files — ARM64 preview · 0.5.0" : "Install",
+      options.publicCatalog
+        ? `Files — ARM64 preview · ${options.extensionVersion ?? "0.5.0"}`
+        : "Install",
     );
     if (options.publicCatalog) await installArchive();
     else await click(core, "Install");
@@ -1095,7 +1111,9 @@ async function run(options) {
     await captureCatalog(
       "catalog-reinstall.png",
       ".extension-catalog-card",
-      options.publicCatalog ? "Files — ARM64 preview · 0.5.0" : "Reinstall",
+      options.publicCatalog
+        ? `Files — ARM64 preview · ${options.extensionVersion ?? "0.5.0"}`
+        : "Reinstall",
     );
   if (options.publicCatalog) await installArchive("Reinstall");
   else if (options.catalogMode) await click(core, "Reinstall");

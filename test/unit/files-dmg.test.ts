@@ -286,6 +286,71 @@ it.each([
   await expect(run()).rejects.toThrow();
   expect((await receipt()).result.passed).toBe(false);
 });
+it("binds the Files0.6 public catalog checkpoint to its exact archive identity", () => {
+  const env = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      "OMXTERM_FILES_DMG_" + key,
+      value,
+    ]),
+  );
+  const selected = {
+    ...env,
+    OMXTERM_FILES_DMG_PUBLIC_CATALOG: filesPublicCatalogUrl,
+    OMXTERM_FILES_DMG_EXTENSION_VERSION: "0.6.0",
+    OMXTERM_FILES_DMG_ARCHIVE_SHA256:
+      "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
+  };
+  expect(filesDmgInputs(selected)).toMatchObject({
+    EXTENSION_VERSION: "0.6.0",
+    PUBLIC_CATALOG: filesPublicCatalogUrl,
+    ARCHIVE_SHA256:
+      "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
+  });
+  expect(() =>
+    filesDmgInputs({
+      ...selected,
+      OMXTERM_FILES_DMG_ARCHIVE_SHA256: "a".repeat(64),
+    }),
+  ).toThrow(/Files0\.6.*digest/);
+});
+
+it("refuses unsupported public catalog versions instead of relabeling a checkpoint", () => {
+  const env = Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [
+      "OMXTERM_FILES_DMG_" + key,
+      value,
+    ]),
+  );
+  expect(() =>
+    filesDmgInputs({
+      ...env,
+      OMXTERM_FILES_DMG_PUBLIC_CATALOG: filesPublicCatalogUrl,
+      OMXTERM_FILES_DMG_EXTENSION_VERSION: "0.7.0",
+    }),
+  ).toThrow(/public Files version/);
+});
+
+it("rejects a substituted Files0.6 digest even for direct fixture callers", async () => {
+  values.PUBLIC_CATALOG = filesPublicCatalogUrl;
+  values.EXTENSION_VERSION = "0.6.0";
+  await expect(run()).rejects.toThrow(/Files0\.6.*digest/);
+  expect(runner.runNativeFixture).not.toHaveBeenCalled();
+});
+
+it("refuses the wrong-sized Files0.6 public archive before native preparation", async () => {
+  values.PUBLIC_CATALOG = filesPublicCatalogUrl;
+  values.EXTENSION_VERSION = "0.6.0";
+  values.ARCHIVE_SHA256 =
+    "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
+  await expect(run()).rejects.toThrow();
+  const { directory } = await receipt();
+  const result = JSON.parse(
+    await fs.readFile(path.join(directory, "result.json"), "utf8"),
+  ) as { failures: string[] };
+  expect(result.failures.join("\n")).toContain("Files0.6 archive size");
+  expect(runner.runNativeFixture).not.toHaveBeenCalled();
+});
+
 it("accepts only the fixed public catalog endpoint and refuses mixed acquisition", () => {
   const env = Object.fromEntries(
     Object.entries(values).map(([key, value]) => [

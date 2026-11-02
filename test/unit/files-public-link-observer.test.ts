@@ -33,11 +33,12 @@ const createConsent = new Function(
     extensionVersion?: string;
     archiveSha256: string;
   },
+  approvals?: number,
 ) => void;
 const consent = createConsent(assert);
 const createCatalogInstall = new Function(
   `${block("function installPublicCatalog(", "function verifyFilesConsent(")} return installPublicCatalog;`,
-) as () => (document: Document, action: string) => void;
+) as () => (document: Document, action: string, version?: string) => void;
 const catalogInstall = createCatalogInstall();
 afterEach(() => document.body.replaceChildren());
 
@@ -220,6 +221,70 @@ it("uses only the exact Files card among other installable catalog entries", asy
     ),
   ).toBe(false);
 });
+it.each(["0.5.0", "0.6.0"])(
+  "captures the selected public Files %s card, not another release",
+  async (version) => {
+    document.body.innerHTML =
+      '<section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.5.0</h4><button>Install</button></section><section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.6.0</h4><button>Install</button></section>';
+    for (const card of document.querySelectorAll<HTMLElement>(
+      ".extension-catalog-card",
+    )) {
+      card.scrollIntoView = () => {};
+      card.getBoundingClientRect = () =>
+        ({ top: 0, bottom: 50, left: 0, right: 100 }) as DOMRect;
+    }
+    const captures: { text: string }[] = [];
+    const js = async (expression: string) => {
+      const evaluate = new Function(
+        "document",
+        "requestAnimationFrame",
+        "innerHeight",
+        "innerWidth",
+        `return ${expression}`,
+      ) as (...args: unknown[]) => unknown;
+      return evaluate(document, (callback: () => void) => callback(), 500, 500);
+    };
+    const capture = new Function(
+      "assert",
+      "js",
+      "options",
+      "core",
+      "writeFile",
+      "path",
+      "renderedCatalog",
+      `${block("  async function captureCatalog(", "  const children = [];")} return captureCatalog;`,
+    ) as (
+      ...args: unknown[]
+    ) => (name: string, selector: string, text: string) => Promise<void>;
+    const write = vi.fn(async () => {});
+    await capture(
+      assert,
+      js,
+      { publicCatalog: "fixed", extensionVersion: version, evidence: "/tmp" },
+      { capturePage: async () => ({ toPNG: () => Buffer.from("capture") }) },
+      write,
+      { join: (...parts: string[]) => parts.join("/") },
+      captures,
+    )("catalog.png", ".extension-catalog-card", "Install");
+    expect(captures).toHaveLength(1);
+    expect(captures[0]!.text).toContain(`Files — ARM64 preview · ${version}`);
+    expect(write).toHaveBeenCalledOnce();
+  },
+);
+
+it("selects only the exact Files0.6 catalog card, not the historical offer", () => {
+  document.body.innerHTML =
+    '<section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.5.0</h4><button>Install</button></section><section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.6.0</h4><button>Install</button></section>';
+  const buttons = document.querySelectorAll("button");
+  const historical = vi.fn();
+  const selected = vi.fn();
+  buttons[0]!.addEventListener("click", historical);
+  buttons[1]!.addEventListener("click", selected);
+  catalogInstall(document, "Install", "0.6.0");
+  expect(selected).toHaveBeenCalledOnce();
+  expect(historical).not.toHaveBeenCalled();
+});
+
 it.each([
   "disabled",
   "hidden",
@@ -245,6 +310,59 @@ it.each([
   ).toThrow();
   expect(otherClick).not.toHaveBeenCalled();
 });
+it.each([
+  [0, 0],
+  [1, 1],
+  [2, 5],
+])(
+  "Files0.6 public consent %i binds the captured generation %i",
+  (approval, generation) => {
+    const digest =
+      "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
+    const prompt = {
+      type: "warning",
+      title: "Trust extension code?",
+      message: "Install Files — ARM64 preview 0.6.0?",
+      detail: `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.files\nSHA-256: ${digest}\nCurrent generation: ${generation}\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.`,
+      buttons: ["Cancel", "Trust and install"],
+      defaultId: 0,
+      cancelId: 0,
+    };
+    const options = {
+      publicCatalog: "fixed",
+      extensionVersion: "0.6.0",
+      archiveSha256: digest,
+    };
+    expect(() => consent(prompt, options, approval)).not.toThrow();
+    for (const wrong of [
+      {
+        ...prompt,
+        detail: prompt.detail.replace(
+          `Current generation: ${generation}`,
+          `Current generation: ${generation + 1}`,
+        ),
+      },
+      { ...prompt, detail: prompt.detail.replace(digest, "a".repeat(64)) },
+      {
+        ...prompt,
+        detail: prompt.detail.replace("omxterm.files", "omxterm.other"),
+      },
+      {
+        ...prompt,
+        detail: prompt.detail.replace("Official means", "Third party means"),
+      },
+      { ...prompt, message: "Install Files — ARM64 preview 0.5.0?" },
+      { ...prompt, title: "Other prompt" },
+      { ...prompt, buttons: ["Trust and install", "Cancel"] },
+      { ...prompt, defaultId: 1 },
+      { ...prompt, cancelId: 1 },
+      { ...prompt, type: "info" },
+    ])
+      expect(() => consent(wrong, options, approval)).toThrow();
+    expect(() => consent(prompt, options, 3)).toThrow();
+  },
+);
+
 it("requires Official catalog trust in addition to exact Files manifest and digest", () => {
   const digest = "a".repeat(64);
   const prompt = {
@@ -268,6 +386,46 @@ it("requires Official catalog trust in addition to exact Files manifest and dige
     expect(() => consent(wrong, options)).toThrow();
   }
 });
+it("routes all three Files0.6 catalog actions to the selected version", async () => {
+  document.body.innerHTML =
+    '<section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.6.0</h4><button>Install</button><button>Reinstall</button></section>';
+  const clicks: string[] = [];
+  for (const button of document.querySelectorAll("button"))
+    button.addEventListener("click", () => clicks.push(button.textContent!));
+  const code = block(
+    "  const publicLinkInstalls = [];",
+    "  async function openFiles()",
+  );
+  const execute = new Function(
+    "assert",
+    "options",
+    "js",
+    "click",
+    "installPublicCatalog",
+    `return (async () => { const core = {}; ${code} await installArchive(); await installArchive("Reinstall"); await installArchive(); return publicCatalogInstalls; })();`,
+  ) as (...args: unknown[]) => Promise<string[]>;
+  const js = async (expression: string) => {
+    const evaluate = new Function("document", `return ${expression}`) as (
+      document: Document,
+    ) => unknown;
+    return evaluate(document);
+  };
+  const fallback = vi.fn(() => {
+    throw Error("fallback forbidden");
+  });
+  await expect(
+    execute(
+      assert,
+      { publicCatalog: "fixed", extensionVersion: "0.6.0" },
+      js,
+      fallback,
+      catalogInstall,
+    ),
+  ).resolves.toEqual(["Install", "Reinstall", "Install"]);
+  expect(clicks).toEqual(["Install", "Reinstall", "Install"]);
+  expect(fallback).not.toHaveBeenCalled();
+});
+
 it("routes three catalog installs through scoped UI without local or link fallback", async () => {
   const code = block(
     "  const publicLinkInstalls = [];",
