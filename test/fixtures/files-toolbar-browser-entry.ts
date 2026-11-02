@@ -9,6 +9,7 @@ let setAppearance!: (appearance: {
   opacity: number;
 }) => void;
 let homeFailure = false;
+let dotfiles = false;
 const requests: { operation: string; path?: string }[] = [];
 const bridge = {
   async request(value: unknown) {
@@ -25,11 +26,23 @@ const bridge = {
       return {
         ok: true,
         directory: request.path!,
-        rows: Array.from({ length: 40 }, (_, index) => ({
-          name: request.path === "/other" ? `other-${index}` : `item-${index}`,
-          kind: "file",
-          size: 1,
-        })),
+        rows: dotfiles
+          ? request.path === "/root/.config"
+            ? [
+                { name: ".private", kind: "file", size: 1 },
+                { name: "settings", kind: "file", size: 1 },
+              ]
+            : [
+                { name: ".config", kind: "directory", size: 0 },
+                { name: ".profile", kind: "file", size: 1 },
+                { name: "visible", kind: "file", size: 1 },
+              ]
+          : Array.from({ length: 40 }, (_, index) => ({
+              name:
+                request.path === "/other" ? `other-${index}` : `item-${index}`,
+              kind: "file",
+              size: 1,
+            })),
       };
     return { ok: true };
   },
@@ -52,6 +65,12 @@ Object.assign(window, {
     setLanguage,
     setAppearance,
     requests,
+    useDotfiles() {
+      dotfiles = true;
+      document
+        .querySelector<HTMLButtonElement>('[aria-label="Refresh"]')!
+        .click();
+    },
     failNextHome() {
       homeFailure = true;
     },

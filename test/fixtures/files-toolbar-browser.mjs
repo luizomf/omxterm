@@ -517,10 +517,267 @@ try {
     await screenshot(`scroll-${tag}`);
     console.log(`PASS actual scroll ${tag}`);
   }
+  async function hidden(tag) {
+    await evaluate("filesFixture.useDotfiles()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=tree]')?.getAttribute('aria-busy') === 'false' && [...document.querySelectorAll('.file-name')].some(node => node.textContent === 'visible')",
+        ),
+      "dotfile fixture loaded",
+    );
+    const names = () =>
+      evaluate(
+        "[...document.querySelectorAll('.file-name')].map(node => node.textContent)",
+      );
+    assert.deepEqual(await names(), ["visible"], "dotfiles hidden by default");
+    for (let i = 0; i < 5; i++) await key("Tab", "Tab", 9);
+    assert.equal(
+      await evaluate(
+        (selector) =>
+          document.activeElement === document.querySelector(selector),
+        selector("actions"),
+      ),
+      true,
+      "Tab reaches Actions",
+    );
+    await key("Enter", "Enter", 13);
+    const toggle = '[role="menuitemcheckbox"]';
+    assert.equal(
+      await evaluate(
+        (selector) =>
+          document.querySelector(selector)?.getAttribute("aria-checked"),
+        toggle,
+      ),
+      "false",
+    );
+    await key("End", "End", 35);
+    assert.equal(
+      await evaluate(
+        (selector) =>
+          document.activeElement === document.querySelector(selector),
+        toggle,
+      ),
+      true,
+      "menu keyboard navigation reaches toggle",
+    );
+    const bounds = await evaluate((selector) => {
+      const item = document.querySelector(selector);
+      const menu = item.closest('[role="menu"]');
+      const button = item.getBoundingClientRect();
+      const popup = menu.getBoundingClientRect();
+      return {
+        visible: button.top >= popup.top && button.bottom <= popup.bottom,
+        inViewport:
+          popup.left >= 0 &&
+          popup.right <= innerWidth &&
+          popup.top >= 0 &&
+          popup.bottom <= innerHeight,
+        outline: getComputedStyle(item).outlineStyle,
+      };
+    }, toggle);
+    assert.ok(bounds.visible && bounds.inViewport, JSON.stringify(bounds));
+    assert.notEqual(
+      bounds.outline,
+      "none",
+      "menu item has keyboard focus indication",
+    );
+    await key("Enter", "Enter", 13);
+    assert.deepEqual(await names(), [".config", ".profile", "visible"]);
+    await key("Enter", "Enter", 13);
+    assert.equal(
+      await evaluate(
+        (selector) =>
+          document.querySelector(selector)?.getAttribute("aria-checked"),
+        toggle,
+      ),
+      "true",
+    );
+    const ax = await send("Accessibility.getFullAXTree");
+    assert.ok(
+      ax.nodes.some(
+        (node) =>
+          node.role?.value === "menuitemcheckbox" &&
+          node.name?.value === "Show dotfiles (names starting with .)" &&
+          node.properties?.some(
+            (property) =>
+              property.name === "checked" && property.value?.value === "true",
+          ),
+      ),
+      "checked state exposed to accessibility tree",
+    );
+    await key("End", "End", 35);
+    await evaluate("filesFixture.setLanguage('pt-BR')");
+    assert.equal(
+      await evaluate(
+        (selector) =>
+          document.activeElement === document.querySelector(selector),
+        toggle,
+      ),
+      true,
+      "locale change retains menu focus",
+    );
+    assert.ok(
+      await evaluate(
+        (selector) =>
+          document
+            .querySelector(selector)
+            .textContent.includes("Mostrar itens iniciados por ponto (.)"),
+        toggle,
+      ),
+    );
+    await key("Enter", "Enter", 13);
+    assert.deepEqual(
+      await names(),
+      ["visible"],
+      "keyboard hides dotfiles again",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/root/.config" });
+    assert.equal(
+      await evaluate(
+        (selector) => document.querySelector(selector).value,
+        address,
+      ),
+      "/root/.config",
+    );
+    await key("Enter", "Enter", 13);
+    await until(
+      async () => (await firstName()) === "settings",
+      "typed hidden root",
+    );
+    assert.deepEqual(
+      await names(),
+      ["settings"],
+      "filter applies relative to typed hidden root",
+    );
+    console.log(`PASS hidden keyboard ${tag}`);
+  }
+  async function shortcut(platform) {
+    await evaluate("filesFixture.useDotfiles()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=tree]')?.getAttribute('aria-busy') === 'false' && document.querySelector('.file-name')?.textContent === 'visible'",
+        ),
+      "dotfile fixture loaded",
+    );
+    const names = () =>
+      evaluate(
+        "[...document.querySelectorAll('.file-name')].map(node => node.textContent)",
+      );
+    const hint = () =>
+      evaluate(
+        "document.querySelector('.filter-hint').hidden ? null : document.querySelector('.filter-hint').textContent",
+      );
+    assert.equal(await hint(), "Dotfiles hidden");
+    await evaluate(
+      "window.shortcutEvents = []; window.addEventListener('keydown', event => shortcutEvents.push({ prevented: event.defaultPrevented, repeat: event.repeat }));",
+    );
+    await evaluate("document.querySelector('[role=treeitem]').focus()");
+    const mac = platform === "mac";
+    const gesture = () =>
+      mac ? key(">", "Period", 190, 12) : key("h", "KeyH", 72, 2);
+    await gesture();
+    assert.deepEqual(await names(), [".config", ".profile", "visible"]);
+    assert.deepEqual(await evaluate("shortcutEvents.at(-1)"), {
+      prevented: true,
+      repeat: false,
+    });
+    assert.equal(await hint(), null);
+    await evaluate("document.querySelector('[role=treeitem]').focus()");
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: mac ? ">" : "h",
+      code: mac ? "Period" : "KeyH",
+      windowsVirtualKeyCode: mac ? 190 : 72,
+      modifiers: mac ? 12 : 2,
+      autoRepeat: true,
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: mac ? ">" : "h",
+      code: mac ? "Period" : "KeyH",
+      windowsVirtualKeyCode: mac ? 190 : 72,
+      modifiers: mac ? 12 : 2,
+    });
+    assert.deepEqual(
+      await names(),
+      [".config", ".profile", "visible"],
+      "repeat did not toggle",
+    );
+    assert.deepEqual(await evaluate("shortcutEvents.at(-1)"), {
+      prevented: true,
+      repeat: true,
+    });
+    await evaluate(
+      (selector) => document.querySelector(selector).focus(),
+      address,
+    );
+    await gesture();
+    assert.deepEqual(
+      await names(),
+      [".config", ".profile", "visible"],
+      "address editing is not intercepted",
+    );
+    assert.deepEqual(await evaluate("shortcutEvents.at(-1)"), {
+      prevented: false,
+      repeat: false,
+    });
+    await evaluate(
+      (selector) => document.querySelector(selector).focus(),
+      selector("actions"),
+    );
+    await key("Enter", "Enter", 13);
+    const ax = await send("Accessibility.getFullAXTree");
+    const item = ax.nodes.find(
+      (node) =>
+        node.role?.value === "menuitemcheckbox" &&
+        node.name?.value === "Show dotfiles (names starting with .)",
+    );
+    assert.equal(
+      item?.description?.value,
+      mac ? "Shortcut: Cmd+Shift+." : "Shortcut: Ctrl+H",
+    );
+    await key("End", "End", 35);
+    await evaluate("filesFixture.setLanguage('pt-BR')");
+    assert.equal(
+      await evaluate("document.querySelector('.menu-shortcut').textContent"),
+      mac ? "Atalho: Cmd+Shift+." : "Atalho: Ctrl+H",
+    );
+    await gesture();
+    assert.deepEqual(await names(), ["visible"], "shortcut works from menu");
+    assert.equal(await hint(), "Itens iniciados por ponto ocultos");
+    console.log(`PASS scoped shortcut ${platform}`);
+  }
   const scenario = process.argv[2] ?? "matrix";
-  assert.ok(["pointer", "notice", "scroll", "matrix"].includes(scenario));
+  assert.ok(
+    [
+      "pointer",
+      "notice",
+      "scroll",
+      "matrix",
+      "hidden",
+      "shortcut-mac",
+      "shortcut-linux",
+    ].includes(scenario),
+  );
+  if (scenario.startsWith("shortcut-")) {
+    await send("Emulation.setUserAgentOverride", {
+      userAgent: await evaluate("navigator.userAgent"),
+      platform: scenario === "shortcut-mac" ? "MacIntel" : "Linux aarch64",
+    });
+    assert.equal(
+      await evaluate("navigator.platform"),
+      scenario === "shortcut-mac" ? "MacIntel" : "Linux aarch64",
+    );
+  }
   const sizes =
-    scenario === "matrix"
+    scenario === "matrix" || scenario === "hidden"
       ? [
           [196, 1],
           [196, 2],
@@ -531,7 +788,9 @@ try {
     for (const language of scenario === "matrix"
       ? ["en-US", "pt-BR"]
       : ["en-US"])
-      for (const light of scenario === "matrix" ? [false, true] : [false]) {
+      for (const light of scenario === "matrix" || scenario === "hidden"
+        ? [false, true]
+        : [false]) {
         const tag = `${width}x${scale}-${language}-${light ? "light" : "dark"}`;
         const names = labels(language);
         for (const kind of scenario === "matrix"
@@ -541,6 +800,9 @@ try {
           if (kind === "pointer") await pointer(names, tag);
           if (kind === "notice") await notice(language, names, tag);
           if (kind === "scroll") await scroll(width, names, tag);
+          if (kind === "hidden") await hidden(tag);
+          if (kind === "shortcut-mac") await shortcut("mac");
+          if (kind === "shortcut-linux") await shortcut("linux");
         }
         if (scenario === "matrix") console.log(`PASS matrix ${tag}`);
       }

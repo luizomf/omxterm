@@ -1839,6 +1839,27 @@ and explicit search/restore focus intent preserve controls across overlays.
 Published ARM64 previews and remaining distributed-platform gates are recorded separately;
 see [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
 This is a production-facing development module consumed by the Linux ARM64 Files preview.
+Current Files source defaults to hiding dot-prefixed entry names and their
+expanded descendants relative to the browsing root; a typed dot-prefixed root is
+still navigable. Its localized, keyboard-accessible checked Actions menu item
+shows or hides them. Finder flags and other platform hidden metadata are not
+classified. The choice survives navigation and panel Hide/reveal for that view,
+but resets on Close/new view; no preference is persisted. Filtering does not
+mutate files, discard expanded subtrees, interrupt listing work or change an
+editor's captured target. A filtered selection is cleared and keyboard focus
+falls back to a visible ancestor or available row/tree. Existing bounded
+snapshots, truncation and error reporting still apply before filtering. An
+in-flow hint identifies actually concealed dotfiles and an empty visible result
+without asserting the folder is empty. In a visible, focused Files browsing page
+or menu with a root, the checked item also describes a child-local `Ctrl+H`
+(Linux) or `Cmd+Shift+.` (macOS) gesture. The macOS matcher requires physical
+`Period` and logical `.` or `>`; other layouts may use the menu. It does not
+claim editable targets, IME composition, repeated toggles, or input while an
+operation editor, confirmation preparation or mutation is active. Host core
+and remapped shortcuts retain precedence; no general shortcut framework or new
+core ownership is added. Physical keyboard/native menu routing remains to be
+qualified. Published Files archives retain their original behavior; see the
+[Files preview contract](files-development-preview.md#build-and-evidence-boundary).
 Catalog acquisition and stable SDK exposure remain separate. Packaged child
 content can subscribe to read-only appearance updates: theme background and
 foreground plus effective per-window tint opacity. Initial/latest snapshots

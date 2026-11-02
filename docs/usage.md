@@ -319,7 +319,16 @@ Settings and general extension tabs temporarily suspend it.
 
 Files keeps the terminal directory captured when its view first opened. Closing
 that terminal leaves the tool available; disabling or removing the extension
-retires its view. Published legacy extension pages retain their own styling.
+retires its view. In current Files source, **Actions… → Show dotfiles (names
+starting with .)** reveals dot-prefixed files and folders; they are hidden by
+default. With the Files list or toolbar focused, use `Ctrl+H` on Linux or
+`Cmd+Shift+.` on macOS; the Actions menu remains available if a core shortcut
+claims the key or the keyboard layout does not match. Shortcuts do not interrupt editing or an
+operation editor. Type a hidden directory path to open it directly. The setting
+stays while navigating or hiding the panel, but resets when the view is closed.
+It does not classify Finder flags or other platform-specific hidden metadata.
+Published archives retain their own styling and do not gain this source-only
+behavior from a host update.
 
 ### Resize or close Snippets
 

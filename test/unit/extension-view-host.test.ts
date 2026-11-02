@@ -565,6 +565,114 @@ it.each([
   },
 );
 
+it.each([
+  {
+    platform: "linux",
+    binding: "Control+H",
+    key: "h",
+    code: "KeyH",
+    control: true,
+    meta: false,
+    shift: false,
+  },
+  {
+    platform: "darwin",
+    binding: "Command+Shift+.",
+    key: ">",
+    code: "Period",
+    control: false,
+    meta: true,
+    shift: true,
+  },
+] as const)(
+  "lets the $platform Files gesture reach the child unless a core shortcut claims it",
+  async ({ platform, binding, key, code, control, meta, shift }) => {
+    const f = await fixture(false);
+    const invoke = vi.fn();
+    const capture = createKeybindCapture(platform);
+    const makeCatalog = (value: string | null) =>
+      createCoreActionCatalog(
+        "OMXTerm",
+        new Proxy({} as TerminalApplicationMenuActions, { get: () => vi.fn() }),
+        { ...terminalDefaultKeybinds(platform), toggleFiles: value },
+        undefined,
+        [
+          {
+            id: "omxterm.files.open",
+            shortcut: "toggleFiles",
+            extension: true,
+            label: "Files",
+            accelerator: null,
+            palette: true,
+            invoke,
+          },
+        ],
+      );
+    let catalog = makeCatalog(null);
+    const ipc = {
+      handle: vi.fn(),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const host = startExtensionViewHost({
+      ...f.options,
+      ipcMain: ipc,
+      onKeybind: (event, input, window, companionOnly) =>
+        deliverExtensionKeybind(catalog, event, input, window, capture, {
+          companionOnly,
+          optionIdentity: { platform },
+        }),
+    });
+    cleanups.push(() => host.retire());
+    const descriptor = await host.open({ ...opening, presentation: "panel" });
+    const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+      ([channel]) => channel === extensionViewIpc.present,
+    )![1] as (
+      event: unknown,
+      request: HostedContentPresentation,
+    ) => Promise<unknown>;
+    await handler(
+      {
+        sender: f.owner.webContents,
+        senderFrame: f.owner.webContents.mainFrame,
+      },
+      present(descriptor.id),
+    );
+    const child = f.views[0]!.webContents;
+    function send(input: {
+      key: string;
+      code: string;
+      control?: boolean;
+      meta?: boolean;
+      shift?: boolean;
+    }) {
+      let prevented = false;
+      const event = {
+        get defaultPrevented() {
+          return prevented;
+        },
+        preventDefault() {
+          prevented = true;
+        },
+      };
+      child.emit("before-input-event", event, {
+        type: "keyDown",
+        control: false,
+        alt: false,
+        meta: false,
+        shift: false,
+        ...input,
+      });
+      return prevented;
+    }
+    for (const plain of ["Tab", "End", "ArrowDown", "Enter"])
+      expect(send({ key: plain, code: plain })).toBe(false);
+    expect(send({ key, code, control, meta, shift })).toBe(false);
+    catalog = makeCatalog(binding);
+    expect(send({ key, code, control, meta, shift })).toBe(true);
+    expect(invoke).toHaveBeenCalledOnce();
+  },
+);
+
 it.each([true, false])(
   "owns native Escape only for companion content (panel=%s)",
   async (panel) => {

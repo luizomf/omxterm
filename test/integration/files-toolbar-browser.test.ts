@@ -5,6 +5,21 @@ import { expect, it } from "vitest";
 const run = promisify(execFile);
 const scenarios = [
   [
+    "shortcut-mac",
+    "scopes Cmd+Shift+Period in the Files child",
+    "PASS scoped shortcut mac",
+  ],
+  [
+    "shortcut-linux",
+    "scopes Ctrl+H in the Files child",
+    "PASS scoped shortcut linux",
+  ],
+  [
+    "hidden",
+    "hides dotfiles and toggles them with the keyboard",
+    "PASS hidden keyboard",
+  ],
+  [
     "pointer",
     "keeps the real Go target clickable under a neighboring tooltip",
     "PASS pointer hover",
@@ -36,6 +51,13 @@ it.skipIf(!process.env.OMXTERM_TOOLBAR_CHROMIUM).each(scenarios)(
       { env: process.env, timeout: 30000 },
     );
     expect(result.stdout).toContain(receipt);
+    if (scenario === "hidden") {
+      for (const size of ["196x1", "196x2", "320x1"])
+        for (const theme of ["dark", "light"])
+          expect(result.stdout).toContain(
+            `PASS hidden keyboard ${size}-en-US-${theme}`,
+          );
+    }
     if (scenario === "matrix") {
       for (const size of ["196x1", "196x2", "320x1"])
         for (const language of ["en-US", "pt-BR"])

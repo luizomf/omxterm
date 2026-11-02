@@ -133,7 +133,8 @@
 }
 .kind,
 .summary,
-.tree-hint {
+.tree-hint,
+.filter-hint {
   color: var(--ui-secondary);
   font-size: 11px;
 }
@@ -141,7 +142,8 @@
   padding: 4px 12px;
   overflow-wrap: anywhere;
 }
-.summary {
+.summary,
+.filter-hint {
   margin: 0;
 }
 .file-menu {
@@ -161,6 +163,25 @@
   border: 0;
   background: transparent;
   text-align: left;
+}
+.file-menu [role="menuitemcheckbox"] {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.menu-check {
+  flex: none;
+  width: 1em;
+}
+.menu-caption {
+  min-width: 0;
+  flex: 1;
+}
+.menu-shortcut {
+  flex: none;
+  color: var(--ui-secondary);
+  font-size: 11px;
+  white-space: nowrap;
 }
 @media (max-width: 300px) {
   .kind {

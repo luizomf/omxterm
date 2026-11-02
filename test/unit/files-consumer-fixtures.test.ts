@@ -267,10 +267,21 @@ describe.each(["files-production.mjs", "files-packaged.cjs"])(
         expect(evaluate(fixture.listingReady("/owned"))).toBe(true);
         expect(evaluate(fixture.listingReady("/elsewhere"))).toBe(false);
         await fixture.openFiles();
+        const visible = Math.max(0, count - 1);
         expect(document.querySelector(".summary")!.textContent).toBe(
-          `${count} visible ${count === 1 ? "entry" : "entries"}`,
+          `${visible} visible ${visible === 1 ? "entry" : "entries"}`,
         );
         if (count) {
+          expect(evaluate(fixture.entryQuery("/owned", ".cache"))).toBeFalsy();
+          document
+            .querySelector<HTMLButtonElement>('[aria-label="Actions…"]')!
+            .click();
+          document
+            .querySelector<HTMLButtonElement>('[role="menuitemcheckbox"]')!
+            .click();
+          expect(document.querySelector(".summary")!.textContent).toBe(
+            `${count} visible ${count === 1 ? "entry" : "entries"}`,
+          );
           const row = evaluate(
             fixture.entryQuery("/owned", ".cache"),
           ) as HTMLElement;

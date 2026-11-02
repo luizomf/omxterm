@@ -147,9 +147,9 @@ it("exposes localized icon names and explanatory tooltips without replacing focu
     ],
     [
       "Actions…",
-      "Actions for the selection or current directory",
+      "Actions for the selection or directory; show dotfiles",
       "Ações…",
-      "Ações para a seleção ou o diretório atual",
+      "Ações para a seleção ou diretório; mostrar itens iniciados por ponto",
     ],
     [
       "Go",

@@ -345,8 +345,13 @@ extension consumed through Settings captured-byte trust and shared namespaced
 actions. Published Files0.4.0 browses expandable local folders with contextual and
 keyboard-accessible actions, captured operation targets and automatic refresh
 after successful mutations; manual refresh handles external changes without
-watchers. Host-language updates relabel retained controls and notices without
-changing drafts, captured paths or pending operations. Its application owner composes independent backend/view version pins,
+watchers. Current source additionally offers a view-local checked Actions item
+for dot-prefixed names, hidden by default relative to the browsing root; it does
+not classify other platform hidden metadata. Its scoped child shortcut leaves
+editing and core shortcut ownership intact. Hide/reveal retains the choice;
+Close/new view resets it. Published archives are unchanged. Host-language
+updates relabel retained controls and notices without changing drafts, captured
+paths or pending operations. Its application owner composes independent backend/view version pins,
 per-invocation terminal context, local management and bounded Quit retirement.
 Its separately built archive/checksum/receipt are not bundled into the host;
 a build receipt identifies bytes and inputs, not completed qualification or shipment.

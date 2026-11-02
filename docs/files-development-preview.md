@@ -207,6 +207,37 @@ available. New folder is also disabled during a mutation; Refresh remains
 available while listings load. These source changes do not alter
 already published Files archives.
 
+In current source, **Actions… → Show dotfiles (names starting with .)** is a
+checked menu item, off by default. It hides dot-prefixed entry names and their
+descendants relative to the current browsing root; it does not classify Finder
+hidden flags or other platform-specific hidden metadata. A directly entered root
+inside a dot-prefixed path remains usable, with the same filter applied to its
+children. Open Actions with Tab and Enter, then use the menu's arrow keys (or
+End) and Enter to change the setting. The menu also shows the view-local
+shortcut: `Ctrl+H` on Linux or `Cmd+Shift+.` on macOS. It works when the visible
+Files browsing page or menu has focus and a root is available; it does not claim
+text inputs, textareas, selects, editable content, IME composition, operation
+editors, pending confirmations or mutations. Key repeats do not toggle again.
+Core-owned/remappable shortcuts get first refusal and may take precedence. The
+macOS gesture requires the physical `Period` key reporting `.` or `>` with the
+exact modifiers; other layouts or native menu routing may need the menu fallback.
+Native physical-keyboard behavior is not established by headless tests. Hiding
+and revealing the panel and navigating retain the choice in the view; Close and
+a new view reset it. This is not a persisted preference or a filesystem
+security boundary.
+
+Filtering is a view projection; toggling it neither mutates files nor starts a
+new read. It preserves expanded subtrees and pending listing work. A hidden selection is
+cleared; keyboard focus falls back to the nearest visible ancestor or an available
+row/tree, without selecting a new operation target. An existing editor keeps its
+captured target. Counts describe visible rows, while loading, errors and the
+5,000-entry per-folder snapshot/truncation limits still apply to the underlying
+listing. Entries beyond that limit remain unavailable even when many of the
+captured entries are filtered. A quiet in-flow hint says when loaded dotfiles
+are actually concealed; an empty visible result says **No visible entries**,
+not that the folder is empty. Folder hints and the underlying truncation/error
+report remain separate. Existing released Files archives do not acquire this behavior from a host update.
+
 **Actions…** exposes operations for the selection; right-click an item or blank
 listing space for actions at that location. Shift+F10/the context-menu key opens
 the same menu from a focused row, and F2 opens Rename / move. Menus support arrow
@@ -220,8 +251,8 @@ selection or browsing root changes.
 
 Successful creation, move, trash and deletion automatically refresh the current
 root and surviving expanded folders, preserving selection where possible. A late
-mutation result never navigates back to its old root. Collapsing drops hidden
-subtrees; refresh errors remain visible rather than implying rollback or retrying
+mutation result never navigates back to its old root. Collapsing drops collapsed
+descendants; refresh errors remain visible rather than implying rollback or retrying
 the mutation. Manual Refresh remains available for external changes. Listings
 are read sequentially, including pagination, and obsolete cursors are closed;
 there are no filesystem watchers or polling. Source 0.4.0 is a new archive

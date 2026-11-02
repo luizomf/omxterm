@@ -17,7 +17,13 @@ import { createFilesToolbar } from "./toolbar.js";
 type Label = (messages: FilesMessages) => string;
 type Reply = FilesTreeReply & { path?: string; token?: string };
 type Target = { path: string; kind: string };
-type Action = { label: Label; run: () => void; disabled?: boolean };
+type Action = {
+  label: Label;
+  run: () => void;
+  disabled?: boolean;
+  checked?: boolean;
+  shortcut?: { display: string; keys: string };
+};
 const join = (base: string, name: string) =>
   `${base.replace(/\/$/, "")}/${name}`;
 const parent = (path: string) => path.slice(0, path.lastIndexOf("/")) || "/";
@@ -33,6 +39,14 @@ export function mountFilesPage(
 ) {
   let messages = filesMessages("en-US");
   let disposed = false;
+  let visible = !bridge.onVisibility;
+  let composing = false;
+  const platform = document.defaultView?.navigator.platform ?? "";
+  const dotfileShortcut = platform.startsWith("Linux")
+    ? { platform: "linux", display: "Ctrl+H", keys: "Control+H" }
+    : platform.startsWith("Mac")
+      ? { platform: "mac", display: "Cmd+Shift+.", keys: "Meta+Shift+." }
+      : undefined;
   const labels = new Map<HTMLElement, () => void>();
   function label(element: HTMLElement, read: Label, attribute?: string) {
     const update = () => {
@@ -68,6 +82,10 @@ export function mountFilesPage(
   entries.tabIndex = 0;
   const status = document.createElement("p");
   status.className = "summary";
+  const filterHint = document.createElement("p");
+  filterHint.className = "filter-hint";
+  filterHint.setAttribute("aria-live", "polite");
+  filterHint.hidden = true;
   const editor = document.createElement("form");
   editor.className = "operation-editor";
   editor.hidden = true;
@@ -77,8 +95,10 @@ export function mountFilesPage(
   label(menu, (m) => m.fileActions, "aria-label");
   menu.hidden = true;
   let selected: Target | undefined;
+  let showDotfiles = false;
   let mutationPending = false;
   let confirmation: string | undefined;
+  let preparingDelete: number | undefined;
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
@@ -169,7 +189,21 @@ export function mountFilesPage(
     const focusedPath = entries.contains(active)
       ? active?.dataset.path
       : undefined;
-    state = snapshot;
+    const rows: FilesTreeRow[] = [];
+    let hiddenDepth: number | undefined;
+    for (const row of snapshot.rows) {
+      if (hiddenDepth !== undefined && row.depth <= hiddenDepth)
+        hiddenDepth = undefined;
+      if (
+        !showDotfiles &&
+        (hiddenDepth !== undefined || row.name.startsWith("."))
+      ) {
+        hiddenDepth ??= row.depth;
+        continue;
+      }
+      rows.push(row);
+    }
+    state = { ...snapshot, rows };
     syncControls();
     if (selected) {
       const current = state.rows.find((row) => row.path === selected?.path);
@@ -181,8 +215,16 @@ export function mountFilesPage(
     entries.setAttribute("aria-busy", String(state.loading));
     clear(entries);
     label(entries, (m) => m.localFiles, "aria-label");
-    const focusPath = selected?.path ?? state.rows[0]?.path;
-    for (const item of state.rows) {
+    // If a focused descendant disappears, keep keyboard focus at its nearest
+    // visible ancestor without silently selecting a different operation target.
+    let focusPath = focusedPath;
+    const visiblePaths = new Set(state.rows.map((row) => row.path));
+    while (focusPath && !visiblePaths.has(focusPath)) {
+      const next = parent(focusPath);
+      focusPath = next === focusPath || next === state.root ? undefined : next;
+    }
+    focusPath ??= selected?.path ?? state.rows[0]?.path;
+    for (const [index, item] of state.rows.entries()) {
       const row = document.createElement("div");
       row.className = "file-row";
       row.dataset.path = item.path;
@@ -230,9 +272,18 @@ export function mountFilesPage(
         openMenu(item, event.clientX, event.clientY, row);
       });
       entries.append(row);
+      const filteredChildren =
+        !showDotfiles &&
+        item.total !== null &&
+        item.total > 0 &&
+        (state.rows[index + 1]?.depth ?? 0) <= item.depth;
       if (
         item.expanded &&
-        (item.loading || item.error || item.truncated || item.total === 0)
+        (item.loading ||
+          item.error ||
+          item.truncated ||
+          item.total === 0 ||
+          filteredChildren)
       ) {
         const hint = document.createElement("div");
         hint.className = "tree-hint";
@@ -243,7 +294,9 @@ export function mountFilesPage(
               ? m.folderUnavailable(item.error)
               : item.truncated
                 ? m.truncatedFolder
-                : m.emptyFolder,
+                : filteredChildren
+                  ? m.noVisibleEntries
+                  : m.emptyFolder,
         );
         entries.append(hint);
       }
@@ -255,6 +308,17 @@ export function mountFilesPage(
         rowElement(focusPath ?? "") ??
         entries
       ).focus();
+    const filtered = snapshot.rows.length > rows.length;
+    const noVisible =
+      !!state.root && !state.loading && !state.error && !rows.length;
+    filterHint.hidden = !filtered && !noVisible;
+    label(filterHint, (m) =>
+      noVisible
+        ? filtered
+          ? m.noVisibleDotfiles
+          : m.noVisibleEntries
+        : m.dotfilesHidden,
+    );
     label(status, (m) =>
       state.rootLoading
         ? m.readingDirectory
@@ -333,6 +397,7 @@ export function mountFilesPage(
   }
   function discardConfirmation() {
     editorRevision++;
+    preparingDelete = undefined;
     if (confirmation)
       void request({ operation: "cancel-delete", token: confirmation });
     confirmation = undefined;
@@ -441,10 +506,12 @@ export function mountFilesPage(
     if (mutationPending) return;
     discardConfirmation();
     const revision = editorRevision;
+    preparingDelete = revision;
     const reply = await request({
       operation: "prepare-delete",
       path: target.path,
     });
+    if (preparingDelete === revision) preparingDelete = undefined;
     if (revision !== editorRevision) {
       if (reply.token)
         void request({ operation: "cancel-delete", token: reply.token });
@@ -471,6 +538,10 @@ export function mountFilesPage(
     button((m) => m.cancel, dismissEditor, editor);
     editor.onsubmit = (event) => event.preventDefault();
     confirm.focus();
+  }
+  function toggleDotfiles() {
+    showDotfiles = !showDotfiles;
+    render(tree.snapshot());
   }
   function actions(target?: Target): Action[] {
     const directory = target
@@ -534,6 +605,12 @@ export function mountFilesPage(
           void navigateFrom("terminal-directory");
         },
       },
+      {
+        label: (m) => m.showDotfiles,
+        checked: showDotfiles,
+        ...(dotfileShortcut ? { shortcut: dotfileShortcut } : {}),
+        run: toggleDotfiles,
+      },
     ];
   }
   function closeMenu(restore = true) {
@@ -565,7 +642,33 @@ export function mountFilesPage(
         },
         menu,
       );
-      item.setAttribute("role", "menuitem");
+      item.setAttribute(
+        "role",
+        action.checked === undefined ? "menuitem" : "menuitemcheckbox",
+      );
+      if (action.checked !== undefined) {
+        item.setAttribute("aria-checked", String(action.checked));
+        const indicator = document.createElement("span");
+        indicator.className = "menu-check";
+        indicator.setAttribute("aria-hidden", "true");
+        indicator.textContent = action.checked ? "✓" : "□";
+        const caption = document.createElement("span");
+        caption.className = "menu-caption";
+        caption.id = "files-dotfiles-caption";
+        item.setAttribute("aria-labelledby", caption.id);
+        labels.delete(item);
+        label(caption, action.label);
+        item.replaceChildren(indicator, caption);
+        if (action.shortcut) {
+          const shortcut = document.createElement("span");
+          shortcut.className = "menu-shortcut";
+          shortcut.id = "files-dotfiles-shortcut";
+          label(shortcut, (m) => m.shortcut(action.shortcut!.display));
+          item.setAttribute("aria-describedby", shortcut.id);
+          item.setAttribute("aria-keyshortcuts", action.shortcut.keys);
+          item.append(shortcut);
+        }
+      }
       item.disabled = !!action.disabled;
       item.tabIndex = -1;
     }
@@ -685,16 +788,67 @@ export function mountFilesPage(
     event.preventDefault();
     void navigate(address.value);
   });
-  content.append(toolbar, location, entries);
+  content.append(toolbar, location, entries, filterHint);
   // The host supplies the visible tool identity; retain a named child region.
   const page = createApplicationPage(document, { notice, content, status });
   page.setAttribute("role", "region");
   label(page, (m) => m.title, "aria-label");
   document.body.append(page, editor, menu);
+  const onShortcut = (event: KeyboardEvent) => {
+    const target = event.target;
+    if (
+      disposed ||
+      !visible ||
+      !state.root ||
+      !document.hasFocus() ||
+      event.defaultPrevented ||
+      composing ||
+      event.isComposing ||
+      !editor.hidden ||
+      mutationPending ||
+      preparingDelete !== undefined ||
+      !(target instanceof document.defaultView!.Element) ||
+      (!page.contains(target) && !menu.contains(target)) ||
+      target.closest(
+        "input, textarea, select, [contenteditable]:not([contenteditable='false'])",
+      ) ||
+      !dotfileShortcut ||
+      event.altKey ||
+      event.getModifierState("AltGraph")
+    )
+      return;
+    const matches =
+      dotfileShortcut.platform === "linux"
+        ? event.ctrlKey &&
+          !event.metaKey &&
+          !event.shiftKey &&
+          event.key.toLowerCase() === "h"
+        : event.metaKey &&
+          event.shiftKey &&
+          !event.ctrlKey &&
+          event.code === "Period" &&
+          (event.key === "." || event.key === ">");
+    if (!matches) return;
+    event.preventDefault();
+    if (event.repeat) return;
+    closeMenu();
+    toggleDotfiles();
+  };
+  const startComposition = () => {
+    composing = true;
+  };
+  const endComposition = () => {
+    composing = false;
+  };
+  document.addEventListener("compositionstart", startComposition);
+  document.addEventListener("compositionend", endComposition);
+  document.addEventListener("keydown", onShortcut);
   // Native Escape belongs to the companion host, not this DOM menu. Hiding
   // dismisses transient menus while operation drafts remain retained.
-  const unsubscribeVisibility = bridge.onVisibility?.((visible) => {
-    if (!visible) {
+  const unsubscribeVisibility = bridge.onVisibility?.((shown) => {
+    visible = shown;
+    if (!shown) {
+      composing = false;
       closeMenu(false);
       tooltips.reset();
     }
@@ -721,6 +875,9 @@ export function mountFilesPage(
       controlHints.clear();
       labels.clear();
       document.removeEventListener("pointerdown", dismissMenu);
+      document.removeEventListener("keydown", onShortcut);
+      document.removeEventListener("compositionstart", startComposition);
+      document.removeEventListener("compositionend", endComposition);
     },
   };
 }

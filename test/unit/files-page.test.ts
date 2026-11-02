@@ -216,6 +216,8 @@ it("offers item and background actions at the point of use, with keyboard dismis
   context("/root/alpha");
   expect(button("Rename / move", menu())).toBeTruthy();
   key(document.activeElement as HTMLElement, "End");
+  expect(document.activeElement?.getAttribute("role")).toBe("menuitemcheckbox");
+  key(document.activeElement as HTMLElement, "ArrowUp");
   expect(document.activeElement?.textContent).toBe("Use terminal directory");
   key(document.activeElement as HTMLElement, "Escape");
   expect(menu().hidden).toBe(true);
