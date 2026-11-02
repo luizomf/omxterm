@@ -1,5 +1,11 @@
 # Optional Snippets migration
 
+In OMXTerm `0.24.0` source, Linux ARM64/x64, macOS ARM64 and Windows ARM64 use
+separately installed Snippets. Windows x64 retains the built-in tool. The
+instructions below describe the selected host behavior, not proof that a stable
+host or a particular catalog offer has been published or qualified. Check the
+[installation guide](installation.md) and the selected release for available files.
+
 The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
 [OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16),
 [OMXTerm 0.24.0-dev.30 Linux x64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30),
@@ -29,20 +35,20 @@ ARM64 dev.11 and macOS ARM64 dev.16 previews, invoking the command again hides i
 The Linux x64 dev.30 and Windows ARM64 dev.36 hosts and current source instead
 **close** the selected-visible tool, discarding its view's
 search/scroll state; **Hide** or
-Escape preserves that state for reopening. Without an enabled package, the command opens **Settings →
-Extensions** with an explanation. It never installs or enables anything for you.
+Escape preserves that state for reopening. On optional-Snippets hosts, without an
+enabled package the command opens **Settings → Extensions** with an explanation.
+It never installs or enables anything for you. On Windows x64, it opens the built-in tool.
 A disabled package remains disabled. Runtime unavailability is reported separately
 from a missing installation. Terminal sessions remain usable.
 
 ## Install deliberately
 
-Use the exact preview pair for your platform linked above. On Windows ARM64,
-follow the [dev.36 installer, SmartScreen and PowerShell checksum instructions](#windows-arm64-published-preview-and-catalog-candidate).
-On macOS, download the ARM64 DMG and checksum; see [macOS installation](#macos-arm64-published-preview).
-On Linux, download the AppImage for your architecture, its checksum and, if wanted,
-the version-matched application-menu helper and checksum. Follow that release's
-installation instructions, not `/latest/download` or the stable-version filenames in the general installation
-guide. For local installation, download `snippets-0.1.0.omxext` and its checksum
+On the four optional-Snippets `0.24.0` targets, use the matching, actually available
+platform package and checksum described in the [installation guide](installation.md).
+Windows x64 uses built-in Snippets instead. For a preview, use its exact host and
+archive pair linked above; the Windows dev.36 section has [installer and SmartScreen
+instructions](#windows-arm64-published-preview-and-catalog-candidate).
+For local installation, download `snippets-0.1.0.omxext` and its checksum
 from the Snippets release into the same folder, then verify before installation:
 
 ```sh
@@ -52,7 +58,14 @@ shasum -a 256 -c snippets-0.1.0.omxext.sha256
 sha256sum --check snippets-0.1.0.omxext.sha256
 ```
 
-No source build is required. Older hosts are not qualified for this package, and
+On Windows, compare the PowerShell result with the hash in the matching sidecar:
+
+```powershell
+Get-FileHash .\snippets-0.1.0.omxext -Algorithm SHA256
+Get-Content .\snippets-0.1.0.omxext.sha256
+```
+
+The checksum identifies bytes, not a verified publisher. No source build is required. Older hosts are not qualified for this package, and
 existing Files/SSH packages were not newly qualified on these previews. The official
 catalog uses the same Snippets bytes for all admitted targets; its Windows ARM64
 promotion changes no archive or manifest range. Separate bounded public-HTTPS

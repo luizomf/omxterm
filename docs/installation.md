@@ -1,6 +1,8 @@
 # Install OMXTerm
 
-OMXTerm ships packages for Apple Silicon Macs, Linux ARM64 or x64, and Windows 11 ARM64 or x64. Both x64 downloads have **build-only qualification** from native hosted CI, not desktop, GPU, installer or ordinary-user integration qualification. See the [0.23.0 release notes](https://github.com/luizomf/omxterm/releases/tag/v0.23.0) for coverage. Grab the file for your system from the [downloads table](../README.md#platforms-and-downloads) and follow the steps below.
+OMXTerm targets Apple Silicon Macs, Linux ARM64 or x64, and Windows 11 ARM64 or x64. The x64 lanes are **build-only**: they do not qualify desktop, GPU, installer or ordinary-user integration. For version 0.24.0, choose your package from the [versioned release](https://github.com/luizomf/omxterm/releases/tag/v0.24.0) once available, and check its notes for actual assets and coverage.
+
+The examples below use the selected `0.24.0` naming: a macOS ARM64 DMG, Linux ARM64/x64 AppImages and Windows ARM64/x64 installers, each with a `.sha256` file, plus the common Linux `linux_install.sh` helper and its checksum. These filenames describe the intended topology, not proof of publication or qualification. Use the version and files of an actually available release.
 
 **[macOS](#macos)** · **[Linux](#linux)** · **[Windows](#windows)** · **[Update or uninstall](#updating-or-uninstalling)**
 
@@ -31,7 +33,8 @@ remains unchanged and requires the historical
 [Files 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.1.0)
 via local/link installation, not the newer catalog entries. Historical
 preview hosts support local/link installation from `0.23.0-dev.8` and catalog
-browsing from `0.23.0-dev.9`; that does not make current Files compatible.
+browsing from `0.23.0-dev.9`; that does not make current Files compatible. The
+historical Files0.1 archive does not admit host0.24.0.
 
 On a compatible supported host, open Settings → Extensions → **Browse official
 extensions**. Choose Install/Update/Reinstall, then review the exact version/digest
@@ -47,9 +50,8 @@ for compatibility and evidence limits.
 
 SSH Connect0.3.0 requires host0.24.0-dev.8 or later; use the qualified
 [Linux ARM64 host0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11).
-It does not run on stable0.23.0 or 0.23.0-dev.9; the normal stable downloads below
-remain unchanged. Download the preview AppImage, matching checksum and
-version-matched helper from that release, not `/latest/download`. Verify the
+It does not run on stable0.23.0 or 0.23.0-dev.9. Download the preview AppImage,
+matching checksum and version-matched helper from that release, not `/latest/download`. Verify the
 checksums before launch/install. The earlier catalog offered Files0.4.0 to this
 host; historical Files0.1.0 compatibility on dev.0 does not extend to dev.11.
 
@@ -72,40 +74,26 @@ responsibility.
 
 ## Optional Snippets preview
 
-The [Linux ARM64 host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
-[macOS ARM64 host 0.24.0-dev.16](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16),
-[Linux x64 host 0.24.0-dev.30](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.30),
-and [Windows ARM64 host 0.24.0-dev.36](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.36)
-use the separate [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)
-instead of built-in Snippets. All are non-Latest prereleases; at dev.36 publication,
-stable 0.23.0 remained Latest and older Windows hosts/Windows x64 were unchanged.
-These pairings do not newly qualify Files/SSH.
+In `0.24.0` source, Linux ARM64/x64, macOS ARM64 and Windows ARM64 use the
+separately installed [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
+Windows x64 retains built-in Snippets. The earlier 0.23.0 host also keeps its
+built-in tool. Existing `snippets.yaml` files are not rewritten or deleted.
 
-For Windows ARM64, download the exact NSIS/checksum and follow the
-[PowerShell verification, unsigned SmartScreen and deliberate local Snippets steps](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).
-The installer can replace an existing per-user installation; it is not isolated
-side-by-side. Windows catalog promotion and the installed public-HTTPS checkpoint
-remain separate pending milestones at this revision.
+On those four optional-Snippets targets, download and verify the archive and its
+checksum, then choose **Settings → Extensions → Install local .omxext…**. Review
+the trusted-code prompt, enable the extension if needed, and open **View → Toggle
+Snippets**. Alternatively, use **Browse official extensions** where your host and
+target have a compatible offer. Installation is deliberate and remains dormant
+until activation; extensions are trusted code, not sandboxed. On those targets,
+without an enabled package, the shortcut opens Extensions guidance; Windows x64
+instead opens built-in Snippets.
 
-Download the versioned host DMG/checksum for macOS, or AppImage/checksum and optional
-matching helper for Linux, from the respective release, not `/latest/download`.
-On macOS, verify the DMG with
-`shasum -a 256 -c OMXTerm-0.24.0-dev.16-arm64.dmg.sha256` and follow the release's
-installation/first-launch instructions. On any of these previews, choose **Settings →
-Extensions → Browse official extensions** and install Snippets. Alternatively,
-download and verify the Snippets archive and checksum, then choose
-**Install local .omxext…**. On macOS, use `shasum -a 256 -c snippets-0.1.0.omxext.sha256`; on
-Linux, use `sha256sum --check snippets-0.1.0.omxext.sha256`. Local installation
-works offline after download. Review trust, enable deliberately if disabled, and
-open **View → Toggle Snippets**. No source build or automatic installation is involved.
-Separate bounded public-HTTPS checkpoints passed on the three Linux/macOS pairs;
-see [macOS coverage](snippets-migration.md#macos-arm64-catalog-delivery) and
-[Linux x64 coverage](snippets-migration.md#linux-x64-public-catalog-checkpoint).
-This does not qualify Finder/Gatekeeper first launch.
-Existing YAML catalogs remain untouched; without the enabled package, the shortcut
-opens Extensions guidance. See the [migration guide](snippets-migration.md) for
-offline installation, new catalogs and qualification limits. The stable-version
-installation examples below remain unchanged.
+The separately published Linux/macOS and Windows ARM64 previews have their own
+exact-pair and public-consumption boundaries. In particular, the Windows dev.36
+installed public-HTTPS checkpoint is separate from its published installer and
+catalog source. Its installer can replace an existing per-user installation; it
+is not isolated side-by-side. See the [migration guide](snippets-migration.md) for
+PowerShell and offline verification, historical preview links, and current limits.
 
 ## macOS
 
@@ -131,7 +119,7 @@ You only do this once. Later, macOS may also ask before OMXTerm opens protected 
 Download the matching `.sha256` file, then run this in the folder where both files are:
 
 ```sh
-shasum -a 256 -c OMXTerm-0.23.0-arm64.dmg.sha256
+shasum -a 256 -c OMXTerm-0.24.0-arm64.dmg.sha256
 ```
 
 A valid file prints `OK`.
@@ -146,12 +134,9 @@ and checksum filenames on Intel/AMD. The common `linux_install.sh` helper accept
 either architecture and rejects mismatched host/ELF architectures before
 execution.
 
-Linux x64 is a **build-only** download from native hosted CI. Checks include
-exact AppImage content/architecture inspection, packaged Electron/addon loading
-and real headless PTY output/exit/resize. Desktop/GPU, FUSE launch, helper
-installation and ordinary-user integration remain unverified, not release gates.
-See the [0.23.0 release notes](https://github.com/luizomf/omxterm/releases/tag/v0.23.0)
-for actual checks and limits.
+Linux x64 is a **build-only** target for native hosted CI. Desktop/GPU, FUSE
+launch, helper installation and ordinary-user integration are not established
+by that lane. See the selected release notes for the checks actually completed.
 
 ### Requirements
 
@@ -164,7 +149,7 @@ getconf GNU_LIBC_VERSION
 
 Recent releases such as Fedora 43, Ubuntu 25.10, and Arch meet the ARM64 requirement. Ubuntu 24.04 LTS and other older releases ship an older glibc and cannot run the ARM64 package.
 
-Linux x64 headless checks ran on Ubuntu 22.04 with glibc 2.35. That observed environment is not a minimum-version or broad distro compatibility guarantee; do not infer x64 requirements from the ARM64 package.
+A historical 0.23.0 Linux x64 headless check used Ubuntu 22.04 with glibc 2.35. That observation is not a minimum-version or broad distro compatibility guarantee and does not qualify a later package; do not infer x64 requirements from the ARM64 package.
 
 Then install the few desktop packages OMXTerm relies on (most desktops already have them):
 
@@ -181,14 +166,14 @@ sudo dnf install fontconfig file xorg-x11-server-Xwayland
 Make the AppImage executable and run it:
 
 ```sh
-chmod +x OMXTerm-0.23.0-arm64.AppImage
-./OMXTerm-0.23.0-arm64.AppImage
+chmod +x OMXTerm-0.24.0-arm64.AppImage
+./OMXTerm-0.24.0-arm64.AppImage
 ```
 
 If you get a FUSE error, run it this way instead:
 
 ```sh
-./OMXTerm-0.23.0-arm64.AppImage --appimage-extract-and-run
+./OMXTerm-0.24.0-arm64.AppImage --appimage-extract-and-run
 ```
 
 ### Add it to your application menu (optional)
@@ -197,7 +182,7 @@ Download `linux_install.sh` next to the AppImage and run:
 
 ```sh
 chmod +x linux_install.sh
-./linux_install.sh install ./OMXTerm-0.23.0-arm64.AppImage
+./linux_install.sh install ./OMXTerm-0.24.0-arm64.AppImage
 ```
 
 OMXTerm now shows up in your application launcher. The [Linux installer guide](linux-installer.md) has the details. For blur, HiDPI scaling, or VM graphics, see [Linux desktop tips](linux-desktop.md).
@@ -208,7 +193,7 @@ OMXTerm now shows up in your application launcher. The [Linux installer guide](l
 Download the matching `.sha256` file next to the AppImage and run:
 
 ```sh
-sha256sum --check OMXTerm-0.23.0-arm64.AppImage.sha256
+sha256sum --check OMXTerm-0.24.0-arm64.AppImage.sha256
 ```
 
 </details>
@@ -217,10 +202,10 @@ sha256sum --check OMXTerm-0.23.0-arm64.AppImage.sha256
 
 You need a Windows 11 PC with an ARM64 or x64 (Intel/AMD) processor (check **System type** in **Settings → System → About**). Use the `-arm64.exe` installer on ARM and the `-x64.exe` installer on Intel/AMD.
 
-Windows x64 has **build-only qualification** from native hosted Windows Server x64 CI, not ARM64 emulation. Checks inspect the unpacked app and load its packaged addon in packaged Electron Run-as-Node. They do not execute NSIS, prove its payload equivalent to the inspected tree, or spawn real ConPTY. Desktop/GPU, ordinary-user integration, Windows 11 and SmartScreen/UAC remain unverified for this x64 package. See the [0.23.0 release notes](https://github.com/luizomf/omxterm/releases/tag/v0.23.0) for separate ARM64 and x64 coverage.
+The Windows x64 native hosted CI lane is **build-only**, not ARM64 emulation. It does not execute NSIS, prove its payload equivalent to the inspected tree, or spawn real ConPTY. Desktop/GPU, ordinary-user integration, Windows 11 and SmartScreen/UAC are not established by that lane. See the selected release notes for separate ARM64 and x64 coverage.
 
 1. Install the Microsoft Visual C++ Redistributable for your architecture (ARM64 or x64) if you don't have it yet. See [Microsoft's download page](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist).
-2. Download and run the matching installer: `OMXTerm-0.23.0-arm64.exe` or `OMXTerm-0.23.0-x64.exe`.
+2. Download and run the matching installer: `OMXTerm-0.24.0-arm64.exe` or `OMXTerm-0.24.0-x64.exe` for the illustrated version.
 3. If SmartScreen warns about an unrecognized app, click **More info → Run anyway**.
 4. Launch **OMXTerm** from the Start menu.
 
@@ -232,7 +217,7 @@ OMXTerm starts Windows PowerShell by default. You can [switch to PowerShell 7 or
 In PowerShell, in your download folder:
 
 ```powershell
-$name = "OMXTerm-0.23.0-arm64.exe" # Use OMXTerm-0.23.0-x64.exe on Intel/AMD
+$name = "OMXTerm-0.24.0-arm64.exe" # Use OMXTerm-0.24.0-x64.exe on Intel/AMD
 Get-FileHash $name -Algorithm SHA256
 ```
 
