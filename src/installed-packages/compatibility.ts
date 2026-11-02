@@ -1,6 +1,6 @@
-import { satisfies } from "semver";
+import { satisfies, valid } from "semver";
 
-/** Deliberate exact-host admission of the unchanged immutable Files preview. */
+/** Shared host and API admission with narrowly bounded host exceptions. */
 export function packageCompatible(
   manifest: {
     id: string;
@@ -20,9 +20,15 @@ export function packageCompatible(
     manifest.version === "0.1.0" &&
     manifest.engines.omxterm === ">=0.23.0-dev.8 <0.24.0" &&
     manifest.engines.api === "0.1.x";
+  const range = manifest.engines.omxterm;
   return (
-    (unchangedFilesPreview ||
-      satisfies(runtime.appVersion, manifest.engines.omxterm)) &&
+    (satisfies(runtime.appVersion, range) ||
+      unchangedFilesPreview ||
+      // This maintenance family deliberately bridges ordinary prerelease rules.
+      (/^0\.24\.1-dev\.(?:0|[1-9]\d*)$/u.test(runtime.appVersion) &&
+        valid(runtime.appVersion) === runtime.appVersion &&
+        satisfies("0.24.0", range) &&
+        satisfies("0.24.1", range))) &&
     satisfies(runtime.apiVersion, manifest.engines.api)
   );
 }

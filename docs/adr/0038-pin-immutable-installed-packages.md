@@ -7,6 +7,12 @@
 
 Use one deep Installed Packages module for local archive installation, bounded validation/extraction, compatibility, aggregate registry publication, installation generations, disable/tombstones and eligible cleanup. Its caller interface is shared by implementation tests and management/bootstrap consumers; no extension code executes during installation.
 
+Shared host compatibility follows ordinary semver plus the narrowly documented
+historical and maintenance-development exceptions in the
+[foundation contract](../extension-installation-foundation.md#archive-contract).
+They do not alter the actual API check, target, archive identity, trust or pin
+fences, and do not qualify a package/platform pair.
+
 Keep registry writer transactions short and independently pin immutable digest-addressed versions with shared native use leases. Collection requires registry nonreference and exclusive version ownership; detach to unique garbage and delete outside the writer interval. Staging and active garbage deletion also retain independent leases. Permanent lock sidecars are never deleted while the namespace can be used. Use a small host-distributed Node-API 8 adapter, with potentially blocking open/stat/close operations off-main, nonblocking POSIX `flock` / Windows `LockFileEx`, noninherited handles and explicit native cleanup lifetime.
 
 Read-only registry snapshots, version acquisition and generation revalidation share the registry sidecar; initialization, mutation and collection retain exclusive ownership. Acquire the immutable-version pin inside the shared registry interval. This permits concurrent main/backend admissions without weakening writer exclusion or adding queues, retries or mutation replay. Busy against a writer remains a deliberate nonblocking refusal.

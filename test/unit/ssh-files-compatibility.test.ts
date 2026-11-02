@@ -75,6 +75,9 @@ it.each([
       if (id !== "omxterm.files") continue;
       for (const appVersion of [
         "0.24.0",
+        "0.24.1-dev.0",
+        "0.24.1-dev.1",
+        "0.24.1",
         "0.24.0-dev.6",
         "0.24.0-dev.11",
         "0.24.0-dev.20",

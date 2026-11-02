@@ -306,7 +306,11 @@ last-successful snapshot may be stale. Hosts select one complete schema1 endpoin
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
 endpoint offered Linux Files0.4; the promoted catalogs select Files0.6 for each
 ARM64 target and SSH0.3.1 for Linux. Common SSH/Snippets entries match; no merging
-or fallback occurs. It is not a marketplace or update daemon.
+or fallback occurs. Target and shared host/API compatibility govern selection;
+the bounded maintenance-development exception is described in the
+[installation contract](docs/extension-installation-foundation.md#archive-contract).
+Admission is not runtime or platform qualification. It is not a marketplace or
+update daemon.
 
 **Third-party Extension** — An Extension maintained by its author rather than
 by the OMXTerm project. Compatibility with OMXTerm does not imply project

@@ -128,10 +128,16 @@ describe("0.24.0 first-party catalog candidate", () => {
         "0.23.0",
         "0.24.0-dev.11",
         "0.24.0-dev.20",
-        "0.24.1-dev.0",
+        "0.24.2-dev.0",
       ])
         expect(catalogCompatible(files, runtime(version), target)).toBe(false);
-      for (const version of ["0.24.0-dev.21", "0.24.0-dev.36", "0.24.0"])
+      for (const version of [
+        "0.24.0-dev.21",
+        "0.24.0-dev.36",
+        "0.24.0",
+        "0.24.1-dev.0",
+        "0.24.1",
+      ])
         expect(catalogCompatible(files, runtime(version), target)).toBe(true);
       expect(catalogCompatible(files, runtime("0.24.0", "0.2.0"), target)).toBe(
         false,

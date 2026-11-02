@@ -31,8 +31,10 @@ Main issues opaque selection identities; renderer-provided URLs, hashes or Offic
 claims cannot authorize catalog installation. Refresh invalidates future use of old
 selections, but cannot change a descriptor already captured by an installation.
 
-Main enforces target and standard prerelease semver compatibility. Existing archive
-validation additionally checks the host/API. Exact byte length, SHA-256 and parsed
+Main enforces target and shared host/API compatibility. Host admission uses
+ordinary semver first plus the explicitly bounded [maintenance-development and
+historical exceptions](extension-installation-foundation.md#archive-contract);
+API admission remains ordinary semver. Exact byte length, SHA-256 and parsed
 manifest ID/version/engine strings must match the captured release **before trust**.
 One-shot owner-bound approval retains bytes and observed installed generation;
 conflict/uncertain publication never triggers automatic retry. Acquisition/consent

@@ -46,7 +46,7 @@ installs the retained bytes with the observed generation; conflicts or unknown
 publication consume the approval and never authorize an automatic retry. This
 service is consumed by the production Settings local/HTTPS install dialog; it never activates code. HTTPS acquisition is a separate main-owned caller, not part of Installed Packages.
 
-Unknown fields are rejected. ID is bounded lowercase ASCII namespace/name; version is semver; application and API ranges must parse and match the explicitly supplied runtime. Normal semver prerelease rules apply: a development application requires a range admitting that prerelease tuple. Backend must name an exact regular archive entry. It is validated but never imported. An optional exact `view` object declares one concrete application-tab entry and shared action: `{ "entry": "view/index.html", "action": "example.files.open", "title": "Files" }`. The entry must be an exact regular `.html` archive member admitted by the hosted resource grammar: at most 512 characters, slash-separated ASCII components starting with a letter, digit, underscore or hyphen, containing only letters, digits, underscores, hyphens and dots, with no trailing dot. The action is the exact package ID plus one dot-separated leaf (no further dots), preventing nested package namespaces from claiming the same action; the title is bounded nonblank display text. It grants no startup activation or shortcut. Other contribution fields, platform declarations and publisher/source trust metadata remain rejected, not permissive placeholders. This internal schema is not a stable extension author API or an assignment of an application release number.
+Unknown fields are rejected. ID is bounded lowercase ASCII namespace/name; version is semver; application and API ranges must parse and pass compatibility against the explicitly supplied runtime. Host compatibility uses ordinary semver first, with the explicit exceptions below; API compatibility always uses ordinary semver against the actual API version. Backend must name an exact regular archive entry. It is validated but never imported. An optional exact `view` object declares one concrete application-tab entry and shared action: `{ "entry": "view/index.html", "action": "example.files.open", "title": "Files" }`. The entry must be an exact regular `.html` archive member admitted by the hosted resource grammar: at most 512 characters, slash-separated ASCII components starting with a letter, digit, underscore or hyphen, containing only letters, digits, underscores, hyphens and dots, with no trailing dot. The action is the exact package ID plus one dot-separated leaf (no further dots), preventing nested package namespaces from claiming the same action; the title is bounded nonblank display text. It grants no startup activation or shortcut. Other contribution fields, platform declarations and publisher/source trust metadata remain rejected, not permissive placeholders. This internal schema is not a stable extension author API or an assignment of an application release number.
 
 The preview now admits the exact capability names `terminal.openSsh.v1`,
 `terminal.captureLayout.v1`, `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`,
@@ -70,8 +70,18 @@ The immutable Files0.1.0 manifest's exact historical engine metadata is admitted
 on the deliberately enumerated hosts 0.24.0-dev.0, 0.24.0-dev.1,
 0.24.0-dev.2, 0.24.0-dev.3, 0.24.0-dev.4 and 0.24.0-dev.5, in both store
 and catalog compatibility. This is not an open-ended prerelease exception or a
-mutation of published bytes; other host versions need ordinary range admission
-or another explicit reviewed decision.
+mutation of published bytes.
+
+For canonical `0.24.1-dev.N` hosts, where `N` is a nonnegative semver numeric
+identifier with no extra suffix or build metadata, host compatibility also
+accepts an original range only if ordinary semver admits **both** `0.24.0` and
+`0.24.1`. This is a deliberate departure from ordinary prerelease matching, not
+a claim that the range explicitly admits that prerelease or every intervening
+version. The historical Files0.1.0 range excludes these endpoints and gains no
+admission. Other development families require ordinary range admission or a
+separate reviewed decision. The actual API check, catalog target and exact
+archive identity checks remain unchanged. Admission does not establish runtime,
+package or platform qualification and never changes the reported host version.
 
 ## Shared store transactions
 

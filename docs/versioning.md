@@ -10,7 +10,10 @@ Explicitly selected partial development previews may retain their `-dev.N`
 version and publish as **non-Latest prereleases**, following the Files/SSH lanes
 in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
-and re-evaluate extension compatibility before any version change. The stable
+and re-evaluate extension compatibility before any version change. The explicit
+`0.24.1-dev.N` [maintenance bridge](extension-installation-foundation.md#archive-contract)
+does not automatically extend to the next patch or minor development family;
+review compatibility and capabilities deliberately at that transition. The stable
 suffix-removal and complete-asset procedure below remains unchanged.
 
 ## Public contract

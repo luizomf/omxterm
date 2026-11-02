@@ -1789,8 +1789,13 @@ The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
 and requires exact archive size/SHA-256 and manifest identity/version/engines
-before the existing one-shot trust flow. Failed refresh retains a visibly stale
-in-memory snapshot; cold failure is unavailable, not empty. Local/installed
+before the existing one-shot trust flow. Host compatibility uses ordinary semver
+first, with an explicit bridge for canonical `0.24.1-dev.N` when the original
+range admits both stable `0.24.0` and `0.24.1`, plus the separate historical
+Files exception. API checks and targets remain unchanged; this admission does
+not qualify the archive or platform. See the
+[compatibility contract](extension-installation-foundation.md#archive-contract).
+Failed refresh retains a visibly stale in-memory snapshot; cold failure is unavailable, not empty. Local/installed
 management remains usable offline. Explicit Update, exact-byte Reinstall and
 warned replacement/downgrade never activate code automatically. Official means
 project-maintained, not sandboxed, harmless or independently signed. See the

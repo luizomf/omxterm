@@ -81,10 +81,10 @@ describe("published Snippets catalog candidate", () => {
         ["0.24.0-dev.32", true],
         ["0.24.0-dev.36", true],
         ["0.24.0", true],
-        ["0.24.1-dev.0", false],
+        ["0.24.1-dev.0", true],
         ["0.25.0-dev.0", false],
       ])(
-        "preserves manifest semver admission for %s (not qualification)",
+        "applies host compatibility for %s (not qualification)",
         (appVersion, compatible) => {
           expect(
             catalogCompatible(
