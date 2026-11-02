@@ -11,6 +11,7 @@ import {
   controlledProbe,
   controlledReadiness,
 } from "../fixtures/snippets-windows-controlled-probe";
+import { freshPublicCatalog } from "../fixtures/snippets-windows-public-catalog-model";
 
 const require = createRequire(import.meta.url);
 const digest =
@@ -105,8 +106,35 @@ function controlledSession() {
   };
 }
 
+function loadPublicScenario(electron: object, simulatedNow?: () => number) {
+  const module = {
+    exports: {} as {
+      runPublicScenario(context: object): Promise<{
+        checks: string[];
+        identities: unknown[];
+        approvals: number;
+      }>;
+    },
+  };
+  runInNewContext(
+    readFileSync("test/fixtures/snippets-windows-public-scenario.cjs", "utf8"),
+    {
+      module,
+      setTimeout: (fn: () => void) => setTimeout(fn, 0),
+      Date: simulatedNow ? { now: simulatedNow } : Date,
+      JSON,
+      require(name: string) {
+        if (name === "electron") return electron;
+        if (name.startsWith("./"))
+          return require(`../fixtures/${name.slice(2)}`) as unknown;
+        return require(name) as unknown;
+      },
+    },
+  );
+  return module.exports;
+}
+
 // Exercise the real scenario caller against controlled WebContents/process edges.
-// The separate DOM tests execute the actual selection function with real DOM nodes.
 async function exercise(
   fault?:
     | "extra-byte"
@@ -116,7 +144,13 @@ async function exercise(
     | "replaced-pty"
     | "backend-failure"
     | "late-settings-tab"
-    | "late-browse-button",
+    | "late-browse-button"
+    | "catalog-not-ready"
+    | "wrong-reinstall-title"
+    | "missing-reinstall-card"
+    | "wrong-reinstall-generation"
+    | "wrong-archive",
+  recordedActions?: string[],
 ) {
   const root = await mkdtemp(path.join(os.tmpdir(), "public-snippets-"));
   await mkdir(path.join(root, "config/omxterm"), { recursive: true });
@@ -136,17 +170,49 @@ async function exercise(
   let status = "uninstalled";
   let local = "dormant";
   let approvals = 0;
-  let browsed = false;
   let coreFocus = true;
   let view: typeof childView | undefined;
-  const actions: string[] = [];
+  const actions: string[] = recordedActions ?? [];
+  const catalog = freshPublicCatalog({
+    failLoad: fault === "catalog-not-ready",
+    wrongTitle: fault === "wrong-reinstall-title",
+    missingCard: fault === "missing-reinstall-card",
+    browse() {
+      actions.push("Browse");
+      if (fault === "wrong-reinstall-generation" && catalog.opens === 2)
+        generation = 2;
+    },
+    action(action) {
+      actions.push(action);
+      if (
+        (action === "Install" && generation !== 0) ||
+        (action === "Reinstall" && generation !== 1)
+      ) {
+        status = "generation-conflict";
+        return;
+      }
+      if (generation === 1) {
+        children[0]!.closed = true;
+        children[0]!.exit = {
+          code: fault === "backend-failure" ? 1 : 0,
+          signal: null,
+        };
+        view = undefined;
+      }
+      generation++;
+      approvals++;
+      status = "enabled";
+      local = "dormant";
+      if (fault === "local-activation" && generation === 1)
+        children.push({ pid: 9, closed: false, exit: null });
+    },
+  });
   const deferred =
     fault === "late-settings-tab" || fault === "late-browse-button"
       ? deferredSettingsRenderer(
           fault === "late-settings-tab" ? "navigation" : "browse",
           () => {
-            actions.push("Browse");
-            browsed = true;
+            catalog.browse();
           },
         )
       : undefined;
@@ -194,33 +260,8 @@ async function exercise(
     },
     // eslint-disable-next-line complexity -- Controlled WebContents boundary covers the scenario's fixed expressions.
     async executeJavaScript(code: string) {
-      if (code.includes("selectPublicCatalogAction")) {
-        const match = /\)\(document, "(Install|Reinstall)"\)/.exec(code);
-        if (!match) throw Error("catalog action missing");
-        if (code.endsWith(").click()")) {
-          actions.push(match[1]!);
-          if (
-            (match[1] === "Install" && generation !== 0) ||
-            (match[1] === "Reinstall" && generation !== 1)
-          )
-            throw Error("wrong catalog action");
-          if (generation === 1) {
-            children[0]!.closed = true;
-            children[0]!.exit = {
-              code: fault === "backend-failure" ? 1 : 0,
-              signal: null,
-            };
-            view = undefined;
-          }
-          generation++;
-          approvals++;
-          status = "enabled";
-          local = "dormant";
-          if (fault === "local-activation" && generation === 1)
-            children.push({ pid: 9, closed: false, exit: null });
-        }
-        return true;
-      }
+      if (code.includes("selectPublicCatalogAction"))
+        return catalog.evaluate(code);
       if (code.includes("managementState")) {
         const match =
           /\)\(document, (\d+), "(\w+)", "(\w+)", (?:null|"\w+")\)$/.exec(code);
@@ -264,13 +305,9 @@ async function exercise(
       }
       if (code.includes("Browse official extensions")) {
         if (fault === "late-browse-button") return deferred!.evaluate(code);
-        if (code.includes(".click()")) {
-          actions.push("Browse");
-          browsed = true;
-        }
-        return true;
+        return catalog.evaluate(code);
       }
-      if (code.includes("Catalog loaded.")) return browsed;
+      if (code.includes("Catalog loaded.")) return catalog.evaluate(code);
       if (code.includes(".settings-close")) {
         coreFocus = true;
         return;
@@ -304,6 +341,7 @@ async function exercise(
       click() {
         actions.push("Settings");
         coreFocus = true;
+        catalog.open();
         deferred?.open();
       },
     },
@@ -323,38 +361,21 @@ async function exercise(
     Menu: { getApplicationMenu: () => ({ items: menu }) },
     webContents: { getAllWebContents: () => (view ? [view] : []) },
   };
-  const module = {
-    exports: {} as {
-      runPublicScenario(context: object): Promise<{
-        checks: string[];
-        identities: unknown[];
-        approvals: number;
-      }>;
-    },
-  };
-  runInNewContext(
-    readFileSync("test/fixtures/snippets-windows-public-scenario.cjs", "utf8"),
-    {
-      module,
-      setTimeout: (fn: () => void) => setTimeout(fn, 0),
-      Date,
-      JSON,
-      require(name: string) {
-        if (name === "electron") return electron;
-        if (name.startsWith("./"))
-          return require(`../fixtures/${name.slice(2)}`) as unknown;
-        return require(name) as unknown;
-      },
-    },
+  let timedCalls = 0;
+  const scenario = loadPublicScenario(
+    electron,
+    fault === "catalog-not-ready"
+      ? () => (catalog.browses >= 2 && ++timedCalls > 2 ? 70000 : 0)
+      : undefined,
   );
   try {
-    const result = await module.exports.runPublicScenario({
+    const result = await scenario.runPublicScenario({
       window,
       fixture: {
         root,
         evidence: root,
         publicCatalog: true,
-        archiveSha256: digest,
+        archiveSha256: fault === "wrong-archive" ? "wrong" : digest,
       },
       ptys: [session],
       children,
@@ -500,6 +521,7 @@ it("drives public acquisition, two dormant epochs, retirement and same-session P
     "Toggle",
     "run",
     "Settings",
+    "Browse",
     "Reinstall",
     "Toggle",
     "Settings",
@@ -535,6 +557,35 @@ it("waits for a temporarily disabled Browse control before activation", async ()
   expect(result.checks).toHaveLength(5);
   expect(result.approvals).toBe(2);
 });
+
+it("refuses an unbound archive identity before browsing", async () => {
+  const actions: string[] = [];
+  await expect(exercise("wrong-archive", actions)).rejects.toThrow();
+  expect(actions).toEqual([]);
+});
+
+it.each([
+  ["catalog-not-ready", "Timed out: public catalog loaded", false],
+  ["wrong-reinstall-title", "exact Snippets catalog card unavailable", false],
+  ["missing-reinstall-card", "exact Snippets catalog card unavailable", false],
+  ["wrong-reinstall-generation", "unexpected management ordering", true],
+] as const)(
+  "refuses %s after reopening Settings",
+  async (fault, message, clicked) => {
+    const actions: string[] = [];
+    await expect(exercise(fault, actions)).rejects.toThrow(message);
+    expect(actions).toEqual([
+      "Settings",
+      "Browse",
+      "Install",
+      "Toggle",
+      "run",
+      "Settings",
+      "Browse",
+      ...(clicked ? ["Reinstall"] : []),
+    ]);
+  },
+);
 
 it.each([
   ["extra-byte", "exact public interaction bytes"],

@@ -286,6 +286,17 @@ async function runPublicScenario({
     js(
       `(${clickManagementAction.toString()})(document, ${JSON.stringify(action)})`,
     );
+  const browseCatalog = async () => {
+    await button("Browse official extensions");
+    await until(
+      () =>
+        js(
+          "document.querySelector('.extension-catalog [role=status]')?.textContent.includes('Catalog loaded.') && [...document.querySelectorAll('.extension-catalog button')].some(b => b.textContent === 'Refresh catalog' && !b.disabled)",
+        ),
+      "public catalog loaded",
+      65000,
+    );
+  };
   const catalogAction = async (action) => {
     const selector = `(${selectPublicCatalogAction.toString()})(document, ${JSON.stringify(action)})`;
     await js(
@@ -349,15 +360,7 @@ async function runPublicScenario({
     assertInput("", 0, 0);
     assert.equal(children.length, 0);
     await settings();
-    await button("Browse official extensions");
-    await until(
-      () =>
-        js(
-          "document.querySelector('.extension-catalog [role=status]')?.textContent.includes('Catalog loaded.') && [...document.querySelectorAll('.extension-catalog button')].some(b => b.textContent === 'Refresh catalog' && !b.disabled)",
-        ),
-      "public catalog loaded",
-      65000,
-    );
+    await browseCatalog();
     await catalogAction("Install");
     await until(
       () => management(1, "enabled", "dormant", "Disable"),
@@ -413,6 +416,7 @@ async function runPublicScenario({
     assertInput("SNIPPETS_RUN\r", 1, 0);
     checks.push("explicit-toggle-exact-run-child-receipt");
     await settings();
+    await browseCatalog();
     await catalogAction("Reinstall");
     await until(
       () => management(2, "enabled", "dormant", "Disable"),
