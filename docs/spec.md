@@ -2039,8 +2039,11 @@ macOS Files or itself establish host publication. The separately
 uses optional Snippets `0.1.0`, available through the official catalog or local
 archive installation. The published Linux x64 `0.24.0-dev.30` preview also offers
 the optional tool through the catalog or a local archive; its bounded public-HTTPS
-checkpoint passed separately. Stable `0.23.0` and published Windows hosts retain
-built-in Snippets. Remaining platform gates in
+checkpoint passed separately. The published Windows ARM64 dev.36 preview uses
+optional Snippets after its exact-stage and separate FULL NSIS gates; its
+[public boundary](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+still distinguishes pending installed public consumption. Stable `0.23.0`, older
+Windows hosts and Windows x64 retain built-in Snippets. Remaining platform gates in
 [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
 still apply. Isolated foundation/runtime builds remain available.
 Explicit activation through the application manager lazily forks one

@@ -28,7 +28,10 @@ passed the shared ten checks and controlled visible-preview inspection, with
 separate stock FULL modes and explicit evidence/diagnostic limits. Catalog
 promotion and endpoint readback were followed by a separate bounded [public-HTTPS
 checkpoint](../snippets-migration.md#linux-x64-public-catalog-checkpoint) on that
-published pair. Published Windows hosts retain built-in Snippets.
+published pair. The separate [Windows ARM64 dev.36 preview](../snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+is published after fresh full portable, exact staged ten-check and separate FULL
+NSIS gates; its installed public-HTTPS checkpoint remains pending at this revision.
+Older Windows hosts and Windows x64 retain built-in Snippets.
 Remaining platform gates and #741 stay open; no stable extension SDK is established.
 
 ## Context
@@ -48,8 +51,9 @@ exercised that retained package with a minimal local extension. A later separate
 [exact-NSIS checkpoint](../windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
 passed on a new installer built from an independent copy. Windows ARM64 source
 now selects optional Snippets; its separate bounded [ordinary source checkpoint](../snippets-migration.md#windows-arm64-source-transition)
-passed on exact dev.33 source. Full portable, exact-package and public-consumption
-qualification remain separate; earlier intermittent failures are not claimed fixed.
+passed on exact dev.33 source. Later dev.36 full portable and exact-package gates
+passed separately; public-consumption qualification remains distinct and pending.
+Earlier intermittent failures are not claimed fixed.
 The delivered [macOS composition](../macos-extension-composition.md) prerequisite
 did not select installed Snippets or change its starter kit. The subsequent source
 transition reuses its ordinary production owners and the existing optional-Snippets
@@ -201,10 +205,12 @@ offline users and publish the compatible package before removing built-in access
 in a distributed host.
 
 Linux ARM64 is the first qualification target, not permission to drop Snippets
-on other distributed platforms. Published Windows hosts and Windows x64 keep the
-current built-in experience. Windows ARM64's bounded ordinary source checkpoint
-has passed; its full portable, exact-package and public-consumption gates remain
-separate.
+on other distributed platforms. Older Windows hosts and Windows x64 keep the
+built-in experience. The published Windows ARM64 dev.36 preview selects the
+optional package after its separate full portable, exact-stage and FULL NSIS
+checkpoints; catalog promotion/readback and installed public consumption remain
+separate pending milestones. The [migration guide](../snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+is the current exact evidence boundary, not a claim about every admitted host.
 Other targets retain the built-in experience until their extension infrastructure
 and equivalent migration are qualified. This
 transitional duplication must reuse parser/UI source where practical, not fork

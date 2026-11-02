@@ -395,8 +395,9 @@ retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 
 **Application Network Boundary** — OMXTerm requests remote bytes only for explicit
 official-catalog browsing and HTTPS extension archive installation on Linux ARM64/x64
-and macOS ARM64, through bounded main-owned acquisition and
-captured-byte trust. No startup/reopen catalog, telemetry or background update
+and macOS/Windows ARM64, through bounded main-owned acquisition and
+captured-byte trust. The published Windows ARM64 dev.36 capability is separate
+from its pending [installed public-consumption checkpoint](docs/snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate). No startup/reopen catalog, telemetry or background update
 requests are made. macOS composition alone does not broaden published catalog
 targets or qualify Files. The published Snippets dev.16 preview now offers the
 same immutable archive through the official catalog on `darwin-arm64`, alongside

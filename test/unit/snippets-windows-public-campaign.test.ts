@@ -39,9 +39,13 @@ let values: NonNullable<
     typeof import("../fixtures/snippets-windows-public-inputs").windowsPublicInputs
   >
 >;
+const nodeDescriptor = Object.getOwnPropertyDescriptor(
+  process.versions,
+  "node",
+)!;
+const versionDescriptor = Object.getOwnPropertyDescriptor(process, "version")!;
 let oldPlatform: string,
   oldArch: string,
-  oldTmp: string | undefined,
   oldLocal: string | undefined,
   oldSystem: string | undefined;
 let execute: ReturnType<typeof makeExecute>;
@@ -155,10 +159,11 @@ beforeEach(async () => {
   });
   oldPlatform = process.platform;
   oldArch = process.arch;
-  oldTmp = process.env.TMPDIR;
   oldLocal = process.env.LOCALAPPDATA;
   oldSystem = process.env.SystemRoot;
-  process.env.TMPDIR = path.join(root, "tmp");
+  vi.spyOn(os, "tmpdir").mockReturnValue(path.join(root, "tmp"));
+  Object.defineProperty(process.versions, "node", { value: "24.22.0" });
+  Object.defineProperty(process, "version", { value: "v24.22.0" });
   process.env.LOCALAPPDATA = path.join(root, "local");
   process.env.SystemRoot = path.join(root, "Windows");
   Object.defineProperty(process, "platform", {
@@ -330,8 +335,9 @@ afterEach(async () => {
     value: oldArch,
     configurable: true,
   });
+  Object.defineProperty(process.versions, "node", nodeDescriptor);
+  Object.defineProperty(process, "version", versionDescriptor);
   for (const [key, value] of [
-    ["TMPDIR", oldTmp],
     ["LOCALAPPDATA", oldLocal],
     ["SystemRoot", oldSystem],
   ] as const) {
@@ -366,6 +372,36 @@ it("awaits the installed-root public run and stock guarded cleanup before PASS",
     ),
   ).toBe(true);
   await expect(fs.stat(installed)).rejects.toMatchObject({ code: "ENOENT" });
+});
+it("controls controller metadata independently of the headless runtime", async () => {
+  expect(process.versions.node).toBe("24.22.0");
+  expect(process.version).toBe("v24.22.0");
+  await run();
+  expect((await publicResult()).passed).toBe(true);
+});
+it("keeps mock transaction directories controlled despite host temp variables", async () => {
+  const other = path.join(root, "other-temp");
+  await fs.mkdir(other);
+  const names = ["TEMP", "TMP", "TMPDIR"] as const;
+  const previous = names.map((name) => process.env[name]);
+  try {
+    for (const name of names) process.env[name] = other;
+    await run();
+    expect(path.dirname(path.dirname(relocated))).toBe(path.join(root, "tmp"));
+    expect(await fs.readdir(other)).toEqual([]);
+  } finally {
+    names.forEach((name, index) => {
+      if (previous[index] === undefined) delete process.env[name];
+      else process.env[name] = previous[index];
+    });
+  }
+});
+it("refuses an unsupported actual controller major before installation", async () => {
+  Object.defineProperty(process.versions, "node", { value: "26.12.1" });
+  await expect(run()).rejects.toThrow();
+  expect(execute).not.toHaveBeenCalled();
+  expect(runner.runNativeFixture).not.toHaveBeenCalled();
+  expect((await publicResult()).passed).toBe(false);
 });
 it("refuses an evidence lane inside the reference stage before creating it", async () => {
   values.EVIDENCE = path.join(values.STAGE, "evidence");
