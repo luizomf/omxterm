@@ -304,7 +304,7 @@ only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
 and manifest identity must match before ordinary one-shot trust. Its in-memory
 last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
-endpoint offered Linux Files0.4; the prepared candidate selects Files0.6 for each
+endpoint offered Linux Files0.4; the promoted catalogs select Files0.6 for each
 ARM64 target and SSH0.3.1 for Linux. Common SSH/Snippets entries match; no merging
 or fallback occurs. It is not a marketplace or update daemon.
 
@@ -374,8 +374,10 @@ including three Official consents and normal joined Quit; prior link evidence
 is not relabeled.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
 display metadata, not a manifest platform fence or blanket native qualification.
-The earlier Linux catalog selected Files0.4.0; the source candidate prepares
+The earlier Linux catalog selected Files0.4.0; the promoted catalogs select
 Files0.6.0 on both ARM64 endpoints after separate publication and qualification.
+A separate [macOS public-catalog checkpoint](docs/files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+passed with a retained locally built 0.24.0 DMG, not a downloaded-public host.
 The host's optional `toggleFiles` shortcut is unbound
 by default and reuses the existing tool entry point; unavailable tools do not
 consume it. No startup code activation, default shortcut or stable SDK is implied;

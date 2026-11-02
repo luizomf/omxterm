@@ -8,7 +8,7 @@ The examples below use the selected `0.24.0` naming: a macOS ARM64 DMG, Linux AR
 
 ## Optional Files preview
 
-Files is separately installed, never bundled. The source catalog candidate selects
+Files is separately installed, never bundled. The official catalogs select
 Files0.6.0 for Linux and macOS ARM64 with host `>=0.24.0-dev.21` and API `0.1.x`;
 publication and target qualification are separate. The earlier catalog offered
 [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
@@ -62,8 +62,8 @@ warning and deliberately install/update the extension; upgrading the host alone
 does not update it. Open SSH Connect separately from File or the Command Palette;
 installation remains dormant. The earlier catalog offered 0.3.0; fixed-endpoint
 readback and bounded public installation/management qualification passed on the
-exact dev.11 host. The separately published SSH0.3.1 is selected by the prepared
-catalog candidate; its promotion and public-consumption checkpoint are separate.
+exact dev.11 host. The separately published SSH0.3.1 is selected by the official
+catalog; public-consumption qualification is separate.
 Historical0.1.0 assets remain immutable.
 No source build is needed. Both releases are non-Latest previews;
 only Linux ARM64 is qualified, with synthetic clients rather than real SSH

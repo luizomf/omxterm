@@ -14,7 +14,7 @@ Main selects one fixed schema1 endpoint from the host target:
 Each is a complete catalog with unique package IDs. There is no multi-endpoint
 merge, schema negotiation or fallback to the legacy endpoint after failure.
 The original target split kept the legacy document unchanged, preserving Linux's
-Files0.4 offer at that checkpoint. The current source candidate selects Files0.6
+Files0.4 offer at that checkpoint. The promoted catalogs select Files0.6
 for Linux ARM64 and macOS ARM64 on their respective endpoints. Common SSH/Snippets
 entries are identical in both documents; promotions must update both together.
 Only explicit Browse/Refresh requests the selected endpoint. No startup, reopen, polling or automatic
@@ -74,7 +74,9 @@ The generator emits only Files with a Linux ARM64 target: merge its entry into
 the appropriate complete catalog rather than replacing SSH or Snippets. It is
 not a macOS entry generator. Never replace the complete catalog with its output.
 
-### Files0.6 and SSH0.3.1 candidate
+<a id="files06-and-ssh031-candidate"></a>
+
+### Files0.6 and SSH0.3.1 promotion
 
 The source catalogs bind Files0.6.0 to archive `files-0.6.0.omxext`, 17,331
 bytes, SHA-256 `50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`,
@@ -86,13 +88,16 @@ SHA-256 `be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`,
 and source `8717d47327eeab14f522b1b2a448216860d0923d`. Original build receipts
 remain `not-run`; qualification evidence is separate.
 
-These source entries are a catalog candidate, not proof that every advertised
-pair has been qualified. The original archive, checksum and receipt for each
-extension were separately published and anonymously byte-verified; their receipts
-remain `not-run`. After integrating the catalog, read back both endpoints. Actual
-public-HTTPS consumption is separate and requires ROOT's authorization after
-endpoint verification. Preserve newer supported Snippets targets when reconciling concurrent
-promotions. Schema1 has one release per ID: promoting Files0.6 removes a compatible
+These entries do not prove that every advertised pair has been qualified. The
+original archive, checksum and receipt for each extension were separately published
+and anonymously byte-verified; their receipts remain `not-run`. Both fixed endpoints
+were read back after catalog integration: legacy SHA-256
+`2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda`, macOS
+`0943623c3907516cc3c2affdc73e5cc7247b040845da5de022fa9f3a7058e870`. The
+separate [macOS Files0.6 public-catalog checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+passed with the retained locally built 0.24.0 DMG, not a downloaded-public stable
+host. Other public-HTTPS checkpoints remain separate. Preserve newer supported
+Snippets targets when reconciling promotions. Schema1 has one release per ID: promoting Files0.6 removes a compatible
 catalog offer for Linux dev.11–dev.20. Those users can upgrade their host or install
 the unchanged Files0.4 archive locally or by its direct HTTPS link. Files0.1 does
 not admit stable host0.24.0. Existing releases and installed packages remain unchanged.

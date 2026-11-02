@@ -1775,9 +1775,9 @@ Windows public consumption remains unqualified. macOS source composition include
 (see [qualification scope](macos-extension-composition.md)). Main selects the
 complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
 schema1 catalog for every other target. Common
-SSH/Snippets entries remain identical. The prepared source catalogs select Files0.6
-for Linux and macOS ARM64 and SSH0.3.1 for Linux ARM64; publication and actual
-public-consumption qualification remain separate. The earlier catalog promotion
+SSH/Snippets entries remain identical. The promoted catalogs select Files0.6
+for Linux and macOS ARM64 and SSH0.3.1 for Linux ARM64; archive publication and
+actual public-consumption qualification are separate. The earlier catalog promotion
 added `linux-x64` to Snippets; public endpoint readback and the separate packaged public-HTTPS checkpoint passed
 for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).
 The earlier common Snippets promotion admitted `win32-arm64` for the public
@@ -2106,12 +2106,13 @@ and actual public Settings-link checkpoint are delivered; see
 That published dev.21 host still uses the legacy catalog URL. Published dev.26
 passed a separate Files0.5 [public-catalog checkpoint](files-development-preview.md#macos-catalog-distribution)
 with three Official consents, retained PTY and normal joined Quit. The source
-catalog candidate instead binds Files0.6 to target-specific Linux/macOS ARM64
-entries; it must not be promoted before its archives and applicable pairs are
-verified. The earlier Linux Files0.4
+catalog now binds Files0.6 to target-specific Linux/macOS ARM64 entries. The
+separate [macOS public-catalog checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+passed with a retained locally built 0.24.0 DMG, not a downloaded-public stable host.
+The earlier Linux Files0.4
 [distribution checkpoint](files-development-preview.md#files-040-distribution-and-controlled-qualification)
 remains evidence for its own dev.11 pair, not for Files0.6. Linux dev.11–dev.20
-lose a compatible Files catalog offer after promotion but retain the historical
+lost a compatible Files catalog offer after promotion but retain the historical
 Files0.4 local/link route. Files0.1 does not admit stable0.24.0. Compatibility
 alone does not qualify every host.
 Archives and build receipts are excluded from application packages. Build receipts

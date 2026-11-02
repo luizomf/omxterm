@@ -342,20 +342,22 @@ See [catalog semantics](extension-distribution.md) and the
 
 ## Files catalog publication
 
-### Files0.6 / SSH0.3.1 source candidate
+<a id="files06--ssh031-source-candidate"></a>
 
-The prepared catalogs bind the separately built Files0.6.0 and SSH0.3.1 archive
+### Files0.6 / SSH0.3.1 promotion
+
+The promoted catalogs bind the separately built Files0.6.0 and SSH0.3.1 archive
 trios to their original receipts and immutable versioned URLs; see
 [distribution](extension-distribution.md#files06-and-ssh031-candidate). They are
 not bundled into the stable host. The selected local host/archive pair checks
 passed, and the original three assets for each extension were published and
 anonymously byte-verified; the original receipts remain `not-run`. Do not replay
-publication or replace those assets. Integrate the reviewed candidate while
-preserving newer Snippets targets and identical SSH/Snippets entries in both
-complete endpoints, then read back both endpoints. Actual public HTTPS consumption
-on each newly promoted target is a separate checkpoint requiring ROOT's explicit
-authorization after endpoint verification. Do not infer it from local qualification
-or asset readback. Preserve historical release bytes and receipts. Files0.6 replaces the Linux0.4 catalog offer; dev.11–dev.20 users retain
+publication or replace those assets. ROOT integrated the reviewed catalogs,
+preserving the newer common Snippets entry, and verified both public endpoint
+bytes. A separate [macOS Files0.6 public-HTTPS checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+passed with a retained locally built DMG; it is not a downloaded-public stable
+host. Other public-HTTPS checkpoints require their own authorization and outcome.
+Do not infer them from local qualification or asset readback. Preserve historical release bytes and receipts. Files0.6 replaces the Linux0.4 catalog offer; dev.11–dev.20 users retain
 the older archive by explicit local/link installation or can upgrade the host.
 
 ### Historical Files 0.4.0 promotion

@@ -3,9 +3,10 @@
 Files is a separately installed Linux and macOS ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
-The prepared catalog candidate selects Files0.6.0 for Linux and macOS ARM64,
-requiring host `>=0.24.0-dev.21` and API `0.1.x`; promotion follows separate
-qualification and public archive verification. The earlier Linux catalog offered
+The official catalogs select Files0.6.0 for Linux and macOS ARM64, requiring
+host `>=0.24.0-dev.21` and API `0.1.x`. The [bounded macOS public-catalog
+checkpoint](#files-060-macos-public-catalog-checkpoint) passed with a locally
+built host; it does not establish public stable-host download. The earlier Linux catalog offered
 [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
 requiring host `>=0.24.0-dev.8`. Its exact controlled-qualified pair uses the already-public
 [host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
@@ -176,8 +177,8 @@ Files0.4.0/0.5.0 archives keep their original heading, including on a newer host
 The local macOS and Linux ARM64 host0.24.0/Files0.6 exact-pair checkpoints
 passed with controlled consent and synthetic input. The original Files0.6 archive,
 checksum and receipt were separately published and byte-verified; the receipt
-remains `not-run`. Public-catalog consumption is a separate checkpoint, not a
-consequence of local pairing or asset publication. The hosted-view diagnostic
+remains `not-run`. The separately passed [macOS public-catalog checkpoint](#files-060-macos-public-catalog-checkpoint)
+is not a consequence of local pairing or asset publication. The hosted-view diagnostic
 in [#746](https://github.com/luizomf/omxterm/issues/746) remains unexplained.
 Never replace or republish existing versioned bytes.
 
@@ -487,6 +488,43 @@ physical/Gatekeeper/notarization, deployment-floor, native-I/O cancellation and
 main-death limits remain. Earlier primitive/local lifecycle campaigns were not
 replayed or relabeled. Original release notes retain their publication-time status.
 
+## Files 0.6.0 macOS public-catalog checkpoint
+
+On 2026-11-02, the exact retained **locally built**, not downloaded-public,
+OMXTerm0.24.0 ARM64 DMG (129,751,297 bytes, SHA-256
+`88e66b764cc9fc4fa3a6cfb2c0e081dce5089631a8f8b8640ad875214e8bc34f`)
+passed the bounded [public-catalog fixture](../test/fixtures/files-dmg.md#prepared-files06-public-catalog-checkpoint)
+with separately published Files0.6.0 (17,331 bytes, SHA-256
+`50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`).
+The host was built from `8717d47327eeab14f522b1b2a448216860d0923d`; the
+archive was built from `cfc9073010df586eec321641ba5013862734f8fe`.
+Fixture/source was `cf13992ccc730947fed7046cc27ce422920d78b1`. The stable
+host was not publicly released at this checkpoint.
+
+The fixed macOS catalog was independently read back at SHA-256
+`0943623c3907516cc3c2affdc73e5cc7247b040845da5de022fa9f3a7058e870`;
+the guest also fetched and compared the catalog and archive before launch.
+The application then used production HTTPS, without transport interception or
+local/link fallback. Six checks passed: actual Install/Reinstall/Install, three
+controlled Official consents bound to the exact identity/digest and generations
+0, 1 and 5, dormant installation, create/move/conflict, management, the same
+PTY/Surface and normal joined Quit. All three backend processes exited 0 and
+closed. Catalog Install/Reinstall, the completed Files move and the surviving
+terminal were separately inspected in WebContents captures. They are not
+compositor or physical-input evidence. The catalog receipt records the configured
+endpoint, not a passive network trace. Earlier local-pair toolbar/dotfile and
+Trash matrices were not replayed; original build receipts remain `not-run`.
+
+The guest preference domain changed despite isolated paths; its exact bytes,
+metadata and daemon-visible state were restored and verified, including after
+owned-scratch removal. Input/display matched the fresh baseline. Fourteen recorded
+process identities and the owned image/mount were absent at audit. This bounded
+snapshot is not a historical escaped-descendant census. This run did not show the
+[#746](https://github.com/luizomf/omxterm/issues/746) diagnostic; earlier occurrences
+remain unexplained. The checkpoint does not qualify a downloaded public stable host,
+Gatekeeper/notarization, physical keyboard/native-popup input, macOS12, blocked
+native-I/O cancellation or the full portable suite.
+
 ## Official catalog
 
 Settings → Extensions offers **Browse official extensions** and explicit Refresh.
@@ -498,8 +536,8 @@ remain usable. en-US/pt-BR controls relabel without repeating requests.
 Main owns the fixed project HTTPS endpoints and captured release selections.
 Current source chooses the complete `official-extensions-darwin-arm64-v1.json`
 for macOS ARM64; every other target retains `official-extensions-v1.json`.
-Only one endpoint is fetched, with no merge or fallback. The prepared catalog
-selects Files0.6 on both ARM64 endpoints and keeps SSH/Snippets identical between
+Only one endpoint is fetched, with no merge or fallback. The promoted catalogs
+select Files0.6 on both ARM64 endpoints and keep SSH/Snippets identical between
 them. Published dev.21 still embeds the legacy URL; its Linux-only Files entry
 does not offer macOS discovery. The earlier dev.26/Files0.5
 [public-catalog checkpoint](#macos-catalog-distribution) establishes that exact
@@ -514,16 +552,15 @@ Installation/replacement remains dormant. Cancel or owner loss before approval
 revokes consent; publication already dispatched cannot be recalled or retried
 implicitly. Refresh cannot retarget a captured installation.
 
-The candidate Files0.6 entries require at least dev.21; compatibility is separate
+The selected Files0.6 entries require at least dev.21; compatibility is separate
 from which endpoint a particular host fetches and from actual qualification.
 Historical Files0.1.0 remains available for local/link installation from
 0.23.0-dev.8; catalog-capable host source started at 0.23.0-dev.9. Its engine
 range excludes host 0.24.0. The catalog is not an index of every historical
 release. Declared compatibility is not qualification of every version.
 
-Files0.6 catalog promotion must follow archive publication and qualification.
-Once both endpoints select it, Linux hosts 0.24.0-dev.11 through dev.20 will no
-longer have a compatible Files catalog offer: the schema contains only one
+After Files0.6 promotion on both endpoints, Linux hosts 0.24.0-dev.11 through
+dev.20 no longer have a compatible Files catalog offer: the schema contains only one
 version per ID and Files0.6 requires dev.21 or newer. Those hosts can still
 install the unchanged [Files0.4.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0)
 from a downloaded local file or its direct HTTPS archive link, or upgrade the host.

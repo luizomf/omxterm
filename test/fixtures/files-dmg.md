@@ -160,12 +160,12 @@ Files0.5 nor teaches already published dev.21 a new endpoint.
 
 ### Prepared Files0.6 public-catalog checkpoint
 
-This adapter is preparation, **not a passed public checkpoint**. Do not execute it
-until ROOT confirms that the original Files0.6 archive, checksum and `not-run`
-receipt have been published and anonymously byte-verified, and that the fixed
-macOS catalog endpoint has been promoted and read back against the selected source.
-Keep the original Files0.5 instructions, receipts and captures as historical
-separate evidence; do not overwrite or relabel them.
+The [bounded Files0.6 public-catalog checkpoint](../../docs/files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+passed on 2026-11-02 using a retained locally built host DMG, not a downloaded
+public stable host. A separate run still requires ROOT to verify original archive,
+checksum and `not-run` receipt publication and fixed-endpoint readback, then
+authorize execution. Keep the original Files0.5 instructions, receipts and captures
+as historical separate evidence; do not overwrite or relabel them.
 
 Use the exact independently downloaded Files0.6 archive as `ARCHIVE` and set:
 
