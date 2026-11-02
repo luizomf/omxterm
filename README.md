@@ -72,7 +72,7 @@ agents.
 ## Platforms and downloads
 
 **Latest release:
-[0.23.0 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.23.0)**
+[0.24.0 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.24.0)**
 
 Prebuilt packages target **Apple Silicon macOS, Linux ARM64 or x64, and Windows 11
 ARM64 or x64**. Both x64 packages have **build-only qualification** from native
@@ -81,12 +81,12 @@ See the release notes for actual platform coverage.
 
 | Platform                                 | Download                                                                                               | Checksum                                                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-arm64.dmg.sha256)      |
-| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-arm64.AppImage.sha256) |
-| Linux x64 (build-only)                   | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-x64.AppImage)   | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-x64.AppImage.sha256)   |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.23.0/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.23.0/linux_install.sh.sha256)              |
-| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-arm64.exe.sha256)      |
-| Windows x64 (build-only)                 | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-x64.exe)       | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.23.0/OMXTerm-0.23.0-x64.exe.sha256)        |
+| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.dmg.sha256)      |
+| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.AppImage.sha256) |
+| Linux x64 (build-only)                   | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.AppImage)   | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.AppImage.sha256)   |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.24.0/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/linux_install.sh.sha256)              |
+| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.exe.sha256)      |
+| Windows x64 (build-only)                 | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.exe)       | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.exe.sha256)        |
 
 Linux ARM64 requires **glibc 2.42+** and X11/XWayland (for example Fedora 43+,
 Ubuntu 25.10+, or Arch). Linux x64 headless checks ran on Ubuntu 22.04 with
@@ -105,7 +105,15 @@ ConPTY. Desktop/GPU, installer and ordinary-user integration remain unverified;
 Linux FUSE/helper installation and Windows 11/SmartScreen/UAC are also unverified.
 These are not release gates for the build-only lanes.
 
-### Optional Snippets previews
+### Optional Snippets
+
+Stable **0.24.0** uses optional Snippets on Linux ARM64/x64, macOS ARM64 and
+Windows ARM64. Installation is deliberate; existing YAML is preserved.
+Windows x64 retains built-in Snippets. The Windows ARM64 installed-public
+checkpoint remains unresolved: see the [release-risk disclosure](docs/snippets-migration.md#stable-0240-release-disposition)
+before upgrading if you depend on the previous built-in experience.
+
+Historical previews:
 
 [Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16, Linux x64 host 0.24.0-dev.30 and Windows ARM64 host 0.24.0-dev.36](docs/installation.md#optional-snippets-preview)
 use the separate Snippets 0.1.0 archive. These non-Latest prereleases require

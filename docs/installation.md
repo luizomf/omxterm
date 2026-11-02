@@ -1,8 +1,8 @@
 # Install OMXTerm
 
-OMXTerm targets Apple Silicon Macs, Linux ARM64 or x64, and Windows 11 ARM64 or x64. The x64 lanes are **build-only**: they do not qualify desktop, GPU, installer or ordinary-user integration. For version 0.24.0, choose your package from the [versioned release](https://github.com/luizomf/omxterm/releases/tag/v0.24.0) once available, and check its notes for actual assets and coverage.
+OMXTerm targets Apple Silicon Macs, Linux ARM64 or x64, and Windows 11 ARM64 or x64. The x64 lanes are **build-only**: they do not qualify desktop, GPU, installer or ordinary-user integration. Version 0.24.0 is [published as the latest stable release](https://github.com/luizomf/omxterm/releases/tag/v0.24.0). Check its notes for platform coverage and the unresolved Windows ARM64 public Snippets checkpoint.
 
-The examples below use the selected `0.24.0` naming: a macOS ARM64 DMG, Linux ARM64/x64 AppImages and Windows ARM64/x64 installers, each with a `.sha256` file, plus the common Linux `linux_install.sh` helper and its checksum. These filenames describe the intended topology, not proof of publication or qualification. Use the version and files of an actually available release.
+The examples below use the selected `0.24.0` naming: a macOS ARM64 DMG, Linux ARM64/x64 AppImages and Windows ARM64/x64 installers, each with a `.sha256` file, plus the common Linux `linux_install.sh` helper and its checksum. All twelve release assets were verified by draft and anonymous public download. Download verification does not extend the platform execution coverage described in the release notes.
 
 **[macOS](#macos)** · **[Linux](#linux)** · **[Windows](#windows)** · **[Update or uninstall](#updating-or-uninstalling)**
 
