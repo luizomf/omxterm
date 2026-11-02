@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { afterEach, expect, it, vi } from "vitest";
 import { renderExtensions } from "../../src/renderer/settings/settings-extensions";
+import { translatorFor } from "../../src/shared/i18n";
 import type {
   ExtensionsRequest,
   ExtensionsResult,
@@ -319,12 +320,23 @@ it.each([
   (approval, generation) => {
     const digest =
       "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
+    const t = translatorFor("en-US");
     const prompt = {
       type: "warning",
-      title: "Trust extension code?",
-      message: "Install Files — ARM64 preview 0.6.0?",
-      detail: `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.files\nSHA-256: ${digest}\nCurrent generation: ${generation}\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.`,
-      buttons: ["Cancel", "Trust and install"],
+      title: t.t("extensions.trustTitle"),
+      message: t.t("extensions.trustMessage", {
+        name: "Files — ARM64 preview",
+        version: "0.6.0",
+      }),
+      detail:
+        t.t("extensions.trustDetail", {
+          id: "omxterm.files",
+          digest,
+          generation,
+        }) +
+        "\n\n" +
+        t.t("extensions.catalogTrust"),
+      buttons: [t.t("common.cancel"), t.t("extensions.trustInstall")],
       defaultId: 0,
       cancelId: 0,
     };
