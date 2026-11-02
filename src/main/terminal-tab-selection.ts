@@ -43,8 +43,11 @@ export function createTabSelection<State>(options: {
       settings = false;
       focused = payload.sessionId;
       tab = payload.tabSessionIds ?? (focused === null ? [] : [focused]);
-      if (focused === null || options.current(focused))
-        options.onSessionSelected(focused);
+      // A full snapshot may name a pane that is not live yet or has just
+      // retired. Do not leave the previously selected pane as the active one.
+      options.onSessionSelected(
+        focused === null || options.current(focused) ? focused : null,
+      );
     },
     refreshTitle() {
       if (settings) options.onSettingsSelected?.();

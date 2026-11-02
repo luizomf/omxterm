@@ -70,6 +70,7 @@ function managementEntry(entry: Installation) {
 async function applicationManager(
   options: Parameters<typeof startApplicationExtensions>[0],
   owner: AbortSignal,
+  windows: Map<BrowserWindow, ExtensionTargetCapture>,
 ) {
   const runtime = { appVersion: app.getVersion(), apiVersion: "0.1.0" };
   const root = path.join(app.getPath("userData"), "extensions");
@@ -103,7 +104,8 @@ async function applicationManager(
       runtime,
       temporaryDirectory: app.getPath("temp"),
     }),
-    createViews: (input) => applicationViews(options, input),
+    createViews: (input) =>
+      applicationViews(options, input, (window) => windows.get(window)?.()),
   });
   try {
     return { manager, installations: await manager.snapshot() };
@@ -223,6 +225,13 @@ async function acknowledgeExtension(
   return { ok: true };
 }
 
+function supportsExtensionPreview() {
+  return (
+    (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
+    (["darwin", "win32"].includes(process.platform) && process.arch === "arm64")
+  );
+}
+
 // Startup creates infrastructure, never activates installed code. Unsupported
 // platforms retain Settings with an explicit preview-unavailable result. Broken
 // infrastructure must not prevent terminal startup.
@@ -241,12 +250,11 @@ export async function startApplicationExtensions(
     `${process.platform}-${process.arch}`,
   );
   const catalogLoads = createCatalogAcquisition(catalog);
-  const supported =
-    (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
-    (["darwin", "win32"].includes(process.platform) &&
-      process.arch === "arm64");
+  const supported = supportsExtensionPreview();
   const initialized = supported
-    ? await applicationManager(options, lifetime.signal).catch(() => undefined)
+    ? await applicationManager(options, lifetime.signal, windows).catch(
+        () => undefined,
+      )
     : undefined;
   const manager = initialized?.manager;
   let installations = initialized?.installations ?? [];

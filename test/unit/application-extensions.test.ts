@@ -43,6 +43,7 @@ type Host = {
 import { startApplicationExtensions } from "../../src/main/application-extensions";
 import type { ExtensionRuntime } from "../../src/extension-runtime/runtime";
 import { createTerminalContextMenuTarget } from "../../src/main/terminal-context-menu";
+import { extensionInvocationTarget } from "../../src/main/extension-invocation-target";
 const adapters = vi.hoisted(() => ({
   root: "",
   selected: undefined as unknown,
@@ -432,7 +433,10 @@ it.each([
         new AbortController().signal,
         { id: "hosted-view", isCurrentVisible: () => true },
       ),
-    ).toEqual({ ok: true, directory: "/original" });
+    ).toEqual({
+      ok: true,
+      directory: id === "omxterm.files" ? "/replacement" : "/original",
+    });
     await request({ operation: "disable", id, generation: 1 });
     expect(service.actions()).toEqual([]);
     action!.invoke();
@@ -448,6 +452,149 @@ it.each([
     ).toBe(true);
   },
 );
+
+it("uses the active pane's last reported directory when a retained Files view requests it", async () => {
+  await installTool("omxterm.files", "Files");
+  const targets = extensionInvocationTarget(window);
+  const reported = new Map([
+    ["s1", "/first"],
+    ["s2", "/second"],
+  ]);
+  targets.started("s1");
+  targets.started("s2");
+  targets.selected("s1");
+  service.registerWindow(window, (source, context) =>
+    targets.capture((id) => reported.get(id), source, context),
+  );
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  const host = adapters.hosts[0]!;
+  const firstRequest = host.options.onRequest!(
+    { operation: "terminal-directory" },
+    new AbortController().signal,
+    { id: "hosted-view", isCurrentVisible: () => true },
+  );
+  targets.selected("s2");
+  expect(await firstRequest).toEqual({ ok: true, directory: "/first" });
+  expect(
+    await host.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).toEqual({ ok: true, directory: "/second" });
+  reported.set("s2", "/second-later");
+  expect(
+    await host.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).toEqual({ ok: true, directory: "/second-later" });
+});
+
+it("does not disclose the active terminal directory to a hidden Files view", async () => {
+  await installTool("omxterm.files", "Files");
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  await expect(
+    adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => false },
+    ),
+  ).rejects.toThrow("unavailable");
+});
+
+it("does not disclose the active terminal directory from a background window", async () => {
+  await installTool("omxterm.files", "Files");
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  adapters.selected = {};
+  await expect(
+    adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).rejects.toThrow("unavailable");
+});
+
+it.each([
+  [
+    "en-US",
+    "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
+  ],
+  [
+    "pt-BR",
+    "Nenhum diretório local foi informado pelo terminal ativo. Ele pode ser remoto ou não informar seu diretório. Use Pasta pessoal ou digite um caminho",
+  ],
+] as const)(
+  "explains an unavailable active terminal directory in %s without falling back to the invocation",
+  async (locale, error) => {
+    await installTool("omxterm.files", "Files");
+    const targets = extensionInvocationTarget(window);
+    targets.started("s1");
+    targets.started("s2");
+    targets.selected("s1");
+    service.registerWindow(window, (source, context) =>
+      targets.capture(
+        (id) => (id === "s1" ? "/first" : undefined),
+        source,
+        context,
+      ),
+    );
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+    targets.selected("s2");
+    language = locale;
+    expect(
+      await adapters.hosts[0]!.options.onRequest!(
+        { operation: "terminal-directory" },
+        new AbortController().signal,
+        { id: "hosted-view", isCurrentVisible: () => true },
+      ),
+    ).toEqual({ ok: false, error });
+  },
+);
+
+it("does not use a directory from an ended active session", async () => {
+  await installTool("omxterm.files", "Files");
+  const active = new AbortController();
+  const owner = new AbortController();
+  service.registerWindow(window, (_source, context) => ({
+    owner: window,
+    signal: context === "window" ? owner.signal : active.signal,
+    terminalDirectory: "/ended",
+  }));
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  active.abort();
+  expect(
+    await adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).toEqual({
+    ok: false,
+    error:
+      "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
+  });
+});
+
+it("rejects a Files directory request with a caller-supplied target", async () => {
+  await installTool("omxterm.files", "Files");
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  await expect(
+    adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory", sessionId: "other" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).rejects.toThrow("unavailable");
+});
 
 it.each(["absent", "disabled"])(
   "guides %s Snippets to management without executing code",

@@ -55,7 +55,11 @@ optional nonempty unique `capabilities` array. Unknown names refuse. The first
 five are own-view host operations; state is declaration-gated backend bootstrap
 support, not browser filesystem access. Optional `view.context: "window"`
 selects original-window lifetime without a captured source-session directory;
-omission retains existing session context. Layout/state declarations require a
+omission retains existing session context. The Files companion's explicit
+`terminal-directory` request is a narrow host-owned exception: it captures the
+visible focused window's current selected live pane rather than retargeting the
+view's other invocation context; see the [Files contract](files-development-preview.md).
+Layout/state declarations require a
 compatible newer host; older hosts reject them rather than partially activating.
 Mirror Typing requires host 0.24.0-dev.2 or newer within its declared 0.24.x
 range. Its own-view describe/start/stop capability grants no extension-authored

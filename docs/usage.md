@@ -318,9 +318,19 @@ Switching terminal tabs keeps the panel visible. Connecting through SSH opens a
 new terminal tab without replacing the current session or closing the panel.
 Settings and general extension tabs temporarily suspend it.
 
-Files keeps the terminal directory captured when its view first opened. Closing
-that terminal leaves the tool available; disabling or removing the extension
-retires its view. In current Files source, **Actions… → Show dotfiles (names
+Files initially opens Home. In current host source, **Actions… → Use terminal
+directory** explicitly uses the selected pane's last local OSC 7 report at that
+moment, even if the panel was opened for another pane. Without a usable report
+or for a known SSH Connect pane, it explains the unavailable directory and
+leaves the current browsing location alone. It does not follow later terminal
+changes or retarget an operation already started. A report is not authenticated
+and can be stale if the shell stops reporting; an ordinary shell-launched SSH
+session cannot always be recognized. OMXTerm does not inspect the current process
+or configure the shell. Enter a path or use Home if needed. This host change
+also works with compatible installed Files archives; it does not replace them.
+
+Closing the opening terminal leaves the tool available; disabling or removing
+the extension retires its view. In current Files source, **Actions… → Show dotfiles (names
 starting with .)** reveals dot-prefixed files and folders; they are hidden by
 default. With the Files list or toolbar focused, use `Ctrl+H` on Linux or
 `Cmd+Shift+.` on macOS; the Actions menu remains available if a core shortcut

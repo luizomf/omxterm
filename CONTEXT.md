@@ -355,8 +355,15 @@ not classify other platform hidden metadata. Its scoped child shortcut leaves
 editing and core shortcut ownership intact. Hide/reveal retains the choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
-paths or pending operations. Its application owner composes independent backend/view version pins,
-per-invocation terminal context, local management and bounded Quit retirement.
+paths or pending operations. In current host source, the explicit Use terminal
+directory action captures the selected live pane's last local OSC7 report when
+requested, not the retained view's initial context. No usable report is explained
+without navigating; this report can be stale or produced by arbitrary output, and
+ordinary shell-launched SSH may be indistinguishable. There is no automatic follow
+or retargeting of started operations. Compatible installed archives use this host
+behavior without modification. Its application owner composes independent
+backend/view version pins, per-invocation context for other extension requests,
+local management and bounded Quit retirement.
 Its separately built archive/checksum/receipt are not bundled into the host;
 a build receipt identifies bytes and inputs, not completed qualification or shipment.
 macOS host source provides no-clobber move and optional Foundation trash in its

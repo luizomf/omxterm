@@ -10,11 +10,9 @@ import {
 
 const INTRODUCER = "\u001b]7;";
 
-// The last local directory each session's shell reported through OSC 7 in its
-// own output. It is used only to start a split pane where its source pane is;
-// it is never logged, persisted or sent anywhere. Shells that do not report
-// keep the home directory, and OMXTerm injects nothing to make them report
-// (ADR 0013).
+// The last local directory reported through OSC 7 in each session's output.
+// It can inform split-pane startup and an explicit extension directory request;
+// OMXTerm injects nothing into shells to make them report (ADR 0013).
 export function createWorkingDirectoryTracker(
   options: {
     readonly platform?: string;
@@ -114,9 +112,12 @@ export function createWorkingDirectoryTracker(
         ? { kind: "launch-local", path: launch }
         : { kind: "home" };
     },
-    // Capture without filesystem IO. The backend validates existence when used.
+    // Capture without filesystem IO. A newer incomplete report may invalidate
+    // the old one; the backend validates existence when the result is used.
     reported(sessionId: TerminalSessionId): string | undefined {
-      return directories.get(sessionId);
+      return carries.get(sessionId)?.startsWith(INTRODUCER)
+        ? undefined
+        : directories.get(sessionId);
     },
     // A reported directory may have been removed since; home is the fallback.
     inherited(sessionId: TerminalSessionId | undefined): string | undefined {

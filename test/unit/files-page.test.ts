@@ -229,6 +229,51 @@ it("offers item and background actions at the point of use, with keyboard dismis
   key(row("/root/beta"), "F10", true);
   expect(menu().hidden).toBe(false);
 });
+it("keeps the browsing directory and explains an unavailable active terminal", async () => {
+  const { handle } = await setup();
+  handle((value) =>
+    value.operation === "terminal-directory"
+      ? Promise.resolve({
+          ok: false,
+          error: "No local directory was reported for the active terminal",
+        })
+      : undefined,
+  );
+  navigate("/other");
+  await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
+  button("Actions…").click();
+  button("Use terminal directory", menu()).click();
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "No local directory was reported for the active terminal",
+    ),
+  );
+  expect(row("/other/elsewhere")).toBeTruthy();
+});
+
+it("keeps an open rename target when using a different terminal directory", async () => {
+  const { handle, request } = await setup();
+  handle((value) =>
+    value.operation === "terminal-directory"
+      ? Promise.resolve({ ok: true, directory: "/other" })
+      : undefined,
+  );
+  context("/root/alpha");
+  button("Rename / move", menu()).click();
+  button("Actions…").click();
+  button("Use terminal directory", menu()).click();
+  await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
+  apply("/root/renamed");
+  await vi.waitFor(() =>
+    expect(request).toHaveBeenCalledWith({
+      operation: "move",
+      path: "/root/alpha",
+      destination: "/root/renamed",
+    }),
+  );
+  expect(row("/other/elsewhere")).toBeTruthy();
+});
+
 it("captures rename target across subsequent selection and automatically refreshes", async () => {
   const { request, listings } = await setup();
   context("/root/alpha");

@@ -109,7 +109,15 @@ export async function exerciseCompanionRouting(
       new AbortController().signal,
       { id: "hosted-view", isCurrentVisible: () => true },
     ),
-  ).toEqual({ ok: true, directory: "/original" });
+  ).toEqual(
+    tool === "files"
+      ? {
+          ok: false,
+          error:
+            "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
+        }
+      : { ok: true, directory: "/original" },
+  );
   service.actions()[0]!.invoke();
   await vi.waitFor(() => expect(host.reveal).toHaveBeenCalledOnce());
   expect(host.reveal).toHaveBeenCalledWith(

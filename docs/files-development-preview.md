@@ -385,13 +385,26 @@ publisher trust or additional capabilities. General extensions retain Applicatio
 Tab presentation and independent per-invocation context/view pins.
 
 Companion view lifetime follows the window rather than the terminal that opened
-it. Its initial terminal context is still copied before asynchronous activation:
-Use terminal directory reports that captured local OSC7 provenance, never later
-selection or process inspection. Closing the source terminal preserves the panel;
-window loss, backend loss and package management still retire it. Hiding the panel
-retains its state and does not cancel or replay an accepted filesystem mutation. No local report means an explicit unavailable
-result, with Home and explicit paths still usable. Views reserve a 34-DIP
-core-owned recovery strip, further intersected with the real renderer slot.
+it. In current host source, Files' explicit **Use terminal directory** request
+captures the selected live pane's last local OSC7 report at request time, rather
+than the retained view's initial invocation. Main accepts this request only from
+the visible Files panel in its focused window, without a caller-supplied target;
+a pending or ended pane, known SSH Connect pane, remote/invalid report, or
+missing local report gives an explicit unavailable result without navigating.
+An incomplete new OSC7 report does not expose the earlier one. The page starts
+at Home; Home and explicit paths remain available. There is no continuous
+following, and a later selection does not retarget a request or mutation already
+started. Other extension invocation contexts remain captured at invocation.
+
+This is the last completed report, not authenticated shell identity or current
+process inspection: any program may emit OSC7, an ordinary shell-launched SSH
+session may not be recognized, and a shell that stops reporting can leave a stale
+value. The host never configures the shell. Compatible installed Files archives
+use the updated host behavior without changing their published bytes.
+Closing the source terminal preserves the panel; window loss, backend loss and
+package management still retire it. Hiding retains state and does not cancel or
+replay accepted filesystem mutations. Views reserve a 34-DIP core-owned recovery
+strip, further intersected with the real renderer slot.
 
 Management shows registry generations and tombstones separately from local state,
 other-instance uncertainty and Pending Cleanup. Normal Quit revokes admission,
