@@ -4,9 +4,11 @@ Files is a separately installed Linux and macOS ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
 The official catalogs select Files0.6.0 for Linux and macOS ARM64, requiring
-host `>=0.24.0-dev.21` and API `0.1.x`. The [bounded macOS public-catalog
-checkpoint](#files-060-macos-public-catalog-checkpoint) passed with a locally
-built host; it does not establish public stable-host download. The earlier Linux catalog offered
+host `>=0.24.0-dev.21` and API `0.1.x`. The bounded
+[Linux](#files-060-linux-public-catalog-checkpoint) and
+[macOS](#files-060-macos-public-catalog-checkpoint) public-catalog checkpoints
+passed with locally built hosts; they do not establish public stable-host download.
+The earlier Linux catalog offered
 [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
 requiring host `>=0.24.0-dev.8`. Its exact controlled-qualified pair uses the already-public
 [host 0.24.0-dev.11](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
@@ -177,8 +179,9 @@ Files0.4.0/0.5.0 archives keep their original heading, including on a newer host
 The local macOS and Linux ARM64 host0.24.0/Files0.6 exact-pair checkpoints
 passed with controlled consent and synthetic input. The original Files0.6 archive,
 checksum and receipt were separately published and byte-verified; the receipt
-remains `not-run`. The separately passed [macOS public-catalog checkpoint](#files-060-macos-public-catalog-checkpoint)
-is not a consequence of local pairing or asset publication. The hosted-view diagnostic
+remains `not-run`. The separately passed [Linux](#files-060-linux-public-catalog-checkpoint)
+and [macOS](#files-060-macos-public-catalog-checkpoint) public-catalog checkpoints
+are not consequences of local pairing or asset publication. The hosted-view diagnostic
 in [#746](https://github.com/luizomf/omxterm/issues/746) remains unexplained.
 Never replace or republish existing versioned bytes.
 
@@ -487,6 +490,43 @@ input, controlled consent, configured endpoint rather than passive network trace
 physical/Gatekeeper/notarization, deployment-floor, native-I/O cancellation and
 main-death limits remain. Earlier primitive/local lifecycle campaigns were not
 replayed or relabeled. Original release notes retain their publication-time status.
+
+## Files 0.6.0 Linux public-catalog checkpoint
+
+🤖 AI-assisted.
+
+On 2026-11-02, an ordinary-user Ubuntu26.04 ARM64 guest used the retained,
+**locally built**, extracted OMXTerm0.24.0 AppImage (128,175,114 bytes, SHA-256
+`0dd3ff2c0ad9dc069c5c22daf735acb84633dce48e484532882f9a375b53c913`)
+with the separately published Files0.6.0 archive (17,331 bytes, SHA-256
+`50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`).
+The host was built from `8717d47327eeab14f522b1b2a448216860d0923d`, the archive
+from `cfc9073010df586eec321641ba5013862734f8fe`, and the fixture used
+`b5ca2aea6087531e523d026424ae0be35a040be3`. The fixture's
+`scripts/linux-packaged-process.mjs` stderr-truncation addition is verifier/test
+infrastructure, not host runtime; host build inputs must be compared separately
+to the final tag. The stable host was not downloaded from a public release.
+
+The independently read-back legacy catalog SHA-256 was
+`2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda`.
+The application used production HTTPS without controlled transport or local/link
+fallback. Passive observations bound the actual catalog bytes, selected snapshot
+and archive responses to three controlled Official consents at installation
+generations 0, 1 and 5. Six checks passed, covering Install/Reinstall/Install,
+dormant installation and activation, create/move/conflict, management, the same PTY/Surface and
+normal joined Quit. All three backends closed with exit 0; the main exited 0 and
+owned processes settled. Separately inspected WebContents captures showed the
+catalog actions, completed Files operation and surviving terminal.
+
+The passing run's stderr retained two Chromium negative-frame-latency diagnostics;
+no user-facing failure was demonstrated in that occurrence, but their cause and
+impact remain unknown. It did not show the earlier [#746](https://github.com/luizomf/omxterm/issues/746)
+diagnostic, which remains unexplained. Synthetic input and controlled consent,
+extracted-AppImage execution, and separate WebContents captures do not qualify
+physical input, native dialog interaction, FUSE/helper installation, compositor
+behavior, a downloaded public stable host or the full portable suite. The earlier
+local toolbar/dotfile matrix was not replayed; the original archive receipt remains
+`not-run`.
 
 ## Files 0.6.0 macOS public-catalog checkpoint
 
@@ -875,8 +915,9 @@ manual review. Unknown diagnostics, including the observed #746 presentation
 rejection, are not waived. Captures still need independent visual inspection;
 synthetic Chromium input and controlled consent do
 not qualify physical input or dialogs. A local stable host against public
-extension URLs is **not** a publicly downloaded stable host. This adapter and its
-headless tests are preparation, not a passed public checkpoint. The historical
+extension URLs is **not** a publicly downloaded stable host. The adapter and its
+headless tests alone are not a public checkpoint; the separately executed Linux
+result is recorded [above](#files-060-linux-public-catalog-checkpoint). The historical
 Files0.4 public result remains separate and unchanged. Its exact dev.11/Files0.4
 fixture path and consent checks remain available as a legacy path, without the
 new passive binding; it cannot qualify the stable pair, and the promoted endpoint

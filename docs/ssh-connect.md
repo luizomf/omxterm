@@ -37,8 +37,9 @@ uses the shared panel header. The exact Linux ARM64 host0.24.0/SSH0.3.1 local
 pair and a bounded older dev.11/local-archive pair passed with synthetic clients;
 this does not establish real SSH authentication or remote connectivity. The
 original archive/checksum/receipt were byte-verified separately, and the receipt
-remains `not-run`. Catalog promotion and public-HTTPS consumption are separate
-milestones. The stable-pair [#746](https://github.com/luizomf/omxterm/issues/746)
+remains `not-run`. Catalog promotion and the separate
+[public-HTTPS checkpoint](#ssh-031-linux-public-catalog-checkpoint) did not
+replace that receipt. The stable-pair [#746](https://github.com/luizomf/omxterm/issues/746)
 diagnostic remains unexplained.
 
 ## Installing the distributed preview
@@ -120,6 +121,44 @@ terminal capture was inspected; the two catalog captures lagged DOM transitions
 and are **not** additional visual qualification. Public lifecycle proof comes from
 actual production actions/receipts; SSH appearance evidence is the separate
 12-cell exact-package campaign above.
+
+### SSH 0.3.1 Linux public-catalog checkpoint
+
+🤖 AI-assisted.
+
+On 2026-11-02, an ordinary-user Ubuntu26.04 ARM64 guest used the retained,
+**locally built**, extracted OMXTerm0.24.0 AppImage (128,175,114 bytes, SHA-256
+`0dd3ff2c0ad9dc069c5c22daf735acb84633dce48e484532882f9a375b53c913`)
+and the separately published SSH0.3.1 archive (11,606 bytes, SHA-256
+`be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`).
+Both were built from `8717d47327eeab14f522b1b2a448216860d0923d`; the passing
+fixture used `b5ca2aea6087531e523d026424ae0be35a040be3`. The host was not
+downloaded from a public stable release. Its build inputs and the verifier-only
+stderr-truncation addition have the separate provenance described in the
+[Files Linux checkpoint](files-development-preview.md#files-060-linux-public-catalog-checkpoint).
+
+The independently read-back legacy catalog SHA-256 was
+`2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda`.
+Production HTTPS, with no controlled transport or local/link fallback, supplied
+both archive downloads. Passive observations bound the actual catalog bytes,
+selected snapshot and archive bytes to controlled Official consents at installation
+generations 0 and 1. Nine checks passed: dormant install/reinstall, activation,
+retirement and management, the retained usable PTY/Surface and normal joined Quit.
+Both backends closed with exit 0; the main exited 0 and owned processes settled.
+Separate WebContents captures showed the SSH0.3.1 Install/Reinstall cards and
+surviving terminal. No SSH client was executed.
+
+The first public attempt reached joined PTY/backend Quit but the main did not exit
+within five seconds and recovery terminated it with SIGTERM; that failed occurrence
+remains recorded. The observer incorrectly required the extensions IPC handler to
+remain present after production shutdown had removed it. Its teardown was corrected,
+and a directed subsequent run passed; the first timeout's cause was not proved.
+The passing run retained two Chromium/X portal atom-cache diagnostics in stderr.
+No user-facing failure was demonstrated in that occurrence, but their cause and
+impact remain unknown. It did not show the earlier #746 diagnostic, which remains
+unexplained. Synthetic input, controlled consent and extracted-AppImage execution do
+not qualify physical input, real SSH/authentication, FUSE/helper installation,
+compositor behavior, a downloaded public stable host or every admitted version.
 
 On an assigned idle ordinary-user Linux ARM64 guest, reuse the opt-in
 `test/integration/ssh-packaged.test.ts` with absolute `OMXTERM_SSH_PACKAGED_APPIMAGE`,
