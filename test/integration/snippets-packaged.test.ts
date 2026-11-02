@@ -51,6 +51,14 @@ it.skipIf(!enabled)(
           process.arch === "arm64"),
     );
     assert.equal(process.env.OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE, undefined);
+    assert.ok(
+      !Object.keys(process.env).some(
+        (key) =>
+          key.startsWith("OMXTERM_SNIPPETS_WINDOWS_") &&
+          process.env[key] !== undefined,
+      ),
+      "Choose one Snippets adapter",
+    );
     const values = Object.fromEntries(
       names.map((name) => {
         const value = process.env[prefix + name];

@@ -26,6 +26,13 @@ let child: EventEmitter & {
   unref: ReturnType<typeof vi.fn>;
 };
 let client: {
+  request: Mock<
+    (method: string, params?: object, timeout?: number) => Promise<unknown>
+  >;
+  scriptUrl: Mock<(id: string) => string | undefined>;
+  nextEvent: Mock<
+    (method: "Debugger.paused", timeout?: number) => Promise<unknown>
+  >;
   evaluate: Mock<(expression: string, timeout?: number) => Promise<unknown>>;
   close: Mock<() => void>;
 };
@@ -62,6 +69,9 @@ beforeEach(async () => {
     if (!(await check())) throw new Error("Timed out: " + label);
   });
   client = {
+    request: vi.fn(async () => ({})),
+    scriptUrl: vi.fn(() => undefined),
+    nextEvent: vi.fn(async () => ({})),
     evaluate: vi.fn(async (expression: string) => {
       if (expression.includes(".run(")) {
         if (mode === "inspector-lost")

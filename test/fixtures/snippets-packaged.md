@@ -2,8 +2,8 @@
 
 This fixture exercises an ordinary `.omxext` install and explicit trust through
 Settings, followed by real hosted-page requests through production semantic
-admission, presentation, Surface and PTY delivery. Source, exact-AppImage and exact-DMG
-adapters share one current ten-check scenario body. Historical nine-scenario
+admission, presentation, Surface and PTY delivery. Source, exact-AppImage, exact-DMG
+and exact-Windows staged adapters share one current ten-check scenario body. Historical nine-scenario
 receipts below remain bound to their original inputs. Adapter admission and
 headless tooling tests are not native qualification. The adapters' evidence
 remains distinct; none qualifies physical keyboards or other platforms; Linux
@@ -477,6 +477,125 @@ PID/start settlement and independent OS state before authorizing another run.
 This adapter does not repeat or supersede the delivered source qualification,
 extend published catalog admission, change immutable archives/receipts or authorize a
 release. Exact native DMG execution remains an integration-owner gate.
+
+## Exact Windows ARM64 staged adapter (provisional qualification)
+
+`test/integration/snippets-windows-exact.test.ts` is fixture-only tooling for an
+assigned Windows ARM64 desktop, not a qualification receipt. It launches the
+actual staged `OMXTerm.exe` and its unchanged `resources/app.asar`, rather than
+dependency Electron importing an ASAR entry. The source adapter above remains
+separate evidence. No package, catalog, public archive or version is changed.
+
+**The early-arm/readiness-only probe completed on Electron 43.8.1 / Node
+24.22.0, but the first ordinary exact-stage campaign failed at the controlled
+child's first-Insert receipt.** The exact Snippets GUI is not qualified. These
+outcomes do not supersede earlier source receipts or turn any failed attempt
+into a pass. First run the readiness-only probe below for a new exact pair; its
+completion is not a Snippets campaign. It must establish the real process, entry breakpoint,
+synchronous observer/readiness installation before the first window and PTY,
+first `-e` controlled-Node session, renderer ACK/mode barrier and normal joined
+Quit. The controller refuses an unidentified initial script, wrong PID/creation
+identity, wrong entry or late window, and never falls back to a later New Tab.
+The accepted startup is the first captured exact-entry module pause, before any
+controller resume, with the actual ESM loader's verified inspector-wrapped
+instantiation call. The loader source hash and call location are pinned to the
+natively checked Electron 43.8.1 / Node 24.22.0 runtime. The entry source must
+match its inspected ASAR bytes. Unknown loaders, later body breakpoints and
+bootstrap fallbacks are refused. A dependency update needs fresh native proof,
+not relaxed matching. Same-runtime ESM/CJS controls supported the instantiation
+ordering; zero current windows or newly observed PTYs alone cannot prove it.
+The owned entry breakpoint is removed before resuming.
+
+`--inspect-brk` also suspends the ConPTY output worker. A same-runtime control
+reproduced missing worker readiness; `NodeWorker.enable` alone did not release
+it. The fixture admits exactly the expected packaged node-pty worker URL and
+correlates both root forwarding acknowledgements and worker protocol replies
+before resuming its one initial startup pause. Foreign identities, missing
+replies and later pauses fail closed. No constructor, dependency, PTY data or
+input-admission path is replaced. `worker-inspector.json` records this debugger
+instrumentation; CDP detachment is not proof of thread or kernel settlement.
+Actual main exit and EOF remain mandatory.
+
+A Node-only headless inspector test and simulated controller events do not prove
+Electron's native startup ordering. If this probe fails or its evidence cannot
+establish that ordering, retain the failure and stop for owner investigation;
+do not run the campaign, retry, or reset ownership/input guards automatically.
+
+Use the native prerequisites and idle unlocked Interactive/Limited session in
+[development](../../docs/development.md#platform-prerequisites) and the Windows
+[source checkpoint](../../docs/snippets-migration.md#windows-arm64-source-transition).
+Use native ARM64 Node and a matching stage and installer built and inspected
+separately from the exact intended source. The installer is bound for comparison,
+not run by this adapter. Verify the public Snippets `0.1.0` archive independently:
+**76,653 bytes**, SHA-256
+`6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`.
+Reuse those exact bytes; never rebuild or relabel the archive or its receipt.
+Leave all source/AppImage/DMG adapter variables and other Snippets diagnostic
+flags unset. Use absolute paths; the private evidence lane must be separate from
+the stage and remain the same across attempts:
+
+```powershell
+$env:OMXTERM_SNIPPETS_WINDOWS_STAGE = 'C:\private\release\win-arm64-unpacked'
+$env:OMXTERM_SNIPPETS_WINDOWS_INSTALLER = 'C:\private\release\OMXTerm-0.24.0-dev.36-arm64.exe'
+$env:OMXTERM_SNIPPETS_WINDOWS_INSTALLER_SHA256 = (Get-FileHash -Algorithm SHA256 $env:OMXTERM_SNIPPETS_WINDOWS_INSTALLER).Hash.ToLowerInvariant()
+$env:OMXTERM_SNIPPETS_WINDOWS_ARCHIVE = 'C:\private\snippets-0.1.0.omxext'
+$env:OMXTERM_SNIPPETS_WINDOWS_VERSION = '0.24.0-dev.36'
+$env:OMXTERM_SNIPPETS_WINDOWS_EVIDENCE = 'C:\private\snippets-exact-evidence'
+
+# First, only the provisional native pause/readiness/normal-Quit probe:
+$env:OMXTERM_SNIPPETS_WINDOWS_PROBE = '1'
+npm.cmd test -- test/integration/snippets-windows-exact.test.ts
+```
+
+Inspect the fresh `run-*` directory and its `supervisor-location.json`,
+`artifacts.json`, `initial-pause.json`, `entry-pause.json`, `entry-source.js`,
+`loader-source.js`, `attachment.json`, `worker-inspector.json`, `probe.json`,
+`quit.json`, `controller.json`, the stage,
+archive, installer and controlled-Node before/after identity files, and supervisor receipt. A completed probe has `result.json` with
+`probeComplete: true` **and `passed: false`**. Confirm its actual entry URL and
+pause, PID plus creation identity, zero windows/observed PTYs at arm, the one
+initial probe PTY and readiness/ACK, joined PTY Quit, actual main exit 0, close,
+both stream EOFs, absence of the controller's captured descendants and outer
+supervisor settlement. The probe does not install
+Snippets or exercise held Enter. If the native evidence supports the ordering
+and the owner authorizes the ordinary campaign, unset the probe flag and run
+once in the **same** evidence lane:
+
+```powershell
+Remove-Item Env:\OMXTERM_SNIPPETS_WINDOWS_PROBE
+npm.cmd test -- test/integration/snippets-windows-exact.test.ts
+```
+
+No opt-in skips by default; partial or mixed inputs refuse. The ordinary command
+sets no diagnostic flags. It retains the existing shared ten checks, timeout,
+controlled approval, byte/CPR/ACK oracles, 150 ms drain, full-interaction
+no-leak assertion, and independent held-to-up Windows input observation. Inspect
+`scenario.json`, `quit.json`, `controller.json`, `pty-writes.json`,
+`native-keys.json`, `installed-child.png`, `installed-core.png`, and
+`preview.png` alongside the supervisor receipt. Screenshots require actual image
+inspection; separate WebContents captures do not establish compositor behavior.
+A successful final `result.json` requires `passed: true`; absent, malformed,
+truncated, cancelled or `finalizing` evidence is never PASS.
+
+The retained manifest identifies every stage file/directory and digest, executable,
+ASAR, entry, backend, unpacked ARM64 runtimes, installer, archive, host version,
+locked Electron/Node-PTY and the fixture's Restty parser bundle and input hashes.
+Stage links are refused rather than treating a link name as its target's bytes.
+The parser is bundled from the installed locked Restty outside the package; the
+owner must bind that fixture source/lock and build provenance to the supplied
+stage. The snapshot is an identity comparison, not a signing or build-provenance
+attestation. Stage, installer, archive and controlled Node are rechecked on success and failure;
+a killed worker may leave no final receipt, requiring manual checks. Profiles
+and private synthetic evidence are retained for owner cleanup on every outcome.
+
+The existing outer supervisor's `ownership-blocked.json` is shared by the lane.
+The Windows held-input marker has a fresh UUID and is **not** an automatic
+cross-run guard. After any failed or uncertain input, inspect its marker, OS key
+state and PID/creation settlement before any later run; a cleanup key-up is not a
+passing gesture. Do not change lanes to evade a guard or treat forced cleanup as
+normal Quit. The separate stock FULL verifier on the matching NSIS installer and
+stage remains required where applicable; it does not run installed-path Snippets
+GUI, and this staged campaign does not replace it.
 
 ## Oracles and limits
 

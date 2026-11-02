@@ -25,8 +25,9 @@ export function dmgInputs(env = process.env) {
   assert.ok(
     !Object.keys(env).some(
       (key) =>
-        /^(OMXTERM_SNIPPETS_PACKAGED_|OMXTERM_SNIPPETS_APPIMAGE_)/.test(key) &&
-        env[key] !== undefined,
+        /^(OMXTERM_SNIPPETS_PACKAGED_|OMXTERM_SNIPPETS_APPIMAGE_|OMXTERM_SNIPPETS_WINDOWS_)/.test(
+          key,
+        ) && env[key] !== undefined,
     ),
     "Choose one Snippets adapter",
   );

@@ -1,4 +1,4 @@
-// Windows source fixture only: observe the original output and renderer ACKs.
+// Windows first-session fixtures: observe the original output and renderer ACKs.
 // This never writes to a terminal or changes the forwarded output.
 const assert = require("node:assert/strict");
 const readyMarker = "\u001b[?2004lSNIPPETS_SHELL_READY\r\n";
