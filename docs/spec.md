@@ -1842,8 +1842,9 @@ This is a production-facing development module consumed by the Linux ARM64 Files
 Current Files source defaults to hiding dot-prefixed entry names and their
 expanded descendants relative to the browsing root; a typed dot-prefixed root is
 still navigable. Its localized, keyboard-accessible checked Actions menu item
-shows or hides them. Finder flags and other platform hidden metadata are not
-classified. The choice survives navigation and panel Hide/reveal for that view,
+shows or hides them. Linux and macOS use the same name rule; macOS `UF_HIDDEN`
+and other Finder metadata, and some Linux desktops' `.hidden` name lists, are
+not classified. The choice survives navigation and panel Hide/reveal for that view,
 but resets on Close/new view; no preference is persisted. Filtering does not
 mutate files, discard expanded subtrees, interrupt listing work or change an
 editor's captured target. A filtered selection is cleared and keyboard focus

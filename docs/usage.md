@@ -326,7 +326,8 @@ default. With the Files list or toolbar focused, use `Ctrl+H` on Linux or
 claims the key or the keyboard layout does not match. Shortcuts do not interrupt editing or an
 operation editor. Type a hidden directory path to open it directly. The setting
 stays while navigating or hiding the panel, but resets when the view is closed.
-It does not classify Finder flags or other platform-specific hidden metadata.
+On both Linux and macOS, the filter uses names only; it does not interpret
+macOS Finder hidden flags or the `.hidden` name lists used by some Linux desktops.
 Published archives retain their own styling and do not gain this source-only
 behavior from a host update.
 

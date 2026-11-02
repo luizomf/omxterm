@@ -208,9 +208,10 @@ available while listings load. These source changes do not alter
 already published Files archives.
 
 In current source, **Actions… → Show dotfiles (names starting with .)** is a
-checked menu item, off by default. It hides dot-prefixed entry names and their
-descendants relative to the current browsing root; it does not classify Finder
-hidden flags or other platform-specific hidden metadata. A directly entered root
+checked menu item, off by default. On both Linux and macOS, it hides dot-prefixed
+entry names and their descendants relative to the current browsing root. It does
+not interpret macOS `UF_HIDDEN` or other Finder visibility metadata, or the
+`.hidden` name lists supported by some Linux desktops. A directly entered root
 inside a dot-prefixed path remains usable, with the same filter applied to its
 children. Open Actions with Tab and Enter, then use the menu's arrow keys (or
 End) and Enter to change the setting. In short views, keyboard navigation
