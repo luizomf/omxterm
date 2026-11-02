@@ -2043,10 +2043,13 @@ Files provides an expandable local folder tree with keyboard
 navigation, discoverable Actions and item/background context menus. Its source
 navigation toolbar uses quiet icon buttons with localized accessible names and
 visible explanations on hover or focus; Go identifies Enter in the address field,
-not a global shortcut. Controls needing a root are disabled until one exists, Up
-is disabled but remains focusable at the filesystem root, and New folder is
-disabled while a mutation is pending. Refresh remains available during listing. Existing menu and destructive
-confirmation labels remain explicit. Operation editors retain captured targets.
+not a global shortcut. Explanations follow notice and language changes, hide while
+their anchor is offscreen, and do not intercept other interactive targets. Their
+unobstructed areas remain hoverable. Controls needing a root are disabled until
+one exists. Up is disabled but remains focusable at the filesystem root, and New
+folder is disabled while a mutation is pending. Refresh remains available during
+listing. Existing menu and destructive confirmation labels remain explicit.
+Operation editors retain captured targets.
 The page follows the host's explicit en-US/pt-BR
 language and relabels retained controls, accessible names, menus, confirmations and
 notices without rereading listings, replaying operations or resetting focus/caret,

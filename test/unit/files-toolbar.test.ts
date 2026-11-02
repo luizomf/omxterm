@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page";
 import type { SupportedLanguage } from "../../src/shared/i18n";
 
@@ -7,9 +7,23 @@ type Reply = Awaited<
   ReturnType<Parameters<typeof mountFilesPage>[1]["request"]>
 >;
 let dispose: (() => void) | undefined;
+// JSDOM does not lay out controls. Browser tests exercise real geometry.
+beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    x: 10,
+    y: 10,
+    left: 10,
+    top: 10,
+    right: 44,
+    bottom: 44,
+    width: 34,
+    height: 34,
+  } as DOMRect);
+});
 afterEach(() => {
   dispose?.();
   document.body.replaceChildren();
+  vi.restoreAllMocks();
 });
 const deferred = <T>() => {
   let resolve!: (value: T) => void;
@@ -89,7 +103,14 @@ function pointer(
   control: HTMLButtonElement,
   type: "pointerenter" | "pointerleave",
 ) {
-  control.parentElement!.dispatchEvent(new Event(type));
+  const target = type === "pointerenter" ? control : document.body;
+  target.dispatchEvent(
+    new MouseEvent("pointermove", {
+      bubbles: true,
+      clientX: type === "pointerenter" ? 20 : -1,
+      clientY: type === "pointerenter" ? 20 : -1,
+    }),
+  );
 }
 async function settled() {
   await vi.waitFor(() => {
@@ -212,6 +233,58 @@ it("shows one tooltip on hover or focus, dismisses it without intercepting Escap
   ).toBe(true);
 });
 
+it("retains hover on a pointer-transparent explanation, but not on underlying inputs or the tree", async () => {
+  await setup();
+  const home = button("Home");
+  const move = (target: Element) =>
+    target.dispatchEvent(
+      new MouseEvent("pointermove", {
+        bubbles: true,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+  pointer(home, "pointerenter");
+  move(document.body);
+  expect(tooltip(home).hidden).toBe(false);
+  move(document.querySelector(".location input")!);
+  expect(tooltip(home).hidden).toBe(true);
+  pointer(home, "pointerenter");
+  move(row("/root/alpha"));
+  expect(tooltip(home).hidden).toBe(true);
+  pointer(home, "pointerenter");
+  document.dispatchEvent(new Event("pointerleave"));
+  expect(tooltip(home).hidden).toBe(true);
+  home.focus();
+  document.dispatchEvent(new Event("pointerleave"));
+  expect(tooltip(home).hidden).toBe(false);
+});
+
+it("prefers renewed pointer movement without reviving an Escape-dismissed tooltip", async () => {
+  await setup();
+  const home = button("Home");
+  const actions = button("Actions…");
+  pointer(home, "pointerenter");
+  actions.focus();
+  expect(tooltip(actions).hidden).toBe(false);
+  home.parentElement!.dispatchEvent(
+    new Event("pointermove", { bubbles: true }),
+  );
+  expect(tooltip(home).hidden).toBe(false);
+  expect(tooltip(actions).hidden).toBe(true);
+  actions.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+  );
+  expect(tooltip(home).hidden).toBe(true);
+  home.parentElement!.dispatchEvent(
+    new Event("pointermove", { bubbles: true }),
+  );
+  expect(tooltip(home).hidden).toBe(true);
+  pointer(home, "pointerleave");
+  pointer(home, "pointerenter");
+  expect(tooltip(home).hidden).toBe(false);
+});
+
 it("clamps a visible tooltip to the child viewport and moves it above when needed", async () => {
   await setup();
   const control = button("Actions…");
@@ -226,15 +299,21 @@ it("clamps a visible tooltip to the child viewport and moves it above when neede
     configurable: true,
     value: 100,
   });
-  vi.spyOn(control, "getBoundingClientRect").mockReturnValue({
-    left: 142,
-    top: 60,
-    bottom: 94,
-  } as DOMRect);
-  vi.spyOn(tip, "getBoundingClientRect").mockReturnValue({
-    width: 120,
-    height: 35,
-  } as DOMRect);
+  Object.defineProperty(control, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({
+      left: 142,
+      right: 176,
+      top: 60,
+      bottom: 94,
+      width: 34,
+      height: 34,
+    }),
+  });
+  Object.defineProperty(tip, "getBoundingClientRect", {
+    configurable: true,
+    value: () => ({ width: 120, height: 35 }),
+  });
   try {
     control.focus();
     expect(tip.style.left).toBe("56px");

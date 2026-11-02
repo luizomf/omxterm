@@ -196,11 +196,15 @@ Enter/Space toggles a folder. Symbolic links remain labeled, not implicitly
 expanded. **Open directory** changes the browsing root. The source toolbar uses
 quiet icons for Home, Up, Refresh, New folder and Actions; the address field has
 an adjacent Go icon. Each has a localized accessible name and a visible,
-explanatory tooltip on hover or focus. Go also works by pressing Enter in the
+explanatory tooltip on hover or focus. Tooltip areas over other interactive
+controls do not intercept pointer input; unobstructed areas remain hoverable.
+Tooltips follow notice and language changes, and hide while their control is
+scrolled out of view. Go also works by pressing Enter in the
 address field; the other toolbar buttons have no assigned shortcuts. Up is
 disabled but remains focusable at the filesystem root, so reaching root does not
-drop focus. Controls requiring a browsing root are disabled until one is available. New folder is also disabled during a mutation;
-Refresh remains available while listings load. These source changes do not alter
+drop focus. Controls requiring a browsing root are disabled until one is
+available. New folder is also disabled during a mutation; Refresh remains
+available while listings load. These source changes do not alter
 already published Files archives.
 
 **Actions…** exposes operations for the selection; right-click an item or blank

@@ -206,6 +206,17 @@ Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/in
 - `npm run test:integration` — runs `test/integration/local-shell.test.ts` only.
 - `npx vitest list --filesOnly --json` — lists discovered test files without running them.
 
+The optional Files toolbar browser test uses an explicitly supplied headless
+Chromium executable and synthetic host/backend responses:
+
+```sh
+OMXTERM_TOOLBAR_CHROMIUM=/absolute/path/to/headless-chromium npm test -- test/integration/files-toolbar-browser.test.ts
+```
+
+It checks real browser hit-testing, scrolling and layout without Electron or a
+desktop. Set `OMXTERM_TOOLBAR_EVIDENCE` to a private output directory to retain
+synthetic screenshots. This is not native or packaged-app qualification.
+
 Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`. Confirm that the report belongs to the current invocation, and preserve it with the command, selected scope/configuration, exit status, and terminal output before another run overwrites it. A nonzero exit remains a failure regardless of JSON counters.
 
 In pinned Vitest 4.1.12:

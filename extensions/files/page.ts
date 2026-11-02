@@ -87,8 +87,10 @@ export function mountFilesPage(
     text: Label,
     severity: "info" | "success" | "warning" | "error" = "info",
   ) => {
-    const update = () =>
+    const update = () => {
       setPageNotice(notice, { text: text(messages), severity });
+      tooltips.refresh();
+    };
     labels.set(notice, update);
     update();
   };
@@ -260,6 +262,7 @@ export function mountFilesPage(
           ? m.directoryUnavailable(state.error)
           : m.entries(state.rows.length, state.truncated),
     );
+    tooltips.refresh();
   }
   const tree = createFilesTree(request, render);
   state = tree.snapshot();

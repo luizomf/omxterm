@@ -26,6 +26,7 @@ const paths: Record<Icon, readonly string[]> = {
 /** Tooltips stay in the child viewport and remain reachable from their anchor. */
 export function createFilesToolbar(document: Document) {
   const page = document.defaultView!;
+  const hints = new Map<Element, Hint>();
   let hovered: Hint | undefined;
   let focused: Hint | undefined;
   let active: Hint | undefined;
@@ -39,16 +40,26 @@ export function createFilesToolbar(document: Document) {
     const width = viewport.clientWidth || page.innerWidth;
     const height = viewport.clientHeight || page.innerHeight;
     const anchor = hint.button.getBoundingClientRect();
+    if (
+      anchor.bottom <= 0 ||
+      anchor.top >= height ||
+      anchor.right <= 0 ||
+      anchor.left >= width
+    ) {
+      hint.tooltip.hidden = true;
+      return;
+    }
+    hint.tooltip.hidden = false;
     const tip = hint.tooltip.getBoundingClientRect();
     const left = Math.max(4, Math.min(anchor.left, width - tip.width - 4));
     const below = anchor.bottom;
     const above = anchor.top - tip.height;
-    const top =
-      below + tip.height <= height - 4
-        ? below
-        : above >= 4
-          ? above
-          : Math.max(4, height - tip.height - 4);
+    const preferredTop =
+      below + tip.height <= height - 4 ? below : above >= 4 ? above : below;
+    const top = Math.max(
+      4,
+      Math.min(preferredTop, Math.max(4, height - tip.height - 4)),
+    );
     hint.tooltip.style.left = `${left}px`;
     hint.tooltip.style.top = `${top}px`;
   }
@@ -81,6 +92,42 @@ export function createFilesToolbar(document: Document) {
       update();
     }
   };
+  function pointermove(event: PointerEvent) {
+    const target = event.target as Element;
+    const wrapper = target.closest?.(".toolbar-control");
+    let next = wrapper ? hints.get(wrapper) : undefined;
+    // The painted tooltip is pointer-transparent. Retain hover over its visible
+    // rectangle only on noninteractive space; actual controls always get input.
+    if (
+      !next &&
+      active &&
+      !active.tooltip.hidden &&
+      !target.closest?.(
+        "button, input, select, textarea, a[href], [role='tree'], .operation-editor, .file-menu",
+      )
+    ) {
+      const rect = active.tooltip.getBoundingClientRect();
+      if (
+        event.clientX >= rect.left &&
+        event.clientX < rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY < rect.bottom
+      )
+        next = active;
+    }
+    if (next === hovered && (!next || preferHover || dismissed)) return;
+    if (next && next !== hovered) dismissed = false;
+    hovered = next;
+    preferHover = true;
+    update();
+  }
+  const pointerleave = () => {
+    hovered = undefined;
+    update();
+  };
+  document.addEventListener("pointerover", pointermove);
+  document.addEventListener("pointermove", pointermove);
+  document.addEventListener("pointerleave", pointerleave);
   page.addEventListener("resize", reposition);
   document.addEventListener("scroll", reposition, true);
   document.addEventListener("keydown", keydown);
@@ -112,16 +159,7 @@ export function createFilesToolbar(document: Document) {
     button.setAttribute("aria-describedby", tooltip.id);
     wrapper.append(button, tooltip);
     const hint = { wrapper, button, tooltip };
-    wrapper.addEventListener("pointerenter", () => {
-      hovered = hint;
-      preferHover = true;
-      dismissed = false;
-      update();
-    });
-    wrapper.addEventListener("pointerleave", () => {
-      if (hovered === hint) hovered = undefined;
-      update();
-    });
+    hints.set(wrapper, hint);
     wrapper.addEventListener("focusin", () => {
       focused = hint;
       preferHover = false;
@@ -148,6 +186,10 @@ export function createFilesToolbar(document: Document) {
       if (disposed) return;
       disposed = true;
       reset();
+      hints.clear();
+      document.removeEventListener("pointerover", pointermove);
+      document.removeEventListener("pointermove", pointermove);
+      document.removeEventListener("pointerleave", pointerleave);
       page.removeEventListener("resize", reposition);
       document.removeEventListener("scroll", reposition, true);
       document.removeEventListener("keydown", keydown);
