@@ -641,6 +641,14 @@ export function mountFilesPage(
     item.focus({ preventScroll: true });
     revealMenuItem(item);
   }
+  function revealFocusedMenuItem() {
+    if (disposed || menu.hidden) return;
+    const active = document.activeElement as HTMLElement | null;
+    if (active?.parentElement === menu) revealMenuItem(active);
+  }
+  // Native child bounds can change after keyboard navigation has revealed an
+  // item. Recheck the new wrapped layout without moving focus or retrying input.
+  document.defaultView?.addEventListener("resize", revealFocusedMenuItem);
   function openMenu(
     target?: Target,
     x?: number,
@@ -879,8 +887,7 @@ export function mountFilesPage(
     document.documentElement.lang = language;
     messages = filesMessages(language);
     for (const update of labels.values()) update();
-    const active = document.activeElement as HTMLElement | null;
-    if (!menu.hidden && active?.parentElement === menu) revealMenuItem(active);
+    revealFocusedMenuItem();
     tooltips.refresh();
   });
   const ready = navigateFrom("home");
@@ -896,6 +903,10 @@ export function mountFilesPage(
       tooltips.dispose();
       controlHints.clear();
       labels.clear();
+      document.defaultView?.removeEventListener(
+        "resize",
+        revealFocusedMenuItem,
+      );
       document.removeEventListener("pointerdown", dismissMenu);
       document.removeEventListener("keydown", onShortcut);
       document.removeEventListener("compositionstart", startComposition);

@@ -227,6 +227,116 @@ it.each([
   },
 );
 
+it.each([
+  ["en-US", "Actions…", 128.375],
+  ["pt-BR", "Ações…", 147.21875],
+] as const)(
+  "reveals the still-focused %s checkbox when the child viewport narrows",
+  async (locale, actionsName, narrowTop) => {
+    const { language, request } = await setup("MacIntel");
+    language(locale);
+    const address =
+      document.querySelector<HTMLInputElement>(".location input")!;
+    address.value = "/synthetic/draft";
+    address.setSelectionRange(2, 9, "backward");
+    const actions = button(actionsName);
+    actions.focus();
+    actions.click();
+    const popup = menu();
+    const item = popup.querySelector<HTMLButtonElement>(
+      '[role="menuitemcheckbox"]',
+    )!;
+    // Model a wide layout followed by the retained narrow geometry. jsdom
+    // does not establish Chromium's wrapping or the native End/resize order.
+    let width = 256;
+    vi.spyOn(popup, "getBoundingClientRect").mockImplementation(
+      () => new DOMRect(0, 8, width - 15, 166),
+    );
+    Object.defineProperties(popup, {
+      clientTop: { configurable: true, value: 1 },
+      clientHeight: { configurable: true, value: 164 },
+    });
+    vi.spyOn(item, "getBoundingClientRect").mockImplementation(
+      () =>
+        new DOMRect(
+          5,
+          (width === 256 ? 128.375 : narrowTop) - popup.scrollTop,
+          width - 40,
+          width === 256 ? 65.625 : 84.4765625,
+        ),
+    );
+    popup.scrollTop = 0;
+    key(document.activeElement as HTMLElement, "End");
+    expect(popup.scrollTop).toBe(25);
+    expect(document.activeElement).toBe(item);
+    const focus = vi.spyOn(item, "focus");
+    const reads = request.mock.calls.length;
+    width = 196;
+    expect(item.getBoundingClientRect().bottom + 4).toBeGreaterThan(173);
+    window.dispatchEvent(new Event("resize"));
+    expect(item.getBoundingClientRect().bottom + 4).toBeLessThanOrEqual(173);
+    expect(item.getBoundingClientRect().top - 4).toBeGreaterThanOrEqual(9);
+    expect(document.activeElement).toBe(item);
+    expect(focus).not.toHaveBeenCalled();
+    expect(item.getAttribute("aria-checked")).toBe("false");
+    for (const value of ["PageDown", "PageUp", "x"])
+      expect(key(item, value).defaultPrevented).toBe(false);
+    expect(address.value).toBe("/synthetic/draft");
+    expect([
+      address.selectionStart,
+      address.selectionEnd,
+      address.selectionDirection,
+    ]).toEqual([2, 9, "backward"]);
+    expect(request).toHaveBeenCalledTimes(reads);
+    item.click();
+    expect(popup.hidden).toBe(true);
+    expect(document.activeElement).toBe(actions);
+  },
+);
+
+it("does not reveal or refocus a closed, unfocused or disposed menu on resize", async () => {
+  const added = vi.spyOn(window, "addEventListener");
+  const removed = vi.spyOn(window, "removeEventListener");
+  const { visibility } = await setup("MacIntel");
+  const actions = button("Actions…");
+  actions.click();
+  const popup = menu();
+  const item = popup.querySelector<HTMLButtonElement>(
+    '[role="menuitemcheckbox"]',
+  )!;
+  key(document.activeElement as HTMLElement, "End");
+  const itemBounds = vi.spyOn(item, "getBoundingClientRect");
+  const address = document.querySelector<HTMLInputElement>(".location input")!;
+  address.focus();
+  window.dispatchEvent(new Event("resize"));
+  expect(popup.hidden).toBe(false);
+  expect(document.activeElement).toBe(address);
+  expect(itemBounds).not.toHaveBeenCalled();
+  item.focus();
+  visibility(false);
+  expect(popup.hidden).toBe(true);
+  window.dispatchEvent(new Event("resize"));
+  expect(popup.hidden).toBe(true);
+  expect(itemBounds).not.toHaveBeenCalled();
+  // Dispose while a fresh menu item is still focused. No retained window
+  // listener may reveal it after the owner disposes the view.
+  visibility(true);
+  actions.click();
+  key(document.activeElement as HTMLElement, "End");
+  const retained = document.activeElement as HTMLElement;
+  const retainedBounds = vi.spyOn(retained, "getBoundingClientRect");
+  const scroll = popup.scrollTop;
+  dispose!();
+  dispose = undefined;
+  window.dispatchEvent(new Event("resize"));
+  expect(document.activeElement).toBe(retained);
+  expect(retainedBounds).not.toHaveBeenCalled();
+  expect(popup.scrollTop).toBe(scroll);
+  for (const [type, listener] of added.mock.calls)
+    if (type === "resize")
+      expect(removed).toHaveBeenCalledWith("resize", listener);
+});
+
 it("reveals a retained focused menu item after its localized text grows", async () => {
   const { language } = await setup("MacIntel");
   button("Actions…").click();
