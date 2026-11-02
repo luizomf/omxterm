@@ -107,8 +107,8 @@ node node_modules/vitest/vitest.mjs run test/unit/restoration-native-preparation
 No Files fixture change is required. Reuse the existing **packaged lifecycle**
 selector below with an inspected Linux ARM64 **0.24.0-dev.1 AppImage** and the
 **unchanged published Files 0.1.0 archive/digest**, not a rebuilt replacement.
-Root must verify the host version: the fixture reads it from the supplied asar;
-it does not have an expected-version environment override.
+Provide the expected host version and original archive identity explicitly; the
+fixture checks those against the extracted host and captured trust prompt.
 
 ```sh
 env -u OMXTERM_FILES_PACKAGED_CATALOG -u OMXTERM_FILES_PACKAGED_CATALOG_FILE \
@@ -117,6 +117,9 @@ env -u OMXTERM_FILES_PACKAGED_CATALOG -u OMXTERM_FILES_PACKAGED_CATALOG_FILE \
   OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256=INSPECTED_HOST_SHA256 \
   OMXTERM_FILES_PACKAGED_ARCHIVE=/absolute/immutable-files-0.1.0.omxext \
   OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256=PUBLISHED_FILES_SHA256 \
+  OMXTERM_FILES_PACKAGED_VERSION=0.24.0-dev.1 \
+  OMXTERM_FILES_PACKAGED_EXTENSION_VERSION=0.1.0 \
+  OMXTERM_FILES_PACKAGED_EXTENSION_NAME='Files — Linux ARM64 preview' \
   OMXTERM_FILES_PACKAGED_EVIDENCE=/absolute/evidence/files-dev1 \
   node node_modules/vitest/vitest.mjs run test/integration/files-packaged.test.ts \
     -t 'uses separate Files through the exact packaged application and joins normal Quit'

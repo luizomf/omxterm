@@ -24,6 +24,9 @@ it
       const host = JSON.parse(await readFile("package.json", "utf8")) as {
         version: string;
       };
+      const sourceManifest: unknown = JSON.parse(
+        await readFile("extensions/files/extension.json", "utf8"),
+      );
       const output = path.join(root, "files.omxext");
       const commit = "a".repeat(40);
       const receipt = await buildFilesExtension(
@@ -65,8 +68,9 @@ it
         apiVersion: "0.1.0",
       });
       expect(validated).toEqual({ digest, manifest: receipt.manifest });
+      expect(receipt.manifest).toEqual(sourceManifest);
       expect(receipt.manifest).toMatchObject({
-        version: "0.5.0",
+        version: "0.6.0",
         engines: { omxterm: ">=0.24.0-dev.21" },
       });
       const bundled = (await import(

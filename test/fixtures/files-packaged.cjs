@@ -153,6 +153,21 @@ function verifyFilesConsent(prompt, options) {
     "trust must identify exact separate archive",
   );
   assert.match(prompt.detail, /network/);
+  if (options.linuxExpectedIdentity) {
+    assert.ok(options.extensionName && options.extensionVersion);
+    assert.match(options.archiveSha256, /^[a-f0-9]{64}$/);
+    assert.equal(
+      prompt.message,
+      `Install ${options.extensionName} ${options.extensionVersion}?`,
+      "expected Files name and version before consent",
+    );
+    assert.ok(
+      prompt.detail.includes(
+        `\n\nPackage: omxterm.files\nSHA-256: ${options.archiveSha256}\n`,
+      ),
+      "expected Files ID and exact digest before consent",
+    );
+  }
   if (options.publicCatalog)
     assert.ok(
       prompt.detail.includes(
@@ -171,6 +186,55 @@ function verifyFilesConsent(prompt, options) {
       "manifest ID before consent",
     );
   }
+}
+
+function checksCurrentFilesUi(options) {
+  return !!(
+    (options.macosLifecycle || options.linuxCurrentFilesUi) &&
+    options.extensionVersion === "0.6.0"
+  );
+}
+
+function focusLinuxFilesRow(document, expectedPath) {
+  if (!document.hasFocus()) throw Error("Files tree focus unavailable");
+  const rows = [
+    ...document.querySelectorAll(
+      '.entries[role="tree"] [role="treeitem"][data-path]',
+    ),
+  ].filter((row) => row.dataset.path === expectedPath);
+  if (rows.length !== 1 || rows[0].closest("[hidden], [inert]"))
+    throw Error("Files tree row unavailable");
+  rows[0].focus();
+  if (!document.hasFocus() || document.activeElement !== rows[0])
+    throw Error("Files tree focus unavailable");
+  return true;
+}
+
+function dispatchLinuxFilesShortcut(document, expectedPath) {
+  const row = document.activeElement;
+  if (
+    !document.hasFocus() ||
+    !document.defaultView.navigator.platform.startsWith("Linux") ||
+    !row?.matches('[role="treeitem"][data-path]') ||
+    row.dataset.path !== expectedPath ||
+    row.closest("[hidden], [inert]")
+  )
+    throw Error("Files shortcut focus unavailable");
+  const event = new document.defaultView.KeyboardEvent("keydown", {
+    key: "h",
+    code: "KeyH",
+    ctrlKey: true,
+    bubbles: true,
+    cancelable: true,
+  });
+  row.dispatchEvent(event);
+  if (
+    !event.defaultPrevented ||
+    !document.hasFocus() ||
+    document.activeElement?.dataset.path !== expectedPath
+  )
+    throw Error("Files shortcut focus or delivery changed");
+  return true;
 }
 
 async function run(options) {
@@ -196,6 +260,7 @@ async function run(options) {
   };
   const checks = [];
   let currentFilesUi = false;
+  let linuxFilesShortcut = false;
   const renderedCatalog = [];
   const destroyedListeners = [];
   function listeners(phase) {
@@ -786,7 +851,7 @@ async function run(options) {
       view.executeJavaScript(`!!${entryQuery(options.files, "source.txt")}`),
     "owned directory list",
   );
-  if (options.macosLifecycle && options.extensionVersion === "0.6.0") {
+  if (checksCurrentFilesUi(options)) {
     assert.equal(
       await js("document.querySelector('.auxiliary-header h2')?.textContent"),
       "Files",
@@ -863,6 +928,38 @@ async function run(options) {
         })()`),
         ["unsubmitted address", 2, 8, "backward"],
       );
+    }
+    if (options.linuxCurrentFilesUi) {
+      await panel(view, true, "child");
+      const sourcePath = path.join(options.files, "source.txt");
+      assert.equal(
+        await view.executeJavaScript(
+          `(${focusLinuxFilesRow.toString()})(document, ${JSON.stringify(sourcePath)})`,
+        ),
+        true,
+        "owned Files tree row has child focus",
+      );
+      for (const shown of [true, false]) {
+        assert.equal(
+          await view.executeJavaScript(
+            `(${dispatchLinuxFilesShortcut.toString()})(document, ${JSON.stringify(sourcePath)})`,
+          ),
+          true,
+        );
+        await until(
+          () => view.executeJavaScript(`${dotfile} === ${shown}`),
+          "Linux Ctrl+H dotfile visibility",
+        );
+        assert.deepEqual(
+          await view.executeJavaScript(`(() => {
+            const input = document.querySelector('form.location input');
+            return [input.value, input.selectionStart, input.selectionEnd, input.selectionDirection];
+          })()`),
+          ["unsubmitted address", 2, 8, "backward"],
+        );
+        await panel(view, true, "child");
+      }
+      linuxFilesShortcut = true;
     }
     await view.executeJavaScript(
       `document.querySelector('form.location input').value = ${JSON.stringify(options.files)}`,
@@ -1090,6 +1187,8 @@ async function run(options) {
     await cleanup();
   }
   if (currentFilesUi) checks.push("current-Files-toolbar-dotfiles-draft");
+  if (linuxFilesShortcut)
+    checks.push("linux-Files-Ctrl-H-dotfiles-draft-focus");
   const result = {
     renderedCatalog,
     destroyedListeners,
@@ -1103,6 +1202,12 @@ async function run(options) {
     checks,
     approvals,
     archiveSha256: options.archiveSha256,
+    ...(options.linuxExpectedIdentity
+      ? {
+          extensionVersion: options.extensionVersion,
+          extensionName: options.extensionName,
+        }
+      : {}),
     ...(options.publicCatalog
       ? {
           publicCatalog: {
@@ -1156,6 +1261,10 @@ async function run(options) {
 
 module.exports = {
   inspect,
+  verifyFilesConsent,
+  checksCurrentFilesUi,
+  focusLinuxFilesRow,
+  dispatchLinuxFilesShortcut,
   run,
   cleanup,
   assertNormalBackendRetirement,

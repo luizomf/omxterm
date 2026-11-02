@@ -126,7 +126,7 @@ npm test -- test/integration/ssh-packaged.test.ts
 ```
 
 `OMXTERM_SSH_PACKAGED_EXTENSION_VERSION` selects the expected archive version
-(default `0.1.0`). With version `0.3.0`, optional
+(default `0.1.0`). With version `0.3.0` or `0.3.1`, optional
 `OMXTERM_SSH_PACKAGED_APPEARANCE=1` adds normal/narrow dark/light opacity and
 visible/hidden language checks before the synthetic Connect campaign. It requires
 an assigned single-screen desktop lane, retains captures for visual inspection,
@@ -134,6 +134,9 @@ and does not establish native blur in a noncomposited nested lane. It cannot be
 combined with public-catalog mode. Exact-package appearance/language qualification
 is separate from public catalog consumption; neither a source build nor the
 historical compact 0.2.0 rendering campaign proves a new archive's Connect behavior.
+The explicit `0.24.0` / `0.3.1` pair also checks captured trust identity and the
+visible host header, named child region and controls, retaining separate host and
+child images for inspection. This does not qualify other compatible host versions.
 
 The public mode verifies a separate fixed-endpoint readback, then the unchanged
 packaged app independently browses the production endpoint and installs the SSH

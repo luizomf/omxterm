@@ -49,12 +49,15 @@ beforeEach(async () => {
   await fs.writeFile(path.join(root, "stage/OMXTerm.exe"), "stage-before");
   await fs.writeFile(path.join(root, "installer.exe"), "installer");
   await fs.writeFile(path.join(root, "archive.omxext"), "archive");
+  const source = JSON.parse(await fs.readFile("package.json", "utf8")) as {
+    version: string;
+  };
   values = {
     STAGE: path.join(root, "stage"),
     INSTALLER: path.join(root, "installer.exe"),
     INSTALLER_SHA256: createHash("sha256").update("installer").digest("hex"),
     ARCHIVE: path.join(root, "archive.omxext"),
-    VERSION: "0.24.0-dev.36",
+    VERSION: source.version,
     EVIDENCE: path.join(root, "lane"),
     probe: false,
   };
@@ -158,6 +161,7 @@ it("rejects a stage changed after the controlled normal campaign and preserves a
       onTestFinished: () => {},
     }),
   ).rejects.toThrow();
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
   )!;
@@ -176,6 +180,7 @@ it("still rechecks and retains a changed stage after a supervisor failure", asyn
       onTestFinished: () => {},
     }),
   ).rejects.toThrow();
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
   )!;
@@ -185,6 +190,7 @@ it("still rechecks and retains a changed stage after a supervisor failure", asyn
   ) as { passed: boolean; failures: string[] };
   expect(result.passed).toBe(false);
   expect(result.failures.join("\n")).toContain("stage changed");
+  expect(result.failures.join("\n")).toContain("parent-disconnected");
   expect((await fs.stat(path.join(dir, "stage-after.json"))).isFile()).toBe(
     true,
   );
@@ -202,6 +208,7 @@ it("requires the controlled normal result and retains the profile and identity m
     signal: abort.signal,
     onTestFinished: () => {},
   });
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
   )!;
@@ -246,6 +253,8 @@ it("rejects a changed controlled-Node executable identity after a normal run", a
       onTestFinished: () => {},
     }),
   ).rejects.toThrow();
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
+  expect(nodeReads).toBe(2);
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
   )!;
@@ -272,6 +281,10 @@ it("refuses a packaged/runtime identity mismatch before starting the supervisor"
       onTestFinished: () => {},
     }),
   ).rejects.toThrow();
+  expect(identity.inspectWindowsStage).toHaveBeenCalledExactlyOnceWith(
+    await fs.realpath(values.STAGE),
+    values.VERSION,
+  );
   expect(runner.runNativeFixture).not.toHaveBeenCalled();
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
@@ -285,6 +298,48 @@ it("refuses a packaged/runtime identity mismatch before starting the supervisor"
   );
 });
 
+it("refuses an explicit source/packaged version mismatch before the supervisor", async () => {
+  values.VERSION = "999.0.0";
+  const source = JSON.parse(await fs.readFile("package.json", "utf8")) as {
+    version: string;
+  };
+  expect(source.version).not.toBe(values.VERSION);
+  await expect(
+    runWindowsExactCampaign(values, {
+      signal: abort.signal,
+      onTestFinished: () => {},
+    }),
+  ).rejects.toThrow("Exact Windows Snippets campaign failed");
+  expect(identity.inspectWindowsStage).toHaveBeenCalledExactlyOnceWith(
+    await fs.realpath(values.STAGE),
+    values.VERSION,
+  );
+  expect(runner.runNativeFixture).not.toHaveBeenCalled();
+  const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
+    name.startsWith("run-"),
+  )!;
+  const dir = path.join(values.EVIDENCE, run);
+  const result = JSON.parse(
+    await fs.readFile(path.join(dir, "result.json"), "utf8"),
+  ) as {
+    passed: boolean;
+    failures: string[];
+  };
+  expect(result.passed).toBe(false);
+  expect(result.failures).toHaveLength(1);
+  expect(result.failures[0]).toContain("source/packaged host version mismatch");
+  for (const file of [
+    "stage-after.json",
+    "archive-after.json",
+    "installer-after.json",
+    "node-after.json",
+  ])
+    expect((await fs.stat(path.join(dir, file))).isFile()).toBe(true);
+  await expect(fs.stat(path.join(dir, "artifacts.json"))).rejects.toMatchObject(
+    { code: "ENOENT" },
+  );
+});
+
 it("records a completed readiness-only probe without claiming qualification", async () => {
   mode = "normal";
   values.probe = true;
@@ -292,6 +347,7 @@ it("records a completed readiness-only probe without claiming qualification", as
     signal: abort.signal,
     onTestFinished: () => {},
   });
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
   )!;
@@ -299,6 +355,12 @@ it("records a completed readiness-only probe without claiming qualification", as
   expect(
     JSON.parse(await fs.readFile(path.join(dir, "result.json"), "utf8")),
   ).toMatchObject({ passed: false, probeComplete: true });
+  expect(
+    JSON.parse(await fs.readFile(path.join(dir, "probe.json"), "utf8")),
+  ).toMatchObject({
+    classification: "early-arm-probe-not-qualification",
+    ready: true,
+  });
   await expect(fs.stat(path.join(dir, "scenario.json"))).rejects.toMatchObject({
     code: "ENOENT",
   });
@@ -321,13 +383,19 @@ it("rejects cancellation during the final stage identity check", async () => {
       onTestFinished: () => {},
     }),
   ).rejects.toThrow();
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
+  expect(snapshots).toBe(3);
+  expect(abort.signal.reason).toMatchObject({
+    message: "final identity cancelled",
+  });
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
   )!;
   const result = JSON.parse(
     await fs.readFile(path.join(values.EVIDENCE, run, "result.json"), "utf8"),
-  ) as { passed: boolean };
+  ) as { passed: boolean; failures: string[] };
   expect(result.passed).toBe(false);
+  expect(result.failures.join("\n")).toContain("final identity cancelled");
 });
 
 it("does not leave a successful probe checkpoint if final publication fails", async () => {
@@ -345,6 +413,7 @@ it("does not leave a successful probe checkpoint if final publication fails", as
       onTestFinished: () => {},
     }),
   ).rejects.toThrow("final publication failed");
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
   )!;
@@ -355,6 +424,14 @@ it("does not leave a successful probe checkpoint if final publication fails", as
     passed: false,
     probeComplete: false,
     finalizing: true,
+  });
+  expect(
+    JSON.parse(
+      await fs.readFile(path.join(values.EVIDENCE, run, "probe.json"), "utf8"),
+    ),
+  ).toMatchObject({
+    classification: "early-arm-probe-not-qualification",
+    ready: true,
   });
 });
 
@@ -374,6 +451,7 @@ it("uses the existing shared lane guard rather than launching over unresolved ow
       onTestFinished: () => {},
     }),
   ).rejects.toThrow();
+  expect(runner.runNativeFixture).toHaveBeenCalledOnce();
   expect(await fs.readFile(marker, "utf8")).toBe("retained-owner");
   const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
     name.startsWith("run-"),
@@ -388,31 +466,63 @@ it("uses the existing shared lane guard rather than launching over unresolved ow
 });
 
 it.each([
-  "archive-change",
-  "installer-change",
-  "cancelled",
-  "supervisor-lost",
-  "no-eof",
-  "truncated",
-  "missing-scenario",
-  "truncated-scenario",
-  "forced-cleanup",
-])(
+  ["archive-change", "archive changed"],
+  ["installer-change", "installer changed"],
+  ["cancelled", "cancelled"],
+  ["supervisor-lost", "parent-disconnected"],
+  ["no-eof", "stderrEnded"],
+  ["truncated", "truncated"],
+  ["missing-scenario", "ENOENT"],
+  ["truncated-scenario", "SyntaxError"],
+  ["forced-cleanup", "false !== true"],
+] as const)(
   "retains non-success for %s even with controlled zero exits",
-  async (selected) => {
+  async (selected, expectedFailure) => {
     mode = selected;
     await expect(
       runWindowsExactCampaign(values, {
         signal: abort.signal,
         onTestFinished: () => {},
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow("Exact Windows Snippets campaign failed");
+    expect(runner.runNativeFixture).toHaveBeenCalledOnce();
     const run = (await fs.readdir(values.EVIDENCE)).find((name) =>
       name.startsWith("run-"),
     )!;
+    const dir = path.join(values.EVIDENCE, run);
     const result = JSON.parse(
-      await fs.readFile(path.join(values.EVIDENCE, run, "result.json"), "utf8"),
-    ) as { passed: boolean };
+      await fs.readFile(path.join(dir, "result.json"), "utf8"),
+    ) as { passed: boolean; failures: string[] };
     expect(result.passed).toBe(false);
+    expect(result.failures.join("\n")).toContain(expectedFailure);
+    if (selected === "archive-change")
+      expect(await fs.readFile(values.ARCHIVE, "utf8")).toBe(
+        "changed-after-launch",
+      );
+    if (selected === "installer-change")
+      expect(await fs.readFile(values.INSTALLER, "utf8")).toBe(
+        "changed-after-launch",
+      );
+    if (selected === "cancelled")
+      expect(abort.signal.reason).toMatchObject({ message: "cancelled" });
+    if (selected === "no-eof" || selected === "truncated") {
+      const controller = JSON.parse(
+        await fs.readFile(path.join(dir, "controller.json"), "utf8"),
+      ) as { stderrEnded: boolean; truncated: boolean };
+      expect(controller.stderrEnded).toBe(selected !== "no-eof");
+      expect(controller.truncated).toBe(selected === "truncated");
+    }
+    if (selected === "missing-scenario")
+      await expect(
+        fs.stat(path.join(dir, "scenario.json")),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+    if (selected === "truncated-scenario")
+      expect(await fs.readFile(path.join(dir, "scenario.json"), "utf8")).toBe(
+        '{"checks":',
+      );
+    if (selected === "forced-cleanup")
+      expect(
+        JSON.parse(await fs.readFile(path.join(dir, "quit.json"), "utf8")),
+      ).toEqual({ joined: false });
   },
 );
