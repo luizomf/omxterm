@@ -3,7 +3,7 @@
 export function createApplicationPage(
   document: Document,
   parts: {
-    readonly title: HTMLElement;
+    readonly title?: HTMLElement;
     readonly actions?: HTMLElement;
     readonly navigation?: HTMLElement;
     readonly notice?: HTMLElement;
@@ -13,11 +13,13 @@ export function createApplicationPage(
 ): HTMLElement {
   const page = document.createElement("div");
   page.className = "application-page";
-  const header = document.createElement("header");
-  header.className = "application-page-header";
-  header.append(parts.title);
-  if (parts.actions) header.append(parts.actions);
-  page.append(header);
+  if (parts.title || parts.actions) {
+    const header = document.createElement("header");
+    header.className = "application-page-header";
+    if (parts.title) header.append(parts.title);
+    if (parts.actions) header.append(parts.actions);
+    page.append(header);
+  }
   for (const [slot, element] of [
     ["notice", parts.notice],
     ["navigation", parts.navigation],

@@ -46,11 +46,8 @@ export function mountFilesPage(
       if (element.contains(bound)) labels.delete(bound);
     element.replaceChildren();
   }
-  const title = document.createElement("div");
-  const heading = document.createElement("h1");
-  label(heading, (m) => m.title);
-  title.append(heading);
   const notice = document.createElement("div");
+  notice.hidden = true;
   notice.setAttribute("role", "status");
   notice.setAttribute("aria-live", "polite");
   const content = document.createElement("section");
@@ -623,11 +620,11 @@ export function mountFilesPage(
     void navigate(address.value);
   });
   content.append(toolbar, location, entries);
-  document.body.append(
-    createApplicationPage(document, { title, notice, content, status }),
-    editor,
-    menu,
-  );
+  // The host supplies the visible tool identity; retain a named child region.
+  const page = createApplicationPage(document, { notice, content, status });
+  page.setAttribute("role", "region");
+  label(page, (m) => m.title, "aria-label");
+  document.body.append(page, editor, menu);
   // Native Escape belongs to the companion host, not this DOM menu. Hiding
   // dismisses transient menus while operation drafts remain retained.
   const unsubscribeVisibility = bridge.onVisibility?.((visible) => {

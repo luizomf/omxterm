@@ -295,7 +295,11 @@ Optional `toggleFiles` and `toggleSshConnect` shortcuts can be configured in
 **Settings → Shortcuts**; neither has a default binding. They use the same tool
 entry points, once per key press. Missing or disabled tools do not consume their
 configured key or install/enable themselves.
-The panel's labeled buttons switch between opened tools without closing them.
+In current source, one open tool is named in the panel header. With multiple
+open tools, the header's labeled buttons identify and switch between them without
+closing them; buttons wrap in a narrow panel. The Files and SSH Connect source
+pages rely on that host identity, but already published extension archives retain
+their own headings. Updating only the host does not update those packages.
 **Hide panel** (−) or Escape retains their state. **Close tool** (×) closes the
 selected tool and hides the panel, retaining any other open tools. Invoking a
 tool's ordinary entry point closes it only when it is already selected and

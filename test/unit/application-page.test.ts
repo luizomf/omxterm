@@ -34,6 +34,13 @@ it("composes optional navigation and an in-flow action without replacing supplie
   expect(action.classList.contains("page-button-primary")).toBe(true);
 });
 
+it("omits the header when a caller supplies neither a title nor actions", () => {
+  const content = document.createElement("section");
+  const page = createApplicationPage(document, { content });
+  expect(page.querySelector(".application-page-header")).toBeNull();
+  expect(page.querySelector(".application-page-content")).toBe(content);
+});
+
 it.each(["en-US", "pt-BR"] as const)(
   "keeps symlink recovery external in %s, with retained error semantics",
   async (locale) => {

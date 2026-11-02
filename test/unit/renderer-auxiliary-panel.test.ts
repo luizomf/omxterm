@@ -516,7 +516,7 @@ describe("window auxiliary panel", () => {
     a.panel.toggle("a");
     a.panel.toggle("b");
     a.key("Home");
-    a.root.querySelector<HTMLButtonElement>("button")!.click();
+    a.root.querySelector<HTMLButtonElement>(".auxiliary-close")!.click();
     expect(a.root.hidden).toBe(false);
     expect(a.root.inert).toBe(true);
     expect(a.factories[1]!.create).not.toHaveBeenCalled();
@@ -532,7 +532,7 @@ describe("window auxiliary panel", () => {
       f.panel.toggle("a");
       const target =
         key === "Enter"
-          ? f.root.querySelector("button")!
+          ? f.root.querySelector<HTMLButtonElement>(".auxiliary-close")!
           : f.root.querySelector("input")!;
       expect(f.key(key, target).defaultPrevented).toBe(true);
       expect(f.root.hidden).toBe(true);

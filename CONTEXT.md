@@ -149,8 +149,11 @@ Alt. It does not change application shortcut recording or matching.
 
 **Auxiliary Panel** — One window-owned, nonmodal host (right by default) shared by
 Snippets and explicitly opened companion tools, with one visible view at a time.
-It owns independent tool closure and retained panel hiding, focus and
-pointer/keyboard resizing; width and visibility are memory-only. Settings → Window
+Its header shows the tool name when alone, or an in-header selector when several
+are open. It does not suppress extension-owned content; older immutable Files/SSH
+archives can retain their own headings. It owns independent tool closure,
+retained panel hiding, focus and pointer/keyboard resizing; width and visibility
+are memory-only. Settings → Window
 persists `window.auxiliaryPanelSide` (`left`/`right`) and applies it live across
 windows without replacing views or changing their focus/state. Close disposes
 the selected tool view, not its extension backend or previously created terminal

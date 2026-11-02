@@ -166,7 +166,13 @@ overwritten. The archive includes its MIT license. Version and compatibility com
 selects the original0.4.0 archive; the new macOS endpoint selects original0.5.0.
 Neither is rebuilt from the catalog commit.
 The historical 0.1.0 release remains immutable; building source alone does not
-update the published catalog.
+update the published catalog. Current source removes the Files page's redundant
+visible identity in favor of the host's panel header, while retaining a named
+child region. Published Files0.4.0/0.5.0 archives keep their original heading,
+including on a newer host. The changed source has not been published or qualified
+as a new Files package. Before distributing it, the release owner must assign a
+new version and qualify the intended host/archive pair and compatibility range;
+do not replace or republish existing versioned bytes.
 
 Files 0.4.0 retains compact shared controls and a read-only host appearance
 subscription. Its base surface reveals the parent window's theme tint; text,

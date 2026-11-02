@@ -29,12 +29,10 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const unsubscribeAppearance = mountHostedAppearance(document, bridge);
   const window = document.defaultView!;
   const lifetime = new window.AbortController();
-  const title = document.createElement("div");
-  const heading = document.createElement("h1");
-  heading.textContent = "SSH Connect";
   const subtitle = document.createElement("p");
-  title.append(heading, subtitle);
+  subtitle.className = "ssh-subtitle";
   const notice = document.createElement("div");
+  notice.hidden = true;
   notice.setAttribute("role", "status");
   notice.setAttribute("aria-live", "polite");
   const content = document.createElement("section");
@@ -69,6 +67,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const explanation = document.createElement("p");
   explanation.className = "ssh-explanation";
   content.append(
+    subtitle,
     quickSection,
     aliasHeading,
     toolbar,
@@ -77,7 +76,10 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     rows,
     explanation,
   );
-  const page = createApplicationPage(document, { title, notice, content });
+  // The host supplies the visible tool identity; retain a named child region.
+  const page = createApplicationPage(document, { notice, content });
+  page.setAttribute("role", "region");
+  page.setAttribute("aria-label", "SSH Connect");
   document.body.append(page);
   let aliases: string[] = [];
   let revision = 0;

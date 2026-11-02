@@ -64,11 +64,11 @@ export async function fixture() {
     bridge,
     sshPane,
     focus,
-    open(id = "files", panel = true, toggle = false) {
+    open(id = "files", panel = true, toggle = false, title = id) {
       for (const listener of opens)
         listener({
           id,
-          title: id,
+          title,
           ...(toggle ? { toggle: true as const } : {}),
           ...(panel ? { presentation: "panel" as const } : {}),
         });

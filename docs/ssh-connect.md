@@ -28,7 +28,13 @@ and pending operations without rediscovery or automatic connection retries.
 Alias names and connection targets remain literal, untranslated data.
 Version 0.3.0 is now separately published; the historical 0.1.0 archive remains
 immutable. Updating the host alone does not update a separately installed extension:
-review and deliberately install the newer extension.
+review and deliberately install the newer extension. Current source leaves the
+visible SSH Connect identity to the host header while retaining its named child
+region and OpenSSH sections. Published archives keep their original heading,
+including on a newer host. This source change is not a published or qualified
+package: before distribution, the release owner must assign a new version and
+qualify the intended host/archive pair and compatibility range rather than
+replace existing bytes.
 
 ## Installing the distributed preview
 

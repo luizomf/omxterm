@@ -195,6 +195,7 @@ export const brazilianPortugueseMessages: Readonly<
   "panel.width": "{width} pixels de largura",
   "panel.close": "Fechar ferramenta",
   "panel.hide": "Ocultar painel auxiliar",
+  "panel.tools": "Ferramentas abertas",
   "panel.tooNarrow": "Alargue a janela para abrir {view}",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Buscar snippets",

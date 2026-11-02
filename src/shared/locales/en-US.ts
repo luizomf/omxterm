@@ -184,6 +184,7 @@ export const englishMessages = {
   "panel.width": "{width} pixels wide",
   "panel.close": "Close tool",
   "panel.hide": "Hide auxiliary panel",
+  "panel.tools": "Open tools",
   "panel.tooNarrow": "Widen the window to open {view}",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Search snippets",

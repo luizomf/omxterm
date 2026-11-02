@@ -421,7 +421,7 @@ body.tabs-visible .terminal-tab {
   white-space: nowrap;
 }
 
-.auxiliary-header button {
+.auxiliary-header > button {
   flex: none;
   width: 28px;
   height: 28px;
@@ -456,14 +456,20 @@ body.tabs-visible .terminal-tab {
 
 .auxiliary-tools {
   display: flex;
-  flex: none;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   gap: 4px;
+  min-width: 0;
 }
 
 .auxiliary-tools button {
+  max-width: 100%;
+  min-height: 28px;
   padding: 4px 8px;
+  overflow: hidden;
   font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: inherit;
   background: transparent;
   border: 1px solid transparent;

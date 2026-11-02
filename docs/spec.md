@@ -566,10 +566,17 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   optional-tool explanation and the actual installation/runtime status, without
   installing, enabling or executing code. Settings and modal owners remain no-op
   targets. Runtime failure never restores a competing built-in implementation. Installed Files and SSH Connect share this
-  panel after explicit activation through their existing actions. A labeled tool
-  switcher selects among opened tools; one view is visible at a time.
-  Each tool's ordinary entry point closes it when selected and visible; otherwise
-  it opens or reveals that tool. Switcher buttons select without closing.
+  panel after explicit activation through their existing actions. With one open
+  tool the header shows its name; with multiple tools the labeled, wrapping
+  switcher occupies that same header and identifies the selected tool without a
+  second host title. One view is visible at a time. The host retains its panel
+  accessible name and does not inspect or strip extension content. The Files and
+  SSH Connect source pages leave visible tool identity to the host, retaining
+  named child regions and meaningful content sections. Installed older archives
+  retain their own headings even with a newer host; source changes do not update
+  immutable packages. Each tool's ordinary entry point closes it when selected
+  and visible; otherwise it opens or reveals that tool. Switcher buttons select
+  without closing.
   Header Close closes only the selected tool and hides the panel; other open
   tools remain retained. Built-in Snippets disposes its view but keeps its lazy
   factory available. Native tool close retires its view through the existing

@@ -73,9 +73,9 @@ export function createAuxiliaryPanel(
   let blocked = false;
   let statusTimer: number | undefined;
   let narrowView: AuxiliaryViewDefinition | undefined;
-  const { separator, title, close, hideButton, body, status } =
+  const { separator, header, title, close, hideButton, body, status } =
     createPanelElements(root);
-  const tools = createPanelTools(body, definitions, opened, show);
+  const tools = createPanelTools(header, title, definitions, opened, show);
   const renderTools = () => tools(current, language.t);
   const renderNarrowNotice = (t: Translate) => {
     if (narrowView)
@@ -302,18 +302,21 @@ function labelOf(definition: AuxiliaryViewDefinition, t: Translate) {
 }
 
 function createPanelTools(
-  body: HTMLElement,
+  header: HTMLElement,
+  title: HTMLElement,
   definitions: ReadonlyMap<string, AuxiliaryViewDefinition>,
   opened: ReadonlySet<string>,
   show: (id: string) => void,
 ) {
-  const document = body.ownerDocument;
+  const document = header.ownerDocument;
   const switcher = document.createElement("nav");
   switcher.className = "auxiliary-tools";
-  body.before(switcher);
+  title.after(switcher);
   const buttons = new Map<string, HTMLButtonElement>();
   return (selected: string | undefined, t: Translate) => {
     switcher.hidden = opened.size < 2;
+    title.hidden = !switcher.hidden;
+    switcher.setAttribute("aria-label", t("panel.tools"));
     for (const [id, button] of buttons) {
       if (!opened.has(id)) {
         button.remove();
@@ -331,6 +334,7 @@ function createPanelTools(
         switcher.append(button);
       }
       button.textContent = labelOf(definition, t);
+      button.title = button.textContent;
       button.setAttribute("aria-pressed", String(definition.id === selected));
     }
   };
@@ -367,5 +371,5 @@ function createPanelElements(root: HTMLElement) {
   status.setAttribute("role", "status");
   status.hidden = true;
   document.body.append(status);
-  return { separator, title, close, hideButton, body, status };
+  return { separator, header, title, close, hideButton, body, status };
 }

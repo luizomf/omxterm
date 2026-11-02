@@ -1,5 +1,10 @@
 @import "../shared/appearance.css";
 
+.ssh-subtitle {
+  margin: 0 0 12px;
+  color: var(--ui-secondary);
+  font-size: 11px;
+}
 .quick-connect,
 .alias-toolbar {
   display: flex;

@@ -82,6 +82,23 @@ describe("Terminal Tab theme", () => {
   );
 });
 
+describe("Auxiliary Panel header", () => {
+  it("keeps the selector and its controls usable at narrow widths", () => {
+    const tools = ruleBody(".auxiliary-tools");
+    expect(declaration(tools, "flex-wrap")).toBe("wrap");
+    expect(declaration(tools, "min-width")).toBe("0");
+    const button = ruleBody(".auxiliary-tools button");
+    expect(declaration(button, "max-width")).toBe("100%");
+    expect(declaration(button, "text-overflow")).toBe("ellipsis");
+    expect(
+      declaration(ruleBody(".auxiliary-tools button:focus-visible"), "outline"),
+    ).toContain("2px");
+    expect(declaration(ruleBody(".auxiliary-header > button"), "width")).toBe(
+      "28px",
+    );
+  });
+});
+
 describe("Pane and auxiliary separator presentation", () => {
   it("shares 1px paint and neutral hover/drag while retaining resize geometry", () => {
     expect(declaration(ruleBody(".terminal-pane-divider"), "flex")).toBe(
