@@ -154,6 +154,14 @@ describe("tab selection busy counts", () => {
     expect(view.hasBusySelectedSession()).toBe(false);
   });
 
+  it("clears the previous active pane while a newly selected pane is unavailable", () => {
+    const view = selection([]);
+    view.tabSelected({ sessionId: "s1", tabSessionIds: ["s1"] });
+    view.tabSelected({ sessionId: "s4", tabSessionIds: ["s4"] });
+    expect(view.reject).not.toHaveBeenCalled();
+    expect(view.onSessionSelected).toHaveBeenLastCalledWith(null);
+  });
+
   it("ignores ended panes and rejects malformed selections", () => {
     const view = selection(["s2"]);
     view.tabSelected({ sessionId: "s1", tabSessionIds: ["s1", "s2"] });
@@ -190,6 +198,24 @@ describe("working directory tracker", () => {
     view.observe("s1", "\u001b]7;file:///srv/other\u001b");
     view.observe("s1", "\\done");
     expect(view.inherited("s1")).toBe("/srv/other");
+  });
+
+  it("cannot infer an unreported directory change from ordinary output", () => {
+    const view = tracker();
+    expect(view.reported("s1")).toBeUndefined();
+    view.observe("s1", "\u001b]7;file:///srv/project\u0007");
+    view.observe("s1", "ordinary output without a directory report");
+    expect(view.reported("s1")).toBe("/srv/project");
+  });
+
+  it("does not expose the previous directory while a new report is incomplete", () => {
+    const view = tracker();
+    view.observe("s1", "\u001b]7;file:///srv/project\u0007");
+    expect(view.reported("s1")).toBe("/srv/project");
+    view.observe("s1", "\u001b]7;file://remote/srv");
+    expect(view.reported("s1")).toBeUndefined();
+    view.observe("s1", "/project\u0007");
+    expect(view.reported("s1")).toBeUndefined();
   });
 
   it("invalidates the previous cwd when an oversized report's terminator arrives later", () => {

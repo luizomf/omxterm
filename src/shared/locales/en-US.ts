@@ -308,6 +308,12 @@ export const englishMessages = {
   "mirrorTyping.focusLivePane": "Focus a live pane, then open Mirror Typing.",
   "mirrorTyping.needTwoPanes":
     "Open at least two live panes in one tab, then open Mirror Typing.",
+  "extensions.noActiveTerminalDirectory":
+    "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
+  "extensions.activeTerminalChanged":
+    "The active terminal changed or could not be confirmed. Try again",
+  "extensions.terminalDirectoryBusy":
+    "A terminal directory request is already in progress. Try again",
   "extensions.unavailable": "Extension unavailable",
   "extensions.unavailableDetail":
     "Refresh Extensions in Settings to inspect the installed state. No operation was automatically retried.",

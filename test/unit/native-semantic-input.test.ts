@@ -67,12 +67,14 @@ function fixture() {
       overlays.push({ open, ...(refused ? { refused } : {}) }),
   });
   const revision = vi.fn(() => 7);
+  const selectedSession = vi.fn<() => string | undefined>(() => "s1");
   const restore = vi.fn(() => true);
   const dispose = subscribeNativeSemanticInput(
     bridge,
     input,
     revision,
     restore,
+    selectedSession,
   );
   cleanups.push(dispose, input.preview.dispose);
   const command = (value: unknown) =>
@@ -85,11 +87,44 @@ function fixture() {
     capture,
     input,
     revision,
+    selectedSession,
     overlays,
     restore,
     dispose,
   };
 }
+it("confirms the exact renderer session and revision without transferring input", () => {
+  const f = fixture();
+  const command = {
+    kind: "confirm-selection",
+    id,
+    revision: 7,
+    sessionId: "s1",
+  };
+  f.command(command);
+  expect(f.ipc.send).toHaveBeenLastCalledWith(semanticInputIpc.reply, {
+    kind: "finished",
+    id,
+    available: true,
+  });
+  f.selectedSession.mockReturnValue("s2");
+  f.command(command);
+  expect(f.ipc.send).toHaveBeenLastCalledWith(semanticInputIpc.reply, {
+    kind: "finished",
+    id,
+    available: false,
+  });
+  f.selectedSession.mockReturnValue("s1");
+  f.revision.mockReturnValue(8);
+  f.command(command);
+  expect(f.ipc.send).toHaveBeenLastCalledWith(semanticInputIpc.reply, {
+    kind: "finished",
+    id,
+    available: false,
+  });
+  expect(f.capture).not.toHaveBeenCalled();
+});
+
 it("rejects a changed core selection in transit and malformed commands before capture", () => {
   const f = fixture();
   f.revision.mockReturnValue(8);

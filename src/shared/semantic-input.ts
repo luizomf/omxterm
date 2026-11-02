@@ -1,4 +1,5 @@
 import { exactLayoutKeys, isLayoutToken } from "./terminal-layout";
+import { isTerminalSessionId } from "./terminal-contract";
 import {
   MAX_SNIPPET_BODY_LENGTH,
   MAX_SNIPPET_DESCRIPTION_LENGTH,
@@ -20,6 +21,12 @@ export interface SemanticInputRequest {
   readonly preview: boolean;
 }
 export type SemanticInputCommand =
+  | {
+      kind: "confirm-selection";
+      id: string;
+      revision: number;
+      sessionId: string;
+    }
   | {
       kind: "request";
       id: string;
@@ -74,6 +81,15 @@ export function isSemanticInputCommand(
 ): value is SemanticInputCommand {
   if (exactLayoutKeys(value, ["kind", "id"]) && value.kind === "revoke")
     return isLayoutToken(value.id);
+  if (
+    exactLayoutKeys(value, ["kind", "id", "revision", "sessionId"]) &&
+    value.kind === "confirm-selection"
+  )
+    return (
+      isLayoutToken(value.id) &&
+      isSelectionRevision(value.revision) &&
+      isTerminalSessionId(value.sessionId)
+    );
   return (
     exactLayoutKeys(value, ["kind", "id", "source", "revision", "input"]) &&
     value.kind === "request" &&

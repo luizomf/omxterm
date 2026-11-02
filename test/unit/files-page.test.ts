@@ -218,8 +218,11 @@ it("offers item and background actions at the point of use, with keyboard dismis
   key(document.activeElement as HTMLElement, "End");
   expect(document.activeElement?.getAttribute("role")).toBe("menuitemcheckbox");
   key(document.activeElement as HTMLElement, "ArrowUp");
-  expect(document.activeElement?.textContent).toBe("Use terminal directory");
-  key(document.activeElement as HTMLElement, "Escape");
+  const action = document.activeElement as HTMLButtonElement;
+  expect(action.getAttribute("aria-label")).toBe(
+    "Use last reported terminal directory",
+  );
+  key(action, "Escape");
   expect(menu().hidden).toBe(true);
   expect(document.activeElement).toBe(row("/root/alpha"));
   context();
@@ -229,6 +232,76 @@ it("offers item and background actions at the point of use, with keyboard dismis
   key(row("/root/beta"), "F10", true);
   expect(menu().hidden).toBe(false);
 });
+it("keeps the browsing directory and explains an unavailable active terminal", async () => {
+  const { handle } = await setup();
+  handle((value) =>
+    value.operation === "terminal-directory"
+      ? Promise.resolve({
+          ok: false,
+          error: "No local directory was reported for the active terminal",
+        })
+      : undefined,
+  );
+  navigate("/other");
+  await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
+  button("Actions…").click();
+  button("Use last reported terminal directory", menu()).click();
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "No local directory was reported for the active terminal",
+    ),
+  );
+  expect(row("/other/elsewhere")).toBeTruthy();
+});
+
+it("relabels an unavailable terminal directory notice when the language changes", async () => {
+  const { handle, language } = await setup();
+  handle((value) =>
+    value.operation === "terminal-directory"
+      ? Promise.resolve({
+          ok: false,
+          error: "English fallback for older Files archives",
+          reason: "terminal-directory-unavailable",
+        })
+      : undefined,
+  );
+  button("Actions…").click();
+  button("Use last reported terminal directory", menu()).click();
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "No local directory was reported",
+    ),
+  );
+  language("pt-BR");
+  expect(document.body.textContent).toContain(
+    "Nenhum diretório local foi informado pelo terminal ativo",
+  );
+  expect(document.body.textContent).not.toContain("English fallback");
+});
+
+it("keeps an open rename target when using a different terminal directory", async () => {
+  const { handle, request } = await setup();
+  handle((value) =>
+    value.operation === "terminal-directory"
+      ? Promise.resolve({ ok: true, directory: "/other" })
+      : undefined,
+  );
+  context("/root/alpha");
+  button("Rename / move", menu()).click();
+  button("Actions…").click();
+  button("Use last reported terminal directory", menu()).click();
+  await vi.waitFor(() => expect(row("/other/elsewhere")).toBeTruthy());
+  apply("/root/renamed");
+  await vi.waitFor(() =>
+    expect(request).toHaveBeenCalledWith({
+      operation: "move",
+      path: "/root/alpha",
+      destination: "/root/renamed",
+    }),
+  );
+  expect(row("/other/elsewhere")).toBeTruthy();
+});
+
 it("captures rename target across subsequent selection and automatically refreshes", async () => {
   const { request, listings } = await setup();
   context("/root/alpha");

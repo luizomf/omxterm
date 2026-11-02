@@ -320,6 +320,12 @@ export const brazilianPortugueseMessages: Readonly<
     "Foque um painel ativo e abra Espelhar digitação.",
   "mirrorTyping.needTwoPanes":
     "Abra pelo menos dois painéis ativos na mesma aba e abra Espelhar digitação.",
+  "extensions.noActiveTerminalDirectory":
+    "Nenhum diretório local foi informado pelo terminal ativo. Ele pode ser remoto ou não informar seu diretório. Use Pasta pessoal ou digite um caminho",
+  "extensions.activeTerminalChanged":
+    "O terminal ativo mudou ou não pôde ser confirmado. Tente novamente",
+  "extensions.terminalDirectoryBusy":
+    "Uma solicitação de diretório do terminal já está em andamento. Tente novamente",
   "extensions.unavailable": "Extensão indisponível",
   "extensions.unavailableDetail":
     "Atualize Extensões nas Configurações para consultar a instalação. Nenhuma operação foi repetida automaticamente.",

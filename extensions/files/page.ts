@@ -15,10 +15,15 @@ import { filesMessages, type FilesMessages } from "./messages.js";
 import { createFilesToolbar } from "./toolbar.js";
 
 type Label = (messages: FilesMessages) => string;
-type Reply = FilesTreeReply & { path?: string; token?: string };
+type Reply = FilesTreeReply & {
+  path?: string;
+  token?: string;
+  reason?: string;
+};
 type Target = { path: string; kind: string };
 type Action = {
   label: Label;
+  hint?: Label;
   run: () => void;
   disabled?: boolean;
   checked?: boolean;
@@ -48,10 +53,16 @@ export function mountFilesPage(
       ? { platform: "mac", display: "Cmd+Shift+.", keys: "Meta+Shift+." }
       : undefined;
   const labels = new Map<HTMLElement, () => void>();
-  function label(element: HTMLElement, read: Label, attribute?: string) {
+  function label(
+    element: HTMLElement,
+    read: Label,
+    attribute?: string,
+    hint?: Label,
+  ) {
     const update = () => {
       if (attribute) element.setAttribute(attribute, read(messages));
       else element.textContent = read(messages);
+      if (hint) element.title = hint(messages);
     };
     labels.set(element, update);
     update();
@@ -122,13 +133,17 @@ export function mountFilesPage(
     }
   }
   function report(reply: Reply) {
-    message(
-      (m) =>
-        reply.error === "outcome-unknown"
-          ? m.unknown
-          : m.failed(reply.error ?? "failed"),
-      "error",
-    );
+    message((m) => {
+      if (reply.reason === "terminal-directory-unavailable")
+        return m.terminalDirectoryUnavailable;
+      if (reply.reason === "terminal-directory-changed")
+        return m.terminalDirectoryChanged;
+      if (reply.reason === "terminal-directory-busy")
+        return m.terminalDirectoryBusy;
+      return reply.error === "outcome-unknown"
+        ? m.unknown
+        : m.failed(reply.error ?? "failed");
+    }, "error");
   }
   function button(
     text: Label,
@@ -603,6 +618,7 @@ export function mountFilesPage(
       },
       {
         label: (m) => m.terminalDirectory,
+        hint: (m) => m.terminalDirectoryHint,
         run: () => {
           void navigateFrom("terminal-directory");
         },
@@ -639,7 +655,7 @@ export function mountFilesPage(
   function focusMenuItem(item?: HTMLButtonElement) {
     if (!item) return;
     item.focus({ preventScroll: true });
-    revealMenuItem(item);
+    revealFocusedMenuItem();
   }
   function placeMenu(x: number, y: number) {
     const viewport = document.documentElement;
@@ -674,6 +690,21 @@ export function mountFilesPage(
         },
         menu,
       );
+      if (action.hint) {
+        const caption = document.createElement("span");
+        const hint = document.createElement("span");
+        hint.className = "menu-action-hint";
+        hint.id = `files-menu-hint-${menu.childElementCount}`;
+        hint.hidden = true;
+        item.addEventListener("focus", () => (hint.hidden = false));
+        item.addEventListener("blur", () => (hint.hidden = true));
+        labels.delete(item);
+        label(item, action.label, "aria-label", action.hint);
+        label(caption, action.label);
+        label(hint, action.hint);
+        item.setAttribute("aria-describedby", hint.id);
+        item.replaceChildren(caption, hint);
+      }
       item.setAttribute(
         "role",
         action.checked === undefined ? "menuitem" : "menuitemcheckbox",

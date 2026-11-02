@@ -19,5 +19,7 @@ a split pane may start in its source pane's last reported local directory
 not report it keep the home directory for ordinary splits. The optional
 [Saved Layout extension](0042-save-layouts-without-restoring-sessions.md) can
 explicitly persist bounded main-observed reports and honestly labelled known
-launch directories for fresh Default Shells. This does not infer current cwd,
+launch directories for fresh Default Shells. Current host source also lets the
+Files companion explicitly open the active pane's last reported path as a local
+folder, subject to selection and lifetime checks. This does not infer current cwd,
 authenticate locality, inject `cd`/`clear`, or alter shell initialization.

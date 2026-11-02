@@ -7,6 +7,7 @@ export function subscribeNativeSemanticInput(
   input: ReturnType<typeof createSemanticInput>,
   selectionRevision: () => number,
   restoreSourceFocus: (id: string) => boolean,
+  selectedSession: () => string | undefined,
 ) {
   let pending: { id: string; abort: AbortController } | undefined;
   let disposed = false;
@@ -14,6 +15,17 @@ export function subscribeNativeSemanticInput(
     if (disposed) return;
     if (command.kind === "revoke") {
       if (pending?.id === command.id) pending.abort.abort();
+      return;
+    }
+    if (command.kind === "confirm-selection") {
+      bridge.reply({
+        kind: "finished",
+        id: command.id,
+        available:
+          !pending &&
+          command.revision === selectionRevision() &&
+          command.sessionId === selectedSession(),
+      });
       return;
     }
     if (pending?.id === command.id) return;

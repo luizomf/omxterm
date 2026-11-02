@@ -90,6 +90,7 @@ export function subscribeToWindowTools(
         input,
         tabs.selectionRevision,
         owner.restoreSourceFocus ?? (() => false),
+        tabs.selectedSessionId,
       );
     removeSettings = options.settings?.onOpen(() => {
       if (!disposed && !owner.blocked()) tabs.openSettings();

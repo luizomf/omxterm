@@ -4,10 +4,14 @@ import type { HostedContentDescriptor } from "../shared/extension-view";
 import path from "node:path";
 import { PackageError } from "../installed-packages/installed-packages";
 import type { Value } from "../extension-runtime/protocol";
-import type { createExtensionManager } from "./extension-manager";
+import type {
+  createExtensionManager,
+  ExtensionTarget,
+} from "./extension-manager";
 import type { ApplicationExtensionsOptions } from "./application-extensions";
 import { extensionResourceOwner } from "./extension-view-reader";
 import { startExtensionViewHost } from "./extension-view-ipc";
+import { createFilesTerminalDirectory } from "./files-terminal-directory";
 
 /** Own-view capability dispatch; ordinary extension data goes to its backend. */
 export function applicationViews(
@@ -20,8 +24,21 @@ export function applicationViews(
     admit,
     retired,
   }: Parameters<Parameters<typeof createExtensionManager>[0]["createViews"]>[0],
+  currentTarget: (window: BrowserWindow) => ExtensionTarget | undefined,
 ) {
   const window = target.owner as BrowserWindow;
+  const filesDirectory =
+    target.presentation === "panel" && pin.manifest.id === "omxterm.files"
+      ? createFilesTerminalDirectory({
+          window,
+          currentTarget: () => currentTarget(window),
+          translator: options.translator,
+          semanticInput: options.semanticInput,
+          ownerSignal: target.signal,
+          epochSignal,
+          admit,
+        })
+      : undefined;
   const view = pin.manifest.view!;
   const viewOwner = {};
   if (target.mirrorContext)
@@ -53,15 +70,17 @@ export function applicationViews(
         if (value.operation === "terminal.semanticInput.v1")
           return semanticRequest(value, signal, context);
         if (value.operation === "terminal-directory")
-          return Promise.resolve(
-            target.terminalDirectory
-              ? { ok: true, directory: target.terminalDirectory }
-              : {
-                  ok: false,
-                  error:
-                    "No local terminal directory was reported at invocation. Use Home or enter a path.",
-                },
-          );
+          return filesDirectory
+            ? filesDirectory(value, context, signal)
+            : Promise.resolve(
+                target.terminalDirectory
+                  ? { ok: true, directory: target.terminalDirectory }
+                  : {
+                      ok: false,
+                      error:
+                        "No local terminal directory was reported at invocation. Use Home or enter a path.",
+                    },
+              );
         if (
           value.operation === "host.capabilities" &&
           Object.keys(value).length === 1

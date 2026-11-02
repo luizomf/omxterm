@@ -61,19 +61,23 @@ it.each([false, true])(
       getContentSize: () => [800, 600],
     } as unknown as BrowserWindow;
     const retired = vi.fn();
-    const views = applicationViews(options, {
-      pin: version,
-      target: {
-        owner: window,
+    const views = applicationViews(
+      options,
+      {
+        pin: version,
+        target: {
+          owner: window,
+          signal: lifetime.signal,
+          terminalDirectory: null,
+          mirrorContext: "captured-context",
+        },
         signal: lifetime.signal,
-        terminalDirectory: null,
-        mirrorContext: "captured-context",
+        call,
+        admit,
+        retired,
       },
-      signal: lifetime.signal,
-      call,
-      admit,
-      retired,
-    });
+      () => undefined,
+    );
     await views.open();
     const signal = new AbortController().signal;
     const value = { operation: "terminal.mirrorTyping.v1", action: "describe" };
