@@ -24,7 +24,27 @@ Validation and delivery share Electron's native key/modifier identity, including
 intrinsic Shift. `Control+Plus`, `Control+Shift+Plus` and `Control+Shift+=`
 collide and cannot name different actions. Shifted-character delivery requires
 the logical character and native physical code to agree; it does not translate
-arbitrary keyboard layouts.
+arbitrary keyboard layouts. On macOS, an optional main-only synchronous AppKit
+provider supplies a narrower Option-only identity to recording and both core and
+hosted-child delivery. It correlates a fresh `before-input-event` keydown with
+the current owned key window, native code, characters and exact Option-only
+flags, checks the current input source is the current keyboard layout and
+rejects composition, AltGr, dead/unknown keys and missing data. It is neither a
+menu invocation nor a shortcut registry. Digits come from ten validated top-row
+native codes; letters come only from a single ASCII character with Option
+removed using the current layout. Only the ordinary `KeyA`–`KeyZ` and
+`Digit0`–`Digit9` code domain is considered: e.g. French physical Semicolon's
+logical `m` is deliberately outside it. No source/event result is cached. The
+original event retains gesture and action-callback ownership, and failure leaves
+the former routing unchanged. The Option Key Mode affects terminal input, not
+this decision.
+
+A native macOS menu control observed `Alt+9` and `Alt+num9` alias regardless of
+registration order. Duplicate validation conservatively treats every Option-only
+top-row/keypad digit pair as one identity on macOS, without changing matching
+priority or other modifier/platform policies. Previously accepted conflicting
+files now use the existing actionable resilient rejection, without rewriting.
+Only 9 was directly observed, not all ten keypad pairs.
 
 Logical Plus delivery is an additional convenience: without explicit Shift it
 accepts unshifted `+`, including keypad input. Logical keypad delivery follows
@@ -98,6 +118,10 @@ Matcher and duplicate-detection tests cover effective native identity, logical
 keypad fallback and untouched terminal keys. The opt-in Linux/Windows OS-input
 fixture checks AltGr layouts, native-menu identity, unbound text/dead keys and
 Alt-alone menu behavior. Synthetic input and unit tests do not establish every
-keyboard layout or native menu's behavior. Electron upgrades need review of the
-raw modifier and native accelerator assumptions; see
+keyboard layout or native menu's behavior. The bounded Brazilian-Pro/French
+fixture matched 132 observable Option-only alphanumeric gestures to competing
+native menu actions; missing dead-key downs, source/event races, correlation of
+identical events, unreported composition and physical devices remain outside
+that evidence. Electron upgrades need review of the raw modifier, AppKit
+current-event correlation and native accelerator assumptions; see
 [development](../development.md).

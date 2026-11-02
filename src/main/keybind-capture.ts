@@ -4,7 +4,10 @@ import type {
   ShortcutCaptureRequest,
   ShortcutCaptureResult,
 } from "../shared/settings-keybinds";
-import { acceleratorForKeyboardInput } from "../shared/terminal-keybinds";
+import {
+  acceleratorForKeyboardInput,
+  type AcceleratorKeyboardInput,
+} from "../shared/terminal-keybinds";
 import type { KeybindKeyboardInput } from "./keybind-delivery";
 import { hasNativeAltGr } from "./keyboard-modifiers";
 
@@ -13,6 +16,15 @@ const CAPTURE_LIMIT_MS = 30_000;
 const MAX_HELD_KEYS = 256;
 const MAX_KEY_IDENTITY_LENGTH = 64;
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta", "AltGraph"]);
+
+function interpretedInput(
+  input: KeybindKeyboardInput,
+  interpret:
+    ((input: KeybindKeyboardInput) => AcceleratorKeyboardInput) | undefined,
+  altGr: boolean,
+): AcceleratorKeyboardInput {
+  return { ...(interpret?.(input) ?? input), altGr };
+}
 
 export interface CaptureTarget {
   isDestroyed?(): boolean;
@@ -80,7 +92,11 @@ export function createKeybindCapture(
       recordings.set(target, recording);
     },
     // Called from before-input-event; true when capture consumed the event.
-    intercept(target: CaptureTarget, input: KeybindKeyboardInput): boolean {
+    intercept(
+      target: CaptureTarget,
+      input: KeybindKeyboardInput,
+      interpret?: (input: KeybindKeyboardInput) => AcceleratorKeyboardInput,
+    ): boolean {
       const identity = input.code || input.key;
       let held = releases.get(target);
       if (held?.has(identity)) {
@@ -125,7 +141,7 @@ export function createKeybindCapture(
         return true;
       }
       const accelerator = acceleratorForKeyboardInput(
-        { ...input, altGr },
+        interpretedInput(input, interpret, altGr),
         platform,
       );
       if (accelerator === undefined) {

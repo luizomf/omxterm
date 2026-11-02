@@ -193,6 +193,9 @@ const recipes: readonly Recipe[] = [
     ],
     files: [
       "dist/main/index.js",
+      ...(process.platform === "darwin"
+        ? ["dist/main/macos-option-shortcut.node"]
+        : []),
       "main.js",
       "dist/preload/index.cjs",
       "dist/renderer/index.js",

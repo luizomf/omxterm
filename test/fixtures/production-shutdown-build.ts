@@ -3,6 +3,7 @@ import { cp, mkdir, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
+import { buildMacOSOptionShortcut } from "../../scripts/build-macos-option-shortcut.mjs";
 
 const projectRoot = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -20,6 +21,7 @@ export async function buildFixture(
         logLevel: "silent" as const,
       };
       await Promise.all([
+        start(() => buildMacOSOptionShortcut(path.join(root, "dist", "main"))),
         start(() =>
           build({
             ...shared,

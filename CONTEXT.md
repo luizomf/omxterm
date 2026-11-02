@@ -145,7 +145,7 @@ Font Mono is the default, with bundled and OS fallback faces for coverage.
 
 **Option Key Mode** — The macOS `keyboard.optionAsAlt` choice: preserve native
 layout input (`none`), or use `left`, `right` or `both` Option keys as terminal
-Alt.
+Alt. It does not change application shortcut recording or matching.
 
 **Auxiliary Panel** — One window-owned, nonmodal host (right by default) shared by
 Snippets and explicitly opened companion tools, with one visible view at a time.

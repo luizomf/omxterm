@@ -13,7 +13,7 @@ Development targets native ARM64 macOS and ARM64/x64 Linux and Windows with **No
 Install **Xcode Command Line Tools** (`xcode-select --install`) before running `npm ci`.
 
 - `postinstall` compiles the pinned Unix `node-pty` native addon.
-- `npm run build` compiles `native/macos-window-blur.mm` using bundled Node-API headers (targeting macOS 12.0+).
+- `npm run build` compiles the separate `native/macos-window-blur.mm` and `native/macos-option-shortcut.mm` addons using bundled Node-API headers (targeting macOS 12.0+).
 
 ### Linux
 

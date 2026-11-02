@@ -38,6 +38,7 @@ import {
   deliverExtensionKeybind,
 } from "./window-action-delivery";
 import { createKeybindCapture } from "./keybind-capture";
+import { loadMacOSOptionShortcut } from "./macos-option-shortcut";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
 import { MalformedLaunchRequestError } from "./launch-request";
 import { prepareStartup } from "./application-startup";
@@ -123,6 +124,10 @@ const { sendAction, notifyWindow } = createWindowActionSender(() => palette);
 
 let terminalApplication: TerminalApplication<BrowserWindow> | undefined;
 const keybindCapture = createKeybindCapture(process.platform);
+const optionShortcutIdentity = {
+  platform: process.platform,
+  native: process.platform === "darwin" ? loadMacOSOptionShortcut() : undefined,
+};
 let operationalEvents: OperationalEventLog | undefined;
 let disposeTerminalSessions = () => {};
 let extensions:
@@ -226,7 +231,7 @@ app
               input,
               owner,
               keybindCapture,
-              companionOnly,
+              { companionOnly, optionIdentity: optionShortcutIdentity },
             ),
         });
         const nativeTitleInset = terminalNativeTitleInset(process.platform);
@@ -288,6 +293,7 @@ app
               () => actionCatalog,
               keybindCapture,
               () => palette,
+              optionShortcutIdentity,
             );
             guardTerminalWindowClose(window, terminalApplication!);
             const chrome = registerWindowChrome(window, ipcMain, {

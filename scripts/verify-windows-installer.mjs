@@ -43,6 +43,8 @@ export function inspectWindowsInstallerInputs(
   // The Windows lease addon is unpacked for ARM64; its compiler/linker
   // intermediates are excluded. NSIS identity, registration, cache/shortcut
   // locations and installer options are unchanged.
+  // #764 unpacks the macOS Option addon and explicitly excludes it from
+  // Linux/Windows. NSIS identity, paths, templates and options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -50,7 +52,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "932076d7606b5dc6093ebe642d5c993989ed23c561e62d51b704aebbd416ad3a"
+      "1f786ca88bbdbc7104f09f5e1e8fc26fd63837b1baceddc8a3f731a1ccae5711"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

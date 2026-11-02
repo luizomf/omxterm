@@ -324,6 +324,7 @@ describe("packaged runtime inventory", () => {
         [
           ...requiredEntries,
           "/dist/main/macos-window-blur.node",
+          "/dist/main/macos-option-shortcut.node",
           ...extensionEntries,
           "/node_modules/node-pty/prebuilds/darwin-arm64",
           "/node_modules/node-pty/prebuilds/darwin-arm64/pty.node",
@@ -500,9 +501,12 @@ describe("pinned PTY packaged inventory", () => {
 
 it("requires the blur addon only on macOS and rejects its build-only headers", () => {
   const addon = "/dist/main/macos-window-blur.node";
+  const option = "/dist/main/macos-option-shortcut.node";
   expect(
-    inspectAsarEntries([...requiredEntries, ...extensionEntries], "darwin")
-      .missing,
+    inspectAsarEntries(
+      [...requiredEntries, ...extensionEntries, option],
+      "darwin",
+    ).missing,
   ).toEqual([addon]);
   for (const platform of ["linux", "win32"] as const) {
     expect(
@@ -536,7 +540,11 @@ describe("separately installed Files package inventory", () => {
     ).toEqual([]);
   });
   it("requires each macOS ARM64 runtime asset including Files move", () => {
-    const base = [...requiredEntries, "/dist/main/macos-window-blur.node"];
+    const base = [
+      ...requiredEntries,
+      "/dist/main/macos-window-blur.node",
+      "/dist/main/macos-option-shortcut.node",
+    ];
     expect(inspectAsarEntries(base, "darwin").missing).toEqual(
       extensionEntries,
     );

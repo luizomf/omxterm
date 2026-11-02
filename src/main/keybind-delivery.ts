@@ -48,6 +48,7 @@ export function deliverKeybindsFromKeyEvents(
   ) => void,
   platform: string = "darwin",
   capture?: Pick<KeybindCapture, "intercept" | "release">,
+  interpret?: (input: KeybindKeyboardInput) => AcceleratorKeyboardInput,
 ): void {
   if (capture) {
     const release = () => capture.release(webContents);
@@ -62,7 +63,7 @@ export function deliverKeybindsFromKeyEvents(
   webContents.on("before-input-event", (event, input) => {
     if (event.defaultPrevented) return;
     // A shortcut being recorded never runs or reaches the terminal.
-    if (capture?.intercept(webContents, input)) {
+    if (capture?.intercept(webContents, input, interpret)) {
       event.preventDefault();
       return;
     }
@@ -73,7 +74,7 @@ export function deliverKeybindsFromKeyEvents(
       return;
     const action = terminalActionForKeyboardInput(
       keybinds(),
-      { ...input, altGr: hasNativeAltGr(input) },
+      { ...(interpret?.(input) ?? input), altGr: hasNativeAltGr(input) },
       platform,
     );
     if (action === undefined) return;

@@ -8,6 +8,10 @@ import type { KeybindCapture } from "./keybind-capture";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createCompanionDismissal } from "./companion-dismissal";
 import { isCompanionToolAction } from "../shared/terminal-keybinds";
+import {
+  optionShortcutInterpreter,
+  type OptionShortcutIdentity,
+} from "./macos-option-shortcut";
 
 export function deliverExtensionKeybind(
   catalog: CoreActionCatalog,
@@ -15,12 +19,22 @@ export function deliverExtensionKeybind(
   input: Input,
   owner: BrowserWindow,
   capture: KeybindCapture,
-  companionOnly = false,
+  options: {
+    companionOnly?: boolean | undefined;
+    optionIdentity?: OptionShortcutIdentity;
+  } = {},
 ) {
+  const {
+    companionOnly = false,
+    optionIdentity = { platform: process.platform },
+  } = options;
   if (event.defaultPrevented || !owner.isFocused()) return;
   const gestures = createCompanionDismissal(owner);
+  const interpret = optionShortcutInterpreter(optionIdentity, () =>
+    owner.getNativeWindowHandle(),
+  );
   if (
-    capture.intercept(owner.webContents, input) ||
+    capture.intercept(owner.webContents, input, interpret) ||
     gestures.interceptShortcut(input)
   ) {
     event.preventDefault();
@@ -33,8 +47,8 @@ export function deliverExtensionKeybind(
     return;
   const action = coreActionForKeyboardInput(
     catalog,
-    { ...input, altGr: hasNativeAltGr(input) },
-    process.platform,
+    { ...interpret(input), altGr: hasNativeAltGr(input) },
+    optionIdentity.platform,
   );
   if (!action || (companionOnly && !isCompanionToolAction(action.id))) return;
   event.preventDefault();
@@ -68,9 +82,13 @@ export function registerWindowActionDelivery(
   catalog: () => CoreActionCatalog,
   capture: KeybindCapture,
   palette: () => ReturnType<typeof startCommandPalette> | undefined,
+  optionIdentity: OptionShortcutIdentity = { platform: process.platform },
 ) {
   const contents = window.webContents;
   const gestures = createCompanionDismissal(window);
+  const interpret = optionShortcutInterpreter(optionIdentity, () =>
+    window.getNativeWindowHandle(),
+  );
   deliverKeybindsFromKeyEvents(
     contents,
     () => coreActionKeybinds(catalog()),
@@ -79,12 +97,14 @@ export function registerWindowActionDelivery(
         return;
       catalog()[action].invoke();
     },
-    process.platform,
+    optionIdentity.platform,
     {
       release: (target) => capture.release(target),
-      intercept: (target, input) =>
-        capture.intercept(target, input) || gestures.interceptShortcut(input),
+      intercept: (target, input, normalize) =>
+        capture.intercept(target, input, normalize) ||
+        gestures.interceptShortcut(input),
     },
+    interpret,
   );
   const invalidate = () => palette()?.invalidate(contents);
   window.on("blur", invalidate);

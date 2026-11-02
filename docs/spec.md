@@ -1449,7 +1449,13 @@ accelerator family. `AltGr` is distinct from `Alt`/`Option` and `Control+Alt`;
 plain Alt never activates an AltGr-only binding. Delivery requires the native
 AltGr identity, not an inference from Alt. Intrinsic Shift and native key
 identity also count: `Control+!` duplicates `Control+Shift+1`, and
-`Control+Plus` duplicates `Control+Shift+Plus` and `Control+Shift+=`. A remap
+`Control+Plus` duplicates `Control+Shift+Plus` and `Control+Shift+=`. On macOS,
+Option-only top-row and keypad bindings for the same digit, such as `Alt+9`
+and `Alt+num9`, also collide. This conservative rule covers 0–9; native 9 was
+observed to alias in both registration orders. A previously valid file with
+both is rejected through the usual resilient loader, never rewritten; remap
+one action or set it to `null`. Other modifiers and platforms retain their
+existing keypad policies. A remap
 that collides with another action's remaining default is the same error as two
 explicit entries colliding; OMXTerm never reassigns another action's shortcut.
 The diagnostic names both actions and the key in a form derived from the parsed
@@ -1457,7 +1463,20 @@ accelerator, never the configured text, and offers both remedies: choose
 another shortcut, or set one of the actions to `null`. A `null` entry holds no
 shortcut and cannot collide. The main-process matcher uses this identity when the
 logical shifted character and native key position agree; it does not translate
-arbitrary keyboard layouts. Separately, application fallback preserves logical
+arbitrary keyboard layouts. For a fresh, observable macOS Option-only keydown
+in the bounded ordinary `KeyA`–`KeyZ`/`Digit0`–`Digit9` code domain, a main-only
+native provider may project a current-layout identity into both recording and
+core/hosted-child delivery. Top-row digits use their validated native numeric
+codes; letters use only a single ASCII Option-stripped current-layout letter,
+not the physical letter position. The synchronous sample requires a matching
+owned key window, event type, native code, characters and Option-only flags,
+current keyboard-layout input source, and visible non-composition/non-AltGr raw
+identity. It rejects repeats, mismatches, IMEs and unavailable information.
+No sample is cached or passed to the renderer. If unavailable, the existing
+matcher and native-menu path remain; an unobservable dead-key keydown cannot be
+recovered. Event field agreement is not a unique Electron/native event token,
+and other layouts, hardware and unreported composition remain limitations.
+`keyboard.optionAsAlt` changes terminal input only. Separately, application fallback preserves logical
 keypad delivery (for example, keypad Minus for Zoom Out) and logical `Plus`
 delivery. `Plus` without explicit Shift also accepts an unshifted logical `+`.
 Logical keypad fallback follows the configured character and explicit Shift,
@@ -1648,11 +1667,11 @@ repeats and releases remain consumed. This flag does not establish every native
 composition state, and unmatched events retain normal native-menu routing.
 Only unmodified Escape cancels; modified Escape, including native AltGr, can be
 recorded. A key that cannot round-trip through the supported accelerator identity
-reports invalid and keeps capture open; arbitrary layout translation is not added,
-and the existing logical Plus/keypad exceptions remain. On macOS, the recording
-prompt and invalid feedback explain that Option-generated characters and dead
-keys may be unsupported, suggest Option with an arrow or function key, and
-distinguish terminal Option Key Mode from application shortcuts. Some native
+reports invalid and keeps capture open; the existing logical Plus/keypad exceptions
+remain. On macOS, the recording prompt and invalid feedback describe bounded
+Option-only letter/top-row-digit support and remaining dead-key, input-method
+and unavailable-native limitations, suggest Option with an arrow or function
+key, and distinguish terminal Option Key Mode from application shortcuts. Some native
 dead-key sequences do not provide a candidate keydown to main and can continue
 composition without a recording result; the prompt remains until another
 candidate, cancellation or timeout. Capture ends after one accepted key, on

@@ -15,6 +15,7 @@ const calls = vi.hoisted(() => ({
       ) => void
     >(),
   blur: vi.fn(),
+  optionShortcut: vi.fn(),
 }));
 vi.mock("esbuild", () => ({ build: calls.build }));
 vi.mock("node:fs/promises", () => ({
@@ -28,6 +29,9 @@ vi.mock("../../scripts/build-extension-leases.mjs", () => ({
 }));
 vi.mock("../../scripts/build-macos-window-blur.mjs", () => ({
   buildMacOSWindowBlur: calls.blur,
+}));
+vi.mock("../../scripts/build-macos-option-shortcut.mjs", () => ({
+  buildMacOSOptionShortcut: calls.optionShortcut,
 }));
 
 const filesTrashNative = /[/\\]native[/\\]files-trash-macos\.mm$/u;
@@ -55,6 +59,7 @@ it.each([
     // Import the real orchestration and Files builder with all effectful seams mocked.
     const entry = "../../build.mjs";
     await import(entry);
+    expect(calls.optionShortcut).toHaveBeenCalledOnce();
     expect(calls.leases).toHaveBeenCalledTimes(runtime ? 1 : 0);
     expect(calls.native).toHaveBeenCalledTimes(move ? 1 : 0);
     if (move) {

@@ -403,11 +403,11 @@ export const brazilianPortugueseMessages: Readonly<
     "Padrão segue o atalho embutido. Sem atalho mantém a ação no menu sem tecla. Atalhos do aplicativo recebem a tecla antes dos programas do terminal.",
   "shortcuts.prompt": "Pressione o novo atalho, ou Escape para cancelar.",
   "shortcuts.promptMac":
-    "Pressione o novo atalho, ou Escape para cancelar. Caracteres produzidos por Option e teclas mortas podem não ser graváveis; tente Option com uma seta ou tecla de função. A opção de usar Option como Alt afeta apenas a entrada no terminal.",
+    "Pressione o novo atalho, ou Escape para cancelar. Option sem outros modificadores com letras e dígitos da fileira superior pode funcionar em layouts compatíveis. Algumas teclas mortas podem não ser graváveis; métodos de entrada ou suporte nativo indisponível também podem impedir a gravação. A opção de usar Option como Alt afeta apenas a entrada no terminal.",
   "shortcuts.invalid":
     "Essa combinação de teclas não é compatível. Use Ctrl, Alt, Cmd ou AltGr com uma tecla compatível, ou use F1–F24.",
   "shortcuts.invalidMac":
-    "Essa combinação de teclas não é compatível. Caracteres produzidos por Option e teclas mortas podem não ser graváveis; tente Option com uma seta ou tecla de função, outro modificador, ou F1–F24.",
+    "Essa combinação de teclas não é compatível. Alguns caracteres de Option e teclas mortas podem não ser graváveis, inclusive com métodos de entrada ou suporte nativo indisponível; tente Option com uma seta ou tecla de função, outro modificador, ou F1–F24.",
   "shortcuts.cancelled": "Gravação cancelada.",
   "shortcuts.pressing": "Pressione um atalho…",
   "shortcuts.none": "Nenhum",

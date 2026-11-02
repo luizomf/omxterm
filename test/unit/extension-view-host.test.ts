@@ -461,14 +461,9 @@ it.each([
       ...f.options,
       ipcMain: ipc,
       onKeybind: (event, input, window, companionOnly) =>
-        deliverExtensionKeybind(
-          catalog,
-          event,
-          input,
-          window,
-          capture,
+        deliverExtensionKeybind(catalog, event, input, window, capture, {
           companionOnly,
-        ),
+        }),
     });
     cleanups.push(() => host.retire());
     const descriptor = await host.open({ ...opening, presentation: "panel" });

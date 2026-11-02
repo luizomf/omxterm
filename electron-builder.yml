@@ -78,6 +78,7 @@ mac:
     - dist/extension-runtime/extension-leases.node
     - dist/extension-runtime/files-move.node
     - dist/main/macos-window-blur.node
+    - dist/main/macos-option-shortcut.node
     - node_modules/node-pty/prebuilds/darwin-arm64/pty.node
     - node_modules/node-pty/prebuilds/darwin-arm64/spawn-helper
   target:
@@ -101,6 +102,7 @@ linux:
     - "!dist/**/*.omxext.json"
     - "!dist/**/*.omxext.sha256"
     - "!dist/main/macos-window-blur.node"
+    - "!dist/main/macos-option-shortcut.node"
     - "!dist/**/*.map"
     - "!node_modules/**/*.map"
     - "!node_modules/restty/**"
@@ -143,6 +145,7 @@ win:
     - "!dist/**/*.omxext.json"
     - "!dist/**/*.omxext.sha256"
     - "!dist/main/macos-window-blur.node"
+    - "!dist/main/macos-option-shortcut.node"
     - "!dist/**/*.map"
     - "!node_modules/**/*.map"
     - "!node_modules/restty/**"

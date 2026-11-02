@@ -84,6 +84,7 @@ function packagedExtensionEntries(platform, arch) {
 }
 
 const macBlurEntry = "/dist/main/macos-window-blur.node";
+const macOptionEntry = "/dist/main/macos-option-shortcut.node";
 const windowsNativeFiles = [
   "conpty.node",
   "conpty_console_list.node",
@@ -141,7 +142,7 @@ export function inspectAsarEntries(
     .map((entry) => (entry.startsWith("/") ? entry : `/${entry}`));
   const required = [
     ...requiredAsarEntries,
-    ...(platform === "darwin" ? [macBlurEntry] : []),
+    ...(platform === "darwin" ? [macBlurEntry, macOptionEntry] : []),
     ...packagedExtensionEntries(platform, arch),
     ...(platform === "win32"
       ? [
@@ -159,7 +160,8 @@ export function inspectAsarEntries(
   const forbidden = normalized.filter(
     (entry) =>
       privateLooking.has(entry) ||
-      (platform !== "darwin" && entry === macBlurEntry) ||
+      (platform !== "darwin" &&
+        [macBlurEntry, macOptionEntry].includes(entry)) ||
       ((!["linux", "darwin"].includes(platform) || arch !== "arm64") &&
         entry === "/dist/extension-runtime/files-move.node") ||
       entry.includes("/node_modules/@xterm/") ||
@@ -1142,6 +1144,39 @@ export async function verifyPackagedApplication(
         assert.deepEqual(Object.keys(native), ['setBlur']);
         assert.throws(() => native.setBlur(Buffer.alloc(8, 1), true), /owned|main thread/u);
       `,
+        ],
+        { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }, timeout: 10_000 },
+      );
+      const optionModule = path.join(
+        resources,
+        "app.asar.unpacked",
+        macOptionEntry,
+      );
+      await inspectArchitecture(
+        optionModule,
+        "macOS Option shortcut module",
+        platform,
+      );
+      const { stdout: optionLoadCommands } = await execFile("otool", [
+        "-l",
+        optionModule,
+      ]);
+      if (!/\bminos 12\.0\b/u.test(optionLoadCommands))
+        throw new Error(
+          "macOS Option shortcut module must target the Electron macOS 12.0 floor",
+        );
+      await execFile(
+        executable,
+        [
+          "--input-type=module",
+          "-e",
+          `
+          import { createRequire } from 'node:module';
+          import assert from 'node:assert/strict';
+          const native = createRequire(${JSON.stringify(path.join(asar, "dist/main/index.js"))})('./macos-option-shortcut.node');
+          assert.deepEqual(Object.keys(native), ['resolve']);
+          assert.equal(native.resolve(Buffer.alloc(8, 1), 'KeyA', 'a'), null);
+        `,
         ],
         { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }, timeout: 10_000 },
       );

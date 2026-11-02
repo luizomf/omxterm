@@ -2,6 +2,7 @@ import { build } from "esbuild";
 import { cp, rm } from "node:fs/promises";
 import path from "node:path";
 import { buildMacOSWindowBlur } from "./scripts/build-macos-window-blur.mjs";
+import { buildMacOSOptionShortcut } from "./scripts/build-macos-option-shortcut.mjs";
 import { buildExtensionRuntime } from "./scripts/build-extension-runtime.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname);
@@ -21,6 +22,7 @@ await Promise.all([
     ? [buildExtensionRuntime(path.join(outputRoot, "extension-runtime"))]
     : []),
   buildMacOSWindowBlur(path.join(outputRoot, "main")),
+  buildMacOSOptionShortcut(path.join(outputRoot, "main")),
   build({
     entryPoints: ["src/main/index.ts"],
     bundle: true,

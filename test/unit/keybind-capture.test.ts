@@ -44,6 +44,33 @@ function recording() {
   return { capture, contents, invoke, press };
 }
 
+it("records an observed Brazilian Option character using the current native layout identity", () => {
+  const capture = createKeybindCapture("darwin");
+  const contents = Object.assign(new EventEmitter(), { send: vi.fn() });
+  const invoke = vi.fn();
+  deliverKeybindsFromKeyEvents(
+    contents,
+    () => ({ ...terminalDefaultKeybinds("darwin"), find: "Alt+A" }),
+    invoke,
+    "darwin",
+    capture,
+    (input) => ({ ...input, key: "a" }),
+  );
+  capture.set(contents, { captureId: "option", active: true });
+  const event = { preventDefault: vi.fn() };
+  contents.emit(
+    "before-input-event",
+    event,
+    key({ key: "å", code: "KeyA", alt: true }),
+  );
+  expect(contents.send).toHaveBeenCalledWith("settings:captured", {
+    captureId: "option",
+    shortcut: { accelerator: "Alt+A" },
+  });
+  expect(event.preventDefault).toHaveBeenCalledOnce();
+  expect(invoke).not.toHaveBeenCalled();
+});
+
 afterEach(() => vi.useRealTimers());
 
 describe("shortcut capture gesture ownership", () => {

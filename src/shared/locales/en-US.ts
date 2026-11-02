@@ -390,11 +390,11 @@ export const englishMessages = {
     "Default follows the built-in shortcut. Unbound keeps the action in the menu without a key. App shortcuts take their key before terminal programs see it.",
   "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",
   "shortcuts.promptMac":
-    "Press the new shortcut, or Escape to cancel. Option-generated characters and dead keys may not be recordable; try Option with an arrow or function key. The Option as Alt setting affects terminal input only.",
+    "Press the new shortcut, or Escape to cancel. Option-only letters and top-row digits may work with supported layouts. Some dead keys may not be recordable; input methods or missing native support can also prevent recording. Option as Alt affects terminal input only.",
   "shortcuts.invalid":
     "That key combination is not supported. Use Ctrl, Alt, Cmd or AltGr with a supported key, or use F1–F24.",
   "shortcuts.invalidMac":
-    "That key combination is not supported. Option-generated characters and dead keys may not be recordable; try Option with an arrow or function key, another modifier, or F1–F24.",
+    "That key combination is not supported. Some Option characters and dead keys may not be recordable, including with input methods or missing native support; try Option with an arrow or function key, another modifier, or F1–F24.",
   "shortcuts.cancelled": "Recording cancelled.",
   "shortcuts.pressing": "Press a shortcut…",
   "shortcuts.none": "None",

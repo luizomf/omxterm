@@ -505,7 +505,16 @@ export function canonicalAccelerator(
   const modifiers = (["cmd", "ctrl", "alt", "altgr", "shift"] as const).filter(
     (modifier) => parsed.modifiers.has(modifier),
   );
-  return [...modifiers, parsed.key].join("+");
+  // AppKit aliases Option-only top-row and keypad digit accelerators. Keep
+  // the existing runtime keypad priority/fallback; this is collision policy.
+  const key =
+    platform === "darwin" &&
+    modifiers.length === 1 &&
+    modifiers[0] === "alt" &&
+    /^num[0-9]$/u.test(parsed.key)
+      ? parsed.key.slice(3)
+      : parsed.key;
+  return [...modifiers, key].join("+");
 }
 
 const DISPLAY_MODIFIERS = {
