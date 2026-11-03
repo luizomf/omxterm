@@ -2,6 +2,7 @@ import { app, BrowserWindow, clipboard, ipcMain, Menu } from "electron";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
 import { registerWindowChrome } from "../../src/main/window-chrome";
 import {
@@ -40,6 +41,8 @@ import {
   POPUP_INPUT_PROVISIONING_ENV,
   POPUP_INPUT_RECEIPT_PREFIX,
 } from "./terminal-popup-input-admission";
+
+applyChromiumGpuPolicy(app.commandLine);
 
 const root = __dirname;
 for (const name of ["userData", "sessionData"] as const) {

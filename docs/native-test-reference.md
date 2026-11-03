@@ -286,7 +286,12 @@ window-local session IDs, the real Busy decision/shared close slot, native
 clipboard selection, and effective translated/remapped/unbound menu state.
 Deliberate old Close Pane and clipboard routing controls must fail their distinct
 oracles; the existing fixture supervisor still requires actual child exits and
-clean ownership settlement.
+clean ownership settlement. Its standalone main applies the shared production GPU
+policy before Electron readiness, including Linux's SwiftShader permission
+([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)), without forcing a
+backend or bypassing the GPU blocklist. macOS and Windows keep Chromium's defaults;
+actual WebGL2 availability remains a prerequisite. Headless emitted-entrypoint
+ordering coverage: `npm test -- test/unit/terminal-popup-gpu-policy.test.ts`.
 
 **Native-input prerequisite:** use an idle, explicitly provisioned input-capable
 X11/XWayland desktop with the standard X11/evdev F5=71 and F6=72 keycode
