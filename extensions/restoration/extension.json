@@ -1,9 +1,9 @@
 {
   "format": 1,
   "id": "omxterm.restoration",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": "Saved Layout",
-  "engines": { "omxterm": ">=0.24.0-dev.1 <0.25.0", "api": "^0.1.0" },
+  "engines": { "omxterm": ">=0.24.0-dev.1 <0.26.0", "api": "^0.1.0" },
   "backend": "backend.mjs",
   "capabilities": [
     "terminal.captureLayout.v1",

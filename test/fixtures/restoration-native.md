@@ -25,9 +25,10 @@ physical keyboard or native dialog qualification.
 
 Prepare the host on that guest with the normal project prerequisites and
 `npm run build`. The package metadata must be **0.24.0-dev.1** (the original
-Saved Layout milestone) or the explicitly admitted **0.24.0-dev.2** follow-up.
-The fixture records the actual supplied version; previous dev.1 receipts do not
-qualify dev.2. This includes the
+Saved Layout milestone), **0.24.0-dev.2**, or the #785 baseline
+**0.25.0-dev.4**. Use the compatible **0.1.1** source archive for dev.4; historical
+0.1.0 metadata remains incompatible there. The fixture records the actual supplied
+version and artifact digests; earlier receipts do not qualify a new pair. This includes the
 Linux native lease addon and extension runtime; do not substitute host-native
 artifacts copied from macOS. The fixture hashes the built main, preload,
 renderer, bootstrap, package runtime and lease addon, without modifying them.
@@ -37,7 +38,7 @@ apply. Production's Linux X11/XWayland policy is retained.
 Prepare a separate Saved Layout archive with:
 
 ```sh
-npm run build:restoration-extension -- /absolute/output/restoration-0.1.0.omxext
+npm run build:restoration-extension -- /absolute/output/restoration-0.1.1.omxext
 ```
 
 The existing builder requires a clean source HEAD. A transported source archive
@@ -55,7 +56,7 @@ existing native fixture supervisor.
 ```sh
 env -u ELECTRON_RUN_AS_NODE -u NODE_OPTIONS -u APPIMAGE -u APPDIR \
   OMXTERM_RESTORATION_SOURCE="$PWD" \
-  OMXTERM_RESTORATION_ARCHIVE=/absolute/output/restoration-0.1.0.omxext \
+  OMXTERM_RESTORATION_ARCHIVE=/absolute/output/restoration-0.1.1.omxext \
   OMXTERM_RESTORATION_ARCHIVE_SHA256=INSPECTED_LOWERCASE_SHA256 \
   OMXTERM_RESTORATION_EVIDENCE=/absolute/evidence/restoration \
   node node_modules/vitest/vitest.mjs run test/integration/restoration-extension.test.ts
