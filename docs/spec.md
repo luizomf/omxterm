@@ -1705,8 +1705,12 @@ the current family when received; a queued generation superseded before its
 load starts is rejected without another read. This does not authorize arbitrary
 historical-family lookup. Loads remain serialized and bounded, and genuine
 read/validation failures still reject. Repeating a reload
-cannot erase a notice while an older Surface survives; removing that Surface
-releases its font bookkeeping. Theme, Interface Language, configured font-size
+cannot erase a notice while an older Surface survives. Surface registration,
+removal and window disposal reconcile deferred fields against all surviving
+owners without another reload; with no owners, no restart is required. Clearing
+resolved restart information preserves current actionable errors and warnings.
+These configuration notices are not transient toasts: elapsed time alone does
+not resolve a font error or apply creation-time settings. Theme, Interface Language, configured font-size
 baseline, padding and Window Font Zoom remain live and preserve the existing Surface and PTY. Invalid,
 missing, unreadable, unsupported or corrupt configured font input rejects the
 whole reload. Runtime scrollback reduction, including zero, uses the selected

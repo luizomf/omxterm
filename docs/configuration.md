@@ -574,6 +574,13 @@ Choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`) a
 | New tabs (or restart) | Font family, line height, Windows shell                                                          |
 | New windows           | Always-on-Top, title-bar, and tab-bar initial defaults                                           |
 
+The footer names pending font-family/line-height changes while any surviving
+pane still uses an older value, including a pane still initializing. It clears
+each resolved field when those panes close (also across windows), without
+requiring another reload or restart. It does not expire while a restart is
+actually needed. Font/configuration errors remain visible until a successful
+reload resolves them; closing an old pane does not dismiss an unrelated error.
+
 A native font read already started for an initializing tab can finish with its
 creation-time family after reload; new tabs use the latest family. Requests must
 still match the current family when received. A queued read superseded before

@@ -132,6 +132,9 @@ followed by sequential application. Validation rejection keeps active settings;
 application-time exceptions can leave partial updates. See
 [configuration and local state](docs/spec.md#configuration-and-local-state) for
 live-safe versus creation-time settings and native font-read lifetime rules.
+Pending-restart information is derived from surviving Surface owners and clears
+as outdated owners retire, without hiding current actionable diagnostics or
+requiring another reload.
 
 **Interface Language** — The language of OMXTerm's own menus, dialogs and
 controls, chosen only by the User Configuration `language` key (`en-US` default

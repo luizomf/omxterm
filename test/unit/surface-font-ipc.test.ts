@@ -1,6 +1,13 @@
 import { expect, it, vi } from "vitest";
 import { registerTerminalIpcRouter } from "../../src/main/terminal-ipc-controller";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
+import {
+  createUserConfigurationReloader,
+  terminalSurfaceFontBaseline,
+  type ActiveUserConfiguration,
+} from "../../src/main/user-configuration-reloader";
+import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
 import {
   createIpcHarness,
   clipboardOptions,
@@ -89,4 +96,79 @@ it("accepts only owned issued snapshots and one-shot starts, and releases pendin
   router.dispose();
   expect(ipc.handlers.size).toBe(0);
   expect(ipc.listeners.size).toBe(0);
+});
+
+it("reconciles all windows on validated registration, release and controller disposal", async () => {
+  const ipc = createIpcHarness();
+  const router = registerTerminalIpcRouter(ipc.ipcMain);
+  const initial = {
+    configuration: DEFAULT_USER_CONFIGURATION,
+    userFileErrors: [],
+  };
+  const apply = vi.fn((state: ActiveUserConfiguration) =>
+    router.applyConfiguration(terminalRendererConfiguration(state, 0)),
+  );
+  const reloader = createUserConfigurationReloader({
+    initial,
+    ...terminalSurfaceFontBaseline(initial.configuration),
+    activeTerminalSurfaceFontConfigurations:
+      router.activeTerminalSurfaceFontConfigurations,
+    load: async () => ({
+      configuration: { ...initial.configuration, fontLineHeight: 1.5 },
+    }),
+    apply,
+  });
+  const changed = vi.fn(() => reloader.refreshTerminalSurfaceNotices());
+  const register = () => {
+    const webContents = {
+      mainFrame: {},
+      isDestroyed: () => false,
+      send: vi.fn(),
+    };
+    const controller = router.registerController({
+      ...clipboardOptions(),
+      configuration: terminalRendererConfiguration(reloader.current(), 0),
+      webContents,
+      onSurfaceFontConfigurationsChanged: changed,
+      createSession: vi.fn(),
+      onSessionStartError() {},
+      onSessionExit() {},
+    });
+    const event = { sender: webContents, senderFrame: webContents.mainFrame };
+    const configuration = ipc.handlers.get(terminalIpc.configuration)!(
+      event,
+    ) as { fontConfigurationId: string };
+    const surface = ipc.handlers.get(terminalIpc.retainSurface)!(
+      event,
+      configuration.fontConfigurationId,
+    );
+    return { controller, event, surface, webContents };
+  };
+  const first = register();
+  const second = register();
+  await reloader.reload();
+  const latest = register();
+  changed.mockClear();
+  const release = ipc.listeners.get(terminalIpc.releaseSurface)!;
+  release(latest.event, first.surface);
+  release({ ...first.event, senderFrame: {} }, first.surface);
+  expect(changed).not.toHaveBeenCalled();
+  expect(reloader.current().userFileErrors[0]).toContain("font.lineHeight");
+  release(first.event, first.surface);
+  expect(changed).toHaveBeenCalledOnce();
+  expect(reloader.current().userFileErrors[0]).toContain("font.lineHeight");
+  second.controller.dispose();
+  expect(changed).toHaveBeenCalledTimes(2);
+  expect(reloader.current().userFileErrors).toEqual([]);
+  expect(latest.webContents.send).toHaveBeenLastCalledWith(
+    terminalIpc.configurationUpdate,
+    expect.objectContaining({ userFileErrors: [] }),
+  );
+  const notifications = apply.mock.calls.length;
+  second.controller.dispose();
+  expect(apply.mock.calls).toHaveLength(notifications);
+  latest.controller.dispose();
+  await reloader.reload();
+  expect(reloader.current().userFileErrors).toEqual([]);
+  router.dispose();
 });

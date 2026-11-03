@@ -87,6 +87,8 @@ function fixture(family?: string) {
   router.registerController({
     webContents,
     configuration: terminalRendererConfiguration(initial, 0),
+    onSurfaceFontConfigurationsChanged: () =>
+      reloader.refreshTerminalSurfaceNotices(),
     createSession,
     onSessionStartError() {},
     onSessionExit() {},
@@ -230,11 +232,31 @@ it("retains the configured family captured before runtime initialization", async
   });
   app.command({ action: "select", position: 1 });
   app.command({ action: "close" });
-  await app.reload(1, "Second Family");
   expect(app.router.activeTerminalSurfaceFontConfigurations()).toEqual([
     { fontFamily: "Second Family", fontLineHeight: 1 },
   ]);
   expect(app.banner.textContent).toBe("");
+});
+
+it("clears restart information when the last outdated initializing Surface is cancelled", async () => {
+  const gate = deferred();
+  runtime.setInitGate(gate.promise);
+  const app = fixture();
+  await vi.waitFor(() => expect(runtime.instances).toHaveLength(1));
+  await app.reload(1.5);
+  runtime.setInitGate(undefined);
+  app.command({ action: "new" });
+  await vi.waitFor(() => expect(app.createSession).toHaveBeenCalledOnce());
+  app.command({ action: "select", position: 1 });
+  app.command({ action: "close" });
+  expect(app.banner.hidden).toBe(true);
+  expect(app.router.activeTerminalSurfaceFontConfigurations()).toEqual([
+    { fontLineHeight: 1.5 },
+  ]);
+  gate.resolve();
+  await app.host.ready;
+  expect(app.createSession).toHaveBeenCalledOnce();
+  expect(app.banner.hidden).toBe(true);
 });
 
 it("counts multiple pending and existing Surfaces and releases cancelled old owners", async () => {
@@ -267,11 +289,9 @@ it("counts multiple pending and existing Surfaces and releases cancelled old own
   expect(app.banner.textContent).toContain("font.lineHeight");
   app.command({ action: "select", position: 1 });
   app.command({ action: "close" });
-  await app.reload(1.5);
   expect(app.banner.textContent).toContain("font.lineHeight");
   app.command({ action: "select", position: 1 });
   app.command({ action: "close" });
-  await app.reload(1.5);
   expect(app.router.activeTerminalSurfaceFontConfigurations()).toEqual([
     { fontLineHeight: 1.5 },
   ]);

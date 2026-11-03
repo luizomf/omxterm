@@ -345,6 +345,8 @@ app
                 active.configuration,
               ),
               webContents: window.webContents,
+              onSurfaceFontConfigurationsChanged: () =>
+                configurationReloader.refreshTerminalSurfaceNotices(),
               consumeSshLaunch: (token) => sshLaunch.consume(window, token),
               homeDirectory: account.homedir,
               initialLayout: () => layouts.initial(window),
