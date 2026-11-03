@@ -218,6 +218,21 @@ available. New folder is also disabled during a mutation; Refresh remains
 available while listings load. These source changes do not alter
 already published Files archives.
 
+Current source offers **Insert path into terminal** in the selection menu,
+with its `Shift+Enter` shortcut shown and exposed to assistive technology. The
+shortcut acts on the focused row, does not intercept editing or composition,
+and suppresses repeats. The single selected file, folder or link is sent
+immediately as a lexical path; no backend lookup or added Enter occurs. Main
+captures the terminal selection before asynchronous admission and uses the same
+quoting and Protected Paste as dropped paths. The captured Surface owns accepted
+delivery even if the panel retires. Once delivery completes, focus returns only
+if that Surface is still the current target and the request remains active.
+Unavailable, busy, invalid, incomplete and unknown outcomes are explained; a
+partial or unknown result should be inspected before retrying. An approved
+unbracketed path containing control characters can affect the receiving program.
+This uses the new `terminal.insertPath.v1` capability: older hosts reject it,
+and the published Files0.6 archive does not acquire this source behavior.
+
 In current source, **Actions… → Show dotfiles (names starting with .)** is a
 checked menu item, off by default. On both Linux and macOS, it hides dot-prefixed
 entry names and their descendants relative to the current browsing root. It does

@@ -10,7 +10,11 @@ follows the receiving Surface's lifetime under
 reuse the Surface's injection seam, keeping it free of Electron, filesystem and
 platform shell policy; the renderer
 gains only the narrow preload capability that maps a dropped `File` to its
-path (`webUtils.getPathForFile`).
+path (`webUtils.getPathForFile`). Current Files source also offers one selected
+path through a declared own-view capability. Main applies this same formatter,
+then routes the result to the captured Surface through the existing semantic
+input owner. This source feature requires a future Files archive and a host
+that understands the capability; the published Files0.6 archive is unchanged.
 
 Paths are lexical only: OMXTerm never reads, resolves, normalizes, or stats a
 target. Probing the filesystem from drop or clipboard data would turn

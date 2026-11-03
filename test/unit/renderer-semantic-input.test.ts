@@ -86,3 +86,82 @@ it("does not capture already revoked requests", () => {
   expect(f.capture).not.toHaveBeenCalled();
   expect(f.target.deliver).not.toHaveBeenCalled();
 });
+
+it.each([true, false])(
+  "waits for Surface delivery (delivered=%s) before focusing its captured target",
+  async (delivered) => {
+    let finish!: (value: boolean) => void;
+    const pending = new Promise<boolean>((resolve) => {
+      finish = resolve;
+    });
+    const target = {
+      live: () => true,
+      isCurrent: vi.fn(() => true),
+      focus: vi.fn(),
+      deliver: vi.fn(),
+      deliverAndReport: vi.fn(() => pending),
+      onUnavailable: () => () => {},
+    };
+    const focusCapturedTarget = vi.fn();
+    const input = createSemanticInput(document, {
+      capture: () => target,
+      blocked: () => false,
+      focusTerminal: vi.fn(),
+      focusCapturedTarget,
+      onPreviewActivity: () => {},
+    });
+    cleanup.push(input.preview.dispose);
+    const result = input.request(
+      snippet,
+      "insert",
+      () => false,
+      undefined,
+      true,
+    );
+    expect(target.deliverAndReport).toHaveBeenCalledExactlyOnceWith(
+      snippet.body,
+    );
+    expect(focusCapturedTarget).not.toHaveBeenCalled();
+    finish(delivered);
+    await expect(result).resolves.toBe(delivered);
+    expect(focusCapturedTarget).toHaveBeenCalledTimes(delivered ? 1 : 0);
+    if (delivered) expect(focusCapturedTarget).toHaveBeenCalledWith(target);
+  },
+);
+
+it("never focuses a replacement after a pending delivery or revocation", async () => {
+  let finish!: (value: boolean) => void;
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve;
+  });
+  const target = {
+    live: () => true,
+    isCurrent: vi.fn(() => true),
+    deliver: vi.fn(),
+    deliverAndReport: vi.fn(() => pending),
+    onUnavailable: () => () => {},
+  };
+  const focus = vi.fn();
+  const input = createSemanticInput(document, {
+    capture: () => target,
+    blocked: () => false,
+    focusTerminal: vi.fn(),
+    focusCapturedTarget: focus,
+    onPreviewActivity: () => {},
+  });
+  cleanup.push(input.preview.dispose);
+  const controller = new AbortController();
+  const result = input.request(
+    snippet,
+    "insert",
+    () => false,
+    controller.signal,
+    true,
+  );
+  target.isCurrent.mockReturnValue(false);
+  controller.abort();
+  finish(true);
+  await expect(result).resolves.toBe(true);
+  expect(focus).not.toHaveBeenCalled();
+  expect(target.deliverAndReport).toHaveBeenCalledOnce();
+});

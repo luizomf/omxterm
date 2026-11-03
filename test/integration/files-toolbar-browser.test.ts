@@ -5,6 +5,11 @@ import { expect, it } from "vitest";
 const run = promisify(execFile);
 const scenarios = [
   [
+    "path",
+    "inserts the focused path by shortcut and accessible menu",
+    "PASS path insertion keyboard and accessible menu",
+  ],
+  [
     "shortcut-mac",
     "scopes Cmd+Shift+Period in the Files child",
     "PASS scoped shortcut mac",

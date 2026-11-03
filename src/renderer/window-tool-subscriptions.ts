@@ -33,7 +33,7 @@ export function subscribeToWindowTools(
     blocked(): boolean;
     onPreviewActivity(): void;
     modalClipboard(action: TerminalClipboardAction): boolean;
-    focusTerminal?(): void;
+    focusTerminal?(focus?: () => void): void;
     restoreSourceFocus?(id: string): boolean;
   },
 ) {
@@ -47,6 +47,11 @@ export function subscribeToWindowTools(
     capture: tabs.captureSnippetTarget,
     blocked: owner.blocked,
     focusTerminal: owner.focusTerminal ?? tabs.focusSelected,
+    focusCapturedTarget: (target) => {
+      if (!target.isCurrent?.()) return;
+      if (owner.focusTerminal) owner.focusTerminal(() => target.focus?.());
+      else target.focus?.();
+    },
     onPreviewActivity: owner.onPreviewActivity,
     openOverlay: tabs.openOverlay,
   });

@@ -224,8 +224,8 @@ export function createCompanionContent(
           presentation.ownsFocus(target.id))
       );
     },
-    focusTerminal() {
-      presentation.focusCore(options.focusTerminal);
+    focusTerminal(focus: () => void = options.focusTerminal) {
+      presentation.focusCore(focus);
     },
     restoreSourceFocus(id: string) {
       if (

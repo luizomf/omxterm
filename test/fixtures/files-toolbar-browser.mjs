@@ -989,7 +989,9 @@ try {
     await key("End", "End", 35);
     await evaluate("filesFixture.setLanguage('pt-BR')");
     assert.equal(
-      await evaluate("document.querySelector('.menu-shortcut').textContent"),
+      await evaluate(
+        "document.querySelector('[role=menuitemcheckbox] .menu-shortcut').textContent",
+      ),
       mac ? "Atalho: Cmd+Shift+." : "Atalho: Ctrl+H",
     );
     await gesture();
@@ -997,10 +999,62 @@ try {
     assert.equal(await hint(), "Itens iniciados por ponto ocultos");
     console.log(`PASS scoped shortcut ${platform}`);
   }
+  async function pathInsertion() {
+    const requests = () =>
+      evaluate(
+        "filesFixture.requests.filter(x => x.operation === 'terminal.insertPath.v1')",
+      );
+    await evaluate("document.querySelector('[role=treeitem]').focus()");
+    await key("Enter", "Enter", 13, 8);
+    assert.deepEqual(await requests(), [
+      { operation: "terminal.insertPath.v1", path: "/root/item-0" },
+    ]);
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+      modifiers: 8,
+      autoRepeat: true,
+    });
+    await send("Input.dispatchKeyEvent", {
+      type: "keyUp",
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+      modifiers: 8,
+    });
+    assert.equal((await requests()).length, 1, "held Enter does not repeat");
+    await evaluate(
+      "document.querySelector('[aria-describedby=files-toolbar-actions-tooltip]').focus()",
+    );
+    await key("Enter", "Enter", 13);
+    const ax = await send("Accessibility.getFullAXTree");
+    const action = ax.nodes.find(
+      (node) =>
+        node.role?.value === "menuitem" &&
+        node.name?.value === "Insert path into terminal",
+    );
+    assert.equal(action?.description?.value, "Shortcut: Shift+Enter");
+    assert.equal(
+      await evaluate(
+        "document.activeElement.textContent.includes('Insert path into terminal')",
+      ),
+      true,
+    );
+    await key("Enter", "Enter", 13);
+    assert.deepEqual(await requests(), [
+      { operation: "terminal.insertPath.v1", path: "/root/item-0" },
+      { operation: "terminal.insertPath.v1", path: "/root/item-0" },
+    ]);
+    await screenshot("path-insertion-menu");
+    console.log("PASS path insertion keyboard and accessible menu");
+  }
   const scenario = process.argv[2] ?? "matrix";
   assert.ok(
     [
       "pointer",
+      "path",
       "notice",
       "scroll",
       "matrix",
@@ -1060,6 +1114,7 @@ try {
           : [scenario]) {
           await load(width, language, light, scale, height);
           if (kind === "pointer") await pointer(names, tag);
+          if (kind === "path") await pathInsertion();
           if (kind === "notice") await notice(language, names, tag);
           if (kind === "scroll") await scroll(width, names, tag);
           if (kind === "hidden" || kind === "short-menu") await hidden(tag);

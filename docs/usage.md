@@ -160,7 +160,7 @@ Modern shells and editors that enable bracketed paste receive pasted text direct
 
 Drag files or folders from your file manager into OMXTerm to insert their shell-quoted paths into the focused pane, separated by spaces. You can also copy files in your file manager and paste them into the terminal (on Windows, drag-and-drop supports multiple files at once, while clipboard paste inserts one file).
 
-Paths are quoted for POSIX shells on macOS/Linux and PowerShell on Windows. Review the inserted text before pressing Enter, especially if you are inside Git Bash, WSL, or an SSH session.
+Paths are quoted for POSIX shells on macOS/Linux and PowerShell on Windows. Review the inserted text before pressing Enter, especially if you are inside Git Bash, WSL, or an SSH session. Quoting assumes a fresh shell argument, not an existing quote or a text editor. Newlines and control characters can themselves act on the receiving program, particularly if you approve an unbracketed paste.
 
 ## Opening visible web links
 
@@ -330,6 +330,15 @@ a path if needed. It does not follow later terminal changes or retarget an
 operation already started. Compatible installed archives retain their original
 **Use terminal directory** label and do not gain the new inline hint or
 tooltip from a host update.
+In current source, select a file, folder or link and choose **Actions… → Insert
+path into terminal**, or focus its row and press `Shift+Enter`. The path is
+quoted and sent without an added Enter through Protected Paste to the terminal
+selected when the action is requested. If the paste completes, focus returns to
+that terminal when it is still selected; changing panes does not redirect it.
+Files explains unavailable, busy or incomplete requests. If the result is
+unknown, check the terminal before trying again. This action needs a future
+Files archive and a host that understands it; it is not in published Files0.6.
+
 These source changes are not a release and do not replace published archives.
 Recognized `0.24.1-dev.N` hosts admit unchanged Files0.6 through the narrow
 [maintenance bridge](extension-installation-foundation.md#archive-contract).
