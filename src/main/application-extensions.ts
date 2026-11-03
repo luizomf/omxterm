@@ -449,6 +449,7 @@ export async function startApplicationExtensions(
     registerWindow(window: BrowserWindow, target: ExtensionTargetCapture) {
       const contents = window.webContents;
       windows.set(window, target);
+      defaultPanel.registerWindow(window);
       window.once("closed", () => {
         windows.delete(window);
         defaultPanel.cancel(window);

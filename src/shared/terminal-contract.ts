@@ -76,6 +76,7 @@ export type TerminalTabCommand =
   | { readonly action: "open-extension"; readonly token: string }
   | { readonly action: "toggle-snippets-extension"; readonly token: string }
   | { readonly action: "snippets-management" }
+  | { readonly action: "cancel-panel-default" }
   | {
       readonly action: "open-ssh";
       readonly token: string;
@@ -236,6 +237,7 @@ export function isTerminalTabCommand(
       [
         "new",
         "snippets-management",
+        "cancel-panel-default",
         "close",
         "prepare-close",
         "next",

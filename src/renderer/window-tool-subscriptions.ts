@@ -74,6 +74,7 @@ export function subscribeToWindowTools(
         tabs.editSettingsClipboard(action, options.clipboard) ||
         (panel?.clipboardAction(action) ?? false),
       owner.modalClipboard,
+      () => panel?.cancelDefaultOpen(),
     );
     removePanel = options.subscribeToAuxiliaryPanelToggle?.(() => {
       if (!disposed && !owner.blocked() && tabs.isTerminalSelected())

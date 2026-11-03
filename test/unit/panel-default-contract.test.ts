@@ -1,5 +1,13 @@
 import { expect, it } from "vitest";
 import { isExtensionsRequest } from "../../src/shared/extensions";
+import { isTerminalTabCommand } from "../../src/shared/terminal-contract";
+
+it("admits only the fixed native panel cancellation command", () => {
+  expect(isTerminalTabCommand({ action: "cancel-panel-default" })).toBe(true);
+  expect(
+    isTerminalTabCommand({ action: "cancel-panel-default", focused: true }),
+  ).toBe(false);
+});
 
 it("admits only bounded empty-panel preparation and main-issued cancellation tokens", () => {
   const token = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";

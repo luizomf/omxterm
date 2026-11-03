@@ -143,7 +143,7 @@ it("opens a later available tool, then toggles retained tools without further de
   expect(h.bridge.close).not.toHaveBeenCalled();
 });
 
-it.each(["settings", "modal", "tool", "selection", "blur", "dispose"])(
+it.each(["settings", "modal", "tool", "selection", "native-blur", "dispose"])(
   "revokes a pending empty intent on %s and never acknowledges it late",
   async (change) => {
     const h = hosted();
@@ -165,7 +165,8 @@ it.each(["settings", "modal", "tool", "selection", "blur", "dispose"])(
     if (change === "modal") f.about();
     if (change === "tool") h.open("files");
     if (change === "selection") f.tabCommand({ action: "new" });
-    if (change === "blur") window.dispatchEvent(new Event("blur"));
+    if (change === "native-blur")
+      f.tabCommand({ action: "cancel-panel-default" });
     if (change === "dispose") f.host.dispose();
     await settle();
     resolve({ ok: true, openToken: token });
@@ -182,6 +183,40 @@ it.each(["settings", "modal", "tool", "selection", "blur", "dispose"])(
     ).toBe(true);
   },
 );
+
+it("accepts initial child focus before publication without treating DOM blur as native window blur", async () => {
+  const h = hosted();
+  let publish!: () => void;
+  const request = vi.fn<ExtensionsBridge["request"]>(async (value) => {
+    if (value.operation === "panel-default")
+      return { ok: true, openToken: token };
+    if (value.operation === "open") {
+      // Native WebContents creation focuses its not-yet-published child first.
+      window.dispatchEvent(new Event("blur"));
+      return new Promise((resolve) => {
+        publish = () => {
+          h.open("snippets", token);
+          resolve({ ok: true });
+        };
+      });
+    }
+    return { ok: true };
+  });
+  const f = await snippetsWindow(
+    { hostedContent: h.bridge, extensions: { request } },
+    false,
+  );
+  f.panelToggle();
+  await settle();
+  expect(request).not.toHaveBeenCalledWith({
+    operation: "cancel-panel-default",
+    token,
+  });
+  publish();
+  await settle();
+  expect(f.root.hidden).toBe(false);
+  expect(h.bridge.close).not.toHaveBeenCalled();
+});
 
 it.each(["before-result", "after-result"])(
   "refuses stale native publication %s without selecting or focusing it",
@@ -214,6 +249,44 @@ it.each(["before-result", "after-result"])(
     await settle();
     expect(h.bridge.close).toHaveBeenCalledWith("late-snippets");
     expect(f.root.getAttribute("aria-label")).toBe("files");
+    expect(document.activeElement).toBe(focused);
+    if (ordering === "before-result") {
+      finish({ ok: true });
+      await settle();
+    }
+  },
+);
+
+it.each(["before-result", "after-result"])(
+  "rejects delayed publication after native window blur %s, without relying on DOM blur",
+  async (ordering) => {
+    const h = hosted();
+    let finish!: (result: ExtensionsResult) => void;
+    const request = vi.fn<ExtensionsBridge["request"]>(async (value) => {
+      if (value.operation === "panel-default")
+        return { ok: true, openToken: token };
+      if (value.operation === "open")
+        return new Promise((resolve) => {
+          finish = resolve;
+        });
+      return { ok: true };
+    });
+    const f = await snippetsWindow(
+      { hostedContent: h.bridge, extensions: { request } },
+      false,
+    );
+    f.panelToggle();
+    await settle();
+    if (ordering === "after-result") {
+      finish({ ok: true });
+      await settle();
+    }
+    f.tabCommand({ action: "cancel-panel-default" });
+    const focused = document.activeElement;
+    h.open("late-snippets", token);
+    await settle();
+    expect(f.root.hidden).toBe(true);
+    expect(h.bridge.close).toHaveBeenCalledWith("late-snippets");
     expect(document.activeElement).toBe(focused);
     if (ordering === "before-result") {
       finish({ ok: true });

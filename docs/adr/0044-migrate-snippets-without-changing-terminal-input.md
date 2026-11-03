@@ -199,8 +199,10 @@ theft, repeated notice/timer extension, Settings jump, native error modal or
 implicit installation/enablement/network acquisition. Later deliberate
 installation/enablement may make a new attempt succeed. Reuse generation/token
 admission and revoke stale panel/tab/pane/modal/native-focus intent, including
-native publication arriving after cancellation. Close/dispose stays distinct from
-Hide/retain. The explicit Snippets entry point above and all action identities,
+native publication arriving after cancellation. Main uses the actual native
+window blur and sends a fixed cancellation command to core, also fencing a
+publication already in transit. A core DOM blur during owned child creation is
+not native window focus loss. Close/dispose stays distinct from Hide/retain. The explicit Snippets entry point above and all action identities,
 defaults and custom/null shortcuts are unchanged.
 
 This slice does not implement the separately accepted new-install provisioning

@@ -244,7 +244,8 @@ export function mountTerminalWindowPage(
     },
   );
 
-  const onPageBlur = () => auxiliaryPanel?.cancelDefaultOpen();
+  // Native window blur revokes pending panel intent through main's command.
+  // DOM blur alone also occurs when an owned child is created before publication.
   const onPageFocus = () => {
     if (!previewActive() && !companion.ownsPanelFocus()) tabs.focusSelected();
   };
@@ -301,7 +302,6 @@ export function mountTerminalWindowPage(
     disposed = true;
     page.removeEventListener("pagehide", dispose);
     page.removeEventListener("focus", onPageFocus);
-    page.removeEventListener("blur", onPageBlur);
     removeFileDrops();
     removeToolSubscriptions?.();
     removeConfigurationUpdateListener?.();
@@ -322,7 +322,6 @@ export function mountTerminalWindowPage(
   };
   page.addEventListener("pagehide", dispose, { once: true });
   page.addEventListener("focus", onPageFocus);
-  page.addEventListener("blur", onPageBlur);
 
   removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
     (configuration) => {

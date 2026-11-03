@@ -600,7 +600,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   later manual installation/enablement can still make a future attempt succeed.
   Tab/pane selection, another tool, modal ownership, native window blur, close
   and disposal revoke pending empty-panel intent; delayed native publication
-  cannot reveal or focus that stale view. Blocked/suspended targets and pending
+  cannot reveal or focus that stale view. Native window blur revokes main intent
+  and notifies core even when publication is already in transit. Core DOM blur
+  from creating/focusing an owned child is not native window focus loss and
+  must not cancel its legitimate initial publication. Blocked/suspended targets and pending
   tool retirement do not trigger fallback. Close still disposes state, while
   Hide/Escape retains it. Existing action identities, defaults and custom/null
   bindings remain unchanged. This is access fallback, not default installation.

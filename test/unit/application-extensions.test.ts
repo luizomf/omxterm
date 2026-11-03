@@ -959,6 +959,77 @@ it("cancels an in-flight activation before it can allocate a late view", async (
   expect(adapters.hosts).toHaveLength(0);
 });
 
+it("revokes a prepared default on native blur even when the window refocuses before acknowledgement", async () => {
+  await installSnippets();
+  const prepared = await request({ operation: "panel-default" });
+  window.emit("blur");
+  expect(window.webContents.send).toHaveBeenCalledWith(expect.any(String), {
+    action: "cancel-panel-default",
+  });
+  // getFocusedWindow again returns this owner: its old intent stays revoked.
+  expect(
+    await request({
+      operation: "open",
+      token: prepared.openToken,
+      accepted: true,
+    }),
+  ).toEqual({ ok: false, error: "unavailable" });
+  expect(adapters.activate).not.toHaveBeenCalled();
+});
+
+it("native blur cancels held activation before publication without activating a late view", async () => {
+  await installSnippets();
+  let finish!: () => void;
+  adapters.activate.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = () => {
+          void applicationBackend(
+            adapters.root,
+            adapters.backendLifetime.signal,
+          ).then(resolve);
+        };
+      }),
+  );
+  const prepared = await request({ operation: "panel-default" });
+  const opening = request({
+    operation: "open",
+    token: prepared.openToken,
+    accepted: true,
+  });
+  await vi.waitFor(() => expect(adapters.activate).toHaveBeenCalledOnce());
+  window.emit("blur");
+  finish();
+  expect(await opening).toEqual({ ok: false });
+  expect(adapters.hosts).toHaveLength(0);
+});
+
+it("notifies renderer intent after publication but retains an already opened tool and cleans native listeners", async () => {
+  await installSnippets();
+  const prepared = await request({ operation: "panel-default" });
+  expect(
+    await request({
+      operation: "open",
+      token: prepared.openToken,
+      accepted: true,
+    }),
+  ).toEqual({ ok: true });
+  const listeners = window.listenerCount("blur");
+  service.registerWindow(window, () => ({
+    owner: window,
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+  }));
+  expect(window.listenerCount("blur")).toBe(listeners);
+  window.emit("blur");
+  expect(window.webContents.send).toHaveBeenCalledWith(expect.any(String), {
+    action: "cancel-panel-default",
+  });
+  expect(adapters.hosts[0]!.retire).not.toHaveBeenCalled();
+  await service.dispose();
+  expect(window.listenerCount("blur")).toBe(0);
+});
+
 it("makes activation errors nonmodal without retiring successful later work", async () => {
   await installSnippets();
   adapters.consent.mockClear();

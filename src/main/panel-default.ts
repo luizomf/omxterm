@@ -1,5 +1,6 @@
 import { BrowserWindow } from "electron";
 import { randomUUID } from "node:crypto";
+import { terminalIpc } from "../shared/terminal-ipc";
 import type { ExtensionsRequest, ExtensionsResult } from "../shared/extensions";
 import type {
   createExtensionManager,
@@ -42,6 +43,21 @@ export function createPanelDefault(options: {
     BrowserWindow,
     { token: string; abort: AbortController }
   >();
+  const windows = new Set<BrowserWindow>();
+  // Native child creation can blur core DOM without blurring its window.
+  // Also revoke renderer intent when publication is already in transit.
+  function onWindowBlur(this: BrowserWindow) {
+    if (options.stopping()) return;
+    cancel(this);
+    if (!this.webContents.isDestroyed())
+      this.webContents.send(terminalIpc.tabCommand, {
+        action: "cancel-panel-default",
+      });
+  }
+  function unregister(window: BrowserWindow) {
+    window.removeListener("blur", onWindowBlur);
+    windows.delete(window);
+  }
   let noticed = false;
   const unavailable = (): ExtensionsResult => {
     const noticeEmpty = !noticed;
@@ -136,7 +152,14 @@ export function createPanelDefault(options: {
       return undefined;
     },
     cancel,
+    registerWindow(window: BrowserWindow) {
+      if (windows.has(window)) return;
+      windows.add(window);
+      window.on("blur", onWindowBlur);
+      window.once("closed", () => unregister(window));
+    },
     dispose() {
+      for (const window of windows) unregister(window);
       for (const window of defaults.keys()) cancel(window);
     },
   };
