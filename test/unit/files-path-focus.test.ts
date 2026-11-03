@@ -16,6 +16,7 @@ function fixture() {
   let finish!: (delivered: boolean) => void;
   let focusContinuation: (() => void) | undefined;
   let blocked = false;
+  let semanticBlocked = false;
   let foreground = true;
   let selected = true;
   const delivery = new Promise<boolean>((resolve) => {
@@ -55,6 +56,7 @@ function fixture() {
       panel: undefined,
       language: englishLanguage,
       blocked: () => blocked,
+      semanticBlocked: () => semanticBlocked,
       onPreviewActivity() {},
       modalClipboard: () => false,
       focusTerminal,
@@ -89,6 +91,9 @@ function fixture() {
     block() {
       blocked = true;
     },
+    blockSemantic() {
+      semanticBlocked = true;
+    },
     switchSource() {
       foreground = false;
       selected = false;
@@ -99,6 +104,15 @@ function fixture() {
 it("refuses an insertion while presentation or an overlay blocks input", async () => {
   const f = fixture();
   f.block();
+  f.act();
+  await Promise.resolve();
+  expect(f.target.deliverAndReport).not.toHaveBeenCalled();
+  expect(f.focusTerminal).not.toHaveBeenCalled();
+});
+
+it("refuses semantic input during a pending native handoff", async () => {
+  const f = fixture();
+  f.blockSemantic();
   f.act();
   await Promise.resolve();
   expect(f.target.deliverAndReport).not.toHaveBeenCalled();
