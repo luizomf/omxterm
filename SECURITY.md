@@ -17,8 +17,13 @@ Please coordinate public disclosure with the maintainer.
 
 ## Local diagnostics and isolation
 
-OMXTerm makes no application network requests; programs you run and web links
-you explicitly open have their usual network access. Operational logs omit
+OMXTerm makes application network requests only for explicit official-catalog
+Browse/Refresh and HTTPS extension archive installation, using bounded acquisition
+in the main process. It does not fetch the catalog at startup or Settings reopen,
+or make telemetry or background update requests. See the
+[specification](docs/spec.md#configuration-and-local-state) for the network
+boundary and platform qualification. Programs you run retain their usual network
+access, and explicitly opened web links use the OS. Operational logs omit
 terminal, clipboard, command, configuration, and environment contents.
 Developer Tools can expose private runtime state, and user-file notices include
 actionable paths. Native font-read errors can also propagate local font paths
