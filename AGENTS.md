@@ -13,6 +13,8 @@ npm run format:check         # Check formatting with Prettier
 ```
 
 > **Note:** Graphical integration tests included in `npm test` and `npm run check:portable` open and focus real Electron windows. Run one graphical suite at a time on an unlocked, idle desktop. Use `npm test -- test/unit` for fast headless feedback.
+>
+> For agent work, run browser tests and browser-based review/reproduction probes only in an assigned disposable guest, including headless Chromium or Chrome. Carry this restriction to every nested delegate. Temporary profiles, HOME and XDG paths do not isolate macOS Keychain or OS preferences; see the [verification precautions](docs/development.md#macos-preferences-and-native-verification).
 
 ## Architecture and repository layout
 

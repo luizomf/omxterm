@@ -34,6 +34,38 @@ const english = {
   mutationPendingHint: "A file operation is in progress",
   openDirectory: "Open directory",
   rename: "Rename / move",
+  moveToFolder: "Move to folder…",
+  moveFolderPrompt: (path: string) =>
+    `Move ${path} into folder (absolute path; links are not folders)`,
+  confirmMove: (source: string, directory: string) =>
+    `Move ${source} into ${directory}? Existing entries will not be overwritten.`,
+  moveAction: "Move",
+  preparingMove: "Checking the source and destination…",
+  reviewMove: "Review the move before confirming.",
+  dropReady: (path: string) => `Drop to move into ${path}.`,
+  dropInvalid: "Cannot drop here. Choose a different folder.",
+  dropExternal: "Only entries dragged within Files can be moved here.",
+  moveError: (error: string) =>
+    ({
+      "same-directory": "The entry is already in that folder.",
+      "self-or-descendant":
+        "A folder cannot be moved into itself or its descendants.",
+      "target-not-directory":
+        "The destination must be a folder, not a symbolic link.",
+      "changed-entry":
+        "The source or destination changed. Start the move again.",
+      "expired-confirmation": "The move confirmation expired. Start again.",
+      "invalid-path": "Enter an absolute local folder path.",
+      conflict:
+        "An entry with that name already exists. Nothing was overwritten.",
+      "cross-device":
+        "Moving between volumes is not supported; nothing was copied or deleted.",
+      "not-found": "The source or destination no longer exists.",
+      "not-directory":
+        "A component of the source or destination path is not a folder.",
+      permission: "Permission denied while moving the entry.",
+      unsupported: "This filesystem does not support a no-overwrite move.",
+    })[error] ?? `Operation not completed: ${error}.`,
   trash: "Move to Trash",
   prepareDelete: "Delete permanently…",
   delete: "Delete permanently",
@@ -116,6 +148,39 @@ const portuguese: FilesMessages = {
   mutationPendingHint: "Uma operação de arquivo está em andamento",
   openDirectory: "Abrir diretório",
   rename: "Renomear / mover",
+  moveToFolder: "Mover para pasta…",
+  moveFolderPrompt: (path) =>
+    `Mover ${path} para a pasta (caminho absoluto; links não são pastas)`,
+  confirmMove: (source, directory) =>
+    `Mover ${source} para ${directory}? Entradas existentes não serão sobrescritas.`,
+  moveAction: "Mover",
+  preparingMove: "Verificando a origem e o destino…",
+  reviewMove: "Revise a movimentação antes de confirmar.",
+  dropReady: (path) => `Solte para mover para ${path}.`,
+  dropInvalid: "Não é possível soltar aqui. Escolha outra pasta.",
+  dropExternal:
+    "Somente entradas arrastadas dentro do Files podem ser movidas aqui.",
+  moveError: (error) =>
+    ({
+      "same-directory": "A entrada já está nessa pasta.",
+      "self-or-descendant":
+        "Uma pasta não pode ser movida para si mesma ou suas subpastas.",
+      "target-not-directory":
+        "O destino deve ser uma pasta, não um link simbólico.",
+      "changed-entry":
+        "A origem ou o destino mudou. Inicie a movimentação novamente.",
+      "expired-confirmation": "A confirmação expirou. Inicie novamente.",
+      "invalid-path": "Digite o caminho absoluto de uma pasta local.",
+      conflict: "Já existe uma entrada com esse nome. Nada foi sobrescrito.",
+      "cross-device":
+        "Mover entre volumes não é suportado; nada foi copiado ou excluído.",
+      "not-found": "A origem ou o destino não existe mais.",
+      "not-directory":
+        "Um componente do caminho de origem ou destino não é uma pasta.",
+      permission: "Permissão negada ao mover a entrada.",
+      unsupported:
+        "Este sistema de arquivos não suporta mover sem sobrescrever.",
+    })[error] ?? `Operação não concluída: ${error}.`,
   trash: "Mover para a Lixeira",
   prepareDelete: "Excluir permanentemente…",
   delete: "Excluir permanentemente",

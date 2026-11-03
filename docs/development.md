@@ -214,8 +214,12 @@ OMXTERM_TOOLBAR_CHROMIUM=/absolute/path/to/headless-chromium npm test -- test/in
 ```
 
 It checks real browser hit-testing, scrolling and layout without Electron or a
-desktop. Set `OMXTERM_TOOLBAR_EVIDENCE` to a private output directory to retain
-synthetic screenshots. This is not native or packaged-app qualification.
+desktop. Headless browser processes may still access OS services. For agent
+verification, run browser tests and browser-based review/reproduction probes in
+an assigned disposable guest, never on a physical host; this also applies to
+headless runs and every nested delegate. Set `OMXTERM_TOOLBAR_EVIDENCE` to a
+private output directory to retain synthetic screenshots. This is not native or
+packaged-app qualification.
 
 Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`. Confirm that the report belongs to the current invocation, and preserve it with the command, selected scope/configuration, exit status, and terminal output before another run overwrites it. A nonzero exit remains a failure regardless of JSON counters.
 
@@ -234,8 +238,11 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 ### macOS preferences and native verification
 
 Temporary `HOME`, XDG, Electron user-data and session-data paths separate some
-application files; they do **not** isolate macOS per-bundle preferences from the
-actual user and GUI session. Setting `HOME` does not switch users. The FULL
+application files; they do **not** isolate macOS per-bundle preferences or
+Keychain from the actual user and GUI session. Temporary browser profiles do not
+establish Keychain isolation either, including for headless Chrome. Setting
+`HOME` does not switch users. The observed Chrome key-storage dialog and its
+unattributed trigger are recorded in [#784](https://github.com/luizomf/omxterm/issues/784). The FULL
 [`package:verify`](../scripts/verify-packaged-app.mjs) GUI startup uses a temporary
 HOME, XDG config/state and Electron user-data directory, but does not capture or
 restore OS preferences. FULL and inspection-only also execute packaged Electron

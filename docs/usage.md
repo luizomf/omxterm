@@ -341,6 +341,16 @@ initiating row/control if available. The query stays while navigating or hiding
 the panel, and resets when Files is closed. A no-match message covers loaded
 entries only; hidden dotfiles, errors and listing limits still apply.
 
+To move one entry in current source, drag it onto another folder row, or select it
+and choose **Move to folder…** from Actions or its keyboard context menu. The
+keyboard action asks for an absolute folder path. Review the fixed source and
+folder, then choose **Move** or **Cancel**. Files does not accept external drags
+for this action, overwrite a collision, move a folder into itself or its children,
+or copy/delete across volumes. A symbolic link is moved as a link and cannot be
+the destination folder. If the outcome is unknown, refresh and inspect rather
+than repeating blindly. Dragging a Files entry into the terminal is not part of
+this workflow.
+
 These source changes are not a release and do not replace published archives.
 Recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts admit unchanged Files0.6
 through the narrow [development bridges](extension-installation-foundation.md#archive-contract).

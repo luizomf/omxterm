@@ -10,6 +10,7 @@ let setAppearance!: (appearance: {
 }) => void;
 let homeFailure = false;
 let dotfiles = false;
+let moveFixture = false;
 let setVisibility!: (visible: boolean) => void;
 let focusIntent!: (intent: "search" | "restore") => void;
 let holdList = false;
@@ -17,6 +18,8 @@ let releaseList: (() => void) | undefined;
 let fillEmpty = false;
 let holdDelete = false;
 let releaseDelete: (() => void) | undefined;
+let holdMove = false;
+let releaseMove: (() => void) | undefined;
 const requests: { operation: string; path?: string }[] = [];
 const bridge = {
   async request(value: unknown) {
@@ -40,8 +43,19 @@ const bridge = {
       return {
         ok: true,
         directory: request.path!,
-        rows:
-          request.path === "/empty"
+        rows: moveFixture
+          ? request.path === "/root"
+            ? [
+                { name: "source", kind: "file", size: 1 },
+                { name: "folder", kind: "directory", size: 0 },
+                { name: "container", kind: "directory", size: 0 },
+                { name: "alias", kind: "link", size: 0 },
+                { name: `long-${"x".repeat(200)}`, kind: "directory", size: 0 },
+              ]
+            : request.path === "/root/container"
+              ? [{ name: "child", kind: "directory", size: 0 }]
+              : []
+          : request.path === "/empty"
             ? fillEmpty
               ? [{ name: "arrived", kind: "file", size: 1 }]
               : []
@@ -64,6 +78,21 @@ const bridge = {
                   kind: "file",
                   size: 1,
                 })),
+      };
+    }
+    if (request.operation === "prepare-move-into") {
+      const move = value as { path: string; directory: string };
+      if (holdMove) {
+        holdMove = false;
+        await new Promise<void>((resolve) => {
+          releaseMove = resolve;
+        });
+      }
+      return {
+        ok: true,
+        path: move.path,
+        directory: move.directory,
+        token: "fixture-move-token",
       };
     }
     if (request.operation === "prepare-delete") {
@@ -130,6 +159,18 @@ Object.assign(window, {
         )!
         .click();
     },
+    holdNextMove() {
+      releaseMove = undefined;
+      holdMove = true;
+    },
+    moveHeld() {
+      return !!releaseMove;
+    },
+    releaseMove() {
+      const release = releaseMove;
+      releaseMove = undefined;
+      release?.();
+    },
     holdNextDelete() {
       releaseDelete = undefined;
       holdDelete = true;
@@ -141,6 +182,14 @@ Object.assign(window, {
       const release = releaseDelete;
       releaseDelete = undefined;
       release?.();
+    },
+    useMoveFixture() {
+      moveFixture = true;
+      document
+        .querySelector<HTMLButtonElement>(
+          '[aria-describedby="files-toolbar-refresh-tooltip"]',
+        )!
+        .click();
     },
     useDotfiles() {
       dotfiles = true;

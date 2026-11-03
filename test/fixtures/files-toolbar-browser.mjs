@@ -1261,7 +1261,7 @@ try {
     await key("Enter", "Enter", 13);
     await evaluate("filesFixture.holdNextDelete()");
     await key("F10", "F10", 121, 8);
-    for (let index = 0; index < 4; index++)
+    for (let index = 0; index < 5; index++)
       await key("ArrowDown", "ArrowDown", 40);
     await key("Enter", "Enter", 13);
     await until(
@@ -1302,6 +1302,366 @@ try {
     await screenshot(`keyboard-${tag}`);
     console.log(`PASS keyboard workflow ${tag}`);
   }
+  async function dragWorkflow(tag) {
+    await evaluate("filesFixture.useMoveFixture()");
+    await until(
+      async () =>
+        await evaluate(
+          "!!document.querySelector('[data-path=\"/root/alias\"]')",
+        ),
+      "move fixture loaded",
+    );
+    await evaluate(() => {
+      window.dragEvents = [];
+      for (const name of ["dragstart", "dragover", "drop", "dragend"])
+        document.addEventListener(
+          name,
+          (event) => {
+            dragEvents.push({
+              name,
+              trusted: event.isTrusted,
+              types: [...(event.dataTransfer?.types ?? [])],
+            });
+          },
+          true,
+        );
+    });
+    async function startDrag(source, target) {
+      await evaluate("dragEvents.length = 0");
+      const from = await point(`[data-path="${source}"]`);
+      const to = await point(`[data-path="${target}"]`);
+      await mouse("mouseMoved", from);
+      await mouse("mousePressed", from, {
+        button: "left",
+        buttons: 1,
+        clickCount: 1,
+      });
+      await mouse(
+        "mouseMoved",
+        { x: from.x + 20, y: from.y + 1 },
+        { button: "left", buttons: 1 },
+      );
+      await until(
+        async () =>
+          await evaluate("dragEvents.some(e => e.name === 'dragstart')"),
+        "Chromium drag started",
+      );
+      await mouse("mouseMoved", to, { button: "left", buttons: 1 });
+      await mouse(
+        "mouseMoved",
+        { x: to.x + 1, y: to.y },
+        { button: "left", buttons: 1 },
+      );
+      return to;
+    }
+    let destination = await startDrag("/root/source", "/root/alias");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/alias\"]')?.dataset.drop === 'invalid'",
+        ),
+      "invalid target feedback",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.drag-feedback').textContent.includes('Cannot drop here')",
+      ),
+    );
+    await mouse("mouseReleased", destination, {
+      button: "left",
+      buttons: 0,
+      clickCount: 1,
+    });
+    await frame();
+    assert.equal(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'prepare-move-into').length",
+      ),
+      0,
+    );
+    destination = await startDrag("/root/source", "/root/folder");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/folder\"]')?.dataset.drop === 'valid'",
+        ),
+      "valid target feedback",
+    );
+    const outside = await point(".entry-filter");
+    await mouse("mouseMoved", outside, { button: "left", buttons: 1 });
+    await mouse("mouseMoved", destination, { button: "left", buttons: 1 });
+    await mouse(
+      "mouseMoved",
+      { x: destination.x + 1, y: destination.y },
+      { button: "left", buttons: 1 },
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/folder\"]')?.dataset.drop === 'valid'",
+        ),
+      "valid target after leaving tree",
+    );
+    await evaluate((refresh) => {
+      window.dragSource = document.querySelector('[data-path="/root/source"]');
+      filesFixture.holdNextList();
+      document.querySelector(refresh).click();
+    }, selector("refresh"));
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "refresh held during drag",
+    );
+    await evaluate("filesFixture.releaseList()");
+    await frame();
+    assert.equal(
+      await evaluate("dragSource.isConnected"),
+      true,
+      "source survives listing completion",
+    );
+    await mouse(
+      "mouseMoved",
+      { x: destination.x + 2, y: destination.y },
+      { button: "left", buttons: 1 },
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/folder\"]')?.dataset.drop === 'valid'",
+        ),
+      "valid target after refresh",
+    );
+    const geometry = await point('[data-path="/root/folder"]');
+    assert.deepEqual(
+      geometry,
+      destination,
+      "feedback does not shift the drop target",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.drag-feedback').textContent.includes('Drop to move into folder')",
+      ),
+    );
+    await screenshot(`drag-valid-${tag}`);
+    await mouse("mouseReleased", destination, {
+      button: "left",
+      buttons: 0,
+      clickCount: 1,
+    });
+    await until(
+      async () =>
+        await evaluate("!document.querySelector('.operation-editor').hidden"),
+      "move confirmation",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('Move /root/source into /root/folder?')",
+      ),
+    );
+    assert.equal(
+      await evaluate("document.activeElement.textContent"),
+      "Cancel",
+      "safe confirmation focus",
+    );
+    assert.deepEqual(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'prepare-move-into')",
+      ),
+      [
+        {
+          operation: "prepare-move-into",
+          path: "/root/source",
+          kind: "file",
+          directory: "/root/folder",
+        },
+      ],
+    );
+    assert.ok(
+      await evaluate(
+        "dragEvents.some(e => e.name === 'dragstart' && e.trusted) && dragEvents.some(e => e.name === 'drop' && e.trusted)",
+      ),
+      "CDP generated trusted Chromium drag events",
+    );
+    const movePoint = await evaluate(() => {
+      const b = [...document.querySelectorAll(".operation-editor button")].find(
+        (b) => b.textContent === "Move",
+      );
+      const r = b.getBoundingClientRect();
+      return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 };
+    });
+    await click(movePoint);
+    await until(
+      async () =>
+        await evaluate(
+          "filesFixture.requests.some(r => r.operation === 'move-into')",
+        ),
+      "confirmed move request",
+    );
+    assert.deepEqual(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'move-into')",
+      ),
+      [{ operation: "move-into", token: "fixture-move-token" }],
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=status]').textContent.includes('Operation completed') && document.querySelector('[role=tree]').getAttribute('aria-busy') === 'false'",
+        ),
+      "move refresh complete",
+    );
+    const count = await evaluate("filesFixture.requests.length");
+    await evaluate(() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["synthetic"], "external"));
+      transfer.setData("application/x-omxterm-files-entry", "forged");
+      const target = document.querySelector('[data-path="/root/folder"]');
+      target.dispatchEvent(
+        new DragEvent("dragover", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: transfer,
+        }),
+      );
+      target.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: transfer,
+        }),
+      );
+    });
+    assert.equal(
+      await evaluate("filesFixture.requests.length"),
+      count,
+      "external file payload did not reach backend",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('[role=status]').textContent.includes('Only entries dragged within Files')",
+      ),
+    );
+    const longFeedback = await evaluate(() => {
+      const data = new DataTransfer();
+      const source = document.querySelector('[data-path="/root/source"]');
+      const target = [...document.querySelectorAll(".file-row")].find((row) =>
+        row.dataset.path.includes("/long-"),
+      );
+      source.dispatchEvent(
+        new DragEvent("dragstart", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: data,
+        }),
+      );
+      target.dispatchEvent(
+        new DragEvent("dragover", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: data,
+        }),
+      );
+      const feedback = document.querySelector(".drag-feedback");
+      const rect = feedback.getBoundingClientRect();
+      const result = {
+        height: rect.height,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        scrollWidth: feedback.scrollWidth,
+        text: feedback.textContent,
+        drop: target.dataset.drop,
+      };
+      source.dispatchEvent(
+        new DragEvent("dragend", { bubbles: true, dataTransfer: data }),
+      );
+      return result;
+    });
+    assert.equal(longFeedback.drop, "valid");
+    assert.ok(
+      longFeedback.height < 50 &&
+        longFeedback.top >= 0 &&
+        longFeedback.bottom <= 400,
+      "long folder feedback stays bounded",
+    );
+    assert.ok(
+      longFeedback.scrollWidth > longFeedback.width &&
+        longFeedback.text.startsWith("Drop to move into long-"),
+      "long feedback is truncated visually, not expanded over the tree",
+    );
+    console.log(`PASS directory drag ${tag}`);
+  }
+  async function moveKeyboardWorkflow(tag) {
+    await evaluate("filesFixture.useMoveFixture()");
+    await until(
+      async () =>
+        await evaluate(
+          "!!document.querySelector('[data-path=\"/root/source\"]')",
+        ),
+      "move keyboard fixture",
+    );
+    async function prepare() {
+      await evaluate(
+        "document.querySelector('[data-path=\"/root/source\"]').focus(); filesFixture.holdNextMove()",
+      );
+      await key("F10", "F10", 121, 8);
+      for (let index = 0; index < 3; index++)
+        await key("ArrowDown", "ArrowDown", 40);
+      await key("Enter", "Enter", 13);
+      await send("Input.insertText", { text: "/root/folder" });
+      await key("Enter", "Enter", 13);
+      await until(
+        async () => await evaluate("filesFixture.moveHeld()"),
+        "keyboard move preparation held",
+      );
+      await frame();
+    }
+    await prepare();
+    await evaluate("filesFixture.releaseMove()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.operation-editor').textContent.includes('Move /root/source into /root/folder?')",
+        ),
+      "keyboard move confirmation",
+    );
+    assert.equal(
+      await evaluate("document.activeElement.textContent"),
+      "Cancel",
+      "Cancel owns focus after inert editor",
+    );
+    await key("Enter", "Enter", 13);
+    assert.equal(
+      await evaluate("document.querySelector('.operation-editor').hidden"),
+      true,
+      "keyboard Cancel closes confirmation",
+    );
+    await prepare();
+    await evaluate(
+      "filesFixture.setVisibility(false); filesFixture.releaseMove()",
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.operation-editor').textContent.includes('Move /root/source into /root/folder?')",
+        ),
+      "hidden confirmation prepared",
+    );
+    await evaluate(
+      'filesFixture.setVisibility(true); filesFixture.focusIntent("search")',
+    );
+    assert.equal(
+      await evaluate("document.activeElement.textContent"),
+      "Cancel",
+      "reveal focuses Cancel",
+    );
+    assert.equal(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'move-into').length",
+      ),
+      0,
+    );
+    console.log(`PASS directory move keyboard ${tag}`);
+  }
   const scenario = process.argv[2] ?? "matrix";
   assert.ok(
     [
@@ -1315,6 +1675,8 @@ try {
       "shortcut-mac",
       "shortcut-linux",
       "keyboard",
+      "drag",
+      "move-keyboard",
     ].includes(scenario),
   );
   if (
@@ -1373,6 +1735,8 @@ try {
           if (kind === "shortcut-mac") await shortcut("mac");
           if (kind === "shortcut-linux") await shortcut("linux");
           if (kind === "keyboard") await keyboardWorkflow(tag);
+          if (kind === "drag") await dragWorkflow(tag);
+          if (kind === "move-keyboard") await moveKeyboardWorkflow(tag);
         }
         if (scenario === "matrix") console.log(`PASS matrix ${tag}`);
       }

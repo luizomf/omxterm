@@ -108,6 +108,10 @@ export function mountFilesPage(
   entries.tabIndex = 0;
   const status = document.createElement("p");
   status.className = "summary";
+  const dragFeedback = document.createElement("p");
+  dragFeedback.className = "drag-feedback";
+  dragFeedback.hidden = true;
+  dragFeedback.setAttribute("role", "status");
   const filterHint = document.createElement("p");
   filterHint.className = "filter-hint";
   filterHint.setAttribute("aria-live", "polite");
@@ -128,7 +132,13 @@ export function mountFilesPage(
   let showDotfiles = false;
   let mutationPending = false;
   let confirmation: string | undefined;
+  let moveConfirmation: string | undefined;
   let preparingDelete: number | undefined;
+  let preparingMove: number | undefined;
+  let drag: { source: Target; token: string } | undefined;
+  let deferredDragSnapshot: FilesTreeSnapshot | undefined;
+  let dragSerial = 0;
+  const dragType = "application/x-omxterm-files-entry";
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
@@ -161,7 +171,7 @@ export function mountFilesPage(
       return { ok: false, error: "outcome-unknown" };
     }
   }
-  function report(reply: Reply) {
+  function report(reply: Reply, moving = false) {
     message((m) => {
       if (reply.reason === "terminal-directory-unavailable")
         return m.terminalDirectoryUnavailable;
@@ -171,7 +181,9 @@ export function mountFilesPage(
         return m.terminalDirectoryBusy;
       return reply.error === "outcome-unknown"
         ? m.unknown
-        : m.failed(reply.error ?? "failed");
+        : moving
+          ? m.moveError(reply.error ?? "failed")
+          : m.failed(reply.error ?? "failed");
     }, "error");
   }
   function button(
@@ -206,7 +218,8 @@ export function mountFilesPage(
     if (state.root === "/") upButton.setAttribute("aria-disabled", "true");
     else upButton.removeAttribute("aria-disabled");
     refreshButton.disabled = !state.root;
-    newFolderButton.disabled = !state.root || mutationPending;
+    newFolderButton.disabled =
+      !state.root || mutationPending || preparingMove !== undefined;
     for (const button of [upButton, refreshButton, newFolderButton]) {
       const hint = controlHints.get(button);
       if (hint) labels.get(hint)?.();
@@ -229,6 +242,12 @@ export function mountFilesPage(
     entries.tabIndex = -1;
   }
   function render(snapshot: FilesTreeSnapshot) {
+    // Replacing the source node ends a native drag. Publish the latest listing
+    // once the gesture ends instead of silently cancelling it mid-flight.
+    if (drag) {
+      deferredDragSnapshot = snapshot;
+      return;
+    }
     const active = document.activeElement as HTMLElement | null;
     const focusedPath = entries.contains(active)
       ? active?.dataset.path
@@ -289,6 +308,7 @@ export function mountFilesPage(
     for (const [index, item] of state.rows.entries()) {
       const row = document.createElement("div");
       row.className = "file-row";
+      row.draggable = true;
       row.dataset.path = item.path;
       row.setAttribute("role", "treeitem");
       row.setAttribute("aria-level", String(item.depth + 1));
@@ -329,6 +349,20 @@ export function mountFilesPage(
         if (event.target !== disclosure && item.kind === "directory")
           void tree.toggle(item.path);
       });
+      row.addEventListener("dragstart", (event) => {
+        if (!event.dataTransfer || !canStartMove()) {
+          event.preventDefault();
+          return;
+        }
+        select(item);
+        drag = {
+          source: { path: item.path, kind: item.kind },
+          token: String(++dragSerial),
+        };
+        // Never put local paths into a payload that can leave this view.
+        event.dataTransfer.setData(dragType, drag.token);
+        event.dataTransfer.effectAllowed = "move";
+      });
       row.addEventListener("keydown", (event) => rowKey(event, item));
       row.addEventListener("contextmenu", (event) => {
         event.preventDefault();
@@ -367,7 +401,7 @@ export function mountFilesPage(
       }
     }
     entries.tabIndex = state.rows.length ? -1 : 0;
-    if (focusedPath) {
+    if (focusedPath && visible) {
       const target =
         rowElement(focusedPath) ?? rowElement(focusPath ?? "") ?? entries;
       restoringTreeFocus = true;
@@ -504,9 +538,14 @@ export function mountFilesPage(
   function discardConfirmation() {
     editorRevision++;
     preparingDelete = undefined;
+    preparingMove = undefined;
+    editor.inert = false;
     if (confirmation)
       void request({ operation: "cancel-delete", token: confirmation });
+    if (moveConfirmation)
+      void request({ operation: "cancel-move", token: moveConfirmation });
     confirmation = undefined;
+    moveConfirmation = undefined;
   }
   function captureEditorReturn() {
     const active = document.activeElement as HTMLElement | null;
@@ -530,10 +569,11 @@ export function mountFilesPage(
   function dismissEditor() {
     discardConfirmation();
     editor.hidden = true;
+    syncControls();
     restoreEditorFocus();
   }
-  async function mutate(value: unknown) {
-    if (mutationPending) return;
+  async function mutate(value: unknown, moving = false) {
+    if (mutationPending || preparingMove !== undefined) return;
     const active = document.activeElement as HTMLElement | null;
     const editorFocus = active && editor.contains(active) ? active : undefined;
     const revision = focusRevision;
@@ -542,6 +582,7 @@ export function mountFilesPage(
     syncControls();
     discardConfirmation();
     editor.inert = true;
+    if (moving) editor.hidden = true;
     message((m) => m.pending);
     try {
       const reply = await request(value);
@@ -559,7 +600,7 @@ export function mountFilesPage(
             ? "warning"
             : "success",
         );
-      } else report(reply);
+      } else report(reply, moving);
     } finally {
       mutationPending = false;
       syncControls();
@@ -571,7 +612,7 @@ export function mountFilesPage(
         visible &&
         document.hasFocus()
       ) {
-        if (completed) restoreEditorFocus();
+        if (completed || moving) restoreEditorFocus();
         else if (editorFocus.isConnected && !editor.hidden) editorFocus.focus();
       }
     }
@@ -581,7 +622,7 @@ export function mountFilesPage(
     initial: string,
     submit: (value: string) => void,
   ) {
-    if (mutationPending) return;
+    if (mutationPending || preparingMove !== undefined) return;
     editorReturn = captureEditorReturn();
     discardConfirmation();
     clear(editor);
@@ -641,8 +682,87 @@ export function mountFilesPage(
       },
     );
   }
+  function canStartMove() {
+    return (
+      visible &&
+      !disposed &&
+      !mutationPending &&
+      preparingMove === undefined &&
+      preparingDelete === undefined &&
+      editor.hidden
+    );
+  }
+  function moveToFolder(target: Target) {
+    const captured = { ...target };
+    form(
+      (m) => m.moveFolderPrompt(captured.path),
+      parent(captured.path),
+      (directory) => void prepareMove(captured, directory, false),
+    );
+  }
+  async function prepareMove(
+    target: Target,
+    directory: string,
+    fromDrop: boolean,
+  ) {
+    if (mutationPending || preparingMove !== undefined) return;
+    if (fromDrop) editorReturn = { path: target.path };
+    discardConfirmation();
+    const revision = editorRevision;
+    const focusAtRequest = focusRevision;
+    const focused = document.activeElement;
+    const focusedInEditor = !!focused && editor.contains(focused);
+    preparingMove = revision;
+    editor.inert = true;
+    syncControls();
+    message((m) => m.preparingMove);
+    const reply = await request({
+      operation: "prepare-move-into",
+      path: target.path,
+      kind: target.kind,
+      directory,
+    });
+    if (revision !== editorRevision) {
+      if (reply.token)
+        void request({ operation: "cancel-move", token: reply.token });
+      return;
+    }
+    preparingMove = undefined;
+    editor.inert = false;
+    syncControls();
+    if (!reply.ok || !reply.token || !reply.path || !reply.directory) {
+      report(reply, true);
+      return;
+    }
+    moveConfirmation = reply.token;
+    message((m) => m.reviewMove);
+    const shouldFocus =
+      visible &&
+      document.hasFocus() &&
+      focusRevision === focusAtRequest &&
+      (document.activeElement === focused ||
+        (focusedInEditor && document.activeElement === document.body));
+    clear(editor);
+    editor.hidden = false;
+    const warning = document.createElement("p");
+    label(warning, (m) => m.confirmMove(reply.path!, reply.directory!));
+    editor.append(warning);
+    // Cancel is first in tab order and in the host's retained-editor focus path.
+    const cancel = button((m) => m.cancel, dismissEditor, editor);
+    button(
+      (m) => m.moveAction,
+      () => {
+        if (moveConfirmation !== reply.token) return;
+        moveConfirmation = undefined;
+        void mutate({ operation: "move-into", token: reply.token }, true);
+      },
+      editor,
+    );
+    editor.onsubmit = (event) => event.preventDefault();
+    if (shouldFocus) cancel.focus();
+  }
   async function prepareDelete(target: Target) {
-    if (mutationPending) return;
+    if (mutationPending || preparingMove !== undefined) return;
     discardConfirmation();
     const origin = captureEditorReturn();
     const focused = document.activeElement;
@@ -694,6 +814,7 @@ export function mountFilesPage(
     render(tree.snapshot());
   }
   function actions(target?: Target): Action[] {
+    const busy = mutationPending || preparingMove !== undefined;
     const directory = target
       ? target.kind === "directory"
         ? target.path
@@ -713,34 +834,39 @@ export function mountFilesPage(
       {
         label: (m) => m.newFile,
         run: () => creation("create-file", directory),
-        disabled: !directory || mutationPending,
+        disabled: !directory || busy,
       },
       {
         label: (m) => m.newFolder,
         run: () => creation("create-directory", directory),
-        disabled: !directory || mutationPending,
+        disabled: !directory || busy,
       },
       ...(target
         ? [
             {
               label: (m: FilesMessages) => m.rename,
               run: () => rename(target),
-              disabled: mutationPending,
+              disabled: busy,
               shortcut: { display: "F2", keys: "F2" },
+            },
+            {
+              label: (m: FilesMessages) => m.moveToFolder,
+              run: () => moveToFolder(target),
+              disabled: busy,
             },
             {
               label: (m: FilesMessages) => m.trash,
               run: () => {
                 void mutate({ operation: "trash", path: target.path });
               },
-              disabled: mutationPending,
+              disabled: busy,
             },
             {
               label: (m: FilesMessages) => m.prepareDelete,
               run: () => {
                 void prepareDelete(target);
               },
-              disabled: mutationPending,
+              disabled: busy,
             },
           ]
         : []),
@@ -1014,6 +1140,82 @@ export function mountFilesPage(
   document.addEventListener("pointercancel", cancelMenuPointer, true);
   document.addEventListener("click", guardScrolledMenuClick, true);
   document.defaultView?.addEventListener("blur", blurMenu);
+  function clearDragFeedback() {
+    dragFeedback.hidden = true;
+    labels.delete(dragFeedback);
+    for (const row of entries.querySelectorAll<HTMLElement>("[data-drop]"))
+      delete row.dataset.drop;
+  }
+  function resetDrag() {
+    drag = undefined;
+    clearDragFeedback();
+    const pending = deferredDragSnapshot;
+    deferredDragSnapshot = undefined;
+    if (pending && !disposed) render(pending);
+  }
+  function dropTarget(event: DragEvent) {
+    const element = event.target;
+    if (!(element instanceof document.defaultView!.Element)) return undefined;
+    const row = element.closest<HTMLElement>(".file-row");
+    return row && entries.contains(row)
+      ? state.rows.find((item) => item.path === row.dataset.path)
+      : undefined;
+  }
+  function internalDrag(event: DragEvent) {
+    const types = Array.from(event.dataTransfer?.types ?? []);
+    return !!drag && types.includes(dragType) && !types.includes("Files");
+  }
+  function validDrop(target: FilesTreeRow | undefined) {
+    if (!drag || !target || target.kind !== "directory" || !canStartMove())
+      return false;
+    const source = drag.source;
+    return (
+      parent(source.path) !== target.path &&
+      (source.kind !== "directory" ||
+        (target.path !== source.path &&
+          !target.path.startsWith(`${source.path}/`)))
+    );
+  }
+  entries.addEventListener("dragover", (event) => {
+    event.preventDefault();
+    const internal = internalDrag(event);
+    const target = dropTarget(event);
+    const valid = internal && validDrop(target);
+    if (event.dataTransfer)
+      event.dataTransfer.dropEffect = valid ? "move" : "none";
+    for (const row of entries.querySelectorAll<HTMLElement>("[data-drop]"))
+      delete row.dataset.drop;
+    const row = target && rowElement(target.path);
+    if (row) row.dataset.drop = valid ? "valid" : "invalid";
+    dragFeedback.hidden = false;
+    label(
+      dragFeedback,
+      internal
+        ? valid
+          ? (m) => m.dropReady(target!.name)
+          : (m) => m.dropInvalid
+        : (m) => m.dropExternal,
+    );
+  });
+  entries.addEventListener("dragleave", (event) => {
+    if (!entries.contains(event.relatedTarget as Node | null))
+      clearDragFeedback();
+  });
+  entries.addEventListener("drop", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const internal = internalDrag(event);
+    const target = dropTarget(event);
+    const source = drag?.source;
+    const valid =
+      internal &&
+      validDrop(target) &&
+      event.dataTransfer?.getData(dragType) === drag?.token;
+    resetDrag();
+    if (valid && source && target) void prepareMove(source, target.path, true);
+    else message((m) => (internal ? m.dropInvalid : m.dropExternal), "warning");
+  });
+  document.addEventListener("dragend", resetDrag);
   entries.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     openMenu(undefined, event.clientX, event.clientY, entries);
@@ -1090,7 +1292,7 @@ export function mountFilesPage(
     "new-folder",
     (m) => m.newFolder,
     (m) =>
-      mutationPending
+      mutationPending || preparingMove !== undefined
         ? m.mutationPendingHint
         : !state.root
           ? m.noRootHint
@@ -1121,7 +1323,7 @@ export function mountFilesPage(
     event.preventDefault();
     void navigate(address.value);
   });
-  content.append(toolbar, location, filter, entries, filterHint);
+  content.append(toolbar, location, filter, dragFeedback, entries, filterHint);
   // The host supplies the visible tool identity; retain a named child region.
   const page = createApplicationPage(document, { notice, content, status });
   page.setAttribute("role", "region");
@@ -1139,6 +1341,7 @@ export function mountFilesPage(
       event.isComposing ||
       !editor.hidden ||
       mutationPending ||
+      preparingMove !== undefined ||
       preparingDelete !== undefined ||
       !(target instanceof document.defaultView!.Element) ||
       (!page.contains(target) && !menu.contains(target)) ||
@@ -1170,6 +1373,13 @@ export function mountFilesPage(
   const recordFocusChange = () => {
     if (!restoringTreeFocus) focusRevision++;
   };
+  // A user gesture during asynchronous preparation owns subsequent focus,
+  // even if it lands on a non-focusable element while the editor is inert.
+  const recordPreparationInteraction = () => {
+    if (preparingMove !== undefined) focusRevision++;
+  };
+  document.addEventListener("pointerdown", recordPreparationInteraction, true);
+  document.addEventListener("keydown", recordPreparationInteraction, true);
   document.addEventListener("focusin", recordFocusChange);
   document.defaultView?.addEventListener("blur", recordFocusChange);
   const startComposition = () => {
@@ -1188,6 +1398,7 @@ export function mountFilesPage(
     if (!shown) {
       focusRevision++;
       composing = false;
+      resetDrag();
       closeMenu(false);
       tooltips.reset();
     }
@@ -1234,6 +1445,7 @@ export function mountFilesPage(
       if (disposed) return;
       disposed = true;
       navigationRevision++;
+      resetDrag();
       discardConfirmation();
       unsubscribeVisibility?.();
       unsubscribeLanguage?.();
@@ -1253,9 +1465,20 @@ export function mountFilesPage(
       document.defaultView?.removeEventListener("blur", blurMenu);
       document.removeEventListener("keydown", onShortcut);
       document.removeEventListener("focusin", recordFocusChange);
+      document.removeEventListener(
+        "pointerdown",
+        recordPreparationInteraction,
+        true,
+      );
+      document.removeEventListener(
+        "keydown",
+        recordPreparationInteraction,
+        true,
+      );
       document.defaultView?.removeEventListener("blur", recordFocusChange);
       document.removeEventListener("compositionstart", startComposition);
       document.removeEventListener("compositionend", endComposition);
+      document.removeEventListener("dragend", resetDrag);
     },
   };
 }

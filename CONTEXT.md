@@ -369,8 +369,13 @@ for dot-prefixed names, hidden by default relative to the browsing root; it does
 not classify other platform hidden metadata. Its scoped child shortcut leaves
 editing and core shortcut ownership intact. Current source also provides a
 focused loaded-entry filter and keyboard-selectable tree; filtering is not a
-recursive search and does not retarget an open operation. These source UI changes
-need a future archive. Hide/reveal retains the dotfile choice;
+recursive search and does not retarget an open operation. Current source also
+supports a confirmed internal entry-to-folder drag and a keyboard-accessible
+Move to folder action. Their fixed source and folder are rechecked before a
+no-replace move; external drags, same-directory, self/descendant and final
+symlink destinations are refused. Cross-volume moves do not copy/delete and
+symlink sources move as links. Files-to-terminal drag remains separate. These
+source UI changes need a future archive. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal

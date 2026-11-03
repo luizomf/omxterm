@@ -5,6 +5,16 @@ import { expect, it } from "vitest";
 const run = promisify(execFile);
 const scenarios = [
   [
+    "move-keyboard",
+    "keeps keyboard confirmation focus safe across delayed and hidden preparation",
+    "PASS directory move keyboard",
+  ],
+  [
+    "drag",
+    "drags an internal entry with Chromium input and rejects external payloads",
+    "PASS directory drag",
+  ],
+  [
     "keyboard",
     "uses the filter, tree, editor and menu with keyboard focus",
     "PASS keyboard workflow",

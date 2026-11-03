@@ -295,6 +295,28 @@ file's parent); background actions use the browsing root. Permanent deletion
 still requires explicit confirmation. Editors keep captured paths even if the
 selection or browsing root changes.
 
+Current source also lets one drag a single Files row onto another directory row.
+The highlighted destination and an in-view message distinguish valid and invalid
+locations; a native/external file drag is not accepted as an internal entry. No
+local path is placed in the drag payload. Keyboard users can select the source,
+open its context menu (Shift+F10), choose **Move to folder…** and enter an
+absolute destination folder. Both routes show the fixed source and folder and
+require an explicit **Move**; Cancel is initially focused when appropriate.
+Changing the selection or navigation cannot retarget that confirmation.
+
+Same-directory drops and moving a directory into itself or its descendants are
+refused. A final symbolic-link row is not a destination folder; a symbolic-link
+source is moved as the link, not its referent. Ancestor paths are resolved before
+checking the relationship. At preparation, the backend records the source and
+folder identities; a one-shot confirmation rechecks them before using the existing
+no-replace move. This prevents ordinary stale-confirmation retargeting, not
+hostile same-user filesystem races between checking and the native rename.
+Destination collisions never overwrite; cross-volume moves fail without copying
+or deleting. Permission, missing, unsupported and uncertain outcomes are reported;
+a failed or uncertain move is not retried automatically. Refresh to inspect an
+unknown outcome. This source-only directory workflow does not insert a path into
+the terminal and does not change published Files0.6.
+
 Successful creation, move, trash and deletion automatically refresh the current
 root and surviving expanded folders, preserving selection where possible. A late
 mutation result never navigates back to its old root. Collapsing drops collapsed
@@ -330,8 +352,9 @@ The backend lists directories using `opendir` and sequential `lstat`, with a
 5,000-entry visit limit and explicit truncation. Replies contain at most100 rows,
 with at most eight active backend invocations; snapshots/cursors are ephemeral,
 not filesystem watchers. At most eight completed snapshots and eight deletion
-confirmations are retained. At capacity, a new request expires the oldest retained
-token rather than allowing abandoned views to reserve capacity forever. In-flight
+confirmations and eight directory-move confirmations are retained. At capacity,
+a new request expires the oldest retained token of that kind rather than allowing
+abandoned views to reserve capacity forever. In-flight
 reads still count toward the limit and are never evicted. Expired cursors require
 an explicit refresh; expired confirmations require fresh confirmation and can never
 be rebound to a new entry. No timers, polling or automatic mutation retry are added.

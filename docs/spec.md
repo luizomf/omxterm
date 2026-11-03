@@ -2156,7 +2156,16 @@ unobstructed areas remain hoverable. Controls needing a root are disabled until
 one exists. Up is disabled but remains focusable at the filesystem root, and New
 folder is disabled while a mutation is pending. Refresh remains available during
 listing. Existing menu and destructive confirmation labels remain explicit.
-Operation editors retain captured targets.
+Operation editors retain captured targets. Current source permits a single
+internal Files entry to be dragged onto a directory row, with valid/invalid
+feedback, and offers the keyboard-accessible Move to folder action. External
+payloads do not become internal moves. Both paths require confirmation of the
+captured source and destination; source and destination identities are rechecked
+before the existing no-replace move. Same-directory, self/descendant and final
+symlink destinations are refused; symlink sources move as links. Conflicts never
+overwrite, cross-volume moves never fall back to copy/delete, and unknown outcomes
+are not retried. These checks are not a hostile filesystem race sandbox. The
+separate Files-to-terminal drag remains outside this workflow.
 The page follows the host's explicit en-US/pt-BR
 language and relabels retained controls, accessible names, menus, confirmations and
 notices without rereading listings, replaying operations or resetting focus/caret,
