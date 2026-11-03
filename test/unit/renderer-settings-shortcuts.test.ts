@@ -41,6 +41,13 @@ const snapshot = (
     find,
     newTab: { effective: "Control+Shift+T", state: "inherit" },
     toggleAuxiliaryPanel: { effective: null, state: "inherit" },
+    moveAuxiliaryPanel: {
+      effective:
+        platform === "darwin"
+          ? "CommandOrControl+Shift+Alt+P"
+          : "Control+Shift+Alt+P",
+      state: "inherit",
+    },
     toggleFiles: { effective: null, state: "inherit" },
     toggleSshConnect: { effective: null, state: "inherit" },
   },
@@ -195,6 +202,13 @@ describe("Shortcuts page", () => {
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
     expect(view.cells("newTab")).toEqual(["Ctrl+Shift+T", "Default"]);
     expect(view.cells("toggleAuxiliaryPanel")).toEqual(["None", "Default"]);
+    expect(view.cells("moveAuxiliaryPanel")).toEqual([
+      "Ctrl+Alt+Shift+P",
+      "Default",
+    ]);
+    expect(
+      view.button("moveAuxiliaryPanel", "record").getAttribute("aria-label"),
+    ).toBe("Record shortcut for Move Auxiliary Panel to Other Side");
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
     ).toBe("Record shortcut for Toggle Auxiliary Panel");
@@ -306,6 +320,10 @@ describe("Shortcuts page", () => {
     }
     expect(view.cells("quit")).toEqual(["Nenhum", ""]);
     expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", "Padrão"]);
+    expect(view.cells("moveAuxiliaryPanel")).toEqual([
+      "Ctrl+Alt+Shift+P",
+      "Padrão",
+    ]);
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
     ).toBe("Gravar atalho para Alternar Painel Auxiliar");

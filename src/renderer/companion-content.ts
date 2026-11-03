@@ -1,4 +1,7 @@
-import type { TerminalRendererConfiguration } from "../shared/user-configuration";
+import type {
+  AuxiliaryPanelSide,
+  TerminalRendererConfiguration,
+} from "../shared/user-configuration";
 import type { HostedContentBridge } from "../shared/extension-view";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { ApplicationTab } from "./terminal-tabs";
@@ -8,6 +11,30 @@ import {
   type HostedContentSlot,
 } from "./hosted-content-presentation";
 import type { RendererLanguage } from "./renderer-language";
+
+function createPanelSideController(
+  panel: ReturnType<typeof createAuxiliaryPanel> | undefined,
+  layout: () => void,
+  isDisposed: () => boolean,
+) {
+  let configuredSide: AuxiliaryPanelSide = "right";
+  let override: AuxiliaryPanelSide | undefined;
+  return {
+    applyConfiguration(
+      configuration?: Pick<TerminalRendererConfiguration, "auxiliaryPanelSide">,
+    ) {
+      const side = configuration?.auxiliaryPanelSide ?? "right";
+      if (side !== configuredSide) override = undefined;
+      configuredSide = side;
+      if (panel?.setSide(override ?? side)) layout();
+    },
+    toggle() {
+      if (!panel || isDisposed()) return;
+      override = (override ?? configuredSide) === "left" ? "right" : "left";
+      if (panel.setSide(override)) layout();
+    },
+  };
+}
 
 // Window composition for the one native presenter and the exclusive companion
 // panel. Tools never enter the application-tab collection or own core sessions.
@@ -81,6 +108,11 @@ export function createCompanionContent(
         },
       })
     : undefined;
+  const panelSide = createPanelSideController(
+    panel,
+    presentation.layout,
+    () => disposed,
+  );
   const selectedPanel = () => {
     const id = panel?.selected();
     const slot = id ? slots.get(id) : undefined;
@@ -185,12 +217,8 @@ export function createCompanionContent(
   return {
     panel,
     presentation,
-    applyConfiguration(
-      configuration?: Pick<TerminalRendererConfiguration, "auxiliaryPanelSide">,
-    ) {
-      if (panel?.setSide(configuration?.auxiliaryPanelSide ?? "right"))
-        presentation.layout();
-    },
+    applyConfiguration: panelSide.applyConfiguration,
+    toggleSide: panelSide.toggle,
     select(
       tab: ApplicationTab,
       activate: (focusAllowed?: boolean) => void,

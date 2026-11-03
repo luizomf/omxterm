@@ -485,6 +485,7 @@ describe("core action catalog", () => {
       "Zoom Out",
       "Actual Size",
       "Toggle Auxiliary Panel",
+      "Move Auxiliary Panel to Other Side",
       "Toggle Snippets",
       "Toggle Tab Bar",
       "Toggle Title Bar",

@@ -31,6 +31,7 @@ export const englishMessages = {
   "menu.toggleSshConnect": "Toggle SSH Connect",
   "menu.toggleTabBar": "Toggle Tab Bar",
   "menu.toggleAuxiliaryPanel": "Toggle Auxiliary Panel",
+  "menu.moveAuxiliaryPanel": "Move Auxiliary Panel to Other Side",
   "menu.toggleTitleBar": "Toggle Title Bar",
   "menu.reloadConfiguration": "Reload User Configuration",
   "menu.toggleDeveloperTools": "Toggle Developer Tools",

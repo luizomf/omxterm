@@ -49,6 +49,7 @@ const MENU_KEYS: Readonly<
   toggleSshConnect: "menu.toggleSshConnect",
   toggleTabBar: "menu.toggleTabBar",
   toggleAuxiliaryPanel: "menu.toggleAuxiliaryPanel",
+  moveAuxiliaryPanel: "menu.moveAuxiliaryPanel",
   toggleTitleBar: "menu.toggleTitleBar",
   reloadConfig: "menu.reloadConfiguration",
 };

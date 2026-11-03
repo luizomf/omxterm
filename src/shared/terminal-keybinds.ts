@@ -41,6 +41,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleSshConnect",
   "toggleTabBar",
   "toggleAuxiliaryPanel",
+  "moveAuxiliaryPanel",
   "toggleTitleBar",
   "reloadConfig",
   "commandPalette",
@@ -107,6 +108,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     toggleSshConnect: null,
     toggleTabBar: "CommandOrControl+Shift+B",
     toggleAuxiliaryPanel: null,
+    moveAuxiliaryPanel: "CommandOrControl+Shift+Alt+P",
     toggleTitleBar: "CommandOrControl+Shift+D",
     reloadConfig: "CommandOrControl+Shift+,",
   },
@@ -155,6 +157,7 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   toggleSshConnect: null,
   toggleTabBar: "Control+Shift+B",
   toggleAuxiliaryPanel: null,
+  moveAuxiliaryPanel: "Control+Shift+Alt+P",
   toggleTitleBar: "Control+Shift+D",
   reloadConfig: "Control+Shift+,",
 });

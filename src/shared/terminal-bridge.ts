@@ -30,6 +30,7 @@ export interface TerminalBridge {
   onSnippetsToggle(listener: () => void): () => void;
   onTabBarToggle(listener: () => void): () => void;
   onAuxiliaryPanelToggle(listener: () => void): () => void;
+  onAuxiliaryPanelSideToggle(listener: () => void): () => void;
   onFind(listener: () => void): () => void;
   onTitleBarToggle(listener: () => void): () => void;
   windowChrome(command: WindowChromeCommand): void;

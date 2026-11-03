@@ -35,6 +35,7 @@ export function subscribeToWindowTools(
     modalClipboard(action: TerminalClipboardAction): boolean;
     focusTerminal?(): void;
     restoreSourceFocus?(id: string): boolean;
+    togglePanelSide?(): void;
   },
 ) {
   const { tabs, panel } = owner;
@@ -76,6 +77,19 @@ export function subscribeToWindowTools(
       if (!disposed && !owner.blocked() && tabs.isTerminalSelected())
         panel?.toggleVisibility();
     });
+    const removePanelSide = options.subscribeToAuxiliaryPanelSideToggle?.(
+      () => {
+        if (!disposed && !owner.blocked() && tabs.isTerminalSelected())
+          owner.togglePanelSide?.();
+      },
+    );
+    if (removePanelSide) {
+      const previous = removePanel;
+      removePanel = () => {
+        previous?.();
+        removePanelSide();
+      };
+    }
     snippets = mountWindowSnippets(document, panel, options.snippets, {
       tabs,
       input,

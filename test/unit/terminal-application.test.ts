@@ -146,6 +146,7 @@ describe("Window Chrome application actions", () => {
       harness.application[`toggleSelected${bar}`]();
       expect(harness[`send${bar}Toggle`]).toHaveBeenCalledExactlyOnceWith(
         harness.windows[1]!.window,
+        ...(bar === "AuxiliaryPanel" ? ["visibility"] : []),
       );
       expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
       expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
@@ -154,6 +155,18 @@ describe("Window Chrome application actions", () => {
       expect(harness[`send${bar}Toggle`]).toHaveBeenCalledOnce();
     },
   );
+
+  it("routes auxiliary panel side changes to the selected terminal window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    const selected = harness.windows[0]!.window;
+    harness.select(selected);
+    harness.application.toggleSelectedAuxiliaryPanel("side");
+    expect(harness.sendAuxiliaryPanelToggle).toHaveBeenCalledExactlyOnceWith(
+      selected,
+      "side",
+    );
+  });
 });
 
 function lastSessionEnd(sessionId = "s1") {

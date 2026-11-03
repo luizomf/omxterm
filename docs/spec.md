@@ -590,6 +590,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   `null`) independently hides or reveals the container. Reveal restores the
   remembered open tool or the first remaining open tool; with none, it does
   nothing. Hiding does not retain active semantic-input authority.
+  `View -> Move Auxiliary Panel to Other Side` (`keybinds.moveAuxiliaryPanel`,
+  default `CommandOrControl+Shift+Alt+P` on macOS and
+  `Control+Shift+Alt+P` on Linux/Windows) changes only the focused terminal
+  window's side. Its override lasts for that window and is cleared when the
+  configured `window.auxiliaryPanelSide` changes; it never writes configuration.
   Window composition creates the shared panel independently of Snippets wiring;
   Built-in Snippets contributes its lazy view definition; installed Snippets
   uses the native companion presenter. Core owns semantic preview in either
@@ -1425,7 +1430,7 @@ action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `find`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
 `toggleSnippets`, `toggleFiles`, `toggleSshConnect`, `toggleAuxiliaryPanel`,
-`toggleTabBar`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
+`toggleTabBar`, `moveAuxiliaryPanel`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
 `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`, `focusPaneLeft`,
 `focusPaneRight`, `focusPaneUp`, `focusPaneDown`, `equalizePanes`, and
 `commandPalette`. Command Palette defaults to `CommandOrControl+Shift+P` on macOS

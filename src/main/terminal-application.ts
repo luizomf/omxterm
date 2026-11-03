@@ -15,6 +15,8 @@ import type {
 } from "./terminal-ipc-controller";
 import type { OperationalEventLog } from "./operational-events";
 import { terminalSessionExitFailure } from "./terminal-session-failure";
+import { createSelectedWindowAction } from "./terminal-window-action";
+import type { RestorationWindowOptions } from "./terminal-window-restoration";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
 export const DEFAULT_ALWAYS_ON_TOP = false;
@@ -26,12 +28,6 @@ export interface NativeTerminalWindow {
   setFullScreen(value: boolean): void;
   isAlwaysOnTop(): boolean;
   setAlwaysOnTop(value: boolean, level: "floating"): void;
-}
-
-export interface RestorationWindowOptions {
-  plan: import("./terminal-layout-transfer").PreparedLayout;
-  focus(): boolean;
-  accepted(): void;
 }
 
 export interface TerminalWindowLifecycle {
@@ -110,7 +106,10 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendFind: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
-  readonly sendAuxiliaryPanelToggle: (window: Window) => void;
+  readonly sendAuxiliaryPanelToggle: (
+    window: Window,
+    action?: "visibility" | "side",
+  ) => void;
   readonly sendTitleBarToggle: (window: Window) => void;
   readonly sendLocalImageOpen: (window: Window) => void;
   readonly toggleDeveloperTools: (window: Window) => void;
@@ -154,7 +153,7 @@ export interface TerminalApplication<
   findInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
-  toggleSelectedAuxiliaryPanel(): void;
+  toggleSelectedAuxiliaryPanel(action?: "visibility" | "side"): void;
   toggleSelectedTitleBar(): void;
   openLocalImageInSelectedWindow(): void;
   applyConfiguration(configuration: {
@@ -175,8 +174,6 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
   let confirmCloseEnabled = options.confirmClose ?? DEFAULT_CONFIRM_CLOSE;
   let alwaysOnTopDefault = options.alwaysOnTopDefault ?? DEFAULT_ALWAYS_ON_TOP;
 
-  const confirmClose = () => confirmCloseEnabled;
-
   const selectedWindow = () => {
     const selected = options.getSelectedWindow();
     return selected && windows.has(selected) && !selected.isDestroyed()
@@ -184,10 +181,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       : undefined;
   };
 
-  const selectedWindowAction = (action: (window: Window) => void) => () => {
-    const window = selectedWindow();
-    if (window) action(window);
-  };
+  const selectedWindowAction = createSelectedWindowAction(selectedWindow);
 
   const quit = () => {
     if (quitting) return;
@@ -338,7 +332,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       return state.closeRequest;
     },
     mayCloseWindow(window) {
-      if (quitting || !confirmClose()) return true;
+      if (quitting || !confirmCloseEnabled) return true;
       const state = windows.get(window);
       return (
         state === undefined ||
@@ -353,7 +347,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       const anySessionBusy = [...windows.values()].some((state) =>
         state.sessionActivity.hasBusySession(),
       );
-      if (!confirmClose() || windows.size === 0 || !anySessionBusy) {
+      if (!confirmCloseEnabled || windows.size === 0 || !anySessionBusy) {
         quit();
         return Promise.resolve();
       }
@@ -374,7 +368,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       if (!window) return Promise.resolve();
       const state = windows.get(window)!;
       if (state.tabCloseRequest) return state.tabCloseRequest;
-      if (!confirmClose() || !state.sessionActivity.hasBusySelectedSession()) {
+      if (
+        !confirmCloseEnabled ||
+        !state.sessionActivity.hasBusySelectedSession()
+      ) {
         options.sendTabCommand(window, { action: "close" });
         return Promise.resolve();
       }
@@ -387,7 +384,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       });
       return state.tabCloseRequest;
     },
-    ...paneActions(options, selectedWindow, windows, confirmClose),
+    ...paneActions(options, selectedWindow, windows, () => confirmCloseEnabled),
     selectNextTab: () => sendToSelected({ action: "next" }),
     selectPreviousTab: () => sendToSelected({ action: "previous" }),
     selectTabInSelectedWindow(position) {
@@ -421,9 +418,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     },
     findInSelectedWindow: selectedWindowAction(options.sendFind),
     toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
-    toggleSelectedAuxiliaryPanel: selectedWindowAction(
-      options.sendAuxiliaryPanelToggle,
-    ),
+    toggleSelectedAuxiliaryPanel(action = "visibility") {
+      const window = selectedWindow();
+      if (window) options.sendAuxiliaryPanelToggle(window, action);
+    },
     toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
     toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
     openLocalImageInSelectedWindow: selectedWindowAction(

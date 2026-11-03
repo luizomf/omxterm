@@ -35,6 +35,7 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.toggleSshConnect": "Alternar SSH Connect",
   "menu.toggleTabBar": "Alternar Barra de Abas",
   "menu.toggleAuxiliaryPanel": "Alternar Painel Auxiliar",
+  "menu.moveAuxiliaryPanel": "Mover Painel Auxiliar para o Outro Lado",
   "menu.toggleTitleBar": "Alternar Barra de Título",
   "menu.reloadConfiguration": "Recarregar Configuração",
   "menu.toggleDeveloperTools": "Alternar Ferramentas de Desenvolvedor",

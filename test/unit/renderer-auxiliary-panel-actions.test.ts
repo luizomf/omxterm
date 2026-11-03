@@ -90,3 +90,26 @@ it("does not reveal a retained panel without a live selected terminal", async ()
   f.panelToggle();
   expect(f.root.hidden).toBe(true);
 });
+
+it("moves the panel per window and resets that choice when its configured side changes", async () => {
+  const f = await snippetsWindow();
+  f.toggle();
+  await settle();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.setLanguage("pt-BR");
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.settingsOpen();
+  await settle();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.tabCommand({ action: "select", position: 1 });
+  await settle();
+  f.setConfiguredSide("left");
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.setConfiguredSide("right");
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  f.host.dispose();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBeUndefined();
+});

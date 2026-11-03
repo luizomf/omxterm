@@ -116,6 +116,7 @@ describe("terminal keybind accelerators", () => {
         platform === "darwin" ? "CommandOrControl+Shift+P" : "Control+Shift+P",
       );
       expect(defaults.toggleAuxiliaryPanel).toBeNull();
+      expect(defaults.moveAuxiliaryPanel).not.toBeNull();
       const canonicals = TERMINAL_ACTION_NAMES.flatMap((action) => {
         const value = defaults[action];
         if (value === null) {
