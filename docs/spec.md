@@ -86,7 +86,7 @@ OMXTerm:
 AI assistance, unrestricted broadcast input, saved or reconnectable running sessions, shell integration,
 profiles, a remote theme marketplace, automatic configuration reload, automatic
 updates, and remote terminal features beyond the optional
-[Linux/macOS ARM64 SSH Connect preview candidate](ssh-connect.md) are outside the current product
+[Linux/macOS ARM64 SSH Connect preview](ssh-connect.md) are outside the current product
 contract. SSH Connect is separately installed: its incomplete read-only alias
 index and distinct quick-connect page request a typed, main-owned literal
 system-ssh launch, without brokering authentication or adding reconnect. The optional
@@ -1823,10 +1823,10 @@ Windows public consumption remains unqualified. macOS source composition include
 complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
 schema1 catalog for every other target. Common
 SSH/Snippets entries remain identical. The published catalogs select Files0.6
-for Linux and macOS ARM64 and SSH0.3.1 for Linux ARM64. The source catalogs propose
-adding macOS ARM64 to the existing SSH0.3.1 offer after the bounded exact-pair
-checks; source integration, public catalog readback and actual macOS public
-consumption remain separate. The earlier catalog promotion
+and SSH0.3.1 for Linux and macOS ARM64. The SSH offer uses the same original
+archive; source integration, public endpoint readback and the separate bounded
+[macOS public-catalog checkpoint](ssh-connect.md#macos-arm64-public-catalog-checkpoint)
+have completed. The earlier catalog promotion
 added `linux-x64` to Snippets; public endpoint readback and the separate packaged public-HTTPS checkpoint passed
 for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).
 The earlier common Snippets promotion admitted `win32-arm64` for the public

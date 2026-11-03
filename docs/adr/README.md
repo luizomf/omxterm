@@ -52,7 +52,7 @@ source/test boundaries and known limitations.
 
 [ADR0041: Transfer explicit SSH launches to core](0041-transfer-ssh-launches-to-core.md)
 adds the optional SSH Connect capability and ended-readable Surface; the SSH
-guide distinguishes published targets from the macOS source-catalog candidate.
+guide describes the published targets and bounded macOS evidence.
 [ADR0042: Save layouts without restoring sessions](0042-save-layouts-without-restoring-sessions.md)
 adds explicit optional Saved Layout capture/open and extension-scoped CAS state.
 [ADR0043: Revoke visible Mirror Typing routes](0043-revoke-visible-mirror-typing-routes.md)

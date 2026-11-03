@@ -270,9 +270,11 @@ replay or startup restoration. Its revisioned state survives uninstall; Forget
 removes the active snapshot, not possible interrupted-write remnants. See
 [the guide](docs/saved-layout.md).
 
-**SSH Connect** — A separately installed Linux ARM64 preview companion-panel page,
-with macOS ARM64 proposed by the source catalogs after bounded exact-pair checks.
-It has an incomplete bounded OpenSSH alias index and distinct quick-connect field.
+**SSH Connect** — A separately installed Linux and macOS ARM64 preview
+companion-panel page with an incomplete bounded OpenSSH alias index and distinct
+quick-connect field. The same published SSH0.3.1 archive is offered on both; the
+[macOS public-catalog checkpoint](docs/ssh-connect.md#macos-arm64-public-catalog-checkpoint)
+is bounded to the exact stable0.24.0 host and controlled inputs.
 Its declared `terminal.openSsh.v1` capability transfers a typed target to a new
 core Terminal Tab while preserving the panel and existing sessions. Core
 owns literal system-ssh launch, PTY, Busy/close/Quit and retained nonzero
@@ -310,8 +312,8 @@ and manifest identity must match before ordinary one-shot trust. Its in-memory
 last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
 endpoint offered Linux Files0.4; the published catalogs select Files0.6 for each
-ARM64 target and SSH0.3.1 for Linux. The source candidate adds macOS ARM64 for
-that same SSH archive; promotion and macOS public consumption are separate.
+ARM64 target and the same SSH0.3.1 archive for Linux and macOS ARM64. Its separate
+bounded macOS public-consumption checkpoint has passed.
 Common SSH/Snippets entries match; no merging or fallback occurs. Cards show the
 selected offer's platforms and distinguish target from host/API incompatibility.
 Target and shared host/API compatibility govern catalog selection, while local/link

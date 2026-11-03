@@ -300,8 +300,8 @@ both draft/public assets, both raw endpoints, the new exact-DMG FULL verificatio
 and the separate six-check public-catalog checkpoint passed. See
 [actual identities, outcomes and limits](files-development-preview.md#macos-catalog-distribution).
 The sequence below records that historical Files0.5/dev.26 promotion, not a
-procedure for later catalog updates. For the new Files0.6 and SSH0.3.1 candidate,
-follow [Files catalog publication](#files06--ssh031-source-candidate).
+procedure for later catalog updates. For the later Files0.6 and SSH0.3.1 promotion,
+see [Files catalog publication](#files06--ssh031-source-candidate).
 
 Current source selects a separate complete schema1 endpoint,
 `distribution/official-extensions-darwin-arm64-v1.json`, only for macOS ARM64.

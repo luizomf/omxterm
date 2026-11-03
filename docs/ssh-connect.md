@@ -1,11 +1,11 @@
 # SSH Connect development preview
 
-SSH Connect is an optional, separately installed extension. The current published
-catalogs offer SSH0.3.1 for **Linux ARM64**. This source candidate also offers the
-unchanged SSH0.3.1 archive for **macOS ARM64**, subject to catalog integration and
-public readback; source changes do not themselves change the published offer.
-It is not bundled with the terminal, a stable SDK, or an SSH broker. Windows and
-other targets are not qualified by this work.
+SSH Connect is an optional, separately installed extension. The published
+catalogs offer the same unchanged SSH0.3.1 archive for **Linux ARM64** and
+**macOS ARM64**. The [bounded macOS public-catalog checkpoint](#macos-arm64-public-catalog-checkpoint)
+used the stable0.24.0 host; catalog admission does not qualify every host or
+workflow. It is not bundled with the terminal, a stable SDK, or an SSH broker.
+Windows and other targets are not qualified by this work.
 
 The separately published SSH0.3.1 archive and its original checksum/receipt are
 immutable. Current source includes a later capability-unavailable message correction;
@@ -50,11 +50,9 @@ diagnostic remains unexplained.
 
 The [stable OMXTerm 0.24.0 host](https://github.com/luizomf/omxterm/releases/tag/v0.24.0)
 and the separately published [SSH Connect 0.3.1 archive](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1)
-are distinct downloads. On Linux ARM64, **Browse official extensions** currently
-offers SSH0.3.1. The source catalogs propose the same original archive on macOS
-ARM64 after integration and verified promotion; until then the published macOS
-catalog marks it incompatible. Local/link installation checks host/API compatibility,
-not catalog target qualification. Check this guide and the selected release rather
+are distinct downloads. On Linux and macOS ARM64, **Browse official extensions**
+offers SSH0.3.1. Local/link installation checks host/API compatibility, not
+catalog target qualification. Check this guide and the selected release rather
 than treating a successful manual install as a platform-support guarantee.
 
 Review the version, digest and trusted-code warning. Installation is dormant; open
@@ -245,13 +243,46 @@ The SSH session ran no remote shell or command; the client ended on signal 1 and
 server on 255 during normal app shutdown. The host/backend joined; these are not
 SSH exit-0 claims.
 
-This is not unwrapped SSH/config behavior, a physical-input/accessibility or
-remote-shell campaign, all-host qualification, or actual macOS public HTTPS/catalog
-consumption. The app's bounded stderr tail retained sandbox-extension permission
-warnings of unknown cause/impact and has no truncation indicator. Three earlier
-GUI attempts failed; a corrected observer waited for the retained panel to become
-visible before Close and the later distinct occurrence passed. Original archive
-receipt qualification remains `not-run`; these subsequent checks are separate.
+These local-pair checks do not establish unwrapped SSH/config behavior, a
+physical-input/accessibility or remote-shell campaign, all-host qualification,
+or public HTTPS/catalog consumption. The separate public-catalog checkpoint below
+exercised that acquisition path. The app's bounded stderr tails retained
+sandbox-extension permission warnings of unknown cause/impact and have no
+truncation indicator. Three earlier GUI attempts failed; a corrected observer
+waited for the retained panel to become visible before Close and the later
+distinct occurrence passed. Original archive receipt qualification remains
+`not-run`; these subsequent checks are separate.
+
+## macOS ARM64 public-catalog checkpoint
+
+On 2026-11-03, one controlled ordinary-user macOS 27.0.1 ARM64 guest occurrence
+used the retained original stable0.24.0 DMG and SSH0.3.1 identities above. The
+host was not freshly downloaded from the public release for this check. In the
+unchanged packaged app, Settings browsed the production macOS catalog, selected
+SSH Connect0.3.1 and installed it through actual HTTPS; no local/link fallback,
+preinstalled extension, substituted transport or custom CA was used. Passive
+observations bound the selected snapshot, one generation-0 Official trust consent,
+and completed catalog/archive responses. The catalog was 2,771 bytes, SHA-256
+`9f75bf9b0c9a58e75e48a903f8518c0deeded767bacf532a1548e22441d7bd4c`;
+the archive response was 11,606 bytes and matched the original archive SHA-256
+above after the actual GitHub redirect. Each request had authorized TLS1.3.
+Catalog and archive hashes bind bytes, not an independent publisher signature.
+
+Installation was dormant. Explicit activation imported a synthetic alias without
+executing a client; Enter release launched a synthetic client once with literal
+`['--', 'fixture-fast']`. The app displayed an exit-code-37 notice; a separate
+OS wait status was not captured. Normal Busy Quit joined the backend and tracked
+PTYs; the backend and Electron main exited 0. Inputs and consent were controlled.
+A bounded later audit found 14 sampled process identities absent; it is not an
+exhaustive descendant census. The bounded app stderr tail contained 15
+sandbox-extension permission warnings of unknown impact and had no truncation
+indicator. No screenshot was captured.
+
+This checkpoint does not qualify physical input, accessibility, compositor
+presentation, real SSH authentication, remote shells, other hosts or a complete
+platform matrix. Real SSH against an owned loopback server was a separate,
+wrapper-mediated local-install check above; neither result upgrades the original
+archive receipt or rewrites earlier failed occurrences.
 
 ## Connecting
 

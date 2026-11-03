@@ -290,8 +290,9 @@ Change the interface language in **Settings → General → Language**. Row and 
 
 ### Shared companion panel
 
-The Linux ARM64 preview's installed **Files** and **SSH Connect** tools open beside
-the terminal through their existing File-menu, palette or terminal-context actions.
+On the Linux and macOS ARM64 previews, installed **Files** and **SSH Connect**
+tools open beside the terminal through their existing File-menu, palette or
+terminal-context actions.
 Optional `toggleFiles` and `toggleSshConnect` shortcuts can be configured in
 **Settings → Shortcuts**; neither has a default binding. They use the same tool
 entry points, once per key press. Missing or disabled tools do not consume their

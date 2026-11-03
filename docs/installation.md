@@ -49,13 +49,12 @@ for compatibility and evidence limits.
 ## Optional SSH Connect preview
 
 SSH Connect is a separate extension; updating OMXTerm alone does not install or
-update it. The current published catalog offers
-[SSH0.3.1](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1) on
-Linux ARM64. This source candidate also offers that unchanged archive on macOS
-ARM64, pending integration and verified catalog promotion. The exact stable0.24.0
-macOS host/SSH0.3.1 local pair has bounded synthetic-client and controlled loopback
-OpenSSH evidence; public-catalog consumption and general remote connectivity are
-separate. Windows remains unqualified.
+update it. The published catalogs offer the same unchanged
+[SSH0.3.1](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1) archive
+on Linux and macOS ARM64. The exact stable0.24.0 macOS host/SSH0.3.1 pair has
+bounded local-install, controlled loopback OpenSSH and separate public-catalog
+consumption evidence. These are not general remote-connectivity qualification;
+Windows remains unqualified.
 
 On a supported offer, use Settings → Extensions → **Browse official extensions**,
 review the version/digest and trusted-code warning, then open SSH Connect separately
