@@ -173,18 +173,18 @@ describe("Restty clipboard actions", () => {
     value.surface.dispose();
   });
 
-  it("reports protected path delivery without appending Enter", async () => {
+  it("preserves protected untracked injection without appending Enter", async () => {
     const value = await mount();
     const path = "'/root/a \\'quote\\'\nname'";
     value.clipboard.confirmPaste.mockResolvedValueOnce(false);
-    await expect(value.surface.inject(path)).resolves.toBe(false);
+    await value.surface.inject(path);
     expect(value.adapter.write).not.toHaveBeenCalled();
     value.clipboard.confirmPaste.mockResolvedValueOnce(true);
-    await expect(value.surface.inject(path)).resolves.toBe(true);
+    await value.surface.inject(path);
     expect(value.adapter.write).toHaveBeenCalledExactlyOnceWith(path);
     value.adapter.write.mockClear();
     value.restty.bracketedPaste = true;
-    await expect(value.surface.inject(path)).resolves.toBe(true);
+    await value.surface.inject(path);
     expect(value.adapter.write).toHaveBeenCalledExactlyOnceWith(
       `\u001b[200~${path}\u001b[201~`,
     );
