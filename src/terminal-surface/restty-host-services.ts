@@ -34,7 +34,7 @@ export function resttyClipboardActions(
     },
     async inject(text, injectOptions) {
       options.onSemanticInput?.();
-      return delivery.deliver(text, injectOptions);
+      await delivery.deliver(text, injectOptions);
     },
     async injectTracked(text) {
       options.onSemanticInput?.();

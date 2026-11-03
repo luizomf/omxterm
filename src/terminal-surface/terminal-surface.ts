@@ -31,11 +31,7 @@ export interface TerminalSurface {
   zoom(command: TerminalFontZoom): void;
   copy(): Promise<void>;
   paste(): Promise<void>;
-  // True means delivery reached the Surface transport, not that a program consumed it.
-  inject(
-    text: string,
-    options?: { readonly submit?: boolean },
-  ): Promise<boolean | void>;
+  inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
   // Path-only: true requires a receipt for every chunk, not shell consumption.
   injectTracked?(text: string): Promise<boolean>;
   selectAll(): void;
