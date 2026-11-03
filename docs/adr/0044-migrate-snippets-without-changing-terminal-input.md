@@ -1,6 +1,31 @@
 # ADR 0044: Migrate Snippets without changing terminal input
 
-Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741);
+Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741).
+
+## Current distribution status
+
+**[Stable OMXTerm 0.24.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.24.0).**
+It uses the separately installed, immutable Snippets `0.1.0` archive on Linux
+ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 retains built-in Snippets;
+the unchanged 0.23.0 host also retains its built-in tool. Installation and
+activation remain deliberate, with catalog and local/offline archive routes
+described in the [migration guide](../snippets-migration.md).
+
+The Windows ARM64 installed-public checkpoint remains **unresolved** under the
+[stable 0.24.0 release-risk decision](#stable-0240-release-risk-decision). Host
+publication is not a public-consumption PASS, demonstrated input fix or fixture-only
+attribution. Exact-stage/local-archive and separate FULL NSIS evidence retain
+their own scopes. Users who depend on built-in Windows ARM64 Snippets may remain
+on 0.23.0. Remaining platform gates and #741 stay open; no stable extension SDK
+is established. This status update changes neither the migration architecture
+nor the acceptance contract below.
+
+## Historical preview checkpoints
+
+The following records the earlier preview deliveries, not today's stable
+publication status. Exact host/archive identities, original receipts and
+qualification limits remain in the linked guides.
+
 Linux ARM64 migration is available in the published OMXTerm `0.24.0-dev.11` /
 Snippets `0.1.0` preview pair. The compatible package was published and download-verified
 before the host; matching exact-package qualification and full Linux package
@@ -22,7 +47,8 @@ a separate bounded macOS packaged public-HTTPS checkpoint passed. Its
 remain distinct from public byte verification and the earlier exact-DMG/FULL
 passes, which were not rerun. No broader platform or new Files/SSH qualification
 is implied.
-Stable `0.23.0` remains Latest. The published Linux x64 `0.24.0-dev.30` preview
+At these preview publication checkpoints, stable `0.23.0` remained Latest.
+The published Linux x64 `0.24.0-dev.30` preview
 selects the optional tool. Its prepublication [exact-AppImage checkpoint](../snippets-migration.md#linux-x64-exact-appimage-checkpoint)
 passed the shared ten checks and controlled visible-preview inspection, with
 separate stock FULL modes and explicit evidence/diagnostic limits. Catalog

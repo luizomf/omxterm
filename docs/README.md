@@ -17,37 +17,42 @@
 | Add OMXTerm to the Linux application menu                  | [Linux desktop installer](linux-installer.md)                           |
 | Update or uninstall OMXTerm                                | [Installation guide](installation.md#updating-or-uninstalling)          |
 
-Optional Linux ARM64 development extensions: [Files](files-development-preview.md),
-[SSH Connect](ssh-connect.md), [Snippets](snippets-migration.md),
-[Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md).
-They are separately installed, not bundled
-features or a stable extension SDK. The [published Snippets previews](installation.md#optional-snippets-preview)
-pair Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16, Linux x64
-host 0.24.0-dev.30 or Windows ARM64 host 0.24.0-dev.36 with Snippets 0.1.0.
-The Linux/macOS pairs passed separate bounded public-HTTPS checkpoints; Windows
-public consumption remains separate from its published preview. Local archive
-installation remains available. Stable 0.23.0, earlier Windows hosts and Windows x64
-retain built-in Snippets.
-Follow each guide's exact host/package pairing rather than assuming all
-preview packages share qualification. The earlier
-[macOS ARM64 composition](macos-extension-composition.md) fixture remains separate
-from Snippets qualification and does not qualify macOS Files/SSH.
-[Linux x64 production composition](linux-x64-extension-composition.md) shares that
-minimal fixture. Its historical built-in Snippets receipt predates the separate
-Snippets source transition; existing package restrictions are unchanged.
-The earlier [Windows ARM64 source composition](windows-arm64-extension-composition.md)
-retained built-in Snippets and passed a bounded ordinary-user native checkpoint.
-Current Windows ARM64 source selects optional Snippets and has passed a bounded
-[ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition),
-with synthetic-input, lifecycle and visual limits.
-A separate [unpacked-package runtime inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
-passed, followed by a bounded [packaged-GUI composition checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
-on that exact retained package. A separate [exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
-passed for a new installer built from an independent copy. Those built-in-Snippets
-artifacts do not qualify the later transition's exact package or public consumption.
-An [earlier default suite failed](snippets-migration.md#default-baseline-and-fixture-follow-up);
-the later dev.36 exact-stage checkpoint passed a separate full portable run. It
-does not turn the earlier failure into a pass or establish public consumption.
+## Optional tools
+
+**[OMXTerm 0.24.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.24.0).**
+Its optional tools are separately installed, not bundled features or a stable
+extension SDK. Updating OMXTerm alone does not install or update extensions.
+
+- **[Files 0.6.0](files-development-preview.md)** and
+  **[SSH Connect 0.3.1](ssh-connect.md)** are published previews offered through
+  the official catalogs on **Linux and macOS ARM64**. Follow each tool's guide
+  for installation, compatible hosts and platform/qualification limits.
+- **[Snippets 0.1.0](snippets-migration.md)** is separately installed on stable
+  0.24.0 for **Linux ARM64/x64, macOS ARM64 and Windows ARM64**. Windows x64
+  retains built-in Snippets. Existing YAML catalogs are preserved; installation
+  and activation remain deliberate, with a local-archive route for offline use.
+  The **Windows ARM64 installed-public checkpoint remains unresolved** under the
+  documented [release-risk decision](snippets-migration.md#stable-0240-release-disposition),
+  not a test pass or a fixture-only explanation. Users who depend on built-in
+  Windows ARM64 Snippets may remain on 0.23.0.
+- **[Saved Layout](saved-layout.md)** and **[Mirror Typing](mirror-typing.md)**
+  remain separately built source previews; their guides describe compatibility
+  and evidence, not a published catalog offer.
+
+Current development source is newer than stable 0.24.0. Source-only improvements
+do not change immutable published hosts or extension archives. Compatibility and
+catalog availability do not qualify every admitted host or workflow.
+
+### Historical preview and composition evidence
+
+The [Snippets migration guide](snippets-migration.md) retains the earlier exact
+preview pairs, source/package/public-HTTPS checkpoints and failed occurrences.
+The [macOS ARM64](macos-extension-composition.md),
+[Linux x64](linux-x64-extension-composition.md) and
+[Windows ARM64](windows-arm64-extension-composition.md) composition guides retain
+separate foundation, hosted-view and packaging evidence. Their historical
+built-in-Snippets checkpoints do not qualify later optional-Snippets artifacts;
+the linked guides preserve exact inputs and remaining limits.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 
