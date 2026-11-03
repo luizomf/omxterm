@@ -385,6 +385,41 @@ They do not replace native Windows execution.
 
 ## Settings layout
 
+**Display prerequisite:** the `settings-only` matrix needs one selected display's
+**usable work area in logical DIPs**, not merely a physical screen resolution,
+large enough for its largest **1920×1080 CSS px renderer viewport plus the native
+frame**. At the fixture's default renderer zoom 1, the required work area is
+`1920 + (outerWidth - contentWidth)` by
+`1080 + (outerHeight - contentHeight)` DIPs. Electron's `screen.workArea` already
+excludes desktop panels/docks; display scaling can make even a high-resolution
+screen's logical work area too small. Renderer-drawn title/tab rows are inside
+the viewport, not additional native frame. There is no universal physical-pixel
+minimum. For example, a frameless 1920×1080 DIP work area with zero native-frame
+overhead fits; a 1920×1080 physical display with reserved desktop space may not.
+
+Before any matrix resize, language/palette change or category check, the fixture
+checks the display matching its original window bounds, current outer/content
+frame difference and renderer zoom. Insufficient capacity fails with required
+and observed logical sizes, scale factor and a focused command; it never skips
+or reports the matrix as passed. Provision the assigned test desktop's logical
+work area, then run
+`npm test -- test/integration/window-chrome.test.ts -t settings-only`
+before spending a full-suite run. A 1696×989 guest display failed the historical
+1920×1080 target at 1696×957; provisioning that same guest to 2560×1600 allowed
+the unchanged six-case Window Chrome suite and full portable suite to pass
+([#786](https://github.com/luizomf/omxterm/issues/786)). That is a bounded sufficient
+example, not a new resolution minimum or a diagnosis of every geometry failure.
+
+The capacity check is necessary setup evidence, **not proof of exact reachability**:
+window-manager constraints, rounding or later display changes can still fail the
+unchanged exact-target oracle. At non-default renderer zoom the check converts
+CSS sizes to content DIPs with that zoom before adding the observed native frame;
+it does not multiply by display scale factor or change zoom, minima or display
+configuration. Headless controlled checks of this diagnostic and the unchanged
+matrix/targeting behavior:
+`npm test -- test/unit/settings-layout-display.test.ts test/unit/settings-layout-oracles.test.ts`.
+They do not qualify native layout.
+
 The Window Chrome `settings-only` case additionally runs the graphical editor's
 layout matrix: six categories after a native-minimum request and at five exact
 renderer viewports (640×480, 800×600, 960×640, 1280×800 and 1920×1080), en-US/pt-BR,

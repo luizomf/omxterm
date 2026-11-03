@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import type { BrowserWindow } from "electron";
+import { screen, type BrowserWindow } from "electron";
+import {
+  assertSettingsDisplayGeometry,
+  settingsExactViewports,
+} from "./settings-layout-display";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SupportedLanguage } from "../../src/shared/i18n";
@@ -106,14 +110,9 @@ export async function exerciseSettingsLayout(
   const compact: SettingsCompactGeometry[] = [];
   const matrix = (["en-US", "pt-BR"] as const).flatMap((language) =>
     [false, true].flatMap((light) =>
-      [
-        "native-minimum-request" as const,
-        [640, 480],
-        [800, 600],
-        [960, 640],
-        [1280, 800],
-        [1920, 1080],
-      ].map((size) => ({ language, light, size })),
+      ["native-minimum-request" as const, ...settingsExactViewports].map(
+        (size) => ({ language, light, size }),
+      ),
     ),
   );
   const evidence = process.env.OMXTERM_SETTINGS_EVIDENCE_DIR;
@@ -125,7 +124,7 @@ export async function exerciseSettingsLayout(
     process.argv.find((arg) => arg.startsWith(flag))?.slice(flag.length) ??
     path.join(process.cwd(), "settings-layout-failures");
   if (evidence) await mkdir(evidence, { recursive: true });
-  let context: SettingsLayoutContext = { phase: "matrix" };
+  let context: SettingsLayoutContext = { phase: "display-prerequisite" };
   let cases = 0;
   let failed = false;
   const checkCategory = async (category: string) => {
@@ -139,6 +138,12 @@ export async function exerciseSettingsLayout(
     return result;
   };
   try {
+    assertSettingsDisplayGeometry({
+      outer: original,
+      content: window.getContentBounds(),
+      zoom: contents.getZoomFactor(),
+      display: screen.getDisplayMatching(original),
+    });
     const [originalWidth, originalHeight] = await evaluate<[number, number]>(
       "[innerWidth, innerHeight]",
     );

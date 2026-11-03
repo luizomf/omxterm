@@ -329,6 +329,12 @@ is available and verified.
 
 - Linux display relaunch selects `APPIMAGE` only when `APPDIR/omxterm` matches the current executable, preventing development Electron from relaunching an inherited outer AppImage; terminal environment propagation is unchanged ([ADR 0020](adr/0020-default-linux-rendering-to-x11.md)). [#609](https://github.com/luizomf/omxterm/issues/609) records the bounded Fedora/Ubuntu reproductions and corrected About/packaged-relaunch checks, not a diagnosis of every historical startup failure or all-platform qualification.
 - Known runtime limitations that tests account for are listed in the [Restty guide](restty-development.md#current-runtime-limitations).
+- Runs that include Window Chrome `settings-only` (including the full suite) need
+  a selected display's logical usable work area large enough for the exact
+  1920×1080 renderer viewport plus its observed native frame. Physical resolution
+  alone is not the prerequisite. See the [Settings layout capacity check and
+  focused command](native-test-reference.md#settings-layout) before a full run;
+  insufficient capacity is a failure, never a qualified skip.
 - Linux runs that include `terminal-popup-native` (including the full suite) need the explicitly provisioned [native-input lane](native-test-reference.md#native-terminal-popup-and-input-provisioning). Set `OMXTERM_TEST_PROVISIONED_NATIVE_INPUT=1` only after provisioning it. Missing prerequisites fail; they are not skipped as successful qualification.
 
 ### Focused checks
