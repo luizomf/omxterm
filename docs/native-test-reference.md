@@ -143,6 +143,33 @@ Headless parser/core and composed producer/session/harness controls:
 `npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-host-output-phases.test.ts`.
 They do not qualify native continuation or Windows transport.
 
+## Standalone Surface startup policy
+
+Linux-capable standalone Surface fixtures use the existing shared
+`applyChromiumGpuPolicy` before Electron readiness, matching production's
+fallback permission ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
+TypeScript mains call it directly; generated rendering, ligature, scrollback
+and appearance mains embed the same self-contained function. This is not a
+forced backend or GPU-blocklist bypass. macOS/Windows defaults, renderer security
+preferences, injected dependencies and explicit negative startup controls remain
+unchanged. Actual WebGL2 is still required.
+
+Headless emitted-entrypoint checks build the real recipes and stop at mocked
+Electron readiness, including scrollback startup/mapping variants, the host's
+focused-cancellation build and the old-post-read font control:
+
+```sh
+npm test -- test/unit/surface-fixture-gpu-policy.test.ts test/unit/appearance-gpu-policy.test.ts test/unit/terminal-popup-gpu-policy.test.ts test/unit/chromium-gpu-policy.test.ts
+```
+
+These checks establish startup wiring only, not native success for every fixture
+or Linux x64 qualification. macOS-only emoji/blur experiments, input-only pages,
+PTY-only fixtures and intentional unavailable-backend controls are not additional
+Linux Surface policy omissions. Production-composition fixtures inherit the
+production main's policy. All actual browser/Electron checks, even headless,
+must run in an assigned disposable guest; see the
+[verification precautions](development.md#macos-preferences-and-native-verification).
+
 ## Resize and continued-text coverage
 
 The existing appearance/resize fixture also checks one short primary-screen,

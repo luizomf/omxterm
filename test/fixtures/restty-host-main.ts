@@ -1,4 +1,6 @@
+/* eslint-disable max-lines -- Preserve the existing host scenarios in this startup-policy-only alignment. */
 import { app, BrowserWindow, ipcMain, session } from "electron";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { spawnFixturePty } from "./native-fixture-pty";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
@@ -32,6 +34,8 @@ import * as resttyCancellation from "./restty-host-cancellation";
 import * as resttyOracles from "./restty-host-oracle-scenarios";
 import { createHostOracleSourceControl } from "./restty-host-oracle-controls";
 import { recordResttyHostPhase as phase } from "./restty-host-phases";
+
+applyChromiumGpuPolicy(app.commandLine);
 
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";
 const root = __dirname;

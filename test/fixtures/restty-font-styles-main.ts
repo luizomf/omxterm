@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { isTerminalFontData } from "../../src/shared/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import {
   fontStyleCaptureNames,
   describeFontStyleRetentionFailure,
@@ -91,6 +92,7 @@ async function run() {
   )
     throw new Error("Invalid font capture variant");
   applyChromiumSandboxPolicy(app.commandLine);
+  applyChromiumGpuPolicy(app.commandLine);
   for (const name of ["userData", "sessionData"] as const) {
     await mkdir(path.join(directory, name), { recursive: true });
     app.setPath(name, path.join(directory, name));

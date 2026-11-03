@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { app, BrowserWindow, ipcMain, WebContentsView } from "electron";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
@@ -41,6 +42,8 @@ const optionalSnippets =
   positive && usesOptionalSnippets(process.platform, process.arch);
 assert.ok(!positive || control === undefined || control === "held-surface");
 if (optionalSnippets) registerExtensionViewScheme();
+
+applyChromiumGpuPolicy(app.commandLine);
 
 const root = __dirname;
 for (const name of ["userData", "sessionData"] as const) {

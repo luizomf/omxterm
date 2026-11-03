@@ -1,4 +1,5 @@
 import { prepareFixture, type FixtureCleanupOwner } from "./prepare-fixture";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
@@ -191,6 +192,8 @@ function electronMainSource(
 ): string {
   return `
 const { app, BrowserWindow } = require("electron");
+// Embed the shared, self-contained policy in this generated entrypoint.
+(${applyChromiumGpuPolicy.toString()})(app.commandLine);
 const fs = require("node:fs");
 const path = require("node:path");
 const { hasNativeDrag } = require('./native-input.cjs');
