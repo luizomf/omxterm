@@ -41,3 +41,11 @@
   --ui-space-6: 24px;
   --ui-space-8: 32px;
 }
+
+/* About and Command Palette soften application paint, including outside the modal.
+   Never filter the body tint or dialog foreground. :modal restores automatically
+   on close/removal and covers inserted underlays; this is not desktop blur. */
+body:has(> :is(.about-dialog, .command-palette):modal)
+  > :not(dialog, script, style, link) {
+  filter: blur(12px);
+}

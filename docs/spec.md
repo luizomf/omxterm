@@ -424,11 +424,12 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   transparency without fading text or keyboard focus; no opaque scrim overrides
   the preference. Overlay tint can composite over application content; it does
   not establish native desktop blur, which remains main-owned and best effort.
-  While About is modal, a fixed 12 px CSS filter softens existing non-dialog
+  While About or Command Palette is modal, a shared fixed 12 px CSS filter
+  softens existing non-dialog
   body-child application underlays, including terminal/Settings content and
   chrome outside the dialog bounds. This modal focus treatment automatically
   covers inserted underlays and ends on dismissal or disposal. It leaves
-  body/html, the body tint, About foreground and its transparent backdrop
+  body/html, the body tint, modal foreground and transparent backdrops
   unfiltered, does not change tint alpha, and is independent of the separate
   `window.blur` native desktop preference.
   Main supplies runtime metadata and opens only fixed named destinations after

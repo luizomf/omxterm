@@ -111,6 +111,12 @@ existing action runs, keeping its normal guards and close confirmations.
 **Escape** or clicking the backdrop cancels. Copy/Paste/Select All edit the
 palette query while it owns input, not your terminal.
 
+Like About, the palette follows the window's theme tint/transparency and softens
+application content behind it, including Settings and chrome outside its bounds.
+Text and keyboard focus stay sharp; closing restores the underlying detail.
+This application-underlay effect is separate from native desktop blur and does
+not depend on `window.blur`.
+
 Results include window/tab and pane actions, Settings, About, local-image
 preview, reload and developer tools, with their current shortcuts where bound.
 Search uses case-insensitive substring matching in the selected interface

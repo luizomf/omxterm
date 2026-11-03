@@ -86,7 +86,9 @@ unfiltered. This treatment is separate from main-owned native desktop blur.
 
 **Command Palette** — A temporary window-owned dialog for searching and invoking
 core application actions from the native View menu or configurable
-`commandPalette` shortcut. It uses the Action Catalog and validates its captured
+`commandPalette` shortcut. It shares About's application-underlay blur while
+modal, leaving foreground and body tint unfiltered; this is not native desktop
+blur. It uses the Action Catalog and validates its captured
 tab/pane rather than retargeting a replacement. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 bindings, matching, excluded actions, modal ownership and appearance.
