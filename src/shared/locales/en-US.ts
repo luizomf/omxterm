@@ -337,7 +337,31 @@ export const englishMessages = {
   "settings.fontSize": "Font size",
   "settings.lineHeight": "Line height",
   "settings.ligatures": "Programming ligatures",
-  "settings.theme": "Theme file",
+  "settings.theme": "Theme file (advanced)",
+  "settings.themePicker": "Terminal themes",
+  "settings.themePickerHint":
+    "Add JSON themes to themes/ beside config.json, then refresh the list.",
+  "settings.themeRefresh": "Refresh themes",
+  "settings.themeLoading": "Loading themes…",
+  "settings.themeMissing":
+    "No themes folder found. Create themes/ beside config.json and refresh.",
+  "settings.themeEmpty": "No theme files found in themes/.",
+  "settings.themeUnavailable":
+    "Could not read themes or config.json. Check the folder and configuration, then refresh.",
+  "settings.themeTruncated":
+    "The list is limited; some files may not be shown.",
+  "settings.themeCustom":
+    "The configured theme is outside this list or unavailable. Check the advanced path or refresh.",
+  "settings.themeInvalid": "These theme files could not be used:",
+  "settings.themeErrorSize": "File exceeds the theme size limit.",
+  "settings.themeErrorType": "Target is not a regular file.",
+  "settings.themeErrorChanged": "File changed while being read.",
+  "settings.themeErrorRead": "File could not be read.",
+  "settings.themeErrorInvalid": "Invalid theme:",
+  "settings.themeErrorUnknown": "Theme contains an unknown field.",
+  "settings.themeSelected": "Selected",
+  "settings.themePending": "Saving…",
+  "settings.themeDefaultDetail": "Built-in default",
   "settings.bundledFont": "Bundled FiraCode Nerd Font Mono",
   "settings.bundledTheme": "Bundled omtheme",
   "settings.defaultShell": "Windows PowerShell",
@@ -367,6 +391,7 @@ export const englishMessages = {
   "settings.fileGuidance":
     "Graphical changes are checked against the whole file. Correct invalid values in Settings or edit Config File; if the file cannot be read, repair it externally and reload.",
   "settings.saved": "Saved.",
+  "settings.notSaved": "Not saved: {detail}",
   "settings.notApplied":
     "Saved to config.json, but it could not be applied: {notice}",
   "settings.lifetime.tabs": "New tabs use it.",

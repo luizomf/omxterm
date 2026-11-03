@@ -349,7 +349,31 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.fontSize": "Tamanho da fonte",
   "settings.lineHeight": "Altura da linha",
   "settings.ligatures": "Ligaduras de programação",
-  "settings.theme": "Arquivo de tema",
+  "settings.theme": "Arquivo de tema (avançado)",
+  "settings.themePicker": "Temas do terminal",
+  "settings.themePickerHint":
+    "Adicione temas JSON em themes/ ao lado de config.json e atualize a lista.",
+  "settings.themeRefresh": "Atualizar temas",
+  "settings.themeLoading": "Carregando temas…",
+  "settings.themeMissing":
+    "Pasta de temas não encontrada. Crie themes/ ao lado de config.json e atualize.",
+  "settings.themeEmpty": "Nenhum arquivo de tema encontrado em themes/.",
+  "settings.themeUnavailable":
+    "Não foi possível ler os temas ou config.json. Confira a pasta e a configuração e atualize.",
+  "settings.themeTruncated":
+    "A lista é limitada; alguns arquivos podem não aparecer.",
+  "settings.themeCustom":
+    "O tema configurado está fora desta lista ou indisponível. Confira o caminho avançado ou atualize.",
+  "settings.themeInvalid": "Não foi possível usar estes arquivos de tema:",
+  "settings.themeErrorSize": "O arquivo excede o limite de tamanho do tema.",
+  "settings.themeErrorType": "O destino não é um arquivo comum.",
+  "settings.themeErrorChanged": "O arquivo mudou durante a leitura.",
+  "settings.themeErrorRead": "Não foi possível ler o arquivo.",
+  "settings.themeErrorInvalid": "Tema inválido:",
+  "settings.themeErrorUnknown": "O tema contém um campo desconhecido.",
+  "settings.themeSelected": "Selecionado",
+  "settings.themePending": "Salvando…",
+  "settings.themeDefaultDetail": "Padrão incluído",
   "settings.bundledFont": "FiraCode Nerd Font Mono incluída",
   "settings.bundledTheme": "omtheme incluído",
   "settings.defaultShell": "Windows PowerShell",
@@ -379,6 +403,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.fileGuidance":
     "Alterações gráficas são verificadas no arquivo inteiro. Corrija valores inválidos em Configurações ou edite o Arquivo de Configuração; se não for possível ler o arquivo, repare-o externamente e recarregue.",
   "settings.saved": "Salvo.",
+  "settings.notSaved": "Não salvo: {detail}",
   "settings.notApplied":
     "Salvo em config.json, mas não foi possível aplicar: {notice}",
   "settings.lifetime.tabs": "Novas abas usam o valor.",

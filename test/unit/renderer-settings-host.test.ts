@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import type { TerminalContextMenuTarget } from "../../src/shared/terminal-contract";
 import type {
@@ -81,6 +82,7 @@ it("owns selected graphical input, allows tab creation and restores Settings bel
         requestContextMenu: vi.fn(),
       },
       settings: {
+        themes: vi.fn(async () => emptyThemes),
         snapshot: vi.fn(async () => snapshot),
         change,
         saveText: vi.fn(),

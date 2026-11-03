@@ -10,6 +10,8 @@ import {
   MIN_TERMINAL_PADDING,
 } from "./user-configuration";
 import type { TerminalActionName } from "./terminal-keybinds";
+import type { SettingsThemesResult } from "./settings-themes";
+export type { SettingsTheme, SettingsThemesResult } from "./settings-themes";
 import {
   isSettingsKeybinds,
   type CapturedShortcut,
@@ -20,6 +22,7 @@ import {
 export const settingsIpc = {
   open: "settings:open",
   snapshot: "settings:snapshot",
+  themes: "settings:themes",
   change: "settings:change",
   saveText: "settings:save-text",
   keybind: "settings:keybind",
@@ -142,6 +145,7 @@ export type SettingsResult =
 
 export interface SettingsBridge {
   snapshot(): Promise<SettingsSnapshot>;
+  themes(): Promise<SettingsThemesResult>;
   change(change: SettingsChange): Promise<SettingsResult>;
   saveText(text: string, revision: string): Promise<SettingsResult>;
   changeKeybind(change: SettingsKeybindChange): Promise<SettingsResult>;

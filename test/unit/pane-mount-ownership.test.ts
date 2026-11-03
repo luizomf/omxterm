@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { harness } from "../fixtures/restty-surface-harness";
 import {
   cancellationBridge,
@@ -109,6 +110,7 @@ it.each(["cancel", "about", "settings"] as const)(
         notifyTabSelection: (sessionId, tabSessionIds) =>
           selection.tabSelected({ sessionId, tabSessionIds }),
         settings: {
+          themes: vi.fn(async () => emptyThemes),
           snapshot: async () => base,
           change: vi.fn(),
           saveText: vi.fn(),

@@ -139,7 +139,9 @@ or `pt-BR`). Diagnostics, logs and Terminal Payload stay untranslated.
 selection and ANSI colors), plus optional independent hex/null appearance choices
 for pane dividers, the Auxiliary Panel divider and the active pane's inset top
 highlight. Omission retains defaults; null hides decorative paint, not separator
-keyboard-focus feedback or resizing. The bundled default is `omtheme`.
+keyboard-focus feedback or resizing. The bundled default is `omtheme`. Settings
+can discover and select validated local themes beside the logical configuration
+directory; the advanced custom path remains available.
 
 **Terminal Font Stack** — The ordered fonts used to render terminal text. An
 explicitly configured installed family takes precedence; otherwise FiraCode Nerd

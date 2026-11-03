@@ -71,6 +71,14 @@ AshyTerm/Community Big MIT notice as `licenses/ashyterm.txt`, crediting Rafael
 Ruscher, Community Big and BigLinux. This is selective concept adaptation, not
 wholesale incorporation of PR #622.
 
+The Settings theme picker adapts the terminal-like color-scheme cards, including
+foreground/background previews, palette dots and names, from
+`src/renderer/preferences/preferences-pages.ts` at that same Rafael Ruscher
+(@ruscher) source commit. OMXTerm discovers validated user-owned local files,
+keeps their paths distinct and applies choices through its existing Settings
+save/reload path instead of installing the fork's built-in scheme catalog. The
+AshyTerm/Community Big MIT notice below remains packaged.
+
 The configured Interface Language implementation also adapts the translator,
 English and Brazilian Portuguese catalogs, and catalog tests from
 `src/shared/i18n.ts`, `src/shared/locales/en.ts`,

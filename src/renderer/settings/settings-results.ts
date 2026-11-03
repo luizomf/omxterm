@@ -38,7 +38,10 @@ export function describeSettingsResult(
 } {
   if (result.status !== "saved")
     return {
-      text: settingsMessageText(result.message, t),
+      text:
+        typeof result.message === "string"
+          ? t("settings.notSaved", { detail: result.message })
+          : settingsMessageText(result.message, t),
       error: true,
       severity: "error",
     };

@@ -84,7 +84,7 @@ OMXTerm:
   running the AppImage directly remains supported.
 
 AI assistance, unrestricted broadcast input, saved or reconnectable running sessions, shell integration,
-profiles, a theme picker or catalog, automatic configuration reload, automatic
+profiles, a remote theme marketplace, automatic configuration reload, automatic
 updates, and remote terminal features beyond the optional
 [Linux ARM64 SSH Connect preview](ssh-connect.md) are outside the current product
 contract. SSH Connect is separately installed: its incomplete read-only alias
@@ -1574,6 +1574,24 @@ loading boundary and sends only validated, typed theme data — plus bounded
 user-file notice state — through the existing configuration boundary.
 `View -> Reload User Configuration` can therefore select a changed path after
 validating the complete document.
+
+Settings → Appearance discovers direct `themes/*.json` entries beside the logical
+configuration path, including linked theme directories and files. Main reads and
+validates candidates and exposes bounded palette previews and diagnostics through
+the trusted Settings bridge. The picker shows the name and path of each valid
+entry, so duplicates remain distinct, and offers the built-in default separately.
+It identifies a configured matching logical path, including equivalent relative
+or absolute spellings; paths to other aliases are not assumed to identify one of
+multiple entries. A missing, empty, unreadable, invalid or truncated discovery is
+reported, not silently treated as a selected default. The explicitly requested
+refresh rereads local files; there is no watcher. A scan examines at most 2,048
+directory entries and 128 JSON candidates, reads at most 256 KiB per theme and
+4 MiB of configuration, and reports truncation. Selection saves `theme.path`
+through the existing serialized validation and reload path; built-in default
+removes it. A pending choice is marked as saving; after settlement cards
+represent the saved configuration, not proof of application when reload fails.
+The advanced custom path remains available. Discovery neither
+modifies themes nor changes relative path semantics.
 
 A Terminal Theme is strict JSON containing required `version`, `name`, and
 `colors`, plus an optional `appearance` object. Version must be `1`. The name is

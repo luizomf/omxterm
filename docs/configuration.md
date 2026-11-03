@@ -461,7 +461,11 @@ snippets:
 
 ## Terminal themes
 
-On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and links it in `config.json`. You can edit `themes/omtheme.json` directly, design a palette in [OMXTerm Studio](#edit-visually-with-omxterm-studio), or create a new theme file such as `themes/my-theme.json`:
+On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and links it in `config.json`. In **Settings → Appearance**, choose a local theme by name and palette preview. Place version-1 JSON theme files directly in `themes/` beside the logical `config.json`, then choose **Refresh themes**. Both the directory and individual files may be symlinks. Names and paths are shown together, so themes with the same name remain distinct. The separate **Bundled omtheme** choice removes `theme.path` and uses the built-in default; it is distinct from the editable `themes/omtheme.json` copy.
+
+Choosing a card saves and applies it through the normal Settings path. A pending choice is marked **Saving…**; after it settles, a selected card identifies the saved configuration. If the status says it could not be applied, follow that message and reload after fixing the problem. Missing or empty folders, unreadable or invalid files and a limited list are reported. Discovery examines at most 2,048 directory entries and 128 JSON candidates, reads at most 256 KiB per theme and 4 MiB of configuration, and does not watch for changes. A configured custom path or another alias may not appear as a selected card; the **Theme file (advanced)** input remains available for relative or absolute paths. Discovery does not edit theme files.
+
+You can edit `themes/omtheme.json` directly, design a palette in [OMXTerm Studio](#edit-visually-with-omxterm-studio), or create a new theme file such as `themes/my-theme.json`:
 
 ```json
 {

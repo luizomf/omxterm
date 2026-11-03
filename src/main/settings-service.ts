@@ -19,6 +19,8 @@ import {
   type SettingsSnapshot,
 } from "../shared/settings";
 import type { UserConfiguration } from "../shared/user-configuration";
+import type { SettingsThemesResult } from "../shared/settings-themes";
+import { discoverSettingsThemes } from "./settings-themes";
 import type { SettingsMessage } from "../shared/settings-messages";
 import {
   TERMINAL_ACTION_NAMES,
@@ -57,6 +59,7 @@ export interface SettingsFiles {
 
 export interface SettingsService {
   snapshot(): Promise<SettingsSnapshot>;
+  themes(): Promise<SettingsThemesResult>;
   change(change: SettingsChange): Promise<SettingsResult>;
   saveText(text: string, revision: string): Promise<SettingsResult>;
   changeKeybind(change: SettingsKeybindChange): Promise<SettingsResult>;
@@ -98,13 +101,8 @@ export function createSettingsService(options: {
     return run;
   };
 
-  const validate = async (bytes: Uint8Array) => {
-    const load = await loadUserConfiguration({
-      ...options.loadOptions,
-      read: fixedRead(bytes),
-    });
-    return load;
-  };
+  const validate = (bytes: Uint8Array) =>
+    loadUserConfiguration({ ...options.loadOptions, read: fixedRead(bytes) });
 
   const readCurrent = async (): Promise<CurrentDocument> => {
     let file: SettingsFile;
@@ -265,6 +263,7 @@ export function createSettingsService(options: {
 
   return {
     snapshot: () => serialize(async () => snapshotOf(await readCurrent())),
+    themes: () => serialize(() => discoverSettingsThemes(configurationPath)),
     change: (change) =>
       edit((document) => setField(document, change.path, change.value)),
     changeKeybind: (change) => edit((document) => setKeybind(document, change)),

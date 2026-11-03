@@ -1,4 +1,5 @@
 import { vi, type Mock } from "vitest";
+import { emptyThemes } from "./settings-themes";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import type { TerminalTabCommand } from "../../src/shared/terminal-contract";
 import type { TerminalSnippetsResponse } from "../../src/shared/terminal-snippets";
@@ -139,6 +140,7 @@ export async function snippetsWindow(
         return vi.fn();
       },
       settings: {
+        themes: vi.fn(async () => emptyThemes),
         snapshot: async () => base,
         change: settingsChange,
         saveText: vi.fn(),

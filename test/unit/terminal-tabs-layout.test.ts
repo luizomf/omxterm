@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import {
   createFakeSurface,
   createTabsHarness,
@@ -189,6 +190,7 @@ describe("initial saved-window layout ownership", () => {
       tabsOptions: {
         layout: captured.bridge,
         settings: {
+          themes: vi.fn(async () => emptyThemes),
           snapshot: vi.fn(async () => base),
           change: vi.fn(async () => saved(base)),
           saveText: vi.fn(async () => saved(base)),

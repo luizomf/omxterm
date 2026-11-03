@@ -123,5 +123,8 @@ notices; normal loading continues. Documents are never repaired or migrated.
 Creation happens at application opening, not installation: DMG copying and
 direct AppImage use have no common installer execution point. The same XDG
 resolution runs as the actual user on all platforms. The theme copy becomes
-user-owned and is not upgraded automatically. No theme discovery UI or file
-watching is introduced.
+user-owned and is not upgraded automatically. Settings discovers local themes
+when opened, when the configured path changes, or when explicitly refreshed,
+without creating or changing theme files. Selection is an explicit settings write through the same validation and
+reload path. Discovery has bounded reads and no file watching; the full behavior
+is in the [configuration contract](../spec.md#configuration-and-local-state).
