@@ -756,8 +756,9 @@ runtime ownership evidence is separate; no blocked Foundation call was proved
 cancellable. Published archives, receipts and catalog targets are unchanged.
 
 The package probe itself checks only the macOS trash export and root-path
-refusal, not a recoverable Trash operation. An assigned ordinary-user
-macOS ARM64 environment can run the prepared fixture with the bundled Electron:
+refusal, not a recoverable Trash operation. Follow the [macOS preference precautions](development.md#macos-preferences-and-native-verification)
+before packaged Electron probes. An assigned ordinary-user macOS ARM64
+environment can run the prepared fixture with the bundled Electron:
 
 ```sh
 ELECTRON_RUN_AS_NODE=1 /absolute/Electron \

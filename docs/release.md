@@ -45,6 +45,11 @@ Before tagging a release, verify that the final `X.Y.Z` version (with no `-dev` 
 
 ### Resume and version-only commands
 
+On macOS, follow the [preference precautions](development.md#macos-preferences-and-native-verification)
+before graphical tests or packaged Electron probes, including FULL and
+inspection-only verification and the standalone commands below. Temporary
+HOME/XDG/profile paths do not isolate OS preferences.
+
 - `npm run check` (macOS), `npm run check:linux` (Linux), and `npm run check:win` (Windows) run `check:portable`, package the build via `package-built:*`, and run `package:verify`.
 - Standalone `npm run package:mac`, `npm run package:linux` (ARM64), `npm run package:linux:x64`, `npm run package:win` (ARM64), and `npm run package:win:x64` run `npm run build` and package the installer without running the test suite.
 - If `npm run build` (or `check:portable`) has already completed on the current source, you can package and verify directly:
@@ -65,7 +70,9 @@ npm run package:verify      # Windows: -- --disposable-vm-allow-omxterm-replacem
 
 ### macOS ARM64
 
-On Apple Silicon macOS with Xcode Command Line Tools:
+On Apple Silicon macOS with Xcode Command Line Tools, use the
+[macOS native verification precautions](development.md#macos-preferences-and-native-verification)
+for both the staged-app and mounted-DMG verifier runs:
 
 ```sh
 npm ci

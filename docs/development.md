@@ -229,7 +229,90 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 
 ## Running native tests
 
-> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop.
+> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. On macOS, also follow the preference precautions below.
+
+### macOS preferences and native verification
+
+Temporary `HOME`, XDG, Electron user-data and session-data paths separate some
+application files; they do **not** isolate macOS per-bundle preferences from the
+actual user and GUI session. Setting `HOME` does not switch users. The FULL
+[`package:verify`](../scripts/verify-packaged-app.mjs) GUI startup uses a temporary
+HOME, XDG config/state and Electron user-data directory, but does not capture or
+restore OS preferences. FULL and inspection-only also execute packaged Electron
+Node-mode probes, some with the inherited environment. Inspection-only does not
+launch the GUI, but has not been established as preference-isolated merely because
+it is headless. Source-mode Electron fixtures can affect preferences too;
+`npm run check` includes both graphical tests and the FULL verifier.
+
+For native verification, prefer an assigned disposable macOS guest with a
+**dedicated ordinary test user** whose preferences and credentials need not be
+preserved. Log into the guest's Aqua session as that user and verify the actual
+account/console identity before launch; changing an environment variable in an
+existing user's session is not equivalent. Provision the fixture's other
+prerequisites and keep the desktop idle. A separate user avoids using the existing
+user's preference domains for that session; it does not isolate shared system
+state, other accounts, input/display settings or external resources. Those still
+need their own authorized protection and cleanup.
+
+If existing guest preferences must be preserved instead, arrange a suitable
+baseline and recovery **before** launching any relevant process:
+
+1. Identify the actual account, executable/bundle and possible application,
+   Electron, Chromium and helper preference domains for the selected test. The
+   packaged app currently uses `com.otaviomiranda.omxterm`; source Electron has
+   used `com.github.Electron`. These are starting points, not an exhaustive list.
+   Identify the files and user/host scope actually used; do not assume `HOME`
+   points to them. Quiesce competing writers and establish exclusive use. If the
+   affected scope cannot be identified or safely preserved, use the disposable
+   test user instead.
+2. In an owner-only hold outside disposable test scratch, record each domain's
+   prior file and daemon existence or absence, exact file bytes and restorable
+   metadata (owner/group, mode, modification time, extended attributes and ACLs
+   when present), plus daemon-visible semantic values. Verify the backup and
+   compare disk with daemon state before launch. Distinguish an absent or empty
+   domain from a read/export error; treat errors, unexpected file types or
+   ownership, and disk/daemon disagreement as blockers. Preserve the hold and
+   keep preference values and private paths out of public evidence.
+3. After the run, settle the owned processes and streams, then compare the same
+   scope and investigate newly observed domains. Do not overwrite concurrent or
+   unrecognized changes. Restore only identified, authorized domains from a
+   verified baseline, including both the user preference daemon's semantic state
+   and the original file bytes and metadata; handle a previously absent domain
+   only when its absence and ownership are established. A raw plist copy or a
+   `defaults` operation alone is not proof of both states. Do not guess missing
+   values, delete unrelated domains, or restart/kill the preference daemon as a
+   shortcut. If safe restoration is unclear, retain the hold and report the
+   unresolved state rather than claiming cleanup.
+4. Compare bytes, metadata, existence and daemon-visible values immediately
+   after restoration and again after owned-scratch cleanup, before retiring the
+   hold. Record the selected scope, process settlement, checks and any remaining
+   limitations separately from the test result. Matches are point-in-time
+   observations, not guarantees against later writes or evidence about
+   unobserved domains.
+
+Bounded guest evidence illustrates the distinction: the #764 FULL package
+verification observed an application-domain plist metadata change without a
+pre-run byte backup, so its earlier contents cannot be reconstructed. A #769
+source-mode run changed Electron-domain bytes and daemon-visible values while the
+application domain stayed unchanged. A separate Files0.6 packaged run changed the
+application domain's bytes and daemon-visible values. In the latter two runs,
+the changed existing domains were restored and their file bytes and daemon-visible
+values matched the recorded baselines at subsequent checks. A later #766
+source-view run also required restoration. In a #765 packaged run, its guard
+reported matching selected domains without restoration.
+The #769, #766 and #765 private guards treated failed daemon exports as absent or
+empty for domains whose files were absent. Their reported matches therefore do
+not establish daemon absence for those domains. These observations do not identify
+the writer or key, prove a general cause, cover all domains, or guarantee future
+restoration. See [#779](https://github.com/luizomf/omxterm/issues/779)
+and the [Files checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint).
+
+Preserve the application's existing macOS Chromium sandbox. An outer sandbox and
+`NODE_OPTIONS` preload were not suitable workarounds in the #764 qualification;
+do not disable application sandboxing to compensate for the test setup. No
+repository verifier currently supplies a general preference backup/restoration
+facility; use the dedicated-user route unless a suitable scoped recovery procedure
+is available and verified.
 
 <a id="qualification-scope"></a>
 
@@ -369,6 +452,11 @@ ARM64 complete native checks (and optional full x64 checks) run `check:portable`
 | Linux ARM64   | `npm run check:linux`                                            |
 | Windows ARM64 | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
 | Windows x64   | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
+
+For macOS, apply the [preference precautions](#macos-preferences-and-native-verification)
+to graphical tests and packaged Electron probes, including FULL and inspection-only
+`package:verify` runs. A successful verifier result does not itself establish
+preference restoration.
 
 > **Warning:** Full Windows verification (`check:win` or `package:verify` with `--disposable-vm-allow-omxterm-replacement`) runs the NSIS installer and can replace an existing OMXTerm installation on the machine. Run it only in a disposable VM with a recovery snapshot ([Windows release procedure](release.md#windows-arm64-and-x64)). To verify only the unpacked Windows app directory without running the installer, use:
 >
