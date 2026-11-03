@@ -589,8 +589,22 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Header Hide and Escape instead preserve all opened tools and their state.
   `View -> Toggle Auxiliary Panel` (`keybinds.toggleAuxiliaryPanel`, default
   `null`) independently hides or reveals the container. Reveal restores the
-  remembered open tool or the first remaining open tool; with none, it does
-  nothing. Hiding does not retain active semantic-input authority.
+  remembered open tool or the first remaining open tool. In an eligible terminal
+  selection with no opened tools, it instead lazily opens/reveals installed and
+  enabled Snippets (the built-in view on Windows x64). It never installs, enables,
+  fetches a catalog, opens Settings or shows a native error modal. If unavailable,
+  one localized, noninteractive panel status says “No tools are open. Open an
+  extension to use the panel.” for about four seconds, without moving focus.
+  Further failed attempts do not repeat or extend it. This budget belongs to one
+  main application-process lifetime across its windows, not a terminal session;
+  later manual installation/enablement can still make a future attempt succeed.
+  Tab/pane selection, another tool, modal ownership, native window blur, close
+  and disposal revoke pending empty-panel intent; delayed native publication
+  cannot reveal or focus that stale view. Blocked/suspended targets and pending
+  tool retirement do not trigger fallback. Close still disposes state, while
+  Hide/Escape retains it. Existing action identities, defaults and custom/null
+  bindings remain unchanged. This is access fallback, not default installation.
+  Hiding does not retain active semantic-input authority.
   Window composition creates the shared panel independently of Snippets wiring;
   Built-in Snippets contributes its lazy view definition; installed Snippets
   uses the native companion presenter. Core owns semantic preview in either

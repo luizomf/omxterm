@@ -186,6 +186,7 @@ export const englishMessages = {
   "panel.hide": "Hide auxiliary panel",
   "panel.tools": "Open tools",
   "panel.tooNarrow": "Widen the window to open {view}",
+  "panel.empty": "No tools are open. Open an extension to use the panel.",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Search snippets",
   "snippets.search": "Search Snippets",

@@ -185,6 +185,29 @@ load the extension remains visible without breaking terminal usability. Keep
 configuration validation accepting existing bindings even when no package is
 installed. Guidance must distinguish unavailable runtime from an absent package.
 
+### Empty-panel access fallback
+
+The accepted [#741 follow-up](https://github.com/luizomf/omxterm/issues/741#issuecomment-6613406531)
+adds a narrow exception for the independent **Toggle Auxiliary Panel** action:
+when genuinely empty and eligible, lazily open/reveal installed+enabled Snippets.
+With opened tools, retain ordinary hide/reveal, even if Snippets is removed.
+Windows x64 retains built-in compatibility, not an optional migration.
+
+If unavailable, use the panel-local noninteractive status for about four seconds,
+once per main application-process lifetime shared across its windows. No focus
+theft, repeated notice/timer extension, Settings jump, native error modal or
+implicit installation/enablement/network acquisition. Later deliberate
+installation/enablement may make a new attempt succeed. Reuse generation/token
+admission and revoke stale panel/tab/pane/modal/native-focus intent, including
+native publication arriving after cancellation. Close/dispose stays distinct from
+Hide/retain. The explicit Snippets entry point above and all action identities,
+defaults and custom/null shortcuts are unchanged.
+
+This slice does not implement the separately accepted new-install provisioning
+direction. It changes no existing-user consent, bundled package source, platform
+qualification gate or published artifact. Current observable details belong to
+[the specification](../spec.md#window-and-session-behavior).
+
 ### Starter kit and user data
 
 Keep existing catalogs untouched on install, upgrade, disable and uninstall.

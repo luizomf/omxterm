@@ -789,6 +789,200 @@ it("rejects a Files directory request with a caller-supplied target", async () =
   ).rejects.toThrow("unavailable");
 });
 
+it.each(["absent", "disabled", "removed"])(
+  "empty-panel %s fallback notices once without management or execution",
+  async (state) => {
+    if (state !== "absent") {
+      await installSnippets();
+      await request({
+        operation: state === "disabled" ? "disable" : "uninstall",
+        id: "omxterm.snippets",
+        generation: 1,
+      });
+    }
+    adapters.picker.mockClear();
+    adapters.consent.mockClear();
+    expect(await request({ operation: "panel-default" })).toMatchObject({
+      ok: false,
+      noticeEmpty: true,
+    });
+    expect(await request({ operation: "panel-default" })).toMatchObject({
+      ok: false,
+      noticeEmpty: false,
+    });
+    expect(adapters.activate).not.toHaveBeenCalled();
+    expect(adapters.download).not.toHaveBeenCalled();
+    expect(adapters.picker).not.toHaveBeenCalled();
+    expect(adapters.consent).not.toHaveBeenCalled();
+    expect(adapters.sendOpen).not.toHaveBeenCalled();
+    expect((await request({ operation: "snapshot" })).entries).toMatchObject(
+      state === "absent" ? [] : [{ generation: 2, enabled: false }],
+    );
+  },
+);
+
+it("shares the notice across registered windows, not application lifetimes", async () => {
+  expect(await request({ operation: "panel-default" })).toMatchObject({
+    noticeEmpty: true,
+  });
+  const original = window;
+  const contents = { mainFrame: {} };
+  window = Object.assign(new EventEmitter(), {
+    webContents: contents,
+    isDestroyed: () => false,
+  }) as unknown as BrowserWindow;
+  adapters.windows.set(contents, window);
+  adapters.selected = window;
+  service.registerWindow(window, () => ({
+    owner: window,
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+  }));
+  expect(await request({ operation: "panel-default" })).toMatchObject({
+    noticeEmpty: false,
+  });
+  window = original;
+  adapters.selected = window;
+  await service.dispose();
+  await startService("linux");
+  expect(await request({ operation: "panel-default" })).toMatchObject({
+    noticeEmpty: true,
+  });
+});
+
+it("finds a later installed dormant Snippets and opens it only at acknowledged admission", async () => {
+  await request({ operation: "panel-default" });
+  await installSnippets();
+  // A different store caller may publish without refreshing the application's cache.
+  const packages = await InstalledPackages.open({
+    root: path.join(adapters.root, "extensions"),
+    runtime: { appVersion: "0.23.0-dev.5", apiVersion: "0.1.0" },
+    leases: { tryAcquire: async () => ({ release: async () => {} }) },
+  });
+  await packages.setEnabled("omxterm.snippets", 1, false);
+  expect(await request({ operation: "panel-default" })).toMatchObject({
+    ok: false,
+    noticeEmpty: false,
+  });
+  await packages.setEnabled("omxterm.snippets", 2, true);
+  const prepared = await request({ operation: "panel-default" });
+  expect(prepared.openToken).toEqual(expect.any(String));
+  expect(adapters.activate).not.toHaveBeenCalled();
+  expect(
+    await request({
+      operation: "open",
+      token: prepared.openToken,
+      accepted: true,
+    }),
+  ).toEqual({ ok: true });
+  expect(adapters.activate).toHaveBeenCalledOnce();
+  expect(adapters.hosts[0]!.open).toHaveBeenCalledWith(
+    expect.objectContaining({ presentation: "panel" }),
+  );
+  expect(
+    await request({
+      operation: "open",
+      token: prepared.openToken,
+      accepted: true,
+    }),
+  ).toMatchObject({ ok: false });
+  const retained = await request({ operation: "panel-default" });
+  await request({
+    operation: "open",
+    token: retained.openToken,
+    accepted: true,
+  });
+  expect(adapters.hosts[0]!.reveal).toHaveBeenCalledWith(
+    expect.not.objectContaining({ toggle: true }),
+  );
+  expect(adapters.consent).toHaveBeenCalledOnce(); // Only the deliberate installation.
+});
+
+it.each(["denied", "cancelled", "disabled", "unfocused"])(
+  "refuses %s default tokens without modal guidance",
+  async (cause) => {
+    await installSnippets();
+    adapters.consent.mockClear();
+    const prepared = await request({ operation: "panel-default" });
+    if (cause === "cancelled")
+      await request({
+        operation: "cancel-panel-default",
+        token: prepared.openToken,
+      });
+    if (cause === "disabled")
+      await request({
+        operation: "disable",
+        id: "omxterm.snippets",
+        generation: 1,
+      });
+    if (cause === "unfocused") adapters.selected = {};
+    expect(
+      await request({
+        operation: "open",
+        token: prepared.openToken,
+        accepted: cause !== "denied",
+      }),
+    ).toMatchObject({ ok: false });
+    expect(adapters.activate).not.toHaveBeenCalled();
+    expect(adapters.consent).not.toHaveBeenCalled();
+    expect(adapters.sendOpen).not.toHaveBeenCalled();
+  },
+);
+
+it("cancels an in-flight activation before it can allocate a late view", async () => {
+  await installSnippets();
+  let finish!: () => void;
+  adapters.activate.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = () => {
+          void applicationBackend(
+            adapters.root,
+            adapters.backendLifetime.signal,
+          ).then(resolve);
+        };
+      }),
+  );
+  const prepared = await request({ operation: "panel-default" });
+  const opening = request({
+    operation: "open",
+    token: prepared.openToken,
+    accepted: true,
+  });
+  await vi.waitFor(() => expect(adapters.activate).toHaveBeenCalledOnce());
+  await request({
+    operation: "cancel-panel-default",
+    token: prepared.openToken,
+  });
+  finish();
+  expect(await opening).toEqual({ ok: false });
+  expect(adapters.hosts).toHaveLength(0);
+});
+
+it("makes activation errors nonmodal without retiring successful later work", async () => {
+  await installSnippets();
+  adapters.consent.mockClear();
+  adapters.activate.mockRejectedValueOnce(new Error("private failure"));
+  const first = await request({ operation: "panel-default" });
+  expect(
+    await request({
+      operation: "open",
+      token: first.openToken,
+      accepted: true,
+    }),
+  ).toMatchObject({ ok: false, noticeEmpty: true });
+  const second = await request({ operation: "panel-default" });
+  const result = await request({
+    operation: "open",
+    token: second.openToken,
+    accepted: true,
+  });
+  expect(result).toEqual({ ok: true });
+  await request({ operation: "cancel-panel-default", token: second.openToken });
+  expect(adapters.hosts[0]!.retire).not.toHaveBeenCalled();
+  expect(adapters.consent).not.toHaveBeenCalled();
+});
+
 it.each(["absent", "disabled"])(
   "guides %s Snippets to management without executing code",
   async (state) => {
@@ -948,6 +1142,15 @@ it("routes runtime-unavailable Snippets to management without activation", async
   expect(await request({ operation: "snapshot" })).toMatchObject({
     error: "runtime-unavailable",
   });
+  expect(await request({ operation: "panel-default" })).toMatchObject({
+    ok: false,
+    noticeEmpty: true,
+  });
+  expect(await request({ operation: "panel-default" })).toMatchObject({
+    ok: false,
+    noticeEmpty: false,
+  });
+  expect(adapters.sendOpen).not.toHaveBeenCalled();
   service.toggleSnippets(window);
   expect(adapters.sendOpen).toHaveBeenCalledExactlyOnceWith(
     window.webContents,

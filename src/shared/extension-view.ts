@@ -12,6 +12,8 @@ export interface HostedContentDescriptor {
   presentation?: "panel";
   // Main-issued tool toggle for an already retained companion.
   toggle?: true;
+  // One-shot core empty-panel intent, never supplied by extension code.
+  panelDefaultToken?: string;
 }
 
 export interface HostedContentPresentation {
@@ -88,6 +90,10 @@ export function isHostedContentDescriptor(
     (record(value, ["id", "title"]) ||
       (record(value, ["id", "title", "presentation"]) &&
         value.presentation === "panel") ||
+      (record(value, ["id", "title", "presentation", "panelDefaultToken"]) &&
+        value.presentation === "panel" &&
+        typeof value.panelDefaultToken === "string" &&
+        /^[0-9a-f-]{36}$/.test(value.panelDefaultToken)) ||
       (record(value, ["id", "title", "presentation", "toggle"]) &&
         value.presentation === "panel" &&
         value.toggle === true)) &&

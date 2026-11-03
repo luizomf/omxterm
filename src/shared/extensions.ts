@@ -47,9 +47,12 @@ export type ExtensionsResult = {
   error?: string;
   entries?: ExtensionEntry[];
   pendingCleanup?: boolean | undefined;
+  openToken?: string;
+  noticeEmpty?: boolean;
 };
 export type ExtensionsRequest =
-  | { operation: "snapshot" | "install" }
+  | { operation: "snapshot" | "install" | "panel-default" }
+  | { operation: "cancel-panel-default"; token: string }
   | { operation: "catalog-refresh"; token: string }
   | { operation: "catalog-install"; selection: string; token: string }
   | { operation: "install-link"; url: string; token: string }
@@ -96,13 +99,15 @@ export function isExtensionsRequest(
     return isCatalogRequest(item);
   if (item.operation === "install-link" || item.operation === "cancel-install")
     return isLinkRequest(item);
+  if (item.operation === "cancel-panel-default")
+    return Object.keys(item).length === 2 && isToken(item.token);
   if (item.operation === "open")
     return (
       Object.keys(item).length === 3 &&
       isToken(item.token) &&
       typeof item.accepted === "boolean"
     );
-  if (item.operation === "snapshot" || item.operation === "install")
+  if (["snapshot", "install", "panel-default"].includes(String(item.operation)))
     return Object.keys(item).length === 1;
   return (
     ["enable", "disable", "uninstall"].includes(String(item.operation)) &&

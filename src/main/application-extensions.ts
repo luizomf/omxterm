@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { createPanelDefault, type PendingExtensionOpen } from "./panel-default";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Translator } from "../shared/i18n";
@@ -208,23 +209,6 @@ function captureExtensionTarget(
     : windowTarget;
 }
 
-async function acknowledgeExtension(
-  pending: Map<BrowserWindow, { token: string; invoke(): Promise<void> }>,
-  window: BrowserWindow,
-  token: string,
-  accepted: boolean,
-  stopping: boolean,
-): Promise<ExtensionsResult> {
-  const issued = pending.get(window);
-  if (!issued || issued.token !== token)
-    return { ok: false, error: "unavailable" };
-  pending.delete(window);
-  if (!accepted || BrowserWindow.getFocusedWindow() !== window || stopping)
-    return { ok: false, error: "unavailable" };
-  await issued.invoke();
-  return { ok: true };
-}
-
 function supportsExtensionPreview() {
   return (
     (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
@@ -240,10 +224,7 @@ export async function startApplicationExtensions(
 ) {
   const windows = new Map<BrowserWindow, ExtensionTargetCapture>();
   const lifetime = new AbortController();
-  const pending = new Map<
-    BrowserWindow,
-    { token: string; invoke(): Promise<void> }
-  >();
+  const pending = new Map<BrowserWindow, PendingExtensionOpen>();
   let stopping = false;
   const catalog = createExtensionCatalog(
     { appVersion: app.getVersion(), apiVersion: "0.1.0" },
@@ -273,6 +254,12 @@ export async function startApplicationExtensions(
       catalog: catalog.snapshot(installations),
     };
   }
+  const defaultPanel = createPanelDefault({
+    manager,
+    pending,
+    stopping: () => stopping,
+    capture: (window) => windows.get(window)?.(undefined, "window"),
+  });
   const busy = new Set<BrowserWindow>();
   const links = createExtensionLinkInstaller(
     () => stopping,
@@ -295,14 +282,8 @@ export async function startApplicationExtensions(
         !isExtensionsRequest(args[0])
       )
         throw new TypeError("Invalid extension management request");
-      if (args[0].operation === "open")
-        return acknowledgeExtension(
-          pending,
-          window,
-          args[0].token,
-          args[0].accepted,
-          stopping,
-        );
+      const opening = defaultPanel.request(window, args[0]);
+      if (opening) return opening;
       if (args[0].operation === "cancel-install") {
         links.cancel(window, args[0].token);
         catalogLoads.cancel(window, args[0].token);
@@ -408,6 +389,7 @@ export async function startApplicationExtensions(
             if (!captured || captured.signal.aborted || stopping) return;
             const window = captured.owner as BrowserWindow;
             const token = randomUUID();
+            defaultPanel.cancel(window);
             pending.set(window, {
               token,
               invoke: () =>
@@ -469,6 +451,7 @@ export async function startApplicationExtensions(
       windows.set(window, target);
       window.once("closed", () => {
         windows.delete(window);
+        defaultPanel.cancel(window);
         pending.delete(window);
         // The native window getter is no longer usable after closed.
         manager?.cancel(contents);
@@ -478,6 +461,7 @@ export async function startApplicationExtensions(
       stopping = true;
       links.dispose();
       catalogLoads.dispose();
+      defaultPanel.dispose();
       pending.clear();
       ipcMain.removeHandler(extensionsIpc);
       lifetime.abort();

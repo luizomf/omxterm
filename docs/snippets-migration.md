@@ -66,6 +66,24 @@ It never installs or enables anything for you. On Windows x64, it opens the buil
 A disabled package remains disabled. Runtime unavailability is reported separately
 from a missing installation. Terminal sessions remain usable.
 
+### Empty-panel access in newer source
+
+**Toggle Auxiliary Panel** preserves ordinary hide/reveal whenever any tool is
+open, including when Snippets has been removed. With a genuinely empty eligible
+panel, newer source lazily opens installed+enabled Snippets; Windows x64 retains
+its built-in compatibility view. If unavailable, one localized nonmodal notice
+lasts about four seconds per application-process lifetime across all its windows,
+without focus theft, timer extension or repeated notices. Later deliberate
+installation/enablement can make a future attempt succeed. No installation,
+enablement, network acquisition, Settings navigation or native error modal comes
+from this fallback. Stale selection/modal/focus intent cannot open a late view.
+
+This is distinct from **Toggle Snippets**, whose explicit management guidance
+and close semantics remain unchanged. Both actions keep their defaults and
+custom/null keybindings. It is not preinstallation, a Windows x64 optional
+migration, new platform qualification or a claim about the immutable 0.24.0
+packages. The accepted new-install default direction remains separate work.
+
 ## Install deliberately
 
 On the four optional-Snippets `0.24.0` targets, use the matching, actually available

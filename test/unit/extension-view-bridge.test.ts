@@ -34,7 +34,30 @@ describe("hosted application-tab contract", () => {
         toggle: true,
       }),
     ).toBe(true);
+    const panelDefaultToken = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+    expect(
+      isHostedContentDescriptor({
+        id: "a",
+        title: "Snippets",
+        presentation: "panel",
+        panelDefaultToken,
+      }),
+    ).toBe(true);
     for (const descriptor of [
+      { id: "a", title: "Snippets", panelDefaultToken },
+      {
+        id: "a",
+        title: "Snippets",
+        presentation: "panel",
+        panelDefaultToken: "invalid",
+      },
+      {
+        id: "a",
+        title: "Snippets",
+        presentation: "panel",
+        panelDefaultToken,
+        toggle: true,
+      },
       { id: "a", title: "Snippets", toggle: true },
       { id: "a", title: "Snippets", presentation: "panel", toggle: false },
       { id: "a", title: "Snippets", presentation: "panel", toggle: "true" },

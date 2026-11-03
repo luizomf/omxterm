@@ -197,6 +197,8 @@ export const brazilianPortugueseMessages: Readonly<
   "panel.hide": "Ocultar painel auxiliar",
   "panel.tools": "Ferramentas abertas",
   "panel.tooNarrow": "Alargue a janela para abrir {view}",
+  "panel.empty":
+    "Nenhuma ferramenta está aberta. Abra uma extensão para usar o painel.",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Buscar snippets",
   "snippets.search": "Buscar Snippets",

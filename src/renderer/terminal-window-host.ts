@@ -209,8 +209,10 @@ export function mountTerminalWindowPage(
       mirrorTyping: options.mirrorTyping,
       initialLayout: options.initialLayout,
       layout: options.layout,
-      notifySelectionRevision: (revision) =>
-        options.semanticInput?.selection(revision),
+      notifySelectionRevision: (revision) => {
+        auxiliaryPanel?.cancelDefaultOpen();
+        options.semanticInput?.selection(revision);
+      },
       ...(options.settings ? { settings: options.settings } : {}),
       ...(options.extensions ? { extensions: options.extensions } : {}),
       hostedContent: options.hostedContent,
@@ -242,6 +244,7 @@ export function mountTerminalWindowPage(
     },
   );
 
+  const onPageBlur = () => auxiliaryPanel?.cancelDefaultOpen();
   const onPageFocus = () => {
     if (!previewActive() && !companion.ownsPanelFocus()) tabs.focusSelected();
   };
@@ -298,6 +301,7 @@ export function mountTerminalWindowPage(
     disposed = true;
     page.removeEventListener("pagehide", dispose);
     page.removeEventListener("focus", onPageFocus);
+    page.removeEventListener("blur", onPageBlur);
     removeFileDrops();
     removeToolSubscriptions?.();
     removeConfigurationUpdateListener?.();
@@ -318,6 +322,7 @@ export function mountTerminalWindowPage(
   };
   page.addEventListener("pagehide", dispose, { once: true });
   page.addEventListener("focus", onPageFocus);
+  page.addEventListener("blur", onPageBlur);
 
   removeConfigurationUpdateListener = options.subscribeToConfigurationUpdates?.(
     (configuration) => {

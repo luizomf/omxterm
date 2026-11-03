@@ -37,9 +37,15 @@ it.each(["builtin", "optional"] as const)(
       { hostedContent: bridge },
       mode === "builtin",
     );
-    f.panelToggle();
+    if (mode === "builtin") {
+      f.panelToggle();
+      await settle();
+      expect(f.root.hidden).toBe(false);
+      expect(f.load).toHaveBeenCalledOnce();
+      f.panelToggle();
+      await settle();
+    }
     expect(f.root.hidden).toBe(true);
-    expect(f.load).not.toHaveBeenCalled();
     if (mode === "builtin") f.toggle();
     else
       open({

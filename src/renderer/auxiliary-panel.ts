@@ -1,6 +1,8 @@
 import type { AuxiliaryPanelSide } from "../shared/user-configuration";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
+import { createPanelDefaultIntent } from "./panel-default";
+import { createAuxiliaryPanelStatus } from "./auxiliary-panel-status";
 import { installAuxiliaryPanelInput } from "./auxiliary-panel-input";
 import { createAuxiliaryPanelGeometry } from "./auxiliary-panel-geometry";
 import {
@@ -33,7 +35,11 @@ export interface AuxiliaryPanel {
   requested(): string | undefined;
   setSuspended(suspended: boolean): void;
   toggle(id: string): void;
-  toggleVisibility(): void;
+  toggleVisibility(openDefault?: (signal: AbortSignal) => void): void;
+  cancelDefaultOpen(): void;
+  expectDefaultOpen(signal: AbortSignal, token: string): void;
+  claimDefaultOpen(token: string): boolean;
+  noticeEmpty(): void;
   deactivate(): void;
   dismiss(): void;
   setBlocked(blocked: boolean): void;
@@ -59,7 +65,6 @@ export function createAuxiliaryPanel(
 ): AuxiliaryPanel {
   const language = options.language ?? englishLanguage;
   const document = root.ownerDocument;
-  const page = document.defaultView!;
   const definitions = new Map(options.views.map((view) => [view.id, view]));
   const created = new Map<string, AuxiliaryView>();
   const opened = new Set<string>();
@@ -71,18 +76,13 @@ export function createAuxiliaryPanel(
   let requested: string | undefined;
   let disposed = false;
   let blocked = false;
-  let statusTimer: number | undefined;
-  let narrowView: AuxiliaryViewDefinition | undefined;
-  const { separator, header, title, close, hideButton, body, status } =
+  const status = createAuxiliaryPanelStatus(document, language);
+  const defaultOpen = createPanelDefaultIntent();
+  const cancelDefaultOpen = defaultOpen.cancel;
+  const { separator, header, title, close, hideButton, body } =
     createPanelElements(root);
   const tools = createPanelTools(header, title, definitions, opened, show);
   const renderTools = () => tools(current, language.t);
-  const renderNarrowNotice = (t: Translate) => {
-    if (narrowView)
-      status.textContent = t("panel.tooNarrow", {
-        view: labelOf(narrowView, t),
-      });
-  };
   const unbindLabels = language.bind((t) => {
     close.setAttribute("aria-label", t("panel.close"));
     hideButton.setAttribute("aria-label", t("panel.hide"));
@@ -91,7 +91,6 @@ export function createAuxiliaryPanel(
       title.textContent = labelOf(definition, t);
       root.setAttribute("aria-label", title.textContent);
     }
-    renderNarrowNotice(t);
     renderTools();
   });
   const ownsFocus = () =>
@@ -122,6 +121,7 @@ export function createAuxiliaryPanel(
     else commit();
   };
   const hide = (restoreFocus: boolean) => {
+    cancelDefaultOpen();
     if (current === undefined && requested === undefined) return;
     select(undefined, () => {
       hideNow();
@@ -172,15 +172,11 @@ export function createAuxiliaryPanel(
     if (disposed || blocked || suspended || closing.has(id)) return;
     const definition = definitions.get(id);
     if (!definition) return;
+    cancelDefaultOpen();
     if (!geometry.measure()) {
-      narrowView = definition;
-      renderNarrowNotice(language.t);
-      status.hidden = false;
-      if (statusTimer !== undefined) page.clearTimeout(statusTimer);
-      statusTimer = page.setTimeout(() => {
-        status.hidden = true;
-        narrowView = undefined;
-      }, 4000);
+      status.show((t) =>
+        t("panel.tooNarrow", { view: labelOf(definition, t) }),
+      );
       return;
     }
     select(id, () => {
@@ -205,8 +201,7 @@ export function createAuxiliaryPanel(
       root.setAttribute("aria-label", title.textContent);
       root.hidden = false;
       separator.hidden = false;
-      status.hidden = true;
-      narrowView = undefined;
+      status.clear();
       view.activate();
       renderTools();
       view.focus();
@@ -235,6 +230,7 @@ export function createAuxiliaryPanel(
     selected: () => current,
     requested: () => requested,
     setSuspended(value) {
+      if (value) cancelDefaultOpen();
       if (disposed || value === suspended) return;
       ++transition;
       requested = current;
@@ -259,15 +255,24 @@ export function createAuxiliaryPanel(
       if (current === id) closeCurrent();
       else show(id);
     },
-    toggleVisibility() {
+    toggleVisibility(openDefault) {
       if (disposed || blocked || suspended) return;
       if (current !== undefined || requested !== undefined) hide(true);
       else {
         const id = remembered ?? opened.values().next().value;
         if (id) show(id);
+        else if (!closing.size && openDefault) defaultOpen.start(openDefault);
       }
     },
+    cancelDefaultOpen,
+    expectDefaultOpen: defaultOpen.expect,
+    claimDefaultOpen: defaultOpen.claim,
+    noticeEmpty() {
+      if (!disposed && !blocked && !suspended && !opened.size)
+        status.show("empty");
+    },
     setBlocked(value) {
+      if (value) cancelDefaultOpen();
       if (disposed || value === blocked) return;
       blocked = value;
       input.invalidate();
@@ -279,18 +284,18 @@ export function createAuxiliaryPanel(
     clipboardAction: input.clipboardAction,
     dispose() {
       if (disposed) return;
+      cancelDefaultOpen();
       ++transition;
       hideNow();
       disposed = true;
       input.dispose();
       unbindLabels();
-      if (statusTimer !== undefined) page.clearTimeout(statusTimer);
+      status.dispose();
       geometry.dispose();
       for (const view of created.values()) view.dispose();
       created.clear();
       root.replaceChildren();
       separator.remove();
-      status.remove();
     },
   };
 }
@@ -366,10 +371,5 @@ function createPanelElements(root: HTMLElement) {
   body.className = "auxiliary-body";
   root.replaceChildren(header, body);
   root.before(separator);
-  const status = document.createElement("p");
-  status.className = "auxiliary-status";
-  status.setAttribute("role", "status");
-  status.hidden = true;
-  document.body.append(status);
-  return { separator, header, title, close, hideButton, body, status };
+  return { separator, header, title, close, hideButton, body };
 }

@@ -409,6 +409,13 @@ for conflict validation. Available tools show the binding on their existing menu
 and palette entries. Holding either key invokes once: a selected-visible tool
 closes, a hidden/nonselected tool is revealed, and a closed tool opens fresh.
 Use `toggleAuxiliaryPanel` instead to hide/reveal without closing tools.
+In current source, when no tools are open, that action opens installed+enabled
+Snippets lazily (built-in on Windows x64). Unavailability produces one discreet
+four-second notice per application process, not installation, enablement or a
+Settings jump. Later deliberate installation can make another attempt succeed.
+This does not reassign Cmd/Ctrl+Shift+S: `toggleSnippets` and
+`toggleAuxiliaryPanel` remain separate actions with unchanged defaults, custom
+bindings and explicit `null` choices.
 
 For example, to use `F11` for Snippets instead of full screen:
 

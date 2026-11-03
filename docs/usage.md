@@ -317,8 +317,14 @@ fresh view, discarding its old drafts/search state.
 **View → Toggle Auxiliary Panel** independently hides or reveals retained tools.
 It has no default shortcut; configure `toggleAuxiliaryPanel` in Settings or
 `keybinds`. Reveal restores the remembered open tool or the first remaining one;
-with no open tools it does nothing. Tool close does not disable the extension
-or end terminal sessions. Accepted file operations or SSH launches may still
+with no open tools, current source opens Snippets if installed and enabled
+(or the built-in tool on Windows x64). If unavailable, a discreet notice disappears
+after about four seconds without moving focus. It appears once per application
+process across its windows; further failed attempts stay quiet, but later manual
+installation/enablement can make the next attempt work. This never installs or
+enables anything, opens Settings, or changes shortcut defaults/custom bindings.
+Settings, modals and stale pending requests cannot trigger a late reveal.
+Tool close does not disable the extension or end terminal sessions. Accepted file operations or SSH launches may still
 finish; close does not promise cancellation or rollback, and reopening does not
 repeat an operation.
 Switching terminal tabs keeps the panel visible. Connecting through SSH opens a

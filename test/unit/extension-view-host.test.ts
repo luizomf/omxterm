@@ -358,13 +358,19 @@ it.each([
   },
 );
 
-it("publishes actual panel focus and reveals the retained identity", async () => {
+it("publishes actual panel focus with one-shot default intent, not retained on later reveal", async () => {
   const f = await fixture(false);
   const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;
   const host = startExtensionViewHost({ ...f.options, ipcMain: ipc });
   cleanups.push(() => host.retire());
-  const descriptor = await host.open({ ...opening, presentation: "panel" });
+  const panelDefaultToken = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+  const descriptor = await host.open({
+    ...opening,
+    presentation: "panel",
+    panelDefaultToken,
+  });
   expect(descriptor.presentation).toBe("panel");
+  expect(descriptor).not.toHaveProperty("panelDefaultToken");
   host.reveal(descriptor);
   expect(f.native.createView).toHaveBeenCalledTimes(1);
   expect(
@@ -372,7 +378,7 @@ it("publishes actual panel focus and reveals the retained identity", async () =>
       ([channel]) => channel === extensionViewIpc.open,
     ),
   ).toEqual([
-    [extensionViewIpc.open, descriptor],
+    [extensionViewIpc.open, { ...descriptor, panelDefaultToken }],
     [extensionViewIpc.open, descriptor],
   ]);
   const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(

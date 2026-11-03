@@ -166,8 +166,10 @@ are memory-only. Settings → Window
 persists `window.auxiliaryPanelSide` (`left`/`right`) and applies it live across
 windows without replacing views or changing their focus/state. Close disposes
 the selected tool view, not its extension backend or previously created terminal
-sessions. Hide/Escape preserves open tools; panel reveal restores an open tool
-without reopening a closed one. Terminal-tab changes preserve it; Settings/general hosted tabs
+sessions. Hide/Escape preserves open tools; panel reveal restores an open tool.
+An eligible empty-panel toggle instead opens available Snippets lazily, with a
+single nonmodal four-second notice per application process when unavailable.
+It does not install or enable tools; closing still discards view state. Terminal-tab changes preserve it; Settings/general hosted tabs
 suspend it. It is independent of the opening terminal's lifetime. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 geometry, view retention and retirement rules.
