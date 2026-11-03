@@ -27,91 +27,109 @@ it("rejects arbitrary context, phase, status and out-of-range checkpoint values 
   expect(() => recordResttyHostPhase("first-session", "begin")).not.toThrow();
 });
 
-it("records actual emitted main app-ready entry/completion around the existing Electron promise", async () => {
-  const root = await mkdtemp(path.join(tmpdir(), "omxterm-host-app-phase-"));
-  try {
-    await build({
-      absWorkingDir: fileURLToPath(new URL("../..", import.meta.url)),
-      entryPoints: ["test/fixtures/restty-host-main.ts"],
-      bundle: true,
-      external: ["electron", "node-pty"],
-      platform: "node",
-      format: "cjs",
-      logLevel: "silent",
-      outfile: path.join(root, "main.cjs"),
-    });
-    let release!: () => void;
-    const ready = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    let finish!: (code: number) => void;
-    const exited = new Promise<number>((resolve) => {
-      finish = resolve;
-    });
-    const app = Object.assign(new EventEmitter(), {
-      whenReady: () => ready,
-      setPath() {},
-      exit: (code: number) => finish(code),
-    });
-    const stop = new Error(
-      "Stop after actual app-ready continuation, before any window",
-    );
-    const lines: string[] = [];
-    const require = createRequire(import.meta.url);
-    const nativeFs = require("node:fs") as typeof fs;
-    runInNewContext(await readFile(path.join(root, "main.cjs"), "utf8"), {
-      __dirname: root,
-      Buffer,
-      console,
-      TextEncoder,
-      TextDecoder,
-      process: { ...process, argv: [], on() {}, stderr: { write() {} } },
-      require(name: string) {
-        if (name === "electron")
-          return {
-            app,
-            BrowserWindow: { getAllWindows: () => [] },
-            session: {
-              defaultSession: {
-                setPermissionRequestHandler() {
-                  throw stop;
+it.each(["linux", "darwin", "win32"] as const)(
+  "records actual emitted main app-ready entry/completion on %s around the existing Electron promise",
+  async (platform) => {
+    const root = await mkdtemp(path.join(tmpdir(), "omxterm-host-app-phase-"));
+    try {
+      await build({
+        absWorkingDir: fileURLToPath(new URL("../..", import.meta.url)),
+        entryPoints: ["test/fixtures/restty-host-main.ts"],
+        bundle: true,
+        external: ["electron", "node-pty"],
+        platform: "node",
+        format: "cjs",
+        logLevel: "silent",
+        outfile: path.join(root, "main.cjs"),
+      });
+      let release!: () => void;
+      const ready = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let finish!: (code: number) => void;
+      const exited = new Promise<number>((resolve) => {
+        finish = resolve;
+      });
+      const appendSwitch = vi.fn();
+      const app = Object.assign(new EventEmitter(), {
+        commandLine: { appendSwitch },
+        whenReady: () => ready,
+        setPath() {},
+        exit: (code: number) => finish(code),
+      });
+      const stop = new Error(
+        "Stop after actual app-ready continuation, before any window",
+      );
+      const lines: string[] = [];
+      const require = createRequire(import.meta.url);
+      const nativeFs = require("node:fs") as typeof fs;
+      runInNewContext(await readFile(path.join(root, "main.cjs"), "utf8"), {
+        __dirname: root,
+        Buffer,
+        console,
+        TextEncoder,
+        TextDecoder,
+        process: {
+          ...process,
+          platform,
+          argv: [],
+          on() {},
+          stderr: { write() {} },
+        },
+        require(name: string) {
+          if (name === "electron")
+            return {
+              app,
+              BrowserWindow: { getAllWindows: () => [] },
+              session: {
+                defaultSession: {
+                  setPermissionRequestHandler() {
+                    throw stop;
+                  },
                 },
               },
+            };
+          if (name === "node-pty")
+            return {
+              spawn() {
+                throw new Error("No PTY allowed");
+              },
+            };
+          if (name === "node:fs")
+            return {
+              ...nativeFs,
+              writeSync(_fd: number, text: string) {
+                lines.push(text);
+              },
+            };
+          return require(name) as unknown;
+        },
+      });
+      const records = () =>
+        lines.map(
+          (line) =>
+            JSON.parse(line.slice("__OMXTERM_RESTTY_HOST_PHASE__".length)) as {
+              phase: string;
+              status: string;
             },
-          };
-        if (name === "node-pty")
-          return {
-            spawn() {
-              throw new Error("No PTY allowed");
-            },
-          };
-        if (name === "node:fs")
-          return {
-            ...nativeFs,
-            writeSync(_fd: number, text: string) {
-              lines.push(text);
-            },
-          };
-        return require(name) as unknown;
-      },
-    });
-    const records = () =>
-      lines.map(
-        (line) =>
-          JSON.parse(line.slice("__OMXTERM_RESTTY_HOST_PHASE__".length)) as {
-            phase: string;
-            status: string;
-          },
-      );
-    expect(records()).toMatchObject([{ phase: "app-ready", status: "begin" }]);
-    release();
-    expect(await exited).toBe(1); // Deliberate cut, not acceptance of a native failure.
-    expect(records()).toMatchObject([
-      { phase: "app-ready", status: "begin" },
-      { phase: "app-ready", status: "complete" },
-    ]);
-    expect(lines).toHaveLength(2);
-  } finally {
-    await rm(root, { recursive: true, force: true });
-  }
-});
+        );
+      if (platform === "linux")
+        expect(appendSwitch).toHaveBeenCalledExactlyOnceWith(
+          "enable-unsafe-swiftshader",
+        );
+      else expect(appendSwitch).not.toHaveBeenCalled();
+      expect(records()).toMatchObject([
+        { phase: "app-ready", status: "begin" },
+      ]);
+      release();
+      expect(await exited).toBe(1); // Deliberate cut, not acceptance of a native failure.
+      expect(records()).toMatchObject([
+        { phase: "app-ready", status: "begin" },
+        { phase: "app-ready", status: "complete" },
+      ]);
+      expect(lines).toHaveLength(2);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
