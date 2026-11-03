@@ -655,6 +655,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Hide or Escape originating inside the panel only hides/deactivates it.
   Both return focus to the live selected terminal after native acknowledgement,
   unless a newer selection or modal owns focus. Neither closes terminal sessions.
+  In the built-in panel, only a fresh non-composing Escape starts dismissal;
+  composing Escape and unowned repeats remain with the focused control. An
+  already-owned dismissal retains its repeats and release even during composition.
+  This DOM event policy does not establish native OS/IME event delivery.
   An Escape or Enter-on-Close/Hide gesture owns its repeats and release, including
   Kitty event reporting. Escape in the terminal remains terminal input. Switching
   internal views deactivates the old view and focuses the new one directly, with

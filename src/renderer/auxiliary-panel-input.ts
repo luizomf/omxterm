@@ -38,6 +38,9 @@ export function installAuxiliaryPanelInput(
   };
   const onPanelKey = (event: KeyboardEvent) => {
     if (!options.interactive()) return;
+    // Already-owned repeats/releases are consumed by the page capture handler.
+    // Do not turn composition, or its now-unowned repeat, into dismissal.
+    if (event.key === "Escape" && (event.isComposing || event.repeat)) return;
     const button =
       event.target instanceof page.HTMLButtonElement ? event.target : undefined;
     if (
