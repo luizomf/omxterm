@@ -1606,7 +1606,15 @@ refresh rereads local files; there is no watcher. A scan examines at most 2,048
 directory entries and 128 JSON candidates, reads at most 256 KiB per theme and
 4 MiB of configuration, and reports truncation. Selection saves `theme.path`
 through the existing serialized validation and reload path; built-in default
-removes it. A pending choice is marked as saving; after settlement cards
+removes it. Consecutive graphical `theme.path` requests that have not started
+are coalesced to the latest choice in main, rather than replaying every stale
+selection. An in-flight validation/write/reload is never cancelled. Reads, raw
+saves, shortcut changes and other field changes preserve request-order barriers;
+coalescing never crosses them. Superseded requests are not reported as saved:
+they settle with an explicit superseded result and the winning request's
+snapshot, while the winning request retains ordinary save/error/application
+feedback. Closing Settings does not discard the final queued choice.
+A pending choice is marked as saving; after settlement cards
 represent the saved configuration, not proof of application when reload fails.
 The advanced custom path remains available. Discovery neither
 modifies themes nor changes relative path semantics.

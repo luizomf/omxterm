@@ -85,7 +85,14 @@ Graphical responses reconcile only controls whose submitted edit still owns
 the field; unrelated or newer typing remains local. Queued changes retain
 pending feedback until all requested changes settle. Graphical requests are
 submitted immediately to the existing main-process queue, not retained in a
-view-local queue. Closing does not cancel requested writes; a reopened view's
+view-local queue. Consecutive graphical `theme.path` requests that have not yet
+started share one queued operation, updated to the latest choice. The running
+validation/write/reload is never cancelled; any intervening read, raw save,
+shortcut or other field change ends that coalescing window. Superseded choices
+are not written and receive an explicit superseded result with the winning
+request's snapshot, not a claim that their own value was saved. The winning
+choice retains normal validation, conflict, write and application outcomes.
+Closing does not cancel requested writes; a reopened view's
 read follows the writes already requested, while removed views still ignore
 late results. Raw Save and Reload File allow only one pending raw operation at
 a time, while typing remains usable.

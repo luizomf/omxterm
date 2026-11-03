@@ -21,6 +21,7 @@ import {
 import type { UserConfiguration } from "../shared/user-configuration";
 import type { SettingsThemesResult } from "../shared/settings-themes";
 import { discoverSettingsThemes } from "./settings-themes";
+import { createSettingsQueue } from "./settings-queue";
 import type { SettingsMessage } from "../shared/settings-messages";
 import {
   TERMINAL_ACTION_NAMES,
@@ -79,7 +80,8 @@ const RESTART_SUFFIX = " Fix the file and restart OMXTerm.";
 
 // Persistence adapted from ruscher/omxterm PR #622's preferences service at
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT).
-// Explicit, user-requested writes to config.json. Requests run one at a time.
+// Explicit, user-requested writes to config.json. Requests run one at a time;
+// consecutive not-started theme choices coalesce to the latest selection.
 // A graphical change rereads the file and changes only its own field, so other
 // entries, including external edits, are kept; a raw JSON save must start from
 // the file's current revision. Every candidate passes the same loader as
@@ -94,13 +96,6 @@ export function createSettingsService(options: {
     options.loadOptions.environment,
     options.loadOptions.homeDirectory,
   );
-  let queue: Promise<unknown> = Promise.resolve();
-  const serialize = <Result>(task: () => Promise<Result>) => {
-    const run = queue.then(task, task);
-    queue = run.catch(() => {});
-    return run;
-  };
-
   const validate = (bytes: Uint8Array) =>
     loadUserConfiguration({ ...options.loadOptions, read: fixedRead(bytes) });
 
@@ -245,30 +240,35 @@ export function createSettingsService(options: {
   };
 
   // A graphical edit rereads the file and changes only its own entry.
-  const edit = (mutate: (document: Record<string, unknown>) => void) =>
-    serialize(async (): Promise<SettingsResult> => {
-      const current = await readCurrent();
-      // A parsed but invalid document may be repaired by this very change;
-      // the candidate still passes full validation before it is written.
-      if (current.problem && !current.document)
-        return {
-          status: "rejected",
-          message: current.problem,
-          snapshot: snapshotOf(current),
-        };
-      const document = structuredClone(current.document ?? { version: 1 });
-      mutate(document);
-      return commit(`${JSON.stringify(document, null, 2)}\n`, current);
-    });
+  const edit = async (
+    mutate: (document: Record<string, unknown>) => void,
+  ): Promise<SettingsResult> => {
+    const current = await readCurrent();
+    // A parsed but invalid document may be repaired by this very change;
+    // the candidate still passes full validation before it is written.
+    if (current.problem && !current.document)
+      return {
+        status: "rejected",
+        message: current.problem,
+        snapshot: snapshotOf(current),
+      };
+    const document = structuredClone(current.document ?? { version: 1 });
+    mutate(document);
+    return commit(`${JSON.stringify(document, null, 2)}\n`, current);
+  };
+
+  const queue = createSettingsQueue((change) =>
+    edit((document) => setField(document, change.path, change.value)),
+  );
 
   return {
-    snapshot: () => serialize(async () => snapshotOf(await readCurrent())),
-    themes: () => serialize(() => discoverSettingsThemes(configurationPath)),
-    change: (change) =>
-      edit((document) => setField(document, change.path, change.value)),
-    changeKeybind: (change) => edit((document) => setKeybind(document, change)),
+    snapshot: () => queue.run(async () => snapshotOf(await readCurrent())),
+    themes: () => queue.run(() => discoverSettingsThemes(configurationPath)),
+    change: queue.change,
+    changeKeybind: (change) =>
+      queue.run(() => edit((document) => setKeybind(document, change))),
     saveText: (text, revision) =>
-      serialize(async () => {
+      queue.run(async () => {
         const current = await readCurrent();
         if (current.revision !== revision)
           return {

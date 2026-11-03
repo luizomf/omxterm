@@ -13,7 +13,13 @@ import path from "node:path";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createSettingsService } from "../../src/main/settings-service";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
-import { installSettingsDom, open } from "../fixtures/settings-dialog-dom";
+import {
+  button,
+  deferred,
+  installSettingsDom,
+  open,
+} from "../fixtures/settings-dialog-dom";
+import type { SettingsResult } from "../../src/shared/settings";
 
 beforeAll(installSettingsDom);
 const roots: string[] = [];
@@ -23,6 +29,120 @@ afterEach(async () => {
     roots.splice(0).map((root) => rm(root, { recursive: true, force: true })),
   );
 });
+
+it.each(["retained", "reopened"] as const)(
+  "bounds rapid picker replay to the active save and final selection under a delayed reload (%s view)",
+  async (lifetime) => {
+    const root = await mkdtemp(path.join(tmpdir(), "omxterm-picker-backlog-"));
+    roots.push(root);
+    const directory = path.join(root, "omxterm");
+    await mkdir(path.join(directory, "themes"), { recursive: true });
+    await writeFile(
+      path.join(directory, "config.json"),
+      JSON.stringify({ version: 1, confirmClose: false }),
+    );
+    for (const name of ["a", "b"])
+      await writeFile(
+        path.join(directory, "themes", `${name}.json`),
+        JSON.stringify({ ...DEFAULT_TERMINAL_THEME, name }),
+      );
+    const entered = deferred<void>();
+    const resume = deferred<void>();
+    const applied: unknown[] = [];
+    const reload = vi.fn(async () => {
+      const configuration = JSON.parse(
+        await readFile(path.join(directory, "config.json"), "utf8"),
+      ) as { theme?: { path: string } };
+      applied.push(configuration.theme?.path ?? "");
+      if (applied.length === 1) {
+        entered.resolve();
+        await resume.promise;
+      }
+      return { applied: true as const, notices: [] };
+    });
+    const service = createSettingsService({
+      loadOptions: {
+        environment: { XDG_CONFIG_HOME: root },
+        homeDirectory: root,
+        platform: "linux",
+        getInstalledFontFamilyMetrics: async () => undefined,
+      },
+      reload,
+    });
+    const changes: Promise<SettingsResult>[] = [];
+    const view = await open({
+      ...service,
+      change: (change) => {
+        const result = service.change(change);
+        changes.push(result);
+        return result;
+      },
+    });
+    const select = (value: string) => {
+      const radio = [
+        ...document.querySelectorAll<HTMLInputElement>(
+          ".settings-themes input",
+        ),
+      ].find((input) => input.value === value)!;
+      radio.click();
+      return radio;
+    };
+    try {
+      await vi.waitFor(() =>
+        expect(
+          document.querySelector('input[value="themes/a.json"]'),
+        ).not.toBeNull(),
+      );
+      select("themes/a.json");
+      await entered.promise;
+      // Native arrow navigation emits the same radio change route. No browser
+      // keyboard behavior is claimed by this jsdom test.
+      for (let index = 0; index < 100; index += 1)
+        select(index % 2 === 0 ? "themes/b.json" : "themes/a.json");
+      const final = select("");
+      expect(final.checked).toBe(true);
+      expect(final.parentElement?.textContent).toContain("Saving…");
+      expect(reload).toHaveBeenCalledOnce();
+      let reopened: Promise<void> | undefined;
+      if (lifetime === "reopened") {
+        button("Close").click();
+        // This read must follow the final queued choice, even though its view
+        // disappeared before the active reload completed.
+        reopened = view.dialog.open();
+      }
+      resume.resolve();
+      const results = await Promise.all(changes);
+      await reopened;
+      await vi.waitFor(() =>
+        expect(view.status()).toBe(lifetime === "retained" ? "Saved." : ""),
+      );
+      expect(results.map((result) => result.status)).toEqual([
+        "saved",
+        ...Array<string>(100).fill("superseded"),
+        "saved",
+      ]);
+      expect(applied).toEqual(["themes/a.json", ""]);
+      expect(reload).toHaveBeenCalledTimes(2);
+      await vi.waitFor(() =>
+        expect(
+          document.querySelector<HTMLInputElement>(
+            '.settings-themes input[value=""]',
+          )?.checked,
+        ).toBe(true),
+      );
+      expect(
+        JSON.parse(await readFile(path.join(directory, "config.json"), "utf8")),
+      ).toEqual({
+        version: 1,
+        confirmClose: false,
+      });
+    } finally {
+      resume.resolve();
+      await Promise.all(changes);
+      view.dialog.dispose();
+    }
+  },
+);
 
 it.skipIf(process.platform === "win32")(
   "selects a linked local theme through the real save and reload path without changing the links",

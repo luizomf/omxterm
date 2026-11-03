@@ -34,8 +34,14 @@ export function describeSettingsResult(
 ): {
   readonly text: string;
   readonly error: boolean;
-  readonly severity: "success" | "warning" | "error";
+  readonly severity: "info" | "success" | "warning" | "error";
 } {
+  if (result.status === "superseded")
+    return {
+      text: t("settings.themeSuperseded"),
+      error: false,
+      severity: "info",
+    };
   if (result.status !== "saved")
     return {
       text:

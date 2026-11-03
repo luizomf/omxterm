@@ -131,6 +131,12 @@ export type SettingsApplication =
 
 export type SettingsResult =
   | {
+      // A newer consecutive theme choice replaced this request before it ran.
+      // The snapshot belongs to that winning request; this choice was not saved.
+      readonly status: "superseded";
+      readonly snapshot: SettingsSnapshot;
+    }
+  | {
       readonly status: "saved";
       readonly snapshot: SettingsSnapshot;
       readonly application: SettingsApplication;
@@ -218,6 +224,7 @@ export function isSettingsResult(value: unknown): value is SettingsResult {
   if (typeof value !== "object" || value === null) return false;
   const result = value as Record<string, unknown>;
   if (!isSettingsSnapshot(result.snapshot)) return false;
+  if (result.status === "superseded") return true;
   if (result.status === "saved") {
     const application = result.application as Record<string, unknown> | null;
     return (

@@ -399,6 +399,8 @@ export const englishMessages = {
   "settings.fileGuidance":
     "Graphical changes are checked against the whole file. Correct invalid values in Settings or edit Config File; if the file cannot be read, repair it externally and reload.",
   "settings.saved": "Saved.",
+  "settings.themeSuperseded":
+    "A newer theme choice replaced this selection before it was saved.",
   "settings.notSaved": "Not saved: {detail}",
   "settings.notApplied":
     "Saved to config.json, but it could not be applied: {notice}",

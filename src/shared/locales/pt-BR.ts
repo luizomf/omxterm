@@ -412,6 +412,8 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.fileGuidance":
     "Alterações gráficas são verificadas no arquivo inteiro. Corrija valores inválidos em Configurações ou edite o Arquivo de Configuração; se não for possível ler o arquivo, repare-o externamente e recarregue.",
   "settings.saved": "Salvo.",
+  "settings.themeSuperseded":
+    "Uma escolha de tema mais recente substituiu esta seleção antes de ela ser salva.",
   "settings.notSaved": "Não salvo: {detail}",
   "settings.notApplied":
     "Salvo em config.json, mas não foi possível aplicar: {notice}",
