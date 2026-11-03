@@ -59,7 +59,8 @@ export function createCompanionDismissal(
     if (activation?.identity === identity && !down) activation = undefined;
     if (activationId && down && !input.isAutoRepeat && input.key === "Enter")
       activation = { id: activationId, identity };
-    if (!panelId || !down || input.key !== "Escape") return false;
+    if (!panelId || !down || input.key !== "Escape" || input.isComposing)
+      return false;
     owned = identity;
     event.preventDefault();
     contents.send(extensionViewIpc.dismissPanel, panelId);

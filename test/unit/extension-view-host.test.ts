@@ -703,6 +703,7 @@ it.each([true, false])(
       contents: Contents,
       type = "keyDown",
       isAutoRepeat = false,
+      isComposing = false,
     ) => {
       const event = { preventDefault: vi.fn() };
       contents.emit("before-input-event", event, {
@@ -710,18 +711,27 @@ it.each([true, false])(
         key: "Escape",
         code: "Escape",
         isAutoRepeat,
+        isComposing,
       });
       return event.preventDefault;
     };
     expect(key(f.owner.webContents)).not.toHaveBeenCalled();
     f.owner.webContents.send.mockClear();
-    const press = key(child);
     if (!panel) {
+      const press = key(child);
       expect(press).not.toHaveBeenCalled();
       expect(f.owner.webContents.send).not.toHaveBeenCalled();
       expect(f.keybind).toHaveBeenCalledOnce();
       return;
     }
+    const composingEscape = key(child, "keyDown", false, true);
+    expect(composingEscape).not.toHaveBeenCalled();
+    expect(f.owner.webContents.send).not.toHaveBeenCalledWith(
+      extensionViewIpc.dismissPanel,
+      descriptor.id,
+    );
+    f.keybind.mockClear();
+    const press = key(child);
     expect(press).toHaveBeenCalledOnce();
     expect(f.keybind).not.toHaveBeenCalled();
     expect(f.owner.webContents.send).toHaveBeenCalledWith(
