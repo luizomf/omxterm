@@ -331,8 +331,8 @@ operation already started. Compatible installed archives retain their original
 **Use terminal directory** label and do not gain the new inline hint or
 tooltip from a host update.
 These source changes are not a release and do not replace published archives.
-Recognized `0.24.1-dev.N` hosts admit unchanged Files0.6 through the narrow
-[maintenance bridge](extension-installation-foundation.md#archive-contract).
+Recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts admit unchanged Files0.6
+through the narrow [development bridges](extension-installation-foundation.md#archive-contract).
 
 Closing the opening terminal leaves the tool available; disabling or removing
 the extension retires its view. In current Files source, **Actions… → Show dotfiles (names

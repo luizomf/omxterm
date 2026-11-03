@@ -66,7 +66,11 @@ Each change you make to a control is checked and saved to `config.json` right aw
 - **Not saved: …** The value was rejected (for example, a font that isn't installed); your file is unchanged.
 - **Saving…** One or more graphical changes are still pending. An earlier result does not mark a later change completed.
 
-Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation. If it detects an external edit during validation or write preparation, it refuses the change and asks you to reload instead of overwriting it. Settings does not write through a `config.json` symlink (including a dangling link); edit its target manually, then reload User Configuration.
+Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation. If it detects an external edit or a changed link destination during validation or write preparation, it refuses the change and asks you to reload instead of overwriting it.
+
+Settings can save through `config.json` symlinks, relative links, link chains and linked directories. It replaces the existing regular target file atomically and keeps the links. If a link is dangling or cyclic, or the target is not a regular file, fix it and reload the file before saving. For permission errors, check the file and its target directory; the directory must allow creating and replacing files. An absent ordinary `config.json` can still be created with mode `0600` where supported; inherited filesystem ACLs still apply. If cleanup fails, Settings warns that a temporary file may remain in the target directory. The final conflict checks include permission changes and reduce races with other editors but cannot lock them out: a change immediately after a check can still interfere with a save.
+
+Atomic replacement keeps the target's basic permission bits where supported, but it creates a new file entry. Other hard links keep the old contents; ownership, ACLs, extended attributes and other metadata may not be preserved. Back up important metadata or use an editor that preserves it if that matters for your setup.
 
 The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Transparency, blur and snippets are still edited in the files.
 
@@ -489,7 +493,7 @@ On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and l
 }
 ```
 
-Point `config.json` to your theme file (relative to `config.json` or as an absolute path) and reload:
+Point `config.json` to your theme file (relative to the logical configuration directory or as an absolute path) and reload. Linking `config.json` elsewhere does not move the base for relative theme paths; theme files and the `themes` directory can themselves be symlinks to readable files:
 
 ```json
 {

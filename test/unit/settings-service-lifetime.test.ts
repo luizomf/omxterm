@@ -1,48 +1,10 @@
-import {
-  lstat,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { createSettingsService } from "../../src/main/settings-service";
-import { settingsMessageText } from "../../src/shared/settings-messages";
 import { loadUserConfiguration } from "../../src/main/user-configuration";
 import { createUserConfigurationReloader } from "../../src/main/user-configuration-reloader";
-
-it.each([false, true])(
-  "preserves a configuration symlink (dangling: %s)",
-  async (dangling) => {
-    const root = await mkdtemp(path.join(tmpdir(), "omxterm-settings-link-"));
-    roots.push(root);
-    const file = path.join(root, "omxterm", "config.json");
-    const target = path.join(root, "target.json");
-    await mkdir(path.dirname(file));
-    if (!dangling) await writeFile(target, '{"version":1}');
-    await symlink(target, file);
-    const service = createSettingsService({
-      loadOptions: loadOptionsFor(root),
-      reload: vi.fn(),
-    });
-    const snapshot = await service.snapshot();
-    expect(snapshot.problem).toEqual({ kind: "symlink" });
-    expect(settingsMessageText(snapshot.problem!)).toMatch(/symlink.*manual/iu);
-    expect(snapshot.revision).not.toBe("absent");
-    expect(
-      await service.change({ path: "font.size", value: 18 }),
-    ).toMatchObject({ status: "rejected" });
-    expect(
-      await service.saveText('{"version":1}', snapshot.revision),
-    ).not.toMatchObject({ status: "saved" });
-    expect((await lstat(file)).isSymbolicLink()).toBe(true);
-    if (!dangling) expect(await readFile(target, "utf8")).toBe('{"version":1}');
-  },
-);
 
 it("reports persistence even when the production reloader's consumer throws twice", async () => {
   const root = await mkdtemp(
@@ -117,7 +79,10 @@ it("keeps a saved draft's revision distinct from an external edit during applica
       return { applied: true, notices: [] };
     },
   });
-  const result = await service.saveText(submitted, "absent");
+  const result = await service.saveText(
+    submitted,
+    (await service.snapshot()).revision,
+  );
   expect(result).toMatchObject({
     status: "saved",
     snapshot: { text: submitted },
@@ -145,7 +110,10 @@ it.each(["win32", "linux"])(
       version: 1,
       windowsShell: "C:\\synthetic\\shell.exe",
     });
-    const result = await service.saveText(text, "absent");
+    const result = await service.saveText(
+      text,
+      (await service.snapshot()).revision,
+    );
     expect(result).toMatchObject({
       status: "saved",
       lifetimes: platform === "win32" ? ["new-tabs"] : [],
@@ -175,7 +143,10 @@ it("saves BOM-prefixed raw JSON with the loader's decoding semantics and a usabl
     reload: reloader.reload,
   });
   const text = '\uFEFF{"version":1,"logLevel":"debug"}';
-  const result = await service.saveText(text, "absent");
+  const result = await service.saveText(
+    text,
+    (await service.snapshot()).revision,
+  );
   expect(result).toMatchObject({
     status: "saved",
     application: { applied: true },

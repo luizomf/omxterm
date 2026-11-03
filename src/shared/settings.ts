@@ -107,9 +107,9 @@ export interface SettingsSnapshot {
   readonly configurationPath: string;
   // Selects platform-specific fields such as the Windows shell.
   readonly platform: string;
-  // A digest of config.json's bytes, or "absent" when there is no file yet.
+  // Opaque revision of the resolved destination and its bytes/presence.
   readonly revision: string;
-  // Decoded UTF-8 text (leading BOM omitted), or null when there is no file yet.
+  // Decoded UTF-8 text (leading BOM omitted), or null if absent or unreadable.
   readonly text: string | null;
   // The values each control shows: the file's own entries, falling back to
   // the effective defaults for omitted fields.

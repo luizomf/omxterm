@@ -29,7 +29,9 @@ it("validates bounded Settings-owned identities and relabels them without revers
         "json",
         "object",
         "symlink",
+        "target",
         "conflict",
+        "cleanup",
         "write",
         "application",
       ] as const

@@ -32,7 +32,7 @@ claims cannot authorize catalog installation. Refresh invalidates future use of 
 selections, but cannot change a descriptor already captured by an installation.
 
 Main enforces target and shared host/API compatibility. Host admission uses
-ordinary semver first plus the explicitly bounded [maintenance-development and
+ordinary semver first plus the explicitly bounded [development-family and
 historical exceptions](extension-installation-foundation.md#archive-contract);
 API admission remains ordinary semver. Exact byte length, SHA-256 and parsed
 manifest ID/version/engine strings must match the captured release **before trust**.

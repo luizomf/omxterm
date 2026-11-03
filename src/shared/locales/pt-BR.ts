@@ -393,16 +393,21 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.stale":
     "config.json mudou desde que você começou a editar. Seu rascunho foi mantido; o salvamento será recusado até recarregar o arquivo.",
   "settings.newer": "As edições mais recentes não foram salvas.",
-  "settings.readError": "não foi possível ler config.json",
+  "settings.readError":
+    "não foi possível ler config.json. Verifique as permissões e o local do arquivo.",
   "settings.utf8Error": "config.json não é UTF-8 válido",
   "settings.jsonError": "config.json não é JSON válido",
   "settings.objectError": "config.json deve conter um objeto",
   "settings.symlinkError":
-    "config.json é um link simbólico. Edite o destino manualmente e recarregue a Configuração do Usuário; Configurações não grava através de links simbólicos.",
+    "Um link de config.json ou de seu diretório está quebrado ou é cíclico. Corrija o link ou seu destino e recarregue o arquivo.",
+  "settings.targetError":
+    "config.json deve apontar para um arquivo comum. Corrija seu local e recarregue o arquivo.",
   "settings.conflict":
-    "config.json mudou desde o início desta edição. Copie seu rascunho, recarregue o arquivo e reaplique suas alterações.",
+    "config.json ou seu destino mudou desde o início desta edição. Copie seu rascunho, recarregue o arquivo e reaplique suas alterações.",
   "settings.writeError":
-    "Não foi possível gravar config.json. Nada foi alterado.",
+    "Não foi possível gravar config.json. Verifique as permissões do arquivo e do diretório de destino. Nada foi alterado.",
+  "settings.cleanupError":
+    "config.json não foi salvo. Um arquivo temporário pode ter permanecido no diretório de destino; verifique o diretório e as permissões antes de tentar novamente.",
   "settings.applicationError":
     "Falha inesperada ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir -> Recarregar Configuração novamente.",
   "settings.page.shortcuts": "Atalhos",

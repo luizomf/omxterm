@@ -28,7 +28,12 @@ export function packageCompatible(
       (/^0\.24\.1-dev\.(?:0|[1-9]\d*)$/u.test(runtime.appVersion) &&
         valid(runtime.appVersion) === runtime.appVersion &&
         satisfies("0.24.0", range) &&
-        satisfies("0.24.1", range))) &&
+        satisfies("0.24.1", range)) ||
+      // The next minor family is a separate, explicitly bounded decision.
+      (/^0\.25\.0-dev\.(?:0|[1-9]\d*)$/u.test(runtime.appVersion) &&
+        valid(runtime.appVersion) === runtime.appVersion &&
+        satisfies("0.24.0", range) &&
+        satisfies("0.25.0", range))) &&
     satisfies(runtime.apiVersion, manifest.engines.api)
   );
 }

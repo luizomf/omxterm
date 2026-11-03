@@ -137,21 +137,26 @@ describe("0.24.0 first-party catalog candidate", () => {
         "0.24.0",
         "0.24.1-dev.0",
         "0.24.1",
+        "0.25.0-dev.0",
+        "0.25.0-dev.1",
       ])
         expect(catalogCompatible(files, runtime(version), target)).toBe(true);
-      expect(catalogCompatible(files, runtime("0.24.0", "0.2.0"), target)).toBe(
-        false,
-      );
+      for (const host of ["0.24.0", "0.25.0-dev.0"])
+        expect(catalogCompatible(files, runtime(host, "0.2.0"), target)).toBe(
+          false,
+        );
       for (const other of [
         "linux-x64",
         "darwin-x64",
         "win32-arm64",
         "win32-x64",
       ])
-        expect(catalogCompatible(files, runtime("0.24.0"), other)).toBe(false);
+        for (const host of ["0.24.0", "0.25.0-dev.0"])
+          expect(catalogCompatible(files, runtime(host), other)).toBe(false);
       const otherArm =
         target === "linux-arm64" ? "darwin-arm64" : "linux-arm64";
-      expect(catalogCompatible(files, runtime("0.24.0"), otherArm)).toBe(false);
+      for (const host of ["0.24.0", "0.25.0-dev.0"])
+        expect(catalogCompatible(files, runtime(host), otherArm)).toBe(false);
       expect(
         catalogAction(files, {
           version: target === "linux-arm64" ? "0.4.0" : "0.5.0",

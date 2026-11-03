@@ -380,16 +380,21 @@ export const englishMessages = {
   "settings.stale":
     "config.json changed since you started editing. Your draft is kept; saving it will be refused until you reload the file.",
   "settings.newer": "Newer edits are not saved.",
-  "settings.readError": "config.json could not be read",
+  "settings.readError":
+    "config.json could not be read. Check its permissions and location.",
   "settings.utf8Error": "config.json is not valid UTF-8",
   "settings.jsonError": "config.json is not valid JSON",
   "settings.objectError": "config.json must hold an object",
   "settings.symlinkError":
-    "config.json is a symlink. Edit its target manually, then reload User Configuration; Settings does not write through symlinks.",
+    "A config.json link or linked directory is dangling or cyclic. Fix the link or its target, then reload the file.",
+  "settings.targetError":
+    "config.json must resolve to a regular file. Fix its location, then reload the file.",
   "settings.conflict":
-    "config.json changed since this edit started. Copy your draft, reload the file and apply your edits again.",
+    "config.json or its target changed since this edit started. Copy your draft, reload the file and apply your edits again.",
   "settings.writeError":
-    "config.json could not be written. Nothing was changed.",
+    "config.json could not be written. Check permissions on the file and its target directory. Nothing was changed.",
+  "settings.cleanupError":
+    "config.json was not saved. A temporary file may remain in its target directory; check the directory and permissions before trying again.",
   "settings.applicationError":
     "Unexpected application failure. Some settings may already be active; choose View -> Reload User Configuration again.",
   "settings.page.shortcuts": "Shortcuts",

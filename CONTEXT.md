@@ -118,7 +118,9 @@ subsequent edits belong to the user.
 
 **Settings** — One lazy, retained graphical Application Tab per window for editing
 `config.json`, without a pane, Surface, Adapter or PTY. Only deliberate changes
-write configuration; opening the editor does not. See
+write configuration; opening the editor does not. Valid configuration symlinks
+are preserved while their regular target is replaced; relative theme paths use
+the logical configuration directory. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for tab
 lifetime and appearance, and [configuration and local state](docs/spec.md#configuration-and-local-state)
 for save/reload, retained drafts, clipboard, recording and language contracts.
@@ -307,7 +309,7 @@ by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
 endpoint offered Linux Files0.4; the promoted catalogs select Files0.6 for each
 ARM64 target and SSH0.3.1 for Linux. Common SSH/Snippets entries match; no merging
 or fallback occurs. Target and shared host/API compatibility govern selection;
-the bounded maintenance-development exception is described in the
+the bounded development-family exceptions are described in the
 [installation contract](docs/extension-installation-foundation.md#archive-contract).
 Admission is not runtime or platform qualification. It is not a marketplace or
 update daemon.

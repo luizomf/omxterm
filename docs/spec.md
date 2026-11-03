@@ -125,8 +125,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   gesture through repeats/release. The internal shared application-page shell
   provides bounded content/navigation scrolling, explicit control variants and
   consistent error/warning/result notices. Raw and graphical results retain their
-  severity; symlink recovery directs external editing without offering in-app
-  write-through. Settings keeps its retained layout and uses the window's theme tint
+  severity; Settings follows valid configuration links and reports broken links,
+  unsuitable targets and conflicts. Settings keeps its retained layout and uses the window's theme tint
   rather than adding an opaque page background; controls and focus remain visible. Settings survives last-terminal exit,
   cancellation or first-mount failure without inventing a shell or reporting
   false renderer emptiness. First-mount readiness still reports the actual
@@ -629,8 +629,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   archives use the host behavior without modified package bytes, but retain their
   earlier label and lack the new inline hint and tooltip. The renamed action,
   hint, tooltip and dynamically localized host-coded notices require a future archive.
-  The narrow [maintenance bridge](extension-installation-foundation.md#archive-contract)
-  admits unchanged Files0.6 on recognized 0.24.1-dev.N hosts; admission alone
+  The narrow [development bridges](extension-installation-foundation.md#archive-contract)
+  admit unchanged Files0.6 on recognized 0.24.1-dev.N and 0.25.0-dev.N hosts; admission alone
   does not qualify native behavior or packages.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
@@ -1565,7 +1565,8 @@ Snippet contents are user payload and are never logged.
 An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A
 present `theme` must contain exactly one required `path`: a non-empty string
 without a NUL character. Absolute paths are used as written; relative paths are
-resolved from the directory containing `config.json`. OMXTerm does not expand
+resolved from the logical directory containing `config.json`, even if the
+configuration file itself is a symlink. OMXTerm does not expand
 `~`, environment variables, shell syntax, or URLs. Symlinks are accepted only
 when their final target is a readable regular file. The Electron main process
 reads and resolves the selected path through the complete User Configuration
@@ -1720,10 +1721,18 @@ and **Reload File**. Writes follow ADR 0003: full startup validation before an
 atomic replacement, a field-scoped change that keeps every other entry, a raw
 save refused when the file changed since its draft was loaded, and a dirty draft
 never replaced by other changes or late Save/Reload File responses. A final
-revision/presence comparison after write preparation rejects detected external
-changes without retry; it is not a cross-process atomic compare-and-swap.
-Settings preserves configuration symlinks, including dangling links, by refusing
-writes and directing the user to manual editing and reload. Pending graphical
+destination/bytes/presence/permission comparison after write preparation rejects
+detected external edits or retargeting without retry; it is not a cross-process atomic
+compare-and-swap. Settings follows relative links, chains and linked parents to
+an existing regular configuration file, atomically replacing the resolved target
+entry and preserving the links. Dangling or cyclic links and non-regular targets
+are refused with recovery guidance; an ordinarily absent file may be created.
+Atomic replacement preserves basic permission bits where supported, not hard-link
+relationships or all metadata; the destination directory must be writable.
+A new configuration and the temporary file initially use mode `0600` where
+supported; inherited filesystem ACLs still apply. Cleanup failures report that a
+temporary file may remain. The remaining race
+after the last comparison is not eliminated. Pending graphical
 responses retain newer or unrelated field drafts, and saving feedback remains
 pending until queued changes settle. Graphical requests go directly to main's
 serialized service, so a reopened view reads after already-requested writes
@@ -1731,7 +1740,7 @@ rather than overtaking undispatched work in a removed view. Raw operations are
 single-flight while typing remains usable; newer edits retain the saved bytes'
 revision as their base and are explicitly reported as not saved. Snapshot text uses the same
 UTF-8 decoding as the loader (omitting a leading BOM), while revisions identify
-the exact persisted bytes; snapshot parsing happens before writing. Closed
+the resolved destination and exact persisted bytes; snapshot parsing happens before writing. Closed
 views ignore late results.
 The status line distinguishes saved and applied, saved but not applied (even
 when reload throws after persistence), new-window/session-only settings, and
@@ -1810,10 +1819,11 @@ Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
 and requires exact archive size/SHA-256 and manifest identity/version/engines
 before the existing one-shot trust flow. Host compatibility uses ordinary semver
-first, with an explicit bridge for canonical `0.24.1-dev.N` when the original
-range admits both stable `0.24.0` and `0.24.1`, plus the separate historical
-Files exception. API checks and targets remain unchanged; this admission does
-not qualify the archive or platform. See the
+first, with explicit bridges for canonical `0.24.1-dev.N` when the original
+range admits stable `0.24.0` and `0.24.1`, and canonical `0.25.0-dev.N` when
+it admits stable `0.24.0` and `0.25.0`, plus the separate historical Files
+exception. API, capability, target, archive identity and trust checks remain
+unchanged; this admission does not qualify the archive or platform. See the
 [compatibility contract](extension-installation-foundation.md#archive-contract).
 Failed refresh retains a visibly stale in-memory snapshot; cold failure is unavailable, not empty. Local/installed
 management remains usable offline. Explicit Update, exact-byte Reinstall and

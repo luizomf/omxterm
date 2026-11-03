@@ -58,11 +58,11 @@ describe("settings snapshot", () => {
     const { service, root } = await setup();
     const snapshot = await service.snapshot();
     expect(snapshot).toMatchObject({
-      revision: "absent",
       text: null,
       values: { "font.size": 16, confirmClose: true, "theme.path": "" },
     });
     expect(snapshot.problem).toBeUndefined();
+    expect(snapshot.revision).toMatch(/^[0-9a-f]{64}$/u);
     expect(await readdir(root)).toEqual([]);
   });
 
@@ -300,7 +300,7 @@ describe("settings file helpers", () => {
     await nodeSettingsFiles.replace(
       file,
       '{ "version": 1 }\n',
-      "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      await nodeSettingsFiles.read(file),
     );
     expect(await readFile(file, "utf8")).toBe('{ "version": 1 }\n');
     if (process.platform !== "win32")
