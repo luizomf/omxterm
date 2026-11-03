@@ -11,6 +11,7 @@ import type {
   TerminalSessionId,
   TerminalSize,
   TerminalTabCommand,
+  TerminalWriteReceipt,
 } from "./terminal-contract";
 import type { WindowChromeCommand, WindowChromeState } from "./window-chrome";
 import type { TerminalRendererConfiguration } from "./user-configuration";
@@ -50,6 +51,10 @@ export interface TerminalBridge {
   ): Promise<TerminalSessionId>;
   sshPane?(token: string, accepted: boolean | null): void;
   input(sessionId: TerminalSessionId, data: string): void;
+  inputTracked?(
+    sessionId: TerminalSessionId,
+    data: string,
+  ): Promise<TerminalWriteReceipt>;
   resize(sessionId: TerminalSessionId, size: TerminalSize): void;
   close(sessionId: TerminalSessionId, reason?: "rendering-failure"): void;
   title(sessionId: TerminalSessionId, request: string): void;

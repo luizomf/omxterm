@@ -37,6 +37,8 @@ export function subscribeToWindowTools(
     onPreviewActivity(): void;
     modalClipboard(action: TerminalClipboardAction): boolean;
     focusTerminal?(focus?: () => void): void;
+    sourceForeground?(id: string): boolean;
+    sourceSelected?(id: string): boolean;
     restoreSourceFocus?(id: string): boolean;
     togglePanelSide?(): void;
   },
@@ -51,10 +53,23 @@ export function subscribeToWindowTools(
     capture: tabs.captureSnippetTarget,
     blocked: owner.blocked,
     focusTerminal: owner.focusTerminal ?? tabs.focusSelected,
-    focusCapturedTarget: (target) => {
-      if (!target.isCurrent?.()) return;
-      if (owner.focusTerminal) owner.focusTerminal(() => target.focus?.());
-      else target.focus?.();
+    focusCapturedTarget: (target, source) => {
+      if (
+        owner.blocked() ||
+        !target.isCurrent?.() ||
+        (source && owner.sourceForeground?.(source) !== true)
+      )
+        return;
+      const focus = () => {
+        if (
+          !owner.blocked() &&
+          target.isCurrent?.() &&
+          (!source || owner.sourceSelected?.(source) === true)
+        )
+          target.focus?.();
+      };
+      if (owner.focusTerminal) owner.focusTerminal(focus);
+      else focus();
     },
     onPreviewActivity: owner.onPreviewActivity,
     openOverlay: tabs.openOverlay,

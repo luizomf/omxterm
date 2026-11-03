@@ -13,7 +13,10 @@ export function resttyClipboardActions(
   options: TerminalSurfaceOptions,
   liveSelection: () =>
     { getSelectionText(): string; selectAll(): boolean } | undefined,
-): Pick<TerminalSurface, "copy" | "paste" | "inject" | "selectAll"> {
+): Pick<
+  TerminalSurface,
+  "copy" | "paste" | "inject" | "injectTracked" | "selectAll"
+> {
   return {
     async copy() {
       const text = liveSelection()?.getSelectionText() ?? "";
@@ -32,6 +35,10 @@ export function resttyClipboardActions(
     async inject(text, injectOptions) {
       options.onSemanticInput?.();
       return delivery.deliver(text, injectOptions);
+    },
+    async injectTracked(text) {
+      options.onSemanticInput?.();
+      return delivery.deliverTracked(text);
     },
     selectAll: () => {
       liveSelection()?.selectAll();

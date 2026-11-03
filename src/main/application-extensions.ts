@@ -125,7 +125,7 @@ export type ApplicationExtensionsOptions = {
   onDefaultSnippetsWarning?(warning: string): void;
   semanticInput?: Pick<
     ReturnType<typeof import("./semantic-input-ipc").registerSemanticInputIpc>,
-    "request" | "confirmSelection"
+    "request" | "confirmSelection" | "subscribeSelection"
   >;
   mirrorTyping?: ReturnType<
     typeof import("./mirror-typing-ipc").registerMirrorTypingIpc

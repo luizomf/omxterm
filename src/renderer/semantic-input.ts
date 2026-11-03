@@ -10,7 +10,10 @@ export function createSemanticInput(
     readonly capture: () => SnippetTarget | undefined;
     readonly blocked: () => boolean;
     readonly focusTerminal: () => void;
-    readonly focusCapturedTarget?: (target: SnippetTarget) => void;
+    readonly focusCapturedTarget?: (
+      target: SnippetTarget,
+      source?: string,
+    ) => void;
     readonly onPreviewActivity: () => void;
     readonly language?: RendererLanguage;
     readonly openOverlay?: (open: () => void, refused?: () => void) => void;
@@ -45,6 +48,7 @@ export function createSemanticInput(
       returnFocus: () => boolean = () => false,
       signal?: AbortSignal,
       waitForDelivery = false,
+      source?: string,
     ): Promise<boolean> {
       if (
         disposed ||
@@ -67,8 +71,10 @@ export function createSemanticInput(
                   delivered === true &&
                   !signal?.aborted &&
                   target.isCurrent?.()
-                )
-                  options.focusCapturedTarget?.(target);
+                ) {
+                  if (source) options.focusCapturedTarget?.(target, source);
+                  else options.focusCapturedTarget?.(target);
+                }
                 return delivered === true;
               },
               () => false,

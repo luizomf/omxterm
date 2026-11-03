@@ -40,7 +40,7 @@ export function snippetTarget(
       if (live()) void surface.inject(body, { submit });
     },
     async deliverAndReport(body) {
-      return live() && (await surface.inject(body, { submit: false })) === true;
+      return live() && (await surface.injectTracked?.(body)) === true;
     },
     isCurrent: () => live() && current?.() === true,
     focus: () => {

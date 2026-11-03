@@ -68,6 +68,8 @@ export function applicationViews(
       return { x: 0, y: 34, width: width!, height: Math.max(0, height! - 34) };
     },
     onKeybind: options.keybind,
+    subscribeSelection: (listener) =>
+      options.semanticInput?.subscribeSelection(window, listener) ?? (() => {}),
     onRequest(value, signal, context) {
       if (epochSignal.aborted || target.signal.aborted || signal.aborted)
         return Promise.reject(new PackageError("unavailable"));
@@ -143,6 +145,10 @@ export function applicationViews(
     const text = formatFilePathInsertion([value.path], process.platform);
     if (!text || text.length > MAX_SNIPPET_BODY_LENGTH)
       return Promise.resolve({ ok: false, reason: "invalid-path" });
+    // An embedded bracketed-paste terminator would escape the receiving
+    // program's paste mode. Refuse rather than change a literal path.
+    if (/\u001b\[201~|\u009b201~/u.test(text))
+      return Promise.resolve({ ok: false, reason: "unsafe-path" });
     return semanticRequest(
       {
         operation: "terminal.semanticInput.v1",

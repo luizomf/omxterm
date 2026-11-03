@@ -4,6 +4,7 @@ import {
   subscribeHostedLanguage,
 } from "./hosted-appearance";
 import type { SupportedLanguage } from "../shared/i18n";
+import { isSelectionRevision } from "../shared/semantic-input";
 import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import { randomUUID } from "node:crypto";
 import { captureValue, type Value } from "../extension-runtime/protocol.js";
@@ -61,6 +62,8 @@ export interface ExtensionViewRuntime {
 /** Main-only identity captured after authenticating the requesting frame. */
 export interface ExtensionViewRequestContext {
   readonly id: string;
+  // Only the app-owned preload supplies this for a path action.
+  readonly actionSelectionRevision?: number;
   // Captured presentation admission, not a reusable view lookup. A hidden
   // request never becomes eligible later; hide/reveal cannot revive a capture.
   isCurrentVisible(): boolean;
@@ -78,6 +81,7 @@ export interface ExtensionViewHostOptions {
   onViewRevoked?(id: string): void;
   onState?(state: ExtensionViewState, outcome?: ExtensionViewOutcome): void;
   onRendererProcess?(id: string, pid: number): void;
+  subscribeSelection?(listener: (revision: number) => void): () => void;
   onKeybind?(
     event: Event,
     input: Input,
@@ -100,6 +104,29 @@ const runtime: ExtensionViewRuntime = {
 };
 const maximumViews = 8;
 const retirementMs = 5_000;
+type PathActionStamp = {
+  selectionRevision: number;
+  admissionGeneration: number;
+};
+function isPathAction(value: Value): boolean {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    value.operation === "terminal.insertPath.v1"
+  );
+}
+function isPathActionStamp(value: unknown): value is PathActionStamp {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return (
+    Object.keys(value).sort().join() ===
+      "admissionGeneration,selectionRevision" &&
+    "selectionRevision" in value &&
+    isSelectionRevision(value.selectionRevision) &&
+    "admissionGeneration" in value &&
+    isSelectionRevision(value.admissionGeneration)
+  );
+}
 type Entry = {
   descriptor: HostedContentDescriptor;
   view: WebContentsView;
@@ -160,8 +187,14 @@ class NativeExtensionViewHost {
   #revision = 0;
   #focusGeneration = 0;
   #admissionGeneration = 0;
+  #selectionRevision: number | undefined;
+  #unsubscribeSelection = () => {};
   #windowHidden = () => {
     this.#admissionGeneration++;
+    for (const entry of this.#views.values()) this.#sendAdmission(entry, false);
+  };
+  #windowShown = () => {
+    for (const entry of this.#views.values()) this.#sendAdmission(entry);
   };
   #reportFocus = () => notify(() => this.options.onFocusChange?.());
   #blur = () => {
@@ -179,6 +212,17 @@ class NativeExtensionViewHost {
     this.#ownerContents = options.owner.webContents;
     this.#native = options.runtime ?? runtime;
     this.#resources = createExtensionResources(options.resources, this.#origin);
+    this.#unsubscribeSelection =
+      options.subscribeSelection?.((revision) => {
+        if (
+          !isSelectionRevision(revision) ||
+          (this.#selectionRevision !== undefined &&
+            revision <= this.#selectionRevision)
+        )
+          return;
+        this.#selectionRevision = revision;
+        for (const entry of this.#views.values()) this.#sendSelection(entry);
+      }) ?? (() => {});
     this.#unsubscribeAppearance = subscribeHostedAppearance(
       this.#ownerContents,
       (appearance) => {
@@ -199,6 +243,8 @@ class NativeExtensionViewHost {
     options.owner.on("focus", this.#reportFocus);
     options.owner.on("hide", this.#windowHidden);
     options.owner.on("minimize", this.#windowHidden);
+    options.owner.on("show", this.#windowShown);
+    options.owner.on("restore", this.#windowShown);
     this.#ownerContents.on("zoom-changed", this.#hideForLayout);
     this.#unsubscribeLoss = subscribeWindowOwnerLoss(
       options.owner,
@@ -215,6 +261,45 @@ class NativeExtensionViewHost {
   #changeState(next: ExtensionViewState, outcome?: ExtensionViewOutcome) {
     this.#state = next;
     notify(() => this.options.onState?.(next, outcome));
+  }
+  #sendSelection(entry: Entry) {
+    if (
+      this.#selectionRevision !== undefined &&
+      this.#live() &&
+      !entry.rendererGone &&
+      !entry.closing &&
+      !entry.contents.isDestroyed()
+    )
+      notify(() =>
+        entry.contents.send(
+          extensionViewIpc.actionSelection,
+          this.#selectionRevision,
+        ),
+      );
+  }
+  #currentlyVisible(entry: Entry) {
+    return (
+      entry.visible &&
+      this.#selected === entry.descriptor.id &&
+      this.options.owner.isVisible() &&
+      !this.options.owner.isMinimized()
+    );
+  }
+  #sendAdmission(entry: Entry, allowed = true) {
+    if (
+      !this.#live() ||
+      entry.rendererGone ||
+      entry.closing ||
+      entry.contents.isDestroyed()
+    )
+      return;
+    const visible = allowed && this.#currentlyVisible(entry);
+    notify(() =>
+      entry.contents.send(extensionViewIpc.actionAdmission, {
+        generation: this.#admissionGeneration,
+        visible,
+      }),
+    );
   }
   #sendAppearance(entry: Entry) {
     if (
@@ -266,6 +351,7 @@ class NativeExtensionViewHost {
     // hiding still applies, but no presentation IPC belongs to a lost/closing view.
     if (!entry.rendererGone && !entry.closing && !entry.contents.isDestroyed())
       entry.contents.send(extensionViewIpc.visibility, visible);
+    if (!visible) this.#sendAdmission(entry, false);
     this.#reportFocus();
   }
   #hideAll = (keep?: Entry) => {
@@ -370,6 +456,7 @@ class NativeExtensionViewHost {
     if (this.#retirement) return this.#retirement;
     this.#state = "retiring";
     this.#unsubscribeLoss();
+    this.#unsubscribeSelection();
     this.#unsubscribeAppearance();
     this.#unsubscribeLanguage();
     this.#activity(null);
@@ -393,6 +480,8 @@ class NativeExtensionViewHost {
       this.options.owner.removeListener("focus", this.#reportFocus);
       this.options.owner.removeListener("hide", this.#windowHidden);
       this.options.owner.removeListener("minimize", this.#windowHidden);
+      this.options.owner.removeListener("show", this.#windowShown);
+      this.options.owner.removeListener("restore", this.#windowShown);
       this.#ownerContents.removeListener("zoom-changed", this.#hideForLayout);
       this.#changeState(outcome.status, outcome);
       return outcome;
@@ -464,27 +553,36 @@ class NativeExtensionViewHost {
             contents.isDestroyed() ||
             event.sender !== contents ||
             event.senderFrame !== contents.mainFrame ||
-            args.length !== 1 ||
+            (args.length !== 1 && args.length !== 2) ||
             pending >= 32
           )
             throw new Error("Request unavailable");
           const value = captureValue(args[0]);
-          const generation = this.#admissionGeneration;
-          const visible =
-            entry.visible &&
-            this.#selected === entry.descriptor.id &&
-            this.options.owner.isVisible() &&
-            !this.options.owner.isMinimized();
+          const pathAction = isPathAction(value);
+          let stamp: PathActionStamp | undefined;
+          if (pathAction) {
+            if (args.length !== 2 || !isPathActionStamp(args[1]))
+              return { ok: false, reason: "terminal-unavailable" };
+            stamp = args[1];
+          } else if (args.length !== 1) throw new Error("Request unavailable");
+          const generation =
+            stamp?.admissionGeneration ?? this.#admissionGeneration;
+          const visible = this.#currentlyVisible(entry);
+          if (
+            pathAction &&
+            (!visible || generation !== this.#admissionGeneration)
+          )
+            return { ok: false, reason: "terminal-unavailable" };
           const context: ExtensionViewRequestContext = {
             id: entry.descriptor.id,
+            ...(stamp
+              ? { actionSelectionRevision: stamp.selectionRevision }
+              : {}),
             isCurrentVisible: () =>
               visible &&
               this.#live() &&
-              this.options.owner.isVisible() &&
-              !this.options.owner.isMinimized() &&
+              this.#currentlyVisible(entry) &&
               this.#admissionGeneration === generation &&
-              this.#selected === entry.descriptor.id &&
-              entry.visible &&
               !entry.closing &&
               !entry.rendererGone &&
               !entry.abort.signal.aborted &&
@@ -523,8 +621,10 @@ class NativeExtensionViewHost {
       if (!entry.closing && this.#live()) {
         this.#sendAppearance(entry);
         this.#sendLanguage(entry);
+        this.#sendSelection(entry);
         entry.contents.send(extensionViewIpc.activity, entry.active);
         this.#visibility(entry, entry.visible);
+        this.#sendAdmission(entry);
       }
     });
     contents.on("before-input-event", (event, input) => {
@@ -697,6 +797,7 @@ class NativeExtensionViewHost {
       entry.view.setBounds(bounds);
       this.#visibility(entry, true);
       this.#selected = entry.descriptor.id;
+      this.#sendAdmission(entry);
       if (focusUnavailable) {
         this.#layoutFocus = null;
         this.#reportFocus();

@@ -99,6 +99,24 @@ it("offers a visible, accessible menu action only for a selected row", async () 
   f.finish({ ok: true });
 });
 
+it.each(["ContextMenu", "F10"])(
+  "selects an initially focused row before its %s context action",
+  async (menuKey) => {
+    const f = await setup();
+    const target = f.row("folder");
+    target.focus();
+    key(target, { key: menuKey, shiftKey: menuKey === "F10" });
+    const action = f.button("Insert path into terminal");
+    expect(action.disabled).toBe(false);
+    expect(action.getAttribute("aria-label")).toBe("Insert path into terminal");
+    action.click();
+    expect(pathCalls(f.request)).toEqual([
+      [{ operation: "terminal.insertPath.v1", path: "/root/folder" }],
+    ]);
+    f.finish({ ok: true });
+  },
+);
+
 it("sends exactly one captured focused path immediately, without Enter or repeats", async () => {
   const f = await setup();
   const first = f.row("name");
@@ -137,6 +155,7 @@ it.each([
   ["terminal-unavailable", "unavailable or closed"],
   ["terminal-not-completed", "did not complete"],
   ["invalid-path", "invalid or too long"],
+  ["unsafe-path", "paste delimiter"],
   ["other", "outcome is unknown"],
 ] as const)(
   "explains %s and relabels the retained notice",
@@ -157,6 +176,21 @@ it.each([
     ).not.toContain(text);
   },
 );
+
+it("clears the busy notice when the original insertion completes", async () => {
+  const f = await setup();
+  key(f.row("folder"));
+  key(f.row("name"));
+  expect(document.querySelector('[role="status"]')?.textContent).toContain(
+    "already in progress",
+  );
+  f.finish({ ok: true });
+  await vi.waitFor(() =>
+    expect(document.querySelector<HTMLElement>('[role="status"]')?.hidden).toBe(
+      true,
+    ),
+  );
+});
 
 it("reports busy locally and treats a rejected request as outcome unknown without replay", async () => {
   const f = await setup();

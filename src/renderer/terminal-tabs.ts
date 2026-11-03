@@ -469,7 +469,10 @@ export function createTerminalTabs(
           revision === actionGeneration &&
           interactivePane() === pane &&
           options.canFocus?.() !== false,
-        () => focusPane(pane, options),
+        () => {
+          if (pane?.surface?.focusInput) pane.surface.focusInput();
+          else focusPane(pane, options);
+        },
       );
     },
     selectionRevision: () => actionGeneration,

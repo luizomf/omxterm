@@ -35,6 +35,7 @@ function fixture() {
     semanticInput: {
       request: vi.fn(async () => ({ ok: true })),
       confirmSelection: vi.fn(async () => true),
+      subscribeSelection: () => () => {},
     },
     ownerSignal: owner.signal,
     epochSignal: epoch.signal,

@@ -1,4 +1,8 @@
-import type { TerminalExit, TerminalSize } from "../shared/terminal-contract";
+import type {
+  TerminalExit,
+  TerminalSize,
+  TerminalWriteReceipt,
+} from "../shared/terminal-contract";
 
 export interface TerminalSessionHandlers {
   readonly onOutput: (data: string) => void;
@@ -8,6 +12,7 @@ export interface TerminalSessionHandlers {
 export interface TerminalSessionAdapter {
   start(handlers: TerminalSessionHandlers): Promise<void>;
   write(data: string): void;
+  writeTracked?(data: string): Promise<TerminalWriteReceipt>;
   resize(size: TerminalSize): void;
   close(reason?: "rendering-failure"): void;
 }

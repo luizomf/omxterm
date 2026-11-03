@@ -57,6 +57,7 @@ export function subscribeNativeSemanticInput(
           !current.abort.signal.aborted && restoreSourceFocus(command.source),
         current.abort.signal,
         command.waitForDelivery === true,
+        command.waitForDelivery ? command.source : undefined,
       );
       bridge.reply({ kind: "started", id: current.id });
       void outcome.then(finish, () => finish(false));
