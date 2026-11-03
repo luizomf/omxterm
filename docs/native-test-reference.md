@@ -158,7 +158,12 @@ replay, historical-match acceptance, tolerance or retry chooses the grid.
 The short continuation must copy as exactly prefix plus suffix, without trimming
 or normalization, with the same Surface/container/canvas, one Adapter start and
 no close. The integration consumer checks this evidence in its existing
-appearance runs. Run on an idle unlocked desktop, one graphical suite at a time:
+appearance runs. The generated appearance main applies the shared production GPU
+policy before Electron readiness, including Linux's SwiftShader permission
+([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)); it does not
+force a backend or bypass the GPU blocklist. macOS and Windows keep Chromium's
+defaults. Actual WebGL2 availability remains a prerequisite.
+Run on an idle unlocked desktop, one graphical suite at a time:
 
 ```sh
 npm test -- test/integration/restty-appearance-rendering.test.ts -t "renders theme colors and preserves configured geometry through live updates"

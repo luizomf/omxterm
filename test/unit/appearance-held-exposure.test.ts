@@ -180,6 +180,7 @@ async function exerciseMain(options: { captureDelay: number; fault?: Fault }) {
     clearTimeout,
     __dirname: "/synthetic-fixture",
     process: {
+      platform: "linux",
       env: {
         OMXTERM_RESTTY_APPEARANCE_GATE_FRAMES: "1",
         OMXTERM_RESTTY_APPEARANCE_ARTIFACT_DIRECTORY: "/synthetic-evidence",
@@ -199,6 +200,7 @@ async function exerciseMain(options: { captureDelay: number; fault?: Fault }) {
       if (name === "electron")
         return {
           app: {
+            commandLine: { appendSwitch() {} },
             setPath() {},
             whenReady: () => Promise.resolve(),
             exit: (code: number) => {
