@@ -989,13 +989,318 @@ try {
     await key("End", "End", 35);
     await evaluate("filesFixture.setLanguage('pt-BR')");
     assert.equal(
-      await evaluate("document.querySelector('.menu-shortcut').textContent"),
+      await evaluate(
+        "document.querySelector('[role=menuitemcheckbox] .menu-shortcut').textContent",
+      ),
       mac ? "Atalho: Cmd+Shift+." : "Atalho: Ctrl+H",
     );
     await gesture();
     assert.deepEqual(await names(), ["visible"], "shortcut works from menu");
     assert.equal(await hint(), "Itens iniciados por ponto ocultos");
     console.log(`PASS scoped shortcut ${platform}`);
+  }
+  async function keyboardWorkflow(tag) {
+    const filter = ".entry-filter";
+    const active = (selector) =>
+      evaluate(
+        (selector) =>
+          document.activeElement === document.querySelector(selector),
+        selector,
+      );
+    const names = () =>
+      evaluate(
+        "[...document.querySelectorAll('.file-name')].map(node => node.textContent)",
+      );
+    await evaluate("filesFixture.focusIntent('search')");
+    assert.equal(await active(filter), true, "host intent focuses filter");
+    await send("Input.insertText", { text: "item-2" });
+    assert.deepEqual(await names(), [
+      "item-2",
+      ...Array.from({ length: 10 }, (_, index) => `item-${20 + index}`),
+    ]);
+    await key("Tab", "Tab", 9);
+    assert.equal(
+      await active('[data-path="/root/item-2"]'),
+      true,
+      "Tab enters first match",
+    );
+    assert.equal(
+      await evaluate("document.activeElement.getAttribute('aria-selected')"),
+      "true",
+    );
+    await key("ArrowDown", "ArrowDown", 40);
+    assert.equal(
+      await active('[data-path="/root/item-20"]'),
+      true,
+      "arrow selects next row",
+    );
+    await key("F2", "F2", 113);
+    assert.equal(await active(".operation-editor input"), true);
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('/root/item-20')",
+      ),
+    );
+    await send("Input.insertText", { text: "/root/draft" });
+    await evaluate(
+      "filesFixture.setVisibility(false); filesFixture.setVisibility(true); filesFixture.focusIntent('search')",
+    );
+    assert.equal(
+      await active(".operation-editor input"),
+      true,
+      "reveal retains draft focus",
+    );
+    assert.equal(
+      await evaluate("document.querySelector('.operation-editor input').value"),
+      "/root/draft",
+    );
+    await key("Tab", "Tab", 9);
+    await key("Tab", "Tab", 9);
+    await key("Enter", "Enter", 13);
+    assert.equal(
+      await active('[data-path="/root/item-20"]'),
+      true,
+      "Cancel returns to origin",
+    );
+    for (let index = 0; index < 4; index++) await key("Tab", "Tab", 9, 8);
+    assert.equal(
+      await active(selector("actions")),
+      true,
+      "reverse Tab reaches Actions",
+    );
+    await key("Enter", "Enter", 13);
+    const ax = await send("Accessibility.getFullAXTree");
+    const rename = ax.nodes.find(
+      (node) =>
+        node.role?.value === "menuitem" && node.name?.value === "Rename / move",
+    );
+    assert.equal(rename?.description?.value, "Shortcut: F2");
+    await key("Tab", "Tab", 9);
+    assert.equal(
+      await active(address),
+      true,
+      "Tab closes menu and advances from its anchor",
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).select(),
+      address,
+    );
+    await send("Input.insertText", { text: "/empty" });
+    await key("Enter", "Enter", 13);
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.summary').textContent === '0 visible entries'",
+        ),
+      "empty directory",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, filter);
+    await key("Backspace", "Backspace", 8);
+    await key("Tab", "Tab", 9);
+    assert.equal(
+      await active('[role="tree"]'),
+      true,
+      "empty tree remains in Tab order",
+    );
+    await evaluate("filesFixture.fillEmptyOnRefresh()");
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "empty refresh held",
+    );
+    await evaluate("filesFixture.releaseList()");
+    await until(
+      async () => (await names()).includes("arrived"),
+      "empty tree populated",
+    );
+    assert.equal(
+      await active('[role="tree"]'),
+      true,
+      "loading does not select a row",
+    );
+    await key("ArrowDown", "ArrowDown", 40);
+    assert.equal(
+      await active('[data-path="/empty/arrived"]'),
+      true,
+      "Down enters newly loaded rows",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/error" });
+    await key("Enter", "Enter", 13);
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.summary').textContent.includes('permission')",
+        ),
+      "directory error",
+    );
+    assert.equal(await active(address), true, "error does not steal focus");
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/root" });
+    await key("Enter", "Enter", 13);
+    await until(async () => (await names()).length === 40, "root restored");
+    await evaluate((selector) => {
+      filesFixture.holdNextList();
+      document.querySelector(selector).focus();
+    }, selector("refresh"));
+    await key("Enter", "Enter", 13);
+    assert.equal(
+      await evaluate(
+        "document.querySelector('[role=tree]').getAttribute('aria-busy')",
+      ),
+      "true",
+    );
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "refresh held",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/unsubmitted draft" });
+    await evaluate(
+      (selector) => document.querySelector(selector).setSelectionRange(2, 8),
+      address,
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).focus(),
+      filter,
+    );
+    await send("Input.insertText", { text: "item-1" });
+    await evaluate("filesFixture.releaseList()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=tree]').getAttribute('aria-busy') === 'false'",
+        ),
+      "held listing settled",
+    );
+    assert.equal(
+      await active(filter),
+      true,
+      "listing completion does not steal focus",
+    );
+    assert.ok((await names()).includes("item-1"));
+    assert.deepEqual(
+      await evaluate((selector) => {
+        const input = document.querySelector(selector);
+        return [input.value, input.selectionStart, input.selectionEnd];
+      }, address),
+      ["/unsubmitted draft", 2, 8],
+      "unfocused address draft survives listing",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.select();
+    }, filter);
+    await key("Backspace", "Backspace", 8);
+    await evaluate("filesFixture.useDotfiles()");
+    await until(
+      async () => (await names()).includes("visible"),
+      "dotfile fixture loaded",
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).focus(),
+      filter,
+    );
+    await send("Input.insertText", { text: "profile" });
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.filter-hint').textContent.includes('Dotfiles hidden')",
+      ),
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).select(),
+      filter,
+    );
+    await key("Backspace", "Backspace", 8);
+    await evaluate(
+      "document.querySelector('[data-path=\"/root/visible\"]').focus()",
+    );
+    await key("h", "KeyH", 72, 2);
+    await evaluate(
+      "document.querySelector('[data-path=\"/root/.profile\"]').focus()",
+    );
+    await key("h", "KeyH", 72, 2);
+    assert.equal(
+      await active('[data-path="/root/visible"]'),
+      true,
+      "hidden selection falls back",
+    );
+    assert.equal(
+      await evaluate("document.querySelector('[aria-selected=true]')"),
+      null,
+    );
+    await key("F2", "F2", 113);
+    assert.equal(
+      await evaluate(
+        "document.querySelector('[data-path=\"/root/visible\"]').getAttribute('aria-selected')",
+      ),
+      "true",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('/root/visible')",
+      ),
+    );
+    await key("Tab", "Tab", 9);
+    await key("Tab", "Tab", 9);
+    await key("Enter", "Enter", 13);
+    await evaluate("filesFixture.holdNextDelete()");
+    await key("F10", "F10", 121, 8);
+    for (let index = 0; index < 4; index++)
+      await key("ArrowDown", "ArrowDown", 40);
+    await key("Enter", "Enter", 13);
+    await until(
+      async () => await evaluate("filesFixture.deleteHeld()"),
+      "delete preparation held",
+    );
+    await evaluate((selector) => {
+      filesFixture.holdNextList();
+      document.querySelector(selector).click();
+    }, selector("refresh"));
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "refresh held before confirmation",
+    );
+    await evaluate("filesFixture.releaseList()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=tree]').getAttribute('aria-busy') === 'false'",
+        ),
+      "refresh before confirmation",
+    );
+    await evaluate("filesFixture.releaseDelete()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.activeElement.textContent === 'Delete permanently'",
+        ),
+      "confirmation focus after row replacement",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('/root/visible')",
+      ),
+    );
+    await key("Tab", "Tab", 9);
+    await key("Enter", "Enter", 13);
+    await screenshot(`keyboard-${tag}`);
+    console.log(`PASS keyboard workflow ${tag}`);
   }
   const scenario = process.argv[2] ?? "matrix";
   assert.ok(
@@ -1009,6 +1314,7 @@ try {
       "resize-menu",
       "shortcut-mac",
       "shortcut-linux",
+      "keyboard",
     ].includes(scenario),
   );
   if (
@@ -1066,6 +1372,7 @@ try {
           if (kind === "resize-menu") await resizeMenu(tag, scale);
           if (kind === "shortcut-mac") await shortcut("mac");
           if (kind === "shortcut-linux") await shortcut("linux");
+          if (kind === "keyboard") await keyboardWorkflow(tag);
         }
         if (scenario === "matrix") console.log(`PASS matrix ${tag}`);
       }

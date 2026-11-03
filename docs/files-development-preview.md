@@ -218,6 +218,35 @@ available. New folder is also disabled during a mutation; Refresh remains
 available while listings load. These source changes do not alter
 already published Files archives.
 
+Current source offers **Filter loaded entries** before the tree. The host's
+explicit focus intent puts focus there when opening Files; Tab enters the tree,
+Shift+Tab returns through the address and toolbar. Typing filters names already
+loaded in expanded folders; it is not a recursive filesystem search and does not
+read collapsed folders. Matching descendants retain their ancestor rows, and
+loading, error and truncation rows remain visible. Dotfile visibility still
+applies first. The query survives navigation and Hide/reveal in the same view;
+Close/new view resets it. Filtering does not discard expansions or an address
+draft. Changing the query does not issue a read or mutate files; filtering away
+a selection clears it without silently selecting a replacement. A no-match
+message refers only to visible loaded entries and also notes hidden dotfiles
+when applicable. Empty trees remain in the Tab order; if rows arrive while the
+tree itself has focus, Down/Up moves explicitly to the first/last row. Listing
+completion does not move focus out of the filter. An unsubmitted address draft
+survives listing updates and initial Home loading; an explicit new navigation
+replaces an earlier draft unless it was edited during the request.
+
+Focusing a tree row selects that row, so its subsequent Actions and keyboard
+operations share an explicit target. Composing and other modified tree gestures
+are left to their normal owners, apart from Shift+F10. The Rename / move menu
+item identifies F2. Cancel returns focus to the control or row that opened an
+editor when still available,
+otherwise Actions; a delayed permanent-delete confirmation does not take focus
+from a user who has moved elsewhere. If a filtered-away selection leaves focus
+on an unselected fallback row, invoking F2 or its context menu first selects
+that row as the explicit target. Host Escape ownership and retained drafts
+remain as described below. These source UI changes require a new archive version;
+they do not modify published Files0.6.
+
 In current source, **Actions… → Show dotfiles (names starting with .)** is a
 checked menu item, off by default. On both Linux and macOS, it hides dot-prefixed
 entry names and their descendants relative to the current browsing root. It does

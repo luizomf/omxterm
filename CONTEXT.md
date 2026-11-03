@@ -367,7 +367,10 @@ after successful mutations; manual refresh handles external changes without
 watchers. Current source additionally offers a view-local checked Actions item
 for dot-prefixed names, hidden by default relative to the browsing root; it does
 not classify other platform hidden metadata. Its scoped child shortcut leaves
-editing and core shortcut ownership intact. Hide/reveal retains the choice;
+editing and core shortcut ownership intact. Current source also provides a
+focused loaded-entry filter and keyboard-selectable tree; filtering is not a
+recursive search and does not retarget an open operation. These source UI changes
+need a future archive. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal

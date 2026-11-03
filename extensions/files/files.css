@@ -78,6 +78,10 @@
   width: 0;
   font-family: ui-monospace, monospace;
 }
+.entry-filter {
+  width: 100%;
+  margin-bottom: 10px;
+}
 .entries {
   min-height: 100px;
 }
@@ -190,6 +194,7 @@
   overflow-wrap: anywhere;
 }
 .menu-shortcut {
+  display: block;
   grid-column: 2;
   grid-row: 2;
   min-width: 0;

@@ -331,6 +331,16 @@ a path if needed. It does not follow later terminal changes or retarget an
 operation already started. Compatible installed archives retain their original
 **Use terminal directory** label and do not gain the new inline hint or
 tooltip from a host update.
+In current source, Files focuses **Filter loaded entries** when opened. Type to
+filter names already loaded in expanded folders; this is not a recursive search
+and does not search collapsed folders. Tab enters the tree, including an empty
+one. Up/Down and Home/End move between rows; Left/Right expand, collapse or
+move between levels. A focused row is selected for Actions. Use F2 for
+**Rename / move** or Shift+F10 for its context menu. Cancel returns to the
+initiating row/control if available. The query stays while navigating or hiding
+the panel, and resets when Files is closed. A no-match message covers loaded
+entries only; hidden dotfiles, errors and listing limits still apply.
+
 These source changes are not a release and do not replace published archives.
 Recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts admit unchanged Files0.6
 through the narrow [development bridges](extension-installation-foundation.md#archive-contract).

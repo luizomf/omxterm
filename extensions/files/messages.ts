@@ -6,6 +6,12 @@ const portuguesePlural = new Intl.PluralRules("pt-BR");
 const english = {
   title: "Files",
   directory: "Directory",
+  filterLoaded: "Filter loaded entries",
+  filterDescription:
+    "Filter names already loaded in expanded folders; collapsed folders are not searched.",
+  noMatchingLoadedEntries: "No matching visible loaded entries",
+  noMatchingVisibleDotfiles:
+    "No matching visible loaded entries · Dotfiles hidden",
   localFiles: "Local files",
   fileActions: "File actions",
   home: "Home",
@@ -81,6 +87,12 @@ export type FilesMessages = {
 const portuguese: FilesMessages = {
   title: "Files",
   directory: "Diretório",
+  filterLoaded: "Filtrar entradas carregadas",
+  filterDescription:
+    "Filtre nomes já carregados nas pastas expandidas; pastas recolhidas não são pesquisadas.",
+  noMatchingLoadedEntries: "Nenhuma entrada visível carregada corresponde",
+  noMatchingVisibleDotfiles:
+    "Nenhuma entrada visível carregada corresponde · Itens iniciados por ponto ocultos",
   localFiles: "Arquivos locais",
   fileActions: "Ações de arquivos",
   home: "Pasta pessoal",

@@ -611,9 +611,23 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   hosted tabs suspend the panel and restore its selected view on terminal return.
   Panel tools are window-owned, independently of the opening terminal's lifetime;
   backend/window loss and disable/update/uninstall still retire their views.
-  In current source, Files initially opens Home; its explicit reported-directory
-  action captures the selected live pane's latest local OSC7 report at action
-  time. Main asks the core renderer to confirm the captured session and selection
+  In current source, Files initially opens Home and an explicit host focus intent
+  focuses its loaded-entry filter, unless an open operation editor needs focus.
+  Restore intent preserves an eligible focused control. The filter projects only
+  already-loaded rows in expanded folders, retains matching ancestors and visible
+  loading/error/truncation rows, and never searches collapsed folders or issues
+  filesystem requests. Dotfile visibility applies first. Filtering away a selection
+  clears it; Tab reaches the tree, including when empty. If rows arrive while the
+  empty tree has focus, Up/Down enters the rows explicitly. Focusing a row selects
+  it; F2 and the context menu explicitly select a previously unselected fallback
+  row before acting. Unsubmitted address drafts survive listing updates. Row
+  actions leave composing and other modified gestures untouched (apart from
+  Shift+F10). Cancel returns to the initiating row/control where available,
+  otherwise Actions; a late
+  permanent-delete confirmation does not steal focus after the user moves away.
+  These source changes require a new Files archive and do not alter Files0.6.
+  Its explicit reported-directory action captures the selected live pane's latest
+  local OSC7 report at action time. Main asks the core renderer to confirm the captured session and selection
   revision, rejecting reordered or changed selection rather than retargeting.
   No report, a known SSH Connect pane or an incomplete recognized OSC7, remote
   or invalid report produces an explanation without changing the browsing location.
@@ -2131,7 +2145,9 @@ official catalog reuses the same installation owner/store; there is no public
 SDK or extension shortcut configuration. An empty source catalog is valid but
 does not constitute public distribution.
 Files provides an expandable local folder tree with keyboard
-navigation, discoverable Actions and item/background context menus. Its source
+navigation, discoverable Actions and item/background context menus. Its current
+source includes the loaded-entry filter and focus/selection behavior described
+above; the Rename / move menu item advertises F2. Its source
 navigation toolbar uses quiet icon buttons with localized accessible names and
 visible explanations on hover or focus; Go identifies Enter in the address field,
 not a global shortcut. Explanations follow notice and language changes, hide while

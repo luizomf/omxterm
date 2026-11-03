@@ -41,6 +41,9 @@ export function mountFilesPage(
     request(value: unknown): Promise<Reply>;
     onVisibility?(listener: (visible: boolean) => void): () => void;
     onLanguage?(listener: (language: SupportedLanguage) => void): () => void;
+    onFocusIntent?(
+      listener: (intent: "search" | "restore") => void,
+    ): () => void;
   },
 ) {
   let messages = filesMessages("en-US");
@@ -87,6 +90,17 @@ export function mountFilesPage(
   const address = document.createElement("input");
   label(address, (m) => m.directory, "aria-label");
   address.spellcheck = false;
+  const filter = document.createElement("input");
+  filter.className = "entry-filter";
+  filter.type = "text";
+  filter.spellcheck = false;
+  const updateFilterLabel = () => {
+    filter.placeholder = messages.filterLoaded;
+    filter.setAttribute("aria-label", messages.filterLoaded);
+    filter.title = messages.filterDescription;
+  };
+  labels.set(filter, updateFilterLabel);
+  updateFilterLabel();
   const entries = document.createElement("div");
   entries.className = "entries";
   entries.setAttribute("role", "tree");
@@ -107,6 +121,10 @@ export function mountFilesPage(
   label(menu, (m) => m.fileActions, "aria-label");
   menu.hidden = true;
   let selected: Target | undefined;
+  let addressDirty = false;
+  let addressRevision = 0;
+  let focusRevision = 0;
+  let restoringTreeFocus = false;
   let showDotfiles = false;
   let mutationPending = false;
   let confirmation: string | undefined;
@@ -114,6 +132,7 @@ export function mountFilesPage(
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
+  let editorReturn: { path?: string; element?: HTMLElement } | undefined;
   type MenuPointer = {
     scrollTop: number;
     scrolled: boolean;
@@ -214,7 +233,7 @@ export function mountFilesPage(
     const focusedPath = entries.contains(active)
       ? active?.dataset.path
       : undefined;
-    const rows: FilesTreeRow[] = [];
+    const dotVisible: FilesTreeRow[] = [];
     let hiddenDepth: number | undefined;
     for (const row of snapshot.rows) {
       if (hiddenDepth !== undefined && row.depth <= hiddenDepth)
@@ -226,8 +245,27 @@ export function mountFilesPage(
         hiddenDepth ??= row.depth;
         continue;
       }
-      rows.push(row);
+      dotVisible.push(row);
     }
+    const query = filter.value.trim().toLowerCase();
+    const matches = new Set<string>();
+    if (query)
+      for (let index = dotVisible.length - 1; index >= 0; index--) {
+        const row = dotVisible[index]!;
+        if (
+          row.name.toLowerCase().includes(query) ||
+          matches.has(row.path) ||
+          row.loading ||
+          row.error ||
+          row.truncated
+        ) {
+          matches.add(row.path);
+          if (row.depth > 0) matches.add(parent(row.path));
+        }
+      }
+    const rows = query
+      ? dotVisible.filter((row) => matches.has(row.path))
+      : dotVisible;
     state = { ...snapshot, rows };
     syncControls();
     if (selected) {
@@ -279,6 +317,9 @@ export function mountFilesPage(
       );
       row.title = item.path;
       row.append(disclosure, name, detail);
+      row.addEventListener("focus", () => {
+        if (!restoringTreeFocus) select(item);
+      });
       row.addEventListener("click", (event) => {
         select(item, true);
         if (event.target === disclosure && item.kind === "directory")
@@ -326,22 +367,30 @@ export function mountFilesPage(
       }
     }
     entries.tabIndex = state.rows.length ? -1 : 0;
-    if (focusedPath)
-      (
-        rowElement(focusedPath) ??
-        rowElement(focusPath ?? "") ??
-        entries
-      ).focus();
-    const filtered = snapshot.rows.length > rows.length;
+    if (focusedPath) {
+      const target =
+        rowElement(focusedPath) ?? rowElement(focusPath ?? "") ?? entries;
+      restoringTreeFocus = true;
+      try {
+        target.focus({ preventScroll: target.dataset.path === focusedPath });
+      } finally {
+        restoringTreeFocus = false;
+      }
+    }
+    const dotfilesFiltered = snapshot.rows.length > dotVisible.length;
     const noVisible =
       !!state.root && !state.loading && !state.error && !rows.length;
-    filterHint.hidden = !filtered && !noVisible;
+    filterHint.hidden = !dotfilesFiltered && !noVisible;
     label(filterHint, (m) =>
-      noVisible
-        ? filtered
-          ? m.noVisibleDotfiles
-          : m.noVisibleEntries
-        : m.dotfilesHidden,
+      noVisible && query
+        ? dotfilesFiltered
+          ? m.noMatchingVisibleDotfiles
+          : m.noMatchingLoadedEntries
+        : noVisible
+          ? dotfilesFiltered
+            ? m.noVisibleDotfiles
+            : m.noVisibleEntries
+          : m.dotfilesHidden,
     );
     label(status, (m) =>
       state.rootLoading
@@ -353,23 +402,49 @@ export function mountFilesPage(
     tooltips.refresh();
   }
   const tree = createFilesTree(request, (snapshot) => {
-    if (document.activeElement !== address) address.value = snapshot.root ?? "";
+    if (!addressDirty && document.activeElement !== address)
+      address.value = snapshot.root ?? "";
     render(snapshot);
   });
   state = tree.snapshot();
-  function navigate(path: string) {
+  address.addEventListener("input", () => {
+    addressDirty = true;
+    addressRevision++;
+  });
+  filter.addEventListener("input", () => render(tree.snapshot()));
+  function navigate(path: string, preserveDraft = false) {
     navigationRevision++;
+    if (!preserveDraft) addressDirty = false;
     closeMenu(false);
     return tree.navigate(path);
   }
-  async function navigateFrom(operation: "home" | "terminal-directory") {
+  async function navigateFrom(
+    operation: "home" | "terminal-directory",
+    initial = false,
+  ) {
     const revision = ++navigationRevision;
+    const addressAtRequest = addressRevision;
     const reply = await request({ operation });
     if (revision !== navigationRevision) return;
-    if (reply.directory) await navigate(reply.directory);
+    if (reply.directory)
+      await navigate(
+        reply.directory,
+        initial || addressAtRequest !== addressRevision,
+      );
     else report(reply);
   }
   function rowKey(event: KeyboardEvent, item: FilesTreeRow) {
+    if (
+      event.defaultPrevented ||
+      composing ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.getModifierState("AltGraph") ||
+      (event.shiftKey && event.key !== "F10")
+    )
+      return;
     const index = state.rows.findIndex((row) => row.path === item.path);
     let next: FilesTreeRow | undefined;
     switch (event.key) {
@@ -405,15 +480,19 @@ export function mountFilesPage(
         if (item.kind === "directory") void tree.toggle(item.path);
         break;
       case "F2":
-        if (!mutationPending) rename(item);
+        if (!mutationPending) {
+          select(item);
+          rename(item);
+        }
         break;
       case "ContextMenu":
+        select(item);
         openMenu(item, undefined, undefined, rowElement(item.path));
         break;
       case "F10":
-        if (event.shiftKey)
-          openMenu(item, undefined, undefined, rowElement(item.path));
-        else return;
+        if (!event.shiftKey) return;
+        select(item);
+        openMenu(item, undefined, undefined, rowElement(item.path));
         break;
       default:
         return;
@@ -429,13 +508,36 @@ export function mountFilesPage(
       void request({ operation: "cancel-delete", token: confirmation });
     confirmation = undefined;
   }
+  function captureEditorReturn() {
+    const active = document.activeElement as HTMLElement | null;
+    if (active && entries.contains(active))
+      return active.dataset.path
+        ? { path: active.dataset.path }
+        : { element: entries };
+    return active &&
+      (toolbar.contains(active) ||
+        location.contains(active) ||
+        active === filter)
+      ? { element: active }
+      : {};
+  }
+  function restoreEditorFocus() {
+    const target = editorReturn?.path
+      ? rowElement(editorReturn.path)
+      : editorReturn?.element;
+    (target?.isConnected ? target : actionsButton).focus();
+  }
   function dismissEditor() {
     discardConfirmation();
     editor.hidden = true;
-    (rowElement(selected?.path ?? "") ?? actionsButton).focus();
+    restoreEditorFocus();
   }
   async function mutate(value: unknown) {
     if (mutationPending) return;
+    const active = document.activeElement as HTMLElement | null;
+    const editorFocus = active && editor.contains(active) ? active : undefined;
+    const revision = focusRevision;
+    let completed = false;
     mutationPending = true;
     syncControls();
     discardConfirmation();
@@ -444,6 +546,7 @@ export function mountFilesPage(
     try {
       const reply = await request(value);
       if (reply.ok) {
+        completed = true;
         editor.hidden = true;
         await tree.refresh();
         const current = tree.snapshot();
@@ -456,13 +559,21 @@ export function mountFilesPage(
             ? "warning"
             : "success",
         );
-        if (editor.contains(document.activeElement))
-          (rowElement(selected?.path ?? "") ?? actionsButton).focus();
       } else report(reply);
     } finally {
       mutationPending = false;
       syncControls();
       editor.inert = false;
+      if (
+        editorFocus &&
+        revision === focusRevision &&
+        !disposed &&
+        visible &&
+        document.hasFocus()
+      ) {
+        if (completed) restoreEditorFocus();
+        else if (editorFocus.isConnected && !editor.hidden) editorFocus.focus();
+      }
     }
   }
   function form(
@@ -471,6 +582,7 @@ export function mountFilesPage(
     submit: (value: string) => void,
   ) {
     if (mutationPending) return;
+    editorReturn = captureEditorReturn();
     discardConfirmation();
     clear(editor);
     editor.hidden = false;
@@ -532,6 +644,9 @@ export function mountFilesPage(
   async function prepareDelete(target: Target) {
     if (mutationPending) return;
     discardConfirmation();
+    const origin = captureEditorReturn();
+    const focused = document.activeElement;
+    const focusAtRequest = focusRevision;
     const revision = editorRevision;
     preparingDelete = revision;
     const reply = await request({
@@ -549,6 +664,7 @@ export function mountFilesPage(
       return;
     }
     confirmation = reply.token;
+    editorReturn = origin;
     clear(editor);
     editor.hidden = false;
     const warning = document.createElement("p");
@@ -564,7 +680,14 @@ export function mountFilesPage(
     );
     button((m) => m.cancel, dismissEditor, editor);
     editor.onsubmit = (event) => event.preventDefault();
-    confirm.focus();
+    if (
+      visible &&
+      document.hasFocus() &&
+      focusRevision === focusAtRequest &&
+      document.activeElement ===
+        (origin.path ? rowElement(origin.path) : focused)
+    )
+      confirm.focus();
   }
   function toggleDotfiles() {
     showDotfiles = !showDotfiles;
@@ -603,6 +726,7 @@ export function mountFilesPage(
               label: (m: FilesMessages) => m.rename,
               run: () => rename(target),
               disabled: mutationPending,
+              shortcut: { display: "F2", keys: "F2" },
             },
             {
               label: (m: FilesMessages) => m.trash,
@@ -756,6 +880,19 @@ export function mountFilesPage(
           item.append(shortcut);
         }
       }
+      if (action.shortcut && action.checked === undefined) {
+        const caption = document.createElement("span");
+        const shortcut = document.createElement("span");
+        shortcut.className = "menu-shortcut";
+        shortcut.id = `files-menu-shortcut-${menu.childElementCount}`;
+        labels.delete(item);
+        label(item, action.label, "aria-label");
+        label(caption, action.label);
+        label(shortcut, (m) => m.shortcut(action.shortcut!.display));
+        item.setAttribute("aria-describedby", shortcut.id);
+        item.setAttribute("aria-keyshortcuts", action.shortcut.keys);
+        item.replaceChildren(caption, shortcut);
+      }
       item.disabled = !!action.disabled;
       item.tabIndex = -1;
     }
@@ -883,7 +1020,32 @@ export function mountFilesPage(
   });
   entries.addEventListener("keydown", (event) => {
     if (
-      event.key === "ContextMenu" ||
+      event.target !== entries ||
+      event.defaultPrevented ||
+      composing ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.getModifierState("AltGraph")
+    )
+      return;
+    if (
+      !event.shiftKey &&
+      ["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)
+    ) {
+      const target =
+        event.key === "ArrowUp" || event.key === "End"
+          ? state.rows.at(-1)
+          : state.rows[0];
+      if (target) {
+        event.preventDefault();
+        select(target, true);
+      }
+      return;
+    }
+    if (
+      (event.key === "ContextMenu" && !event.shiftKey) ||
       (event.key === "F10" && event.shiftKey)
     ) {
       event.preventDefault();
@@ -959,7 +1121,7 @@ export function mountFilesPage(
     event.preventDefault();
     void navigate(address.value);
   });
-  content.append(toolbar, location, entries, filterHint);
+  content.append(toolbar, location, filter, entries, filterHint);
   // The host supplies the visible tool identity; retain a named child region.
   const page = createApplicationPage(document, { notice, content, status });
   page.setAttribute("role", "region");
@@ -1005,6 +1167,11 @@ export function mountFilesPage(
     closeMenu();
     toggleDotfiles();
   };
+  const recordFocusChange = () => {
+    if (!restoringTreeFocus) focusRevision++;
+  };
+  document.addEventListener("focusin", recordFocusChange);
+  document.defaultView?.addEventListener("blur", recordFocusChange);
   const startComposition = () => {
     composing = true;
   };
@@ -1019,12 +1186,38 @@ export function mountFilesPage(
   const unsubscribeVisibility = bridge.onVisibility?.((shown) => {
     visible = shown;
     if (!shown) {
+      focusRevision++;
       composing = false;
       closeMenu(false);
       tooltips.reset();
     }
   });
   document.documentElement.lang = "en-US";
+  const unsubscribeFocus = bridge.onFocusIntent?.((intent) => {
+    if (disposed || !visible) return;
+    const active = document.activeElement as HTMLElement | null;
+    if (
+      intent === "restore" &&
+      active &&
+      active.isConnected &&
+      !active.closest("[hidden], [inert]") &&
+      (page.contains(active) ||
+        (!editor.hidden && !editor.inert && editor.contains(active)))
+    ) {
+      active.focus();
+      return;
+    }
+    if (!editor.hidden && !editor.inert) {
+      const target = editor.contains(active)
+        ? active
+        : editor.querySelector<HTMLElement>("input, button:not(:disabled)");
+      if (target) {
+        target.focus();
+        return;
+      }
+    }
+    filter.focus();
+  });
   const unsubscribeLanguage = bridge.onLanguage?.((language) => {
     if (disposed) return;
     if (menuGestureActive()) closeMenu(false);
@@ -1034,7 +1227,7 @@ export function mountFilesPage(
     revealFocusedMenuItem();
     tooltips.refresh();
   });
-  const ready = navigateFrom("home");
+  const ready = navigateFrom("home", true);
   return {
     ready,
     dispose() {
@@ -1044,6 +1237,7 @@ export function mountFilesPage(
       discardConfirmation();
       unsubscribeVisibility?.();
       unsubscribeLanguage?.();
+      unsubscribeFocus?.();
       tooltips.dispose();
       controlHints.clear();
       labels.clear();
@@ -1058,6 +1252,8 @@ export function mountFilesPage(
       document.removeEventListener("click", guardScrolledMenuClick, true);
       document.defaultView?.removeEventListener("blur", blurMenu);
       document.removeEventListener("keydown", onShortcut);
+      document.removeEventListener("focusin", recordFocusChange);
+      document.defaultView?.removeEventListener("blur", recordFocusChange);
       document.removeEventListener("compositionstart", startComposition);
       document.removeEventListener("compositionend", endComposition);
     },

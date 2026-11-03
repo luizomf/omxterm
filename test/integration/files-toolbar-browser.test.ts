@@ -5,6 +5,11 @@ import { expect, it } from "vitest";
 const run = promisify(execFile);
 const scenarios = [
   [
+    "keyboard",
+    "uses the filter, tree, editor and menu with keyboard focus",
+    "PASS keyboard workflow",
+  ],
+  [
     "shortcut-mac",
     "scopes Cmd+Shift+Period in the Files child",
     "PASS scoped shortcut mac",
