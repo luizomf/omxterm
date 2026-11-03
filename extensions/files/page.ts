@@ -426,12 +426,14 @@ export function mountFilesPage(
         if (!mutationPending) rename(item);
         break;
       case "ContextMenu":
+        select(item);
         openMenu(item, undefined, undefined, rowElement(item.path));
         break;
       case "F10":
-        if (event.shiftKey)
+        if (event.shiftKey) {
+          select(item);
           openMenu(item, undefined, undefined, rowElement(item.path));
-        else return;
+        } else return;
         break;
       default:
         return;
@@ -604,14 +606,17 @@ export function mountFilesPage(
     insertionPending = true;
     message((m) => m.insertPathPending);
     try {
-      // Send immediately: main captures the terminal before asynchronous admission.
+      // Send immediately so the app-owned preload stamps the action before admission.
       const reply = await bridge.request({
         operation: "terminal.insertPath.v1",
         path: target.path,
       });
       if (disposed) return;
       if (reply.ok) {
-        if (notice.textContent === messages.insertPathPending) {
+        if (
+          notice.textContent === messages.insertPathPending ||
+          notice.textContent === messages.insertPathBusy
+        ) {
           notice.hidden = true;
           labels.delete(notice);
         }
@@ -626,7 +631,9 @@ export function mountFilesPage(
                   ? m.insertPathIncomplete
                   : reply.reason === "invalid-path"
                     ? m.insertPathInvalid
-                    : m.insertPathUnknown,
+                    : reply.reason === "unsafe-path"
+                      ? m.insertPathUnsafe
+                      : m.insertPathUnknown,
           "error",
         );
       }
@@ -809,6 +816,8 @@ export function mountFilesPage(
         shortcut.className = "menu-shortcut";
         shortcut.id = `files-menu-shortcut-${menu.childElementCount}`;
         labels.delete(item);
+        item.classList.add("menu-with-shortcut");
+        label(item, action.label, "aria-label");
         label(caption, action.label);
         label(shortcut, (m) => m.shortcut(action.shortcut!.display));
         item.setAttribute("aria-describedby", shortcut.id);

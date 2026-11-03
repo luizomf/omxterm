@@ -7,6 +7,7 @@ import {
   splitTerminalPayload,
   type TerminalExit,
   type TerminalSize,
+  type TerminalWriteReceipt,
 } from "../shared/terminal-contract";
 
 export type TerminalSessionLaunchKind = LaunchRequest["kind"];
@@ -27,6 +28,7 @@ export interface LocalTerminalSession {
   readonly launchKind?: TerminalSessionLaunchKind;
   readonly fallbackTitle?: string;
   write(data: string): void;
+  writeTracked?(data: string): TerminalWriteReceipt;
   resize(size: TerminalSize): void;
   acknowledgeOutput?(bytes: number): boolean;
   outputFlowMetrics?(): TerminalOutputFlowMetrics;
@@ -188,6 +190,17 @@ export function createLocalTerminalSession(
         : path.posix.basename(options.shell)),
     write(data) {
       if (!closed && !exited && isBoundedTerminalPayload(data)) pty.write(data);
+    },
+    writeTracked(data) {
+      if (closed || exited || !isBoundedTerminalPayload(data))
+        return "rejected";
+      try {
+        pty.write(data);
+        return closed || exited ? "unknown" : "accepted";
+      } catch {
+        // A native failure can occur after some bytes were handed off.
+        return "unknown";
+      }
     },
     resize(size) {
       if (closed || exited || !isTerminalSize(size)) return;

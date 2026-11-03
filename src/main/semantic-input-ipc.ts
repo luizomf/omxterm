@@ -21,6 +21,7 @@ type Pending = {
 type Owner = {
   contents: BrowserWindow["webContents"];
   revision?: number;
+  selectionListeners: Set<(revision: number) => void>;
   pending?: Pending;
   cleanup(): void;
 };
@@ -42,8 +43,16 @@ export function registerSemanticInputIpc(options: {
       owner &&
       isSelectionRevision(revision) &&
       (owner.revision === undefined || revision > owner.revision)
-    )
+    ) {
       owner.revision = revision;
+      for (const listener of owner.selectionListeners) {
+        try {
+          listener(revision);
+        } catch {
+          // A lost child cannot interrupt core selection tracking.
+        }
+      }
+    }
   };
   const reply = (event: IpcEvent, value?: unknown) => {
     const owner = ownerFor(event);
@@ -60,6 +69,7 @@ export function registerSemanticInputIpc(options: {
   options.ipc.on(semanticInputIpc.reply, reply);
   const remove = (owner: Owner) => {
     owners.delete(owner.contents);
+    owner.selectionListeners.clear();
     owner.pending?.cancel();
     owner.cleanup();
   };
@@ -79,6 +89,7 @@ export function registerSemanticInputIpc(options: {
       };
       const owner: Owner = {
         contents,
+        selectionListeners: new Set(),
         cleanup() {
           unsubscribeLoss();
           contents.removeListener("did-start-navigation", navigation);
@@ -87,6 +98,16 @@ export function registerSemanticInputIpc(options: {
       owners.set(contents, owner);
       contents.on("did-start-navigation", navigation);
       unsubscribeLoss = subscribeWindowOwnerLoss(window, lost);
+    },
+    subscribeSelection(
+      window: BrowserWindow,
+      listener: (revision: number) => void,
+    ) {
+      const owner = owners.get(window.webContents);
+      if (!owner || options.quitting()) return () => {};
+      owner.selectionListeners.add(listener);
+      if (owner.revision !== undefined) listener(owner.revision);
+      return () => owner.selectionListeners.delete(listener);
     },
     confirmSelection(
       window: BrowserWindow,
@@ -157,6 +178,9 @@ export function registerSemanticInputIpc(options: {
         !owner ||
         owner.pending ||
         owner.revision === undefined ||
+        (waitForDelivery &&
+          (!isSelectionRevision(source.actionSelectionRevision) ||
+            source.actionSelectionRevision !== owner.revision)) ||
         signal.aborted ||
         options.quitting() ||
         !source.isCurrentVisible() ||
@@ -166,9 +190,12 @@ export function registerSemanticInputIpc(options: {
         return waitForDelivery
           ? Promise.resolve({ ok: false, reason: "terminal-unavailable" })
           : Promise.reject(new Error("Semantic input unavailable"));
-      // Capture before asynchronous admission. The renderer independently checks
-      // this revision before capturing its exact Surface; neither side retargets.
-      const revision = owner.revision;
+      // Paths carry the child preload's action-time observation, not the newer
+      // revision that may have reached main first. Snippets retain their existing
+      // receipt-time capture. Core independently checks before capturing a Surface.
+      const revision = waitForDelivery
+        ? source.actionSelectionRevision!
+        : owner.revision;
       return new Promise((resolve, reject) => {
         const id = randomUUID();
         let sent = false;
@@ -192,7 +219,9 @@ export function registerSemanticInputIpc(options: {
               /* Lost renderer has no remaining authority. */
             }
           }
-          reject(new Error("Semantic input unavailable"));
+          if (waitForDelivery && !sent)
+            resolve({ ok: false, reason: "terminal-unavailable" });
+          else reject(new Error("Semantic input unavailable"));
         };
         // Bound a missing renderer acknowledgement, not the user's preview time.
         const timer = setTimeout(cancel, 5000);

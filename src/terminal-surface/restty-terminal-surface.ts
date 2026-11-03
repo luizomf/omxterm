@@ -45,6 +45,7 @@ import {
   applySearchTheme,
   focusedSearchField,
   focusSurfacePreservingSearch,
+  focusSurfaceInput,
   retainSearchEscapeGesture,
   withSearchFieldClipboard,
 } from "./restty-search-field";
@@ -102,6 +103,14 @@ function resttyDelivery(
       revealInput();
       adapter.write(chunk);
     },
+    ...(adapter.writeTracked
+      ? {
+          writeTracked: (chunk: string) => {
+            revealInput();
+            return adapter.writeTracked!(chunk);
+          },
+        }
+      : {}),
     // Keep large semantic pastes complete through asynchronous IPC and native
     // PTY queues without turning ordinary key input into scheduled work.
     chunkBytes: 512,
@@ -344,6 +353,9 @@ export async function mountResttyTerminalSurface(
       geometry: geometry.measure,
       focus: () => {
         if (!disposed) focusSurfacePreservingSearch(restty, container, refit);
+      },
+      focusInput: () => {
+        if (!disposed) focusSurfaceInput(restty, refit);
       },
       applyConfiguration,
       applyTheme(theme) {

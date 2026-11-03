@@ -97,6 +97,21 @@ it("retains logical activity through overlay hiding and distinguishes restored f
   });
 });
 
+it("blocks terminal input while a native overlay hide is pending or has failed", async () => {
+  const h = fixture();
+  const target = h.slot("panel");
+  h.owner.select(target, () => {}, target);
+  await settle();
+  expect(h.owner.isInputBlocked()).toBe(false);
+  const hide = deferred<boolean>();
+  h.bridge.present.mockReturnValueOnce(hide.promise);
+  h.owner.openOverlay(() => {});
+  expect(h.owner.isInputBlocked()).toBe(true);
+  hide.resolve(false);
+  await settle();
+  expect(h.owner.isInputBlocked()).toBe(true);
+});
+
 it("orders tab-independent slots and DOM activation through one revision stream", async () => {
   const h = fixture();
   const first = h.slot("first");

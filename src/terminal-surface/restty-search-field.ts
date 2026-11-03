@@ -34,6 +34,14 @@ export function focusSurfacePreservingSearch(
   refit: () => void,
 ): void {
   if (focusedSearchField(restty, container)) return;
+  focusSurfaceInput(restty, refit);
+}
+
+// Explicit input handoffs target the terminal even if its search field was active.
+export function focusSurfaceInput(
+  restty: PatchedRestty | undefined,
+  refit: () => void,
+): void {
   refit();
   const pane = restty?.getActivePane();
   pane?.runtime.interaction.focus();

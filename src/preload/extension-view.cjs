@@ -87,6 +87,33 @@ if (process.isMainFrame) {
     undefined,
     false,
   );
+  // These stamps stay private to the app-owned preload. Package code can
+  // neither pick a terminal nor reuse a previous gesture's observation.
+  let selectionRevision;
+  let admissionGeneration;
+  let lastAdmissionGeneration = -1;
+  const validRevision = (value) => Number.isSafeInteger(value) && value >= 0;
+  ipcRenderer.on("extension-view:action-selection", (_event, value) => {
+    if (
+      validRevision(value) &&
+      (selectionRevision === undefined || value > selectionRevision)
+    )
+      selectionRevision = value;
+  });
+  ipcRenderer.on("extension-view:action-admission", (_event, value) => {
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.keys(value).sort().join() !== "generation,visible" ||
+      !validRevision(value.generation) ||
+      typeof value.visible !== "boolean" ||
+      value.generation < lastAdmissionGeneration
+    )
+      return;
+    lastAdmissionGeneration = value.generation;
+    admissionGeneration = value.visible ? value.generation : undefined;
+  });
   let pending = 0;
   contextBridge.exposeInMainWorld("omxHostedContent", {
     onActivity,
@@ -96,6 +123,16 @@ if (process.isMainFrame) {
       if (pending >= 32) throw new Error("Request capacity exceeded");
       pending++;
       try {
+        if (
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          value.operation === "terminal.insertPath.v1"
+        )
+          return await ipcRenderer.invoke("extension-view:request", value, {
+            selectionRevision,
+            admissionGeneration,
+          });
         return await ipcRenderer.invoke("extension-view:request", value);
       } finally {
         pending--;

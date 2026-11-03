@@ -1005,7 +1005,16 @@ try {
         "filesFixture.requests.filter(x => x.operation === 'terminal.insertPath.v1')",
       );
     await evaluate("document.querySelector('[role=treeitem]').focus()");
-    await key("Enter", "Enter", 13, 8);
+    await send("Input.dispatchKeyEvent", {
+      type: "keyDown",
+      key: "Enter",
+      code: "Enter",
+      windowsVirtualKeyCode: 13,
+      nativeVirtualKeyCode: 13,
+      modifiers: 8,
+      text: "\r",
+      unmodifiedText: "\r",
+    });
     assert.deepEqual(await requests(), [
       { operation: "terminal.insertPath.v1", path: "/root/item-0" },
     ]);
@@ -1042,12 +1051,12 @@ try {
       ),
       true,
     );
+    await screenshot("path-insertion-menu");
     await key("Enter", "Enter", 13);
     assert.deepEqual(await requests(), [
       { operation: "terminal.insertPath.v1", path: "/root/item-0" },
       { operation: "terminal.insertPath.v1", path: "/root/item-0" },
     ]);
-    await screenshot("path-insertion-menu");
     console.log("PASS path insertion keyboard and accessible menu");
   }
   const scenario = process.argv[2] ?? "matrix";

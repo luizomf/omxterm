@@ -367,6 +367,36 @@ describe("Restty terminal context-menu policy", () => {
 });
 
 describe("Restty Protected Paste", () => {
+  it("tracks only path injection through the existing confirmation and bracketed-paste owner", async () => {
+    const value = createHarness();
+    const tracked = vi.fn(async () => "accepted" as const);
+    Object.assign(value.adapter, { writeTracked: tracked });
+    value.clipboard.confirmPaste.mockResolvedValue(true);
+    const onSemanticInput = vi.fn();
+    const mounted = await mount(value, { onSemanticInput });
+
+    expect(await mounted.surface.injectTracked!("'/tmp/a\nb'")).toBe(true);
+    expect(value.clipboard.confirmPaste).toHaveBeenCalledOnce();
+    expect(tracked).toHaveBeenCalledExactlyOnceWith("'/tmp/a\nb'");
+    mounted.restty.bracketedPaste = true;
+    expect(await mounted.surface.injectTracked!("'/tmp/file'")).toBe(true);
+    expect(tracked).toHaveBeenLastCalledWith(
+      "\u001b[200~'/tmp/file'\u001b[201~",
+    );
+    expect(onSemanticInput).toHaveBeenCalledTimes(2);
+    expect(value.adapter.write).not.toHaveBeenCalled();
+    expect(value.clipboard.readText).not.toHaveBeenCalled();
+    expect(tracked.mock.calls.flat()).not.toContain("\r");
+    mounted.surface.dispose();
+  });
+
+  it("fails closed when a mounted adapter has no tracked receipt", async () => {
+    const mounted = await mount();
+    expect(await mounted.surface.injectTracked!("'/tmp/file'")).toBe(false);
+    expect(mounted.adapter.write).not.toHaveBeenCalled();
+    mounted.surface.dispose();
+  });
+
   it("diverts native paste asynchronously while ordinary keyboard input stays direct", async () => {
     let decide: ((approved: boolean) => void) | undefined;
     const value = createHarness();

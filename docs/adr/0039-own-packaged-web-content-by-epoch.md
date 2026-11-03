@@ -34,7 +34,15 @@ A same-view geometry refresh does not revoke captured visible-child semantic
 admission. Actual hiding, selection loss, window hide/minimize or retirement
 revokes it permanently; showing that child again cannot revive the capture.
 Layout revisions still order native presentations, and core selection revisions
-still prevent semantic input from retargeting another Surface.
+still prevent semantic input from retargeting another Surface. For path actions,
+main privately publishes each window's selection revision to its live children
+and issues a visible-admission generation. The app-owned child preload stamps
+its current observations at request invocation; neither stamp exposes a target
+to package code. Main checks the stamps against the owning live view at receipt
+and commit, and the core renderer independently checks its selection. Missing or
+stale observations fail closed, including across hide/reveal before commit;
+same-view geometry refreshes preserve admission. This does not impose a total
+order between processes.
 
 DOM selection and overlay opening await an acknowledged native hide. When that
 hide removes the selected, natively focused child of an already focused window,

@@ -30,7 +30,7 @@ it("keeps the Files checkbox caption and shortcut on separate shrinkable rows", 
   });
   const css = result.outputFiles[0]!.text;
   const rule = (selector: string) => {
-    const start = css.indexOf(`${selector} {`);
+    const start = css.indexOf(`\n${selector} {`);
     expect(start, selector).toBeGreaterThanOrEqual(0);
     return css.slice(start, css.indexOf("}", start));
   };
@@ -53,6 +53,9 @@ it("keeps the Files checkbox caption and shortcut on separate shrinkable rows", 
   expect(rule(".menu-shortcut")).toContain("overflow-wrap: anywhere;");
   expect(rule(".menu-shortcut")).toContain("color: var(--ui-secondary);");
   expect(rule(".menu-shortcut")).not.toContain("white-space: nowrap;");
+  expect(rule(".menu-with-shortcut .menu-shortcut")).toContain(
+    "grid-column: 1;",
+  );
   expect(rule(":focus-visible")).toContain(
     "outline: 2px solid var(--ui-text);",
   );

@@ -34,10 +34,12 @@ const english = {
   insertPathUnavailable:
     "The terminal is unavailable or closed. Select a live terminal and try again.",
   insertPathIncomplete:
-    "Path insertion did not complete; the terminal may have closed or paste was cancelled. Check the terminal before retrying.",
+    "Path insertion did not complete or its outcome is unknown. Check the terminal before retrying.",
   insertPathUnknown:
     "Path insertion outcome is unknown. Check the terminal before retrying.",
   insertPathInvalid: "This path cannot be inserted: it is invalid or too long.",
+  insertPathUnsafe:
+    "This path contains a terminal paste delimiter and cannot be inserted safely.",
   rename: "Rename / move",
   trash: "Move to Trash",
   prepareDelete: "Delete permanently…",
@@ -121,11 +123,13 @@ const portuguese: FilesMessages = {
   insertPathUnavailable:
     "O terminal está indisponível ou foi fechado. Selecione um terminal ativo e tente novamente.",
   insertPathIncomplete:
-    "A inserção não foi concluída; o terminal pode ter sido fechado ou a colagem cancelada. Confira o terminal antes de tentar novamente.",
+    "A inserção não foi concluída ou seu resultado é desconhecido. Confira o terminal antes de tentar novamente.",
   insertPathUnknown:
     "O resultado da inserção é desconhecido. Confira o terminal antes de tentar novamente.",
   insertPathInvalid:
     "Não é possível inserir este caminho: inválido ou longo demais.",
+  insertPathUnsafe:
+    "Este caminho contém um delimitador de colagem do terminal e não pode ser inserido com segurança.",
   rename: "Renomear / mover",
   trash: "Mover para a Lixeira",
   prepareDelete: "Excluir permanentemente…",

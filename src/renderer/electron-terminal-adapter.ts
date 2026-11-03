@@ -138,6 +138,17 @@ export function createElectronTerminalAdapter(
       )
         bridge.input(sessionId, data);
     },
+    async writeTracked(data: string) {
+      if (
+        closed ||
+        ended ||
+        sessionId === undefined ||
+        !isBoundedTerminalPayload(data) ||
+        !bridge.inputTracked
+      )
+        return "rejected";
+      return bridge.inputTracked(sessionId, data);
+    },
     resize(size: TerminalSize) {
       if (!closed && !ended && sessionId !== undefined && isTerminalSize(size))
         bridge.resize(sessionId, size);

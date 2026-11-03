@@ -239,6 +239,14 @@ export function createCompanionContent(
       presentation.restoreFocus();
       return true;
     },
+    isSourceSelected(id: string) {
+      return (
+        !disposed &&
+        !options.blocked() &&
+        application?.kind === "terminal" &&
+        selectedPanel()?.id === id
+      );
+    },
     isSourceForeground(id: string) {
       return (
         !options.blocked() &&

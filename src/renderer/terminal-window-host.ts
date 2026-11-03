@@ -365,10 +365,12 @@ export function mountTerminalWindowPage(
       tabs,
       panel: auxiliaryPanel,
       language,
-      blocked: previewActive,
+      blocked: () => previewActive() || companion.presentation.isInputBlocked(),
       onPreviewActivity: onOverlayActivity,
       modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
       focusTerminal: companion.focusTerminal,
+      sourceForeground: companion.isSourceForeground,
+      sourceSelected: companion.isSourceSelected,
       restoreSourceFocus: companion.restoreSourceFocus,
     });
     snippetPreview = tools.preview;

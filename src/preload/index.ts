@@ -33,6 +33,7 @@ import {
   isTerminalSize,
   isTerminalTabCommand,
   isTerminalTitleRequest,
+  isTerminalWriteReceipt,
   type TerminalExit,
   type TerminalFontZoom,
   type TerminalSessionId,
@@ -245,6 +246,20 @@ const terminal: TerminalBridge = {
     if (!isTerminalSessionId(sessionId) || !isBoundedTerminalPayload(data))
       throw new TypeError("Invalid terminal input payload");
     ipcRenderer.send(terminalIpc.input, { sessionId, data });
+  },
+  async inputTracked(sessionId, data) {
+    if (!isTerminalSessionId(sessionId) || !isBoundedTerminalPayload(data))
+      throw new TypeError("Invalid tracked terminal input payload");
+    const receipt: unknown = await ipcRenderer.invoke(
+      terminalIpc.trackedInput,
+      {
+        sessionId,
+        data,
+      },
+    );
+    if (!isTerminalWriteReceipt(receipt))
+      throw new TypeError("Invalid tracked terminal input receipt");
+    return receipt;
   },
   resize(sessionId: TerminalSessionId, size: TerminalSize) {
     if (!isTerminalSessionId(sessionId) || !isTerminalSize(size))

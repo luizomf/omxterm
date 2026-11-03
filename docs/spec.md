@@ -635,17 +635,24 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Current Files source also offers **Insert path into terminal** in Actions and
   on a focused row with Shift+Enter. It captures one visible selected file,
   folder or link, requests insertion immediately and never sends an added Enter.
-  Main captures the selected terminal revision at request receipt before async
-  admission; core refuses a changed selection instead of retargeting. The
+  At request invocation, the app-owned child preload privately stamps its latest
+  observed core-selection revision and visible-admission generation. Main checks
+  both at receipt and commit; core independently refuses a changed selection
+  before capturing the Surface. Missing or stale observations fail closed rather
+  than retargeting. This does not imply a global ordering across processes. The
   original Surface owns accepted Protected Paste, including confirmation and
   remaining chunks. After successful Surface delivery, focus returns to that
   target only if it is still the current live selection and the request remains
   active; a later selection is never focused as a substitute. Missing, closed,
   busy, invalid and incomplete or unknown outcomes are explained without
-  automatic replay. Completion means Surface transport delivery, not shell
-  consumption. A control character or newline in the path can still act on a
-  receiving program, even though no Enter is appended. This source behavior
-  requires both a compatible new host and a future Files archive; installed
+  automatic replay. Completion means every chunk was accepted by the captured
+  live local session and passed to node-pty without a synchronous error; it does
+  not establish OS or shell consumption. A control character or newline in the
+  path can still act on a receiving program, even though no Enter is appended.
+  A path containing a bracketed-paste terminator is refused rather than rewritten.
+  Explicit focus returns to terminal input rather than a retained search query;
+  a newer companion selection or pending overlay prevents focus theft.
+  This source behavior requires both a compatible new host and a future Files archive; installed
   Files0.6 bytes remain unchanged.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
@@ -1252,6 +1259,9 @@ while a Local Image Preview or About owns modal input.
   ordinary keyboard input. Current bracketed mode and ownership are checked
   after asynchronous clipboard reads or confirmation. Mid-delivery disposal
   stops later chunks and a snippet's optional Enter, without rollback or replay.
+  For the Files path capability, each chunk awaits a main-session receipt. An
+  unresolved or lost receipt stops that path and fences later queued semantic
+  input until a definitive late receipt, if any; keyboard input remains direct.
 - OSC 52 may write the clipboard only for target `c` with non-empty canonical
   padded Base64 that decodes as UTF-8. The 10,000,000 UTF-16-code-unit handler
   payload bound counts `c;` and Base64 but excludes the OSC introducer, command
@@ -1874,9 +1884,15 @@ owned across focus handoff. Retirement cancels unaccepted interactions but does
 not revoke accepted Surface-owned input or end sessions. The separate
 `terminal.insertPath.v1` own-view capability accepts one bounded absolute lexical
 path, formats it with the shared platform path-quoting policy and reuses the same
-selection, admission, gesture and Protected Paste owner. It reports delivery
-completion separately from mere interaction acceptance; interrupted delivery can
-be partial. It exposes no caller-selected terminal or raw PTY authority. Older
+admission, gesture and Protected Paste owner. Its private action-time selection
+and visible-admission stamps are checked by main at entry and commit, while core
+checks its selection independently; a hide/reveal before commit cannot revive
+an earlier request, and a same-view geometry refresh does not revoke it. It
+reports delivery completion separately from mere interaction acceptance;
+completion requires a receipt for each chunk passed by the captured live local
+session to node-pty without synchronous error, not OS or shell consumption.
+Interrupted or uncertain delivery can be partial and must be inspected before
+retrying. It exposes no caller-selected terminal or raw PTY authority. Older
 hosts reject the unknown capability rather than silently treating it as supported.
 This preparatory capability does not install an optional Snippets package or cut over any platform.
 `extensions/snippets` source builds a separate archive using the shared

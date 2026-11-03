@@ -7,6 +7,7 @@ export const terminalIpc = {
   configurationUpdate: "terminal:configuration-update",
   fontData: "terminal:font-data",
   input: "terminal:input",
+  trackedInput: "terminal:tracked-input",
   resize: "terminal:resize",
   close: "terminal:close",
   output: "terminal:output",

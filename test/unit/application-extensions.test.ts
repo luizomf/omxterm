@@ -88,6 +88,12 @@ const adapters = vi.hoisted(() => ({
         Parameters<typeof startApplicationExtensions>[0]["semanticInput"]
       >["confirmSelection"]
     >(),
+  semanticSubscribe:
+    vi.fn<
+      NonNullable<
+        Parameters<typeof startApplicationExtensions>[0]["semanticInput"]
+      >["subscribeSelection"]
+    >(),
   retire: vi.fn(),
   hosts: [] as Host[],
 }));
@@ -241,6 +247,7 @@ beforeEach(async () => {
   adapters.retire.mockResolvedValue(null);
   adapters.consent.mockResolvedValue({ response: 1 });
   adapters.semanticConfirm.mockResolvedValue(true);
+  adapters.semanticSubscribe.mockReturnValue(() => {});
   const contents = Object.assign(new EventEmitter(), {
     mainFrame: {},
     send: vi.fn(),
@@ -281,6 +288,7 @@ async function startService(platform: string) {
       semanticInput: {
         request: adapters.semanticRequest,
         confirmSelection: adapters.semanticConfirm,
+        subscribeSelection: adapters.semanticSubscribe,
       },
       layout: {
         capture: vi.fn(() => Promise.reject(new Error("unavailable"))),
@@ -1229,8 +1237,15 @@ it.each([false, true])(
     const visible = vi.fn(() => true);
     const context = {
       id: "authenticated-native-view",
+      actionSelectionRevision: 7,
       isCurrentVisible: visible,
     };
+    const listener = vi.fn();
+    host.options.subscribeSelection!(listener);
+    expect(adapters.semanticSubscribe).toHaveBeenCalledExactlyOnceWith(
+      window,
+      listener,
+    );
     const signal = new AbortController().signal;
     const value = {
       operation: "terminal.insertPath.v1",
@@ -1271,6 +1286,10 @@ it.each([false, true])(
       await expect(
         host.options.onRequest!({ ...value, path }, signal, context),
       ).resolves.toEqual({ ok: false, reason: "invalid-path" });
+    for (const path of ["/root/\u001b[201~bad", "/root/\u009b201~bad"])
+      await expect(
+        host.options.onRequest!({ ...value, path }, signal, context),
+      ).resolves.toEqual({ ok: false, reason: "unsafe-path" });
     await expect(
       host.options.onRequest!({ ...value, target: "s1" }, signal, context),
     ).resolves.toEqual({ ok: false, reason: "invalid-path" });

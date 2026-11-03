@@ -29,6 +29,16 @@ export interface TerminalSessionInput {
   readonly data: string;
 }
 
+// Acceptance means the live local session passed a chunk to node-pty without
+// a synchronous error; it does not prove OS or process consumption.
+export type TerminalWriteReceipt = "accepted" | "rejected" | "unknown";
+
+export function isTerminalWriteReceipt(
+  value: unknown,
+): value is TerminalWriteReceipt {
+  return value === "accepted" || value === "rejected" || value === "unknown";
+}
+
 export interface TerminalSessionResize {
   readonly sessionId: TerminalSessionId;
   readonly cols: number;
@@ -100,6 +110,7 @@ export function isBoundedTerminalPayload(value: unknown): value is string {
   return (
     typeof value === "string" &&
     value.length > 0 &&
+    value.length <= MAX_TERMINAL_PAYLOAD_BYTES &&
     encoder.encode(value).byteLength <= MAX_TERMINAL_PAYLOAD_BYTES
   );
 }

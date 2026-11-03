@@ -48,6 +48,8 @@ export const extensionViewIpc = {
   failure: "extension-view:failure",
   close: "extension-view:close",
   visibility: "extension-view:visibility",
+  actionSelection: "extension-view:action-selection",
+  actionAdmission: "extension-view:action-admission",
   appearance: "extension-view:appearance",
   activity: "extension-view:activity",
   language: "extension-view:language",

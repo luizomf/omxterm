@@ -179,6 +179,14 @@
   column-gap: 6px;
   row-gap: 2px;
 }
+.file-menu .menu-with-shortcut {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+.menu-with-shortcut .menu-shortcut {
+  grid-column: 1;
+}
 .menu-check {
   grid-column: 1;
   grid-row: 1;

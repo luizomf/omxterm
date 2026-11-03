@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createSemanticInput } from "../../src/renderer/semantic-input";
+import { snippetTarget } from "../../src/renderer/snippet-target";
+import { createSemanticInputDelivery } from "../../src/terminal-surface/semantic-input-delivery";
+import type { TerminalSurface } from "../../src/terminal-surface/terminal-surface";
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () {
@@ -128,6 +131,61 @@ it.each([true, false])(
     if (delivered) expect(focusCapturedTarget).toHaveBeenCalledWith(target);
   },
 );
+
+it("keeps accepted tracked Protected Paste Surface-owned after extension retirement", async () => {
+  let approve!: (value: boolean) => void;
+  const confirmPaste = vi.fn(
+    () =>
+      new Promise<boolean>((resolve) => {
+        approve = resolve;
+      }),
+  );
+  const write = vi.fn();
+  const writeTracked = vi.fn(async () => "accepted" as const);
+  const delivery = createSemanticInputDelivery({
+    isLive: () => true,
+    isBracketedPasteEnabled: () => false,
+    confirmPaste,
+    write,
+    writeTracked,
+  });
+  const surface = {
+    injectTracked: (text: string) => delivery.deliverTracked(text),
+  } as TerminalSurface;
+  const target = snippetTarget(
+    {
+      removed: false,
+      ended: false,
+      snippetTargetListeners: new Set(),
+      surface,
+    },
+    () => true,
+  )!;
+  const focus = vi.fn();
+  const input = createSemanticInput(document, {
+    capture: () => target,
+    blocked: () => false,
+    focusTerminal: vi.fn(),
+    focusCapturedTarget: focus,
+    onPreviewActivity: () => {},
+  });
+  cleanup.push(input.preview.dispose);
+  const extension = new AbortController();
+  const outcome = input.request(
+    snippet,
+    "insert",
+    () => false,
+    extension.signal,
+    true,
+  );
+  await vi.waitFor(() => expect(confirmPaste).toHaveBeenCalledOnce());
+  extension.abort();
+  approve(true);
+  await expect(outcome).resolves.toBe(true);
+  expect(writeTracked).toHaveBeenCalledExactlyOnceWith(snippet.body);
+  expect(write).not.toHaveBeenCalled();
+  expect(focus).not.toHaveBeenCalled();
+});
 
 it("never focuses a replacement after a pending delivery or revocation", async () => {
   let finish!: (value: boolean) => void;
