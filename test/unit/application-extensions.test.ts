@@ -1658,6 +1658,79 @@ it.each([true, false])(
   },
 );
 
+it.each([false, true])(
+  "admits lexical path insertion only from a declared visible view (%s)",
+  async (declared) => {
+    await writeFile(
+      archive,
+      packageArchive([
+        {
+          name: "extension.json",
+          data: JSON.stringify({
+            ...manifest,
+            ...(declared ? { capabilities: ["terminal.insertPath.v1"] } : {}),
+          }),
+        },
+        { name: "backend.mjs", data: "" },
+        { name: "index.html", data: "<h1>Input</h1>" },
+      ]),
+    );
+    await request({ operation: "install" });
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+    const host = adapters.hosts[0]!;
+    const visible = vi.fn(() => true);
+    const context = {
+      id: "authenticated-native-view",
+      isCurrentVisible: visible,
+    };
+    const signal = new AbortController().signal;
+    const value = {
+      operation: "terminal.insertPath.v1",
+      path: "/root/a 'b'\nname",
+    };
+    adapters.semanticRequest.mockResolvedValue({ ok: true });
+    if (!declared) {
+      await expect(
+        host.options.onRequest!(value, signal, context),
+      ).rejects.toThrow("unavailable");
+      expect(adapters.semanticRequest).not.toHaveBeenCalled();
+      return;
+    }
+    visible.mockReturnValue(false);
+    await expect(
+      host.options.onRequest!(value, signal, context),
+    ).rejects.toThrow("unavailable");
+    visible.mockReturnValue(true);
+    await expect(
+      host.options.onRequest!(value, signal, context),
+    ).resolves.toEqual({ ok: true });
+    expect(adapters.semanticRequest).toHaveBeenCalledExactlyOnceWith(
+      window,
+      {
+        operation: "terminal.semanticInput.v1",
+        text: "'/root/a '\\''b'\\''\nname'",
+        title: "File path",
+        intent: "insert",
+        preview: false,
+      },
+      context,
+      expect.any(AbortSignal),
+      expect.any(Function),
+      true,
+    );
+    expect(host.claimActivation).toHaveBeenCalledExactlyOnceWith(context.id);
+    for (const path of ["relative", "/root/\0bad", "/" + "'".repeat(20_000)])
+      await expect(
+        host.options.onRequest!({ ...value, path }, signal, context),
+      ).resolves.toEqual({ ok: false, reason: "invalid-path" });
+    await expect(
+      host.options.onRequest!({ ...value, target: "s1" }, signal, context),
+    ).resolves.toEqual({ ok: false, reason: "invalid-path" });
+    expect(adapters.semanticRequest).toHaveBeenCalledOnce();
+  },
+);
+
 it("a valid claimed terminal contribution retains its captured directory", async () => {
   await request({ operation: "install" });
   let directory = "/original";

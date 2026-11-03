@@ -5,6 +5,7 @@
   "name": "Files — ARM64 preview",
   "engines": { "omxterm": ">=0.25.0-dev.10", "api": "0.1.x" },
   "backend": "backend.mjs",
+  "capabilities": ["terminal.insertPath.v1"],
   "view": {
     "entry": "index.html",
     "action": "omxterm.files.open",

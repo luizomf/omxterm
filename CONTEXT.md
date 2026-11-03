@@ -422,7 +422,13 @@ retargeting of started operations. Compatible installed archives use this host
 behavior without modification; the renamed action, inline hint, tooltip and
 relocalizable host-coded notices are included in the Files0.7 source/archive
 preparation, not published Files0.6; qualification and publication remain pending.
-Its application owner composes independent
+Current source also
+inserts one selected file/folder/link path through the core's lexical quoting and
+Protected Paste into the action-time captured Surface; its visible menu action
+and Shift+Enter row shortcut add no Enter. Focus returns after Surface delivery
+only while the captured target remains selected. Incomplete or unknown delivery
+is not automatically retried. This needs a future archive and a host supporting
+`terminal.insertPath.v1`; published Files0.6 remains unchanged. Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.
 Its separately built archive/checksum/receipt are not bundled into the host;

@@ -33,6 +33,17 @@ const english = {
   atRootHint: "Already at the filesystem root",
   mutationPendingHint: "A file operation is in progress",
   openDirectory: "Open directory",
+  insertPath: "Insert path into terminal",
+  insertPathPending: "Inserting path into terminal…",
+  insertPathBusy:
+    "A terminal input request is already in progress. Try again when it finishes.",
+  insertPathUnavailable:
+    "The terminal is unavailable or closed. Select a live terminal and try again.",
+  insertPathIncomplete:
+    "Path insertion did not complete; the terminal may have closed or paste was cancelled. Check the terminal before retrying.",
+  insertPathUnknown:
+    "Path insertion outcome is unknown. Check the terminal before retrying.",
+  insertPathInvalid: "This path cannot be inserted: it is invalid or too long.",
   rename: "Rename / move",
   moveToFolder: "Move to folder…",
   moveFolderPrompt: (path: string) =>
@@ -147,6 +158,18 @@ const portuguese: FilesMessages = {
   atRootHint: "Já está na raiz do sistema de arquivos",
   mutationPendingHint: "Uma operação de arquivo está em andamento",
   openDirectory: "Abrir diretório",
+  insertPath: "Inserir caminho no terminal",
+  insertPathPending: "Inserindo caminho no terminal…",
+  insertPathBusy:
+    "Uma solicitação de entrada no terminal já está em andamento. Tente novamente quando terminar.",
+  insertPathUnavailable:
+    "O terminal está indisponível ou foi fechado. Selecione um terminal ativo e tente novamente.",
+  insertPathIncomplete:
+    "A inserção não foi concluída; o terminal pode ter sido fechado ou a colagem cancelada. Confira o terminal antes de tentar novamente.",
+  insertPathUnknown:
+    "O resultado da inserção é desconhecido. Confira o terminal antes de tentar novamente.",
+  insertPathInvalid:
+    "Não é possível inserir este caminho: inválido ou longo demais.",
   rename: "Renomear / mover",
   moveToFolder: "Mover para pasta…",
   moveFolderPrompt: (path) =>

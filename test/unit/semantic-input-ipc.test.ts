@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep the semantic request and delivery lifetime matrix with its shared fixture. */
 import { EventEmitter } from "node:events";
 import type { BrowserWindow } from "electron";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -286,6 +287,44 @@ it("allows one pending request per window, independently of another window", asy
   await Promise.resolve();
   first.reply({ kind: "finished", id: first.command().id, available: true });
   await expect(next).resolves.toEqual({ ok: true });
+});
+
+it("serializes tracked path delivery and reports busy or unavailable without retargeting", async () => {
+  const test = fixture();
+  const owner = test.owner();
+  const pathInput = { ...input, intent: "insert" as const, preview: false };
+  const tracked = () =>
+    test.service.request(
+      owner.window,
+      pathInput,
+      owner.source,
+      owner.abort.signal,
+      owner.admit,
+      true,
+    );
+  await expect(tracked()).resolves.toEqual({
+    ok: false,
+    reason: "terminal-unavailable",
+  });
+  owner.selection(7);
+  const first = tracked();
+  await expect(tracked()).resolves.toEqual({
+    ok: false,
+    reason: "terminal-busy",
+  });
+  await Promise.resolve();
+  const command = owner.command();
+  expect(command.revision).toBe(7);
+  expect(command.waitForDelivery).toBe(true);
+  expect(isSemanticInputCommand(command)).toBe(true);
+  owner.selection(8);
+  owner.reply({ kind: "started", id: command.id });
+  owner.reply({ kind: "finished", id: command.id, available: false });
+  await expect(first).resolves.toEqual({
+    ok: false,
+    reason: "terminal-not-completed",
+  });
+  expect(owner.contents.send).toHaveBeenCalledOnce();
 });
 
 it("ignores foreign, untrusted, malformed, unknown and stale replies", async () => {
@@ -581,6 +620,13 @@ it("validates selection and exact request/revoke/started/finished envelopes", ()
     { ...command, source: "" },
     { ...command, id: "" },
     { ...command, input: { ...input, intent: "write" } },
+    { ...command, waitForDelivery: true },
+    { ...command, waitForDelivery: false },
+    {
+      ...command,
+      waitForDelivery: true,
+      input: { ...input, preview: false, intent: "run" },
+    },
     { kind: "revoke", id: token, input },
   ])
     expect(isSemanticInputCommand(value)).toBe(false);

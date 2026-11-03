@@ -679,6 +679,21 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   The narrow [development bridges](extension-installation-foundation.md#archive-contract)
   admit unchanged Files0.6 on recognized 0.24.1-dev.N and 0.25.0-dev.N hosts; admission alone
   does not qualify native behavior or packages.
+  Current Files source also offers **Insert path into terminal** in Actions and
+  on a focused row with Shift+Enter. It captures one visible selected file,
+  folder or link, requests insertion immediately and never sends an added Enter.
+  Main captures the selected terminal revision at request receipt before async
+  admission; core refuses a changed selection instead of retargeting. The
+  original Surface owns accepted Protected Paste, including confirmation and
+  remaining chunks. After successful Surface delivery, focus returns to that
+  target only if it is still the current live selection and the request remains
+  active; a later selection is never focused as a substitute. Missing, closed,
+  busy, invalid and incomplete or unknown outcomes are explained without
+  automatic replay. Completion means Surface transport delivery, not shell
+  consumption. A control character or newline in the path can still act on a
+  receiving program, even though no Enter is appended. This source behavior
+  requires both a compatible new host and a future Files archive; installed
+  Files0.6 bytes remain unchanged.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
   core while the panel remains visible; a background result does not steal focus.
@@ -2060,8 +2075,14 @@ selection loss revokes it even if the child is subsequently shown again. Insert,
 Run and read-only preview reuse Protected Paste, modal exclusion and the same
 core preview owner as built-in Snippets. Native Enter repeats/release remain
 owned across focus handoff. Retirement cancels unaccepted interactions but does
-not revoke accepted Surface-owned input or end sessions. This preparatory
-capability does not install an optional Snippets package or cut over any platform.
+not revoke accepted Surface-owned input or end sessions. The separate
+`terminal.insertPath.v1` own-view capability accepts one bounded absolute lexical
+path, formats it with the shared platform path-quoting policy and reuses the same
+selection, admission, gesture and Protected Paste owner. It reports delivery
+completion separately from mere interaction acceptance; interrupted delivery can
+be partial. It exposes no caller-selected terminal or raw PTY authority. Older
+hosts reject the unknown capability rather than silently treating it as supported.
+This preparatory capability does not install an optional Snippets package or cut over any platform.
 `extensions/snippets` source builds a separate archive using the shared
 Snippets UI/CSS and bounded catalog client. Its separate action is withheld from
 production; Linux ARM64/x64 and macOS/Windows ARM64 source composition route

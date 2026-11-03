@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep the shared Files shortcut and menu-geometry fixture together. */
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page";
@@ -212,11 +213,15 @@ it.each([
       key(item, "End");
       assertVisible();
       key(item, "ArrowDown");
-      expect(document.activeElement).toBe(popup.querySelector("button"));
+      expect(document.activeElement).toBe(
+        popup.querySelector("button:not(:disabled)"),
+      );
       key(document.activeElement as HTMLElement, "ArrowUp");
       assertVisible();
       key(item, "Home");
-      expect(document.activeElement).toBe(popup.querySelector("button"));
+      expect(document.activeElement).toBe(
+        popup.querySelector("button:not(:disabled)"),
+      );
       key(document.activeElement as HTMLElement, "End");
       assertVisible();
       item.click();

@@ -31,7 +31,7 @@ export function resttyClipboardActions(
     },
     async inject(text, injectOptions) {
       options.onSemanticInput?.();
-      await delivery.deliver(text, injectOptions);
+      return delivery.deliver(text, injectOptions);
     },
     selectAll: () => {
       liveSelection()?.selectAll();

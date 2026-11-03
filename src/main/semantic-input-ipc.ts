@@ -148,8 +148,11 @@ export function registerSemanticInputIpc(options: {
       source: ExtensionViewRequestContext,
       signal: AbortSignal,
       admit: (signal: AbortSignal, commit: () => void) => Promise<void>,
-    ): Promise<{ ok: boolean }> {
+      waitForDelivery = false,
+    ): Promise<{ ok: boolean; reason?: string }> {
       const owner = owners.get(window.webContents);
+      if (waitForDelivery && owner?.pending)
+        return Promise.resolve({ ok: false, reason: "terminal-busy" });
       if (
         !owner ||
         owner.pending ||
@@ -157,9 +160,12 @@ export function registerSemanticInputIpc(options: {
         signal.aborted ||
         options.quitting() ||
         !source.isCurrentVisible() ||
-        !isSemanticInputRequest(input)
+        !isSemanticInputRequest(input) ||
+        (waitForDelivery && (input.intent !== "insert" || input.preview))
       )
-        return Promise.reject(new Error("Semantic input unavailable"));
+        return waitForDelivery
+          ? Promise.resolve({ ok: false, reason: "terminal-unavailable" })
+          : Promise.reject(new Error("Semantic input unavailable"));
       // Capture before asynchronous admission. The renderer independently checks
       // this revision before capturing its exact Surface; neither side retargets.
       const revision = owner.revision;
@@ -199,7 +205,11 @@ export function registerSemanticInputIpc(options: {
             if (settled || !sent) return;
             settled = true;
             cleanup();
-            resolve({ ok: available });
+            resolve(
+              waitForDelivery && !available
+                ? { ok: false, reason: "terminal-not-completed" }
+                : { ok: available },
+            );
           },
           cancel,
         };
@@ -224,6 +234,7 @@ export function registerSemanticInputIpc(options: {
                 source: source.id,
                 revision,
                 input,
+                ...(waitForDelivery ? { waitForDelivery: true } : {}),
               });
             }),
           )

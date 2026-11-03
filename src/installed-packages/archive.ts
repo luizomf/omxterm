@@ -38,6 +38,7 @@ export type PackageManifest = {
     | "terminal.openLayout.v1"
     | "terminal.mirrorTyping.v1"
     | "terminal.semanticInput.v1"
+    | "terminal.insertPath.v1"
     | "state.v1"
   )[];
   view?: { entry: string; action: string; title: string; context?: "window" };
@@ -131,7 +132,7 @@ function validateCapabilities(value: Record<string, unknown>): void {
     "capabilities" in value &&
     (!Array.isArray(value.capabilities) ||
       value.capabilities.length < 1 ||
-      value.capabilities.length > 6 ||
+      value.capabilities.length > 7 ||
       new Set(value.capabilities).size !== value.capabilities.length ||
       value.capabilities.some(
         (capability) =>
@@ -142,6 +143,7 @@ function validateCapabilities(value: Record<string, unknown>): void {
             "terminal.openLayout.v1",
             "terminal.mirrorTyping.v1",
             "terminal.semanticInput.v1",
+            "terminal.insertPath.v1",
             "state.v1",
           ].includes(capability),
       ))

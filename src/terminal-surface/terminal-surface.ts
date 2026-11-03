@@ -29,7 +29,11 @@ export interface TerminalSurface {
   zoom(command: TerminalFontZoom): void;
   copy(): Promise<void>;
   paste(): Promise<void>;
-  inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
+  // True means delivery reached the Surface transport, not that a program consumed it.
+  inject(
+    text: string,
+    options?: { readonly submit?: boolean },
+  ): Promise<boolean | void>;
   selectAll(): void;
   // Opens the in-memory scrollback search bar, or focuses it when open.
   find(): void;
