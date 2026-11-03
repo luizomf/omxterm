@@ -66,8 +66,11 @@ Companion tools distinguish Close from Hide: Close uses the same owner-bound
 per-view retirement path, while Hide/Escape retains the page and remembers the
 panel selection separately from native activity. A tool entry point closes only
 its selected-visible view; otherwise it reveals or opens it. The independent
-panel toggle never implicitly reopens a closed tool. Built-in tools retain an
-available factory separately from opened instances. Closing the selected tool
+panel toggle restores opened tools, not arbitrary closed tools. The narrow
+[ADR0044 empty-panel exception](0044-migrate-snippets-without-changing-terminal-input.md#empty-panel-access-fallback)
+opens available Snippets when no tools are open; it does not restore discarded
+view state or install/enable anything. Built-in tools retain an available factory
+separately from opened instances. Closing the selected tool
 hides the container without selecting a successor; other opened tools survive.
 Removal is per-identity and idempotent across retirement notification and close
 completion. Explicit close transfers native focus from the selected focused child
