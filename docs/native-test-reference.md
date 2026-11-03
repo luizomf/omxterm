@@ -695,6 +695,43 @@ Headless composition and receipt coverage:
 `npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-publication.test.ts test/unit/native-fixture-registration-diagnostics.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
 Passing those controlled cases does not qualify Windows native D9 or its baseline.
 
+## Supervisor cleanup assistance
+
+New native supervisor receipts include `cleanupAssistance`:
+
+- `none`: process cleanup completed without an observed assistance attempt.
+- `attempted`: an identity-checked POSIX STOP/KILL was attempted, or the Windows
+  termination command emitted its fixed marker immediately before calling Kill
+  on a handle whose creation identity matched. This includes partial command
+  failure and a signal racing with exit; it does **not** prove signal delivery,
+  successful termination, or that the attempt caused disappearance.
+- `unknown`: cleanup did not reach a complete observation and no attempt was
+  recorded. In particular, a failed Windows command without its marker cannot
+  establish that no Kill occurred.
+
+Keep this separate from the existing native exit code, signal, reason and
+`cleanupErrors`. `attempted` plus empty cleanup errors records completed cleanup
+**after an attempt**, not natural Quit or causal proof of assistance. An attempt
+with errors remains failed/uncertain. `none` alone is not success either: actual
+exit, stream closure, registration checks, cleanup errors and owner join still
+apply, within the existing cooperative ownership limits. Natural-settlement
+claims require explicit `none` in addition to those checks and the scenario's
+Quit assertions. No new identity acquisition, signal selection, cleanup authority
+or deadline is introduced.
+
+Historical receipts without this field remain readable but unclassified; do not
+infer `none` from empty cleanup errors or later process absence. Historical
+campaign results are not retroactively reclassified. Snippets source/exact/native,
+Files DMG/production campaigns and the performance runner now require explicit `none` before accepting
+normal settlement. The Windows installed-public fence still permits its existing
+owned uninstall after joined cleanup, including assisted failure settlement; it
+compares assistance metadata but does not turn cleanup permission into PASS.
+
+Headless actual emitted-helper/supervisor controls:
+`npm test -- test/unit/native-fixture-cleanup-assistance.test.ts test/unit/native-fixture-cleanup-failure.test.ts test/unit/snippets-windows-public-campaign.test.ts test/unit/snippets-windows-public-fence.test.ts`.
+These model OS inventories/signals/commands and use real receipt/profile I/O;
+they do not add Windows Snippets, product input or native GUI qualification.
+
 ## Windows cleanup diagnostics
 
 Windows supervisor receipts can additionally contain optional `cleanupFailure`

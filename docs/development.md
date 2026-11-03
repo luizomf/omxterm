@@ -631,7 +631,7 @@ Linux packaged-wrapper controls: [fixture reference](native-test-reference.md#li
 Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`):
 
 - Fixture diagnostics and stdout/stderr logs are written under `.scratch/native-fixtures/`.
-- The supervisor removes temporary profiles only after verifying that child processes have exited and streams have closed.
+- The supervisor removes temporary profiles only after verifying that child processes have exited and streams have closed. Its [cleanup-assistance classification](native-test-reference.md#supervisor-cleanup-assistance) distinguishes no observed attempt from attempted or unknown assistance; cleanup success alone is not natural Quit.
 - If a fixture process cannot be cleanly verified on exit, it writes an `ownership-blocked.json` receipt in `.scratch/native-fixtures/` and blocks further launches in that scope until inspected (except for abandoned Windows pre-bootstrap receipts whose parent process has already exited, which are archived automatically).
 
 To run the unit tests for fixture preparation and supervision headlessly:

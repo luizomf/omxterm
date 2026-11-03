@@ -140,6 +140,7 @@ beforeEach(async () => {
         ? "parent-disconnected"
         : "exit",
       cleanupErrors: [],
+      cleanupAssistance: "none",
       stdout: "",
       stderr: "",
     };

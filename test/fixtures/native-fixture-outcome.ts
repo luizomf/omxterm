@@ -52,6 +52,9 @@ export interface NativeFixtureResult {
   readonly stderr: string;
   readonly cleanupErrors: readonly string[];
   readonly cleanupFailure?: NativeFixtureCleanupFailure;
+  // Absent in historical receipts. Attempts do not establish signal delivery or
+  // causation; cleanupErrors separately reports whether settlement completed.
+  readonly cleanupAssistance?: "none" | "attempted" | "unknown";
 }
 
 export function isNativeFixtureResult(
@@ -76,6 +79,10 @@ export function isNativeFixtureResult(
     "cleanupErrors" in result &&
     Array.isArray(result.cleanupErrors) &&
     result.cleanupErrors.every((error: unknown) => typeof error === "string") &&
+    (!("cleanupAssistance" in result) ||
+      ["none", "attempted", "unknown"].some(
+        (value) => value === result.cleanupAssistance,
+      )) &&
     (!("cleanupFailure" in result) ||
       (result.cleanupErrors.length > 0 &&
         isCleanupFailure(result.cleanupFailure)))

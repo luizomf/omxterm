@@ -142,6 +142,7 @@ export async function terminateFixtureProcesses(
     context?: FixtureCleanupCommandContext,
   ) => void = () => {},
   onFailure?: FixtureCleanupCommandContext["onFailure"],
+  onAssistance?: () => void,
 ): Promise<void> {
   const context = (callsite: NativeFixtureCleanupFailure["callsite"]) =>
     onFailure ? { callsite, onFailure } : undefined;
@@ -150,15 +151,18 @@ export async function terminateFixtureProcesses(
   // Freeze POSIX parents and rescan before killing, closing the spawn race.
   if (process.platform !== "win32") {
     for (let pass = 0; pass < 3; pass += 1) {
-      for (const row of owned.values()) signalFixtureProcess(row, "SIGSTOP");
+      for (const row of owned.values())
+        signalFixtureProcess(row, "SIGSTOP", onAssistance);
       collectFixtureDescendants(fixtureProcesses(), owned);
       collectRegistered();
     }
   }
   const targets = [...owned.values()].reverse();
   if (process.platform === "win32")
-    killWindowsFixtureProcesses(targets, context("termination"));
-  else for (const row of targets) signalFixtureProcess(row, "SIGKILL");
+    killWindowsFixtureProcesses(targets, context("termination"), onAssistance);
+  else
+    for (const row of targets)
+      signalFixtureProcess(row, "SIGKILL", onAssistance);
   // This is a post-termination deadline, not a total-cleanup bound. It is
   // checked after each bounded inventory; an in-flight inventory may overrun it.
   // Freeze/rescan and signal operations above have separate command bounds.
@@ -212,21 +216,33 @@ export function collectFixtureDescendants(
   } while (changed);
 }
 
+const assistanceMarker = "OMXTERM_CLEANUP_ASSISTANCE_ATTEMPTED";
+
+function observeWindowsAssistance(output: unknown, onAssistance?: () => void) {
+  if (
+    (typeof output === "string" || Buffer.isBuffer(output)) &&
+    output.toString().split(/\r?\n/u).includes(assistanceMarker)
+  )
+    onAssistance?.();
+}
+
 function killWindowsFixtureProcesses(
   rows: readonly FixtureProcess[],
   failureContext?: FixtureCleanupCommandContext,
+  onAssistance?: () => void,
 ): void {
   const encoded = Buffer.from(JSON.stringify(rows)).toString("base64");
   // Hold each process handle before rechecking CIM identity. Kill uses that
   // handle, not an unchecked PID or a broad taskkill /T selection.
-  observeCleanupCommand(failureContext, () =>
-    execFileSync(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-NonInteractive",
-        "-Command",
-        `
+  try {
+    const output = observeCleanupCommand(failureContext, () =>
+      execFileSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `
     $ErrorActionPreference = 'Stop'
     $targets = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${encoded}')) | ConvertFrom-Json
     foreach ($target in $targets) {
@@ -235,29 +251,51 @@ function killWindowsFixtureProcesses(
       try {
         $null = $p.Handle
         $c = Get-CimInstance Win32_Process -Filter ("ProcessId = " + $target.pid)
-        if ($c -and $c.CreationDate.ToUniversalTime().Ticks.ToString() -eq $target.identity) { $p.Kill() }
+        if ($c -and $c.CreationDate.ToUniversalTime().Ticks.ToString() -eq $target.identity) {
+          [Console]::Out.WriteLine('${assistanceMarker}')
+          [Console]::Out.Flush()
+          $p.Kill()
+        }
       } finally { $p.Dispose() }
     }
     exit 0
   `,
-      ],
-      { timeout: 5_000, windowsHide: true },
-    ),
-  );
+        ],
+        { timeout: 5_000, windowsHide: true },
+      ),
+    );
+    observeWindowsAssistance(output, onAssistance);
+  } catch (error) {
+    // A failed command may already have attempted some targets. Retain only the
+    // fixed marker, never command output, and preserve the original exception.
+    try {
+      const stdout =
+        error && typeof error === "object"
+          ? Object.getOwnPropertyDescriptor(error, "stdout")
+          : undefined;
+      if (stdout && "value" in stdout)
+        observeWindowsAssistance(stdout.value, onAssistance);
+    } catch {
+      // Observation must never replace the original command exception.
+    }
+    throw error;
+  }
 }
 
 export function signalFixtureProcess(
   row: FixtureProcess,
   signal: "SIGSTOP" | "SIGKILL",
+  onAssistance?: () => void,
 ): void {
   if (process.platform === "win32") {
-    killWindowsFixtureProcesses([row]);
+    killWindowsFixtureProcesses([row], undefined, onAssistance);
     return;
   }
   const current = fixtureProcesses().find(
     (candidate) => candidate.pid === row.pid,
   );
   if (current?.identity !== row.identity) return;
+  onAssistance?.();
   try {
     process.kill(row.pid, signal);
   } catch (error) {
