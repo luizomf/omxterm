@@ -227,7 +227,7 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.snippetsOptional":
     "Snippets é uma extensão opcional. Use os controles de instalação existentes para instalá-la, ou Ativar se estiver instalada, mas desativada. Abrir esta página não instala nem ativa a extensão. Seu catálogo snippets.yaml permanece inalterado. Consulte o estado da extensão abaixo para verificar a disponibilidade.",
   "extensions.explanation":
-    "Instale um pacote .omxext baixado separadamente. O código da extensão tem as permissões do seu usuário; não há isolamento de segurança. Pacotes instalados ficam inativos até serem acionados. Esta prévia é exclusiva para Linux ARM64.",
+    "Instale um pacote .omxext baixado separadamente. O código da extensão tem as permissões do seu usuário; não há isolamento de segurança. Pacotes instalados ficam inativos até serem acionados. As plataformas compatíveis dependem da extensão; confira os requisitos antes de instalá-la.",
   "extensions.install": "Instalar .omxext local…",
   "extensions.url": "Link HTTPS do arquivo",
   "extensions.installLink": "Instalar pelo link",
@@ -255,7 +255,9 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.catalogStale":
     "Não foi possível atualizar o catálogo. Exibindo a última consulta bem-sucedida; as versões podem estar desatualizadas.",
   "extensions.catalogUnavailable":
-    "Catálogo indisponível. Extensões instaladas e instalação de arquivo local continuam funcionando offline.",
+    "Catálogo indisponível. Se o gerenciamento de extensões estiver disponível, você ainda pode instalar arquivos locais e gerenciar extensões instaladas offline.",
+  "extensions.catalogManagementUnavailable":
+    "O catálogo e a instalação estão indisponíveis porque o gerenciamento de extensões está indisponível.",
   "extensions.catalogIdle":
     "O catálogo se conecta apenas ao escolher Explorar ou Atualizar. Sem atualizações automáticas.",
   "extensions.catalogLoaded":
@@ -263,6 +265,12 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.catalogEmpty": "O catálogo ainda não tem extensões publicadas.",
   "extensions.catalogInstalled": "Instalada: {version}",
   "extensions.catalogNotInstalled": "Não instalada",
+  "extensions.catalogPlatforms":
+    "Plataformas desta oferta do catálogo: {platforms}",
+  "extensions.catalogPlatformIncompatible":
+    "Não oferecida por este catálogo para esta plataforma",
+  "extensions.catalogEngineIncompatible":
+    "Incompatível com esta versão do OMXTerm ou da API de extensões",
   "extensions.catalogInstall": "Instalar",
   "extensions.catalogUpdate": "Atualizar",
   "extensions.catalogReinstall": "Reinstalar",
@@ -301,7 +309,8 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.outcome-unknown": "Resultado da operação desconhecido",
   "extensions.runtime-unavailable":
     "Armazenamento ou execução de extensões indisponível. Os terminais continuam utilizáveis",
-  "extensions.unsupported": "A prévia de Files requer Linux ARM64",
+  "extensions.unsupported":
+    "O gerenciamento de extensões não está disponível nesta plataforma",
   "mirrorTyping.title": "Espelhar digitação",
   "mirrorTyping.preparing": "Iniciando espelhamento…",
   "mirrorTyping.active": "Espelhando digitação · {count} painéis",

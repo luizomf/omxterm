@@ -164,14 +164,24 @@ export function parseCatalog(bytes: Buffer): CatalogRelease[] {
     throw new CatalogError("invalid-catalog");
   }
 }
+function catalogIncompatibility(
+  release: CatalogRelease,
+  runtime: PackageRuntime,
+  target: string,
+): CatalogCard["incompatibility"] {
+  const platform = release.targets.includes(target);
+  const engine = packageCompatible(release, runtime);
+  if (!platform && !engine) return "platform-and-engine";
+  if (!platform) return "platform";
+  if (!engine) return "engine";
+  return null;
+}
 export function catalogCompatible(
   release: CatalogRelease,
   runtime: PackageRuntime,
   target: string,
 ): boolean {
-  return (
-    release.targets.includes(target) && packageCompatible(release, runtime)
-  );
+  return catalogIncompatibility(release, runtime, target) === null;
 }
 export function catalogAction(
   release: CatalogRelease,
@@ -230,6 +240,11 @@ export function createExtensionCatalog(
         stale,
         entries: (entries ?? []).map(({ selection, release }) => {
           const existing = installed.find((entry) => entry.id === release.id);
+          const incompatibility = catalogIncompatibility(
+            release,
+            runtime,
+            target,
+          );
           return {
             selection,
             id: release.id,
@@ -237,7 +252,9 @@ export function createExtensionCatalog(
             description: release.description,
             version: release.version,
             installedVersion: existing?.manifest?.version ?? null,
-            compatible: catalogCompatible(release, runtime, target),
+            compatible: incompatibility === null,
+            targets: [...release.targets],
+            incompatibility,
             action: catalogAction(
               release,
               existing

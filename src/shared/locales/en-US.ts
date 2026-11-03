@@ -215,7 +215,7 @@ export const englishMessages = {
   "extensions.snippetsOptional":
     "Snippets is an optional extension. Use the existing installation controls to install it, or Enable if it is installed but disabled. Opening this page does not install or enable it. Your snippets.yaml catalog stays unchanged. Check the extension status below for availability.",
   "extensions.explanation":
-    "Install a separately downloaded .omxext package. Trusted extension code has your user permissions; it is not sandboxed. Installed packages stay dormant until invoked. This preview is Linux ARM64 only.",
+    "Install a separately downloaded .omxext package. Trusted extension code has your user permissions; it is not sandboxed. Installed packages stay dormant until invoked. Platform support depends on the extension; check its requirements before installing.",
   "extensions.install": "Install local .omxext…",
   "extensions.url": "HTTPS archive link",
   "extensions.installLink": "Install from link",
@@ -244,7 +244,9 @@ export const englishMessages = {
   "extensions.catalogStale":
     "Catalog refresh unavailable. Showing the last successful snapshot; versions may be outdated.",
   "extensions.catalogUnavailable":
-    "Catalog unavailable. Installed extensions and local-file installation still work offline.",
+    "Catalog unavailable. If extension management is available, you can still install local files and manage installed extensions offline.",
+  "extensions.catalogManagementUnavailable":
+    "Catalog and installation are unavailable because extension management is unavailable.",
   "extensions.catalogIdle":
     "The catalog connects only when you choose Browse or Refresh. No automatic updates.",
   "extensions.catalogLoaded":
@@ -252,6 +254,11 @@ export const englishMessages = {
   "extensions.catalogEmpty": "The catalog has no published extensions yet.",
   "extensions.catalogInstalled": "Installed: {version}",
   "extensions.catalogNotInstalled": "Not installed",
+  "extensions.catalogPlatforms": "Catalog offer platforms: {platforms}",
+  "extensions.catalogPlatformIncompatible":
+    "Not offered by this catalog for this platform",
+  "extensions.catalogEngineIncompatible":
+    "Not compatible with this OMXTerm or extension API version",
   "extensions.catalogInstall": "Install",
   "extensions.catalogUpdate": "Update",
   "extensions.catalogReinstall": "Reinstall",
@@ -290,7 +297,8 @@ export const englishMessages = {
   "extensions.outcome-unknown": "Operation outcome unknown",
   "extensions.runtime-unavailable":
     "Extension store or runtime unavailable. Terminal sessions remain usable",
-  "extensions.unsupported": "Files development preview requires Linux ARM64",
+  "extensions.unsupported":
+    "Extension management is unavailable on this platform",
   "mirrorTyping.title": "Mirror Typing",
   "mirrorTyping.preparing": "Starting mirroring…",
   "mirrorTyping.active": "Mirroring typing · {count} panes",

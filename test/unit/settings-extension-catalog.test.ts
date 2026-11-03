@@ -20,6 +20,8 @@ const catalog = {
       version: "0.1.0",
       installedVersion: "0.2.0",
       compatible: true,
+      targets: ["linux-arm64"],
+      incompatibility: null,
       action: "replace" as const,
     },
   ],
@@ -47,6 +49,12 @@ it("loads only explicitly, renders plain text, localizes retained cards and bind
   expect(document.querySelector("script,img")).toBeNull();
   expect(document.body.textContent).toContain("<script>evil()</script>");
   expect(document.body.textContent).toContain(
+    "Catalog offer platforms: Linux ARM64",
+  );
+  expect(document.body.textContent).not.toContain(
+    "This preview is Linux ARM64 only",
+  );
+  expect(document.body.textContent).toContain(
     "older version or different bytes",
   );
   const retained = button("Replace installed version");
@@ -62,6 +70,131 @@ it("loads only explicitly, renders plain text, localizes retained cards and bind
     selection: catalog.entries[0]!.selection,
   });
 });
+it.each([
+  [
+    "platform",
+    "Not offered by this catalog for this platform",
+    "Não oferecida por este catálogo para esta plataforma",
+  ],
+  [
+    "engine",
+    "Not compatible with this OMXTerm or extension API version",
+    "Incompatível com esta versão do OMXTerm ou da API de extensões",
+  ],
+  [
+    "platform-and-engine",
+    "Not offered by this catalog for this platform",
+    "Não oferecida por este catálogo para esta plataforma",
+  ],
+] as const)(
+  "shows %s incompatibility and supported platforms",
+  async (reason, en, pt) => {
+    const labels: ((t: Translate) => void)[] = [];
+    const request = vi
+      .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
+      .mockResolvedValue({
+        ok: true,
+        entries: [],
+        catalog: {
+          ...catalog,
+          entries: [
+            {
+              ...catalog.entries[0]!,
+              compatible: false,
+              targets: ["linux-arm64", "darwin-arm64"],
+              incompatibility: reason,
+            },
+          ],
+        },
+      });
+    document.body.append(
+      renderExtensions(document, { request }, () => true, labels),
+    );
+    await vi.waitFor(() => expect(document.body.textContent).toContain(en));
+    expect(document.body.textContent).toContain(
+      "Catalog offer platforms: Linux ARM64, macOS ARM64",
+    );
+    if (reason === "platform-and-engine")
+      expect(document.body.textContent).toContain(
+        "Not compatible with this OMXTerm or extension API version",
+      );
+    const install = button("Replace installed version");
+    expect(install.disabled).toBe(true);
+    labels.forEach((label) => label(translatorFor("pt-BR").t));
+    expect(document.body.textContent).toContain(pt);
+    expect(document.body.textContent).toContain(
+      "Plataformas desta oferta do catálogo: Linux ARM64, macOS ARM64",
+    );
+    expect(install.disabled).toBe(true);
+  },
+);
+it("explains unavailable extension management without a Files-specific claim", async () => {
+  const labels: ((t: Translate) => void)[] = [];
+  const request = vi
+    .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
+    .mockResolvedValue({ ok: false, error: "unsupported" });
+  document.body.append(
+    renderExtensions(document, { request }, () => true, labels),
+  );
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "Extension management is unavailable on this platform",
+    ),
+  );
+  labels.forEach((label) => label(translatorFor("pt-BR").t));
+  expect(document.body.textContent).toContain(
+    "O gerenciamento de extensões não está disponível nesta plataforma",
+  );
+});
+it.each(["unsupported", "runtime-unavailable"])(
+  "does not promise offline installation when catalog refresh returns %s",
+  async (error) => {
+    const labels: ((t: Translate) => void)[] = [];
+    const request = vi
+      .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
+      .mockResolvedValue({ ok: false, error });
+    document.body.append(
+      renderExtensions(document, { request }, () => true, labels),
+    );
+    await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    button("Browse official extensions").click();
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain(
+        "Catalog and installation are unavailable because extension management is unavailable",
+      ),
+    );
+    expect(document.body.textContent).not.toContain(
+      "local-file installation still work offline",
+    );
+    labels.forEach((label) => label(translatorFor("pt-BR").t));
+    expect(document.body.textContent).toContain(
+      "O catálogo e a instalação estão indisponíveis porque o gerenciamento de extensões está indisponível",
+    );
+  },
+);
+it("clears manager-unavailable status when an explicit shared snapshot succeeds", async () => {
+  const request = vi
+    .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
+    .mockResolvedValueOnce({ ok: false, error: "runtime-unavailable" })
+    .mockResolvedValueOnce({ ok: false, error: "runtime-unavailable" })
+    .mockResolvedValueOnce({ ok: true, entries: [], catalog });
+  document.body.append(renderExtensions(document, { request }, () => true));
+  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+  button("Browse official extensions").click();
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "Catalog and installation are unavailable",
+    ),
+  );
+  button("Refresh").click();
+  await vi.waitFor(() =>
+    expect(button("Replace installed version")).toBeDefined(),
+  );
+  expect(document.body.textContent).not.toContain(
+    "Catalog and installation are unavailable",
+  );
+  expect(document.body.textContent).toContain("Catalog loaded.");
+});
 it("keeps local controls usable during cold offline loading and failure, with owned cancellation", async () => {
   let finish!: (result: ExtensionsResult) => void;
   const request = vi
@@ -74,8 +207,9 @@ it("keeps local controls usable during cold offline loading and failure, with ow
         : { ok: true, entries: [] },
     );
   const disposers: (() => void)[] = [];
+  const labels: ((t: Translate) => void)[] = [];
   document.body.append(
-    renderExtensions(document, { request }, () => true, [], disposers),
+    renderExtensions(document, { request }, () => true, labels, disposers),
   );
   await vi.waitFor(() =>
     expect(button("Install from link").disabled).toBe(false),
@@ -97,8 +231,15 @@ it("keeps local controls usable during cold offline loading and failure, with ow
     expect(document.body.textContent).toContain("Catalog unavailable."),
   );
   expect(document.body.textContent).not.toContain("no published extensions");
+  expect(document.body.textContent).toContain(
+    "If extension management is available, you can still install local files and manage installed extensions offline",
+  );
   expect(button("Install from link").disabled).toBe(false);
   expect(button("Retry catalog").disabled).toBe(false);
+  labels.forEach((label) => label(translatorFor("pt-BR").t));
+  expect(document.body.textContent).toContain(
+    "Se o gerenciamento de extensões estiver disponível, você ainda pode instalar arquivos locais e gerenciar extensões instaladas offline",
+  );
 });
 it("adopts a fresh shared snapshot after another window recovers the catalog", async () => {
   const request = vi

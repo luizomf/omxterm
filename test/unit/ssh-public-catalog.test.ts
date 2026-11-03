@@ -224,6 +224,29 @@ it("passively ties unchanged HTTPS response streams, snapshot selection and cons
   expect([...f.listeners.values()].every((set) => set.size === 0)).toBe(true);
 });
 
+it("observes the candidate macOS target without accepting unrelated targets", async () => {
+  const f = fixture();
+  f.release.targets = ["linux-arm64", "darwin-arm64"];
+  f.changeCatalog();
+  const observer = f.start();
+  await f.invoke({ operation: "catalog-refresh" });
+  await f.invoke({ operation: "catalog-install", selection });
+  expect(observer.summary()).toMatchObject({
+    offer: { targets: ["linux-arm64", "darwin-arm64"] },
+    installed: 1,
+  });
+  observer.stop();
+
+  const wrong = fixture();
+  wrong.release.targets = ["linux-arm64", "win32-arm64"];
+  wrong.changeCatalog();
+  const rejected = wrong.start();
+  await expect(wrong.invoke({ operation: "catalog-refresh" })).rejects.toThrow(
+    /release targets/,
+  );
+  rejected.stop();
+});
+
 it("records each actual download and consent against the same selection and catalog generation", async () => {
   const f = fixture();
   const observer = f.start();

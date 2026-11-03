@@ -1,6 +1,8 @@
 # Transfer explicit SSH launches to core
 
-Status: Accepted for the Linux ARM64 optional SSH Connect preview (#671).
+Status: Accepted for the optional SSH Connect preview (#671). Linux ARM64 is
+published; the source catalogs propose the existing SSH0.3.1 archive for macOS
+ARM64 after the bounded checks in the [SSH guide](../ssh-connect.md).
 
 ## Decision
 
@@ -50,6 +52,8 @@ the default shell; no reconnect or implicit configuration writes are added.
 
 API0.1.x remains compatible with unchanged Files manifests. SSH requires the first
 compatible host0.24.0-dev.0 and a separate archive; no stable SDK, broker, sandbox,
-real connectivity evidence or other-platform preview qualification is implied.
+general connectivity or other-platform preview qualification is implied. The
+separate macOS loopback checkpoint and its wrapper/qualification limits are
+recorded in the SSH guide.
 Tests must compose actual capture, admission, token, Surface and native lifetime
 seams, not merely keep a dead tab whose renderer was already destroyed.

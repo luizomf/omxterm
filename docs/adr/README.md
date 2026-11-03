@@ -51,7 +51,8 @@ source/test boundaries and known limitations.
 | 0040 | [Run extension backends in owned bundled-Node children](0040-run-backends-in-owned-node-children.md)                           |
 
 [ADR0041: Transfer explicit SSH launches to core](0041-transfer-ssh-launches-to-core.md)
-adds the optional Linux ARM64 SSH Connect capability and ended-readable Surface.
+adds the optional SSH Connect capability and ended-readable Surface; the SSH
+guide distinguishes published targets from the macOS source-catalog candidate.
 [ADR0042: Save layouts without restoring sessions](0042-save-layouts-without-restoring-sessions.md)
 adds explicit optional Saved Layout capture/open and extension-scoped CAS state.
 [ADR0043: Revoke visible Mirror Typing routes](0043-revoke-visible-mirror-typing-routes.md)

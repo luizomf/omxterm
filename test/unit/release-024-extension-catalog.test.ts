@@ -63,7 +63,7 @@ describe("0.24.0 first-party catalog candidate", () => {
         name: "SSH Connect",
         version: "0.3.1",
         engines: { omxterm: ">=0.24.0-dev.8", api: "0.1.x" },
-        targets: ["linux-arm64"],
+        targets: ["linux-arm64", "darwin-arm64"],
         archive: {
           url: "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext",
           sha256: sshSha,
@@ -200,7 +200,7 @@ describe("0.24.0 first-party catalog candidate", () => {
     expect(packageCompatible(old, runtime("0.24.0"))).toBe(false);
   });
 
-  it("retains SSH host admission but does not advertise other targets", async () => {
+  it("offers the unchanged SSH archive on Linux and macOS ARM64 only", async () => {
     const ssh = byId(await readCatalog(targets[0][1]), "omxterm.ssh");
     expect(catalogCompatible(ssh, runtime("0.24.0-dev.7"), "linux-arm64")).toBe(
       false,
@@ -209,12 +209,10 @@ describe("0.24.0 first-party catalog candidate", () => {
       expect(catalogCompatible(ssh, runtime(version), "linux-arm64")).toBe(
         true,
       );
-    for (const target of [
-      "darwin-arm64",
-      "linux-x64",
-      "win32-arm64",
-      "win32-x64",
-    ])
+    expect(catalogCompatible(ssh, runtime("0.24.0"), "darwin-arm64")).toBe(
+      true,
+    );
+    for (const target of ["linux-x64", "win32-arm64", "win32-x64"])
       expect(catalogCompatible(ssh, runtime("0.24.0"), target)).toBe(false);
     expect(catalogAction(ssh, { version: "0.3.0", digest: "old" })).toBe(
       "update",

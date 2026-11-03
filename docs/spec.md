@@ -86,7 +86,7 @@ OMXTerm:
 AI assistance, unrestricted broadcast input, saved or reconnectable running sessions, shell integration,
 profiles, a remote theme marketplace, automatic configuration reload, automatic
 updates, and remote terminal features beyond the optional
-[Linux ARM64 SSH Connect preview](ssh-connect.md) are outside the current product
+[Linux/macOS ARM64 SSH Connect preview candidate](ssh-connect.md) are outside the current product
 contract. SSH Connect is separately installed: its incomplete read-only alias
 index and distinct quick-connect page request a typed, main-owned literal
 system-ssh launch, without brokering authentication or adding reconnect. The optional
@@ -1822,9 +1822,11 @@ Windows public consumption remains unqualified. macOS source composition include
 (see [qualification scope](macos-extension-composition.md)). Main selects the
 complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
 schema1 catalog for every other target. Common
-SSH/Snippets entries remain identical. The promoted catalogs select Files0.6
-for Linux and macOS ARM64 and SSH0.3.1 for Linux ARM64; archive publication and
-actual public-consumption qualification are separate. The earlier catalog promotion
+SSH/Snippets entries remain identical. The published catalogs select Files0.6
+for Linux and macOS ARM64 and SSH0.3.1 for Linux ARM64. The source catalogs propose
+adding macOS ARM64 to the existing SSH0.3.1 offer after the bounded exact-pair
+checks; source integration, public catalog readback and actual macOS public
+consumption remain separate. The earlier catalog promotion
 added `linux-x64` to Snippets; public endpoint readback and the separate packaged public-HTTPS checkpoint passed
 for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).
 The earlier common Snippets promotion admitted `win32-arm64` for the public
@@ -1836,7 +1838,11 @@ The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
 and requires exact archive size/SHA-256 and manifest identity/version/engines
-before the existing one-shot trust flow. Host compatibility uses ordinary semver
+before the existing one-shot trust flow. Cards show the platforms of the selected
+catalog offer, not a complete list of every supported package/platform pair, and
+distinguish target from host/API incompatibility, including when both apply.
+Manual local/link archive admission checks host/API, not catalog targets. Host
+compatibility uses ordinary semver
 first, with explicit bridges for canonical `0.24.1-dev.N` when the original
 range admits stable `0.24.0` and `0.24.1`, and canonical `0.25.0-dev.N` when
 it admits stable `0.24.0` and `0.25.0`, plus the separate historical Files

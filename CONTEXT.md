@@ -270,8 +270,9 @@ replay or startup restoration. Its revisioned state survives uninstall; Forget
 removes the active snapshot, not possible interrupted-write remnants. See
 [the guide](docs/saved-layout.md).
 
-**SSH Connect** — A separately installed Linux ARM64 preview companion-panel page
-with an incomplete bounded OpenSSH alias index and distinct quick-connect field.
+**SSH Connect** — A separately installed Linux ARM64 preview companion-panel page,
+with macOS ARM64 proposed by the source catalogs after bounded exact-pair checks.
+It has an incomplete bounded OpenSSH alias index and distinct quick-connect field.
 Its declared `terminal.openSsh.v1` capability transfers a typed target to a new
 core Terminal Tab while preserving the panel and existing sessions. Core
 owns literal system-ssh launch, PTY, Busy/close/Quit and retained nonzero
@@ -308,10 +309,14 @@ only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
 and manifest identity must match before ordinary one-shot trust. Its in-memory
 last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
-endpoint offered Linux Files0.4; the promoted catalogs select Files0.6 for each
-ARM64 target and SSH0.3.1 for Linux. Common SSH/Snippets entries match; no merging
-or fallback occurs. Target and shared host/API compatibility govern selection;
-the bounded development-family exceptions are described in the
+endpoint offered Linux Files0.4; the published catalogs select Files0.6 for each
+ARM64 target and SSH0.3.1 for Linux. The source candidate adds macOS ARM64 for
+that same SSH archive; promotion and macOS public consumption are separate.
+Common SSH/Snippets entries match; no merging or fallback occurs. Cards show the
+selected offer's platforms and distinguish target from host/API incompatibility.
+Target and shared host/API compatibility govern catalog selection, while local/link
+archive admission does not enforce catalog targets. The bounded development-family
+exceptions are described in the
 [installation contract](docs/extension-installation-foundation.md#archive-contract).
 Admission is not runtime or platform qualification. It is not a marketplace or
 update daemon.

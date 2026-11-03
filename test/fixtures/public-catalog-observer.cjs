@@ -16,6 +16,7 @@ function startSshPublicObservation(options) {
       name: "SSH Connect",
       version: "0.3.1",
       targets: ["linux-arm64"],
+      additionalTargetSets: [["linux-arm64", "darwin-arm64"]],
       archiveUrl:
         "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext",
       archiveBytes: 11606,
@@ -278,7 +279,21 @@ function startPublicCatalogObservation({
         offer = releases[0];
         assert.equal(offer.name, release.name);
         assert.equal(offer.version, release.version);
-        assert.deepEqual(offer.targets, release.targets);
+        const allowedTargets = [
+          release.targets,
+          ...(release.additionalTargetSets ?? []),
+        ];
+        assert.ok(
+          Array.isArray(offer.targets) &&
+            allowedTargets.some(
+              (targets) =>
+                targets.length === offer.targets.length &&
+                targets.every(
+                  (target, index) => target === offer.targets[index],
+                ),
+            ),
+          `${release.label} release targets`,
+        );
         assert.equal(offer.archive.sha256, archiveSha256);
         assert.ok(
           Number.isSafeInteger(offer.archive.bytes) && offer.archive.bytes > 0,

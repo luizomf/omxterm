@@ -32,6 +32,8 @@ export type CatalogCard = {
   version: string;
   installedVersion: string | null;
   compatible: boolean;
+  targets: string[];
+  incompatibility: "platform" | "engine" | "platform-and-engine" | null;
   action: "install" | "update" | "reinstall" | "replace";
 };
 export type CatalogSnapshot = {

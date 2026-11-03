@@ -17,6 +17,10 @@ The original target split kept the legacy document unchanged, preserving Linux's
 Files0.4 offer at that checkpoint. The promoted catalogs select Files0.6
 for Linux ARM64 and macOS ARM64 on their respective endpoints. Common SSH/Snippets
 entries are identical in both documents; promotions must update both together.
+The published SSH0.3.1 offer is Linux ARM64 only; this source candidate adds
+macOS ARM64 for the exact same archive after the bounded
+[local-pair checks](ssh-connect.md#macos-arm64-exact-pair-checkpoint). Integration,
+public endpoint readback and macOS public consumption are separate steps.
 Only explicit Browse/Refresh requests the selected endpoint. No startup, reopen, polling or automatic
 update traffic is added. Responses use the existing 60-second HTTPS/redirect policy
 with a smaller 256 KiB declared/actual body bound. JSON must be valid UTF-8,
@@ -31,8 +35,12 @@ Main issues opaque selection identities; renderer-provided URLs, hashes or Offic
 claims cannot authorize catalog installation. Refresh invalidates future use of old
 selections, but cannot change a descriptor already captured by an installation.
 
-Main enforces target and shared host/API compatibility. Host admission uses
-ordinary semver first plus the explicitly bounded [development-family and
+Main enforces target and shared host/API compatibility for catalog selection.
+Cards show the selected offer's targets, not an exhaustive platform-support list,
+and distinguish target from host/API incompatibility. Local/link archive admission
+checks host/API, not catalog targets. Manager-unavailable errors are distinct from
+an offline catalog failure and do not promise local installation will work.
+Host admission uses ordinary semver first plus the explicitly bounded [development-family and
 historical exceptions](extension-installation-foundation.md#archive-contract);
 API admission remains ordinary semver. Exact byte length, SHA-256 and parsed
 manifest ID/version/engine strings must match the captured release **before trust**.
@@ -84,7 +92,8 @@ The source catalogs bind Files0.6.0 to archive `files-0.6.0.omxext`, 17,331
 bytes, SHA-256 `50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`,
 and source `cfc9073010df586eec321641ba5013862734f8fe`. The Linux entry targets
 `linux-arm64`; the macOS entry targets `darwin-arm64`. Both require host
-`>=0.24.0-dev.21` and API `0.1.x`. SSH0.3.1 targets `linux-arm64`, requires
+`>=0.24.0-dev.21` and API `0.1.x`. SSH0.3.1 currently targets `linux-arm64` in
+the published catalogs; this source candidate adds `darwin-arm64`. It requires
 host `>=0.24.0-dev.8` / API `0.1.x`, and binds `ssh-0.3.1.omxext`, 11,606 bytes,
 SHA-256 `be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`,
 and source `8717d47327eeab14f522b1b2a448216860d0923d`. Original build receipts
@@ -92,8 +101,8 @@ remain `not-run`; qualification evidence is separate.
 
 These entries do not prove that every advertised pair has been qualified. The
 original archive, checksum and receipt for each extension were separately published
-and anonymously byte-verified; their receipts remain `not-run`. Both fixed endpoints
-were read back after catalog integration: legacy SHA-256
+and anonymously byte-verified; their receipts remain `not-run`. Before the proposed
+macOS SSH promotion, both fixed endpoints were read back: legacy SHA-256
 `2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda`, macOS
 `0943623c3907516cc3c2affdc73e5cc7247b040845da5de022fa9f3a7058e870`. The
 separate [macOS Files0.6 public-catalog checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
