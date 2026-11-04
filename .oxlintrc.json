@@ -16,7 +16,7 @@
     "!src/**/*.ts",
     "!test/",
     "!test/**/*.ts",
-    "!vitest.config.ts"
+    "!vitest.config.cts"
   ],
   "rules": {
     "typescript/no-explicit-any": "error",
