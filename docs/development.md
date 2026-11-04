@@ -55,7 +55,7 @@ OMXTerm runs with `--no-sandbox` on Linux ([ADR 0024](adr/0024-disable-the-chrom
 Linux tests need a writable temporary directory on a filesystem that permits execution. These fixtures create executable scripts under Node's `os.tmpdir()` (which honors `TMPDIR`):
 
 - [`linux-appimage-installer`](../test/unit/linux-appimage-installer.test.ts) and [`linux-helper-architecture`](../test/unit/linux-helper-architecture.test.ts) execute synthetic AppImages and commands such as `file` and `uname` through a fixture-local `PATH`.
-- [`linux-appimage-launcher`](../test/integration/linux-appimage-launcher.test.ts) runs a generated AppRun through Bash, which then executes the temporary application stub.
+- [`linux-appimage-launcher`](../test/integration/linux-appimage-launcher.test.ts) prepares a private copy of the pinned `app-builder-lib` package under `.scratch/`, leaving the installed dependency unchanged. It runs the generated AppRun through Bash, which then executes the temporary application stub. Production Linux packaging still prepares and guards the installed dependency's exact reviewed bytes.
 - [`linux-desktop-launch`](../test/integration/linux-desktop-launch.test.ts) executes inspection stubs and a synthetic AppImage, including its installed copy through `gio launch`.
 - [`linux-helper-provisioning`](../test/integration/linux-helper-provisioning.test.ts), [`linux-installer-lifecycle`](../test/integration/linux-installer-lifecycle.test.ts), and [`linux-packaged-process`](../test/unit/linux-packaged-process.test.ts) execute temporary helper, AppImage, or wrapper scripts.
 
