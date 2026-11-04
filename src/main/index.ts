@@ -1,5 +1,9 @@
 /* eslint-disable max-lines, max-lines-per-function -- Keep native startup composition and its captured application/window lifetimes together. */
 import {
+  captureDefaultProfile,
+  claimDefaultSnippets,
+} from "./default-snippets";
+import {
   app,
   BrowserWindow,
   clipboard,
@@ -93,6 +97,9 @@ import {
   type OperationalEventLog,
 } from "./operational-events";
 
+// Capture before any profile getters or startup writes; never enroll upgrades.
+const defaultProfile = captureDefaultProfile(app);
+
 // Dialogs follow the configured language once the configuration is loaded.
 let currentTranslator = () => translatorFor(DEFAULT_LANGUAGE);
 const nativeDialogs = createNativeDialogs(() => currentTranslator());
@@ -162,6 +169,11 @@ app.on("before-quit", () => operationalEvents?.flush());
 app
   .whenReady()
   .then(async () => {
+    const provisioning = await claimDefaultSnippets(
+      defaultProfile,
+      () => app.getPath("userData"),
+      process.resourcesPath,
+    );
     const { account, consumeLaunchRequest, configurationLoadOptions } =
       prepareStartup(
         developmentApplicationIconPath,
@@ -173,7 +185,15 @@ app
     });
     return startWithUserConfiguration(
       configurationLoadOptions,
-      async ({ configuration: userConfiguration, fallback, warnings }) => {
+      async ({
+        configuration: userConfiguration,
+        fallback,
+        warnings: configurationWarnings,
+      }) => {
+        const warnings = [
+          ...(configurationWarnings ?? []),
+          ...(provisioning.warning ? [provisioning.warning] : []),
+        ];
         operationalEvents!.setLevel(userConfiguration.logLevel);
         if (fallback) {
           operationalEvents!.write({
@@ -215,6 +235,11 @@ app
         let rebuildMenu = () => {};
         let actionCatalog: CoreActionCatalog;
         extensions = await startApplicationExtensions({
+          ...(provisioning.seed ? { defaultSnippets: provisioning.seed } : {}),
+          onDefaultSnippetsWarning(warning) {
+            warnings.push(warning);
+            process.stderr.write(`${warning}\n`);
+          },
           translator: () => currentTranslator(),
           sendAction,
           applicationRoot,

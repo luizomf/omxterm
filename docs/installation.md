@@ -91,6 +91,14 @@ catalog source. Its installer can replace an existing per-user installation; it
 is not isolated side-by-side. See the [migration guide](snippets-migration.md) for
 PowerShell and offline verification, historical preview links, and current limits.
 
+Newer source separately implements a [removable default](default-snippets.md)
+only for positively new packaged profiles on optional targets. Successful seeding
+installs the exact pinned public0.1.0 archive enabled but dormant; Toggle remains
+the deliberate activation. No startup acquisition or user YAML creation occurs.
+Existing profiles keep the manual route above, and uninstall never silently
+restores the package. Developer startup/Windows x64 are excluded; source delivery
+does not qualify this new startup/package path or change published0.24.0.
+
 ## macOS
 
 You need an Apple Silicon Mac (M1 or later) with macOS 12 Monterey or newer.

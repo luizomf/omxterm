@@ -489,6 +489,14 @@ files (including cleared registrations but retained payload):
 These tests do not execute NSIS or PowerShell, reproduce an installer defect, or
 replace disposable-Windows exact-installer qualification.
 
+Current source also carries one exact public Snippets0.1.0 input for new packaged
+profiles. Normal checkout/package preparation is offline and pinned; missing or
+corrupt supported-target input fails the beforePack hook. Source build/development
+opts out of provisioning. See [Default Snippets](default-snippets.md) for
+`prepare:default-snippets`, exact target/resource checks and the still-required
+changed-startup/native/package proof. This does not reclassify existing platform
+or historical failed checkpoints.
+
 For native x64 **build-only** delivery, use `npm run package:linux:x64` or
 `npm run package:win:x64`, then `npm run package:verify -- --inspection-only`.
 This mode never launches a GUI, executes NSIS or installs the Linux helper. It

@@ -1,3 +1,7 @@
+import {
+  defaultSnippets,
+  verifyDefaultSnippetsResources,
+} from "./prepare-default-snippets.mjs";
 import { extractFile, listPackage, statFile } from "@electron/asar";
 import { execFile as execFileCallback, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -115,11 +119,17 @@ const forbiddenEntryPatterns = [
   /(?:credential|private[_-]?key|session[_-]?transcript)/iu,
 ];
 
-export function inspectForbiddenPackagedEntries(entries) {
+export function inspectForbiddenPackagedEntries(entries, target) {
+  const allowed = defaultSnippets.targets.includes(target)
+    ? `${target.startsWith("darwin-") ? "/Contents/Resources" : "/resources"}/bundled-snippets/${defaultSnippets.filename}`
+    : undefined;
   return entries
+    .map((entry) => entry.split("\\").join("/"))
     .map((entry) => (entry.startsWith("/") ? entry : `/${entry}`))
-    .filter((entry) =>
-      forbiddenEntryPatterns.some((pattern) => pattern.test(entry)),
+    .filter(
+      (entry) =>
+        entry !== allowed &&
+        forbiddenEntryPatterns.some((pattern) => pattern.test(entry)),
     );
 }
 
@@ -1047,6 +1057,7 @@ export async function verifyPackagedApplication(
       inspectLinuxAppRun(await readFile(path.join(applicationRoot, "AppRun")));
       const forbidden = inspectForbiddenPackagedEntries(
         await listTreeEntries(applicationRoot),
+        `${platform}-${process.arch}`,
       );
       if (forbidden.length > 0)
         throw new Error(
@@ -1056,8 +1067,10 @@ export async function verifyPackagedApplication(
 
     if (
       platform === "win32" &&
-      inspectForbiddenPackagedEntries(await listTreeEntries(applicationRoot))
-        .length > 0
+      inspectForbiddenPackagedEntries(
+        await listTreeEntries(applicationRoot),
+        `${platform}-${process.arch}`,
+      ).length > 0
     )
       throw new Error(
         "Development/private-looking files were packaged outside app.asar",
@@ -1067,6 +1080,10 @@ export async function verifyPackagedApplication(
       platform === "darwin"
         ? path.join(applicationRoot, "Contents", "Resources")
         : path.join(applicationRoot, "resources");
+    await verifyDefaultSnippetsResources(
+      resources,
+      `${platform}-${process.arch}`,
+    );
     const executable =
       platform === "darwin"
         ? path.join(applicationRoot, "Contents", "MacOS", "OMXTerm")

@@ -433,16 +433,28 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Linux ARM64/x64 and macOS/Windows ARM64 source, along with the published Linux ARM64
-**0.24.0-dev.11**, macOS ARM64 **0.24.0-dev.16** and Linux x64 **0.24.0-dev.30**
-previews, use the optional Snippets extension. Stable **0.23.0** and published
-Windows hosts retain built-in Snippets. All three previews offer Snippets through
-the official catalog or an explicit local archive, which also works offline after
-download. See the [migration guide](snippets-migration.md) for matching host and
-package downloads, installation steps, existing catalogs and qualification limits.
-Windows ARM64 has a [bounded ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition);
-its default suite failed and package qualification remains separate. No catalog
-conversion, automatic installation or automatic enablement occurs.
+Published **OMXTerm 0.24.0** and current source use optional Snippets on Linux
+ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and the unchanged0.23.0
+host retain built-in Snippets. Use the official catalog or a verified local
+archive; the local route also works offline after download. See the
+[migration guide](snippets-migration.md) for matching downloads, installation,
+existing catalogs and exact qualification limits.
+
+Windows ARM64 has separate exact-stage/local-archive Snippets and FULL NSIS
+checkpoints; stable0.24.0 passed its own FULL installer check. Its additional
+installed-public HTTPS Snippets checkpoint remains unresolved under the explicit
+[release-risk decision](snippets-migration.md#stable-0240-release-disposition),
+not a PASS, demonstrated input fix or fixture-only attribution. Historical failed
+runs retain their original scope. Those release checkpoints neither convert
+catalogs nor automatically install or enable Snippets.
+
+Separately, current source implements a [one-time removable default](default-snippets.md)
+for positively new packaged profiles only: exact pinned public0.1.0 bytes installed
+and enabled but dormant, with no eager backend/view, startup network or YAML.
+Existing profiles/disabled entries/tombstones and deliberate manual trust are
+preserved; a permanent consumed attempt prevents silent restore or startup retry.
+Developer startup and Windows x64 are excluded. Changed-startup and exact-package
+qualification remain separate; no published release behavior is being relabeled.
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 

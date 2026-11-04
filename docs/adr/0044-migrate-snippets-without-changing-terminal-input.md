@@ -205,10 +205,36 @@ publication already in transit. A core DOM blur during owned child creation is
 not native window focus loss. Close/dispose stays distinct from Hide/retain. The explicit Snippets entry point above and all action identities,
 defaults and custom/null shortcuts are unchanged.
 
-This slice does not implement the separately accepted new-install provisioning
-direction. It changes no existing-user consent, bundled package source, platform
-qualification gate or published artifact. Current observable details belong to
+The access slice alone did not implement new-profile provisioning. The separate
+accepted default below changes neither existing-user consent nor any platform
+qualification gate/published artifact. Current observable details belong to
 [the specification](../spec.md#window-and-session-behavior).
+
+### Removable default for positively new packaged profiles
+
+Use the simpler synchronous capture at the start of existing main, not a new
+bootstrap/first-run framework. The bounded prior Linux source diagnostic supports
+that seam but not a different import graph, packaged identity or other-platform
+startup proof. Require absolute absent default userData/config/state roots before
+readiness/profile getters, fail closed on ambiguous/linked/error/overridden paths,
+then recheck actual identity before any kit/log/store work. Developer startup and
+Windows x64 are excluded.
+
+Consume one stable exclusive-created attempt witness outside the package store
+before publication; partial/failed/uncertain attempts never silently replay. Install
+only the exact pinned public Snippets0.1.0 bytes, enabled+dormant, through production
+generation0 admission before the initial manager snapshot. Preserve all installed,
+disabled and tombstoned entries; collection/uninstall cannot erase the attempt.
+No startup catalog/download, backend/view activation, YAML creation or binding
+reassignment. Manual installs/reinstalls retain ordinary explicit trust. This is
+not upgrade consent, an automatic updater or another package store.
+
+Bundle one exact external archive resource on existing optional targets, retain
+other archive/receipt exclusions, reject missing/corrupt package inputs, and check
+resource identity before package runtime probes. See [Default Snippets](../default-snippets.md)
+for the fixed-input route, namespace/durability assumptions and remaining native,
+modified-startup and exact-package gates. Source implementation does not waive
+those gates or rewrite historical failures.
 
 ### Starter kit and user data
 
@@ -248,8 +274,9 @@ unchanged user data and the remaining platform gates.
 Cut over a platform only after the package is installable through the ordinary
 extension-management path on that platform, the matching host/package pair is
 qualified, and migration instructions are included. A catalog listing or an
-archive build alone is insufficient. There is no automatic installation or
-implicit consent based on the presence of an old catalog. Existing users choose
+archive build alone is insufficient. Existing profiles never gain implicit
+installation consent from the presence or absence of an old catalog; the sole
+one-time packaged-new-profile default is described above. Existing users choose
 installation; until then their file remains intact and the old shortcut explains
 how to regain the optional tool. Keep a local-archive installation path for
 offline users and publish the compatible package before removing built-in access

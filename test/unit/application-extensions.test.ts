@@ -1,5 +1,6 @@
 /* eslint-disable max-lines -- Keep the shared installation adapter and its capability/lifetime matrix together. */
 import { packageArchive } from "../fixtures/extension-package-archive";
+import { defaultSnippetsFixture } from "../fixtures/default-snippets";
 import { EventEmitter } from "node:events";
 import { catalogBytes as catalogFixture } from "../fixtures/extension-catalog";
 import {
@@ -52,6 +53,8 @@ import { semanticInputIpc } from "../../src/shared/semantic-input";
 import { createIpcHarness } from "../fixtures/terminal-ipc-harness";
 const adapters = vi.hoisted(() => ({
   root: "",
+  appVersion: "0.23.0-dev.5",
+  runtimeCreated: vi.fn(),
   selected: undefined as unknown,
   handlers: new Map<string, Handler>(),
   windows: new Map<unknown, unknown>(),
@@ -96,7 +99,7 @@ vi.mock("../../src/main/extension-download", async (original) => ({
   downloadExtension: adapters.download,
 }));
 vi.mock("electron", () => ({
-  app: { getVersion: () => "0.23.0-dev.5", getPath: () => adapters.root },
+  app: { getVersion: () => adapters.appVersion, getPath: () => adapters.root },
   BrowserWindow: {
     fromWebContents: (owner: unknown) => adapters.windows.get(owner),
     getFocusedWindow: () => adapters.selected,
@@ -120,11 +123,14 @@ vi.mock(
   }),
 );
 vi.mock("../../src/extension-runtime/electron-runtime", () => ({
-  createExtensionRuntime: async () => ({
-    activate: adapters.activate,
-    retire: adapters.retire,
-    dispose: async () => [],
-  }),
+  createExtensionRuntime: async () => {
+    adapters.runtimeCreated();
+    return {
+      activate: adapters.activate,
+      retire: adapters.retire,
+      dispose: async () => [],
+    };
+  },
 }));
 vi.mock("../../src/main/extension-view-ipc", () => ({
   startExtensionViewHost: (options: ExtensionViewHostOptions) => {
@@ -158,6 +164,62 @@ let window: BrowserWindow;
 let archive: string;
 let language: SupportedLanguage = "en-US";
 const catalogBytes = () => catalogFixture(manifest, bytes());
+it("startup seeds actual fixed bytes before runtime composition/initial snapshot without trust, network, activation or view", async () => {
+  await service.dispose();
+  await rm(adapters.root, { recursive: true, force: true });
+  const fixture = await defaultSnippetsFixture();
+  const claim = await fixture.claim();
+  await fixture.bundle();
+  adapters.root = fixture.userData;
+  adapters.appVersion = "0.25.0-dev.8";
+  const events: string[] = [];
+  adapters.runtimeCreated.mockImplementation(() =>
+    events.push("runtime-created"),
+  );
+  await startService("linux", {
+    defaultSnippets: {
+      async install(packages) {
+        const warning = await claim.seed!.install(packages);
+        events.push("seeded");
+        return warning;
+      },
+    },
+  });
+  expect(events).toEqual(["seeded", "runtime-created"]);
+  expect((await request({ operation: "snapshot" })).entries).toEqual([
+    expect.objectContaining({
+      id: "omxterm.snippets",
+      enabled: true,
+      generation: 1,
+      local: "dormant",
+    }),
+  ]);
+  expect(adapters.activate).not.toHaveBeenCalled();
+  expect(adapters.hosts).toHaveLength(0);
+  expect(adapters.download).not.toHaveBeenCalled();
+  expect(adapters.consent).not.toHaveBeenCalled();
+});
+it.each([false, true])(
+  "startup provisioning warning survives later runtime failure=%s without retry",
+  async (failRuntime) => {
+    await service.dispose();
+    const warning = "Default Snippets failed; no automatic retry.";
+    const install = vi.fn(async () => warning);
+    const report = vi.fn();
+    if (failRuntime)
+      adapters.runtimeCreated.mockImplementation(() => {
+        throw new Error("runtime unavailable");
+      });
+    await startService("linux", {
+      defaultSnippets: { install },
+      onDefaultSnippetsWarning: report,
+    });
+    expect(install).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenCalledExactlyOnceWith(warning);
+    expect(adapters.activate).not.toHaveBeenCalled();
+    expect(adapters.hosts).toHaveLength(0);
+  },
+);
 it.each(["linux", "darwin"])(
   "%s catalog selection composes exact-byte trust, remains captured over refresh and stays dormant",
   async (platform) => {
@@ -227,6 +289,7 @@ function request(
 beforeEach(async () => {
   vi.resetAllMocks();
   adapters.backendLifetime = new AbortController();
+  adapters.appVersion = "0.23.0-dev.5";
   adapters.root = await mkdtemp(path.join(os.tmpdir(), "omxterm-service-"));
   language = "en-US";
   adapters.sendOpen.mockImplementation((_sender, _channel, command) => {
@@ -261,7 +324,13 @@ beforeEach(async () => {
   );
   await startService("linux");
 });
-async function startService(platform: string) {
+async function startService(
+  platform: string,
+  provisioning: Pick<
+    Parameters<typeof startApplicationExtensions>[0],
+    "defaultSnippets" | "onDefaultSnippetsWarning"
+  > = {},
+) {
   // Model preview admission/catalog targeting, not the host filesystem. Startup
   // captures both synchronously before its first await; Windows store operations
   // must retain their native directory-sync policy after that boundary.
@@ -276,6 +345,7 @@ async function startService(platform: string) {
       configurable: true,
     });
     starting = startApplicationExtensions({
+      ...provisioning,
       applicationRoot: adapters.root,
       ssh: { open: adapters.sshOpen },
       semanticInput: {

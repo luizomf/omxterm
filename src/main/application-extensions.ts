@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import type { DefaultSnippetsSeed } from "./default-snippets";
 import { createPanelDefault, type PendingExtensionOpen } from "./panel-default";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -85,6 +86,8 @@ async function applicationManager(
     runtime,
     leases: createNativeLeaseAdapter(addon),
   });
+  const warning = await options.defaultSnippets?.install(packages);
+  if (warning) options.onDefaultSnippetsWarning?.(warning);
   const backend = await createExtensionRuntime({
     root,
     runtime,
@@ -118,6 +121,8 @@ async function applicationManager(
 
 export type ApplicationExtensionsOptions = {
   applicationRoot: string;
+  defaultSnippets?: DefaultSnippetsSeed;
+  onDefaultSnippetsWarning?(warning: string): void;
   semanticInput?: Pick<
     ReturnType<typeof import("./semantic-input-ipc").registerSemanticInputIpc>,
     "request" | "confirmSelection"

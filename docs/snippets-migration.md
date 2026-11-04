@@ -1,5 +1,13 @@
 # Optional Snippets migration
 
+Current source adds a [removable one-time default](default-snippets.md) only for
+positively new packaged profiles on existing optional targets: exact public0.1.0
+bytes, installed+enabled but dormant, no startup network/view/backend/YAML, no
+existing-user enrollment and no silent restore after uninstall. Developer startup
+and Windows x64 are excluded. This is not published0.24.0 behavior or qualification
+of the changed startup/package paths; historical receipts/failures and the Windows
+installed-public risk decision below retain their original scope.
+
 In OMXTerm `0.24.0` source, Linux ARM64/x64, macOS ARM64 and Windows ARM64 use
 separately installed Snippets. Windows x64 retains the built-in tool. The
 instructions below describe the selected host behavior, not proof that a stable
@@ -82,7 +90,8 @@ This is distinct from **Toggle Snippets**, whose explicit management guidance
 and close semantics remain unchanged. Both actions keep their defaults and
 custom/null keybindings. It is not preinstallation, a Windows x64 optional
 migration, new platform qualification or a claim about the immutable 0.24.0
-packages. The accepted new-install default direction remains separate work.
+packages. The separate [new-profile default](default-snippets.md) does not change
+this fallback's no-install behavior or qualify the changed startup/package paths.
 
 ## Install deliberately
 

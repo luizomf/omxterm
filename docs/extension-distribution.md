@@ -56,6 +56,16 @@ independent publisher signature. A compromised catalog authority can replace bot
 metadata and hashes. A stale snapshot is not proof of newest release or revocation.
 The UI does not add persistent installed Official badges or a second trust ledger.
 
+## Fixed host default is not catalog acquisition
+
+Current source has one narrow [new-profile Snippets default](default-snippets.md):
+a packaged host can consume a permanent, early-absence-bound one-time grant to
+install exact bundled public0.1.0 bytes enabled+dormant. It never fetches this
+catalog or substitutes its mutable offer for the pin. Existing profiles and
+manual install/reinstall/replacement keep their explicit trust; disabled entries
+and tombstones win. This does not modify any catalog, published receipt or
+platform/package qualification status.
+
 ## Offline and replacement behavior
 
 Only the last successful snapshot is retained, in memory. Failed refresh visibly

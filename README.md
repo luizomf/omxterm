@@ -113,6 +113,12 @@ Windows x64 retains built-in Snippets. The Windows ARM64 installed-public
 checkpoint remains unresolved: see the [release-risk disclosure](docs/snippets-migration.md#stable-0240-release-disposition)
 before upgrading if you depend on the previous built-in experience.
 
+Newer source implements a [removable one-time default](docs/default-snippets.md)
+for positively new packaged optional-target profiles only: installed+enabled but
+dormant, without startup network or user YAML creation. Existing profiles, disabled
+entries and removals are preserved; developer startup and Windows x64 are excluded.
+Source implementation is not qualification or changed behavior in published0.24.0.
+
 Historical previews:
 
 [Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16, Linux x64 host 0.24.0-dev.30 and Windows ARM64 host 0.24.0-dev.36](docs/installation.md#optional-snippets-preview)

@@ -1314,8 +1314,27 @@ published last. Shell, font family and shortcuts retain their implicit platform
 defaults. Creation failure produces a non-blocking notice and normal
 configuration loading continues. This runs at application opening, not package
 installation or manual reload. The copied theme belongs to the user and does not
-track subsequent bundled palette changes. A present file must contain
-`"version": 1` and only supported keys:
+track subsequent bundled palette changes.
+
+Separately from that kit, current packaged optional-Snippets targets attempt a
+one-time **installed+enabled but dormant** default from the unchanged pinned
+public0.1.0 archive. Early synchronous main capture must prove absent absolute
+default userData, config and state roots before readiness/getter contamination;
+existing roots, links/errors, overrides, developer startup, changed identity or
+unsupported targets never enroll. Readiness rechecks actual userData and derived
+configuration/state identity, then exclusively consumes the permanent
+`<userData>/provisioning/default-snippets` witness before kit/log/store writes.
+Any present/partial/unknown witness suppresses future attempts. After store open,
+before runtime/manager initial snapshot, ordinary generation0 admission preserves
+installed/disabled/tombstoned and concurrent selections. No backend/view, network,
+YAML, shortcut change or implicit restore occurs. Missing/corrupt resource or
+uncertain publication never retries; normal startup continues with bounded warning
+or unavailable-runtime handling. Windows x64 retains built-in compatibility.
+The exact resource/build route, stable-state assumptions and still-separate
+changed-startup/per-platform/package gates are in [Default Snippets](default-snippets.md).
+This source contract does not qualify distributed artifacts or rewrite failures.
+
+A present configuration file must contain `"version": 1` and only supported keys:
 
 - `language`: `en-US` or `pt-BR`;
 - `confirmClose`;

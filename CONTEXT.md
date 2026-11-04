@@ -194,6 +194,16 @@ and original receipts remain immutable. Each remaining cutover requires matching
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
 
+**Default Snippets Attempt** — The host-owned one-time grant for positively new
+packaged optional-target profiles, independent of configuration-kit creation.
+Early default/config/state absence and later identity matching precede a permanent,
+version-independent consumed witness. Exact pinned public bytes enter Installed
+Packages enabled+dormant with generation0, without startup network, YAML or code
+activation. Existing profiles, disabled entries and tombstones never enroll;
+uninstall/collection cannot restore the default. Developer startup and Windows x64
+are excluded. This is a source behavior, not matching platform/package qualification;
+see [Default Snippets](docs/default-snippets.md).
+
 ## Terminal data and interaction
 
 See [terminal behavior](docs/spec.md#terminal-behavior) and

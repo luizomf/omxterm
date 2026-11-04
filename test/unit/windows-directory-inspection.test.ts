@@ -1,4 +1,5 @@
 import path from "node:path";
+import { copyDefaultSnippetsResources } from "../fixtures/default-snippets";
 import { mkdtemp, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
@@ -57,6 +58,10 @@ async function inspectWindowsDirectory(dotAncestor: boolean) {
   );
   await put(path.join(project, "assets/application-icon.png"), "icon");
   await put(path.join(application, "resources/application-icon.png"), "icon");
+  await copyDefaultSnippetsResources(
+    path.join(application, "resources"),
+    "win32-arm64",
+  );
   await put(path.join(application, "OMXTerm.exe"), pe);
   await put(
     path.join(project, "scripts/packaged-extensions-probe.mjs"),
