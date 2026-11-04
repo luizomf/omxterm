@@ -4,6 +4,28 @@ This reference details focused native subsystem fixtures, their prerequisites, a
 
 For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls), [supervised PTY acquisition](#supervised-pty-acquisition), and [Windows cleanup diagnostics](#windows-cleanup-diagnostics). The [graphical fixture supervision overview](development.md#graphical-fixture-supervision) and its headless entry recipe remain in the development guide.
 
+## Admission, input and invocation outcomes
+
+Apply [macOS live console admission](development.md#macos-console-admission) before
+native launches there. An admitted desktop is setup evidence, not proof that
+posted input reached the intended application, window or PTY. Require the
+selected fixture's actual input/action receipts and unchanged assertions; a
+successful input API call or later successful control does not pass an earlier
+failed invocation. Synthetic OS Quartz/CGEvent input is not physical-keyboard,
+layout or IME qualification.
+
+Record each layer's outcome separately: input/control receipts, application
+exit and stream closure, [supervisor assistance](#supervisor-cleanup-assistance),
+the nested stock verifier and the outer wrapper. A stock verifier can pass while
+its wrapper fails on metadata collection; app exit0/EOF can coexist with a
+supervisor failure involving its own helper. Neither fact makes the overall
+invocation pass. Preserve original failures and inspect retained evidence before
+selecting any further execution; metadata-only completion is not a verifier
+rerun. Do not weaken assertions, suppress diagnostics or rerun a consumed
+[first-use attempt](default-snippets.md#enrollment-and-the-permanent-attempt)
+just to obtain green results. Later scoped positives retain their own limits,
+not retroactive qualification of failed runs.
+
 ## Hosted extension view composition
 
 On an assigned idle, unlocked Linux or macOS desktop, run the existing hosted-view

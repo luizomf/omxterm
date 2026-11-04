@@ -328,10 +328,11 @@ it is headless. Source-mode Electron fixtures can affect preferences too;
 For native verification, prefer an assigned disposable macOS guest with a
 **dedicated ordinary test user** whose preferences and credentials need not be
 preserved. Log into the guest's Aqua session as that user and verify the actual
-account/console identity before launch; changing an environment variable in an
-existing user's session is not equivalent. Provision the fixture's other
-prerequisites and keep the desktop idle. A separate user avoids using the existing
-user's preference domains for that session; it does not isolate shared system
+account/console identity and [live desktop admission](#macos-console-admission)
+before launch; changing an environment variable in an existing user's session is
+not equivalent. Provision the fixture's other prerequisites and keep the desktop
+idle. A separate user avoids using the existing user's preference domains for
+that session; it does not isolate shared system
 state, other accounts, input/display settings or external resources. Those still
 need their own authorized protection and cleanup.
 
@@ -394,6 +395,42 @@ do not disable application sandboxing to compensate for the test setup. No
 repository verifier currently supplies a general preference backup/restoration
 facility; use the dedicated-user route unless a suitable scoped recovery procedure
 is available and verified.
+
+### macOS console admission
+
+Before source graphical tests, packaged GUI checks or native input probes in the
+assigned disposable guest:
+
+1. Verify that the intended **ordinary test user** actually owns the console and
+   Aqua session, is on-console and is **unlocked**. SSH access, a running Aqua
+   session, configured automatic login, accepted credentials and a stock
+   `screenLock is off` result do not establish unlocked desktop admission.
+2. Check for held keys/buttons **and Command/Shift/Control/Option modifier flags**.
+   Release only input injected by the current owner; do not clear another user's
+   state. Verify the selected display's current logical usable work area and
+   [required viewport plus native frame](native-test-reference.md#settings-layout),
+   not just its physical resolution.
+3. Recheck immediately before launch and after restart, session/display changes
+   or idle locking. Earlier readiness and a user-active assertion do not guarantee
+   continued unlock. If the desktop is locked or changing, stop before launching
+   the native run rather than treating the setup hold as a product failure.
+
+Use supported normal guest-console/login mechanisms or an input transport whose
+mapping and actual delivery have been verified. API/CLI acceptance alone proves
+neither authentication nor product input receipt; do not guess virtual keycode
+schemas or loop password attempts. Preserve a verified original-state baseline
+before reversible, owned guest-only login/display/idle setup and restore it when
+its consumers finish. This is not advice to disable security generally: do not
+relax physical-host authentication/privacy/Keychain, decode another account's
+credential or modify clean recovery media to admit a run.
+
+[#797](https://github.com/luizomf/omxterm/issues/797) records a local
+`autoLoginUserScreenLocked` observation and a separate later idle relock despite
+lock-policy status. That local Boolean is **not a documented stable Apple MDM
+interface or a permanent unlock recipe**; its initial writer is unknown. Setup
+recovery does not qualify the product. Keep admission, actual input receipts and
+[invocation outcomes](native-test-reference.md#admission-input-and-invocation-outcomes)
+separate.
 
 <a id="qualification-scope"></a>
 
