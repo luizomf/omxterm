@@ -588,7 +588,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Repeated closes coalesce; pending close does not queue an automatic reopen.
   Header Hide and Escape instead preserve all opened tools and their state.
   `View -> Toggle Auxiliary Panel` (`keybinds.toggleAuxiliaryPanel`, default
-  `null`) independently hides or reveals the container. Reveal restores the
+  `null`) independently hides or reveals the container.
+  `View -> Switch Auxiliary Panel Side` (`keybinds.switchAuxiliaryPanelSide`,
+  default `CommandOrControl+Shift+\` on macOS and `Control+Shift+\` on
+  Linux/Windows) writes the opposite `window.auxiliaryPanelSide` through the
+  same Settings queue and reloads. It does not hide, close, or retarget a tool. Reveal restores the
   remembered open tool or the first remaining open tool. In an eligible terminal
   selection with no opened tools, it instead lazily opens/reveals installed and
   enabled Snippets (the built-in view on Windows x64). It never installs, enables,
@@ -640,7 +644,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   it; F2 and the context menu explicitly select a previously unselected fallback
   row before acting. Unsubmitted address drafts survive listing updates. Row
   actions leave composing and other modified gestures untouched (apart from
-  Shift+F10). Cancel returns to the initiating row/control where available,
+  Shift+F10 and Shift+Enter). Shift+Enter, and the visible Insert path action,
+  capture the selected entry's path at that moment and ask main to insert one
+  shell-quoted token through the existing Protected Paste path, with no added
+  Enter. Main quotes it lexically and does not stat, normalize, or retarget it.
+  A missing, busy, changed, or non-absolute path stays explained in Files.
+  Successful insertion focuses the captured terminal. This source action
+  requires a future Files archive and does not alter published Files0.6.
+  Cancel returns to the initiating row/control where available,
   otherwise Actions; a late
   permanent-delete confirmation does not steal focus after the user moves away.
   These source changes require a new Files archive and do not alter Files0.6.
@@ -673,10 +684,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Hide or Escape originating inside the panel only hides/deactivates it.
   Both return focus to the live selected terminal after native acknowledgement,
   unless a newer selection or modal owns focus. Neither closes terminal sessions.
-  In the built-in panel, only a fresh non-composing Escape starts dismissal;
-  composing Escape and unowned repeats remain with the focused control. An
-  already-owned dismissal retains its repeats and release even during composition.
-  This DOM event policy does not establish native OS/IME event delivery.
+  In the built-in panel and the native hosted-view Escape fallback, only a
+  fresh non-composing Escape starts dismissal; composing Escape and unowned
+  repeats remain with the focused control. An already-owned dismissal retains
+  its repeats and release even during composition. This does not establish that
+  a particular OS or IME emits a composing Escape.
   An Escape or Enter-on-Close/Hide gesture owns its repeats and release, including
   Kitty event reporting. Escape in the terminal remains terminal input. Switching
   internal views deactivates the old view and focuses the new one directly, with
@@ -718,7 +730,9 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   remaining chunks/Enter without rollback.
 - **Settings → Window → Auxiliary panel side** persists
   `window.auxiliaryPanelSide` (`left` or `right`, default `right`) in User
-  Configuration and applies live to all windows. The same side hosts built-in
+  Configuration and applies live to all windows. **View → Switch Auxiliary
+  Panel Side** flips that same persisted value; it is also listed in Settings →
+  Shortcuts. The same side hosts built-in
   Snippets and every companion tool; no per-tool placement or additional panel
   is created. A side change ends active resizing and preserves preferred width,
   visibility, selection, drafts, focus and view/Surface/session identities. It
@@ -1480,6 +1494,7 @@ action vocabulary: `quit`, `copy`, `paste`, `selectAll`, `find`, `newWindow`,
 `closeWindow`, `newTab`, `closeTab`, `nextTab`, `previousTab`, `selectTab1`
 through `selectTab9`, `zoomIn`, `zoomOut`, `actualSize`, `toggleFullScreen`,
 `toggleSnippets`, `toggleFiles`, `toggleSshConnect`, `toggleAuxiliaryPanel`,
+`switchAuxiliaryPanelSide`,
 `toggleTabBar`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
 `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`, `focusPaneLeft`,
 `focusPaneRight`, `focusPaneUp`, `focusPaneDown`, `equalizePanes`, and

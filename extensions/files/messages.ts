@@ -80,6 +80,17 @@ const english = {
     "The active terminal changed or could not be confirmed. Try again.",
   terminalDirectoryBusy:
     "A terminal directory request is already in progress. Try again.",
+  insertPath: "Insert path",
+  insertPathHint:
+    "Insert the selected path into the active terminal. It is not executed.",
+  pathInserted: "Path inserted into the terminal. It was not executed.",
+  terminalPathUnavailable:
+    "The path was not inserted. The terminal is missing or busy.",
+  terminalPathChanged:
+    "The path was not inserted. The terminal changed before insertion finished. Try again.",
+  terminalPathBusy: "A path insertion is already in progress. Try again.",
+  terminalPathInvalid:
+    "The path was not inserted. It must be one absolute local path.",
   apply: "Apply",
   cancel: "Cancel",
   folder: "Folder",
@@ -195,6 +206,18 @@ const portuguese: FilesMessages = {
     "O terminal ativo mudou ou não pôde ser confirmado. Tente novamente.",
   terminalDirectoryBusy:
     "Uma solicitação de diretório do terminal já está em andamento. Tente novamente.",
+  insertPath: "Inserir caminho",
+  insertPathHint:
+    "Insere o caminho selecionado no terminal ativo. Ele não é executado.",
+  pathInserted: "Caminho inserido no terminal. Ele não foi executado.",
+  terminalPathUnavailable:
+    "O caminho não foi inserido. O terminal está ausente ou ocupado.",
+  terminalPathChanged:
+    "O caminho não foi inserido. O terminal mudou antes do fim da inserção. Tente novamente.",
+  terminalPathBusy:
+    "Uma inserção de caminho já está em andamento. Tente novamente.",
+  terminalPathInvalid:
+    "O caminho não foi inserido. Ele precisa ser um caminho local absoluto.",
   apply: "Aplicar",
   cancel: "Cancelar",
   folder: "Pasta",

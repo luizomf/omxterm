@@ -35,6 +35,7 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.toggleSshConnect": "Alternar SSH Connect",
   "menu.toggleTabBar": "Alternar Barra de Abas",
   "menu.toggleAuxiliaryPanel": "Alternar Painel Auxiliar",
+  "menu.switchAuxiliaryPanelSide": "Trocar lado do painel auxiliar",
   "menu.toggleTitleBar": "Alternar Barra de Título",
   "menu.reloadConfiguration": "Recarregar Configuração",
   "menu.toggleDeveloperTools": "Alternar Ferramentas de Desenvolvedor",
@@ -337,6 +338,14 @@ export const brazilianPortugueseMessages: Readonly<
     "O terminal ativo mudou ou não pôde ser confirmado. Tente novamente",
   "extensions.terminalDirectoryBusy":
     "Uma solicitação de diretório do terminal já está em andamento. Tente novamente",
+  "extensions.terminalPathUnavailable":
+    "O caminho não foi inserido. O terminal está ausente ou ocupado",
+  "extensions.terminalPathChanged":
+    "O caminho não foi inserido. O terminal mudou antes do fim da inserção. Tente novamente",
+  "extensions.terminalPathBusy":
+    "Uma inserção de caminho já está em andamento. Tente novamente",
+  "extensions.terminalPathInvalid":
+    "O caminho não foi inserido. Ele precisa ser um caminho local absoluto",
   "extensions.unavailable": "Extensão indisponível",
   "extensions.unavailableDetail":
     "Atualize Extensões nas Configurações para consultar a instalação. Nenhuma operação foi repetida automaticamente.",

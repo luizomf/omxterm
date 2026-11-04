@@ -31,6 +31,7 @@ export const englishMessages = {
   "menu.toggleSshConnect": "Toggle SSH Connect",
   "menu.toggleTabBar": "Toggle Tab Bar",
   "menu.toggleAuxiliaryPanel": "Toggle Auxiliary Panel",
+  "menu.switchAuxiliaryPanelSide": "Switch Auxiliary Panel Side",
   "menu.toggleTitleBar": "Toggle Title Bar",
   "menu.reloadConfiguration": "Reload User Configuration",
   "menu.toggleDeveloperTools": "Toggle Developer Tools",
@@ -323,6 +324,14 @@ export const englishMessages = {
     "The active terminal changed or could not be confirmed. Try again",
   "extensions.terminalDirectoryBusy":
     "A terminal directory request is already in progress. Try again",
+  "extensions.terminalPathUnavailable":
+    "The path was not inserted. The terminal is missing or busy",
+  "extensions.terminalPathChanged":
+    "The path was not inserted. The terminal changed before insertion finished. Try again",
+  "extensions.terminalPathBusy":
+    "A path insertion is already in progress. Try again",
+  "extensions.terminalPathInvalid":
+    "The path was not inserted. It must be one absolute local path",
   "extensions.unavailable": "Extension unavailable",
   "extensions.unavailableDetail":
     "Refresh Extensions in Settings to inspect the installed state. No operation was automatically retried.",

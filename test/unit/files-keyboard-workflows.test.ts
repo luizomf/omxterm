@@ -500,6 +500,41 @@ it("focuses a pending delete confirmation after internal restoration of the same
   );
 });
 
+it("inserts the selected path on Shift+Enter and from the actions menu", async () => {
+  const { request } = await setup();
+  const item = row("/root/alpha.txt")!;
+  item.focus();
+  const before = request.mock.calls.length;
+  expect(
+    key(item, "Enter", { shiftKey: true, isComposing: true }).defaultPrevented,
+  ).toBe(false);
+  expect(request).toHaveBeenCalledTimes(before);
+  expect(key(item, "Enter", { shiftKey: true }).defaultPrevented).toBe(true);
+  expect(request).toHaveBeenLastCalledWith({
+    operation: "insert-path",
+    path: "/root/alpha.txt",
+  });
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(
+      "Path inserted into the terminal. It was not executed.",
+    ),
+  );
+  key(item, "ContextMenu");
+  const action = button("Insert path", menu());
+  expect(action.getAttribute("aria-keyshortcuts")).toBe("Shift+Enter");
+  action.click();
+  expect(request).toHaveBeenLastCalledWith({
+    operation: "insert-path",
+    path: "/root/alpha.txt",
+  });
+  key(row("/root/projects")!, "Enter");
+  expect(
+    request.mock.calls.filter(
+      ([value]) => (value as { operation: string }).operation === "insert-path",
+    ),
+  ).toHaveLength(2);
+});
+
 it("restores the same focused row without scrolling it into view", async () => {
   await setup();
   row("/root/alpha.txt")!.focus();

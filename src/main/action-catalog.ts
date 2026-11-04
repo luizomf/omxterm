@@ -39,6 +39,7 @@ export interface TerminalApplicationMenuActions {
   readonly toggleSelectedSnippets: () => void;
   readonly toggleSelectedTabBar: () => void;
   readonly toggleSelectedAuxiliaryPanel: () => void;
+  readonly switchAuxiliaryPanelSide: () => void;
   readonly toggleSelectedTitleBar: () => void;
   readonly reloadUserConfiguration: () => void;
   readonly openLocalImage: () => void;
@@ -126,6 +127,10 @@ export function createCoreActionCatalog(
     toggleAuxiliaryPanel: action(
       t("menu.toggleAuxiliaryPanel"),
       actions.toggleSelectedAuxiliaryPanel,
+    ),
+    switchAuxiliaryPanelSide: action(
+      t("menu.switchAuxiliaryPanelSide"),
+      actions.switchAuxiliaryPanelSide,
     ),
     toggleTitleBar: action(
       t("menu.toggleTitleBar"),

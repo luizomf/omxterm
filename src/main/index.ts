@@ -537,6 +537,13 @@ app
           operationalEvents: operationalEvents!,
         });
 
+        const applicationSettings = startApplicationSettings(
+          terminalIpcRouter,
+          configurationLoadOptions,
+          configurationReloader,
+          keybindCapture,
+          sendAction,
+        );
         const menuActions = terminalMenuActions(terminalApplication, {
           newWindow: () => {
             void terminalApplication!.newWindow().catch((cause) => {
@@ -554,13 +561,9 @@ app
             sendAction,
           ),
           showCommandPalette: () => palette?.show(),
-          showSettings: startApplicationSettings(
-            terminalIpcRouter,
-            configurationLoadOptions,
-            configurationReloader,
-            keybindCapture,
-            sendAction,
-          ),
+          showSettings: () => applicationSettings.show(),
+          switchAuxiliaryPanelSide: () =>
+            applicationSettings.switchAuxiliaryPanelSide(),
         });
         rebuildMenu = () => {
           actionCatalog = createCoreActionCatalog(

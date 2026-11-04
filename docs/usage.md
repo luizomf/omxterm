@@ -314,6 +314,12 @@ tool's ordinary entry point closes it only when it is already selected and
 visible; otherwise it reveals or opens it. Reopening a closed tool creates a
 fresh view, discarding its old drafts/search state.
 
+**View → Switch Auxiliary Panel Side** moves the panel between left and right.
+The default is **Cmd+Shift+\\** on macOS and **Ctrl+Shift+\\** on Linux and
+Windows. It saves `window.auxiliaryPanelSide`, so every window follows, and the
+open tool keeps its draft and focus. Change or remove the shortcut in
+**Settings → Shortcuts**.
+
 **View → Toggle Auxiliary Panel** independently hides or reveals retained tools.
 It has no default shortcut; configure `toggleAuxiliaryPanel` in Settings or
 `keybinds`. Reveal restores the remembered open tool or the first remaining one;

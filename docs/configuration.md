@@ -370,6 +370,7 @@ Customize application shortcuts under `keybinds` using [Electron accelerator](ht
 | `toggleFiles`               | `null`                       | `null`                |
 | `toggleSshConnect`          | `null`                       | `null`                |
 | `toggleAuxiliaryPanel`      | `null`                       | `null`                |
+| `switchAuxiliaryPanelSide`  | `CommandOrControl+Shift+\`   | `Control+Shift+\`     |
 | `toggleTabBar`              | `CommandOrControl+Shift+B`   | `Control+Shift+B`     |
 | `toggleTitleBar`            | `CommandOrControl+Shift+D`   | `Control+Shift+D`     |
 | `reloadConfig`              | `CommandOrControl+Shift+,`   | `Control+Shift+,`     |
@@ -415,7 +416,9 @@ four-second notice per application process, not installation, enablement or a
 Settings jump. Later deliberate installation can make another attempt succeed.
 This does not reassign Cmd/Ctrl+Shift+S: `toggleSnippets` and
 `toggleAuxiliaryPanel` remain separate actions with unchanged defaults, custom
-bindings and explicit `null` choices.
+bindings and explicit `null` choices. `switchAuxiliaryPanelSide` is also
+separate: it flips the persisted `window.auxiliaryPanelSide` value for every
+window and keeps the open tool, its draft, and focus.
 
 For example, to use `F11` for Snippets instead of full screen:
 

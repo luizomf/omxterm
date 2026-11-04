@@ -79,6 +79,7 @@ function menuActions(): TerminalApplicationMenuActions {
     toggleSelectedSnippets: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
     toggleSelectedAuxiliaryPanel: vi.fn(),
+    switchAuxiliaryPanelSide: vi.fn(),
     toggleSelectedTitleBar: vi.fn(),
     reloadUserConfiguration: vi.fn(),
     openLocalImage: vi.fn(),

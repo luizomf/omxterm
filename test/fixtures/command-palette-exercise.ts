@@ -89,6 +89,7 @@ export async function exerciseCommandPalette(options: {
     showAbout: options.showAbout,
     showSettings: settings.show,
     showCommandPalette: () => palette.show(),
+    switchAuxiliaryPanelSide: unexpected,
     toggleSelectedTabBar() {
       toggles += 1;
       application.toggleSelectedTabBar();

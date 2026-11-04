@@ -59,7 +59,10 @@ export function createCompanionDismissal(
     if (activation?.identity === identity && !down) activation = undefined;
     if (activationId && down && !input.isAutoRepeat && input.key === "Enter")
       activation = { id: activationId, identity };
-    if (!panelId || !down || input.key !== "Escape") return false;
+    // A fresh composing Escape belongs to the IME, as in the built-in panel.
+    // An already-owned dismissal still consumes its repeats and release above.
+    if (!panelId || !down || input.key !== "Escape" || inputIsComposing(input))
+      return false;
     owned = identity;
     event.preventDefault();
     contents.send(extensionViewIpc.dismissPanel, panelId);
@@ -112,4 +115,10 @@ export function createCompanionDismissal(
   };
   owners.set(window, owner);
   return owner;
+}
+
+function inputIsComposing(input: Input): boolean {
+  return (
+    (input as Input & { readonly isComposing?: boolean }).isComposing === true
+  );
 }

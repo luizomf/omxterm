@@ -12,6 +12,7 @@ import type { ApplicationExtensionsOptions } from "./application-extensions";
 import { extensionResourceOwner } from "./extension-view-reader";
 import { startExtensionViewHost } from "./extension-view-ipc";
 import { createFilesTerminalDirectory } from "./files-terminal-directory";
+import { createFilesPathInsertion } from "./files-path-insertion";
 
 /** Own-view capability dispatch; ordinary extension data goes to its backend. */
 export function applicationViews(
@@ -27,18 +28,30 @@ export function applicationViews(
   currentTarget: (window: BrowserWindow) => ExtensionTarget | undefined,
 ) {
   const window = target.owner as BrowserWindow;
-  const filesDirectory =
-    target.presentation === "panel" && pin.manifest.id === "omxterm.files"
-      ? createFilesTerminalDirectory({
-          window,
-          currentTarget: () => currentTarget(window),
-          translator: options.translator,
-          semanticInput: options.semanticInput,
-          ownerSignal: target.signal,
-          epochSignal,
-          admit,
-        })
-      : undefined;
+  const filesPanel =
+    target.presentation === "panel" && pin.manifest.id === "omxterm.files";
+  const filesDirectory = filesPanel
+    ? createFilesTerminalDirectory({
+        window,
+        currentTarget: () => currentTarget(window),
+        translator: options.translator,
+        semanticInput: options.semanticInput,
+        ownerSignal: target.signal,
+        epochSignal,
+        admit,
+      })
+    : undefined;
+  const filesPath = filesPanel
+    ? createFilesPathInsertion({
+        window,
+        translator: options.translator,
+        semanticInput: options.semanticInput,
+        platform: process.platform,
+        ownerSignal: target.signal,
+        epochSignal,
+        admit,
+      })
+    : undefined;
   const view = pin.manifest.view!;
   const viewOwner = {};
   if (target.mirrorContext)
@@ -69,6 +82,10 @@ export function applicationViews(
       if (value && typeof value === "object" && !Array.isArray(value)) {
         if (value.operation === "terminal.semanticInput.v1")
           return semanticRequest(value, signal, context);
+        if (value.operation === "insert-path")
+          return filesPath
+            ? filesPath(value, context, signal)
+            : Promise.reject(new PackageError("unavailable"));
         if (value.operation === "terminal-directory")
           return filesDirectory
             ? filesDirectory(value, context, signal)

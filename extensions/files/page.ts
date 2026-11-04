@@ -179,6 +179,13 @@ export function mountFilesPage(
         return m.terminalDirectoryChanged;
       if (reply.reason === "terminal-directory-busy")
         return m.terminalDirectoryBusy;
+      if (reply.reason === "terminal-path-unavailable")
+        return m.terminalPathUnavailable;
+      if (reply.reason === "terminal-path-changed")
+        return m.terminalPathChanged;
+      if (reply.reason === "terminal-path-busy") return m.terminalPathBusy;
+      if (reply.reason === "terminal-path-invalid")
+        return m.terminalPathInvalid;
       return reply.error === "outcome-unknown"
         ? m.unknown
         : moving
@@ -467,6 +474,12 @@ export function mountFilesPage(
       );
     else report(reply);
   }
+  async function insertSelectedPath(path: string) {
+    const reply = await request({ operation: "insert-path", path });
+    if (disposed) return;
+    if (reply.ok) message((m) => m.pathInserted, "success");
+    else report(reply);
+  }
   function rowKey(event: KeyboardEvent, item: FilesTreeRow) {
     if (
       event.defaultPrevented ||
@@ -476,7 +489,7 @@ export function mountFilesPage(
       event.metaKey ||
       event.altKey ||
       event.getModifierState("AltGraph") ||
-      (event.shiftKey && event.key !== "F10")
+      (event.shiftKey && event.key !== "F10" && event.key !== "Enter")
     )
       return;
     const index = state.rows.findIndex((row) => row.path === item.path);
@@ -509,6 +522,14 @@ export function mountFilesPage(
             .find((row) => row.depth === item.depth - 1);
         break;
       case "Enter":
+        select(item);
+        if (event.shiftKey) {
+          event.preventDefault();
+          void insertSelectedPath(item.path);
+          break;
+        }
+        if (item.kind === "directory") void tree.toggle(item.path);
+        break;
       case " ":
         select(item);
         if (item.kind === "directory") void tree.toggle(item.path);
@@ -843,6 +864,15 @@ export function mountFilesPage(
       },
       ...(target
         ? [
+            {
+              label: (m: FilesMessages) => m.insertPath,
+              hint: (m: FilesMessages) => m.insertPathHint,
+              run: () => {
+                void insertSelectedPath(target.path);
+              },
+              disabled: busy,
+              shortcut: { display: "Shift+Enter", keys: "Shift+Enter" },
+            },
             {
               label: (m: FilesMessages) => m.rename,
               run: () => rename(target),

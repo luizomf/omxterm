@@ -61,6 +61,7 @@ export async function exerciseApplicationMenu(
     toggleSelectedSnippets: unexpected,
     toggleSelectedTabBar: unexpected,
     toggleSelectedAuxiliaryPanel: unexpected,
+    switchAuxiliaryPanelSide: unexpected,
     toggleSelectedTitleBar() {
       titleActions += 1;
       application.toggleSelectedTitleBar();
