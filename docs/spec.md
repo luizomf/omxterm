@@ -1924,7 +1924,16 @@ project-maintained, not sandboxed, harmless or independently signed. See the
 passes captured bytes through existing archive validation and explicit trust;
 see the [transport policy](files-development-preview.md#https-archive-installation).
 There is no analytics, telemetry, crash reporting, update check or remote log
-delivery. URLs and archive contents are excluded from operational logs. Child
+delivery. Main registers an early owned-session spellcheck policy, after the
+read-only default-profile capture and without eagerly resolving a session.
+Every created core/hosted session disables unused spellchecking; Linux/Windows
+also clear the selected dictionary list. Disabling only the enable preference or
+a view's spellcheck flag does not cancel Chromium's dictionary initialization.
+No dictionary acquisition, prewarming, alternate download URL or network blackhole
+is used. Literal terminal/hosted/text-field input and deliberate catalog/archive
+operations retain their existing routes; no spelling-correction UI is introduced.
+This policy does not establish all-platform/runtime/package network qualification.
+URLs and archive contents are excluded from operational logs. Child
 processes retain their normal network access. The internal Extension View Host may load only its
 owned epoch-local `omx-extension` packaged-resource origin, returning bounded
 materialized bytes under a captured immutable-version pin. This exception does

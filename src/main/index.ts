@@ -1,4 +1,5 @@
 /* eslint-disable max-lines, max-lines-per-function -- Keep native startup composition and its captured application/window lifetimes together. */
+import { disableSessionSpellcheck } from "./session-spellcheck";
 import {
   captureDefaultProfile,
   claimDefaultSnippets,
@@ -99,6 +100,7 @@ import {
 
 // Capture before any profile getters or startup writes; never enroll upgrades.
 const defaultProfile = captureDefaultProfile(app);
+disableSessionSpellcheck(app);
 
 // Dialogs follow the configured language once the configuration is loaded.
 let currentTranslator = () => translatorFor(DEFAULT_LANGUAGE);
