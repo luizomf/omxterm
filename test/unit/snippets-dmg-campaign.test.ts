@@ -98,6 +98,7 @@ beforeEach(async () => {
       signal: null,
       reason: "exit",
       cleanupErrors: [],
+      cleanupAssistance: "none",
       stdout: "",
       stderr: "",
     };
@@ -165,6 +166,7 @@ it("refuses a cancelled/lost supervisor even with zero native exit and settled c
     signal: null,
     reason: "parent-disconnected",
     cleanupErrors: [],
+    cleanupAssistance: "none",
     stdout: "",
     stderr: "",
   });

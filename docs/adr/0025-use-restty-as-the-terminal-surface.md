@@ -130,7 +130,13 @@ keep them; new Surfaces use the latest validated values. Theme, size, ligatures,
 padding and scrollback update in place without replacing a core or PTY. A
 persistent notice names deferred settings and asks for restart. A setting clears
 from that notice only when the requested value is active in every surviving
-Surface, including owners still initializing.
+Surface, including owners still initializing. Registration, removal and window
+disposal refresh this derived information without rereading configuration or
+reapplying native settings. An authoritative empty owner list needs no restart;
+the startup baseline is used only by compositions without an owner provider.
+Current actionable diagnostics survive this refresh, including after a rejected
+reload. Neither an unresolved error nor genuinely deferred settings expire on a
+timer.
 
 Main issues renderer-scoped font-configuration identities. The host captures one
 with the Surface options, and its Adapter retains an independent Surface owner

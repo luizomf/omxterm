@@ -31,8 +31,10 @@ installation and records it as `SNIPPETS_SOURCE_HOST`; Electron's fallback versi
 is not matching-host evidence. The archive digest is checked before launch, at consent, in
 the result, and after execution; the entry digest is checked before/after.
 
-On an assigned disposable Linux ARM64/x64 or macOS/Windows ARM64 desktop only, run the normal source build,
-then `node test/fixtures/snippets-qualification-build.mjs /absolute/new/qualification`
+On an assigned disposable Linux ARM64/x64 or macOS/Windows ARM64 desktop only, run the normal source build.
+For macOS, follow the [preference precautions](../../docs/development.md#macos-preferences-and-native-verification)
+for source-mode Electron too; an isolated profile does not protect OS preferences.
+Then run `node test/fixtures/snippets-qualification-build.mjs /absolute/new/qualification`
 to copy its artifacts and rebuild main/renderer without source substitutions.
 The builder refuses output reuse and records source hashes (including the real
 application icon) and `differences: []`. Its owned output preserves the development
@@ -400,7 +402,9 @@ not qualified by either controlled scenario.
 ## Exact macOS ARM64 DMG adapter
 
 `test/integration/snippets-dmg.test.ts` is opt-in tooling, not a qualification
-receipt. On the assigned disposable, unlocked Aqua desktop, supply:
+receipt. On the assigned disposable, unlocked Aqua desktop, follow the
+[macOS preference precautions](../../docs/development.md#macos-preferences-and-native-verification);
+the isolated paths do not protect the guest user's OS preferences. Then supply:
 
 ```sh
 OMXTERM_SNIPPETS_DMG_DMG=/absolute/host.dmg \

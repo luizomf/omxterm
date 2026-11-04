@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import type { TerminalTabCommand } from "../../src/shared/terminal-contract";
 import type { LocalImageData } from "../../src/shared/local-image";
@@ -126,6 +127,7 @@ it.each([
           return () => {};
         },
         settings: {
+          themes: vi.fn(async () => emptyThemes),
           snapshot: async () => base,
           change: vi.fn(),
           saveText: vi.fn(),

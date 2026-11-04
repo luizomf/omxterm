@@ -286,7 +286,12 @@ describe("actual emitted Windows command failure boundary", () => {
 // Only OS process/clock seams are modeled; receipt/profile I/O is real and fresh.
 async function supervise(
   fault?: number | "invalid-registration" | "invalid-json",
-  options: { readonly nativeSuccess?: boolean; readonly error?: unknown } = {},
+  options: {
+    readonly nativeSuccess?: boolean;
+    readonly error?: unknown;
+    readonly live?: boolean;
+    readonly survives?: boolean;
+  } = {},
 ) {
   const base = fs.mkdtempSync(path.join(tmpdir(), "omxterm-cleanup-context-"));
   const root = path.join(base, "profile");
@@ -316,15 +321,21 @@ async function supervise(
   );
   let clock = 100;
   let wallClock = 100_000;
-  const execFileSync = vi.fn(() => {
+  let live = options.live === true;
+  const execFileSync = vi.fn((_file: string, args: string[]) => {
     clock += 12.75;
-    wallClock -= 10_000;
+    if (!options.survives) wallClock -= 10_000;
     const invocation = execFileSync.mock.calls.length;
     if (invocation === fault) throw options.error ?? original;
     if (invocation === 2 && fault === "invalid-registration")
       fs.writeFileSync(path.join(registry, "invalid.json"), "{}");
     if (invocation === 2 && fault === "invalid-json") return "not JSON";
-    return JSON.stringify([parent]);
+    if (args[3]!.includes("$p.Kill()")) {
+      const attempted = live;
+      if (!options.survives) live = false;
+      return attempted ? "OMXTERM_CLEANUP_ASSISTANCE_ATTEMPTED\n" : "";
+    }
+    return JSON.stringify(live ? [parent, owner] : [parent]);
   });
   let finish!: () => void;
   const exited = new Promise<void>((resolve) => {
@@ -347,7 +358,9 @@ async function supervise(
       clearTimeout,
       setInterval,
       clearInterval,
-      Date: { now: () => wallClock },
+      Date: {
+        now: () => (options.survives ? (wallClock += 10_000) : wallClock),
+      },
       require: (name: string) => {
         if (name === "node:child_process")
           return { spawn: forbiddenSpawn, execFileSync };
@@ -394,6 +407,7 @@ describe("actual emitted supervisor cleanup evidence", () => {
         stderr: "",
         cleanupErrors: ["Error: spawnSync powershell.exe ETIMEDOUT"],
         cleanupFailure: { callsite, elapsedMs: 12, category: "timeout" },
+        cleanupAssistance: "unknown",
         ownedProcesses: [owner],
       });
       expect(observed.calls).toHaveLength(failedCall);
@@ -403,7 +417,7 @@ describe("actual emitted supervisor cleanup evidence", () => {
     },
   );
 
-  it("leaves successful cleanup receipts and all six commands unchanged, without extra commands", async () => {
+  it("adds classification without changing command count, bounds or native failure", async () => {
     const observed = await supervise();
     expect(observed.result).toEqual({
       exitCode: 7,
@@ -412,6 +426,7 @@ describe("actual emitted supervisor cleanup evidence", () => {
       stdout: "original stdout",
       stderr: "original stderr",
       cleanupErrors: [],
+      cleanupAssistance: "none",
       ownedProcesses: [owner],
     });
     expect(observed.rootRetained).toBe(false);
@@ -433,14 +448,18 @@ describe("actual emitted supervisor cleanup evidence", () => {
       "-Command",
     ]);
     expect(termination[1]).toHaveLength(4);
-    // Digest of the fixed-base script with the exact single owned target above.
-    expect(createHash("sha256").update(termination[1][3]!).digest("hex")).toBe(
+    // Removing only the assistance marker restores the exact fixed-base script.
+    const originalScript = termination[1][3]!.replace(
+      /\{\n          \[Console\]::Out.WriteLine\('OMXTERM_CLEANUP_ASSISTANCE_ATTEMPTED'\)\n          \[Console\]::Out.Flush\(\)\n          \$p.Kill\(\)\n        \}/u,
+      "{ $p.Kill() }",
+    );
+    expect(createHash("sha256").update(originalScript).digest("hex")).toBe(
       "ddc8384920f01b678f0edaa08b0d2a54772dc102dc1fdddfc23e71d5e5d6b3ab",
     );
     expect(termination[2]).toEqual({ timeout: 5_000, windowsHide: true });
   });
 
-  it("does not add metadata or alter a normal native success", async () => {
+  it("classifies natural native settlement without altering the native outcome", async () => {
     const observed = await supervise(undefined, { nativeSuccess: true });
     expect(observed.result).toEqual({
       exitCode: 0,
@@ -449,11 +468,75 @@ describe("actual emitted supervisor cleanup evidence", () => {
       stdout: "original stdout",
       stderr: "original stderr",
       cleanupErrors: [],
+      cleanupAssistance: "none",
       ownedProcesses: [owner],
     });
     expect(observed.calls).toHaveLength(6);
     expect(observed.rootRetained).toBe(false);
     expect(observed.status).toEqual([0]);
+  });
+
+  it("records assistance even when exit0 and cleanup success are retained", async () => {
+    const observed = await supervise(undefined, {
+      nativeSuccess: true,
+      live: true,
+    });
+    expect(observed.result).toMatchObject({
+      exitCode: 0,
+      signal: null,
+      reason: "exit",
+      cleanupErrors: [],
+      cleanupAssistance: "attempted",
+    });
+    expect(observed.rootRetained).toBe(false);
+    expect(observed.status).toEqual([0]);
+  });
+
+  it("retains an attempted but unsuccessful cleanup", async () => {
+    const observed = await supervise(undefined, {
+      nativeSuccess: true,
+      live: true,
+      survives: true,
+    });
+    expect(observed.result).toMatchObject({
+      exitCode: 0,
+      signal: null,
+      reason: "exit",
+      cleanupAssistance: "attempted",
+      cleanupErrors: ["Error: Fixture processes survived cleanup: 10000"],
+    });
+    expect(observed.rootRetained).toBe(true);
+    expect(observed.status).toEqual([1]);
+  });
+
+  it("retains a partial Windows attempt when the command later fails", async () => {
+    const error = Object.assign(new Error("partial termination failure"), {
+      status: 3,
+      stdout: Buffer.from("OMXTERM_CLEANUP_ASSISTANCE_ATTEMPTED\r\n"),
+    });
+    const observed = await supervise(4, {
+      nativeSuccess: true,
+      live: true,
+      error,
+    });
+    expect(observed.result).toMatchObject({
+      exitCode: 0,
+      signal: null,
+      reason: "exit",
+      cleanupAssistance: "attempted",
+      cleanupErrors: [String(error)],
+      cleanupFailure: { callsite: "termination", category: "command-failed" },
+    });
+    expect(observed.rootRetained).toBe(true);
+    expect(observed.status).toEqual([1]);
+    expect(observed.raw).not.toContain("OMXTERM_CLEANUP_ASSISTANCE_ATTEMPTED");
+  });
+
+  it("does not classify an unobserved termination as natural", async () => {
+    const observed = await supervise(4, { nativeSuccess: true });
+    expect(observed.result).toMatchObject({ cleanupAssistance: "unknown" });
+    expect(observed.result!.cleanupErrors).not.toEqual([]);
+    expect(observed.rootRetained).toBe(true);
   });
 
   it.each([

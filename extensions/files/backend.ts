@@ -10,6 +10,17 @@ export type FilesServices = {
   trash?(target: string, signal: AbortSignal): Promise<void>;
 };
 type Row = { name: string; kind: string; size: number; modified: number };
+type MoveCapture = {
+  source: string;
+  directory: string;
+  sourceReal: string;
+  directoryReal: string;
+  sourceDevice: number;
+  sourceInode: number;
+  directoryDevice: number;
+  directoryInode: number;
+  kind: string;
+};
 const limit = 5_000;
 const batch = 100;
 function record(value: Value): Record<string, Value> {
@@ -46,9 +57,85 @@ function failure(error: unknown): string {
       return "permission";
     case "ENOENT":
       return "not-found";
+    case "ENOTDIR":
+      return "not-directory";
+    case "FILES_SAME_DIRECTORY":
+      return "same-directory";
+    case "FILES_DESCENDANT":
+      return "self-or-descendant";
+    case "FILES_TARGET":
+      return "target-not-directory";
+    case "FILES_CHANGED":
+      return "changed-entry";
+    case "FILES_EXPIRED":
+      return "expired-confirmation";
+    case "FILES_INVALID_PATH":
+      return "invalid-path";
     default:
       return "failed";
   }
+}
+function refuse(code: string): never {
+  throw Object.assign(new Error(code), { code });
+}
+function kindOf(stat: Awaited<ReturnType<typeof lstat>>) {
+  return stat.isSymbolicLink()
+    ? "link"
+    : stat.isDirectory()
+      ? "directory"
+      : stat.isFile()
+        ? "file"
+        : "other";
+}
+async function captureMove(
+  source: string,
+  directory: string,
+  kind: string,
+): Promise<MoveCapture> {
+  const sourceStat = await lstat(source);
+  const directoryStat = await lstat(directory);
+  if (kindOf(sourceStat) !== kind) refuse("FILES_CHANGED");
+  // A link can be moved as an entry, but is never a directory-drop target.
+  if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink())
+    refuse("FILES_TARGET");
+  const sourceReal = path.join(
+    await realpath(path.dirname(source)),
+    path.basename(source),
+  );
+  const directoryReal = await realpath(directory);
+  if (path.dirname(sourceReal) === directoryReal)
+    refuse("FILES_SAME_DIRECTORY");
+  if (kind === "directory") {
+    const relative = path.relative(sourceReal, directoryReal);
+    if (
+      !relative ||
+      (!relative.startsWith(`..${path.sep}`) &&
+        relative !== ".." &&
+        !path.isAbsolute(relative))
+    )
+      refuse("FILES_DESCENDANT");
+  }
+  return {
+    source,
+    directory,
+    sourceReal,
+    directoryReal,
+    sourceDevice: sourceStat.dev,
+    sourceInode: sourceStat.ino,
+    directoryDevice: directoryStat.dev,
+    directoryInode: directoryStat.ino,
+    kind,
+  };
+}
+function sameMove(a: MoveCapture, b: MoveCapture) {
+  return (
+    a.sourceReal === b.sourceReal &&
+    a.directoryReal === b.directoryReal &&
+    a.sourceDevice === b.sourceDevice &&
+    a.sourceInode === b.sourceInode &&
+    a.directoryDevice === b.directoryDevice &&
+    a.directoryInode === b.directoryInode
+  );
 }
 async function systemTrash(target: string, signal: AbortSignal): Promise<void> {
   if (process.platform !== "linux")
@@ -77,6 +164,7 @@ export function activate(context: {
     string,
     { target: string; device: number; inode: number }
   >();
+  const moves = new Map<string, MoveCapture>();
   let active = 0;
   let pendingListings = 0;
   const check = (signal: AbortSignal) => {
@@ -182,7 +270,55 @@ export function activate(context: {
         if (typeof request.token === "string") deletions.delete(request.token);
         return { ok: true };
       }
-      if (request.operation === "delete") {
+      if (request.operation === "cancel-move") {
+        if (typeof request.token === "string") moves.delete(request.token);
+        return { ok: true };
+      }
+      if (request.operation === "prepare-move-into") {
+        let source: string;
+        let directory: string;
+        try {
+          source = pathname(request.path);
+          directory = pathname(request.directory);
+        } catch {
+          refuse("FILES_INVALID_PATH");
+        }
+        if (
+          source === path.parse(source).root ||
+          typeof request.kind !== "string"
+        )
+          throw new Error("invalid-request");
+        const captured = await captureMove(source, directory, request.kind);
+        check(signal);
+        if (moves.size >= 8) moves.delete(moves.keys().next().value!);
+        const token = randomUUID();
+        moves.set(token, captured);
+        return {
+          ok: true,
+          token,
+          path: captured.sourceReal,
+          directory: captured.directoryReal,
+        };
+      }
+      if (request.operation === "move-into") {
+        if (typeof request.token !== "string")
+          throw new Error("invalid-request");
+        const captured = moves.get(request.token);
+        moves.delete(request.token);
+        if (!captured) refuse("FILES_EXPIRED");
+        const current = await captureMove(
+          captured.source,
+          captured.directory,
+          captured.kind,
+        );
+        if (!sameMove(captured, current)) refuse("FILES_CHANGED");
+        check(signal);
+        mutation = true;
+        await context.files.moveNoReplace(
+          captured.sourceReal,
+          path.join(captured.directoryReal, path.basename(captured.sourceReal)),
+        );
+      } else if (request.operation === "delete") {
         if (typeof request.token !== "string")
           throw new Error("invalid-request");
         const captured = deletions.get(request.token);
@@ -264,6 +400,7 @@ export function activate(context: {
     deactivate() {
       listings.clear();
       deletions.clear();
+      moves.clear();
     },
   };
 }

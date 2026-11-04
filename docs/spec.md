@@ -84,9 +84,9 @@ OMXTerm:
   running the AppImage directly remains supported.
 
 AI assistance, unrestricted broadcast input, saved or reconnectable running sessions, shell integration,
-profiles, a theme picker or catalog, automatic configuration reload, automatic
+profiles, a remote theme marketplace, automatic configuration reload, automatic
 updates, and remote terminal features beyond the optional
-[Linux ARM64 SSH Connect preview](ssh-connect.md) are outside the current product
+[Linux/macOS ARM64 SSH Connect preview](ssh-connect.md) are outside the current product
 contract. SSH Connect is separately installed: its incomplete read-only alias
 index and distinct quick-connect page request a typed, main-owned literal
 system-ssh launch, without brokering authentication or adding reconnect. The optional
@@ -125,8 +125,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   gesture through repeats/release. The internal shared application-page shell
   provides bounded content/navigation scrolling, explicit control variants and
   consistent error/warning/result notices. Raw and graphical results retain their
-  severity; symlink recovery directs external editing without offering in-app
-  write-through. Settings keeps its retained layout and uses the window's theme tint
+  severity; Settings follows valid configuration links and reports broken links,
+  unsuitable targets and conflicts. Settings keeps its retained layout and uses the window's theme tint
   rather than adding an opaque page background; controls and focus remain visible. Settings survives last-terminal exit,
   cancellation or first-mount failure without inventing a shell or reporting
   false renderer emptiness. First-mount readiness still reports the actual
@@ -424,11 +424,12 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   transparency without fading text or keyboard focus; no opaque scrim overrides
   the preference. Overlay tint can composite over application content; it does
   not establish native desktop blur, which remains main-owned and best effort.
-  While About is modal, a fixed 12 px CSS filter softens existing non-dialog
+  While About or Command Palette is modal, a shared fixed 12 px CSS filter
+  softens existing non-dialog
   body-child application underlays, including terminal/Settings content and
   chrome outside the dialog bounds. This modal focus treatment automatically
   covers inserted underlays and ends on dismissal or disposal. It leaves
-  body/html, the body tint, About foreground and its transparent backdrop
+  body/html, the body tint, modal foreground and transparent backdrops
   unfiltered, does not change tint alpha, and is independent of the separate
   `window.blur` native desktop preference.
   Main supplies runtime metadata and opens only fixed named destinations after
@@ -588,8 +589,25 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Header Hide and Escape instead preserve all opened tools and their state.
   `View -> Toggle Auxiliary Panel` (`keybinds.toggleAuxiliaryPanel`, default
   `null`) independently hides or reveals the container. Reveal restores the
-  remembered open tool or the first remaining open tool; with none, it does
-  nothing. Hiding does not retain active semantic-input authority.
+  remembered open tool or the first remaining open tool. In an eligible terminal
+  selection with no opened tools, it instead lazily opens/reveals installed and
+  enabled Snippets (the built-in view on Windows x64). It never installs, enables,
+  fetches a catalog, opens Settings or shows a native error modal. If unavailable,
+  one localized, noninteractive panel status says “No tools are open. Open an
+  extension to use the panel.” for about four seconds, without moving focus.
+  Further failed attempts do not repeat or extend it. This budget belongs to one
+  main application-process lifetime across its windows, not a terminal session;
+  later manual installation/enablement can still make a future attempt succeed.
+  Tab/pane selection, another tool, modal ownership, native window blur, close
+  and disposal revoke pending empty-panel intent; delayed native publication
+  cannot reveal or focus that stale view. Native window blur revokes main intent
+  and notifies core even when publication is already in transit. Core DOM blur
+  from creating/focusing an owned child is not native window focus loss and
+  must not cancel its legitimate initial publication. Blocked/suspended targets and pending
+  tool retirement do not trigger fallback. Close still disposes state, while
+  Hide/Escape retains it. Existing action identities, defaults and custom/null
+  bindings remain unchanged. This is access fallback, not default installation.
+  Hiding does not retain active semantic-input authority.
   Window composition creates the shared panel independently of Snippets wiring;
   Built-in Snippets contributes its lazy view definition; installed Snippets
   uses the native companion presenter. Core owns semantic preview in either
@@ -611,9 +629,23 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   hosted tabs suspend the panel and restore its selected view on terminal return.
   Panel tools are window-owned, independently of the opening terminal's lifetime;
   backend/window loss and disable/update/uninstall still retire their views.
-  In current source, Files initially opens Home; its explicit reported-directory
-  action captures the selected live pane's latest local OSC7 report at action
-  time. Main asks the core renderer to confirm the captured session and selection
+  In current source, Files initially opens Home and an explicit host focus intent
+  focuses its loaded-entry filter, unless an open operation editor needs focus.
+  Restore intent preserves an eligible focused control. The filter projects only
+  already-loaded rows in expanded folders, retains matching ancestors and visible
+  loading/error/truncation rows, and never searches collapsed folders or issues
+  filesystem requests. Dotfile visibility applies first. Filtering away a selection
+  clears it; Tab reaches the tree, including when empty. If rows arrive while the
+  empty tree has focus, Up/Down enters the rows explicitly. Focusing a row selects
+  it; F2 and the context menu explicitly select a previously unselected fallback
+  row before acting. Unsubmitted address drafts survive listing updates. Row
+  actions leave composing and other modified gestures untouched (apart from
+  Shift+F10). Cancel returns to the initiating row/control where available,
+  otherwise Actions; a late
+  permanent-delete confirmation does not steal focus after the user moves away.
+  These source changes require a new Files archive and do not alter Files0.6.
+  Its explicit reported-directory action captures the selected live pane's latest
+  local OSC7 report at action time. Main asks the core renderer to confirm the captured session and selection
   revision, rejecting reordered or changed selection rather than retargeting.
   No report, a known SSH Connect pane or an incomplete recognized OSC7, remote
   or invalid report produces an explanation without changing the browsing location.
@@ -629,8 +661,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   archives use the host behavior without modified package bytes, but retain their
   earlier label and lack the new inline hint and tooltip. The renamed action,
   hint, tooltip and dynamically localized host-coded notices require a future archive.
-  The narrow [maintenance bridge](extension-installation-foundation.md#archive-contract)
-  admits unchanged Files0.6 on recognized 0.24.1-dev.N hosts; admission alone
+  The narrow [development bridges](extension-installation-foundation.md#archive-contract)
+  admit unchanged Files0.6 on recognized 0.24.1-dev.N and 0.25.0-dev.N hosts; admission alone
   does not qualify native behavior or packages.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
@@ -649,6 +681,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Escape, and an unowned Escape repeat, with an operation editor or menu, so
   the unsubmitted draft stays. That page change needs a future Files archive
   and does not alter published Files0.6.
+  In the built-in panel, only a fresh non-composing Escape starts dismissal;
+  composing Escape and unowned repeats remain with the focused control. An
+  already-owned dismissal retains its repeats and release even during composition.
+  This DOM event policy does not establish native OS/IME event delivery.
   An Escape or Enter-on-Close/Hide gesture owns its repeats and release, including
   Kitty event reporting. Escape in the terminal remains terminal input. Switching
   internal views deactivates the old view and focuses the new one directly, with
@@ -1286,8 +1322,27 @@ published last. Shell, font family and shortcuts retain their implicit platform
 defaults. Creation failure produces a non-blocking notice and normal
 configuration loading continues. This runs at application opening, not package
 installation or manual reload. The copied theme belongs to the user and does not
-track subsequent bundled palette changes. A present file must contain
-`"version": 1` and only supported keys:
+track subsequent bundled palette changes.
+
+Separately from that kit, current packaged optional-Snippets targets attempt a
+one-time **installed+enabled but dormant** default from the unchanged pinned
+public0.1.0 archive. Early synchronous main capture must prove absent absolute
+default userData, config and state roots before readiness/getter contamination;
+existing roots, links/errors, overrides, developer startup, changed identity or
+unsupported targets never enroll. Readiness rechecks actual userData and derived
+configuration/state identity, then exclusively consumes the permanent
+`<userData>/provisioning/default-snippets` witness before kit/log/store writes.
+Any present/partial/unknown witness suppresses future attempts. After store open,
+before runtime/manager initial snapshot, ordinary generation0 admission preserves
+installed/disabled/tombstoned and concurrent selections. No backend/view, network,
+YAML, shortcut change or implicit restore occurs. Missing/corrupt resource or
+uncertain publication never retries; normal startup continues with bounded warning
+or unavailable-runtime handling. Windows x64 retains built-in compatibility.
+The exact resource/build route, stable-state assumptions and still-separate
+changed-startup/per-platform/package gates are in [Default Snippets](default-snippets.md).
+This source contract does not qualify distributed artifacts or rewrite failures.
+
+A present configuration file must contain `"version": 1` and only supported keys:
 
 - `language`: `en-US` or `pt-BR`;
 - `confirmClose`;
@@ -1573,7 +1628,8 @@ Snippet contents are user payload and are never logged.
 An absent `theme` uses the bundled canonical [`omtheme`](omtheme.json). A
 present `theme` must contain exactly one required `path`: a non-empty string
 without a NUL character. Absolute paths are used as written; relative paths are
-resolved from the directory containing `config.json`. OMXTerm does not expand
+resolved from the logical directory containing `config.json`, even if the
+configuration file itself is a symlink. OMXTerm does not expand
 `~`, environment variables, shell syntax, or URLs. Symlinks are accepted only
 when their final target is a readable regular file. The Electron main process
 reads and resolves the selected path through the complete User Configuration
@@ -1581,6 +1637,32 @@ loading boundary and sends only validated, typed theme data — plus bounded
 user-file notice state — through the existing configuration boundary.
 `View -> Reload User Configuration` can therefore select a changed path after
 validating the complete document.
+
+Settings → Appearance discovers direct `themes/*.json` entries beside the logical
+configuration path, including linked theme directories and files. Main reads and
+validates candidates and exposes bounded palette previews and diagnostics through
+the trusted Settings bridge. The picker shows the name and path of each valid
+entry, so duplicates remain distinct, and offers the built-in default separately.
+It identifies a configured matching logical path, including equivalent relative
+or absolute spellings; paths to other aliases are not assumed to identify one of
+multiple entries. A missing, empty, unreadable, invalid or truncated discovery is
+reported, not silently treated as a selected default. The explicitly requested
+refresh rereads local files; there is no watcher. A scan examines at most 2,048
+directory entries and 128 JSON candidates, reads at most 256 KiB per theme and
+4 MiB of configuration, and reports truncation. Selection saves `theme.path`
+through the existing serialized validation and reload path; built-in default
+removes it. Consecutive graphical `theme.path` requests that have not started
+are coalesced to the latest choice in main, rather than replaying every stale
+selection. An in-flight validation/write/reload is never cancelled. Reads, raw
+saves, shortcut changes and other field changes preserve request-order barriers;
+coalescing never crosses them. Superseded requests are not reported as saved:
+they settle with an explicit superseded result and the winning request's
+snapshot, while the winning request retains ordinary save/error/application
+feedback. Closing Settings does not discard the final queued choice.
+A pending choice is marked as saving; after settlement cards
+represent the saved configuration, not proof of application when reload fails.
+The advanced custom path remains available. Discovery neither
+modifies themes nor changes relative path semantics.
 
 A Terminal Theme is strict JSON containing required `version`, `name`, and
 `colors`, plus an optional `appearance` object. Version must be `1`. The name is
@@ -1667,8 +1749,12 @@ the current family when received; a queued generation superseded before its
 load starts is rejected without another read. This does not authorize arbitrary
 historical-family lookup. Loads remain serialized and bounded, and genuine
 read/validation failures still reject. Repeating a reload
-cannot erase a notice while an older Surface survives; removing that Surface
-releases its font bookkeeping. Theme, Interface Language, configured font-size
+cannot erase a notice while an older Surface survives. Surface registration,
+removal and window disposal reconcile deferred fields against all surviving
+owners without another reload; with no owners, no restart is required. Clearing
+resolved restart information preserves current actionable errors and warnings.
+These configuration notices are not transient toasts: elapsed time alone does
+not resolve a font error or apply creation-time settings. Theme, Interface Language, configured font-size
 baseline, padding and Window Font Zoom remain live and preserve the existing Surface and PTY. Invalid,
 missing, unreadable, unsupported or corrupt configured font input rejects the
 whole reload. Runtime scrollback reduction, including zero, uses the selected
@@ -1728,10 +1814,18 @@ and **Reload File**. Writes follow ADR 0003: full startup validation before an
 atomic replacement, a field-scoped change that keeps every other entry, a raw
 save refused when the file changed since its draft was loaded, and a dirty draft
 never replaced by other changes or late Save/Reload File responses. A final
-revision/presence comparison after write preparation rejects detected external
-changes without retry; it is not a cross-process atomic compare-and-swap.
-Settings preserves configuration symlinks, including dangling links, by refusing
-writes and directing the user to manual editing and reload. Pending graphical
+destination/bytes/presence/permission comparison after write preparation rejects
+detected external edits or retargeting without retry; it is not a cross-process atomic
+compare-and-swap. Settings follows relative links, chains and linked parents to
+an existing regular configuration file, atomically replacing the resolved target
+entry and preserving the links. Dangling or cyclic links and non-regular targets
+are refused with recovery guidance; an ordinarily absent file may be created.
+Atomic replacement preserves basic permission bits where supported, not hard-link
+relationships or all metadata; the destination directory must be writable.
+A new configuration and the temporary file initially use mode `0600` where
+supported; inherited filesystem ACLs still apply. Cleanup failures report that a
+temporary file may remain. The remaining race
+after the last comparison is not eliminated. Pending graphical
 responses retain newer or unrelated field drafts, and saving feedback remains
 pending until queued changes settle. Graphical requests go directly to main's
 serialized service, so a reopened view reads after already-requested writes
@@ -1739,7 +1833,7 @@ rather than overtaking undispatched work in a removed view. Raw operations are
 single-flight while typing remains usable; newer edits retain the saved bytes'
 revision as their base and are explicitly reported as not saved. Snapshot text uses the same
 UTF-8 decoding as the loader (omitting a leading BOM), while revisions identify
-the exact persisted bytes; snapshot parsing happens before writing. Closed
+the resolved destination and exact persisted bytes; snapshot parsing happens before writing. Closed
 views ignore late results.
 The status line distinguishes saved and applied, saved but not applied (even
 when reload throws after persistence), new-window/session-only settings, and
@@ -1803,9 +1897,11 @@ Windows public consumption remains unqualified. macOS source composition include
 (see [qualification scope](macos-extension-composition.md)). Main selects the
 complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
 schema1 catalog for every other target. Common
-SSH/Snippets entries remain identical. The promoted catalogs select Files0.6
-for Linux and macOS ARM64 and SSH0.3.1 for Linux ARM64; archive publication and
-actual public-consumption qualification are separate. The earlier catalog promotion
+SSH/Snippets entries remain identical. The published catalogs select Files0.6
+and SSH0.3.1 for Linux and macOS ARM64. The SSH offer uses the same original
+archive; source integration, public endpoint readback and the separate bounded
+[macOS public-catalog checkpoint](ssh-connect.md#macos-arm64-public-catalog-checkpoint)
+have completed. The earlier catalog promotion
 added `linux-x64` to Snippets; public endpoint readback and the separate packaged public-HTTPS checkpoint passed
 for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).
 The earlier common Snippets promotion admitted `win32-arm64` for the public
@@ -1817,11 +1913,16 @@ The selected project catalog is fetched only on Browse/Refresh, never startup or
 Settings reopen. Its bounded versioned JSON supplies plain-text release cards;
 main captures selections, checks supported target and host/API compatibility,
 and requires exact archive size/SHA-256 and manifest identity/version/engines
-before the existing one-shot trust flow. Host compatibility uses ordinary semver
-first, with an explicit bridge for canonical `0.24.1-dev.N` when the original
-range admits both stable `0.24.0` and `0.24.1`, plus the separate historical
-Files exception. API checks and targets remain unchanged; this admission does
-not qualify the archive or platform. See the
+before the existing one-shot trust flow. Cards show the platforms of the selected
+catalog offer, not a complete list of every supported package/platform pair, and
+distinguish target from host/API incompatibility, including when both apply.
+Manual local/link archive admission checks host/API, not catalog targets. Host
+compatibility uses ordinary semver
+first, with explicit bridges for canonical `0.24.1-dev.N` when the original
+range admits stable `0.24.0` and `0.24.1`, and canonical `0.25.0-dev.N` when
+it admits stable `0.24.0` and `0.25.0`, plus the separate historical Files
+exception. API, capability, target, archive identity and trust checks remain
+unchanged; this admission does not qualify the archive or platform. See the
 [compatibility contract](extension-installation-foundation.md#archive-contract).
 Failed refresh retains a visibly stale in-memory snapshot; cold failure is unavailable, not empty. Local/installed
 management remains usable offline. Explicit Update, exact-byte Reinstall and
@@ -1831,7 +1932,16 @@ project-maintained, not sandboxed, harmless or independently signed. See the
 passes captured bytes through existing archive validation and explicit trust;
 see the [transport policy](files-development-preview.md#https-archive-installation).
 There is no analytics, telemetry, crash reporting, update check or remote log
-delivery. URLs and archive contents are excluded from operational logs. Child
+delivery. Main registers an early owned-session spellcheck policy, after the
+read-only default-profile capture and without eagerly resolving a session.
+Every created core/hosted session disables unused spellchecking; Linux/Windows
+also clear the selected dictionary list. Disabling only the enable preference or
+a view's spellcheck flag does not cancel Chromium's dictionary initialization.
+No dictionary acquisition, prewarming, alternate download URL or network blackhole
+is used. Literal terminal/hosted/text-field input and deliberate catalog/archive
+operations retain their existing routes; no spelling-correction UI is introduced.
+This policy does not establish all-platform/runtime/package network qualification.
+URLs and archive contents are excluded from operational logs. Child
 processes retain their normal network access. The internal Extension View Host may load only its
 owned epoch-local `omx-extension` packaged-resource origin, returning bounded
 materialized bytes under a captured immutable-version pin. This exception does
@@ -2105,7 +2215,9 @@ official catalog reuses the same installation owner/store; there is no public
 SDK or extension shortcut configuration. An empty source catalog is valid but
 does not constitute public distribution.
 Files provides an expandable local folder tree with keyboard
-navigation, discoverable Actions and item/background context menus. Its source
+navigation, discoverable Actions and item/background context menus. Its current
+source includes the loaded-entry filter and focus/selection behavior described
+above; the Rename / move menu item advertises F2. Its source
 navigation toolbar uses quiet icon buttons with localized accessible names and
 visible explanations on hover or focus; Go identifies Enter in the address field,
 not a global shortcut. Explanations follow notice and language changes, hide while
@@ -2114,7 +2226,16 @@ unobstructed areas remain hoverable. Controls needing a root are disabled until
 one exists. Up is disabled but remains focusable at the filesystem root, and New
 folder is disabled while a mutation is pending. Refresh remains available during
 listing. Existing menu and destructive confirmation labels remain explicit.
-Operation editors retain captured targets.
+Operation editors retain captured targets. Current source permits a single
+internal Files entry to be dragged onto a directory row, with valid/invalid
+feedback, and offers the keyboard-accessible Move to folder action. External
+payloads do not become internal moves. Both paths require confirmation of the
+captured source and destination; source and destination identities are rechecked
+before the existing no-replace move. Same-directory, self/descendant and final
+symlink destinations are refused; symlink sources move as links. Conflicts never
+overwrite, cross-volume moves never fall back to copy/delete, and unknown outcomes
+are not retried. These checks are not a hostile filesystem race sandbox. The
+separate Files-to-terminal drag remains outside this workflow.
 The page follows the host's explicit en-US/pt-BR
 language and relabels retained controls, accessible names, menus, confirmations and
 notices without rereading listings, replaying operations or resetting focus/caret,
@@ -2199,7 +2320,11 @@ Tests cover configuration, tabs and window lifecycle, PTY startup/resize/output
 flow, Unicode, scrollback, Kitty images, local-image reads and overlay cleanup,
 link gestures, clipboard policy, title sanitization, logging, IPC boundaries and
 packaged startup. Chromium tests retain the production CSP, context isolation,
-disabled Node integration and platform sandbox policy. Linux package
+disabled Node integration and platform sandbox policy. macOS native verification's
+temporary HOME/XDG/profile paths do not isolate per-bundle OS preferences; the
+[verification precautions](development.md#macos-preferences-and-native-verification)
+cover a disposable test user or scoped baseline and restoration. The verifier does
+not automatically establish preference restoration. Linux package
 verification checks AppRun bytes and available installed launch modes against
 the fixed no-sandbox policy. It installs the exact helper but removes the
 fixture home rather than invoking that helper's `uninstall`; separate helper
@@ -2208,8 +2333,12 @@ tests exercise uninstall behavior.
 Windows exact-installer verification requires an explicitly authorized
 disposable VM and literal CLI opt-in. `/D=` changes the destination without
 isolating old-version removal, registration, shortcuts or processes.
-Verification refuses unsafe or unknown installation state. Ownership-checked
-cleanup preserves user data and is part of full verification; unpacked-only
+Verification refuses unsafe or unknown installation state. Only its newly created
+transaction directory is bound to a native long path with matching object identity
+before NSIS arguments are constructed; both path spellings retain the original
+reparse/process/cache inspections ([ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)).
+This does not normalize foreign registration or command ownership.
+Ownership-checked cleanup preserves user data and is part of full verification; unpacked-only
 diagnostics are partial.
 
 Release verification separates behavioral tests, native builds, exact-artifact

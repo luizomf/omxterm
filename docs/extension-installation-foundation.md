@@ -8,7 +8,7 @@ Status: internal foundation from [#715](https://github.com/luizomf/omxterm/issue
 
 - `InstalledPackages.open({root, runtime, leases})` opens a dedicated absolute, user-owned local store. `runtime` supplies valid application/API semver versions. `createNativeLeaseAdapter(absoluteAddonPath)` is the real adapter; a controlled adapter can hold acquisition/release boundaries in tests while retaining real kernel locks.
 - `snapshot()` returns installation metadata, including disabled entries and tombstones. It does not observe global process/runtime state.
-- `install(localArchive, {expectedGeneration, enabled})` validates and stages a complete local package before the bounded writer transaction. The internal caller may supply a bounded Buffer instead of a filename; bytes and options are copied synchronously before asynchronous admission so a consent service can install exactly its captured archive rather than reopen a mutable source. Generation `0` means never installed; updates and reinstalls must name the observed generation, including tombstones. The explicit `enabled` choice is metadata only, never code execution or a substitute for explicit trust. The resulting entry includes its digest and new generation.
+- `install(localArchive, {expectedGeneration, enabled})` validates and stages a complete local package before the bounded writer transaction. The internal caller may supply a bounded Buffer instead of a filename; bytes and options are copied synchronously before asynchronous admission so a consent service can install exactly its captured archive rather than reopen a mutable source. Generation `0` means never installed; updates and reinstalls must name the observed generation, including tombstones. The explicit `enabled` choice is metadata only, never code execution. Ordinary manual installation retains explicit trust; the sole host-owned [new-profile default](default-snippets.md) instead authorizes one fixed public Snippets input through its early-identity-bound permanent grant, never arbitrary bytes or upgrade consent. The resulting entry includes its digest and new generation.
 - `setEnabled(id, expectedGeneration, enabled)` and `uninstall(id, expectedGeneration)` publish a new generation. Uninstall publishes a tombstone, not a claim all processes stopped or bytes disappeared. Disable retains its installed version as referenced. A tombstone retains generation indefinitely to prevent identical-byte reinstall from reviving stale permits.
 - `openVersion(id, expectedSelection?)` returns a separately acquired shared pin, captured generation/digest, immutable directory, manifest, `revalidate()` and idempotent async `release()`. A second process can use the captured selection to acquire its **own** pin. Hold each pin until its actual file-reading lifetime ends; never pass a borrowed descriptor as an independent pin. `revalidate()` returns false after release, disable, update or tombstone/reinstall. It is a point-in-time admission check, not a revocable lock on future side effects.
 - `collect()` performs bounded eligible detachment/deletion and returns `removed` and `pending` identities. No collection timer/daemon is installed. Management/runtime consumers call it at their owned lifecycle points. Pending cleanup is not whole-root failure. Collection inventories at most 10,000 namespace entries outside writer exclusion and examines at most 32 candidates per writer transaction, including pinned/referenced candidates and registry temporary files. `more` indicates an unexamined remainder of that snapshot; the same instance advances its cursor on the next deliberate call. Concurrent mutations can change that snapshot, so this is not global cleanup completion. Sidecar files remain permanent, including garbage/staging sidecars.
@@ -81,10 +81,16 @@ identifier with no extra suffix or build metadata, host compatibility also
 accepts an original range only if ordinary semver admits **both** `0.24.0` and
 `0.24.1`. This is a deliberate departure from ordinary prerelease matching, not
 a claim that the range explicitly admits that prerelease or every intervening
-version. The historical Files0.1.0 range excludes these endpoints and gains no
-admission. Other development families require ordinary range admission or a
-separate reviewed decision. The actual API check, catalog target and exact
-archive identity checks remain unchanged. Admission does not establish runtime,
+version.
+
+For canonical `0.25.0-dev.N` hosts under the same identifier rules, a separate
+minor-development bridge accepts an original range only if ordinary semver
+admits **both** `0.24.0` and `0.25.0`. Neither bridge rewrites the original
+range or implies it admits every intervening version. The historical
+Files0.1.0 range excludes the required endpoints and gains no admission. Other
+development families require ordinary range admission or a separate reviewed
+decision. Actual API, capability validation, catalog target, archive identity
+and trust checks remain unchanged. Admission does not establish runtime,
 package or platform qualification and never changes the reported host version.
 
 ## Shared store transactions
@@ -116,7 +122,7 @@ The explicit build produces `dist/installed-packages/index.mjs` and the addon. N
 macOS and Linux ARM64 package verification checks required resources and actual bundled
 Node-mode store/native loading; that is not GUI or backend activation. macOS also
 requires explicit native unpacking and checks the complete ad-hoc seal; no
-Developer ID/notarization, Files or other-platform qualification follows. `yauzl`/`semver` remain external direct dependencies of this Node bundle. No binaries enter Git.
+Developer ID/notarization, Files or other-platform qualification follows. `yauzl`/`semver` remain external direct dependencies of this Node bundle. Generated native binaries do not enter Git. The separately reviewed pinned public Snippets archive is a fixed distribution input, not a generated native addon; see [its resource contract](default-snippets.md).
 
 macOS needs Xcode Command Line Tools; Linux needs a C++17 compiler; pinned `node-api-headers` supplies Node-API declarations without downloading runtime headers. Windows needs a target-native MSVC developer shell, matching Windows SDK/Visual C++ runtime, and an absolute `OMXTERM_NODE_IMPORT_LIBRARY` pointing to an architecture-matched `node.exe` import library exposing Node-API 8. The delay-load helper binds only that library to the current Node/Electron executable. Build performs no toolchain provisioning/download. Native ARM64 results do not qualify x64, deployment floors or signed packages.
 

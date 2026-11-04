@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { app, BrowserWindow } from "electron";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
 import { createWindowBackgroundEffects } from "../../src/main/window-background-effects";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
+
+applyChromiumGpuPolicy(app.commandLine);
 
 for (const name of ["userData", "sessionData"] as const) {
   const directory = path.join(__dirname, name);

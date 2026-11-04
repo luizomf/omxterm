@@ -989,13 +989,678 @@ try {
     await key("End", "End", 35);
     await evaluate("filesFixture.setLanguage('pt-BR')");
     assert.equal(
-      await evaluate("document.querySelector('.menu-shortcut').textContent"),
+      await evaluate(
+        "document.querySelector('[role=menuitemcheckbox] .menu-shortcut').textContent",
+      ),
       mac ? "Atalho: Cmd+Shift+." : "Atalho: Ctrl+H",
     );
     await gesture();
     assert.deepEqual(await names(), ["visible"], "shortcut works from menu");
     assert.equal(await hint(), "Itens iniciados por ponto ocultos");
     console.log(`PASS scoped shortcut ${platform}`);
+  }
+  async function keyboardWorkflow(tag) {
+    const filter = ".entry-filter";
+    const active = (selector) =>
+      evaluate(
+        (selector) =>
+          document.activeElement === document.querySelector(selector),
+        selector,
+      );
+    const names = () =>
+      evaluate(
+        "[...document.querySelectorAll('.file-name')].map(node => node.textContent)",
+      );
+    await evaluate("filesFixture.focusIntent('search')");
+    assert.equal(await active(filter), true, "host intent focuses filter");
+    await send("Input.insertText", { text: "item-2" });
+    assert.deepEqual(await names(), [
+      "item-2",
+      ...Array.from({ length: 10 }, (_, index) => `item-${20 + index}`),
+    ]);
+    await key("Tab", "Tab", 9);
+    assert.equal(
+      await active('[data-path="/root/item-2"]'),
+      true,
+      "Tab enters first match",
+    );
+    assert.equal(
+      await evaluate("document.activeElement.getAttribute('aria-selected')"),
+      "true",
+    );
+    await key("ArrowDown", "ArrowDown", 40);
+    assert.equal(
+      await active('[data-path="/root/item-20"]'),
+      true,
+      "arrow selects next row",
+    );
+    await key("F2", "F2", 113);
+    assert.equal(await active(".operation-editor input"), true);
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('/root/item-20')",
+      ),
+    );
+    await send("Input.insertText", { text: "/root/draft" });
+    await evaluate(
+      "filesFixture.setVisibility(false); filesFixture.setVisibility(true); filesFixture.focusIntent('search')",
+    );
+    assert.equal(
+      await active(".operation-editor input"),
+      true,
+      "reveal retains draft focus",
+    );
+    assert.equal(
+      await evaluate("document.querySelector('.operation-editor input').value"),
+      "/root/draft",
+    );
+    await key("Tab", "Tab", 9);
+    await key("Tab", "Tab", 9);
+    await key("Enter", "Enter", 13);
+    assert.equal(
+      await active('[data-path="/root/item-20"]'),
+      true,
+      "Cancel returns to origin",
+    );
+    for (let index = 0; index < 4; index++) await key("Tab", "Tab", 9, 8);
+    assert.equal(
+      await active(selector("actions")),
+      true,
+      "reverse Tab reaches Actions",
+    );
+    await key("Enter", "Enter", 13);
+    const ax = await send("Accessibility.getFullAXTree");
+    const rename = ax.nodes.find(
+      (node) =>
+        node.role?.value === "menuitem" && node.name?.value === "Rename / move",
+    );
+    assert.equal(rename?.description?.value, "Shortcut: F2");
+    await key("Tab", "Tab", 9);
+    assert.equal(
+      await active(address),
+      true,
+      "Tab closes menu and advances from its anchor",
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).select(),
+      address,
+    );
+    await send("Input.insertText", { text: "/empty" });
+    await key("Enter", "Enter", 13);
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.summary').textContent === '0 visible entries'",
+        ),
+      "empty directory",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, filter);
+    await key("Backspace", "Backspace", 8);
+    await key("Tab", "Tab", 9);
+    assert.equal(
+      await active('[role="tree"]'),
+      true,
+      "empty tree remains in Tab order",
+    );
+    await evaluate("filesFixture.fillEmptyOnRefresh()");
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "empty refresh held",
+    );
+    await evaluate("filesFixture.releaseList()");
+    await until(
+      async () => (await names()).includes("arrived"),
+      "empty tree populated",
+    );
+    assert.equal(
+      await active('[role="tree"]'),
+      true,
+      "loading does not select a row",
+    );
+    await key("ArrowDown", "ArrowDown", 40);
+    assert.equal(
+      await active('[data-path="/empty/arrived"]'),
+      true,
+      "Down enters newly loaded rows",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/error" });
+    await key("Enter", "Enter", 13);
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.summary').textContent.includes('permission')",
+        ),
+      "directory error",
+    );
+    assert.equal(await active(address), true, "error does not steal focus");
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/root" });
+    await key("Enter", "Enter", 13);
+    await until(async () => (await names()).length === 40, "root restored");
+    await evaluate((selector) => {
+      filesFixture.holdNextList();
+      document.querySelector(selector).focus();
+    }, selector("refresh"));
+    await key("Enter", "Enter", 13);
+    assert.equal(
+      await evaluate(
+        "document.querySelector('[role=tree]').getAttribute('aria-busy')",
+      ),
+      "true",
+    );
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "refresh held",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.focus();
+      input.select();
+    }, address);
+    await send("Input.insertText", { text: "/unsubmitted draft" });
+    await evaluate(
+      (selector) => document.querySelector(selector).setSelectionRange(2, 8),
+      address,
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).focus(),
+      filter,
+    );
+    await send("Input.insertText", { text: "item-1" });
+    await evaluate("filesFixture.releaseList()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=tree]').getAttribute('aria-busy') === 'false'",
+        ),
+      "held listing settled",
+    );
+    assert.equal(
+      await active(filter),
+      true,
+      "listing completion does not steal focus",
+    );
+    assert.ok((await names()).includes("item-1"));
+    assert.deepEqual(
+      await evaluate((selector) => {
+        const input = document.querySelector(selector);
+        return [input.value, input.selectionStart, input.selectionEnd];
+      }, address),
+      ["/unsubmitted draft", 2, 8],
+      "unfocused address draft survives listing",
+    );
+    await evaluate((selector) => {
+      const input = document.querySelector(selector);
+      input.select();
+    }, filter);
+    await key("Backspace", "Backspace", 8);
+    await evaluate("filesFixture.useDotfiles()");
+    await until(
+      async () => (await names()).includes("visible"),
+      "dotfile fixture loaded",
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).focus(),
+      filter,
+    );
+    await send("Input.insertText", { text: "profile" });
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.filter-hint').textContent.includes('Dotfiles hidden')",
+      ),
+    );
+    await evaluate(
+      (selector) => document.querySelector(selector).select(),
+      filter,
+    );
+    await key("Backspace", "Backspace", 8);
+    await evaluate(
+      "document.querySelector('[data-path=\"/root/visible\"]').focus()",
+    );
+    await key("h", "KeyH", 72, 2);
+    await evaluate(
+      "document.querySelector('[data-path=\"/root/.profile\"]').focus()",
+    );
+    await key("h", "KeyH", 72, 2);
+    assert.equal(
+      await active('[data-path="/root/visible"]'),
+      true,
+      "hidden selection falls back",
+    );
+    assert.equal(
+      await evaluate("document.querySelector('[aria-selected=true]')"),
+      null,
+    );
+    await key("F2", "F2", 113);
+    assert.equal(
+      await evaluate(
+        "document.querySelector('[data-path=\"/root/visible\"]').getAttribute('aria-selected')",
+      ),
+      "true",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('/root/visible')",
+      ),
+    );
+    await key("Tab", "Tab", 9);
+    await key("Tab", "Tab", 9);
+    await key("Enter", "Enter", 13);
+    await evaluate("filesFixture.holdNextDelete()");
+    await key("F10", "F10", 121, 8);
+    for (let index = 0; index < 5; index++)
+      await key("ArrowDown", "ArrowDown", 40);
+    await key("Enter", "Enter", 13);
+    await until(
+      async () => await evaluate("filesFixture.deleteHeld()"),
+      "delete preparation held",
+    );
+    await evaluate((selector) => {
+      filesFixture.holdNextList();
+      document.querySelector(selector).click();
+    }, selector("refresh"));
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "refresh held before confirmation",
+    );
+    await evaluate("filesFixture.releaseList()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=tree]').getAttribute('aria-busy') === 'false'",
+        ),
+      "refresh before confirmation",
+    );
+    await evaluate("filesFixture.releaseDelete()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.activeElement.textContent === 'Delete permanently'",
+        ),
+      "confirmation focus after row replacement",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('/root/visible')",
+      ),
+    );
+    await key("Tab", "Tab", 9);
+    await key("Enter", "Enter", 13);
+    await screenshot(`keyboard-${tag}`);
+    console.log(`PASS keyboard workflow ${tag}`);
+  }
+  async function dragWorkflow(tag) {
+    await evaluate("filesFixture.useMoveFixture()");
+    await until(
+      async () =>
+        await evaluate(
+          "!!document.querySelector('[data-path=\"/root/alias\"]')",
+        ),
+      "move fixture loaded",
+    );
+    await evaluate(() => {
+      window.dragEvents = [];
+      for (const name of ["dragstart", "dragover", "drop", "dragend"])
+        document.addEventListener(
+          name,
+          (event) => {
+            dragEvents.push({
+              name,
+              trusted: event.isTrusted,
+              types: [...(event.dataTransfer?.types ?? [])],
+            });
+          },
+          true,
+        );
+    });
+    async function startDrag(source, target) {
+      await evaluate("dragEvents.length = 0");
+      const from = await point(`[data-path="${source}"]`);
+      const to = await point(`[data-path="${target}"]`);
+      await mouse("mouseMoved", from);
+      await mouse("mousePressed", from, {
+        button: "left",
+        buttons: 1,
+        clickCount: 1,
+      });
+      await mouse(
+        "mouseMoved",
+        { x: from.x + 20, y: from.y + 1 },
+        { button: "left", buttons: 1 },
+      );
+      await until(
+        async () =>
+          await evaluate("dragEvents.some(e => e.name === 'dragstart')"),
+        "Chromium drag started",
+      );
+      await mouse("mouseMoved", to, { button: "left", buttons: 1 });
+      await mouse(
+        "mouseMoved",
+        { x: to.x + 1, y: to.y },
+        { button: "left", buttons: 1 },
+      );
+      return to;
+    }
+    let destination = await startDrag("/root/source", "/root/alias");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/alias\"]')?.dataset.drop === 'invalid'",
+        ),
+      "invalid target feedback",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.drag-feedback').textContent.includes('Cannot drop here')",
+      ),
+    );
+    await mouse("mouseReleased", destination, {
+      button: "left",
+      buttons: 0,
+      clickCount: 1,
+    });
+    await frame();
+    assert.equal(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'prepare-move-into').length",
+      ),
+      0,
+    );
+    destination = await startDrag("/root/source", "/root/folder");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/folder\"]')?.dataset.drop === 'valid'",
+        ),
+      "valid target feedback",
+    );
+    const outside = await point(".entry-filter");
+    await mouse("mouseMoved", outside, { button: "left", buttons: 1 });
+    await mouse("mouseMoved", destination, { button: "left", buttons: 1 });
+    await mouse(
+      "mouseMoved",
+      { x: destination.x + 1, y: destination.y },
+      { button: "left", buttons: 1 },
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/folder\"]')?.dataset.drop === 'valid'",
+        ),
+      "valid target after leaving tree",
+    );
+    await evaluate((refresh) => {
+      window.dragSource = document.querySelector('[data-path="/root/source"]');
+      filesFixture.holdNextList();
+      document.querySelector(refresh).click();
+    }, selector("refresh"));
+    await until(
+      async () => await evaluate("filesFixture.listHeld()"),
+      "refresh held during drag",
+    );
+    await evaluate("filesFixture.releaseList()");
+    await frame();
+    assert.equal(
+      await evaluate("dragSource.isConnected"),
+      true,
+      "source survives listing completion",
+    );
+    await mouse(
+      "mouseMoved",
+      { x: destination.x + 2, y: destination.y },
+      { button: "left", buttons: 1 },
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[data-path=\"/root/folder\"]')?.dataset.drop === 'valid'",
+        ),
+      "valid target after refresh",
+    );
+    const geometry = await point('[data-path="/root/folder"]');
+    assert.deepEqual(
+      geometry,
+      destination,
+      "feedback does not shift the drop target",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.drag-feedback').textContent.includes('Drop to move into folder')",
+      ),
+    );
+    await screenshot(`drag-valid-${tag}`);
+    await mouse("mouseReleased", destination, {
+      button: "left",
+      buttons: 0,
+      clickCount: 1,
+    });
+    await until(
+      async () =>
+        await evaluate("!document.querySelector('.operation-editor').hidden"),
+      "move confirmation",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('.operation-editor').textContent.includes('Move /root/source into /root/folder?')",
+      ),
+    );
+    assert.equal(
+      await evaluate("document.activeElement.textContent"),
+      "Cancel",
+      "safe confirmation focus",
+    );
+    assert.deepEqual(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'prepare-move-into')",
+      ),
+      [
+        {
+          operation: "prepare-move-into",
+          path: "/root/source",
+          kind: "file",
+          directory: "/root/folder",
+        },
+      ],
+    );
+    assert.ok(
+      await evaluate(
+        "dragEvents.some(e => e.name === 'dragstart' && e.trusted) && dragEvents.some(e => e.name === 'drop' && e.trusted)",
+      ),
+      "CDP generated trusted Chromium drag events",
+    );
+    const movePoint = await evaluate(() => {
+      const b = [...document.querySelectorAll(".operation-editor button")].find(
+        (b) => b.textContent === "Move",
+      );
+      const r = b.getBoundingClientRect();
+      return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 };
+    });
+    await click(movePoint);
+    await until(
+      async () =>
+        await evaluate(
+          "filesFixture.requests.some(r => r.operation === 'move-into')",
+        ),
+      "confirmed move request",
+    );
+    assert.deepEqual(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'move-into')",
+      ),
+      [{ operation: "move-into", token: "fixture-move-token" }],
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('[role=status]').textContent.includes('Operation completed') && document.querySelector('[role=tree]').getAttribute('aria-busy') === 'false'",
+        ),
+      "move refresh complete",
+    );
+    const count = await evaluate("filesFixture.requests.length");
+    await evaluate(() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(["synthetic"], "external"));
+      transfer.setData("application/x-omxterm-files-entry", "forged");
+      const target = document.querySelector('[data-path="/root/folder"]');
+      target.dispatchEvent(
+        new DragEvent("dragover", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: transfer,
+        }),
+      );
+      target.dispatchEvent(
+        new DragEvent("drop", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: transfer,
+        }),
+      );
+    });
+    assert.equal(
+      await evaluate("filesFixture.requests.length"),
+      count,
+      "external file payload did not reach backend",
+    );
+    assert.ok(
+      await evaluate(
+        "document.querySelector('[role=status]').textContent.includes('Only entries dragged within Files')",
+      ),
+    );
+    const longFeedback = await evaluate(() => {
+      const data = new DataTransfer();
+      const source = document.querySelector('[data-path="/root/source"]');
+      const target = [...document.querySelectorAll(".file-row")].find((row) =>
+        row.dataset.path.includes("/long-"),
+      );
+      source.dispatchEvent(
+        new DragEvent("dragstart", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: data,
+        }),
+      );
+      target.dispatchEvent(
+        new DragEvent("dragover", {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: data,
+        }),
+      );
+      const feedback = document.querySelector(".drag-feedback");
+      const rect = feedback.getBoundingClientRect();
+      const result = {
+        height: rect.height,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        scrollWidth: feedback.scrollWidth,
+        text: feedback.textContent,
+        drop: target.dataset.drop,
+      };
+      source.dispatchEvent(
+        new DragEvent("dragend", { bubbles: true, dataTransfer: data }),
+      );
+      return result;
+    });
+    assert.equal(longFeedback.drop, "valid");
+    assert.ok(
+      longFeedback.height < 50 &&
+        longFeedback.top >= 0 &&
+        longFeedback.bottom <= 400,
+      "long folder feedback stays bounded",
+    );
+    assert.ok(
+      longFeedback.scrollWidth > longFeedback.width &&
+        longFeedback.text.startsWith("Drop to move into long-"),
+      "long feedback is truncated visually, not expanded over the tree",
+    );
+    console.log(`PASS directory drag ${tag}`);
+  }
+  async function moveKeyboardWorkflow(tag) {
+    await evaluate("filesFixture.useMoveFixture()");
+    await until(
+      async () =>
+        await evaluate(
+          "!!document.querySelector('[data-path=\"/root/source\"]')",
+        ),
+      "move keyboard fixture",
+    );
+    async function prepare() {
+      await evaluate(
+        "document.querySelector('[data-path=\"/root/source\"]').focus(); filesFixture.holdNextMove()",
+      );
+      await key("F10", "F10", 121, 8);
+      for (let index = 0; index < 3; index++)
+        await key("ArrowDown", "ArrowDown", 40);
+      await key("Enter", "Enter", 13);
+      await send("Input.insertText", { text: "/root/folder" });
+      await key("Enter", "Enter", 13);
+      await until(
+        async () => await evaluate("filesFixture.moveHeld()"),
+        "keyboard move preparation held",
+      );
+      await frame();
+    }
+    await prepare();
+    await evaluate("filesFixture.releaseMove()");
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.operation-editor').textContent.includes('Move /root/source into /root/folder?')",
+        ),
+      "keyboard move confirmation",
+    );
+    assert.equal(
+      await evaluate("document.activeElement.textContent"),
+      "Cancel",
+      "Cancel owns focus after inert editor",
+    );
+    await key("Enter", "Enter", 13);
+    assert.equal(
+      await evaluate("document.querySelector('.operation-editor').hidden"),
+      true,
+      "keyboard Cancel closes confirmation",
+    );
+    await prepare();
+    await evaluate(
+      "filesFixture.setVisibility(false); filesFixture.releaseMove()",
+    );
+    await until(
+      async () =>
+        await evaluate(
+          "document.querySelector('.operation-editor').textContent.includes('Move /root/source into /root/folder?')",
+        ),
+      "hidden confirmation prepared",
+    );
+    await evaluate(
+      'filesFixture.setVisibility(true); filesFixture.focusIntent("search")',
+    );
+    assert.equal(
+      await evaluate("document.activeElement.textContent"),
+      "Cancel",
+      "reveal focuses Cancel",
+    );
+    assert.equal(
+      await evaluate(
+        "filesFixture.requests.filter(r => r.operation === 'move-into').length",
+      ),
+      0,
+    );
+    console.log(`PASS directory move keyboard ${tag}`);
   }
   const scenario = process.argv[2] ?? "matrix";
   assert.ok(
@@ -1009,6 +1674,9 @@ try {
       "resize-menu",
       "shortcut-mac",
       "shortcut-linux",
+      "keyboard",
+      "drag",
+      "move-keyboard",
     ].includes(scenario),
   );
   if (
@@ -1066,6 +1734,9 @@ try {
           if (kind === "resize-menu") await resizeMenu(tag, scale);
           if (kind === "shortcut-mac") await shortcut("mac");
           if (kind === "shortcut-linux") await shortcut("linux");
+          if (kind === "keyboard") await keyboardWorkflow(tag);
+          if (kind === "drag") await dragWorkflow(tag);
+          if (kind === "move-keyboard") await moveKeyboardWorkflow(tag);
         }
         if (scenario === "matrix") console.log(`PASS matrix ${tag}`);
       }

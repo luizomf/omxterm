@@ -73,7 +73,9 @@ describe("historical macOS Files 0.5 catalog", () => {
     ["0.24.0-dev.21", true],
     ["0.24.0-dev.26", true],
     ["0.24.0", true],
-    ["0.25.0-dev.0", false],
+    ["0.25.0-dev.0", true],
+    ["0.25.0-dev.1", true],
+    ["0.25.1-dev.0", false],
   ])(
     "admits manifest range %s without claiming execution qualification",
     (appVersion, expected) => {

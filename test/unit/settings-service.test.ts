@@ -58,11 +58,11 @@ describe("settings snapshot", () => {
     const { service, root } = await setup();
     const snapshot = await service.snapshot();
     expect(snapshot).toMatchObject({
-      revision: "absent",
       text: null,
       values: { "font.size": 16, confirmClose: true, "theme.path": "" },
     });
     expect(snapshot.problem).toBeUndefined();
+    expect(snapshot.revision).toMatch(/^[0-9a-f]{64}$/u);
     expect(await readdir(root)).toEqual([]);
   });
 
@@ -260,6 +260,98 @@ describe("graphical settings changes", () => {
   });
 });
 
+describe("theme selection ordering", () => {
+  it.each(["snapshot", "themes", "field", "keybind", "raw"] as const)(
+    "does not coalesce theme choices across a %s request",
+    async (barrier) => {
+      const { service, reload, read } = await setup('{"version":1}');
+      const initial = await service.snapshot();
+      let resume!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        resume = resolve;
+      });
+      reload.mockImplementationOnce(async () => {
+        await gate;
+        return { applied: true, notices: [] };
+      });
+      const active = service.change({ path: "font.size", value: 18 });
+      await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
+      const before = service.change({
+        path: "theme.path",
+        value: "missing-before.json",
+      });
+      const middle =
+        barrier === "snapshot"
+          ? service.snapshot()
+          : barrier === "themes"
+            ? service.themes()
+            : barrier === "field"
+              ? service.change({ path: "confirmClose", value: false })
+              : barrier === "keybind"
+                ? service.changeKeybind({
+                    action: "find",
+                    choice: { state: "unbound" },
+                  })
+                : service.saveText(
+                    '{"version":1,"logLevel":"error"}',
+                    initial.revision,
+                  );
+      const after = service.change({ path: "theme.path", value: null });
+      resume();
+      expect(await active).toMatchObject({ status: "saved" });
+      expect(await before).toMatchObject({ status: "rejected" });
+      const result = await middle;
+      if (barrier === "raw")
+        expect(result).toMatchObject({ status: "conflict" });
+      if (barrier === "snapshot")
+        expect(result).toMatchObject({
+          values: { "font.size": 18, "theme.path": "" },
+        });
+      expect(await after).toMatchObject({ status: "saved" });
+      expect(JSON.parse(await read())).toEqual({
+        version: 1,
+        font: { size: 18 },
+        ...(barrier === "field" ? { confirmClose: false } : {}),
+        ...(barrier === "keybind" ? { keybinds: { find: null } } : {}),
+      });
+    },
+  );
+
+  it("reports a rejected winning choice without saving superseded choices or losing the running save's application error", async () => {
+    const { service, reload, read } = await setup('{"version":1}');
+    let resume!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      resume = resolve;
+    });
+    reload.mockImplementationOnce(async () => {
+      await gate;
+      return { applied: false, notice: "reload failed" };
+    });
+    const active = service.change({ path: "theme.path", value: null });
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledOnce());
+    const skipped = service.change({ path: "theme.path", value: null });
+    const final = service.change({
+      path: "theme.path",
+      value: "missing-final.json",
+    });
+    resume();
+    expect(await active).toMatchObject({
+      status: "saved",
+      application: { applied: false, notice: "reload failed" },
+    });
+    expect(await skipped).toMatchObject({
+      status: "superseded",
+      snapshot: { values: { "theme.path": "" } },
+    });
+    expect(await final).toMatchObject({
+      status: "rejected",
+      snapshot: { values: { "theme.path": "" } },
+    });
+    expect(reload).toHaveBeenCalledOnce();
+    expect(JSON.parse(await read())).toEqual({ version: 1 });
+  });
+});
+
 describe("raw JSON saves", () => {
   it("saves only from the current revision and validates first", async () => {
     const { service, file, read } = await setup(JSON.stringify({ version: 1 }));
@@ -300,7 +392,7 @@ describe("settings file helpers", () => {
     await nodeSettingsFiles.replace(
       file,
       '{ "version": 1 }\n',
-      "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      await nodeSettingsFiles.read(file),
     );
     expect(await readFile(file, "utf8")).toBe('{ "version": 1 }\n');
     if (process.platform !== "win32")

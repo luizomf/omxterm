@@ -211,6 +211,7 @@ export function startExtensionViewHost(
       entryResource: string;
       title: string;
       presentation?: "panel";
+      panelDefaultToken?: string;
     }) {
       const opened = await host.open(input);
       const descriptor: HostedContentDescriptor = input.presentation
@@ -222,7 +223,11 @@ export function startExtensionViewHost(
       if (descriptor.presentation === "panel")
         ownerRoute.panels.add(descriptor.id);
       try {
-        reveal(descriptor);
+        reveal(
+          input.panelDefaultToken
+            ? { ...descriptor, panelDefaultToken: input.panelDefaultToken }
+            : descriptor,
+        );
       } catch {
         await host.retire();
         throw new Error("Hosted notification failed");

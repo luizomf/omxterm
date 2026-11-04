@@ -15,8 +15,9 @@ const digest = (source) => createHash("sha256").update(source).digest("hex");
 // app-builder-lib 26.15.3 has no launcher override. Correct this exact build
 // input before loading electron-builder, never an already-built artifact.
 // Unknown dependency bytes require a new review, not a best-effort patch.
-export async function prepareLinuxLauncher() {
-  const source = await readFile(dependencyPath, "utf8");
+// Tests pass a fixture-owned copy; production prepares the installed dependency.
+export async function prepareLinuxLauncher(targetPath = dependencyPath) {
+  const source = await readFile(targetPath, "utf8");
   if (digest(source) === correctedDigest) return;
   if (digest(source) !== originalDigest)
     throw new Error(
@@ -33,7 +34,7 @@ export async function prepareLinuxLauncher() {
     throw new Error(
       "AppImage generator correction did not match reviewed bytes",
     );
-  await writeFile(dependencyPath, corrected);
+  await writeFile(targetPath, corrected);
 }
 
 // Also guard direct electron-builder invocations that bypass package:linux.

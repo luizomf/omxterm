@@ -4,7 +4,7 @@ copyright: Copyright © 2026 Luiz Otávio Miranda
 asar:
   smartUnpack: false
 npmRebuild: false
-beforePack: scripts/prepare-linux-launcher.mjs
+beforePack: scripts/prepare-default-snippets.mjs
 # The legacy ARM64 AppImage runtime dynamically requests the development-only
 # libz.so linker name. Use electron-builder's static runtime so the artifact has
 # no host zlib or libfuse2 library dependency.
@@ -13,6 +13,10 @@ toolsets:
 directories:
   output: release
 extraResources:
+  - from: dist/default-snippets/${os}-${arch}/bundled-snippets
+    to: bundled-snippets
+    filter:
+      - snippets-0.1.0.omxext
   - from: LICENSE
     to: LICENSE.txt
   # Linux Terminal Windows resolve their icon from resources because a
@@ -53,6 +57,7 @@ mac:
   category: public.app-category.developer-tools
   files:
     - dist/**
+    - "!dist/default-snippets/**"
     - "!dist/extensions/**"
     - "!dist/**/*.omxext"
     - "!dist/**/*.omxext.json"
@@ -97,6 +102,7 @@ linux:
   syncDesktopName: true
   files:
     - dist/**
+    - "!dist/default-snippets/**"
     - "!dist/extensions/**"
     - "!dist/**/*.omxext"
     - "!dist/**/*.omxext.json"
@@ -137,6 +143,7 @@ win:
   icon: assets/application-icon.png
   files:
     - dist/**
+    - "!dist/default-snippets/**"
     - "!dist/extension-runtime/*.lib"
     - "!dist/extension-runtime/*.exp"
     - "!dist/extension-runtime/*.obj"

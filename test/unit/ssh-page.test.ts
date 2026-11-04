@@ -63,6 +63,38 @@ const launches = (request: ReturnType<typeof vi.fn<SshBridge["request"]>>) =>
     ([value]) =>
       (value as { operation: string }).operation === "terminal.openSsh.v1",
   );
+it("explains a missing SSH capability without a Linux-only claim", async () => {
+  let language!: (value: "en-US" | "pt-BR") => void;
+  const page = mountSshPage(document, {
+    onAppearance: () => () => {},
+    onLanguage(listener) {
+      language = listener;
+      return () => {};
+    },
+    onVisibility(listener) {
+      listener(true);
+      return () => {};
+    },
+    request: async (value) =>
+      (value as { operation: string }).operation === "host.capabilities"
+        ? { capabilities: [] }
+        : { ok: true, aliases: [], incomplete: false, reasons: {} },
+  });
+  dispose = page.dispose;
+  await page.ready;
+  expect(document.body.textContent).toContain(
+    "Check the OMXTerm version and platform requirements",
+  );
+  expect(document.body.textContent).not.toContain("Linux ARM64 preview host");
+  expect(
+    document.querySelector<HTMLButtonElement>(".quick-connect button")!
+      .disabled,
+  ).toBe(true);
+  language("pt-BR");
+  expect(document.body.textContent).toContain(
+    "Confira os requisitos de versão do OMXTerm e de plataforma",
+  );
+});
 it("replays the initial language and preserves keyboard selection across relabeling", async () => {
   const { request, search, language } = await setup("pt-BR");
   expect(document.documentElement.lang).toBe("pt-BR");

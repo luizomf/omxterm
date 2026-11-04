@@ -1,4 +1,9 @@
-import { SETTINGS_FIELDS, type SettingsPath } from "../../shared/settings";
+import {
+  SETTINGS_FIELDS,
+  type SettingsBridge,
+  type SettingsPath,
+} from "../../shared/settings";
+import { renderSettingsThemes } from "./settings-themes";
 import type { MessageKey } from "../../shared/i18n";
 import { englishLanguage, type Translate } from "../renderer-language";
 
@@ -171,6 +176,40 @@ export function pages(platform: string): readonly Page[] {
       ],
     },
   ];
+}
+
+export function renderSettingsPage(
+  document: Document,
+  page: Page,
+  options: {
+    readonly bridge: SettingsBridge;
+    readonly live: () => boolean;
+    readonly value: (path: SettingsPath) => unknown;
+    readonly change: (
+      path: SettingsPath,
+      value: unknown,
+      settled: () => void,
+    ) => void;
+    readonly syncs: (() => void)[];
+    readonly labels: ((t: Translate) => void)[];
+  },
+): HTMLElement {
+  const panel = document.createElement("div");
+  panel.className = "settings-panel";
+  if (page.id === "appearance")
+    panel.append(renderSettingsThemes(document, options.bridge, options));
+  for (const control of page.controls)
+    panel.append(
+      renderControl(
+        document,
+        control,
+        options.value,
+        options.change,
+        options.syncs,
+        options.labels,
+      ),
+    );
+  return panel;
 }
 
 export function renderControl(

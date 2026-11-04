@@ -64,6 +64,7 @@ export interface TerminalIpcControllerOptions {
   readonly configuration: TerminalRendererConfiguration;
   readonly webContents: TrustedWebContents;
   readonly initialFullScreen?: boolean;
+  readonly onSurfaceFontConfigurationsChanged?: () => void;
   readonly mirrorWindowFocused?: () => boolean;
   readonly mirrorWindowAvailable?: () => boolean;
   readonly onMirrorStopped?: (

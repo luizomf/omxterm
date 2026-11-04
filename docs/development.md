@@ -55,7 +55,7 @@ OMXTerm runs with `--no-sandbox` on Linux ([ADR 0024](adr/0024-disable-the-chrom
 Linux tests need a writable temporary directory on a filesystem that permits execution. These fixtures create executable scripts under Node's `os.tmpdir()` (which honors `TMPDIR`):
 
 - [`linux-appimage-installer`](../test/unit/linux-appimage-installer.test.ts) and [`linux-helper-architecture`](../test/unit/linux-helper-architecture.test.ts) execute synthetic AppImages and commands such as `file` and `uname` through a fixture-local `PATH`.
-- [`linux-appimage-launcher`](../test/integration/linux-appimage-launcher.test.ts) runs a generated AppRun through Bash, which then executes the temporary application stub.
+- [`linux-appimage-launcher`](../test/integration/linux-appimage-launcher.test.ts) prepares a private copy of the pinned `app-builder-lib` package under `.scratch/`, leaving the installed dependency unchanged. It runs the generated AppRun through Bash, which then executes the temporary application stub. Production Linux packaging still prepares and guards the installed dependency's exact reviewed bytes.
 - [`linux-desktop-launch`](../test/integration/linux-desktop-launch.test.ts) executes inspection stubs and a synthetic AppImage, including its installed copy through `gio launch`.
 - [`linux-helper-provisioning`](../test/integration/linux-helper-provisioning.test.ts), [`linux-installer-lifecycle`](../test/integration/linux-installer-lifecycle.test.ts), and [`linux-packaged-process`](../test/unit/linux-packaged-process.test.ts) execute temporary helper, AppImage, or wrapper scripts.
 
@@ -214,8 +214,32 @@ OMXTERM_TOOLBAR_CHROMIUM=/absolute/path/to/headless-chromium npm test -- test/in
 ```
 
 It checks real browser hit-testing, scrolling and layout without Electron or a
-desktop. Set `OMXTERM_TOOLBAR_EVIDENCE` to a private output directory to retain
-synthetic screenshots. This is not native or packaged-app qualification.
+desktop. Headless browser processes may still access OS services. For agent
+verification, run browser tests and browser-based review/reproduction probes in
+an assigned disposable guest, never on a physical host; this also applies to
+headless runs and every nested delegate. Set `OMXTERM_TOOLBAR_EVIDENCE` to a
+private output directory to retain synthetic screenshots. This is not native or
+packaged-app qualification.
+
+The repository's `vitest.config.cts` sets Vite's root-relative `cacheDir` to
+`.scratch/vite`, so Vitest result caches and Vite optimizer artifacts belong to
+the selected worktree/project root, not a shared `node_modules` target. The CJS
+config form also keeps Vite's config bundling in memory: an ESM config would
+still write temporary modules under `node_modules/.vite-temp` before its
+`cacheDir` setting is read. Do not rely on `--no-cache` or a private reporter path
+to make linked dependencies read-only. Cache entries are cumulative scheduling
+and optimization state, not evidence of the current invocation's execution or
+coverage.
+
+Named projects must inherit this policy or select their own owned cache location;
+custom configs/CLI overrides are not sandboxed by the repository config. The
+optional experimental filesystem-module cache has a separate path setting and
+is not enabled here; enabling it requires an owned location too. Do not delete
+shared historical caches or claim their unknown original state was restored.
+The Node-only cache regression runs the pinned CLI with disposable shared
+cache destinations, multiple workers, inherited nested projects, dependency
+optimization and a symlinked working-directory alias; it does not qualify native
+or browser behavior.
 
 Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`. Confirm that the report belongs to the current invocation, and preserve it with the command, selected scope/configuration, exit status, and terminal output before another run overwrites it. A nonzero exit remains a failure regardless of JSON counters.
 
@@ -229,7 +253,184 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 
 ## Running native tests
 
-> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop.
+> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. Follow the Linux desktop-service or macOS preference precautions below before launch.
+
+### Linux desktop services and native verification
+
+For Linux verification that launches Electron, a browser or a desktop harness
+(including headless probes), prefer an assigned disposable guest's **ordinary
+test user, logged-in desktop, normal user bus and actual per-user runtime directory**.
+Verify the actual account/session and inherited display, authentication, bus and
+runtime before launch. A dedicated ordinary test account with its own login and
+runtime avoids the original user's per-user services; it does not isolate shared
+machine state or grant permission to alter other users' resources.
+
+Temporary HOME/XDG/profile directories separate application files, not per-user
+services. Changing `XDG_RUNTIME_DIR`, authenticating an Xvfb/Openbox display or
+starting `dbus-run-session` under the existing logged-in account does **not**
+establish account/runtime isolation. Auto-activated services can still share
+paths and mounts with the original desktop. Do not create a competing same-user
+private-bus portal as an isolation workaround. If using the original guest
+user's ordinary desktop/bus, explicitly own that verification session and protect
+its shared resources instead.
+
+Launch and settlement prerequisites:
+
+1. Before launch, record a private baseline on the intended ordinary bus
+   **without activating absent services**: original document-portal service/helper
+   creation identities and bus owner (or established absence), mount namespace and document-path
+   mount mapping/device/type and portal FUSE connection when observable, current
+   consumers, and basic API/FUSE functionality when already active. Identify
+   consumers of the document mount, including open files and process working
+   directories, without reading exported document contents. Preserve the selected
+   original configuration/state and unrelated
+   evidence holds. Distinguish observed absence from unavailable inspection;
+   if the scope cannot be observed and protected, stop and arrange a suitable
+   user/session before launch. Do not interrupt original consumers to make a
+   lane available.
+2. After the run, join owned process outcomes and streams and release injected
+   input. Compare the same original portal/helper/bus identities, mount mapping
+   and API/FUSE scope, and original consumer state. Record unexplained consumer
+   changes or inspection errors rather than assuming no impact. Repeat
+   preservation checks after retiring only owned scratch, before releasing the
+   guest. Record these results separately from fixture assertions and process
+   settlement: exit0, no remaining task actors or a successful cleanup receipt
+   alone does not prove shared-service preservation.
+3. On unexplained changes or unavailable checks, retain evidence and report the
+   unresolved shared-resource state; stop further launches. Do not unmount,
+   kill or restart original services, delete their runtime/store, or reset the
+   guest as routine cleanup. Recovery requires separately authorized scope and
+   consumer assessment, not a generic retry or an assumed restoration baseline.
+
+[#793](https://github.com/luizomf/omxterm/issues/793) records a same-user/private-bus
+portal owning the visible document mount while the original portal retained a
+different FUSE connection. Scoped functional recovery is complete, but the full
+initial displacement sequence and any rendering-failure causality remain
+unproven. Preservation checks are point-in-time observations, not a guarantee
+against later changes or reconstruction of a missing historical baseline.
+
+### macOS preferences and native verification
+
+Temporary `HOME`, XDG, Electron user-data and session-data paths separate some
+application files; they do **not** isolate macOS per-bundle preferences or
+Keychain from the actual user and GUI session. Temporary browser profiles do not
+establish Keychain isolation either, including for headless Chrome. Setting
+`HOME` does not switch users. The observed Chrome key-storage dialog and its
+unattributed trigger are recorded in [#784](https://github.com/luizomf/omxterm/issues/784). The FULL
+[`package:verify`](../scripts/verify-packaged-app.mjs) GUI startup uses a temporary
+HOME, XDG config/state and Electron user-data directory, but does not capture or
+restore OS preferences. FULL and inspection-only also execute packaged Electron
+Node-mode probes, some with the inherited environment. Inspection-only does not
+launch the GUI, but has not been established as preference-isolated merely because
+it is headless. Source-mode Electron fixtures can affect preferences too;
+`npm run check` includes both graphical tests and the FULL verifier.
+
+For native verification, prefer an assigned disposable macOS guest with a
+**dedicated ordinary test user** whose preferences and credentials need not be
+preserved. Log into the guest's Aqua session as that user and verify the actual
+account/console identity and [live desktop admission](#macos-console-admission)
+before launch; changing an environment variable in an existing user's session is
+not equivalent. Provision the fixture's other prerequisites and keep the desktop
+idle. A separate user avoids using the existing user's preference domains for
+that session; it does not isolate shared system
+state, other accounts, input/display settings or external resources. Those still
+need their own authorized protection and cleanup.
+
+If existing guest preferences must be preserved instead, arrange a suitable
+baseline and recovery **before** launching any relevant process:
+
+1. Identify the actual account, executable/bundle and possible application,
+   Electron, Chromium and helper preference domains for the selected test. The
+   packaged app currently uses `com.otaviomiranda.omxterm`; source Electron has
+   used `com.github.Electron`. These are starting points, not an exhaustive list.
+   Identify the files and user/host scope actually used; do not assume `HOME`
+   points to them. Quiesce competing writers and establish exclusive use. If the
+   affected scope cannot be identified or safely preserved, use the disposable
+   test user instead.
+2. In an owner-only hold outside disposable test scratch, record each domain's
+   prior file and daemon existence or absence, exact file bytes and restorable
+   metadata (owner/group, mode, modification time, extended attributes and ACLs
+   when present), plus daemon-visible semantic values. Verify the backup and
+   compare disk with daemon state before launch. Distinguish an absent or empty
+   domain from a read/export error; treat errors, unexpected file types or
+   ownership, and disk/daemon disagreement as blockers. Preserve the hold and
+   keep preference values and private paths out of public evidence.
+3. After the run, settle the owned processes and streams, then compare the same
+   scope and investigate newly observed domains. Do not overwrite concurrent or
+   unrecognized changes. Restore only identified, authorized domains from a
+   verified baseline, including both the user preference daemon's semantic state
+   and the original file bytes and metadata; handle a previously absent domain
+   only when its absence and ownership are established. A raw plist copy or a
+   `defaults` operation alone is not proof of both states. Do not guess missing
+   values, delete unrelated domains, or restart/kill the preference daemon as a
+   shortcut. If safe restoration is unclear, retain the hold and report the
+   unresolved state rather than claiming cleanup.
+4. Compare bytes, metadata, existence and daemon-visible values immediately
+   after restoration and again after owned-scratch cleanup, before retiring the
+   hold. Record the selected scope, process settlement, checks and any remaining
+   limitations separately from the test result. Matches are point-in-time
+   observations, not guarantees against later writes or evidence about
+   unobserved domains.
+
+Bounded guest evidence illustrates the distinction: the #764 FULL package
+verification observed an application-domain plist metadata change without a
+pre-run byte backup, so its earlier contents cannot be reconstructed. A #769
+source-mode run changed Electron-domain bytes and daemon-visible values while the
+application domain stayed unchanged. A separate Files0.6 packaged run changed the
+application domain's bytes and daemon-visible values. In the latter two runs,
+the changed existing domains were restored and their file bytes and daemon-visible
+values matched the recorded baselines at subsequent checks. A later #766
+source-view run also required restoration. In a #765 packaged run, its guard
+reported matching selected domains without restoration.
+The #769, #766 and #765 private guards treated failed daemon exports as absent or
+empty for domains whose files were absent. Their reported matches therefore do
+not establish daemon absence for those domains. These observations do not identify
+the writer or key, prove a general cause, cover all domains, or guarantee future
+restoration. See [#779](https://github.com/luizomf/omxterm/issues/779)
+and the [Files checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint).
+
+Preserve the application's existing macOS Chromium sandbox. An outer sandbox and
+`NODE_OPTIONS` preload were not suitable workarounds in the #764 qualification;
+do not disable application sandboxing to compensate for the test setup. No
+repository verifier currently supplies a general preference backup/restoration
+facility; use the dedicated-user route unless a suitable scoped recovery procedure
+is available and verified.
+
+### macOS console admission
+
+Before source graphical tests, packaged GUI checks or native input probes in the
+assigned disposable guest:
+
+1. Verify that the intended **ordinary test user** actually owns the console and
+   Aqua session, is on-console and is **unlocked**. SSH access, a running Aqua
+   session, configured automatic login, accepted credentials and a stock
+   `screenLock is off` result do not establish unlocked desktop admission.
+2. Check for held keys/buttons **and Command/Shift/Control/Option modifier flags**.
+   Release only input injected by the current owner; do not clear another user's
+   state. Verify the selected display's current logical usable work area and
+   [required viewport plus native frame](native-test-reference.md#settings-layout),
+   not just its physical resolution.
+3. Recheck immediately before launch and after restart, session/display changes
+   or idle locking. Earlier readiness and a user-active assertion do not guarantee
+   continued unlock. If the desktop is locked or changing, stop before launching
+   the native run rather than treating the setup hold as a product failure.
+
+Use supported normal guest-console/login mechanisms or an input transport whose
+mapping and actual delivery have been verified. API/CLI acceptance alone proves
+neither authentication nor product input receipt; do not guess virtual keycode
+schemas or loop password attempts. Preserve a verified original-state baseline
+before reversible, owned guest-only login/display/idle setup and restore it when
+its consumers finish. This is not advice to disable security generally: do not
+relax physical-host authentication/privacy/Keychain, decode another account's
+credential or modify clean recovery media to admit a run.
+
+[#797](https://github.com/luizomf/omxterm/issues/797) records a local
+`autoLoginUserScreenLocked` observation and a separate later idle relock despite
+lock-policy status. That local Boolean is **not a documented stable Apple MDM
+interface or a permanent unlock recipe**; its initial writer is unknown. Setup
+recovery does not qualify the product. Keep admission, actual input receipts and
+[invocation outcomes](native-test-reference.md#admission-input-and-invocation-outcomes)
+separate.
 
 <a id="qualification-scope"></a>
 
@@ -239,6 +440,12 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 
 - Linux display relaunch selects `APPIMAGE` only when `APPDIR/omxterm` matches the current executable, preventing development Electron from relaunching an inherited outer AppImage; terminal environment propagation is unchanged ([ADR 0020](adr/0020-default-linux-rendering-to-x11.md)). [#609](https://github.com/luizomf/omxterm/issues/609) records the bounded Fedora/Ubuntu reproductions and corrected About/packaged-relaunch checks, not a diagnosis of every historical startup failure or all-platform qualification.
 - Known runtime limitations that tests account for are listed in the [Restty guide](restty-development.md#current-runtime-limitations).
+- Runs that include Window Chrome `settings-only` (including the full suite) need
+  a selected display's logical usable work area large enough for the exact
+  1920×1080 renderer viewport plus its observed native frame. Physical resolution
+  alone is not the prerequisite. See the [Settings layout capacity check and
+  focused command](native-test-reference.md#settings-layout) before a full run;
+  insufficient capacity is a failure, never a qualified skip.
 - Linux runs that include `terminal-popup-native` (including the full suite) need the explicitly provisioned [native-input lane](native-test-reference.md#native-terminal-popup-and-input-provisioning). Set `OMXTERM_TEST_PROVISIONED_NATIVE_INPUT=1` only after provisioning it. Missing prerequisites fail; they are not skipped as successful qualification.
 
 ### Focused checks
@@ -370,6 +577,13 @@ ARM64 complete native checks (and optional full x64 checks) run `check:portable`
 | Windows ARM64 | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
 | Windows x64   | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
 
+For macOS, apply the [preference precautions](#macos-preferences-and-native-verification)
+to graphical tests and packaged Electron probes, including FULL and inspection-only
+`package:verify` runs. A successful verifier result does not itself establish
+preference restoration. For Linux, apply the [desktop-service prerequisites](#linux-desktop-services-and-native-verification)
+before source/package launches; temporary profiles and headless execution do not
+establish account/runtime isolation.
+
 > **Warning:** Full Windows verification (`check:win` or `package:verify` with `--disposable-vm-allow-omxterm-replacement`) runs the NSIS installer and can replace an existing OMXTerm installation on the machine. Run it only in a disposable VM with a recovery snapshot ([Windows release procedure](release.md#windows-arm64-and-x64)). To verify only the unpacked Windows app directory without running the installer, use:
 >
 > ```powershell
@@ -382,11 +596,29 @@ registration/shortcut/process cleanup: the custom installation root must be
 absent or a real empty directory. Non-recursive removal preserves unexpected
 residual files/directories as failure evidence; exact owned-cache cleanup and
 later relocated-uninstaller cleanup do not establish payload removal.
+Before installation, the verifier binds its own new temporary directory to a
+native long path and matching object identity. This handles Windows 8.3 `TEMP`
+aliases without relaxing existing registration/shortcut/cache checks. Unsafe
+resolved paths, identity changes and original or resolved reparse/process/cache
+conflicts fail before installer execution; temporary evidence is retained. See
+[ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md).
+
 Headless controlled-command regressions exercise the actual transaction with real
-files (including cleared registrations but retained payload):
+files (including modeled short/long Windows aliases and cleared registrations but retained payload):
 `npm test -- test/unit/windows-installer-transaction.test.ts test/unit/windows-installer-verification.test.ts test/unit/windows-verification-options.test.ts`.
-These tests do not execute NSIS or PowerShell, reproduce an installer defect, or
-replace disposable-Windows exact-installer qualification.
+These tests mock Windows filesystem metadata/path resolution and command results;
+they reproduce verifier defects, not actual NSIS behavior. They do not execute
+NSIS or PowerShell or replace disposable-Windows exact-installer qualification.
+A source correction does not reclassify an earlier failed installation or
+permit replaying its retained transaction.
+
+Current source also carries one exact public Snippets0.1.0 input for new packaged
+profiles. Normal checkout/package preparation is offline and pinned; missing or
+corrupt supported-target input fails the beforePack hook. Source build/development
+opts out of provisioning. See [Default Snippets](default-snippets.md) for
+`prepare:default-snippets`, exact target/resource checks and the still-required
+changed-startup/native/package proof. This does not reclassify existing platform
+or historical failed checkpoints.
 
 For native x64 **build-only** delivery, use `npm run package:linux:x64` or
 `npm run package:win:x64`, then `npm run package:verify -- --inspection-only`.
@@ -527,10 +759,12 @@ Linux packaged-wrapper controls: [fixture reference](native-test-reference.md#li
 
 ### Graphical fixture supervision
 
-Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`):
+Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They inherit the caller's desktop/bus/runtime; neither these helpers nor the Linux packaged-process helper provision or validate per-user service isolation. The launching owner must satisfy the [Linux shared-resource prerequisites and preservation checks](#linux-desktop-services-and-native-verification).
+
+Within the fixture process/profile scope:
 
 - Fixture diagnostics and stdout/stderr logs are written under `.scratch/native-fixtures/`.
-- The supervisor removes temporary profiles only after verifying that child processes have exited and streams have closed.
+- The supervisor removes temporary profiles only after verifying that child processes have exited and streams have closed. Its [cleanup-assistance classification](native-test-reference.md#supervisor-cleanup-assistance) distinguishes no observed attempt from attempted or unknown assistance; cleanup success alone is not natural Quit.
 - If a fixture process cannot be cleanly verified on exit, it writes an `ownership-blocked.json` receipt in `.scratch/native-fixtures/` and blocks further launches in that scope until inspected (except for abandoned Windows pre-bootstrap receipts whose parent process has already exited, which are archived automatically).
 
 To run the unit tests for fixture preparation and supervision headlessly:

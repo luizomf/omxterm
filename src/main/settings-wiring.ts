@@ -37,6 +37,15 @@ export function startSettings(options: {
     if (payload !== undefined) throw new TypeError("Invalid settings request");
     return options.service.snapshot();
   });
+  options.ipcMain.handle(
+    settingsIpc.themes,
+    async (event, payload, ...extra: unknown[]) => {
+      if (!trusted(event)) throw new Error("Rejected settings sender");
+      if (payload !== undefined || extra.length > 0)
+        throw new TypeError("Invalid settings request");
+      return options.service.themes();
+    },
+  );
   options.ipcMain.handle(settingsIpc.change, async (event, payload) => {
     if (!trusted(event)) throw new Error("Rejected settings sender");
     if (!isSettingsChange(payload))
@@ -76,6 +85,7 @@ export function startSettings(options: {
       disposed = true;
       for (const channel of [
         settingsIpc.snapshot,
+        settingsIpc.themes,
         settingsIpc.change,
         settingsIpc.saveText,
         settingsIpc.keybind,

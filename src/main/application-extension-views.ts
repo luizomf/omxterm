@@ -198,14 +198,16 @@ export function applicationViews(
     );
   }
   return {
-    open: async (togglePanel?: boolean) => {
+    open: async (togglePanel?: boolean, panelDefaultToken?: string) => {
       if (epochSignal.aborted || target.signal.aborted)
         throw new PackageError("unavailable");
       if (descriptor) {
         host.reveal(
-          togglePanel && descriptor.presentation === "panel"
-            ? { ...descriptor, toggle: true }
-            : descriptor,
+          panelDefaultToken
+            ? { ...descriptor, panelDefaultToken }
+            : togglePanel && descriptor.presentation === "panel"
+              ? { ...descriptor, toggle: true }
+              : descriptor,
         );
         return;
       }
@@ -213,6 +215,7 @@ export function applicationViews(
         entryResource: view.entry,
         title: view.title,
         ...(target.presentation ? { presentation: target.presentation } : {}),
+        ...(panelDefaultToken ? { panelDefaultToken } : {}),
       });
       viewId = descriptor.id;
     },

@@ -86,7 +86,9 @@ unfiltered. This treatment is separate from main-owned native desktop blur.
 
 **Command Palette** — A temporary window-owned dialog for searching and invoking
 core application actions from the native View menu or configurable
-`commandPalette` shortcut. It uses the Action Catalog and validates its captured
+`commandPalette` shortcut. It shares About's application-underlay blur while
+modal, leaving foreground and body tint unfiltered; this is not native desktop
+blur. It uses the Action Catalog and validates its captured
 tab/pane rather than retargeting a replacement. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 bindings, matching, excluded actions, modal ownership and appearance.
@@ -118,7 +120,9 @@ subsequent edits belong to the user.
 
 **Settings** — One lazy, retained graphical Application Tab per window for editing
 `config.json`, without a pane, Surface, Adapter or PTY. Only deliberate changes
-write configuration; opening the editor does not. See
+write configuration; opening the editor does not. Valid configuration symlinks
+are preserved while their regular target is replaced; relative theme paths use
+the logical configuration directory. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for tab
 lifetime and appearance, and [configuration and local state](docs/spec.md#configuration-and-local-state)
 for save/reload, retained drafts, clipboard, recording and language contracts.
@@ -128,6 +132,9 @@ followed by sequential application. Validation rejection keeps active settings;
 application-time exceptions can leave partial updates. See
 [configuration and local state](docs/spec.md#configuration-and-local-state) for
 live-safe versus creation-time settings and native font-read lifetime rules.
+Pending-restart information is derived from surviving Surface owners and clears
+as outdated owners retire, without hiding current actionable diagnostics or
+requiring another reload.
 
 **Interface Language** — The language of OMXTerm's own menus, dialogs and
 controls, chosen only by the User Configuration `language` key (`en-US` default
@@ -137,7 +144,9 @@ or `pt-BR`). Diagnostics, logs and Terminal Payload stay untranslated.
 selection and ANSI colors), plus optional independent hex/null appearance choices
 for pane dividers, the Auxiliary Panel divider and the active pane's inset top
 highlight. Omission retains defaults; null hides decorative paint, not separator
-keyboard-focus feedback or resizing. The bundled default is `omtheme`.
+keyboard-focus feedback or resizing. The bundled default is `omtheme`. Settings
+can discover and select validated local themes beside the logical configuration
+directory; the advanced custom path remains available.
 
 **Terminal Font Stack** — The ordered fonts used to render terminal text. An
 explicitly configured installed family takes precedence; otherwise FiraCode Nerd
@@ -157,8 +166,10 @@ are memory-only. Settings → Window
 persists `window.auxiliaryPanelSide` (`left`/`right`) and applies it live across
 windows without replacing views or changing their focus/state. Close disposes
 the selected tool view, not its extension backend or previously created terminal
-sessions. Hide/Escape preserves open tools; panel reveal restores an open tool
-without reopening a closed one. Terminal-tab changes preserve it; Settings/general hosted tabs
+sessions. Hide/Escape preserves open tools; panel reveal restores an open tool.
+An eligible empty-panel toggle instead opens available Snippets lazily, with a
+single nonmodal four-second notice per application process when unavailable.
+It does not install or enable tools; closing still discards view state. Terminal-tab changes preserve it; Settings/general hosted tabs
 suspend it. It is independent of the opening terminal's lifetime. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 geometry, view retention and retirement rules.
@@ -182,6 +193,16 @@ Published artifacts
 and original receipts remain immutable. Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+
+**Default Snippets Attempt** — The host-owned one-time grant for positively new
+packaged optional-target profiles, independent of configuration-kit creation.
+Early default/config/state absence and later identity matching precede a permanent,
+version-independent consumed witness. Exact pinned public bytes enter Installed
+Packages enabled+dormant with generation0, without startup network, YAML or code
+activation. Existing profiles, disabled entries and tombstones never enroll;
+uninstall/collection cannot restore the default. Developer startup and Windows x64
+are excluded. This is a source behavior, not matching platform/package qualification;
+see [Default Snippets](docs/default-snippets.md).
 
 ## Terminal data and interaction
 
@@ -266,8 +287,11 @@ replay or startup restoration. Its revisioned state survives uninstall; Forget
 removes the active snapshot, not possible interrupted-write remnants. See
 [the guide](docs/saved-layout.md).
 
-**SSH Connect** — A separately installed Linux ARM64 preview companion-panel page
-with an incomplete bounded OpenSSH alias index and distinct quick-connect field.
+**SSH Connect** — A separately installed Linux and macOS ARM64 preview
+companion-panel page with an incomplete bounded OpenSSH alias index and distinct
+quick-connect field. The same published SSH0.3.1 archive is offered on both; the
+[macOS public-catalog checkpoint](docs/ssh-connect.md#macos-arm64-public-catalog-checkpoint)
+is bounded to the exact stable0.24.0 host and controlled inputs.
 Its declared `terminal.openSsh.v1` capability transfers a typed target to a new
 core Terminal Tab while preserving the panel and existing sessions. Core
 owns literal system-ssh launch, PTY, Busy/close/Quit and retained nonzero
@@ -304,10 +328,14 @@ only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
 and manifest identity must match before ordinary one-shot trust. Its in-memory
 last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
-endpoint offered Linux Files0.4; the promoted catalogs select Files0.6 for each
-ARM64 target and SSH0.3.1 for Linux. Common SSH/Snippets entries match; no merging
-or fallback occurs. Target and shared host/API compatibility govern selection;
-the bounded maintenance-development exception is described in the
+endpoint offered Linux Files0.4; the published catalogs select Files0.6 for each
+ARM64 target and the same SSH0.3.1 archive for Linux and macOS ARM64. Its separate
+bounded macOS public-consumption checkpoint has passed.
+Common SSH/Snippets entries match; no merging or fallback occurs. Cards show the
+selected offer's platforms and distinguish target from host/API incompatibility.
+Target and shared host/API compatibility govern catalog selection, while local/link
+archive admission does not enforce catalog targets. The bounded development-family
+exceptions are described in the
 [installation contract](docs/extension-installation-foundation.md#archive-contract).
 Admission is not runtime or platform qualification. It is not a marketplace or
 update daemon.
@@ -356,7 +384,15 @@ after successful mutations; manual refresh handles external changes without
 watchers. Current source additionally offers a view-local checked Actions item
 for dot-prefixed names, hidden by default relative to the browsing root; it does
 not classify other platform hidden metadata. Its scoped child shortcut leaves
-editing and core shortcut ownership intact. Hide/reveal retains the choice;
+editing and core shortcut ownership intact. Current source also provides a
+focused loaded-entry filter and keyboard-selectable tree; filtering is not a
+recursive search and does not retarget an open operation. Current source also
+supports a confirmed internal entry-to-folder drag and a keyboard-accessible
+Move to folder action. Their fixed source and folder are rechecked before a
+no-replace move; external drags, same-directory, self/descendant and final
+symlink destinations are refused. Cross-volume moves do not copy/delete and
+symlink sources move as links. Files-to-terminal drag remains separate. These
+source UI changes need a future archive. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal

@@ -24,6 +24,20 @@ to this transaction or overwritten. A newly created cached installer is checked
 against the exact installer digest and only that unchanged file and its empty
 directory are removed; unknown or additional cache state is preserved.
 
+Before executing NSIS, the transaction resolves only its newly created temporary
+installation directory to a native long path. Windows `TEMP` may contain an 8.3
+profile alias while Shell shortcuts return long names. The created and resolved
+paths must remain real directories with the same bigint device/inode identity;
+a missing identity, reparse root or changed object fails closed. The resolved
+path must also satisfy the original NSIS quoting and no-spaces constraints.
+Both original and resolved spellings receive the stock ancestor/tree reparse,
+process-prefix and cache inspection before launch, so resolution cannot hide an
+unsafe original ancestor or miss a canonical process prefix. NSIS `/D`, expected
+registration, shortcut target and owned-uninstaller arguments then use that one
+resolved spelling. Existing registrations, commands, caches and unrelated
+shortcuts are **not** canonicalized to make their ownership checks pass. This
+bounded observation does not eliminate filesystem or installer-wide races.
+
 The transaction binds installer bytes to their digest, compares installed
 payload bytes, verifies installed startup, and invokes only its owned new
 uninstaller after confirming registration ownership. A byte-identical copy runs

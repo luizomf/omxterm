@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { createTabsHarness } from "../fixtures/terminal-tabs-harness";
 import { base } from "../fixtures/settings-dialog-dom";
 
@@ -7,6 +8,7 @@ it("captures retained Settings ownership without requiring a Surface", async () 
   const h = createTabsHarness({
     tabsOptions: {
       settings: {
+        themes: vi.fn(async () => emptyThemes),
         snapshot: async () => base,
         change: vi.fn(),
         saveText: vi.fn(),

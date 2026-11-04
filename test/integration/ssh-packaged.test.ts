@@ -112,7 +112,12 @@ async function recordPublicCatalog(
   assert.equal(release?.version, extensionVersion);
   if (stablePublic) {
     assert.equal(release?.name, "SSH Connect");
-    assert.deepEqual(release?.targets, ["linux-arm64"]);
+    assert.ok(
+      ["linux-arm64", "linux-arm64,darwin-arm64"].includes(
+        release?.targets.join(",") ?? "",
+      ),
+      "historical or macOS-qualified SSH catalog targets",
+    );
   }
   assert.equal(digest(bytes), process.env.OMXTERM_SSH_PACKAGED_CATALOG_SHA256);
   await writeFile(path.join(receipts, "public-catalog.json"), bytes);

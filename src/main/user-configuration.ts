@@ -1,5 +1,5 @@
 import { validateLanguage } from "./user-configuration-language";
-import { lstat, readFile, stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type {
   OperationalLogLevel,
@@ -34,6 +34,11 @@ import {
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
 import { loadTerminalTheme, TerminalThemeError } from "./terminal-theme";
+import {
+  isUserConfigurationPathAbsent,
+  resolveUserConfigurationPath,
+} from "./user-configuration-path";
+export { resolveUserConfigurationPath } from "./user-configuration-path";
 import {
   UserConfigurationError,
   userConfigurationDiagnostic,
@@ -136,15 +141,6 @@ export function keybindPortabilityWarnings(
   );
 }
 
-export function resolveUserConfigurationPath(
-  environment: Readonly<Record<string, string | undefined>>,
-  homeDirectory: string,
-): string {
-  const root =
-    environment.XDG_CONFIG_HOME || path.join(homeDirectory, ".config");
-  return path.join(root, "omxterm", "config.json");
-}
-
 export async function loadUserConfiguration(
   options: LoadUserConfigurationOptions,
 ): Promise<UserConfigurationLoad> {
@@ -177,7 +173,10 @@ export async function loadUserConfiguration(
   try {
     bytes = await (options.read ?? readFile)(configurationPath);
   } catch (cause) {
-    if (isNotFound(cause) && (await isPathAbsent(configurationPath)))
+    if (
+      isNotFound(cause) &&
+      (await isUserConfigurationPathAbsent(configurationPath))
+    )
       return Object.freeze({ configuration: defaultConfiguration });
     return configurationFallback(undefined, "the file could not be read");
   }
@@ -306,15 +305,6 @@ export async function loadUserConfiguration(
     ...(themeFallback ? { fallback: themeFallback } : {}),
     ...warnings,
   });
-}
-
-async function isPathAbsent(configurationPath: string): Promise<boolean> {
-  try {
-    await lstat(configurationPath);
-    return false;
-  } catch (cause) {
-    return isNotFound(cause);
-  }
 }
 
 function configuredFontFamily(document: unknown): string | undefined {

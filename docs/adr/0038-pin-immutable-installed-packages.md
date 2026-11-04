@@ -8,7 +8,7 @@
 Use one deep Installed Packages module for local archive installation, bounded validation/extraction, compatibility, aggregate registry publication, installation generations, disable/tombstones and eligible cleanup. Its caller interface is shared by implementation tests and management/bootstrap consumers; no extension code executes during installation.
 
 Shared host compatibility follows ordinary semver plus the narrowly documented
-historical and maintenance-development exceptions in the
+historical and explicitly selected development-family exceptions in the
 [foundation contract](../extension-installation-foundation.md#archive-contract).
 They do not alter the actual API check, target, archive identity, trust or pin
 fences, and do not qualify a package/platform pair.
@@ -36,7 +36,10 @@ activating installed code. The bounded [Windows ARM64 source-composition checkpo
 passed separately from packaging. Execution, web-content hosting, acquisition and trust UI remain consumer responsibilities;
 [Files composition](../files-development-preview.md#owned-composition-modules)
 documents their integration. Installation and enable remain dormant. Separate
-extension archives are not bundled into the host. [macOS composition](../macos-extension-composition.md)
+extension archives remain excluded from host payloads except the exact pinned
+[one-time default Snippets resource](../default-snippets.md) on optional targets.
+That packaged-new-profile grant neither enrolls existing profiles nor activates code.
+[macOS composition](../macos-extension-composition.md)
 and [Linux x64 composition](../linux-x64-extension-composition.md)
 are separate from Files qualification or Snippets migration. Terminal ownership and ADR 0018
 are unchanged; the [specification](../spec.md#configuration-and-local-state) owns

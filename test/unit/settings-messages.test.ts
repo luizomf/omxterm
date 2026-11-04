@@ -18,6 +18,23 @@ const snapshot = {
   text: null,
   values: {},
 };
+it("validates and localizes a superseded theme result without claiming it was saved", () => {
+  const result = { status: "superseded" as const, snapshot };
+  expect(isSettingsResult(result)).toBe(true);
+  expect(isSettingsResult({ status: "superseded" })).toBe(false);
+  for (const language of ["en-US", "pt-BR"] as const) {
+    const t = translatorFor(language).t;
+    expect(describeSettingsResult(result, t)).toEqual({
+      text: t("settings.themeSuperseded"),
+      error: false,
+      severity: "info",
+    });
+    expect(describeSettingsResult(result, t).text).not.toBe(
+      t("settings.saved"),
+    );
+  }
+});
+
 it("validates bounded Settings-owned identities and relabels them without reverse-matching diagnostics", () => {
   const en = translatorFor("en-US").t;
   const pt = translatorFor("pt-BR").t;
@@ -29,7 +46,9 @@ it("validates bounded Settings-owned identities and relabels them without revers
         "json",
         "object",
         "symlink",
+        "target",
         "conflict",
+        "cleanup",
         "write",
         "application",
       ] as const

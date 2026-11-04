@@ -1,6 +1,9 @@
-import { defineConfig } from "vitest/config";
+const { defineConfig } =
+  require("vitest/config") as typeof import("vitest/config");
 
-export default defineConfig({
+// CJS config bundling stays in memory instead of writing node_modules/.vite-temp.
+module.exports = defineConfig({
+  cacheDir: ".scratch/vite",
   test: {
     include: ["test/{unit,integration}/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
     environment: "node",

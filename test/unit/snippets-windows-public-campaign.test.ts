@@ -28,6 +28,7 @@ const outcome = {
   stdout: "",
   stderr: "",
   cleanupErrors: [],
+  cleanupAssistance: "none" as const,
 };
 let root: string,
   installed: string,
@@ -312,6 +313,18 @@ beforeEach(async () => {
         ],
       }),
     );
+    const classified =
+      mode === "assisted"
+        ? { ...outcome, cleanupAssistance: "attempted" as const }
+        : mode === "unknown-assistance"
+          ? { ...outcome, cleanupAssistance: "unknown" as const }
+          : mode === "historical"
+            ? (Object.fromEntries(
+                Object.entries(outcome).filter(
+                  ([key]) => key !== "cleanupAssistance",
+                ),
+              ) as unknown as runner.NativeFixtureResult)
+            : outcome;
     if (mode !== "missing")
       await fs.writeFile(
         options.evidencePath!,
@@ -322,7 +335,7 @@ beforeEach(async () => {
                 ? { ...outcome, stdout: "mismatch" }
                 : mode === "timeout"
                   ? { ...outcome, exitCode: 1, reason: "timeout" }
-                  : outcome,
+                  : classified,
             ),
       );
     if (mode === "rejected") throw new Error("native rejected despite receipt");
@@ -335,7 +348,7 @@ beforeEach(async () => {
       return { ...outcome, exitCode: 1, reason: "timeout" };
     return mode === "cleanup-errors"
       ? { ...outcome, cleanupErrors: ["uncertain"] }
-      : outcome;
+      : classified;
   });
   execute = makeExecute();
 });
@@ -599,6 +612,15 @@ it("allows joined timeout cleanup without claiming normal success", async () => 
   expect(relocated).not.toBe("");
   expect((await publicResult()).passed).toBe(false);
 });
+it.each(["assisted", "unknown-assistance", "historical"])(
+  "allows owned cleanup but withholds normal-Quit success for %s evidence",
+  async (classification) => {
+    mode = classification;
+    await expect(run()).rejects.toThrow();
+    expect(relocated).not.toBe("");
+    expect((await publicResult()).passed).toBe(false);
+  },
+);
 it("preserves primary and cleanup failures", async () => {
   mode = "primary-cleanup";
   await expect(run()).rejects.toThrow();

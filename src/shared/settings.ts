@@ -10,6 +10,8 @@ import {
   MIN_TERMINAL_PADDING,
 } from "./user-configuration";
 import type { TerminalActionName } from "./terminal-keybinds";
+import type { SettingsThemesResult } from "./settings-themes";
+export type { SettingsTheme, SettingsThemesResult } from "./settings-themes";
 import {
   isSettingsKeybinds,
   type CapturedShortcut,
@@ -20,6 +22,7 @@ import {
 export const settingsIpc = {
   open: "settings:open",
   snapshot: "settings:snapshot",
+  themes: "settings:themes",
   change: "settings:change",
   saveText: "settings:save-text",
   keybind: "settings:keybind",
@@ -107,9 +110,9 @@ export interface SettingsSnapshot {
   readonly configurationPath: string;
   // Selects platform-specific fields such as the Windows shell.
   readonly platform: string;
-  // A digest of config.json's bytes, or "absent" when there is no file yet.
+  // Opaque revision of the resolved destination and its bytes/presence.
   readonly revision: string;
-  // Decoded UTF-8 text (leading BOM omitted), or null when there is no file yet.
+  // Decoded UTF-8 text (leading BOM omitted), or null if absent or unreadable.
   readonly text: string | null;
   // The values each control shows: the file's own entries, falling back to
   // the effective defaults for omitted fields.
@@ -128,6 +131,12 @@ export type SettingsApplication =
 
 export type SettingsResult =
   | {
+      // A newer consecutive theme choice replaced this request before it ran.
+      // The snapshot belongs to that winning request; this choice was not saved.
+      readonly status: "superseded";
+      readonly snapshot: SettingsSnapshot;
+    }
+  | {
       readonly status: "saved";
       readonly snapshot: SettingsSnapshot;
       readonly application: SettingsApplication;
@@ -142,6 +151,7 @@ export type SettingsResult =
 
 export interface SettingsBridge {
   snapshot(): Promise<SettingsSnapshot>;
+  themes(): Promise<SettingsThemesResult>;
   change(change: SettingsChange): Promise<SettingsResult>;
   saveText(text: string, revision: string): Promise<SettingsResult>;
   changeKeybind(change: SettingsKeybindChange): Promise<SettingsResult>;
@@ -214,6 +224,7 @@ export function isSettingsResult(value: unknown): value is SettingsResult {
   if (typeof value !== "object" || value === null) return false;
   const result = value as Record<string, unknown>;
   if (!isSettingsSnapshot(result.snapshot)) return false;
+  if (result.status === "superseded") return true;
   if (result.status === "saved") {
     const application = result.application as Record<string, unknown> | null;
     return (

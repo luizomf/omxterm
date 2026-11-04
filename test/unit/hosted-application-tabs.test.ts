@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import type {
   HostedContentBridge,
   HostedContentDescriptor,
@@ -48,6 +49,7 @@ function harness(canFocus = () => true) {
       notifyEmpty,
       hostedContent: bridge,
       settings: {
+        themes: vi.fn(async () => emptyThemes),
         snapshot: async () => base,
         change: async () => saved(base),
         saveText: async () => saved(base),

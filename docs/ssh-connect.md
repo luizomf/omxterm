@@ -1,20 +1,24 @@
 # SSH Connect development preview
 
-SSH Connect is an optional, separately installed extension for the **Linux ARM64
-preview**, first supported by OMXTerm **0.24.0-dev.0**. It is not bundled with the
-terminal, a stable SDK, an SSH broker, or a cross-platform availability claim.
+SSH Connect is an optional, separately installed extension. The published
+catalogs offer the same unchanged SSH0.3.1 archive for **Linux ARM64** and
+**macOS ARM64**. The [bounded macOS public-catalog checkpoint](#macos-arm64-public-catalog-checkpoint)
+used the stable0.24.0 host; catalog admission does not qualify every host or
+workflow. It is not bundled with the terminal, a stable SDK, or an SSH broker.
+Windows and other targets are not qualified by this work.
 
-Build the committed source with `node scripts/build-ssh-extension.mjs`. The
-builder produces `dist/extensions/ssh-0.3.1.omxext`, a SHA-256 sidecar and an
-unqualified source/tool receipt; existing outputs are never overwritten. Install
-the archive through Settings → Extensions and review the ordinary trusted-code
-warning. Open **SSH Connect** from File, the Command Palette or the terminal
-context menu. There is no new toolbar or default shortcut. Host source also
+The separately published SSH0.3.1 archive and its original checksum/receipt are
+immutable. Current source includes a later capability-unavailable message correction;
+it is not present in that archive. An isolated test build may use a distinct output
+path, but must not be confused with or replace the published archive. A maintainer
+must assign a new extension version before publishing changed bytes. Install an
+offered archive through Settings → Extensions and review the ordinary trusted-code
+warning. Open **SSH Connect** from File, the Command Palette or the terminal context
+menu. There is no new toolbar or default shortcut. Host source also
 supports an optional `toggleSshConnect` binding in Settings → Shortcuts, reusing
 the same entry point once per key press. Missing/disabled/unsupported tools do
-not consume that key. This host capability does not change published preview
-binaries or broaden SSH platform qualification. Building an archive alone does
-not publish it.
+not consume that key. A host change does not update an installed extension, and
+building an archive alone does not publish it.
 
 Source version 0.3.1 requires host 0.24.0-dev.8 or later for its read-only
 appearance and interface-language subscriptions. Compact controls share the terminal's theme tokens;
@@ -44,17 +48,26 @@ diagnostic remains unexplained.
 
 ## Installing the distributed preview
 
-Use the [Linux ARM64 host 0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
-with the separate [SSH Connect 0.3.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0).
-Neither is Latest; stable 0.23.0 and 0.23.0-dev.9 cannot run SSH Connect.
-The new archive requires host 0.24.0-dev.8 or later; dev.11 is the exact qualified
-Linux ARM64 host, not a claim of qualification for every admitted version.
-Install the published archive locally or through **Install from link** and review
-the version/digest and trusted-code warning. At the 0.3.0 promotion checkpoint,
-**Browse official extensions** offered that version and the bounded public
-packaged checkpoint passed on this exact pair. A later 0.3.1 promotion replaces
-the catalog offer, not the historical archive. Installation is dormant; open SSH
-Connect separately to activate it. Official does not mean sandboxed.
+The [stable OMXTerm 0.24.0 host](https://github.com/luizomf/omxterm/releases/tag/v0.24.0)
+and the separately published [SSH Connect 0.3.1 archive](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1)
+are distinct downloads. On Linux and macOS ARM64, **Browse official extensions**
+offers SSH0.3.1. Local/link installation checks host/API compatibility, not
+catalog target qualification. Check this guide and the selected release rather
+than treating a successful manual install as a platform-support guarantee.
+
+Review the version, digest and trusted-code warning. Installation is dormant; open
+SSH Connect separately to activate it. Official does not mean sandboxed. The
+archive requires host 0.24.0-dev.8 or later, but a minimum version alone does not
+establish platform support or qualify every admitted host. The immutable SSH0.3.1
+archive's capability-unavailable message still mentions only Linux ARM64; that
+historical wording is not a current macOS compatibility test. Stable host0.24.0
+also incorrectly describes extension management itself as Linux ARM64-only in
+Settings; the host-source correction is not present in that immutable release.
+
+The earlier [Linux ARM64 host 0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
+and [SSH Connect 0.3.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0)
+remain a separate historical exact pair. Stable 0.23.0 and 0.23.0-dev.9 cannot
+run SSH Connect. Their earlier catalog checkpoint does not establish the new offer.
 
 The published [ssh-0.3.0-77937fc.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext)
 is 11,572 bytes, SHA-256
@@ -213,6 +226,64 @@ remain in force. Without the public-mode inputs the original synthetic campaign
 is unchanged. Public execution belongs after asset publication and fixed-catalog
 promotion, not during source preparation.
 
+## macOS ARM64 exact-pair checkpoint
+
+On macOS 27.0.1 ARM64, the retained original OMXTerm0.24.0 DMG
+(SHA-256 `88e66b764cc9fc4fa3a6cfb2c0e081dce5089631a8f8b8640ad875214e8bc34f`)
+and SSH0.3.1 archive (SHA-256
+`be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`)
+passed bounded local-install scenarios with controlled consent and synthetic input.
+A synthetic client verified alias import, literal argv, retained exit, Hide/Close,
+Disable with a surviving core SSH terminal, and joined normal Quit. Separately,
+production Connect invoked a wrapper with literal `['--', 'fixture-local']`;
+the wrapper added `-F` and `-E` to isolate configuration and capture diagnostics,
+then exec'd the guest's verified `/usr/bin/ssh` (OpenSSH10.3p1). Client and owned
+loopback server both recorded public-key authentication using generated keys.
+The SSH session ran no remote shell or command; the client ended on signal 1 and
+server on 255 during normal app shutdown. The host/backend joined; these are not
+SSH exit-0 claims.
+
+These local-pair checks do not establish unwrapped SSH/config behavior, a
+physical-input/accessibility or remote-shell campaign, all-host qualification,
+or public HTTPS/catalog consumption. The separate public-catalog checkpoint below
+exercised that acquisition path. The app's bounded stderr tails retained
+sandbox-extension permission warnings of unknown cause/impact and have no
+truncation indicator. Three earlier GUI attempts failed; a corrected observer
+waited for the retained panel to become visible before Close and the later
+distinct occurrence passed. Original archive receipt qualification remains
+`not-run`; these subsequent checks are separate.
+
+## macOS ARM64 public-catalog checkpoint
+
+On 2026-11-03, one controlled ordinary-user macOS 27.0.1 ARM64 guest occurrence
+used the retained original stable0.24.0 DMG and SSH0.3.1 identities above. The
+host was not freshly downloaded from the public release for this check. In the
+unchanged packaged app, Settings browsed the production macOS catalog, selected
+SSH Connect0.3.1 and installed it through actual HTTPS; no local/link fallback,
+preinstalled extension, substituted transport or custom CA was used. Passive
+observations bound the selected snapshot, one generation-0 Official trust consent,
+and completed catalog/archive responses. The catalog was 2,771 bytes, SHA-256
+`9f75bf9b0c9a58e75e48a903f8518c0deeded767bacf532a1548e22441d7bd4c`;
+the archive response was 11,606 bytes and matched the original archive SHA-256
+above after the actual GitHub redirect. Each request had authorized TLS1.3.
+Catalog and archive hashes bind bytes, not an independent publisher signature.
+
+Installation was dormant. Explicit activation imported a synthetic alias without
+executing a client; Enter release launched a synthetic client once with literal
+`['--', 'fixture-fast']`. The app displayed an exit-code-37 notice; a separate
+OS wait status was not captured. Normal Busy Quit joined the backend and tracked
+PTYs; the backend and Electron main exited 0. Inputs and consent were controlled.
+A bounded later audit found 14 sampled process identities absent; it is not an
+exhaustive descendant census. The bounded app stderr tail contained 15
+sandbox-extension permission warnings of unknown impact and had no truncation
+indicator. No screenshot was captured.
+
+This checkpoint does not qualify physical input, accessibility, compositor
+presentation, real SSH authentication, remote shells, other hosts or a complete
+platform matrix. Real SSH against an owned loopback server was a separate,
+wrapper-mediated local-install check above; neither result upgrades the original
+archive receipt or rewrites earlier failed occurrences.
+
 ## Connecting
 
 Search filters the displayed aliases; it never interprets an unmatched query as
@@ -333,9 +404,9 @@ never automatically replayed. Closing a pending pane cancels its token.
 See [ADR0041](adr/0041-transfer-ssh-launches-to-core.md). Controlled tests cover
 input/index/wire budgets, view gesture/admission and retained Surface behavior.
 Native/package evidence must identify exact host and separate archive hashes;
-build receipts alone are not qualification. No real OpenSSH authentication or
-remote connectivity campaign is claimed by this implementation. Other-platform
-preview enablement and physical-keyboard/accessibility matrices remain unqualified.
+build receipts alone are not qualification. The bounded macOS loopback check above
+is not a general remote-connectivity campaign. Windows and other-platform preview
+enablement and physical-keyboard/accessibility matrices remain unqualified.
 
 The original #622/#671 proposal by @ruscher and `luizomf/sshtoolkit` informed the
 design. This small parser/grammar is independently implemented; the archive keeps

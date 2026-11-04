@@ -7,6 +7,7 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   rmdir,
   unlink,
@@ -188,21 +189,51 @@ export async function verifyExactWindowsInstaller({
           throw new Error(
             "Unsafe NSIS temporary path; use a clean disposable VM",
           );
-        installRoot = await mkdtemp(
+        const createdRoot = await mkdtemp(
           path.join(temporaryDirectory, "omxterm-installed-"),
         );
-        const beforeLaunch = await inspectWindowsInstallation(
-          execute,
-          installRoot,
-        );
-        if (beforeLaunch.processes)
+        const created = await lstat(createdRoot, { bigint: true });
+        if (
+          !created.isDirectory() ||
+          created.isSymbolicLink() ||
+          created.ino === 0n
+        )
+          throw new Error("New NSIS directory ownership is not established");
+        // Windows TEMP can use an 8.3 profile alias while Shell shortcuts use
+        // long names. Bind only OUR new directory before NSIS writes any paths;
+        // never canonicalize foreign registrations/commands to make them owned.
+        installRoot = await realpath(createdRoot);
+        if (
+          !path.win32.isAbsolute(installRoot) ||
+          unsafeNsisPath.test(installRoot) ||
+          installRoot.includes(" ")
+        )
           throw new Error(
-            "Conflicting NSIS path-prefix processes; installer not launched, temporary evidence retained",
+            "Unsafe canonical NSIS installation path; temporary evidence retained",
           );
-        if (beforeLaunch.paths.some((entry) => entry.kind === "cache"))
-          throw new Error(
-            "Unowned pre-existing NSIS installer cache; installer not launched, temporary evidence retained",
-          );
+        for (const root of new Set([createdRoot, installRoot])) {
+          const currentRoot = await lstat(root, { bigint: true });
+          if (
+            !currentRoot.isDirectory() ||
+            currentRoot.isSymbolicLink() ||
+            currentRoot.dev !== created.dev ||
+            currentRoot.ino !== created.ino
+          )
+            throw new Error(
+              "New NSIS directory identity changed; retain evidence",
+            );
+          // Inspect BOTH spellings: resolving the alias must not hide an
+          // original ancestor reparse point, or a canonical process prefix.
+          const beforeLaunch = await inspectWindowsInstallation(execute, root);
+          if (beforeLaunch.processes)
+            throw new Error(
+              "Conflicting NSIS path-prefix processes; installer not launched, temporary evidence retained",
+            );
+          if (beforeLaunch.paths.some((entry) => entry.kind === "cache"))
+            throw new Error(
+              "Unowned pre-existing NSIS installer cache; installer not launched, temporary evidence retained",
+            );
+        }
         console.warn(
           "WARNING: authorized disposable VM exact NSIS test may remove existing OMXTerm and replace its registration/shortcuts. /D is NOT isolation. User data is not deleted.",
         );

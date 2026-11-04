@@ -25,6 +25,12 @@ do not remove the upstream attribution.
 | JetBrainsMono Nerd Font Mono                           | SIL Open Font License 1.1       | `licenses/JetBrainsMono-OFL.txt`   |
 | Nerd Fonts patched glyph sets                          | MIT, OFL, CC BY 4.0, Apache 2.0 | `licenses/NerdFonts-glyphs.txt`    |
 
+The fixed public Snippets0.1.0 archive bundled for one-time new-profile defaults
+retains its original OMXTerm MIT license and bundled YAML ISC notice inside the
+ZIP (`LICENSE`, `licenses/yaml.txt`). It is not rebuilt from current extension
+source; [its pinned provenance](assets/default-snippets/README.md) and
+[resource policy](docs/default-snippets.md) identify the unchanged input.
+
 The compact About implementation adapts text-safe rendering, named link buttons,
 runtime-version delivery, and the typed fixed-link route from
 [Rafael Ruscher (@ruscher)](https://github.com/ruscher)'s MIT-licensed contribution
@@ -70,6 +76,14 @@ The separate archive retains its own NOTICE, OMXTerm MIT license and the full
 AshyTerm/Community Big MIT notice as `licenses/ashyterm.txt`, crediting Rafael
 Ruscher, Community Big and BigLinux. This is selective concept adaptation, not
 wholesale incorporation of PR #622.
+
+The Settings theme picker adapts the terminal-like color-scheme cards, including
+foreground/background previews, palette dots and names, from
+`src/renderer/preferences/preferences-pages.ts` at that same Rafael Ruscher
+(@ruscher) source commit. OMXTerm discovers validated user-owned local files,
+keeps their paths distinct and applies choices through its existing Settings
+save/reload path instead of installing the fork's built-in scheme catalog. The
+AshyTerm/Community Big MIT notice below remains packaged.
 
 The configured Interface Language implementation also adapts the translator,
 English and Brazilian Portuguese catalogs, and catalog tests from

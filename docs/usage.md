@@ -111,6 +111,12 @@ existing action runs, keeping its normal guards and close confirmations.
 **Escape** or clicking the backdrop cancels. Copy/Paste/Select All edit the
 palette query while it owns input, not your terminal.
 
+Like About, the palette follows the window's theme tint/transparency and softens
+application content behind it, including Settings and chrome outside its bounds.
+Text and keyboard focus stay sharp; closing restores the underlying detail.
+This application-underlay effect is separate from native desktop blur and does
+not depend on `window.blur`.
+
 Results include window/tab and pane actions, Settings, About, local-image
 preview, reload and developer tools, with their current shortcuts where bound.
 Search uses case-insensitive substring matching in the selected interface
@@ -290,8 +296,9 @@ Change the interface language in **Settings → General → Language**. Row and 
 
 ### Shared companion panel
 
-The Linux ARM64 preview's installed **Files** and **SSH Connect** tools open beside
-the terminal through their existing File-menu, palette or terminal-context actions.
+On the Linux and macOS ARM64 previews, installed **Files** and **SSH Connect**
+tools open beside the terminal through their existing File-menu, palette or
+terminal-context actions.
 Optional `toggleFiles` and `toggleSshConnect` shortcuts can be configured in
 **Settings → Shortcuts**; neither has a default binding. They use the same tool
 entry points, once per key press. Missing or disabled tools do not consume their
@@ -310,8 +317,14 @@ fresh view, discarding its old drafts/search state.
 **View → Toggle Auxiliary Panel** independently hides or reveals retained tools.
 It has no default shortcut; configure `toggleAuxiliaryPanel` in Settings or
 `keybinds`. Reveal restores the remembered open tool or the first remaining one;
-with no open tools it does nothing. Tool close does not disable the extension
-or end terminal sessions. Accepted file operations or SSH launches may still
+with no open tools, current source opens Snippets if installed and enabled
+(or the built-in tool on Windows x64). If unavailable, a discreet notice disappears
+after about four seconds without moving focus. It appears once per application
+process across its windows; further failed attempts stay quiet, but later manual
+installation/enablement can make the next attempt work. This never installs or
+enables anything, opens Settings, or changes shortcut defaults/custom bindings.
+Settings, modals and stale pending requests cannot trigger a late reveal.
+Tool close does not disable the extension or end terminal sessions. Accepted file operations or SSH launches may still
 finish; close does not promise cancellation or rollback, and reopening does not
 repeat an operation.
 Switching terminal tabs keeps the panel visible. Connecting through SSH opens a
@@ -330,9 +343,29 @@ a path if needed. It does not follow later terminal changes or retarget an
 operation already started. Compatible installed archives retain their original
 **Use terminal directory** label and do not gain the new inline hint or
 tooltip from a host update.
+In current source, Files focuses **Filter loaded entries** when opened. Type to
+filter names already loaded in expanded folders; this is not a recursive search
+and does not search collapsed folders. Tab enters the tree, including an empty
+one. Up/Down and Home/End move between rows; Left/Right expand, collapse or
+move between levels. A focused row is selected for Actions. Use F2 for
+**Rename / move** or Shift+F10 for its context menu. Cancel returns to the
+initiating row/control if available. The query stays while navigating or hiding
+the panel, and resets when Files is closed. A no-match message covers loaded
+entries only; hidden dotfiles, errors and listing limits still apply.
+
+To move one entry in current source, drag it onto another folder row, or select it
+and choose **Move to folder…** from Actions or its keyboard context menu. The
+keyboard action asks for an absolute folder path. Review the fixed source and
+folder, then choose **Move** or **Cancel**. Files does not accept external drags
+for this action, overwrite a collision, move a folder into itself or its children,
+or copy/delete across volumes. A symbolic link is moved as a link and cannot be
+the destination folder. If the outcome is unknown, refresh and inspect rather
+than repeating blindly. Dragging a Files entry into the terminal is not part of
+this workflow.
+
 These source changes are not a release and do not replace published archives.
-Recognized `0.24.1-dev.N` hosts admit unchanged Files0.6 through the narrow
-[maintenance bridge](extension-installation-foundation.md#archive-contract).
+Recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts admit unchanged Files0.6
+through the narrow [development bridges](extension-installation-foundation.md#archive-contract).
 
 Closing the opening terminal leaves the tool available; disabling or removing
 the extension retires its view. In current Files source, **Actions… → Show dotfiles (names

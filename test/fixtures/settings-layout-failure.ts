@@ -7,7 +7,7 @@ import type {
 } from "./settings-layout-observation";
 
 export interface SettingsLayoutContext {
-  readonly phase: "matrix" | "breakpoint" | "minimum";
+  readonly phase: "display-prerequisite" | "matrix" | "breakpoint" | "minimum";
   readonly language?: string;
   readonly light?: boolean;
   readonly width?: number;

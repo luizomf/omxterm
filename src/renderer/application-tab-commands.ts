@@ -58,6 +58,8 @@ export function createApplicationTabCommands<Tab>(
         return;
       }
       switch (command.action) {
+        case "cancel-panel-default":
+          return; // Window-level intent, handled before tab delivery.
         case "open-ssh":
           options.openSsh?.(command);
           return;

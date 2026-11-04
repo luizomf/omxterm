@@ -27,7 +27,10 @@ export function activeSessionFontConfigurations(
 }
 
 /** Font snapshots are issued by one renderer owner, never claimed as values. */
-export function createSurfaceFontOwnership(reject: () => void) {
+export function createSurfaceFontOwnership(
+  reject: () => void,
+  changed: () => void = () => {},
+) {
   const configurations = new Map<string, TerminalSurfaceFontConfiguration>();
   const surfaces = new Map<
     string,
@@ -59,6 +62,7 @@ export function createSurfaceFontOwnership(reject: () => void) {
     }
     const surfaceId = randomUUID();
     surfaces.set(surfaceId, { configuration, started: false });
+    changed();
     return surfaceId;
   };
   const start = (id: unknown) => {
@@ -77,6 +81,7 @@ export function createSurfaceFontOwnership(reject: () => void) {
       retainSurface: retain,
       releaseSurface(id: unknown) {
         if (typeof id !== "string" || !surfaces.delete(id)) reject();
+        else changed();
       },
       // Messages preceding this acknowledgement have already retained their
       // snapshots. Surviving Surfaces own those values independently.

@@ -6,6 +6,7 @@ import {
   settingsIpc,
   type SettingsBridge,
 } from "../shared/settings";
+import { isSettingsThemesResult } from "../shared/settings-themes";
 import {
   isShortcutCaptureResult,
   isSettingsKeybindChange,
@@ -43,6 +44,12 @@ export function createSettingsBridge(ipc: {
       const value: unknown = await ipc.invoke(settingsIpc.snapshot);
       if (!isSettingsSnapshot(value))
         throw new TypeError("Invalid settings response");
+      return value;
+    },
+    async themes() {
+      const value: unknown = await ipc.invoke(settingsIpc.themes);
+      if (!isSettingsThemesResult(value))
+        throw new TypeError("Invalid settings themes response");
       return value;
     },
     async change(change) {

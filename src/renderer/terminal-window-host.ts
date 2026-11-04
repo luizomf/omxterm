@@ -209,8 +209,10 @@ export function mountTerminalWindowPage(
       mirrorTyping: options.mirrorTyping,
       initialLayout: options.initialLayout,
       layout: options.layout,
-      notifySelectionRevision: (revision) =>
-        options.semanticInput?.selection(revision),
+      notifySelectionRevision: (revision) => {
+        auxiliaryPanel?.cancelDefaultOpen();
+        options.semanticInput?.selection(revision);
+      },
       ...(options.settings ? { settings: options.settings } : {}),
       ...(options.extensions ? { extensions: options.extensions } : {}),
       hostedContent: options.hostedContent,
@@ -242,6 +244,8 @@ export function mountTerminalWindowPage(
     },
   );
 
+  // Native window blur revokes pending panel intent through main's command.
+  // DOM blur alone also occurs when an owned child is created before publication.
   const onPageFocus = () => {
     if (!previewActive() && !companion.ownsPanelFocus()) tabs.focusSelected();
   };

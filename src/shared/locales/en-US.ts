@@ -186,6 +186,7 @@ export const englishMessages = {
   "panel.hide": "Hide auxiliary panel",
   "panel.tools": "Open tools",
   "panel.tooNarrow": "Widen the window to open {view}",
+  "panel.empty": "No tools are open. Open an extension to use the panel.",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Search snippets",
   "snippets.search": "Search Snippets",
@@ -215,7 +216,7 @@ export const englishMessages = {
   "extensions.snippetsOptional":
     "Snippets is an optional extension. Use the existing installation controls to install it, or Enable if it is installed but disabled. Opening this page does not install or enable it. Your snippets.yaml catalog stays unchanged. Check the extension status below for availability.",
   "extensions.explanation":
-    "Install a separately downloaded .omxext package. Trusted extension code has your user permissions; it is not sandboxed. Installed packages stay dormant until invoked. This preview is Linux ARM64 only.",
+    "Install a separately downloaded .omxext package. Trusted extension code has your user permissions; it is not sandboxed. Installed packages stay dormant until invoked. Platform support depends on the extension; check its requirements before installing.",
   "extensions.install": "Install local .omxext…",
   "extensions.url": "HTTPS archive link",
   "extensions.installLink": "Install from link",
@@ -244,7 +245,9 @@ export const englishMessages = {
   "extensions.catalogStale":
     "Catalog refresh unavailable. Showing the last successful snapshot; versions may be outdated.",
   "extensions.catalogUnavailable":
-    "Catalog unavailable. Installed extensions and local-file installation still work offline.",
+    "Catalog unavailable. If extension management is available, you can still install local files and manage installed extensions offline.",
+  "extensions.catalogManagementUnavailable":
+    "Catalog and installation are unavailable because extension management is unavailable.",
   "extensions.catalogIdle":
     "The catalog connects only when you choose Browse or Refresh. No automatic updates.",
   "extensions.catalogLoaded":
@@ -252,6 +255,11 @@ export const englishMessages = {
   "extensions.catalogEmpty": "The catalog has no published extensions yet.",
   "extensions.catalogInstalled": "Installed: {version}",
   "extensions.catalogNotInstalled": "Not installed",
+  "extensions.catalogPlatforms": "Catalog offer platforms: {platforms}",
+  "extensions.catalogPlatformIncompatible":
+    "Not offered by this catalog for this platform",
+  "extensions.catalogEngineIncompatible":
+    "Not compatible with this OMXTerm or extension API version",
   "extensions.catalogInstall": "Install",
   "extensions.catalogUpdate": "Update",
   "extensions.catalogReinstall": "Reinstall",
@@ -290,7 +298,8 @@ export const englishMessages = {
   "extensions.outcome-unknown": "Operation outcome unknown",
   "extensions.runtime-unavailable":
     "Extension store or runtime unavailable. Terminal sessions remain usable",
-  "extensions.unsupported": "Files development preview requires Linux ARM64",
+  "extensions.unsupported":
+    "Extension management is unavailable on this platform",
   "mirrorTyping.title": "Mirror Typing",
   "mirrorTyping.preparing": "Starting mirroring…",
   "mirrorTyping.active": "Mirroring typing · {count} panes",
@@ -337,7 +346,31 @@ export const englishMessages = {
   "settings.fontSize": "Font size",
   "settings.lineHeight": "Line height",
   "settings.ligatures": "Programming ligatures",
-  "settings.theme": "Theme file",
+  "settings.theme": "Theme file (advanced)",
+  "settings.themePicker": "Terminal themes",
+  "settings.themePickerHint":
+    "Add JSON themes to themes/ beside config.json, then refresh the list.",
+  "settings.themeRefresh": "Refresh themes",
+  "settings.themeLoading": "Loading themes…",
+  "settings.themeMissing":
+    "No themes folder found. Create themes/ beside config.json and refresh.",
+  "settings.themeEmpty": "No theme files found in themes/.",
+  "settings.themeUnavailable":
+    "Could not read themes or config.json. Check the folder and configuration, then refresh.",
+  "settings.themeTruncated":
+    "The list is limited; some files may not be shown.",
+  "settings.themeCustom":
+    "The configured theme is outside this list or unavailable. Check the advanced path or refresh.",
+  "settings.themeInvalid": "These theme files could not be used:",
+  "settings.themeErrorSize": "File exceeds the theme size limit.",
+  "settings.themeErrorType": "Target is not a regular file.",
+  "settings.themeErrorChanged": "File changed while being read.",
+  "settings.themeErrorRead": "File could not be read.",
+  "settings.themeErrorInvalid": "Invalid theme:",
+  "settings.themeErrorUnknown": "Theme contains an unknown field.",
+  "settings.themeSelected": "Selected",
+  "settings.themePending": "Saving…",
+  "settings.themeDefaultDetail": "Built-in default",
   "settings.bundledFont": "Bundled FiraCode Nerd Font Mono",
   "settings.bundledTheme": "Bundled omtheme",
   "settings.defaultShell": "Windows PowerShell",
@@ -367,6 +400,9 @@ export const englishMessages = {
   "settings.fileGuidance":
     "Graphical changes are checked against the whole file. Correct invalid values in Settings or edit Config File; if the file cannot be read, repair it externally and reload.",
   "settings.saved": "Saved.",
+  "settings.themeSuperseded":
+    "A newer theme choice replaced this selection before it was saved.",
+  "settings.notSaved": "Not saved: {detail}",
   "settings.notApplied":
     "Saved to config.json, but it could not be applied: {notice}",
   "settings.lifetime.tabs": "New tabs use it.",
@@ -380,16 +416,21 @@ export const englishMessages = {
   "settings.stale":
     "config.json changed since you started editing. Your draft is kept; saving it will be refused until you reload the file.",
   "settings.newer": "Newer edits are not saved.",
-  "settings.readError": "config.json could not be read",
+  "settings.readError":
+    "config.json could not be read. Check its permissions and location.",
   "settings.utf8Error": "config.json is not valid UTF-8",
   "settings.jsonError": "config.json is not valid JSON",
   "settings.objectError": "config.json must hold an object",
   "settings.symlinkError":
-    "config.json is a symlink. Edit its target manually, then reload User Configuration; Settings does not write through symlinks.",
+    "A config.json link or linked directory is dangling or cyclic. Fix the link or its target, then reload the file.",
+  "settings.targetError":
+    "config.json must resolve to a regular file. Fix its location, then reload the file.",
   "settings.conflict":
-    "config.json changed since this edit started. Copy your draft, reload the file and apply your edits again.",
+    "config.json or its target changed since this edit started. Copy your draft, reload the file and apply your edits again.",
   "settings.writeError":
-    "config.json could not be written. Nothing was changed.",
+    "config.json could not be written. Check permissions on the file and its target directory. Nothing was changed.",
+  "settings.cleanupError":
+    "config.json was not saved. A temporary file may remain in its target directory; check the directory and permissions before trying again.",
   "settings.applicationError":
     "Unexpected application failure. Some settings may already be active; choose View -> Reload User Configuration again.",
   "settings.page.shortcuts": "Shortcuts",

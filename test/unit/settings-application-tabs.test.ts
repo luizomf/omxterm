@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import {
   createTabsHarness,
   selectedStates,
@@ -16,6 +17,7 @@ afterEach(() => {
 });
 function settings(overrides: Partial<SettingsBridge> = {}): SettingsBridge {
   return {
+    themes: vi.fn(async () => emptyThemes),
     snapshot: vi.fn(async () => base),
     change: vi.fn(async () => saved(base)),
     saveText: vi.fn(async () => saved(base)),

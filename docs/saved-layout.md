@@ -1,7 +1,9 @@
 # Saved Layout — Linux ARM64 preview
 
-Saved Layout is an optional, separately installed extension for host
-**0.24.0-dev.1 or newer within 0.24.x**. It is not bundled, automatically
+Saved Layout **0.1.1** is an optional, separately installed extension for host
+**>=0.24.0-dev.1 <0.26.0**, with preview API **^0.1.0**. The host's explicit
+0.24.1-dev.N and 0.25.0-dev.N compatibility bridges also admit this range;
+other prerelease families follow ordinary semver rules. It is not bundled, automatically
 installed, or a stable SDK. This change does not publish an archive or catalog
 entry. Build instructions below are for developers; install a separately
 provided `.omxext` through Settings → Extensions using the ordinary code-trust
@@ -91,8 +93,26 @@ not a sandbox for trusted extension code.
 ## Development and evidence
 
 ```sh
-npm run build:restoration-extension -- /absolute/output/restoration-0.1.0.omxext
+npm run build:restoration-extension -- /absolute/output/restoration-0.1.1.omxext
 ```
+
+### Source compatibility follow-up (#785)
+
+The 0.1.0 source manifest stopped below stable 0.25.0, so the existing minor-dev
+bridge correctly refused it on host 0.25.0-dev.4. Version 0.1.1 extends only the
+source archive's upper bound to 0.26.0; it does not weaken global admission or
+modify any historical archive. The extension ID, saved-document version, CAS
+state location and capabilities are unchanged, so updating retains saved data
+without migration or implicit replacement.
+
+The audit from #673's integrated host `c1a09dd1906414c03a24fc58dc0e554098e39f00`
+to the #785 baseline `57adbe391eda3abdbf66ee1a72191c2d672a2461` found no
+changes to the layout codec, directory provenance/transfer, state adapter,
+bootstrap protocol or extension payload. Shared view dispatch/presentation and
+window-owner cleanup did change. Those paths require fresh bounded production
+lifecycle evidence on the current host, not reuse of the old native receipt.
+The original #673 qualification retains only its historical host/archive scope;
+this follow-up is not a new cross-platform or packaged-host qualification.
 
 The separate archive contains its MIT license, Community Big MIT notice and
 adaptation credit for @ruscher's #622 layout work. Host and archive source

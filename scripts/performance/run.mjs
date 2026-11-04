@@ -129,7 +129,8 @@ for (let trial = 0; trial < summary.repetitions; trial++) {
     execution.reason !== "exit" ||
     execution.exitCode !== 0 ||
     execution.signal ||
-    execution.cleanupErrors.length
+    execution.cleanupErrors.length ||
+    execution.cleanupAssistance !== "none"
   )
     throw new Error(
       `Performance execution ${trial} failed; inspect local execution/settlement receipts`,

@@ -4,7 +4,9 @@ This opt-in, reporting-only workflow compares an identified baseline and candida
 on the **same idle native desktop**. It is not part of `npm test`, a RAM budget,
 a leak detector, a release gate, or a claim about total application consumption.
 Run on an assigned disposable desktop, not inside the terminal being measured.
-Do not run other graphical tests, builds or workloads concurrently.
+Do not run other graphical tests, builds or workloads concurrently. On macOS,
+follow the [preference precautions](development.md#macos-preferences-and-native-verification):
+an isolated Electron profile does not protect OS preferences.
 
 The [initial Ubuntu calibration](performance-calibration.md) retains raw
 normal/normal/control results, demonstrates large-cost sensitivity, and explains

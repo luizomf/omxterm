@@ -50,8 +50,9 @@ Public host/archive/catalog distribution is not established by that checkpoint.
 
 ## Installed-package production fixture
 
-On an assigned disposable, logged-in, idle macOS ARM64 desktop, build ordinary
-production output, then run only the opt-in integration test:
+On an assigned disposable, logged-in, idle macOS ARM64 desktop, follow the
+[macOS preference precautions](development.md#macos-preferences-and-native-verification).
+Then build ordinary production output and run only the opt-in integration test:
 
 ```sh
 npm run build

@@ -67,9 +67,11 @@ describe("historical Files 0.4 catalog", () => {
     ["0.24.0-dev.11", true],
     ["0.24.0-dev.20", true],
     ["0.24.0", true],
-    ["0.25.0-dev.0", false],
+    ["0.25.0-dev.0", true],
+    ["0.25.0-dev.1", true],
+    ["0.25.1-dev.0", false],
   ])(
-    "preserves semver admission for %s (not execution qualification)",
+    "applies host compatibility for %s (not execution qualification)",
     (appVersion, compatible) => {
       expect(
         catalogCompatible(

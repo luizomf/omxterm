@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { createSettingsView as createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
 import { createRendererLanguage } from "../../src/renderer/renderer-language";
 import type {
@@ -225,6 +226,7 @@ it("keeps file, reload and transport failures live without refetching on languag
 it("relabels a retained initial load failure without retrying", async () => {
   const language = createRendererLanguage("pt-BR");
   const bridge = {
+    themes: vi.fn(async () => emptyThemes),
     snapshot: vi.fn(async (): Promise<SettingsSnapshot> => {
       throw new Error("private");
     }),

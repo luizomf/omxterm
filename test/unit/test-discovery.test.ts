@@ -26,7 +26,7 @@ function discoveredFiles(root: string): string[] {
       "--root",
       root,
       "--config",
-      path.join(repositoryRoot, "vitest.config.ts"),
+      path.join(repositoryRoot, "vitest.config.cts"),
     ],
     { cwd: repositoryRoot, encoding: "utf8", timeout: 15_000 },
   );

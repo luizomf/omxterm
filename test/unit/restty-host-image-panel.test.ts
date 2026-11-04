@@ -182,15 +182,16 @@ it.each([false, true])(
     ).toBeNull();
     expect(root.querySelector("input[type=search]")).toBeNull();
     togglePanel();
-    expect(root.hidden).toBe(true);
+    expect(root.hidden).toBe(!builtIn);
     if (builtIn) {
-      toggleSnippets();
       await Promise.resolve();
       expect(root.hidden).toBe(false);
       expect(root.querySelector("h2")?.textContent).toBe("Snippets");
       expect(loadSnippets).toHaveBeenCalledOnce();
       fixture.close(); // It must not dismiss another selected view.
       expect(root.hidden).toBe(false);
+      toggleSnippets(); // The separate tool action still closes it.
+      expect(root.hidden).toBe(true);
     }
     host.dispose();
     expect(

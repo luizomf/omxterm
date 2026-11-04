@@ -17,7 +17,8 @@ Manual User Configuration Reload reuses complete startup validation and
 serializes requests. Validation/load rejection before application retains the
 last valid in-memory settings and reports the current problem. A successful
 load publishes a whole snapshot, then applies consumers synchronously. Removing
-`config.json` selects defaults; manual reload does not seed files.
+`config.json` selects defaults; a dangling link in its path is a read failure,
+not ordinary absence. Manual reload does not seed files.
 
 Consumer application is sequential, not transactional. If a consumer throws
 after publication and the log-level change, those changes and any already
@@ -50,31 +51,58 @@ serialized. A file that cannot be read, decoded or parsed is reported, never
 replaced with defaults; a parsed but invalid document may be repaired by a
 change whose whole candidate validates.
 
-After asynchronous validation and temporary-file preparation, the writer checks
-the observed bytes/presence again immediately before rename. A mismatch refuses
-the edit with a fresh snapshot and reload guidance, without automatic retry or
-rebase. The in-process queue does not lock external editors: this final
-compare-then-rename minimizes the remaining race but is not a cross-process
-atomic compare-and-swap. Settings refuses writes through a `config.json`
-symlink, including a dangling one, with guidance to edit the target manually
-and reload. It preserves the link and target rather than silently replacing
-the entry or inventing a target-following policy.
+Settings follows existing `config.json` symlinks, including relative links,
+chains and linked parent directories, to an existing regular file. It prepares
+the temporary file beside that resolved target and atomically replaces the
+target entry, leaving the links in place. An ordinarily absent configuration
+may still be created, including under a linked directory; a dangling link or
+cycle is refused rather than creating its target. Directories, devices, pipes
+and other non-regular targets are refused; read or write failures give
+permission/location guidance. Fix the problem and reload before trying again.
+
+A raw draft's opaque revision identifies the resolved destination as well as its
+bytes or absence. After asynchronous validation and temporary-file preparation,
+the writer resolves the logical path again and checks destination, bytes/presence
+and basic permission bits before rename. A mismatch refuses the edit with a
+fresh snapshot and reload guidance, without automatic retry or rebase, even
+when two targets contain identical bytes. The temporary file is initially created
+with mode `0600` where supported; its final permissions are adjusted through
+its open handle, and its identity is
+checked before publication and cleanup. Cleanup failure is reported with guidance
+that a temporary file may remain. The in-process queue does not lock external
+editors: these checks minimize remaining races but do not form a cross-process
+atomic compare-and-swap. Either pathname can still change after its final check.
+
+Atomic replacement preserves the existing target's basic permission bits where
+supported, not its inode. A newly created configuration starts with mode `0600`
+where supported; inherited filesystem ACLs still apply. Other hard links still
+point to the old file, and ownership, ACLs, extended attributes and other metadata are not guaranteed to
+survive. The target directory must permit temporary-file creation and replacement.
+Relative theme paths continue to use the logical configuration directory, not
+the directory of the resolved `config.json` target.
 
 Graphical responses reconcile only controls whose submitted edit still owns
 the field; unrelated or newer typing remains local. Queued changes retain
 pending feedback until all requested changes settle. Graphical requests are
 submitted immediately to the existing main-process queue, not retained in a
-view-local queue. Closing does not cancel requested writes; a reopened view's
+view-local queue. Consecutive graphical `theme.path` requests that have not yet
+started share one queued operation, updated to the latest choice. The running
+validation/write/reload is never cancelled; any intervening read, raw save,
+shortcut or other field change ends that coalescing window. Superseded choices
+are not written and receive an explicit superseded result with the winning
+request's snapshot, not a claim that their own value was saved. The winning
+choice retains normal validation, conflict, write and application outcomes.
+Closing does not cancel requested writes; a reopened view's
 read follows the writes already requested, while removed views still ignore
 late results. Raw Save and Reload File allow only one pending raw operation at
 a time, while typing remains usable.
 Their responses cannot replace newer typing or a closed/reopened view. After a
 successful raw save, newer typing keeps the revision of the submitted bytes as
 its base, so a subsequent external edit still conflicts. A saved snapshot
-represents those submitted bytes, not later disk contents observed during
-application. Its text/document use the loader's UTF-8 decoding semantics
-(including removal of a leading BOM), while its revision hashes the exact saved
-bytes. Snapshot decoding/parsing is completed before persistence; raw Save
+represents those submitted bytes and destination, not later disk contents
+observed during application. Its text/document use the loader's UTF-8 decoding
+semantics (including removal of a leading BOM), while its revision identifies
+the destination and exact saved bytes. Snapshot decoding/parsing is completed before persistence; raw Save
 still writes the submitted text, including an accepted BOM, without a new
 normalization or validation policy.
 
@@ -102,5 +130,8 @@ notices; normal loading continues. Documents are never repaired or migrated.
 Creation happens at application opening, not installation: DMG copying and
 direct AppImage use have no common installer execution point. The same XDG
 resolution runs as the actual user on all platforms. The theme copy becomes
-user-owned and is not upgraded automatically. No theme discovery UI or file
-watching is introduced.
+user-owned and is not upgraded automatically. Settings discovers local themes
+when opened, when the configured path changes, or when explicitly refreshed,
+without creating or changing theme files. Selection is an explicit settings write through the same validation and
+reload path. Discovery has bounded reads and no file watching; the full behavior
+is in the [configuration contract](../spec.md#configuration-and-local-state).

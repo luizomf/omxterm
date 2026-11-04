@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { app, BrowserWindow, ipcMain } from "electron";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { mkdirSync, writeSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -42,6 +43,8 @@ import {
   holdFontRead,
   releaseFontReads,
 } from "./font-read-reload-io";
+
+applyChromiumGpuPolicy(app.commandLine);
 
 const root = __dirname;
 for (const name of ["userData", "sessionData"] as const) {

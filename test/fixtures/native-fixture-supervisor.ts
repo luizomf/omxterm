@@ -1,9 +1,12 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { collectFixtureRegistrations } from "./native-fixture-ownership";
-import type { NativeFixtureCleanupFailure } from "./native-fixture-outcome";
+import type {
+  NativeFixtureCleanupFailure,
+  NativeFixtureResult,
+} from "./native-fixture-outcome";
 import {
   completedFixture,
   type FixtureCompletion,
@@ -110,6 +113,28 @@ async function removeFixtureProfile(
 
 function completesOnExit(request: Request, exit: ExternalExit): boolean {
   return exit.exitCode !== 0 || exit.signal !== null || !request.completionFile;
+}
+
+// Preserve the final exit event and buffered diagnostics, without letting an
+// escaped inherited pipe keep the supervisor alive indefinitely.
+async function closeFixturePipes(
+  child: ChildProcess | undefined,
+  pipesClosed: Promise<void>,
+  cleanupErrors: string[],
+): Promise<void> {
+  let closeTimer: ReturnType<typeof setTimeout> | undefined;
+  await Promise.race([
+    pipesClosed,
+    new Promise<void>((resolve) => {
+      closeTimer = setTimeout(() => {
+        cleanupErrors.push("Fixture streams did not close after cleanup");
+        resolve();
+      }, 1_000);
+    }),
+  ]);
+  clearTimeout(closeTimer);
+  child?.stdout!.destroy();
+  child?.stderr!.destroy();
 }
 
 async function supervise(request: Request): Promise<void> {
@@ -288,9 +313,19 @@ async function supervise(request: Request): Promise<void> {
   const failureMetadata: { cleanupFailure?: NativeFixtureCleanupFailure } = {};
   const onFailure = (cleanupFailure: NativeFixtureCleanupFailure) =>
     Object.assign(failureMetadata, { cleanupFailure });
+  let cleanupAssistance: NativeFixtureResult["cleanupAssistance"] = "unknown";
+  const onAssistance = () => {
+    cleanupAssistance = "attempted";
+  };
   try {
     sample({ callsite: "final-sample", onFailure });
-    await terminateFixtureProcesses(owned, collectRegistered, onFailure);
+    await terminateFixtureProcesses(
+      owned,
+      collectRegistered,
+      onFailure,
+      onAssistance,
+    );
+    if (cleanupAssistance === "unknown") cleanupAssistance = "none";
 
     if (request.externalChild) {
       stdout = await readNativeOutput(
@@ -320,21 +355,7 @@ async function supervise(request: Request): Promise<void> {
   } catch (error) {
     cleanupErrors.push(String(error));
   }
-  // Preserve the final exit event and buffered diagnostics, without letting an
-  // escaped inherited pipe keep the supervisor alive indefinitely.
-  let closeTimer: ReturnType<typeof setTimeout> | undefined;
-  await Promise.race([
-    pipesClosed,
-    new Promise<void>((resolve) => {
-      closeTimer = setTimeout(() => {
-        cleanupErrors.push("Fixture streams did not close after cleanup");
-        resolve();
-      }, 1_000);
-    }),
-  ]);
-  clearTimeout(closeTimer);
-  child?.stdout!.destroy();
-  child?.stderr!.destroy();
+  await closeFixturePipes(child, pipesClosed, cleanupErrors);
   if (cleanupErrors.length === 0) {
     try {
       await removeFixtureProfile(request.root, rootIdentity);
@@ -349,6 +370,7 @@ async function supervise(request: Request): Promise<void> {
     stdout,
     stderr,
     cleanupErrors,
+    cleanupAssistance,
     ...failureMetadata,
     ownedProcesses: [...owned.values()],
   };

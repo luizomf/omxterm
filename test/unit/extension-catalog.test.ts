@@ -135,6 +135,31 @@ describe("official catalog", () => {
       ),
     ).toBe(false);
   });
+  it.each([
+    ["linux-arm64", "0.23.0-dev.9", null, true],
+    ["darwin-arm64", "0.23.0-dev.9", "platform", false],
+    ["linux-arm64", "0.22.0", "engine", false],
+    ["darwin-arm64", "0.22.0", "platform-and-engine", false],
+  ] as const)(
+    "reports platform and host/API compatibility separately for %s / %s",
+    async (target, version, incompatibility, compatible) => {
+      const catalog = createExtensionCatalog(
+        { ...runtime, appVersion: version },
+        target,
+      );
+      vi.mocked(downloadExtension).mockResolvedValue(bytes());
+      await catalog.refresh(new AbortController().signal);
+      const card = catalog.snapshot([]).entries[0]!;
+      expect(card).toMatchObject({
+        targets: ["linux-arm64"],
+        incompatibility,
+        compatible,
+      });
+      if (!compatible)
+        expect(() => catalog.select(card.selection)).toThrow("incompatible");
+      else expect(catalog.select(card.selection).id).toBe(release.id);
+    },
+  );
   it("distinguishes update, exact reinstall, different bytes and downgrade", () => {
     expect(catalogAction(release)).toBe("install");
     expect(catalogAction(release, { version: "0.0.9", digest: "x" })).toBe(

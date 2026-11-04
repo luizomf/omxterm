@@ -47,6 +47,7 @@ it("keeps newer typing and external bytes after a BOM raw save finishes applying
   const dialog = createSettingsDialog(
     document,
     {
+      themes: service.themes,
       snapshot: service.snapshot,
       change: service.change,
       saveText: save,
@@ -282,6 +283,7 @@ it.each([false, true])(
     });
     const second = deferred<SettingsResult>();
     const bridge: SettingsBridge = {
+      themes: service.themes,
       snapshot: () => service.snapshot(),
       change: async (change) => {
         const result = await service.change(change);

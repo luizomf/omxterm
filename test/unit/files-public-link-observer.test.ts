@@ -163,6 +163,8 @@ it("uses only the exact Files card among other installable catalog entries", asy
       entries: [
         {
           selection: "snippets",
+          targets: ["darwin-arm64"],
+          incompatibility: null,
           id: "omxterm.snippets",
           name: "Snippets",
           version: "0.1.0",
@@ -173,6 +175,8 @@ it("uses only the exact Files card among other installable catalog entries", asy
         },
         {
           selection: "files",
+          targets: ["darwin-arm64"],
+          incompatibility: null,
           id: "omxterm.files",
           name: "Files — ARM64 preview",
           version: "0.5.0",

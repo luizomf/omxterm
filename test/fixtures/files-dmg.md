@@ -4,8 +4,9 @@ The [bounded exact-pair checkpoint](../../docs/files-development-preview.md#file
 passed on 2026-10-31; this procedure itself is not a publication receipt or
 qualification of other inputs. Run only on the
 assigned ordinary-user unlocked, idle Aqua guest, after root-owned executable,
-artifact and ownership preflight. Never use the owner's desktop. No Quartz or
-physical-input qualification is selected.
+artifact and ownership preflight. Follow the [macOS preference precautions](../../docs/development.md#macos-preferences-and-native-verification);
+the isolated paths do not protect the guest user's OS preferences. Never use the
+owner's desktop. No Quartz or physical-input qualification is selected.
 
 ## Separate immutable inputs
 

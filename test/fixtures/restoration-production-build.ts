@@ -37,9 +37,9 @@ export async function prepareRestorationFixture(
   const metadata = JSON.parse(
     await readFile(path.join(options.source, "package.json"), "utf8"),
   ) as { version: string };
-  // Keep historical dev.1 runs reproducible; admit only the assigned follow-up.
+  // Keep historical runs reproducible; new milestones need their own receipts.
   assert.ok(
-    ["0.24.0-dev.1", "0.24.0-dev.2"].includes(metadata.version),
+    ["0.24.0-dev.1", "0.24.0-dev.2", "0.25.0-dev.4"].includes(metadata.version),
     "selected host milestone",
   );
   const archive = await readFile(options.archive);

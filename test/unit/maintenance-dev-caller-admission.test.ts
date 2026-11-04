@@ -39,7 +39,7 @@ vi.mock("../../src/main/extension-download", async (original) => ({
   downloadExtension: adapters.download,
 }));
 
-// The current host version is 0.24.1-dev.0 at the #781 base. Do not spoof it.
+// Exercise the actual current source host version; do not spoof admission.
 const runtime = { appVersion, apiVersion: "0.1.0" };
 // Verbatim extension.json bytes extracted from the immutable public archives in
 // #781. The independent hashes identify those manifests and their source ZIPs.
@@ -346,6 +346,32 @@ it("refuses an API-incompatible archive through catalog, local and link", async 
   ).rejects.toMatchObject({ code: "incompatible" });
   await expect(installLink(release, bytes)).rejects.toMatchObject({
     code: "incompatible",
+  });
+  expect(adapters.consent).not.toHaveBeenCalled();
+  expect(await packages.snapshot()).toEqual([]);
+});
+
+it("rejects an unknown capability before local or link trust", async () => {
+  const fixture = releases[0];
+  const unsupported = fixture.manifest.replace(
+    '"backend":"backend.mjs"',
+    '"capabilities":["terminal.future.v1"],"backend":"backend.mjs"',
+  );
+  const bytes = archive(unsupported);
+  const release = await syntheticRelease(fixture, bytes);
+  const catalog = await catalogFor(release);
+  // Catalog metadata has no capability list; archive validation is authoritative.
+  const card = catalog.snapshot([]).entries[0]!;
+  expect(card.compatible).toBe(true);
+  const selected = catalog.select(card.selection);
+  const file = path.join(root, "unsupported.omxext");
+  await writeFile(file, bytes);
+  adapters.picker.mockResolvedValueOnce({ canceled: false, filePaths: [file] });
+  await expect(
+    installExtensionFromDialog(window, manager, () => false, translator),
+  ).rejects.toMatchObject({ code: "invalid-package" });
+  await expect(installLink(selected, bytes, true)).rejects.toMatchObject({
+    code: "invalid-package",
   });
   expect(adapters.consent).not.toHaveBeenCalled();
   expect(await packages.snapshot()).toEqual([]);
