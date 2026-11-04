@@ -4,6 +4,7 @@ import path from "node:path";
 import assert from "node:assert/strict";
 import { loadTerminalFontData } from "../../src/main/terminal-font-data";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import {
   runCursorStep,
   parseCursorInputObservation,
@@ -246,6 +247,7 @@ function watchCursorInput(window: BrowserWindow) {
 
 async function run() {
   applyChromiumSandboxPolicy(app.commandLine);
+  applyChromiumGpuPolicy(app.commandLine);
   for (const name of ["userData", "sessionData"] as const) {
     await mkdir(path.join(root, name), { recursive: true });
     app.setPath(name, path.join(root, name));

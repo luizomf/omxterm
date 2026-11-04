@@ -78,6 +78,10 @@
   width: 0;
   font-family: ui-monospace, monospace;
 }
+.entry-filter {
+  width: 100%;
+  margin-bottom: 10px;
+}
 .entries {
   min-height: 100px;
 }
@@ -117,6 +121,29 @@
 }
 .file-row:hover {
   background: var(--tool-hover);
+}
+.file-row[data-drop="valid"] {
+  outline: 2px solid var(--ui-text);
+  outline-offset: -2px;
+  background: var(--tool-hover);
+}
+.file-row[data-drop="invalid"] {
+  outline: 1px dashed var(--ui-secondary);
+  outline-offset: -2px;
+}
+.drag-feedback {
+  position: fixed;
+  z-index: 2;
+  inset: auto 8px 8px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--ui-input-border);
+  border-left: 3px solid var(--ui-text);
+  background: var(--ui-raised);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
 }
 .file-name {
   overflow: hidden;
@@ -190,6 +217,7 @@
   overflow-wrap: anywhere;
 }
 .menu-shortcut {
+  display: block;
   grid-column: 2;
   grid-row: 2;
   min-width: 0;

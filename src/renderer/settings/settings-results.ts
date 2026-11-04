@@ -34,11 +34,20 @@ export function describeSettingsResult(
 ): {
   readonly text: string;
   readonly error: boolean;
-  readonly severity: "success" | "warning" | "error";
+  readonly severity: "info" | "success" | "warning" | "error";
 } {
+  if (result.status === "superseded")
+    return {
+      text: t("settings.themeSuperseded"),
+      error: false,
+      severity: "info",
+    };
   if (result.status !== "saved")
     return {
-      text: settingsMessageText(result.message, t),
+      text:
+        typeof result.message === "string"
+          ? t("settings.notSaved", { detail: result.message })
+          : settingsMessageText(result.message, t),
       error: true,
       severity: "error",
     };

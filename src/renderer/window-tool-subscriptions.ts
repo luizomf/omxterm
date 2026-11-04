@@ -1,3 +1,5 @@
+import type { ExtensionsBridge } from "../shared/extensions";
+import { openPanelDefault } from "./panel-default";
 import type { SemanticInputBridge } from "../shared/semantic-input";
 import { createSemanticInput } from "./semantic-input";
 import { subscribeNativeSemanticInput } from "./native-semantic-input";
@@ -22,6 +24,7 @@ export function subscribeToWindowTools(
   document: Document,
   options: TerminalWindowActionSubscriptions & {
     semanticInput?: SemanticInputBridge;
+    extensions?: ExtensionsBridge;
     settings?: SettingsBridge;
     snippets?: WindowSnippetsSource;
     clipboard?: TerminalClipboard;
@@ -72,10 +75,22 @@ export function subscribeToWindowTools(
         tabs.editSettingsClipboard(action, options.clipboard) ||
         (panel?.clipboardAction(action) ?? false),
       owner.modalClipboard,
+      () => panel?.cancelDefaultOpen(),
     );
     removePanel = options.subscribeToAuxiliaryPanelToggle?.(() => {
       if (!disposed && !owner.blocked() && tabs.isTerminalSelected())
-        panel?.toggleVisibility();
+        panel?.toggleVisibility((signal) => {
+          if (options.snippets) panel.show("snippets");
+          else if (options.extensions)
+            void openPanelDefault(
+              options.extensions,
+              signal,
+              () => panel.noticeEmpty(),
+              (token) => panel.expectDefaultOpen(signal, token),
+            ).then((opened) => {
+              if (!opened && !signal.aborted) panel.cancelDefaultOpen();
+            });
+        });
     });
     const removePanelSide = options.subscribeToAuxiliaryPanelSideToggle?.(
       () => {

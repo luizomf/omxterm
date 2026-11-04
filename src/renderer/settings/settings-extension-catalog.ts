@@ -6,6 +6,14 @@ import type {
 import { createPageButton, setPageNotice } from "../application-page";
 import { englishLanguage, type Translate } from "../renderer-language";
 
+const platformNames: Record<string, string> = {
+  "linux-arm64": "Linux ARM64",
+  "linux-x64": "Linux x64",
+  "darwin-arm64": "macOS ARM64",
+  "win32-arm64": "Windows ARM64",
+  "win32-x64": "Windows x64",
+};
+
 /** Independent acquisition state leaves local/installed management usable offline. */
 export function renderExtensionCatalog(
   document: Document,
@@ -19,6 +27,7 @@ export function renderExtensionCatalog(
   let snapshot: CatalogSnapshot = { loaded: false, stale: false, entries: [] };
   let token: string | undefined;
   let failed = false;
+  let managementUnavailable = false;
   let managementBusy = false;
   const section = document.createElement("section");
   section.className = "extension-catalog";
@@ -59,17 +68,20 @@ export function renderExtensionCatalog(
       text: t(
         token
           ? "extensions.catalogLoading"
-          : failed || snapshot.stale
-            ? snapshot.loaded
-              ? "extensions.catalogStale"
-              : "extensions.catalogUnavailable"
-            : !snapshot.loaded
-              ? "extensions.catalogIdle"
-              : snapshot.entries.length
-                ? "extensions.catalogLoaded"
-                : "extensions.catalogEmpty",
+          : managementUnavailable
+            ? "extensions.catalogManagementUnavailable"
+            : failed || snapshot.stale
+              ? snapshot.loaded
+                ? "extensions.catalogStale"
+                : "extensions.catalogUnavailable"
+              : !snapshot.loaded
+                ? "extensions.catalogIdle"
+                : snapshot.entries.length
+                  ? "extensions.catalogLoaded"
+                  : "extensions.catalogEmpty",
       ),
-      severity: failed || snapshot.stale ? "warning" : "info",
+      severity:
+        managementUnavailable || failed || snapshot.stale ? "warning" : "info",
     });
     for (const apply of bindings) apply();
     for (const item of buttons)
@@ -77,7 +89,10 @@ export function renderExtensionCatalog(
   }
   function update(next: CatalogSnapshot) {
     snapshot = next;
-    if (next.loaded && !next.stale) failed = false;
+    if (next.loaded && !next.stale) {
+      failed = false;
+      managementUnavailable = false;
+    }
     bindings.length = 0;
     buttons.length = 0;
     list.replaceChildren();
@@ -88,16 +103,33 @@ export function renderExtensionCatalog(
       title.textContent = `${entry.name} · ${entry.version}`;
       const description = document.createElement("p");
       description.textContent = entry.description;
+      const platforms = document.createElement("p");
       const status = document.createElement("p");
       const button = createPageButton(document);
       bindings.push(() => {
+        platforms.textContent = t("extensions.catalogPlatforms", {
+          platforms: entry.targets
+            .map((target) => platformNames[target] ?? target)
+            .join(", "),
+        });
+        const reasons = [];
+        if (
+          entry.incompatibility === "platform" ||
+          entry.incompatibility === "platform-and-engine"
+        )
+          reasons.push(t("extensions.catalogPlatformIncompatible"));
+        if (
+          entry.incompatibility === "engine" ||
+          entry.incompatibility === "platform-and-engine"
+        )
+          reasons.push(t("extensions.catalogEngineIncompatible"));
         status.textContent = entry.compatible
           ? entry.installedVersion
             ? t("extensions.catalogInstalled", {
                 version: entry.installedVersion,
               })
             : t("extensions.catalogNotInstalled")
-          : t("extensions.incompatible");
+          : reasons.join(". ");
         button.textContent = t(
           entry.action === "install"
             ? "extensions.catalogInstall"
@@ -116,7 +148,7 @@ export function renderExtensionCatalog(
         }),
       );
       buttons.push({ button, compatible: entry.compatible });
-      card.append(title, description, status);
+      card.append(title, description, platforms, status);
       if (entry.action === "replace") {
         const warning = document.createElement("p");
         bindings.push(() =>
@@ -136,14 +168,19 @@ export function renderExtensionCatalog(
     if (token || !live()) return;
     token = crypto.randomUUID();
     failed = false;
+    managementUnavailable = false;
     relabel();
     void bridge
       .request({ operation: "catalog-refresh", token })
       .then(
         (result) => {
           if (!live()) return;
-          failed = !result.ok;
           if (result.catalog) update(result.catalog);
+          failed = !result.ok;
+          managementUnavailable =
+            !result.ok &&
+            (result.error === "unsupported" ||
+              result.error === "runtime-unavailable");
         },
         () => {
           failed = true;

@@ -10,13 +10,13 @@ import {
   parseManifest,
 } from "../../src/installed-packages/archive";
 
-it("declares window-scoped state and layout capabilities only for the new compatible host", async () => {
+it("declares window-scoped state and layout capabilities without changing saved data identity", async () => {
   const manifest = parseManifest(
     JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
   );
   expect(manifest).toMatchObject({
     id: "omxterm.restoration",
-    version: "0.1.0",
+    version: "0.1.1",
     name: "Saved Layout",
     view: { context: "window" },
   });
@@ -25,21 +25,68 @@ it("declares window-scoped state and layout capabilities only for the new compat
     "terminal.openLayout.v1",
     "state.v1",
   ]);
+  expect(manifest.engines).toEqual({
+    omxterm: ">=0.24.0-dev.1 <0.26.0",
+    api: "^0.1.0",
+  });
+});
+
+it("admits the built source on the current host through real archive validation", async () => {
+  const manifest = parseManifest(
+    JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
+  );
+  const host = JSON.parse(await readFile("package.json", "utf8")) as {
+    version: string;
+  };
+  for (const appVersion of [
+    "0.24.0-dev.1",
+    "0.24.0-dev.36",
+    "0.24.0",
+    "0.24.1-dev.0",
+    "0.24.1",
+    "0.25.0-dev.0",
+    host.version,
+    "0.25.0",
+    "0.25.1",
+  ])
+    expect(() =>
+      checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
+    ).not.toThrow();
+
+  // Historical archive metadata stays refused on this host, not globally waived.
+  const historical = parseManifest({
+    ...manifest,
+    version: "0.1.0",
+    engines: { ...manifest.engines, omxterm: ">=0.24.0-dev.1 <0.25.0" },
+  });
   expect(() =>
-    checkCompatibility(manifest, {
-      appVersion: "0.24.0-dev.0",
+    checkCompatibility(historical, {
+      appVersion: host.version,
       apiVersion: "0.1.0",
     }),
   ).toThrow("incompatible");
-  expect(() =>
-    checkCompatibility(manifest, {
-      appVersion: "0.24.0-dev.1",
-      apiVersion: "0.1.0",
-    }),
-  ).not.toThrow();
-  expect(() =>
-    checkCompatibility(manifest, { appVersion: "0.25.0", apiVersion: "0.1.0" }),
-  ).toThrow("incompatible");
+});
+
+it("keeps earlier hosts, future minor families and incompatible APIs refused", async () => {
+  const manifest = parseManifest(
+    JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
+  );
+  for (const appVersion of [
+    "0.23.0",
+    "0.24.0-dev.0",
+    "0.24.2-dev.0",
+    "0.25.0-beta.1",
+    "0.25.1-dev.0",
+    "0.26.0-dev.0",
+    "0.26.0",
+  ])
+    expect(() =>
+      checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
+    ).toThrow("incompatible");
+  for (const apiVersion of ["0.0.9", "0.2.0", "0.1.1-dev.0"])
+    expect(() =>
+      checkCompatibility(manifest, { appVersion: "0.25.0-dev.4", apiVersion }),
+    ).toThrow("incompatible");
 });
 it("rejects non-string capability declarations rather than coercing them", async () => {
   const manifest: unknown = JSON.parse(
@@ -81,8 +128,11 @@ it.skipIf(process.env.OMXTERM_RESTORATION_BUILD !== "1")(
       );
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
+      const host = JSON.parse(await readFile("package.json", "utf8")) as {
+        version: string;
+      };
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: "0.24.0-dev.1",
+        appVersion: host.version,
         apiVersion: "0.1.0",
       });
       expect(validated.manifest).toEqual(receipt.manifest);

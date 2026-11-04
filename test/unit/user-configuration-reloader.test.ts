@@ -413,6 +413,124 @@ describe("User Configuration reloader", () => {
       expect.stringContaining("font.family and font.lineHeight"),
     ]);
   });
+});
+
+describe("User Configuration notice lifetime", () => {
+  it("refreshes only deferred fields as owners retire, preserving warnings without reloading", async () => {
+    const initial = configuration("initial");
+    const changed = configuration("changed", {
+      fontFamily: "Changed Family",
+      fontLineHeight: 1.5,
+    });
+    const activeSurfaces: Pick<
+      LoadedUserConfiguration,
+      "fontFamily" | "fontLineHeight"
+    >[] = [
+      { fontLineHeight: 1 },
+      { fontFamily: "Changed Family", fontLineHeight: 1 },
+    ];
+    const apply = vi.fn();
+    const load = vi.fn(async () => valid(changed, ["actionable warning"]));
+    const reloader = createUserConfigurationReloader({
+      initial: { configuration: initial, userFileErrors: [] },
+      load,
+      apply,
+      terminalSurfaceFontBaseline: initial,
+      activeTerminalSurfaceFontConfigurations: () => activeSurfaces,
+    });
+    await reloader.reload();
+    expect(reloader.current().userFileErrors[1]).toContain(
+      "font.family and font.lineHeight",
+    );
+    activeSurfaces.shift();
+    reloader.refreshTerminalSurfaceNotices();
+    expect(reloader.current().userFileErrors).toEqual([
+      "actionable warning",
+      expect.stringContaining("previous font.lineHeight value"),
+    ]);
+    expect(apply).toHaveBeenLastCalledWith(reloader.current(), false);
+    activeSurfaces.length = 0;
+    reloader.refreshTerminalSurfaceNotices();
+    expect(reloader.current().userFileErrors).toEqual(["actionable warning"]);
+    expect(reloader.current().configuration).toBe(changed);
+    expect(apply).toHaveBeenCalledTimes(3);
+    reloader.refreshTerminalSurfaceNotices();
+    expect(apply).toHaveBeenCalledTimes(3);
+    expect(load).toHaveBeenCalledOnce();
+    await reloader.reload();
+    // The startup baseline must not invent an old owner after the last one left.
+    expect(reloader.current().userFileErrors).toEqual(["actionable warning"]);
+  });
+
+  it("retains a rejected font diagnostic while retirement clears only restart information", async () => {
+    const initial = configuration("initial");
+    const changed = configuration("changed", { fontLineHeight: 1.5 });
+    const activeSurfaces = [{ fontLineHeight: 1 }];
+    const load = vi
+      .fn<() => Promise<UserConfigurationLoad>>()
+      .mockResolvedValueOnce(valid(changed))
+      .mockResolvedValueOnce({
+        configuration: initial,
+        fallback: {
+          surface: "configuration",
+          error: new UserConfigurationError(
+            "/fixture/config.json",
+            "font.family",
+            "must exactly name an installed font family",
+          ),
+        },
+      });
+    const reloader = createUserConfigurationReloader({
+      initial: { configuration: initial, userFileErrors: [] },
+      load,
+      apply: vi.fn(),
+      terminalSurfaceFontBaseline: initial,
+      activeTerminalSurfaceFontConfigurations: () => activeSurfaces,
+    });
+    await reloader.reload();
+    await reloader.reload();
+    expect(reloader.current().configuration).toBe(changed);
+    const diagnostic = reloader.current().userFileErrors[0];
+    expect(diagnostic).toContain("must exactly name an installed font family");
+    expect(reloader.current().userFileErrors[1]).toContain("font.lineHeight");
+    activeSurfaces.length = 0;
+    reloader.refreshTerminalSurfaceNotices();
+    expect(reloader.current().userFileErrors).toEqual([diagnostic]);
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it("reconciles against current settings while a reload is pending without erasing startup errors", async () => {
+    const initial = configuration("initial");
+    const pending = deferred<UserConfigurationLoad>();
+    const activeSurfaces: Array<{ fontLineHeight: number }> = [];
+    const apply = vi.fn();
+    const reloader = createUserConfigurationReloader({
+      initial: {
+        configuration: initial,
+        userFileErrors: ["startup font error"],
+      },
+      load: () => pending.promise,
+      apply,
+      terminalSurfaceFontBaseline: initial,
+      activeTerminalSurfaceFontConfigurations: () => activeSurfaces,
+    });
+    reloader.refreshTerminalSurfaceNotices();
+    expect(apply).not.toHaveBeenCalled();
+    expect(reloader.current().userFileErrors).toEqual(["startup font error"]);
+    const reload = reloader.reload();
+    activeSurfaces.push({ fontLineHeight: 1 });
+    reloader.refreshTerminalSurfaceNotices();
+    expect(apply).not.toHaveBeenCalled();
+    activeSurfaces.length = 0;
+    reloader.refreshTerminalSurfaceNotices();
+    pending.resolve(valid(configuration("changed", { fontLineHeight: 1.5 })));
+    await reload;
+    expect(reloader.current().userFileErrors).toEqual([]);
+    activeSurfaces.push({ fontLineHeight: 1 });
+    // A previously captured registration can arrive before delivery ACK.
+    reloader.refreshTerminalSurfaceNotices();
+    expect(reloader.current().userFileErrors[0]).toContain("font.lineHeight");
+  });
 
   it("serializes repeated requests so later successful state cannot be lost", async () => {
     const first = deferred<UserConfigurationLoad>();

@@ -50,7 +50,7 @@ async function inputs(version = "0.24.0-dev.2") {
     },
   };
 }
-it.each(["0.24.0-dev.1", "0.24.0-dev.2"])(
+it.each(["0.24.0-dev.1", "0.24.0-dev.2", "0.25.0-dev.4"])(
   "preserves actual host %s and production artifacts while bundling only observers",
   async (version) => {
     const f = await inputs(version);
@@ -105,7 +105,14 @@ it("refuses the wrong archive digest or host version before building/launching",
       archiveSha256: "0".repeat(64),
     }),
   ).rejects.toThrow("separate archive digest");
-  for (const version of ["0.24.0-dev.0", "0.24.0-dev.3", "0.24.0", "0.25.0"]) {
+  for (const version of [
+    "0.24.0-dev.0",
+    "0.24.0-dev.3",
+    "0.24.0",
+    "0.25.0-dev.3",
+    "0.25.0-dev.5",
+    "0.25.0",
+  ]) {
     await writeFile(
       path.join(f.options.source, "package.json"),
       JSON.stringify({ version }),

@@ -219,6 +219,7 @@ it.skipIf(!enabled)(
       signal: null,
       reason: "exit",
       cleanupErrors: [],
+      cleanupAssistance: "none",
     });
     if (windows) {
       const launches = result.stdout

@@ -111,6 +111,7 @@ beforeEach(async () => {
       signal: null,
       reason: "exit",
       cleanupErrors: [],
+      cleanupAssistance: "none",
       stdout: "",
       stderr: "",
     };
@@ -514,36 +515,44 @@ it.each(["digest", "detach"])(
     expect((await receipt()).result.passed).toBe(false);
   },
 );
-it.each(["owner-lost", "unrestored", "wrong-checks"])(
-  "rejects %s even with successful process exit",
-  async (mode) => {
-    const implementation = vi
-      .mocked(runner.runNativeFixture)
-      .getMockImplementation()!;
-    vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
-      const result = await implementation(options);
-      const config = JSON.parse(
-        await fs.readFile(options.args[1]!, "utf8"),
-      ) as { evidence: string };
-      if (mode === "unrestored")
-        await fs.writeFile(
-          path.join(config.evidence, "trash-recovery.json"),
-          JSON.stringify({ verified: true, restored: false }),
-        );
-      if (mode === "wrong-checks")
-        await fs.writeFile(
-          path.join(config.evidence, "scenario.json"),
-          JSON.stringify({ checks: [], approvals: 3 }),
-        );
-      return {
-        ...result,
-        reason: mode === "owner-lost" ? "parent-disconnected" : "exit",
-      };
-    });
-    await expect(run()).rejects.toThrow();
-    expect((await receipt()).result.passed).toBe(false);
-  },
-);
+it.each([
+  "owner-lost",
+  "unrestored",
+  "wrong-checks",
+  "attempted",
+  "unknown",
+  "historical",
+])("rejects %s even with successful process exit", async (mode) => {
+  const implementation = vi
+    .mocked(runner.runNativeFixture)
+    .getMockImplementation()!;
+  vi.mocked(runner.runNativeFixture).mockImplementation(async (options) => {
+    const result = await implementation(options);
+    const config = JSON.parse(await fs.readFile(options.args[1]!, "utf8")) as {
+      evidence: string;
+    };
+    if (mode === "unrestored")
+      await fs.writeFile(
+        path.join(config.evidence, "trash-recovery.json"),
+        JSON.stringify({ verified: true, restored: false }),
+      );
+    if (mode === "wrong-checks")
+      await fs.writeFile(
+        path.join(config.evidence, "scenario.json"),
+        JSON.stringify({ checks: [], approvals: 3 }),
+      );
+    const classified = { ...result };
+    if (mode === "historical") delete classified.cleanupAssistance;
+    else if (mode === "attempted" || mode === "unknown")
+      classified.cleanupAssistance = mode;
+    return {
+      ...classified,
+      reason: mode === "owner-lost" ? "parent-disconnected" : "exit",
+    };
+  });
+  await expect(run()).rejects.toThrow();
+  expect((await receipt()).result.passed).toBe(false);
+});
 it.each(["identity", "checkpoint", "sync-write"])(
   "cannot publish success when cancelled or failed at %s",
   async (mode) => {

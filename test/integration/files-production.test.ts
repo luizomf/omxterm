@@ -90,6 +90,7 @@ it.skipIf(process.platform !== "linux" || process.arch !== "arm64" || !source)(
       signal: null,
       reason: "exit",
       cleanupErrors: [],
+      cleanupAssistance: "none",
     });
     const prefix = "__FILES_PRODUCTION__";
     const lines = execution.stdout

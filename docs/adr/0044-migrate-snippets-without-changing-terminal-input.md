@@ -1,6 +1,31 @@
 # ADR 0044: Migrate Snippets without changing terminal input
 
-Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741);
+Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741).
+
+## Current distribution status
+
+**[Stable OMXTerm 0.24.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.24.0).**
+It uses the separately installed, immutable Snippets `0.1.0` archive on Linux
+ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 retains built-in Snippets;
+the unchanged 0.23.0 host also retains its built-in tool. Installation and
+activation remain deliberate, with catalog and local/offline archive routes
+described in the [migration guide](../snippets-migration.md).
+
+The Windows ARM64 installed-public checkpoint remains **unresolved** under the
+[stable 0.24.0 release-risk decision](#stable-0240-release-risk-decision). Host
+publication is not a public-consumption PASS, demonstrated input fix or fixture-only
+attribution. Exact-stage/local-archive and separate FULL NSIS evidence retain
+their own scopes. Users who depend on built-in Windows ARM64 Snippets may remain
+on 0.23.0. Remaining platform gates and #741 stay open; no stable extension SDK
+is established. This status update changes neither the migration architecture
+nor the acceptance contract below.
+
+## Historical preview checkpoints
+
+The following records the earlier preview deliveries, not today's stable
+publication status. Exact host/archive identities, original receipts and
+qualification limits remain in the linked guides.
+
 Linux ARM64 migration is available in the published OMXTerm `0.24.0-dev.11` /
 Snippets `0.1.0` preview pair. The compatible package was published and download-verified
 before the host; matching exact-package qualification and full Linux package
@@ -22,7 +47,8 @@ a separate bounded macOS packaged public-HTTPS checkpoint passed. Its
 remain distinct from public byte verification and the earlier exact-DMG/FULL
 passes, which were not rerun. No broader platform or new Files/SSH qualification
 is implied.
-Stable `0.23.0` remains Latest. The published Linux x64 `0.24.0-dev.30` preview
+At these preview publication checkpoints, stable `0.23.0` remained Latest.
+The published Linux x64 `0.24.0-dev.30` preview
 selects the optional tool. Its prepublication [exact-AppImage checkpoint](../snippets-migration.md#linux-x64-exact-appimage-checkpoint)
 passed the shared ten checks and controlled visible-preview inspection, with
 separate stock FULL modes and explicit evidence/diagnostic limits. Catalog
@@ -159,6 +185,57 @@ load the extension remains visible without breaking terminal usability. Keep
 configuration validation accepting existing bindings even when no package is
 installed. Guidance must distinguish unavailable runtime from an absent package.
 
+### Empty-panel access fallback
+
+The accepted [#741 follow-up](https://github.com/luizomf/omxterm/issues/741#issuecomment-6613406531)
+adds a narrow exception for the independent **Toggle Auxiliary Panel** action:
+when genuinely empty and eligible, lazily open/reveal installed+enabled Snippets.
+With opened tools, retain ordinary hide/reveal, even if Snippets is removed.
+Windows x64 retains built-in compatibility, not an optional migration.
+
+If unavailable, use the panel-local noninteractive status for about four seconds,
+once per main application-process lifetime shared across its windows. No focus
+theft, repeated notice/timer extension, Settings jump, native error modal or
+implicit installation/enablement/network acquisition. Later deliberate
+installation/enablement may make a new attempt succeed. Reuse generation/token
+admission and revoke stale panel/tab/pane/modal/native-focus intent, including
+native publication arriving after cancellation. Main uses the actual native
+window blur and sends a fixed cancellation command to core, also fencing a
+publication already in transit. A core DOM blur during owned child creation is
+not native window focus loss. Close/dispose stays distinct from Hide/retain. The explicit Snippets entry point above and all action identities,
+defaults and custom/null shortcuts are unchanged.
+
+The access slice alone did not implement new-profile provisioning. The separate
+accepted default below changes neither existing-user consent nor any platform
+qualification gate/published artifact. Current observable details belong to
+[the specification](../spec.md#window-and-session-behavior).
+
+### Removable default for positively new packaged profiles
+
+Use the simpler synchronous capture at the start of existing main, not a new
+bootstrap/first-run framework. The bounded prior Linux source diagnostic supports
+that seam but not a different import graph, packaged identity or other-platform
+startup proof. Require absolute absent default userData/config/state roots before
+readiness/profile getters, fail closed on ambiguous/linked/error/overridden paths,
+then recheck actual identity before any kit/log/store work. Developer startup and
+Windows x64 are excluded.
+
+Consume one stable exclusive-created attempt witness outside the package store
+before publication; partial/failed/uncertain attempts never silently replay. Install
+only the exact pinned public Snippets0.1.0 bytes, enabled+dormant, through production
+generation0 admission before the initial manager snapshot. Preserve all installed,
+disabled and tombstoned entries; collection/uninstall cannot erase the attempt.
+No startup catalog/download, backend/view activation, YAML creation or binding
+reassignment. Manual installs/reinstalls retain ordinary explicit trust. This is
+not upgrade consent, an automatic updater or another package store.
+
+Bundle one exact external archive resource on existing optional targets, retain
+other archive/receipt exclusions, reject missing/corrupt package inputs, and check
+resource identity before package runtime probes. See [Default Snippets](../default-snippets.md)
+for the fixed-input route, namespace/durability assumptions and remaining native,
+modified-startup and exact-package gates. Source implementation does not waive
+those gates or rewrite historical failures.
+
 ### Starter kit and user data
 
 Keep existing catalogs untouched on install, upgrade, disable and uninstall.
@@ -197,8 +274,9 @@ unchanged user data and the remaining platform gates.
 Cut over a platform only after the package is installable through the ordinary
 extension-management path on that platform, the matching host/package pair is
 qualified, and migration instructions are included. A catalog listing or an
-archive build alone is insufficient. There is no automatic installation or
-implicit consent based on the presence of an old catalog. Existing users choose
+archive build alone is insufficient. Existing profiles never gain implicit
+installation consent from the presence or absence of an old catalog; the sole
+one-time packaged-new-profile default is described above. Existing users choose
 installation; until then their file remains intact and the old shortcut explains
 how to regain the optional tool. Keep a local-archive installation path for
 offline users and publish the compatible package before removing built-in access

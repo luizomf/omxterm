@@ -83,6 +83,107 @@ body.tabs-visible .settings-tab {
 .settings-panel[hidden] {
   display: none;
 }
+.settings-themes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.settings-themes-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-themes-header h3 {
+  margin: 0;
+}
+.settings-themes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  gap: 12px;
+}
+.settings-theme-card {
+  position: relative;
+  min-width: 0;
+  scroll-margin: 4px;
+  cursor: pointer;
+}
+.settings-theme-card input {
+  position: absolute;
+  opacity: 0;
+}
+.settings-theme-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  padding: 10px;
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius);
+  background: var(--ui-raised-tint);
+}
+.settings-theme-card input:checked + .settings-theme-content {
+  border-color: var(--ui-text);
+  background: var(--ui-selected);
+}
+.settings-theme-card input:focus-visible + .settings-theme-content {
+  outline: 2px solid var(--ui-text);
+  outline-offset: 2px;
+}
+.settings-theme-preview {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 68px;
+  padding: 10px;
+  border-radius: 4px;
+  font:
+    12px/1.3 ui-monospace,
+    monospace;
+}
+.settings-theme-dots {
+  display: flex;
+  gap: 5px;
+}
+.settings-theme-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.settings-theme-title {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 8px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.settings-theme-selected {
+  display: none;
+  color: var(--ui-secondary);
+  font-size: 12px;
+}
+.settings-theme-card
+  input:checked
+  + .settings-theme-content
+  .settings-theme-selected {
+  display: inline;
+}
+.settings-theme-path {
+  color: var(--ui-secondary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.settings-themes-invalid {
+  overflow-wrap: anywhere;
+}
+.settings-themes-invalid ul {
+  margin-block: 8px 0;
+  padding-inline-start: 20px;
+}
 .settings-row {
   display: flex;
   flex-direction: column;

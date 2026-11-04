@@ -30,9 +30,12 @@ OMXTERM_EXTENSION_COMPOSITION=1 \
 
 The shared macOS/Linux fixture imports `dist/main/index.js` unchanged. Linux uses
 X11 and the existing Linux sandbox policy; production startup applies its normal
-GPU policy. An authenticated isolated Xvfb/Openbox desktop is suitable for bounded
-software-rendered evidence, not hardware-GPU or physical-input qualification.
-Do not run desktop tests concurrently.
+GPU policy. Prefer the assigned ordinary guest desktop and its normal user bus;
+first satisfy the [Linux desktop-service prerequisites](development.md#linux-desktop-services-and-native-verification).
+An authenticated Xvfb/Openbox display can provide bounded software-rendered
+observations, but does not isolate accounts or per-user services. A same-user
+private D-Bus is not a substitute for that boundary. Such observations are not
+hardware-GPU or physical-input qualification. Do not run desktop tests concurrently.
 
 A real minimal archive with a cooperative backend and editable hosted page
 exercises exact-digest local installation/trust, dormant installation/enablement,

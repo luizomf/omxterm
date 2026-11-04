@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { app, BrowserWindow, ipcMain } from "electron";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
@@ -13,6 +14,8 @@ import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { spawnFixturePty } from "./native-fixture-pty";
 import { nativeFixturePlatform } from "./restty-host-platform";
 import { createResttyHostSessions } from "./restty-host-sessions";
+
+applyChromiumGpuPolicy(app.commandLine);
 
 const root = __dirname;
 for (const name of ["userData", "sessionData"] as const) {

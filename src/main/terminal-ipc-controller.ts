@@ -412,8 +412,9 @@ function createTerminalIpcController(
   let disposed = false;
   const reject: RejectBoundary = (boundary, reason) =>
     operationalEvents?.write({ name: "boundary.rejected", boundary, reason });
-  const surfaceFonts = createSurfaceFontOwnership(() =>
-    reject("ipc", "invalid-payload"),
+  const surfaceFonts = createSurfaceFontOwnership(
+    () => reject("ipc", "invalid-payload"),
+    () => options.onSurfaceFontConfigurationsChanged?.(),
   );
   const rendererConfiguration = createRendererConfigurationState(
     surfaceFonts.configure(options.configuration),
@@ -584,6 +585,8 @@ function createTerminalIpcController(
               // Failure acknowledgement owns only the immutable context, not the
               // ended session/native wrapper. Native shutdown observes exit first.
               sessions.delete(sessionId);
+              if (state?.terminalSurfaceFontConfiguration)
+                options.onSurfaceFontConfigurationsChanged?.();
               workingDirectories.forget(sessionId);
             }
           },
@@ -627,6 +630,8 @@ function createTerminalIpcController(
         closed: false,
         exited: false,
       });
+      if (launch.surfaceId === undefined)
+        options.onSurfaceFontConfigurationsChanged?.();
     }
     startedAt = Date.now();
     if (windowId !== undefined)
@@ -807,6 +812,7 @@ function createTerminalIpcController(
       for (const sessionId of [...sessions.keys()]) closeSession(sessionId);
       // Main's native shutdown barrier remains independent of this controller.
       sessions.clear();
+      options.onSurfaceFontConfigurationsChanged?.();
     },
   };
 }

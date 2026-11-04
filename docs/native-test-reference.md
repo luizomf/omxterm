@@ -1,8 +1,30 @@
 # Native subsystem fixture reference
 
-This reference details focused native subsystem fixtures, their prerequisites, and evidence boundaries. Start with the [native development prerequisites](development.md#platform-prerequisites) and [focused commands](development.md#focused-checks). Follow the [graphical test precautions](development.md#running-native-tests): use an unlocked, logged-in desktop with WebGL2 support, leave the mouse and keyboard idle, do not resize or switch windows, and run only one graphical suite at a time per desktop.
+This reference details focused native subsystem fixtures, their prerequisites, and evidence boundaries. Start with the [native development prerequisites](development.md#platform-prerequisites) and [focused commands](development.md#focused-checks). Follow the [graphical test precautions](development.md#running-native-tests): use an unlocked, logged-in desktop with WebGL2 support, leave the mouse and keyboard idle, do not resize or switch windows, and run only one graphical suite at a time per desktop. On macOS, also follow the [preference precautions](development.md#macos-preferences-and-native-verification) for source-mode Electron fixtures.
 
 For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls), [supervised PTY acquisition](#supervised-pty-acquisition), and [Windows cleanup diagnostics](#windows-cleanup-diagnostics). The [graphical fixture supervision overview](development.md#graphical-fixture-supervision) and its headless entry recipe remain in the development guide.
+
+## Admission, input and invocation outcomes
+
+Apply [macOS live console admission](development.md#macos-console-admission) before
+native launches there. An admitted desktop is setup evidence, not proof that
+posted input reached the intended application, window or PTY. Require the
+selected fixture's actual input/action receipts and unchanged assertions; a
+successful input API call or later successful control does not pass an earlier
+failed invocation. Synthetic OS Quartz/CGEvent input is not physical-keyboard,
+layout or IME qualification.
+
+Record each layer's outcome separately: input/control receipts, application
+exit and stream closure, [supervisor assistance](#supervisor-cleanup-assistance),
+the nested stock verifier and the outer wrapper. A stock verifier can pass while
+its wrapper fails on metadata collection; app exit0/EOF can coexist with a
+supervisor failure involving its own helper. Neither fact makes the overall
+invocation pass. Preserve original failures and inspect retained evidence before
+selecting any further execution; metadata-only completion is not a verifier
+rerun. Do not weaken assertions, suppress diagnostics or rerun a consumed
+[first-use attempt](default-snippets.md#enrollment-and-the-permanent-attempt)
+just to obtain green results. Later scoped positives retain their own limits,
+not retroactive qualification of failed runs.
 
 ## Hosted extension view composition
 
@@ -143,6 +165,33 @@ Headless parser/core and composed producer/session/harness controls:
 `npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-host-output-phases.test.ts`.
 They do not qualify native continuation or Windows transport.
 
+## Standalone Surface startup policy
+
+Linux-capable standalone Surface fixtures use the existing shared
+`applyChromiumGpuPolicy` before Electron readiness, matching production's
+fallback permission ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
+TypeScript mains call it directly; generated rendering, ligature, scrollback
+and appearance mains embed the same self-contained function. This is not a
+forced backend or GPU-blocklist bypass. macOS/Windows defaults, renderer security
+preferences, injected dependencies and explicit negative startup controls remain
+unchanged. Actual WebGL2 is still required.
+
+Headless emitted-entrypoint checks build the real recipes and stop at mocked
+Electron readiness, including scrollback startup/mapping variants, the host's
+focused-cancellation build and the old-post-read font control:
+
+```sh
+npm test -- test/unit/surface-fixture-gpu-policy.test.ts test/unit/appearance-gpu-policy.test.ts test/unit/terminal-popup-gpu-policy.test.ts test/unit/chromium-gpu-policy.test.ts
+```
+
+These checks establish startup wiring only, not native success for every fixture
+or Linux x64 qualification. macOS-only emoji/blur experiments, input-only pages,
+PTY-only fixtures and intentional unavailable-backend controls are not additional
+Linux Surface policy omissions. Production-composition fixtures inherit the
+production main's policy. All actual browser/Electron checks, even headless,
+must run in an assigned disposable guest; see the
+[verification precautions](development.md#macos-preferences-and-native-verification).
+
 ## Resize and continued-text coverage
 
 The existing appearance/resize fixture also checks one short primary-screen,
@@ -158,7 +207,12 @@ replay, historical-match acceptance, tolerance or retry chooses the grid.
 The short continuation must copy as exactly prefix plus suffix, without trimming
 or normalization, with the same Surface/container/canvas, one Adapter start and
 no close. The integration consumer checks this evidence in its existing
-appearance runs. Run on an idle unlocked desktop, one graphical suite at a time:
+appearance runs. The generated appearance main applies the shared production GPU
+policy before Electron readiness, including Linux's SwiftShader permission
+([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)); it does not
+force a backend or bypass the GPU blocklist. macOS and Windows keep Chromium's
+defaults. Actual WebGL2 availability remains a prerequisite.
+Run on an idle unlocked desktop, one graphical suite at a time:
 
 ```sh
 npm test -- test/integration/restty-appearance-rendering.test.ts -t "renders theme colors and preserves configured geometry through live updates"
@@ -281,7 +335,12 @@ window-local session IDs, the real Busy decision/shared close slot, native
 clipboard selection, and effective translated/remapped/unbound menu state.
 Deliberate old Close Pane and clipboard routing controls must fail their distinct
 oracles; the existing fixture supervisor still requires actual child exits and
-clean ownership settlement.
+clean ownership settlement. Its standalone main applies the shared production GPU
+policy before Electron readiness, including Linux's SwiftShader permission
+([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)), without forcing a
+backend or bypassing the GPU blocklist. macOS and Windows keep Chromium's defaults;
+actual WebGL2 availability remains a prerequisite. Headless emitted-entrypoint
+ordering coverage: `npm test -- test/unit/terminal-popup-gpu-policy.test.ts`.
 
 **Native-input prerequisite:** use an idle, explicitly provisioned input-capable
 X11/XWayland desktop with the standard X11/evdev F5=71 and F6=72 keycode
@@ -384,6 +443,41 @@ still required. Headless validator and caller controls:
 They do not replace native Windows execution.
 
 ## Settings layout
+
+**Display prerequisite:** the `settings-only` matrix needs one selected display's
+**usable work area in logical DIPs**, not merely a physical screen resolution,
+large enough for its largest **1920×1080 CSS px renderer viewport plus the native
+frame**. At the fixture's default renderer zoom 1, the required work area is
+`1920 + (outerWidth - contentWidth)` by
+`1080 + (outerHeight - contentHeight)` DIPs. Electron's `screen.workArea` already
+excludes desktop panels/docks; display scaling can make even a high-resolution
+screen's logical work area too small. Renderer-drawn title/tab rows are inside
+the viewport, not additional native frame. There is no universal physical-pixel
+minimum. For example, a frameless 1920×1080 DIP work area with zero native-frame
+overhead fits; a 1920×1080 physical display with reserved desktop space may not.
+
+Before any matrix resize, language/palette change or category check, the fixture
+checks the display matching its original window bounds, current outer/content
+frame difference and renderer zoom. Insufficient capacity fails with required
+and observed logical sizes, scale factor and a focused command; it never skips
+or reports the matrix as passed. Provision the assigned test desktop's logical
+work area, then run
+`npm test -- test/integration/window-chrome.test.ts -t settings-only`
+before spending a full-suite run. A 1696×989 guest display failed the historical
+1920×1080 target at 1696×957; provisioning that same guest to 2560×1600 allowed
+the unchanged six-case Window Chrome suite and full portable suite to pass
+([#786](https://github.com/luizomf/omxterm/issues/786)). That is a bounded sufficient
+example, not a new resolution minimum or a diagnosis of every geometry failure.
+
+The capacity check is necessary setup evidence, **not proof of exact reachability**:
+window-manager constraints, rounding or later display changes can still fail the
+unchanged exact-target oracle. At non-default renderer zoom the check converts
+CSS sizes to content DIPs with that zoom before adding the observed native frame;
+it does not multiply by display scale factor or change zoom, minima or display
+configuration. Headless controlled checks of this diagnostic and the unchanged
+matrix/targeting behavior:
+`npm test -- test/unit/settings-layout-display.test.ts test/unit/settings-layout-oracles.test.ts`.
+They do not qualify native layout.
 
 The Window Chrome `settings-only` case additionally runs the graphical editor's
 layout matrix: six categories after a native-minimum request and at five exact
@@ -659,6 +753,43 @@ permission to invent identities or clear historical blocked receipts.
 Headless composition and receipt coverage:
 `npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-publication.test.ts test/unit/native-fixture-registration-diagnostics.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
 Passing those controlled cases does not qualify Windows native D9 or its baseline.
+
+## Supervisor cleanup assistance
+
+New native supervisor receipts include `cleanupAssistance`:
+
+- `none`: process cleanup completed without an observed assistance attempt.
+- `attempted`: an identity-checked POSIX STOP/KILL was attempted, or the Windows
+  termination command emitted its fixed marker immediately before calling Kill
+  on a handle whose creation identity matched. This includes partial command
+  failure and a signal racing with exit; it does **not** prove signal delivery,
+  successful termination, or that the attempt caused disappearance.
+- `unknown`: cleanup did not reach a complete observation and no attempt was
+  recorded. In particular, a failed Windows command without its marker cannot
+  establish that no Kill occurred.
+
+Keep this separate from the existing native exit code, signal, reason and
+`cleanupErrors`. `attempted` plus empty cleanup errors records completed cleanup
+**after an attempt**, not natural Quit or causal proof of assistance. An attempt
+with errors remains failed/uncertain. `none` alone is not success either: actual
+exit, stream closure, registration checks, cleanup errors and owner join still
+apply, within the existing cooperative ownership limits. Natural-settlement
+claims require explicit `none` in addition to those checks and the scenario's
+Quit assertions. No new identity acquisition, signal selection, cleanup authority
+or deadline is introduced.
+
+Historical receipts without this field remain readable but unclassified; do not
+infer `none` from empty cleanup errors or later process absence. Historical
+campaign results are not retroactively reclassified. Snippets source/exact/native,
+Files DMG/production campaigns and the performance runner now require explicit `none` before accepting
+normal settlement. The Windows installed-public fence still permits its existing
+owned uninstall after joined cleanup, including assisted failure settlement; it
+compares assistance metadata but does not turn cleanup permission into PASS.
+
+Headless actual emitted-helper/supervisor controls:
+`npm test -- test/unit/native-fixture-cleanup-assistance.test.ts test/unit/native-fixture-cleanup-failure.test.ts test/unit/snippets-windows-public-campaign.test.ts test/unit/snippets-windows-public-fence.test.ts`.
+These model OS inventories/signals/commands and use real receipt/profile I/O;
+they do not add Windows Snippets, product input or native GUI qualification.
 
 ## Windows cleanup diagnostics
 

@@ -43,6 +43,7 @@ export function subscribeToGuardedActions(
   blocked: () => boolean,
   panelClipboard: (action: TerminalClipboardAction) => boolean,
   modalClipboard: (action: TerminalClipboardAction) => boolean = () => false,
+  cancelPanelDefault: () => void = () => {},
 ): () => void {
   const subscriptions = [
     () =>
@@ -67,6 +68,10 @@ export function subscribeToGuardedActions(
       }),
     () =>
       options.subscribeToTabCommands?.((command) => {
+        if (command.action === "cancel-panel-default") {
+          cancelPanelDefault();
+          return;
+        }
         if (blocked() && MODAL_COMPETING_TAB_ACTIONS.has(command.action))
           return;
         tabs.handleCommand(command);

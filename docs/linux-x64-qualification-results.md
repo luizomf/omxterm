@@ -1,4 +1,49 @@
-# Linux x64 qualification: partial results (#706)
+# Linux x64 qualification results (#706)
+
+## Current-source portable milestone — 2026-11-03
+
+🤖 AI-assisted.
+
+Maintainer verification at `76f2442812e52156002a0b2f1d6b7fe0a94d5d7e`
+(`0.25.0-dev.5`) passed one complete `npm run check:portable`: formatting,
+lint, typecheck, default tests and the actual trailing build all exited 0.
+Tests reported **6,444 passed, 0 failed, 84 skipped**; the skipped cases remain
+unqualified. The approximately 22-minute-41-second occurrence is recorded in
+[the exact-source delivery](https://github.com/luizomf/omxterm/issues/706#issuecomment-6608071455).
+
+The assigned native x86_64 Ubuntu 24.04.5 guest used Node 24.22.2, locked
+Electron 43.8.1, isolated authenticated Xvfb/Openbox at 2560×1600, actual
+SwiftShader WebGL2 and provisioned XTEST input. Real focused, unmodified F6
+admission and independent key release were verified. Required Noto CJK and emoji
+fonts were extracted data-only into the task scope from signed Ubuntu artifacts;
+no global font installation or application dependency was added. Source identity,
+font provenance, runtime artifacts, per-case results and native outcomes were
+retained. Owned resources were removed, with existing services and global font
+configuration unchanged.
+
+The earlier full run at `4b376a4b3ac098e70920e6be4aa6d0b8668060d4` remains
+**failed**: 6,441 passed, one failed, 84 skipped; trailing build was not reached.
+Its sole failure was the emitted-host phase test's missing `app.commandLine`
+mock on Linux. The reviewed correction adds that port and explicitly models
+Linux, macOS and Windows without changing product or native-fixture behavior.
+The new successful occurrence does not overwrite the old result.
+
+Earlier reviewed fixture corrections aligned standalone Surface startup with
+[the existing Linux GPU policy](adr/0037-allow-the-linux-software-webgl-fallback.md).
+They retain exact rendering/input oracles, deadlines and unavailable-backend
+controls. Successful cleanup is not automatically natural Quit: retained native
+receipts preserve expected negative exits and deliberate timeout controls,
+including two controls requiring supervisor assistance.
+
+This completes the selected current-source portable milestone and, together with
+the separately identified historical helper checks below, the bounded #706
+follow-up. It is not a new packaged-app/helper qualification, physical-HID,
+hardware-GPU, compositor, portal-persistence or universal Linux claim. Historical
+crash causes and missing observations below remain unresolved, not retroactively
+attributed to later fixes. A specific new failure or qualification need warrants
+its own follow-up; the build-only release policy remains unchanged.
+
+## Historical contributor evidence — 2026-10-27
 
 Reported by [@Gaalbu](https://github.com/Gaalbu) on 2026-10-27 in
 [PR #714](https://github.com/luizomf/omxterm/pull/714). This is contributor-reported
@@ -105,7 +150,7 @@ established. The native-input prerequisite was not bypassed, and neither native
 failures nor retained installer cleanup diagnostics were erased or relabeled.
 No unchanged full-suite retry was performed.
 
-## Disposition
+## Historical disposition
 
 The bounded published-artifact and helper checks above are delivered, with
 synthetic-input and numeric-exit-status limits. Physical input remains unverified.
@@ -113,5 +158,6 @@ Full development qualification is **failed/incomplete**, not waived. No new x64
 package was built: the portable prerequisite failed, and this checkout's
 `check:linux` targets ARM64 packaging; it was not substituted for x64 verification.
 No release, package publication, new release gate or product fix is claimed.
-The remaining failed checks and their causes remain follow-up work under #706;
-this report does not close that issue.
+Those historical failures and their causes are not cleared by later successful
+runs. The current-source milestone and its separate closure scope are recorded
+above; the historical evidence retains its original identities and limitations.

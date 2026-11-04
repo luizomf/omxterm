@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import {
   createSettingsView as createSettingsDialog,
   describeSettingsResult,
@@ -405,6 +406,7 @@ describe("settings dialog", () => {
   it("ignores late snapshots after closing", async () => {
     let finish!: (value: SettingsSnapshot) => void;
     const bridge: SettingsBridge = {
+      themes: vi.fn(async () => emptyThemes),
       snapshot: () =>
         new Promise((resolve) => {
           finish = resolve;

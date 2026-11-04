@@ -165,11 +165,11 @@ it("opens a new panel normally, then forwards toggle only to its admitted retain
   const first = manager.open(manifest.id, target);
   expect(manager.open(manifest.id, target)).toBe(first);
   await first;
-  expect(opens.mock.calls).toEqual([[]]);
+  expect(opens.mock.calls).toEqual([[undefined, undefined]]);
   await manager.open(manifest.id, target);
-  expect(opens).toHaveBeenLastCalledWith(true);
+  expect(opens).toHaveBeenLastCalledWith(true, undefined);
   await manager.open(manifest.id, { ...target, togglePanel: false });
-  expect(opens).toHaveBeenLastCalledWith(false);
+  expect(opens).toHaveBeenLastCalledWith(false, undefined);
   expect(createViews).toHaveBeenCalledOnce();
   expect(runtime.activate).toHaveBeenCalledOnce();
   const aborted = new AbortController();
@@ -181,6 +181,23 @@ it("opens a new panel normally, then forwards toggle only to its admitted retain
   await packages.setEnabled(manifest.id, 1, false);
   await expect(manager.open(manifest.id, target)).rejects.toThrow();
   expect(opens).toHaveBeenCalledTimes(3);
+  expect(await manager.dispose()).toBe(true);
+});
+
+it("carries each default intent on initial and retained opens without retaining an old token", async () => {
+  const { manager, opens } = await setup();
+  const target = {
+    owner: {},
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+    presentation: "panel" as const,
+  };
+  await manager.open(manifest.id, { ...target, panelDefaultToken: "first" });
+  expect(opens).toHaveBeenLastCalledWith(undefined, "first");
+  await manager.open(manifest.id, { ...target, panelDefaultToken: "second" });
+  expect(opens).toHaveBeenLastCalledWith(undefined, "second");
+  await manager.open(manifest.id, target);
+  expect(opens).toHaveBeenLastCalledWith(undefined, undefined);
   expect(await manager.dispose()).toBe(true);
 });
 

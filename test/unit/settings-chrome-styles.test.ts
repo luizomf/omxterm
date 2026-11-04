@@ -5,6 +5,10 @@ import { mountWindowChrome } from "../../src/renderer/window-chrome";
 import type { WindowChromeState } from "../../src/shared/window-chrome";
 const surfaceCss = readFileSync("src/renderer/terminal-window.css", "utf8");
 const chromeCss = readFileSync("src/renderer/window-chrome.css", "utf8");
+const settingsCss = readFileSync(
+  "src/renderer/settings/settings-dialog.css",
+  "utf8",
+);
 const rule = (css: string, selector: string) =>
   [...css.matchAll(/([^{}]+)\{([^}]*)\}/gu)].find((match) =>
     match[1]!
@@ -15,6 +19,17 @@ const rule = (css: string, selector: string) =>
 afterEach(() => {
   document.body.replaceChildren();
   document.body.className = "";
+});
+it("keeps a scroll margin around a focused theme card's outline", () => {
+  expect(rule(settingsCss, ".settings-theme-card")).toContain(
+    "scroll-margin: 4px",
+  );
+  expect(
+    rule(
+      settingsCss,
+      ".settings-theme-card input:focus-visible + .settings-theme-content",
+    ),
+  ).toContain("outline: 2px solid");
 });
 it("gives Settings the same bounded native-title drag region without depending on a Surface", () => {
   const region = rule(surfaceCss, ".settings-tab::before");

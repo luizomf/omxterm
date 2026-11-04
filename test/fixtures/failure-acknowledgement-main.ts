@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { existsSync, mkdirSync, writeSync } from "node:fs";
 import { spawn } from "node-pty";
 import path from "node:path";
@@ -16,6 +17,8 @@ import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { spawnFixturePty } from "./native-fixture-pty";
 import { nativeFixturePlatform } from "./restty-host-platform";
 import { createResttyHostSessions } from "./restty-host-sessions";
+
+applyChromiumGpuPolicy(app.commandLine);
 
 const root = __dirname;
 const missingDefaultShell = process.argv.includes("--missing-default-shell");

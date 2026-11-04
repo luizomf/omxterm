@@ -23,7 +23,7 @@ const english = {
   invalid:
     "Invalid target. Use [user@]host[:port], at most 384 characters, ASCII names and a port from 1 to 65535. IPv6 requires a valid address in brackets without a zone identifier.",
   unavailable:
-    "This host does not provide SSH Connect. Install a compatible Linux ARM64 preview host.",
+    "This host does not provide SSH Connect. Check the OMXTerm version and platform requirements.",
   capabilities: "Host capabilities unavailable.",
   reading: "Reading aliases…",
   discovery:
@@ -63,7 +63,7 @@ const portuguese: Messages = {
   invalid:
     "Destino inválido. Use [usuário@]host[:porta], no máximo 384 caracteres, nomes ASCII e uma porta de 1 a 65535. IPv6 exige um endereço válido entre colchetes, sem identificador de zona.",
   unavailable:
-    "Este host não oferece SSH Connect. Instale uma versão de prévia compatível para Linux ARM64.",
+    "Este host não oferece SSH Connect. Confira os requisitos de versão do OMXTerm e de plataforma.",
   capabilities: "Recursos do host indisponíveis.",
   reading: "Lendo aliases…",
   discovery:

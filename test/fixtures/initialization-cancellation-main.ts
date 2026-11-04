@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { app, BrowserWindow, ipcMain } from "electron";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalWindowOptions } from "../../src/main/terminal-window";
@@ -15,6 +16,8 @@ import { nativeFixturePlatform } from "./restty-host-platform";
 import { createResttyHostSessions } from "./restty-host-sessions";
 import { recordInitializationStage } from "./initialization-cancellation-diagnostics";
 import { startCancellationTab } from "./initialization-cancellation-readiness";
+
+applyChromiumGpuPolicy(app.commandLine);
 
 const root = __dirname;
 const firstTab = process.argv.includes("--fixture-tab=first");

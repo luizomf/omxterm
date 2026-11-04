@@ -198,6 +198,8 @@ export const brazilianPortugueseMessages: Readonly<
   "panel.hide": "Ocultar painel auxiliar",
   "panel.tools": "Ferramentas abertas",
   "panel.tooNarrow": "Alargue a janela para abrir {view}",
+  "panel.empty":
+    "Nenhuma ferramenta está aberta. Abra uma extensão para usar o painel.",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Buscar snippets",
   "snippets.search": "Buscar Snippets",
@@ -228,7 +230,7 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.snippetsOptional":
     "Snippets é uma extensão opcional. Use os controles de instalação existentes para instalá-la, ou Ativar se estiver instalada, mas desativada. Abrir esta página não instala nem ativa a extensão. Seu catálogo snippets.yaml permanece inalterado. Consulte o estado da extensão abaixo para verificar a disponibilidade.",
   "extensions.explanation":
-    "Instale um pacote .omxext baixado separadamente. O código da extensão tem as permissões do seu usuário; não há isolamento de segurança. Pacotes instalados ficam inativos até serem acionados. Esta prévia é exclusiva para Linux ARM64.",
+    "Instale um pacote .omxext baixado separadamente. O código da extensão tem as permissões do seu usuário; não há isolamento de segurança. Pacotes instalados ficam inativos até serem acionados. As plataformas compatíveis dependem da extensão; confira os requisitos antes de instalá-la.",
   "extensions.install": "Instalar .omxext local…",
   "extensions.url": "Link HTTPS do arquivo",
   "extensions.installLink": "Instalar pelo link",
@@ -256,7 +258,9 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.catalogStale":
     "Não foi possível atualizar o catálogo. Exibindo a última consulta bem-sucedida; as versões podem estar desatualizadas.",
   "extensions.catalogUnavailable":
-    "Catálogo indisponível. Extensões instaladas e instalação de arquivo local continuam funcionando offline.",
+    "Catálogo indisponível. Se o gerenciamento de extensões estiver disponível, você ainda pode instalar arquivos locais e gerenciar extensões instaladas offline.",
+  "extensions.catalogManagementUnavailable":
+    "O catálogo e a instalação estão indisponíveis porque o gerenciamento de extensões está indisponível.",
   "extensions.catalogIdle":
     "O catálogo se conecta apenas ao escolher Explorar ou Atualizar. Sem atualizações automáticas.",
   "extensions.catalogLoaded":
@@ -264,6 +268,12 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.catalogEmpty": "O catálogo ainda não tem extensões publicadas.",
   "extensions.catalogInstalled": "Instalada: {version}",
   "extensions.catalogNotInstalled": "Não instalada",
+  "extensions.catalogPlatforms":
+    "Plataformas desta oferta do catálogo: {platforms}",
+  "extensions.catalogPlatformIncompatible":
+    "Não oferecida por este catálogo para esta plataforma",
+  "extensions.catalogEngineIncompatible":
+    "Incompatível com esta versão do OMXTerm ou da API de extensões",
   "extensions.catalogInstall": "Instalar",
   "extensions.catalogUpdate": "Atualizar",
   "extensions.catalogReinstall": "Reinstalar",
@@ -302,7 +312,8 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.outcome-unknown": "Resultado da operação desconhecido",
   "extensions.runtime-unavailable":
     "Armazenamento ou execução de extensões indisponível. Os terminais continuam utilizáveis",
-  "extensions.unsupported": "A prévia de Files requer Linux ARM64",
+  "extensions.unsupported":
+    "O gerenciamento de extensões não está disponível nesta plataforma",
   "mirrorTyping.title": "Espelhar digitação",
   "mirrorTyping.preparing": "Iniciando espelhamento…",
   "mirrorTyping.active": "Espelhando digitação · {count} painéis",
@@ -350,7 +361,31 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.fontSize": "Tamanho da fonte",
   "settings.lineHeight": "Altura da linha",
   "settings.ligatures": "Ligaduras de programação",
-  "settings.theme": "Arquivo de tema",
+  "settings.theme": "Arquivo de tema (avançado)",
+  "settings.themePicker": "Temas do terminal",
+  "settings.themePickerHint":
+    "Adicione temas JSON em themes/ ao lado de config.json e atualize a lista.",
+  "settings.themeRefresh": "Atualizar temas",
+  "settings.themeLoading": "Carregando temas…",
+  "settings.themeMissing":
+    "Pasta de temas não encontrada. Crie themes/ ao lado de config.json e atualize.",
+  "settings.themeEmpty": "Nenhum arquivo de tema encontrado em themes/.",
+  "settings.themeUnavailable":
+    "Não foi possível ler os temas ou config.json. Confira a pasta e a configuração e atualize.",
+  "settings.themeTruncated":
+    "A lista é limitada; alguns arquivos podem não aparecer.",
+  "settings.themeCustom":
+    "O tema configurado está fora desta lista ou indisponível. Confira o caminho avançado ou atualize.",
+  "settings.themeInvalid": "Não foi possível usar estes arquivos de tema:",
+  "settings.themeErrorSize": "O arquivo excede o limite de tamanho do tema.",
+  "settings.themeErrorType": "O destino não é um arquivo comum.",
+  "settings.themeErrorChanged": "O arquivo mudou durante a leitura.",
+  "settings.themeErrorRead": "Não foi possível ler o arquivo.",
+  "settings.themeErrorInvalid": "Tema inválido:",
+  "settings.themeErrorUnknown": "O tema contém um campo desconhecido.",
+  "settings.themeSelected": "Selecionado",
+  "settings.themePending": "Salvando…",
+  "settings.themeDefaultDetail": "Padrão incluído",
   "settings.bundledFont": "FiraCode Nerd Font Mono incluída",
   "settings.bundledTheme": "omtheme incluído",
   "settings.defaultShell": "Windows PowerShell",
@@ -380,6 +415,9 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.fileGuidance":
     "Alterações gráficas são verificadas no arquivo inteiro. Corrija valores inválidos em Configurações ou edite o Arquivo de Configuração; se não for possível ler o arquivo, repare-o externamente e recarregue.",
   "settings.saved": "Salvo.",
+  "settings.themeSuperseded":
+    "Uma escolha de tema mais recente substituiu esta seleção antes de ela ser salva.",
+  "settings.notSaved": "Não salvo: {detail}",
   "settings.notApplied":
     "Salvo em config.json, mas não foi possível aplicar: {notice}",
   "settings.lifetime.tabs": "Novas abas usam o valor.",
@@ -394,16 +432,21 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.stale":
     "config.json mudou desde que você começou a editar. Seu rascunho foi mantido; o salvamento será recusado até recarregar o arquivo.",
   "settings.newer": "As edições mais recentes não foram salvas.",
-  "settings.readError": "não foi possível ler config.json",
+  "settings.readError":
+    "não foi possível ler config.json. Verifique as permissões e o local do arquivo.",
   "settings.utf8Error": "config.json não é UTF-8 válido",
   "settings.jsonError": "config.json não é JSON válido",
   "settings.objectError": "config.json deve conter um objeto",
   "settings.symlinkError":
-    "config.json é um link simbólico. Edite o destino manualmente e recarregue a Configuração do Usuário; Configurações não grava através de links simbólicos.",
+    "Um link de config.json ou de seu diretório está quebrado ou é cíclico. Corrija o link ou seu destino e recarregue o arquivo.",
+  "settings.targetError":
+    "config.json deve apontar para um arquivo comum. Corrija seu local e recarregue o arquivo.",
   "settings.conflict":
-    "config.json mudou desde o início desta edição. Copie seu rascunho, recarregue o arquivo e reaplique suas alterações.",
+    "config.json ou seu destino mudou desde o início desta edição. Copie seu rascunho, recarregue o arquivo e reaplique suas alterações.",
   "settings.writeError":
-    "Não foi possível gravar config.json. Nada foi alterado.",
+    "Não foi possível gravar config.json. Verifique as permissões do arquivo e do diretório de destino. Nada foi alterado.",
+  "settings.cleanupError":
+    "config.json não foi salvo. Um arquivo temporário pode ter permanecido no diretório de destino; verifique o diretório e as permissões antes de tentar novamente.",
   "settings.applicationError":
     "Falha inesperada ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir -> Recarregar Configuração novamente.",
   "settings.page.shortcuts": "Atalhos",

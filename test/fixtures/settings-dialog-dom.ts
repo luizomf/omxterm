@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { emptyThemes } from "./settings-themes";
 import type { RendererLanguage } from "../../src/renderer/renderer-language";
 import { createSettingsView as createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
 import type {
@@ -60,6 +61,7 @@ export async function open(
   language?: RendererLanguage,
 ) {
   const bridge: SettingsBridge = {
+    themes: vi.fn(async () => emptyThemes),
     snapshot: vi.fn(async () => base),
     change: vi.fn(async (change: SettingsChange) =>
       saved(

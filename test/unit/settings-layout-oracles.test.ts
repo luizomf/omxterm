@@ -11,7 +11,16 @@ import {
 import { captureSettingsLayoutFailure } from "../fixtures/settings-layout-failure";
 import { exerciseSettingsDialog } from "../fixtures/settings-dialog-exercise";
 
-vi.mock("electron", () => ({ ipcMain: {} }));
+vi.mock("electron", () => ({
+  ipcMain: {},
+  screen: {
+    getDisplayMatching: vi.fn(() => ({
+      bounds: { x: 0, y: 0, width: 2560, height: 1600 },
+      workArea: { x: 0, y: 32, width: 1921, height: 1082 },
+      scaleFactor: 2,
+    })),
+  },
+}));
 import {
   exerciseSettingsLayout,
   targetSettingsGeometry,
@@ -230,7 +239,7 @@ function layoutPort(mode = "normal", restoreFails = false) {
     getContentBounds: () => ({
       x: 51,
       y: 40,
-      width: mode === "invalid" ? NaN : width,
+      width: mode === "invalid" && nativeRequests.length ? NaN : width,
       height,
     }),
     getContentSize: () => [width, height],
@@ -263,6 +272,7 @@ function layoutPort(mode = "normal", restoreFails = false) {
       outer = { ...bounds };
     },
     webContents: {
+      getZoomFactor: () => 1,
       sendInputEvent() {},
       capturePage: vi.fn(async () => {
         order.push("capture");

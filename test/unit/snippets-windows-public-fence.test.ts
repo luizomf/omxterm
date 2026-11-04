@@ -101,6 +101,23 @@ it.each(["missing", "malformed", "mismatch", "cleanup", "rejected", "stale"])(
     await expect(uninstall(f)).rejects.toThrow("unresolved");
   },
 );
+it("refuses mismatched assistance evidence without changing cleanup authority", async () => {
+  const receipt = path.join(lane, "supervisor.json");
+  const f = fence();
+  await bind(f);
+  await expect(
+    f.verifyInstalled(root, (run) =>
+      run(receipt, async () => {
+        await writeFile(
+          receipt,
+          JSON.stringify({ ...clean, cleanupAssistance: "attempted" }),
+        );
+        return { ...clean, cleanupAssistance: "none" };
+      }),
+    ),
+  ).rejects.toThrow("cleanupAssistance");
+  await expect(uninstall(f)).rejects.toThrow("unresolved");
+});
 it("does not treat a receipt alone as settlement", async () => {
   const receipt = path.join(lane, "supervisor.json");
   const f = fence();

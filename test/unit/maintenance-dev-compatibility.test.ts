@@ -67,7 +67,7 @@ it.each([
   ["0.24.1-beta.1", false],
   ["0.24.1-rc.0", false],
   ["0.24.2-dev.0", false],
-  ["0.25.0-dev.0", false],
+  ["0.25.0-dev.0", true],
   ["invalid", false],
   [`0.24.1-dev.${"9".repeat(300)}`, false],
 ])("limits additional admission for host %j", (host, expected) => {
@@ -143,6 +143,8 @@ it.each([
       "0.24.1-dev.1",
       "0.24.1-dev.37",
       "0.24.1",
+      "0.25.0-dev.0",
+      "0.25.0-dev.1",
     ]) {
       expect(packageCompatible(archived, runtime(host))).toBe(true);
       expect(() => checkCompatibility(archived, runtime(host))).not.toThrow();

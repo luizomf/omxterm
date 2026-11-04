@@ -171,6 +171,7 @@ export function createPublicInstallerFence(config: {
         "stderr",
         "cleanupErrors",
         "cleanupFailure",
+        "cleanupAssistance",
       ] as const)
         assert.deepEqual(
           journal[key],

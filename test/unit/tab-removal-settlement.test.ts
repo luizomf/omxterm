@@ -7,6 +7,7 @@ import { build } from "esbuild";
 import { beforeAll, expect, it, vi } from "vitest";
 import { createResttyHostSessions } from "../fixtures/restty-host-sessions";
 import { usesOptionalSnippets } from "../../src/shared/snippets-mode";
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
 
 let entry: string;
 beforeAll(async () => {
@@ -95,6 +96,7 @@ function harness(
     ended() {},
   };
   const app = Object.assign(new EventEmitter(), {
+    commandLine: { appendSwitch: vi.fn() },
     setPath() {},
     whenReady: async () => {},
     getVersion: () => "0.24.0-dev.33",
@@ -102,7 +104,7 @@ function harness(
   });
   const processPort = Object.assign(new EventEmitter(), {
     argv: ["--tab-removal-positive"],
-    platform: "win32",
+    platform: "win32" as const,
     arch: "arm64",
     env: {},
     stderr: { write: vi.fn() },
@@ -208,6 +210,10 @@ function harness(
       BrowserWindow: Window,
       ipcMain: {},
       WebContentsView: HostedView,
+    },
+    "../../src/main/chromium-gpu-policy": {
+      applyChromiumGpuPolicy: (commandLine: typeof app.commandLine) =>
+        applyChromiumGpuPolicy(commandLine, processPort.platform),
     },
     "../../src/main/terminal-window": { terminalWindowOptions: () => ({}) },
     "../../src/main/terminal-window-host": { registerTerminalWindowHost() {} },

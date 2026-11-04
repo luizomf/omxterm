@@ -57,7 +57,7 @@ its dismissal preserves the retained editor and restores a surviving focused con
 
 Choose **Settings…** in the OMXTerm application menu. **General → Language** selects **English (United States)** (`en-US`) or **Português (Brasil)** (`pt-BR`), always listed by their own names; it defaults to en-US and is never inferred from the system. A successful save/reload updates the menu and all open windows immediately, including Settings and snippet preview labels. Open editors keep their drafts, selected page, focus, selection/caret, scroll and pending saves; an open preview keeps its captured pane/Surface and disabled state if that terminal ended. Pane menus, close dialogs and existing Surface/separator accessible labels also update; panes completing initialization replay the latest labels. JSON, paths, snippet contents and diagnostic detail remain literal.
 
-Each change you make to a control is checked and saved to `config.json` right away, then applied; the status line tells you what happened (examples below use English):
+Control changes are submitted right away for validation, saving to `config.json` and application. Rapid theme choices replace earlier consecutive choices that are still waiting to start, so stale selections do not all replay; an already-running save finishes normally. The status line tells you what happened (examples below use English):
 
 - **Saved.** The change is active.
 - **Saved. New tabs use it.** or **It applies to new windows.** Open tabs and windows keep their current value.
@@ -65,8 +65,13 @@ Each change you make to a control is checked and saved to `config.json` right aw
 - **Saved to config.json, but it could not be applied: …** The file was written, but reload failed; some settings may already be active. Fix the reported problem and reload again.
 - **Not saved: …** The value was rejected (for example, a font that isn't installed); your file is unchanged.
 - **Saving…** One or more graphical changes are still pending. An earlier result does not mark a later change completed.
+- **A newer theme choice replaced this selection before it was saved.** A later choice superseded this queued theme request, possibly from another window. This is not a saved confirmation for the replaced choice.
 
-Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation. If it detects an external edit during validation or write preparation, it refuses the change and asks you to reload instead of overwriting it. Settings does not write through a `config.json` symlink (including a dangling link); edit its target manually, then reload User Configuration.
+Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation. If it detects an external edit or a changed link destination during validation or write preparation, it refuses the change and asks you to reload instead of overwriting it.
+
+Settings can save through `config.json` symlinks, relative links, link chains and linked directories. It replaces the existing regular target file atomically and keeps the links. If a link is dangling or cyclic, or the target is not a regular file, fix it and reload the file before saving. For permission errors, check the file and its target directory; the directory must allow creating and replacing files. An absent ordinary `config.json` can still be created with mode `0600` where supported; inherited filesystem ACLs still apply. If cleanup fails, Settings warns that a temporary file may remain in the target directory. The final conflict checks include permission changes and reduce races with other editors but cannot lock them out: a change immediately after a check can still interfere with a save.
+
+Atomic replacement keeps the target's basic permission bits where supported, but it creates a new file entry. Other hard links keep the old contents; ownership, ACLs, extended attributes and other metadata may not be preserved. Back up important metadata or use an editor that preserves it if that matters for your setup.
 
 The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Transparency, blur and snippets are still edited in the files.
 
@@ -414,6 +419,13 @@ for conflict validation. Available tools show the binding on their existing menu
 and palette entries. Holding either key invokes once: a selected-visible tool
 closes, a hidden/nonselected tool is revealed, and a closed tool opens fresh.
 Use `toggleAuxiliaryPanel` instead to hide/reveal without closing tools.
+In current source, when no tools are open, that action opens installed+enabled
+Snippets lazily (built-in on Windows x64). Unavailability produces one discreet
+four-second notice per application process, not installation, enablement or a
+Settings jump. Later deliberate installation can make another attempt succeed.
+This does not reassign Cmd/Ctrl+Shift+S: `toggleSnippets` and
+`toggleAuxiliaryPanel` remain separate actions with unchanged defaults, custom
+bindings and explicit `null` choices.
 
 For example, to use `F11` for Snippets instead of full screen:
 
@@ -431,16 +443,28 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Linux ARM64/x64 and macOS/Windows ARM64 source, along with the published Linux ARM64
-**0.24.0-dev.11**, macOS ARM64 **0.24.0-dev.16** and Linux x64 **0.24.0-dev.30**
-previews, use the optional Snippets extension. Stable **0.23.0** and published
-Windows hosts retain built-in Snippets. All three previews offer Snippets through
-the official catalog or an explicit local archive, which also works offline after
-download. See the [migration guide](snippets-migration.md) for matching host and
-package downloads, installation steps, existing catalogs and qualification limits.
-Windows ARM64 has a [bounded ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition);
-its default suite failed and package qualification remains separate. No catalog
-conversion, automatic installation or automatic enablement occurs.
+Published **OMXTerm 0.24.0** and current source use optional Snippets on Linux
+ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and the unchanged0.23.0
+host retain built-in Snippets. Use the official catalog or a verified local
+archive; the local route also works offline after download. See the
+[migration guide](snippets-migration.md) for matching downloads, installation,
+existing catalogs and exact qualification limits.
+
+Windows ARM64 has separate exact-stage/local-archive Snippets and FULL NSIS
+checkpoints; stable0.24.0 passed its own FULL installer check. Its additional
+installed-public HTTPS Snippets checkpoint remains unresolved under the explicit
+[release-risk decision](snippets-migration.md#stable-0240-release-disposition),
+not a PASS, demonstrated input fix or fixture-only attribution. Historical failed
+runs retain their original scope. Those release checkpoints neither convert
+catalogs nor automatically install or enable Snippets.
+
+Separately, current source implements a [one-time removable default](default-snippets.md)
+for positively new packaged profiles only: exact pinned public0.1.0 bytes installed
+and enabled but dormant, with no eager backend/view, startup network or YAML.
+Existing profiles/disabled entries/tombstones and deliberate manual trust are
+preserved; a permanent consumed attempt prevents silent restore or startup retry.
+Developer startup and Windows x64 are excluded. Changed-startup and exact-package
+qualification remain separate; no published release behavior is being relabeled.
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 
@@ -467,7 +491,11 @@ snippets:
 
 ## Terminal themes
 
-On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and links it in `config.json`. You can edit `themes/omtheme.json` directly, design a palette in [OMXTerm Studio](#edit-visually-with-omxterm-studio), or create a new theme file such as `themes/my-theme.json`:
+On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and links it in `config.json`. In **Settings → Appearance**, choose a local theme by name and palette preview. Place version-1 JSON theme files directly in `themes/` beside the logical `config.json`, then choose **Refresh themes**. Both the directory and individual files may be symlinks. Names and paths are shown together, so themes with the same name remain distinct. The separate **Bundled omtheme** choice removes `theme.path` and uses the built-in default; it is distinct from the editable `themes/omtheme.json` copy.
+
+Choosing a card saves and applies it through the normal Settings path. A pending choice is marked **Saving…**; after it settles, a selected card identifies the saved configuration. If the status says it could not be applied, follow that message and reload after fixing the problem. Missing or empty folders, unreadable or invalid files and a limited list are reported. Discovery examines at most 2,048 directory entries and 128 JSON candidates, reads at most 256 KiB per theme and 4 MiB of configuration, and does not watch for changes. A configured custom path or another alias may not appear as a selected card; the **Theme file (advanced)** input remains available for relative or absolute paths. Discovery does not edit theme files.
+
+You can edit `themes/omtheme.json` directly, design a palette in [OMXTerm Studio](#edit-visually-with-omxterm-studio), or create a new theme file such as `themes/my-theme.json`:
 
 ```json
 {
@@ -499,7 +527,7 @@ On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and l
 }
 ```
 
-Point `config.json` to your theme file (relative to `config.json` or as an absolute path) and reload:
+Point `config.json` to your theme file (relative to the logical configuration directory or as an absolute path) and reload. Linking `config.json` elsewhere does not move the base for relative theme paths; theme files and the `themes` directory can themselves be symlinks to readable files:
 
 ```json
 {
@@ -574,6 +602,13 @@ Choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`) a
 | App behavior          | Close confirmation, log level, keyboard shortcuts, language                                      |
 | New tabs (or restart) | Font family, line height, Windows shell                                                          |
 | New windows           | Always-on-Top, title-bar, and tab-bar initial defaults                                           |
+
+The footer names pending font-family/line-height changes while any surviving
+pane still uses an older value, including a pane still initializing. It clears
+each resolved field when those panes close (also across windows), without
+requiring another reload or restart. It does not expire while a restart is
+actually needed. Font/configuration errors remain visible until a successful
+reload resolves them; closing an old pane does not dismiss an unrelated error.
 
 A native font read already started for an initializing tab can finish with its
 creation-time family after reload; new tabs use the latest family. Requests must

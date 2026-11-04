@@ -474,7 +474,9 @@ it.each([
                   if (mode !== "survived")
                     live = live.filter((row) => row.pid !== target.pid);
                 }
-                return "";
+                return signaled.length
+                  ? "OMXTERM_CLEANUP_ASSISTANCE_ATTEMPTED\n"
+                  : "";
               },
             };
           return require(name) as unknown;
@@ -493,6 +495,7 @@ it.each([
           : mode === "survived"
             ? ["Error: Fixture processes survived cleanup: 10001"]
             : [],
+        cleanupAssistance: signaled.length ? "attempted" : "none",
         ownedProcesses: pending ? [owner] : [owner, child],
       });
       expect(forbiddenSpawn).not.toHaveBeenCalled();

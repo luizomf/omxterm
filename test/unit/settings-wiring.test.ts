@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { startSettings } from "../../src/main/settings-wiring";
 import { createSettingsBridge } from "../../src/preload/settings-bridge";
 import { settingsIpc, type SettingsSnapshot } from "../../src/shared/settings";
@@ -15,6 +16,7 @@ const snapshot: SettingsSnapshot = {
 function wiring() {
   const handlers = new Map<string, IpcHandler>();
   const service = {
+    themes: vi.fn(async () => emptyThemes),
     snapshot: vi.fn(async () => snapshot),
     changeKeybind: vi.fn(async () => ({
       status: "saved" as const,

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { createSettingsView as createSettingsDialog } from "../../src/renderer/settings/settings-dialog";
 import {
   createRendererLanguage,
@@ -80,6 +81,7 @@ async function open(language?: RendererLanguage, platform = "linux") {
     },
   );
   const bridge: SettingsBridge = {
+    themes: vi.fn(async () => emptyThemes),
     snapshot: async () => current,
     change: vi.fn(),
     saveText: vi.fn(),

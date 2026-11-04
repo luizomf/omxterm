@@ -22,13 +22,13 @@
     {
       "id": "omxterm.ssh",
       "name": "SSH Connect",
-      "description": "Project-maintained Linux ARM64 preview: searchable OpenSSH aliases and quick-connect in core-owned terminal tabs. Synthetic-client qualification only; real authentication and remote connectivity are unqualified.",
+      "description": "Project-maintained Linux and macOS ARM64 preview: searchable OpenSSH aliases and quick-connect in core-owned terminal tabs. macOS has a bounded controlled loopback authentication check; remote shells and general connectivity remain unqualified.",
       "version": "0.3.1",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
-      "targets": ["linux-arm64"],
+      "targets": ["linux-arm64", "darwin-arm64"],
       "archive": {
         "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext",
         "sha256": "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b",

@@ -48,29 +48,25 @@ for compatibility and evidence limits.
 
 ## Optional SSH Connect preview
 
-SSH Connect0.3.0 requires host0.24.0-dev.8 or later; use the qualified
-[Linux ARM64 host0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11).
-It does not run on stable0.23.0 or 0.23.0-dev.9. Download the preview AppImage,
-matching checksum and version-matched helper from that release, not `/latest/download`. Verify the
-checksums before launch/install. The earlier catalog offered Files0.4.0 to this
-host; historical Files0.1.0 compatibility on dev.0 does not extend to dev.11.
+SSH Connect is a separate extension; updating OMXTerm alone does not install or
+update it. The published catalogs offer the same unchanged
+[SSH0.3.1](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1) archive
+on Linux and macOS ARM64. The exact stable0.24.0 macOS host/SSH0.3.1 pair has
+bounded local-install, controlled loopback OpenSSH and separate public-catalog
+consumption evidence. These are not general remote-connectivity qualification;
+Windows remains unqualified.
 
-The [separate SSH0.3.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0)
-provides the verified prebuilt archive/checksum/original receipt for local-file or
-**Install from link** installation in Settings → Extensions. Review the trusted-code
-warning and deliberately install/update the extension; upgrading the host alone
-does not update it. Open SSH Connect separately from File or the Command Palette;
-installation remains dormant. The earlier catalog offered 0.3.0; fixed-endpoint
-readback and bounded public installation/management qualification passed on the
-exact dev.11 host. The separately published SSH0.3.1 is selected by the official
-catalog; public-consumption qualification is separate.
-Historical0.1.0 assets remain immutable.
-No source build is needed. Both releases are non-Latest previews;
-only Linux ARM64 is qualified, with synthetic clients rather than real SSH
-authentication/connectivity. See [SSH Connect](ssh-connect.md) for requirements,
-source/qualification distinctions and grammar limits. Extensions are trusted
-code, not sandboxed; OpenSSH configuration and authentication remain OpenSSH's
-responsibility.
+On a supported offer, use Settings → Extensions → **Browse official extensions**,
+review the version/digest and trusted-code warning, then open SSH Connect separately
+from File or the Command Palette. Installation stays dormant. A local-file or
+**Install from link** operation checks host/API but does not enforce catalog platform
+targets; successful manual installation is not proof of support. SSH0.3.1 requires
+host0.24.0-dev.8 or later, which alone does not establish platform support. Its older
+archive's capability-unavailable message still says Linux ARM64 only. Earlier
+SSH0.3.0/dev.11 and historical0.1.0 assets remain unchanged. See
+[SSH Connect](ssh-connect.md) for exact evidence, limitations and grammar.
+Extensions are trusted code, not sandboxed; OpenSSH owns configuration and
+authentication.
 
 ## Optional Snippets preview
 
@@ -94,6 +90,14 @@ installed public-HTTPS checkpoint is separate from its published installer and
 catalog source. Its installer can replace an existing per-user installation; it
 is not isolated side-by-side. See the [migration guide](snippets-migration.md) for
 PowerShell and offline verification, historical preview links, and current limits.
+
+Newer source separately implements a [removable default](default-snippets.md)
+only for positively new packaged profiles on optional targets. Successful seeding
+installs the exact pinned public0.1.0 archive enabled but dormant; Toggle remains
+the deliberate activation. No startup acquisition or user YAML creation occurs.
+Existing profiles keep the manual route above, and uninstall never silently
+restores the package. Developer startup/Windows x64 are excluded; source delivery
+does not qualify this new startup/package path or change published0.24.0.
 
 ## macOS
 

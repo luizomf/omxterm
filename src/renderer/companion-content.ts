@@ -120,6 +120,13 @@ export function createCompanionContent(
   };
   const removeOpen = bridge?.onOpen((descriptor) => {
     if (disposed || descriptor.presentation !== "panel" || !panel) return;
+    if (
+      descriptor.panelDefaultToken &&
+      !panel.claimDefaultOpen(descriptor.panelDefaultToken)
+    ) {
+      void bridge?.close(descriptor.id).catch(() => {});
+      return;
+    }
     if (!slots.has(descriptor.id)) {
       const slot = parent.ownerDocument.createElement("div");
       slot.className = "companion-native-slot";
@@ -224,6 +231,7 @@ export function createCompanionContent(
       activate: (focusAllowed?: boolean) => void,
       passive: boolean,
     ) {
+      panel?.cancelDefaultOpen();
       application = tab;
       selectionRevision += 1;
       pendingActivation = activate;

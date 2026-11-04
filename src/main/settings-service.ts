@@ -1,14 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
-  chmod,
   mkdir,
   lstat,
+  open,
   readFile,
+  realpath,
   rename,
   rm,
-  stat,
-  writeFile,
 } from "node:fs/promises";
+import { constants, type Stats } from "node:fs";
 import path from "node:path";
 import {
   SETTINGS_FIELDS,
@@ -19,6 +19,9 @@ import {
   type SettingsSnapshot,
 } from "../shared/settings";
 import type { UserConfiguration } from "../shared/user-configuration";
+import type { SettingsThemesResult } from "../shared/settings-themes";
+import { discoverSettingsThemes } from "./settings-themes";
+import { createSettingsQueue } from "./settings-queue";
 import type { SettingsMessage } from "../shared/settings-messages";
 import {
   TERMINAL_ACTION_NAMES,
@@ -39,15 +42,25 @@ import {
   type LoadUserConfigurationOptions,
 } from "./user-configuration";
 
+interface SettingsFile {
+  readonly target: string;
+  readonly bytes: Uint8Array | null;
+  readonly mode?: number;
+}
+
 export interface SettingsFiles {
-  read(filePath: string): Promise<Uint8Array>;
-  // Prepare text, then check the revision immediately before atomic replacement.
-  // False means a concurrent edit was detected; no replacement was performed.
-  replace(filePath: string, text: string, revision: string): Promise<boolean>;
+  read(filePath: string): Promise<SettingsFile>;
+  // False means a concurrent edit or retargeting was detected; no replacement occurred.
+  replace(
+    filePath: string,
+    text: string,
+    expected: SettingsFile,
+  ): Promise<boolean>;
 }
 
 export interface SettingsService {
   snapshot(): Promise<SettingsSnapshot>;
+  themes(): Promise<SettingsThemesResult>;
   change(change: SettingsChange): Promise<SettingsResult>;
   saveText(text: string, revision: string): Promise<SettingsResult>;
   changeKeybind(change: SettingsKeybindChange): Promise<SettingsResult>;
@@ -56,6 +69,7 @@ export interface SettingsService {
 interface CurrentDocument {
   readonly revision: string;
   readonly text: string | null;
+  readonly file?: SettingsFile;
   readonly document?: Record<string, unknown>;
   readonly configuration?: UserConfiguration;
   readonly problem?: SettingsMessage;
@@ -66,7 +80,8 @@ const RESTART_SUFFIX = " Fix the file and restart OMXTerm.";
 
 // Persistence adapted from ruscher/omxterm PR #622's preferences service at
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT).
-// Explicit, user-requested writes to config.json. Requests run one at a time.
+// Explicit, user-requested writes to config.json. Requests run one at a time;
+// consecutive not-started theme choices coalesce to the latest selection.
 // A graphical change rereads the file and changes only its own field, so other
 // entries, including external edits, are kept; a raw JSON save must start from
 // the file's current revision. Every candidate passes the same loader as
@@ -81,36 +96,23 @@ export function createSettingsService(options: {
     options.loadOptions.environment,
     options.loadOptions.homeDirectory,
   );
-  let queue: Promise<unknown> = Promise.resolve();
-  const serialize = <Result>(task: () => Promise<Result>) => {
-    const run = queue.then(task, task);
-    queue = run.catch(() => {});
-    return run;
-  };
-
-  const validate = async (bytes: Uint8Array) => {
-    const load = await loadUserConfiguration({
-      ...options.loadOptions,
-      read: fixedRead(bytes),
-    });
-    return load;
-  };
+  const validate = (bytes: Uint8Array) =>
+    loadUserConfiguration({ ...options.loadOptions, read: fixedRead(bytes) });
 
   const readCurrent = async (): Promise<CurrentDocument> => {
-    let bytes: Uint8Array;
+    let file: SettingsFile;
     try {
-      bytes = await files.read(configurationPath);
+      file = await files.read(configurationPath);
     } catch (cause) {
-      if (isNotFound(cause)) return { revision: "absent", text: null };
       return {
         revision: "unreadable",
         text: null,
-        problem: {
-          kind: cause instanceof SettingsSymlinkError ? "symlink" : "read",
-        },
+        problem: { kind: settingsFileError(cause, "read") },
       };
     }
-    const revision = revisionOf(bytes);
+    const revision = revisionOf(file);
+    const { bytes } = file;
+    if (bytes === null) return { revision, text: null, file };
     let text: string;
     try {
       text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -118,6 +120,7 @@ export function createSettingsService(options: {
       return {
         revision,
         text: null,
+        file,
         problem: { kind: "utf8" },
       };
     }
@@ -125,17 +128,23 @@ export function createSettingsService(options: {
     try {
       document = JSON.parse(text);
     } catch {
-      return { revision, text, problem: { kind: "json" } };
+      return { revision, text, file, problem: { kind: "json" } };
     }
     if (!isRecord(document))
-      return { revision, text, problem: { kind: "object" } };
+      return { revision, text, file, problem: { kind: "object" } };
     const load = await loadUserConfiguration({
       ...options.loadOptions,
       read: fixedRead(bytes),
     });
     return load.fallback
-      ? { revision, text, document, problem: describe(load.fallback.error) }
-      : { revision, text, document, configuration: load.configuration };
+      ? {
+          revision,
+          text,
+          file,
+          document,
+          problem: describe(load.fallback.error),
+        }
+      : { revision, text, file, document, configuration: load.configuration };
   };
 
   const snapshotOf = (current: CurrentDocument): SettingsSnapshot => ({
@@ -167,6 +176,13 @@ export function createSettingsService(options: {
     text: string,
     current: CurrentDocument,
   ): Promise<SettingsResult> => {
+    // A read failure has no safe destination or revision, including for raw saves.
+    if (!current.file)
+      return {
+        status: "rejected",
+        message: current.problem ?? { kind: "read" },
+        snapshot: snapshotOf(current),
+      };
     const bytes = encoder.encode(text);
     const candidate = await validate(bytes);
     if (candidate.fallback)
@@ -176,11 +192,11 @@ export function createSettingsService(options: {
         snapshot: snapshotOf(await readCurrent()),
       };
     // Build the response before writing, using the same UTF-8 decoding as the
-    // loader/read snapshots (including BOM removal). Its revision still names
-    // the exact submitted bytes; parsing cannot fail after persistence.
+    // loader/read snapshots (including BOM removal). Its revision identifies
+    // the destination and exact submitted bytes; parsing happens before persistence.
     const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const savedSnapshot = snapshotOf({
-      revision: revisionOf(bytes),
+      revision: revisionOf({ ...current.file, bytes }),
       text: decoded,
       document: JSON.parse(decoded) as Record<string, unknown>,
       configuration: candidate.configuration,
@@ -191,14 +207,14 @@ export function createSettingsService(options: {
       options.loadOptions.platform ?? process.platform,
     );
     try {
-      if (!(await files.replace(configurationPath, text, current.revision)))
+      if (!(await files.replace(configurationPath, text, current.file)))
         return conflict();
     } catch (cause) {
+      if (cause instanceof SettingsFileError && cause.kind === "conflict")
+        return conflict();
       return {
         status: "failed",
-        message: {
-          kind: cause instanceof SettingsSymlinkError ? "symlink" : "write",
-        },
+        message: { kind: settingsFileError(cause, "write") },
         snapshot: snapshotOf(await readCurrent()),
       };
     }
@@ -224,29 +240,35 @@ export function createSettingsService(options: {
   };
 
   // A graphical edit rereads the file and changes only its own entry.
-  const edit = (mutate: (document: Record<string, unknown>) => void) =>
-    serialize(async (): Promise<SettingsResult> => {
-      const current = await readCurrent();
-      // A parsed but invalid document may be repaired by this very change;
-      // the candidate still passes full validation before it is written.
-      if (current.problem && !current.document)
-        return {
-          status: "rejected",
-          message: current.problem,
-          snapshot: snapshotOf(current),
-        };
-      const document = structuredClone(current.document ?? { version: 1 });
-      mutate(document);
-      return commit(`${JSON.stringify(document, null, 2)}\n`, current);
-    });
+  const edit = async (
+    mutate: (document: Record<string, unknown>) => void,
+  ): Promise<SettingsResult> => {
+    const current = await readCurrent();
+    // A parsed but invalid document may be repaired by this very change;
+    // the candidate still passes full validation before it is written.
+    if (current.problem && !current.document)
+      return {
+        status: "rejected",
+        message: current.problem,
+        snapshot: snapshotOf(current),
+      };
+    const document = structuredClone(current.document ?? { version: 1 });
+    mutate(document);
+    return commit(`${JSON.stringify(document, null, 2)}\n`, current);
+  };
+
+  const queue = createSettingsQueue((change) =>
+    edit((document) => setField(document, change.path, change.value)),
+  );
 
   return {
-    snapshot: () => serialize(async () => snapshotOf(await readCurrent())),
-    change: (change) =>
-      edit((document) => setField(document, change.path, change.value)),
-    changeKeybind: (change) => edit((document) => setKeybind(document, change)),
+    snapshot: () => queue.run(async () => snapshotOf(await readCurrent())),
+    themes: () => queue.run(() => discoverSettingsThemes(configurationPath)),
+    change: queue.change,
+    changeKeybind: (change) =>
+      queue.run(() => edit((document) => setKeybind(document, change))),
     saveText: (text, revision) =>
-      serialize(async () => {
+      queue.run(async () => {
         const current = await readCurrent();
         if (current.revision !== revision)
           return {
@@ -391,49 +413,148 @@ function changedLifetimes(
   ];
 }
 
-function revisionOf(bytes: Uint8Array): string {
-  return createHash("sha256").update(bytes).digest("hex");
+function revisionOf(file: SettingsFile): string {
+  const hash = createHash("sha256").update(file.target).update("\0");
+  if (file.bytes === null) hash.update("0");
+  else hash.update("1").update(file.bytes);
+  return hash.digest("hex");
 }
 
-class SettingsSymlinkError extends Error {
-  constructor() {
-    super("Settings does not write through configuration symlinks");
+class SettingsFileError extends Error {
+  constructor(readonly kind: "symlink" | "target" | "conflict" | "cleanup") {
+    super(kind);
   }
+}
+
+function settingsFileError(
+  cause: unknown,
+  fallback: "read" | "write",
+): "symlink" | "target" | "conflict" | "cleanup" | "read" | "write" {
+  return cause instanceof SettingsFileError ? cause.kind : fallback;
+}
+
+// Resolve existing links with the OS, including relative links and linked
+// parents. An absent ordinary path is allowed; an existing dangling link is not.
+async function settingsTarget(filePath: string): Promise<string> {
+  let current = path.resolve(filePath);
+  const missing: string[] = [];
+  for (;;) {
+    try {
+      return path.join(await realpath(current), ...missing);
+    } catch (cause) {
+      if (!isNotFound(cause)) {
+        const code = (cause as NodeJS.ErrnoException).code;
+        if (code === "ELOOP") throw new SettingsFileError("symlink");
+        if (code === "ENOTDIR") throw new SettingsFileError("target");
+        throw cause;
+      }
+      try {
+        await lstat(current);
+        // An entry exists but its resolution failed: do not create its target.
+        throw new SettingsFileError("symlink");
+      } catch (entryError) {
+        if (!isNotFound(entryError)) throw entryError;
+      }
+      const parent = path.dirname(current);
+      if (parent === current) throw cause;
+      missing.unshift(path.basename(current));
+      current = parent;
+    }
+  }
+}
+
+function sameSettingsFile(first: SettingsFile, second: SettingsFile): boolean {
+  return revisionOf(first) === revisionOf(second) && first.mode === second.mode;
+}
+
+function sameTemporary(entry: Stats, original: Stats | undefined): boolean {
+  return (
+    original !== undefined &&
+    entry.isFile() &&
+    entry.dev === original.dev &&
+    entry.ino === original.ino
+  );
 }
 
 export const nodeSettingsFiles: SettingsFiles = {
   async read(filePath) {
-    if ((await lstat(filePath)).isSymbolicLink())
-      throw new SettingsSymlinkError();
-    return readFile(filePath);
-  },
-  async replace(filePath, text, revision) {
-    await mkdir(path.dirname(filePath), { recursive: true });
-    const mode = await stat(filePath).then(
-      (stats) => stats.mode & 0o777,
-      () => undefined,
-    );
-    const temporary = `${filePath}.${randomBytes(6).toString("hex")}.tmp`;
-    let replaced = false;
+    const target = await settingsTarget(filePath);
+    let entry;
     try {
-      await writeFile(temporary, text, { encoding: "utf8", flag: "wx" });
-      if (mode !== undefined) await chmod(temporary, mode);
-      const latest = await nodeSettingsFiles
-        .read(filePath)
-        .then(revisionOf, (cause: unknown) => {
-          if (isNotFound(cause)) return "absent";
-          throw cause;
-        });
-      // This closes validation/preparation races, not arbitrary cross-process
-      // compare-and-swap: an external writer can still race this final rename.
-      if (latest !== revision) return false;
-      await rename(temporary, filePath);
+      entry = await lstat(target);
+    } catch (cause) {
+      if (!isNotFound(cause)) throw cause;
+    }
+    let bytes: Uint8Array | null = null;
+    let mode: number | undefined;
+    if (entry) {
+      if (entry.isSymbolicLink()) throw new SettingsFileError("conflict");
+      if (!entry.isFile()) throw new SettingsFileError("target");
+      // Non-blocking open and fstat prevent a swapped FIFO or device from
+      // being read. The resolved final component must not become a link.
+      const handle = await open(
+        target,
+        constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0),
+      );
+      try {
+        const status = await handle.stat();
+        if (!status.isFile()) throw new SettingsFileError("target");
+        mode = status.mode & 0o777;
+        bytes = await handle.readFile();
+      } finally {
+        await handle.close();
+      }
+    }
+    if ((await settingsTarget(filePath)) !== target)
+      throw new SettingsFileError("conflict");
+    return { target, bytes, ...(mode === undefined ? {} : { mode }) };
+  },
+  async replace(filePath, text, expected) {
+    if (!sameSettingsFile(await nodeSettingsFiles.read(filePath), expected))
+      return false;
+    await mkdir(path.dirname(expected.target), { recursive: true });
+    const temporary = path.join(
+      path.dirname(expected.target),
+      `.omxterm-settings-${randomBytes(6).toString("hex")}.tmp`,
+    );
+    let created = false;
+    let replaced = false;
+    let identity: Stats | undefined;
+    try {
+      // The target may be private even when the process has a permissive umask.
+      const handle = await open(temporary, "wx", 0o600);
+      created = true;
+      try {
+        identity = await handle.stat();
+        await handle.writeFile(text, "utf8");
+        const latest = await nodeSettingsFiles.read(filePath);
+        if (!sameSettingsFile(latest, expected)) return false;
+        // Use the owned handle, never a path that another process can replace.
+        if (expected.mode !== undefined) await handle.chmod(expected.mode);
+      } finally {
+        await handle.close();
+      }
+      if (!sameSettingsFile(await nodeSettingsFiles.read(filePath), expected))
+        return false;
+      if (!sameTemporary(await lstat(temporary), identity))
+        throw new SettingsFileError("conflict");
+      // These checks minimize races, but are not a cross-process atomic CAS:
+      // either pathname can still change between its final check and rename.
+      await rename(temporary, expected.target);
       replaced = true;
       return true;
     } finally {
-      // A successful rename already consumed the temporary entry. No later
-      // cleanup failure may turn a persisted write into a failed result.
-      if (!replaced) await rm(temporary, { force: true });
+      if (created && !replaced) {
+        try {
+          const entry = await lstat(temporary);
+          // Never delete a replacement entry belonging to another writer.
+          if (!sameTemporary(entry, identity))
+            throw new Error("temporary changed");
+          await rm(temporary);
+        } catch (cause) {
+          if (!isNotFound(cause)) throw new SettingsFileError("cleanup");
+        }
+      }
     }
   },
 };

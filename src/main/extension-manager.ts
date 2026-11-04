@@ -21,9 +21,10 @@ export type ExtensionTarget = {
   mirrorContext?: string;
   presentation?: "panel";
   togglePanel?: boolean;
+  panelDefaultToken?: string;
 };
 export type ManagedViews = {
-  open(togglePanel?: boolean): Promise<void>;
+  open(togglePanel?: boolean, panelDefaultToken?: string): Promise<void>;
   retire(): Promise<{ status: "settled" | "failed" }>;
 };
 type Group = {
@@ -183,7 +184,10 @@ function createPanelOpener(
       }
       let shown: Promise<void> | undefined;
       await retained.admit(target.signal, () => {
-        shown = retained.views.open(target.togglePanel);
+        shown = retained.views.open(
+          target.togglePanel,
+          target.panelDefaultToken,
+        );
       });
       await shown;
     })();
@@ -320,7 +324,7 @@ export function createExtensionManager(options: Options) {
           lost();
           throw new PackageError("unavailable");
         }
-        await views.open();
+        await views.open(undefined, target.panelDefaultToken);
       }
       if (!alive(id, captured, target) || backend.signal.aborted)
         throw new PackageError("unavailable");

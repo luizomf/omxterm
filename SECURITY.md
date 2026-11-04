@@ -20,7 +20,11 @@ Please coordinate public disclosure with the maintainer.
 OMXTerm makes application network requests only for explicit official-catalog
 Browse/Refresh and HTTPS extension archive installation, using bounded acquisition
 in the main process. It does not fetch the catalog at startup or Settings reopen,
-or make telemetry or background update requests. See the
+or make telemetry or background update requests. Owned browser sessions disable
+unused spellchecking; on Linux/Windows their selected dictionary list is cleared
+at session creation so Chromium does not acquire dictionaries in the background.
+This is a product policy, not a network block or a change to literal text input
+or explicit extension acquisition. See the
 [specification](docs/spec.md#configuration-and-local-state) for the network
 boundary and platform qualification. Programs you run retain their usual network
 access, and explicitly opened web links use the OS. Operational logs omit

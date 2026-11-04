@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { emptyThemes } from "../fixtures/settings-themes";
 import { createTabsHarness } from "../fixtures/terminal-tabs-harness";
 import { base, deferred, saved } from "../fixtures/settings-dialog-dom";
 import type {
@@ -22,6 +23,7 @@ function settings(
   snapshot: SettingsBridge["snapshot"] = async () => base,
 ): SettingsBridge {
   return {
+    themes: vi.fn(async () => emptyThemes),
     snapshot: vi.fn(snapshot),
     change: vi.fn(async () => saved(base)),
     saveText: vi.fn(async () => saved(base)),

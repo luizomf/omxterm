@@ -13,7 +13,7 @@ import {
   setPageNotice,
 } from "../application-page";
 import { renderConfigFile } from "./settings-config-file";
-import { pages, renderControl } from "./settings-pages";
+import { pages, renderSettingsPage } from "./settings-pages";
 import {
   englishLanguage,
   type RendererLanguage,
@@ -193,8 +193,17 @@ export function createSettingsView(
         ? document.activeElement
         : undefined;
       if (
-        !(field instanceof HTMLInputElement) &&
-        !(field instanceof HTMLTextAreaElement)
+        !(field instanceof HTMLTextAreaElement) &&
+        (!(field instanceof HTMLInputElement) ||
+          ![
+            "text",
+            "number",
+            "url",
+            "search",
+            "email",
+            "tel",
+            "password",
+          ].includes(field.type))
       )
         return;
       void editField(
@@ -420,15 +429,13 @@ function buildSettingsView(
   // Pages depend on the main-reported platform, so they are built with the
   // first snapshot; until then the retained editor shows a loading status.
   const build = (platform: string) => {
-    for (const page of pages(platform)) {
-      const panel = document.createElement("div");
-      panel.className = "settings-panel";
-      for (const control of page.controls)
-        panel.append(
-          renderControl(document, control, value, change, syncs, labels),
-        );
-      addPage(page.id, page.label, panel);
-    }
+    const pageOptions = { bridge, live, value, change, syncs, labels };
+    for (const page of pages(platform))
+      addPage(
+        page.id,
+        page.label,
+        renderSettingsPage(document, page, pageOptions),
+      );
     shortcuts = renderShortcuts(document, {
       snapshot: () => snapshot,
       platform,

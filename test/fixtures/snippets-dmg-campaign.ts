@@ -141,8 +141,15 @@ export async function runDmgCampaign(
         signal: result.signal,
         reason: result.reason,
         cleanup: result.cleanupErrors,
+        assistance: result.cleanupAssistance,
       },
-      { code: 0, signal: null, reason: "exit", cleanup: [] },
+      {
+        code: 0,
+        signal: null,
+        reason: "exit",
+        cleanup: [],
+        assistance: "none",
+      },
       result.stderr,
     );
     const scenario = JSON.parse(

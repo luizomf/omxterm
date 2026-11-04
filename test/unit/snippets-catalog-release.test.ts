@@ -82,7 +82,9 @@ describe("published Snippets catalog candidate", () => {
         ["0.24.0-dev.36", true],
         ["0.24.0", true],
         ["0.24.1-dev.0", true],
-        ["0.25.0-dev.0", false],
+        ["0.25.0-dev.0", true],
+        ["0.25.0-dev.1", true],
+        ["0.25.1-dev.0", false],
       ])(
         "applies host compatibility for %s (not qualification)",
         (appVersion, compatible) => {
@@ -178,8 +180,8 @@ describe("published Snippets catalog candidate", () => {
           .entries.filter((entry) => entry.id !== snippets.id)) {
           const compatible =
             target === "darwin-arm64" &&
-            other.id === "omxterm.files" &&
-            appVersion === "0.24.0-dev.26";
+            (other.id === "omxterm.ssh" ||
+              (other.id === "omxterm.files" && appVersion === "0.24.0-dev.26"));
           expect(other.compatible).toBe(compatible);
           if (!compatible)
             expect(() => catalog.select(other.selection)).toThrow(

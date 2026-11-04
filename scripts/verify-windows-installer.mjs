@@ -45,6 +45,9 @@ export function inspectWindowsInstallerInputs(
   // locations and installer options are unchanged.
   // #764 unpacks the macOS Option addon and explicitly excludes it from
   // Linux/Windows. NSIS identity, paths, templates and options are unchanged.
+  // #741 adds only exact target-scoped public Snippets resource preparation:
+  // ARM64 includes the fixed archive, x64 excludes it. Host identity, NSIS
+  // registration/cache paths, templates/options and builder remain unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -52,7 +55,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "1f786ca88bbdbc7104f09f5e1e8fc26fd63837b1baceddc8a3f731a1ccae5711"
+      "7803299ec667f8d7605304adfaf28818df2a5b0868447eb13cd8d0d5e29fa6fb"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

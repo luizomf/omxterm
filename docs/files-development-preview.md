@@ -218,6 +218,35 @@ available. New folder is also disabled during a mutation; Refresh remains
 available while listings load. These source changes do not alter
 already published Files archives.
 
+Current source offers **Filter loaded entries** before the tree. The host's
+explicit focus intent puts focus there when opening Files; Tab enters the tree,
+Shift+Tab returns through the address and toolbar. Typing filters names already
+loaded in expanded folders; it is not a recursive filesystem search and does not
+read collapsed folders. Matching descendants retain their ancestor rows, and
+loading, error and truncation rows remain visible. Dotfile visibility still
+applies first. The query survives navigation and Hide/reveal in the same view;
+Close/new view resets it. Filtering does not discard expansions or an address
+draft. Changing the query does not issue a read or mutate files; filtering away
+a selection clears it without silently selecting a replacement. A no-match
+message refers only to visible loaded entries and also notes hidden dotfiles
+when applicable. Empty trees remain in the Tab order; if rows arrive while the
+tree itself has focus, Down/Up moves explicitly to the first/last row. Listing
+completion does not move focus out of the filter. An unsubmitted address draft
+survives listing updates and initial Home loading; an explicit new navigation
+replaces an earlier draft unless it was edited during the request.
+
+Focusing a tree row selects that row, so its subsequent Actions and keyboard
+operations share an explicit target. Composing and other modified tree gestures
+are left to their normal owners, apart from Shift+F10. The Rename / move menu
+item identifies F2. Cancel returns focus to the control or row that opened an
+editor when still available,
+otherwise Actions; a delayed permanent-delete confirmation does not take focus
+from a user who has moved elsewhere. If a filtered-away selection leaves focus
+on an unselected fallback row, invoking F2 or its context menu first selects
+that row as the explicit target. Host Escape ownership and retained drafts
+remain as described below. These source UI changes require a new archive version;
+they do not modify published Files0.6.
+
 In current source, **Actions… → Show dotfiles (names starting with .)** is a
 checked menu item, off by default. On both Linux and macOS, it hides dot-prefixed
 entry names and their descendants relative to the current browsing root. It does
@@ -266,6 +295,28 @@ file's parent); background actions use the browsing root. Permanent deletion
 still requires explicit confirmation. Editors keep captured paths even if the
 selection or browsing root changes.
 
+Current source also lets one drag a single Files row onto another directory row.
+The highlighted destination and an in-view message distinguish valid and invalid
+locations; a native/external file drag is not accepted as an internal entry. No
+local path is placed in the drag payload. Keyboard users can select the source,
+open its context menu (Shift+F10), choose **Move to folder…** and enter an
+absolute destination folder. Both routes show the fixed source and folder and
+require an explicit **Move**; Cancel is initially focused when appropriate.
+Changing the selection or navigation cannot retarget that confirmation.
+
+Same-directory drops and moving a directory into itself or its descendants are
+refused. A final symbolic-link row is not a destination folder; a symbolic-link
+source is moved as the link, not its referent. Ancestor paths are resolved before
+checking the relationship. At preparation, the backend records the source and
+folder identities; a one-shot confirmation rechecks them before using the existing
+no-replace move. This prevents ordinary stale-confirmation retargeting, not
+hostile same-user filesystem races between checking and the native rename.
+Destination collisions never overwrite; cross-volume moves fail without copying
+or deleting. Permission, missing, unsupported and uncertain outcomes are reported;
+a failed or uncertain move is not retried automatically. Refresh to inspect an
+unknown outcome. This source-only directory workflow does not insert a path into
+the terminal and does not change published Files0.6.
+
 Successful creation, move, trash and deletion automatically refresh the current
 root and surviving expanded folders, preserving selection where possible. A late
 mutation result never navigates back to its old root. Collapsing drops collapsed
@@ -301,8 +352,9 @@ The backend lists directories using `opendir` and sequential `lstat`, with a
 5,000-entry visit limit and explicit truncation. Replies contain at most100 rows,
 with at most eight active backend invocations; snapshots/cursors are ephemeral,
 not filesystem watchers. At most eight completed snapshots and eight deletion
-confirmations are retained. At capacity, a new request expires the oldest retained
-token rather than allowing abandoned views to reserve capacity forever. In-flight
+confirmations and eight directory-move confirmations are retained. At capacity,
+a new request expires the oldest retained token of that kind rather than allowing
+abandoned views to reserve capacity forever. In-flight
 reads still count toward the limit and are never evicted. Expired cursors require
 an explicit refresh; expired confirmations require fresh confirmation and can never
 be rebound to a new entry. No timers, polling or automatic mutation retry are added.
@@ -412,8 +464,8 @@ missing inline hint and tooltip, and already-displayed literal error text
 do not change. Current
 Files source also relabels host-coded unavailable notices. A future archive needs
 a new immutable version.
-The host's narrow [maintenance bridge](extension-installation-foundation.md#archive-contract)
-admits unchanged Files0.6 on recognized `0.24.1-dev.N` hosts. Admission is not
+The host's narrow [development bridges](extension-installation-foundation.md#archive-contract)
+admit unchanged Files0.6 on recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts. Admission is not
 native runtime or package qualification.
 Closing the source terminal preserves the panel; window loss, backend loss and
 package management still retire it. Hiding retains state and does not cancel or
@@ -756,8 +808,9 @@ runtime ownership evidence is separate; no blocked Foundation call was proved
 cancellable. Published archives, receipts and catalog targets are unchanged.
 
 The package probe itself checks only the macOS trash export and root-path
-refusal, not a recoverable Trash operation. An assigned ordinary-user
-macOS ARM64 environment can run the prepared fixture with the bundled Electron:
+refusal, not a recoverable Trash operation. Follow the [macOS preference precautions](development.md#macos-preferences-and-native-verification)
+before packaged Electron probes. An assigned ordinary-user macOS ARM64
+environment can run the prepared fixture with the bundled Electron:
 
 ```sh
 ELECTRON_RUN_AS_NODE=1 /absolute/Electron \

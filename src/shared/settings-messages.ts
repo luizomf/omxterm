@@ -12,7 +12,9 @@ export type SettingsMessage =
         | "json"
         | "object"
         | "symlink"
+        | "target"
         | "conflict"
+        | "cleanup"
         | "write"
         | "application";
     }
@@ -28,7 +30,9 @@ const frames = {
   json: "settings.jsonError",
   object: "settings.objectError",
   symlink: "settings.symlinkError",
+  target: "settings.targetError",
   conflict: "settings.conflict",
+  cleanup: "settings.cleanupError",
   write: "settings.writeError",
   application: "settings.applicationError",
 } as const;

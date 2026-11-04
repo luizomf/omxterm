@@ -9,7 +9,10 @@ export function inspectAsarEntries(
   arch?: "arm64" | "x64",
 ): AsarInspection;
 
-export function inspectForbiddenPackagedEntries(entries: string[]): string[];
+export function inspectForbiddenPackagedEntries(
+  entries: string[],
+  target?: string,
+): string[];
 
 export function inspectElfDynamicDependencies(dynamicSection: string): string[];
 

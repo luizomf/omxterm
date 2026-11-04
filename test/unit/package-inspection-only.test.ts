@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { copyDefaultSnippetsResources } from "../fixtures/default-snippets";
 import path from "node:path";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as realAsar from "@electron/asar";
 import { afterEach, expect, it, vi } from "vitest";
@@ -271,6 +272,42 @@ function inspectionCommands(
   );
 }
 
+function mockInspectionFiles(
+  resources: string,
+  root: string,
+  platform: string,
+  arch: string,
+  readFile: (file: string, encoding?: string) => Promise<string | Buffer>,
+) {
+  vi.doMock("node:fs/promises", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("node:fs/promises")>();
+    return {
+      ...actual,
+      readFile,
+      // Validate actual pinned resource bytes, not a mocked default bypass.
+      readdir: vi.fn(async (file: string, options?: { recursive?: boolean }) =>
+        file === resources || file === path.join(resources, "bundled-snippets")
+          ? actual.readdir(file, options)
+          : [],
+      ),
+      mkdir: vi.fn(),
+      writeFile: vi.fn(),
+      rm: vi.fn(),
+      mkdtemp: vi.fn(async () => root),
+      stat: vi.fn(async (file: string) => {
+        if (
+          platform === "win32" &&
+          file.endsWith(path.join("release", `OMXTerm-1.2.3-${arch}.exe`))
+        )
+          throw new Error("Inspection must not access an installer");
+        if (file.endsWith("default_app.asar"))
+          throw Object.assign(new Error(), { code: "ENOENT" });
+        return { isFile: () => true };
+      }),
+    };
+  });
+}
+
 it.each([
   ["linux", "x64"],
   ["win32", "x64"],
@@ -301,6 +338,8 @@ it.each([
     );
     const applicationRoot =
       platform === "linux" ? path.join(root, "squashfs-root") : packagedPath;
+    const resources = path.join(applicationRoot, "resources");
+    await copyDefaultSnippetsResources(resources, `${platform}-${arch}`);
     Object.defineProperty(process, "platform", {
       value: platform,
       configurable: true,
@@ -358,24 +397,7 @@ it.each([
         contents = "X-AppImage-Version=1.2.3\n";
       return encoding ? contents : Buffer.from(contents);
     });
-    vi.doMock("node:fs/promises", () => ({
-      readFile,
-      readdir: vi.fn(async () => []),
-      mkdir: vi.fn(),
-      writeFile: vi.fn(),
-      rm: vi.fn(),
-      mkdtemp: vi.fn(async () => root),
-      stat: vi.fn(async (file: string) => {
-        if (
-          platform === "win32" &&
-          file.endsWith(path.join("release", `OMXTerm-1.2.3-${arch}.exe`))
-        )
-          throw new Error("Inspection must not access an installer");
-        if (file.endsWith("default_app.asar"))
-          throw Object.assign(new Error(), { code: "ENOENT" });
-        return { isFile: () => true };
-      }),
-    }));
+    mockInspectionFiles(resources, root, platform, arch, readFile);
     const probeFailure: {
       active: boolean;
       invalidStdout: boolean;

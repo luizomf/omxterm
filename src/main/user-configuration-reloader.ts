@@ -42,6 +42,7 @@ export type UserConfigurationReloadOutcome =
 export interface UserConfigurationReloader {
   current(): ActiveUserConfiguration;
   reload(): Promise<UserConfigurationReloadOutcome>;
+  refreshTerminalSurfaceNotices(): void;
 }
 
 export function terminalSurfaceFontBaseline(
@@ -69,7 +70,22 @@ export function createUserConfigurationReloader(
     options.initial.userFileErrors,
   );
   let queue: Promise<unknown> = Promise.resolve();
+  let otherNotices: readonly SettingsMessage[] = options.initial.userFileErrors;
   const now = options.now ?? Date.now;
+  const noticesFor = (configuration: LoadedUserConfiguration) =>
+    currentNotices(
+      configuration,
+      otherNotices,
+      options.terminalSurfaceFontBaseline,
+      options.activeTerminalSurfaceFontConfigurations?.(),
+    );
+  const renderNotices = (
+    configuration: LoadedUserConfiguration,
+    notices: readonly SettingsMessage[],
+  ) =>
+    notices.map((notice) =>
+      settingsMessageText(notice, translatorFor(configuration.language).t),
+    );
 
   const run = async (): Promise<UserConfigurationReloadOutcome> => {
     const startedAt = now();
@@ -81,20 +97,11 @@ export function createUserConfigurationReloader(
     try {
       const load = await options.load();
       if (load.fallback) return reject(load.fallback, startedAt);
-      const notices = currentNotices(
-        load.configuration,
-        load.warnings ?? [],
-        options.terminalSurfaceFontBaseline,
-        options.activeTerminalSurfaceFontConfigurations?.(),
-      );
+      otherNotices = load.warnings ?? [];
+      const notices = noticesFor(load.configuration);
       active = freezeState(
         load.configuration,
-        notices.map((notice) =>
-          settingsMessageText(
-            notice,
-            translatorFor(load.configuration.language).t,
-          ),
-        ),
+        renderNotices(load.configuration, notices),
       );
       options.operationalEvents?.setLevel(load.configuration.logLevel);
       options.apply(active, true);
@@ -128,7 +135,11 @@ export function createUserConfigurationReloader(
       translatorFor(active.configuration.language).t,
     );
     options.writeStderr?.(`${rendered}\n`);
-    active = freezeState(active.configuration, [rendered]);
+    otherNotices = [notice];
+    active = freezeState(
+      active.configuration,
+      renderNotices(active.configuration, noticesFor(active.configuration)),
+    );
     options.apply(active, false);
     options.operationalEvents?.write({
       name: "configuration.reload.rejected",
@@ -143,6 +154,23 @@ export function createUserConfigurationReloader(
 
   return {
     current: () => active,
+    // Surface retirement is not another reload: keep current diagnostics and
+    // settings, and publish only if the deferred information actually changed.
+    refreshTerminalSurfaceNotices() {
+      const messages = renderNotices(
+        active.configuration,
+        noticesFor(active.configuration),
+      );
+      if (
+        messages.length === active.userFileErrors.length &&
+        messages.every(
+          (message, index) => message === active.userFileErrors[index],
+        )
+      )
+        return;
+      active = freezeState(active.configuration, messages);
+      options.apply(active, false);
+    },
     reload() {
       const request = queue.then(run, run);
       queue = request.catch(() => {});
@@ -163,16 +191,16 @@ function freezeState(
 
 function currentNotices(
   configuration: LoadedUserConfiguration,
-  warnings: readonly string[],
+  warnings: readonly SettingsMessage[],
   baseline:
     Pick<LoadedUserConfiguration, "fontFamily" | "fontLineHeight"> | undefined,
   activeSurfaces:
     | readonly Pick<LoadedUserConfiguration, "fontFamily" | "fontLineHeight">[]
     | undefined,
 ): readonly SettingsMessage[] {
-  if (!baseline) return warnings;
-  const surfaces =
-    activeSurfaces && activeSurfaces.length > 0 ? activeSurfaces : [baseline];
+  // An authoritative empty owner list means no surviving Surface needs a
+  // restart. The startup baseline is only for compositions without ownership.
+  const surfaces = activeSurfaces ?? (baseline ? [baseline] : []);
   const deferred: ("font.family" | "font.lineHeight")[] = [
     ...(surfaces.every(
       (surface) => configuration.fontFamily === surface.fontFamily,

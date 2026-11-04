@@ -1,3 +1,5 @@
+import { applyChromiumGpuPolicy } from "../../src/main/chromium-gpu-policy";
+
 export interface AppearanceScenario {
   readonly requestedDPR: number | "actual";
   readonly paletteOnly?: boolean;
@@ -15,6 +17,8 @@ export function resttyAppearanceMainSource(
   return (
     `
 const { app, BrowserWindow } = require("electron");
+// Embed the shared, self-contained policy in this generated entrypoint.
+(${applyChromiumGpuPolicy.toString()})(app.commandLine);
 const fs = require("node:fs");
 const path = require("node:path");
 for (const name of ["userData", "sessionData"]) {
