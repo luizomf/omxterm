@@ -165,14 +165,14 @@ menu bar.
 
 ### Make it yours
 
-On first launch, stable OMXTerm creates starter configuration files (`config.json`,
-`snippets.yaml`, and `themes/omtheme.json`) in `~/.config/omxterm`. You can edit
-them directly,
+On first launch, stable OMXTerm creates `config.json` and `themes/omtheme.json`
+in `~/.config/omxterm`. You can edit them directly,
 [tweak a single setting](docs/configuration.md#add-one-display-change), or use
 [OMXTerm Studio](docs/configuration.md#edit-visually-with-omxterm-studio) to
-customize your settings and colors visually. The optional Snippets previews do
-not create `snippets.yaml` in fresh configuration kits; use the extension's example
-as described in the [migration guide](docs/snippets-migration.md).
+customize your settings and colors visually. Stable 0.24.0 also creates
+`snippets.yaml` on Windows x64, which retains built-in Snippets. Linux ARM64/x64
+and macOS/Windows ARM64 use optional Snippets and do not create that file; follow
+the [migration guide](docs/snippets-migration.md#install-deliberately) to create a catalog.
 
 See [Everyday use](docs/usage.md) for all keyboard shortcuts, image previews,
 and tips.
