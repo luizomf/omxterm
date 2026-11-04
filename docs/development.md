@@ -596,11 +596,21 @@ registration/shortcut/process cleanup: the custom installation root must be
 absent or a real empty directory. Non-recursive removal preserves unexpected
 residual files/directories as failure evidence; exact owned-cache cleanup and
 later relocated-uninstaller cleanup do not establish payload removal.
+Before installation, the verifier binds its own new temporary directory to a
+native long path and matching object identity. This handles Windows 8.3 `TEMP`
+aliases without relaxing existing registration/shortcut/cache checks. Unsafe
+resolved paths, identity changes and original or resolved reparse/process/cache
+conflicts fail before installer execution; temporary evidence is retained. See
+[ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md).
+
 Headless controlled-command regressions exercise the actual transaction with real
-files (including cleared registrations but retained payload):
+files (including modeled short/long Windows aliases and cleared registrations but retained payload):
 `npm test -- test/unit/windows-installer-transaction.test.ts test/unit/windows-installer-verification.test.ts test/unit/windows-verification-options.test.ts`.
-These tests do not execute NSIS or PowerShell, reproduce an installer defect, or
-replace disposable-Windows exact-installer qualification.
+These tests mock Windows filesystem metadata/path resolution and command results;
+they reproduce verifier defects, not actual NSIS behavior. They do not execute
+NSIS or PowerShell or replace disposable-Windows exact-installer qualification.
+A source correction does not reclassify an earlier failed installation or
+permit replaying its retained transaction.
 
 Current source also carries one exact public Snippets0.1.0 input for new packaged
 profiles. Normal checkout/package preparation is offline and pinned; missing or

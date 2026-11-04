@@ -2325,8 +2325,12 @@ tests exercise uninstall behavior.
 Windows exact-installer verification requires an explicitly authorized
 disposable VM and literal CLI opt-in. `/D=` changes the destination without
 isolating old-version removal, registration, shortcuts or processes.
-Verification refuses unsafe or unknown installation state. Ownership-checked
-cleanup preserves user data and is part of full verification; unpacked-only
+Verification refuses unsafe or unknown installation state. Only its newly created
+transaction directory is bound to a native long path with matching object identity
+before NSIS arguments are constructed; both path spellings retain the original
+reparse/process/cache inspections ([ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)).
+This does not normalize foreign registration or command ownership.
+Ownership-checked cleanup preserves user data and is part of full verification; unpacked-only
 diagnostics are partial.
 
 Release verification separates behavioral tests, native builds, exact-artifact
