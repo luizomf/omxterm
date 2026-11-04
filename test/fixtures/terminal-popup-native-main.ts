@@ -267,6 +267,7 @@ app
       sendFind() {},
       sendTabBarToggle() {},
       sendAuxiliaryPanelToggle() {},
+      sendAuxiliaryPanelSideToggle() {},
       sendTitleBarToggle() {},
       sendLocalImageOpen() {},
       toggleDeveloperTools() {},

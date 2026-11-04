@@ -408,7 +408,7 @@ export const brazilianPortugueseMessages: Readonly<
     "Falha inesperada ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir -> Recarregar Configuração novamente.",
   "settings.page.shortcuts": "Atalhos",
   "shortcuts.hint":
-    "Padrão segue o atalho embutido. Sem atalho mantém a ação no menu sem tecla. Atalhos do aplicativo recebem a tecla antes dos programas do terminal.",
+    "Estas linhas são ações remapeáveis do aplicativo. Padrão segue o atalho embutido. Sem atalho mantém a ação no menu sem tecla. Atalhos do aplicativo recebem a tecla antes dos programas do terminal. Atalhos do sistema operacional, edição de texto comum e gestos fixos de contexto, como Escape para ocultar o painel auxiliar ou as setas no separador, não aparecem aqui.",
   "shortcuts.prompt": "Pressione o novo atalho, ou Escape para cancelar.",
   "shortcuts.promptMac":
     "Pressione o novo atalho, ou Escape para cancelar. Option sem outros modificadores com letras e dígitos da fileira superior pode funcionar em layouts compatíveis. Algumas teclas mortas podem não ser graváveis; métodos de entrada ou suporte nativo indisponível também podem impedir a gravação. A opção de usar Option como Alt afeta apenas a entrada no terminal.",

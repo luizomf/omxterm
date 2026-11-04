@@ -492,12 +492,12 @@ app
           sendFind: notifyWindow(terminalIpc.find),
           sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
           sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
-          sendAuxiliaryPanelToggle: (window, action = "visibility") =>
-            notifyWindow(
-              action === "side"
-                ? terminalIpc.auxiliaryPanelSideToggle
-                : terminalIpc.auxiliaryPanelToggle,
-            )(window),
+          sendAuxiliaryPanelToggle: notifyWindow(
+            terminalIpc.auxiliaryPanelToggle,
+          ),
+          sendAuxiliaryPanelSideToggle: notifyWindow(
+            terminalIpc.auxiliaryPanelSideToggle,
+          ),
           sendSnippetsToggle: (window) => {
             if (usesOptionalSnippets(process.platform, process.arch))
               extensions?.toggleSnippets(window);

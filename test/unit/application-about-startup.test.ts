@@ -64,6 +64,7 @@ it.for(["missing-result", "published-hang", "published-failure"] as const)(
       sendFind: unexpected,
       sendTabBarToggle: unexpected,
       sendAuxiliaryPanelToggle: unexpected,
+      sendAuxiliaryPanelSideToggle: unexpected,
       sendTitleBarToggle: unexpected,
       sendLocalImageOpen: unexpected,
       toggleDeveloperTools: unexpected,

@@ -5,6 +5,10 @@ import type {
   HostedContentDescriptor,
 } from "../../src/shared/extension-view";
 import {
+  fixture,
+  settle as companionSettle,
+} from "../fixtures/companion-content";
+import {
   cleanupSnippetsWindows,
   snippetsWindow,
 } from "../fixtures/snippets-window";
@@ -101,8 +105,15 @@ it("moves the panel per window and resets that choice when its configured side c
   expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
   f.settingsOpen();
   await settle();
+  expect(f.root.hidden).toBe(true);
   f.panelSideToggle();
-  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  expect(f.root.hidden).toBe(true);
+  f.about();
+  await settle();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  document.querySelector<HTMLButtonElement>(".about-close")!.click();
   f.tabCommand({ action: "select", position: 1 });
   await settle();
   f.setConfiguredSide("left");
@@ -112,4 +123,20 @@ it("moves the panel per window and resets that choice when its configured side c
   f.host.dispose();
   f.panelSideToggle();
   expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBeUndefined();
+});
+
+it("moves a suspended panel from a hosted tab without revealing it", async () => {
+  const f = await fixture();
+  f.toggle();
+  await companionSettle();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.open("general", false);
+  await companionSettle();
+  expect(document.querySelectorAll(".hosted-content-tab")).toHaveLength(1);
+  expect(f.root.hidden).toBe(true);
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  expect(f.root.hidden).toBe(true);
+  expect(document.querySelectorAll(".hosted-content-tab")).toHaveLength(1);
 });

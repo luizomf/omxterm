@@ -180,3 +180,50 @@ it.each(["darwin", "linux", "win32"])(
     expect(invoke).toHaveBeenCalledOnce();
   },
 );
+
+it("moves the panel once per physical press, including held repeats", () => {
+  const move = vi.fn();
+  const actions = new Proxy({} as TerminalApplicationMenuActions, {
+    get: (_target, property) =>
+      property === "moveSelectedAuxiliaryPanel" ? move : vi.fn(),
+  });
+  const contents = Object.assign(new EventEmitter(), {
+    send: vi.fn(),
+    isDestroyed: () => false,
+  });
+  const window = Object.assign(new EventEmitter(), { webContents: contents });
+  registerWindowActionDelivery(
+    window as unknown as BrowserWindow,
+    () =>
+      createCoreActionCatalog(
+        "OMXTerm",
+        actions,
+        terminalDefaultKeybinds(process.platform),
+      ),
+    createKeybindCapture(process.platform),
+    () => undefined,
+  );
+  const key = {
+    type: "keyDown",
+    key: "p",
+    code: "KeyP",
+    control: process.platform !== "darwin",
+    alt: true,
+    shift: true,
+    meta: process.platform === "darwin",
+  };
+  const preventDefault = vi.fn();
+  contents.emit("before-input-event", { preventDefault }, key);
+  contents.emit(
+    "before-input-event",
+    { preventDefault },
+    { ...key, isAutoRepeat: true },
+  );
+  contents.emit(
+    "before-input-event",
+    { preventDefault },
+    { ...key, type: "keyUp", control: false, alt: false, shift: false },
+  );
+  expect(move).toHaveBeenCalledOnce();
+  expect(preventDefault).toHaveBeenCalledTimes(3);
+});

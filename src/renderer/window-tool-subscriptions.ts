@@ -79,8 +79,9 @@ export function subscribeToWindowTools(
     });
     const removePanelSide = options.subscribeToAuxiliaryPanelSideToggle?.(
       () => {
-        if (!disposed && !owner.blocked() && tabs.isTerminalSelected())
-          owner.togglePanelSide?.();
+        // Side is a focused-window preference. Settings and hosted tabs may
+        // change it; suspension and modal owners still hide or block the panel.
+        if (!disposed && !owner.blocked()) owner.togglePanelSide?.();
       },
     );
     if (removePanelSide) {

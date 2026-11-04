@@ -56,6 +56,14 @@ export function isCompanionToolAction(
   return action === "toggleFiles" || action === "toggleSshConnect";
 }
 
+// A window preference, not a companion-tool slot. Delivery owns one physical
+// press separately from the extension-only classifier above.
+export function isDiscreteWindowAction(
+  action: string,
+): action is "moveAuxiliaryPanel" {
+  return action === "moveAuxiliaryPanel";
+}
+
 // null disables an action's shortcut; the action stays in the menu.
 export type TerminalKeybinds = Readonly<
   Record<TerminalActionName, string | null>

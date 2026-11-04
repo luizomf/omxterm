@@ -74,6 +74,7 @@ function createApplicationHarness(
   const sendSnippetsToggle = vi.fn();
   const sendTabBarToggle = vi.fn();
   const sendAuxiliaryPanelToggle = vi.fn();
+  const sendAuxiliaryPanelSideToggle = vi.fn();
   const sendFind = vi.fn();
   const sendTitleBarToggle = vi.fn();
   const sendLocalImageOpen = vi.fn();
@@ -100,6 +101,7 @@ function createApplicationHarness(
     sendSnippetsToggle,
     sendTabBarToggle,
     sendAuxiliaryPanelToggle,
+    sendAuxiliaryPanelSideToggle,
     sendFind,
     sendTitleBarToggle,
     sendLocalImageOpen,
@@ -121,6 +123,7 @@ function createApplicationHarness(
     sendSnippetsToggle,
     sendTabBarToggle,
     sendAuxiliaryPanelToggle,
+    sendAuxiliaryPanelSideToggle,
     sendFind,
     sendTitleBarToggle,
     sendLocalImageOpen,
@@ -146,7 +149,6 @@ describe("Window Chrome application actions", () => {
       harness.application[`toggleSelected${bar}`]();
       expect(harness[`send${bar}Toggle`]).toHaveBeenCalledExactlyOnceWith(
         harness.windows[1]!.window,
-        ...(bar === "AuxiliaryPanel" ? ["visibility"] : []),
       );
       expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
       expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
@@ -161,11 +163,10 @@ describe("Window Chrome application actions", () => {
     await harness.application.newWindow();
     const selected = harness.windows[0]!.window;
     harness.select(selected);
-    harness.application.toggleSelectedAuxiliaryPanel("side");
-    expect(harness.sendAuxiliaryPanelToggle).toHaveBeenCalledExactlyOnceWith(
-      selected,
-      "side",
-    );
+    harness.application.moveSelectedAuxiliaryPanel();
+    expect(
+      harness.sendAuxiliaryPanelSideToggle,
+    ).toHaveBeenCalledExactlyOnceWith(selected);
   });
 });
 
@@ -385,6 +386,7 @@ describe("Terminal application lifecycle", () => {
       sendSnippetsToggle: vi.fn(),
       sendTabBarToggle: vi.fn(),
       sendAuxiliaryPanelToggle: vi.fn(),
+      sendAuxiliaryPanelSideToggle: vi.fn(),
       sendFind: vi.fn(),
       sendTitleBarToggle: vi.fn(),
       sendLocalImageOpen: vi.fn(),

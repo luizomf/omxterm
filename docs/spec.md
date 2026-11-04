@@ -592,8 +592,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   nothing. Hiding does not retain active semantic-input authority.
   `View -> Move Auxiliary Panel to Other Side` (`keybinds.moveAuxiliaryPanel`,
   default `CommandOrControl+Shift+Alt+P` on macOS and
-  `Control+Shift+Alt+P` on Linux/Windows) changes only the focused terminal
-  window's side. Its override lasts for that window and is cleared when the
+  `Control+Shift+Alt+P` on Linux/Windows) changes only the focused window's
+  side. The command is accepted from a terminal, Settings, or a nonmodal hosted
+  tab and does not reveal a suspended panel. A modal or other presentation
+  owner still suppresses it. One physical press moves the panel once; that
+  press owns its repeats and release across core and child focus, including a
+  modified Escape binding that would otherwise dismiss a focused companion.
+  Plain Escape dismissal and companion-tool shortcuts keep their existing
+  ownership. The override lasts for that window and is cleared when the
   configured `window.auxiliaryPanelSide` changes; it never writes configuration.
   Window composition creates the shared panel independently of Snippets wiring;
   Built-in Snippets contributes its lazy view definition; installed Snippets
@@ -1468,8 +1474,10 @@ These two bindings follow ordinary tool-toggle semantics: close selected-visible
 content, reveal hidden/nonselected content, or open a fresh closed view. One
 physical press invokes once, retaining repeats and release across child/core
 focus transfer without sending them to the terminal or reopening the tool.
-Shortcut recording takes priority. Other actions keep their existing repeat
-behavior; Snippets and independent panel-toggle bindings are unchanged.
+Shortcut recording takes priority. `moveAuxiliaryPanel` uses its own
+once-per-press policy, separate from those companion-tool slots. Other
+actions keep their existing repeat behavior; Snippets and independent
+panel-toggle bindings are unchanged.
 
 An effective keybind works even when the platform refuses to fire its menu
 accelerator (macOS never delivers `Control+Tab` to a menu item): the main

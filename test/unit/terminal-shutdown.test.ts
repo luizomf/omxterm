@@ -172,6 +172,7 @@ function harness(confirmClose = false) {
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
     sendAuxiliaryPanelToggle() {},
+    sendAuxiliaryPanelSideToggle() {},
     sendFind() {},
     sendTitleBarToggle() {},
     sendLocalImageOpen() {},

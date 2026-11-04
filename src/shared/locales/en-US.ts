@@ -395,7 +395,7 @@ export const englishMessages = {
     "Unexpected application failure. Some settings may already be active; choose View -> Reload User Configuration again.",
   "settings.page.shortcuts": "Shortcuts",
   "shortcuts.hint":
-    "Default follows the built-in shortcut. Unbound keeps the action in the menu without a key. App shortcuts take their key before terminal programs see it.",
+    "These rows are remappable application actions. Default follows the built-in shortcut. Unbound keeps the action in the menu without a key. Application shortcuts take their key before terminal programs see it. Operating-system shortcuts, ordinary text editing, and fixed context-specific gestures, such as Escape to hide the auxiliary panel or arrow keys on its separator, are not listed here.",
   "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",
   "shortcuts.promptMac":
     "Press the new shortcut, or Escape to cancel. Option-only letters and top-row digits may work with supported layouts. Some dead keys may not be recordable; input methods or missing native support can also prevent recording. Option as Alt affects terminal input only.",

@@ -15,8 +15,8 @@ import type {
 } from "./terminal-ipc-controller";
 import type { OperationalEventLog } from "./operational-events";
 import { terminalSessionExitFailure } from "./terminal-session-failure";
+import type { RestorationWindowOptions } from "./terminal-layout-transfer";
 import { createSelectedWindowAction } from "./terminal-window-action";
-import type { RestorationWindowOptions } from "./terminal-window-restoration";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
 export const DEFAULT_ALWAYS_ON_TOP = false;
@@ -106,10 +106,8 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendFind: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
-  readonly sendAuxiliaryPanelToggle: (
-    window: Window,
-    action?: "visibility" | "side",
-  ) => void;
+  readonly sendAuxiliaryPanelToggle: (window: Window) => void;
+  readonly sendAuxiliaryPanelSideToggle: (window: Window) => void;
   readonly sendTitleBarToggle: (window: Window) => void;
   readonly sendLocalImageOpen: (window: Window) => void;
   readonly toggleDeveloperTools: (window: Window) => void;
@@ -153,7 +151,8 @@ export interface TerminalApplication<
   findInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
-  toggleSelectedAuxiliaryPanel(action?: "visibility" | "side"): void;
+  toggleSelectedAuxiliaryPanel(): void;
+  moveSelectedAuxiliaryPanel(): void;
   toggleSelectedTitleBar(): void;
   openLocalImageInSelectedWindow(): void;
   applyConfiguration(configuration: {
@@ -418,10 +417,12 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     },
     findInSelectedWindow: selectedWindowAction(options.sendFind),
     toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
-    toggleSelectedAuxiliaryPanel(action = "visibility") {
-      const window = selectedWindow();
-      if (window) options.sendAuxiliaryPanelToggle(window, action);
-    },
+    toggleSelectedAuxiliaryPanel: selectedWindowAction(
+      options.sendAuxiliaryPanelToggle,
+    ),
+    moveSelectedAuxiliaryPanel: selectedWindowAction(
+      options.sendAuxiliaryPanelSideToggle,
+    ),
     toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
     toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
     openLocalImageInSelectedWindow: selectedWindowAction(

@@ -7,7 +7,16 @@ import type { startCommandPalette } from "./command-palette";
 import type { KeybindCapture } from "./keybind-capture";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createCompanionDismissal } from "./companion-dismissal";
-import { isCompanionToolAction } from "../shared/terminal-keybinds";
+import {
+  isCompanionToolAction,
+  isDiscreteWindowAction,
+} from "../shared/terminal-keybinds";
+
+// Companion-tool slots and the panel-side action stay separate classifiers.
+// Both own one physical press, including repeats and release across focus.
+function ownsPhysicalPress(action: string): boolean {
+  return isCompanionToolAction(action) || isDiscreteWindowAction(action);
+}
 import {
   optionShortcutInterpreter,
   type OptionShortcutIdentity,
@@ -50,10 +59,9 @@ export function deliverExtensionKeybind(
     { ...interpret(input), altGr: hasNativeAltGr(input) },
     optionIdentity.platform,
   );
-  if (!action || (companionOnly && !isCompanionToolAction(action.id))) return;
+  if (!action || (companionOnly && !ownsPhysicalPress(action.id))) return;
   event.preventDefault();
-  if (isCompanionToolAction(action.id) && !gestures.claimShortcut(input))
-    return;
+  if (ownsPhysicalPress(action.id) && !gestures.claimShortcut(input)) return;
   action.invoke();
 }
 
@@ -93,8 +101,7 @@ export function registerWindowActionDelivery(
     contents,
     () => coreActionKeybinds(catalog()),
     (action, input) => {
-      if (isCompanionToolAction(action) && !gestures.claimShortcut(input))
-        return;
+      if (ownsPhysicalPress(action) && !gestures.claimShortcut(input)) return;
       catalog()[action].invoke();
     },
     optionIdentity.platform,

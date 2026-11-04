@@ -318,6 +318,12 @@ describe("Shortcuts page", () => {
         `Gravar atalho para Alternar ${title}`,
       );
     }
+    expect(document.querySelector(".settings-hint")!.textContent).toContain(
+      "ações remapeáveis do aplicativo",
+    );
+    expect(document.querySelector(".settings-hint")!.textContent).toContain(
+      "não aparecem aqui",
+    );
     expect(view.cells("quit")).toEqual(["Nenhum", ""]);
     expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", "Padrão"]);
     expect(view.cells("moveAuxiliaryPanel")).toEqual([
@@ -334,6 +340,12 @@ describe("Shortcuts page", () => {
       )!.textContent,
     ).toBe("Selecionar Aba 3");
     language.set("en-US");
+    expect(document.querySelector(".settings-hint")!.textContent).toContain(
+      "remappable application actions",
+    );
+    expect(document.querySelector(".settings-hint")!.textContent).toContain(
+      "are not listed here",
+    );
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
     expect(view.button("find", "record").textContent).toBe("Record");
   });

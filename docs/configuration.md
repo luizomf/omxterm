@@ -70,7 +70,7 @@ Clearing a text or number field removes that entry from `config.json`, so the de
 
 The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Transparency, blur and snippets are still edited in the files.
 
-The **Shortcuts** page lists every remappable action with the shortcut it uses now and how it is set:
+The **Shortcuts** page lists every remappable application action with the shortcut it uses now and how it is set. Operating-system shortcuts, ordinary text editing inside a field, and intentionally fixed context-specific gestures are not global commands and do not appear there. Escape still hides the auxiliary panel, and Left/Right/Home/End still move its focused separator; those keys cannot be rebound on this page.
 
 - **Default:** follows OMXTerm's built-in shortcut (no entry in `config.json`). **Default** removes your entry again. Command Palette defaults to `Cmd+Shift+P` on macOS and `Ctrl+Shift+P` on Linux and Windows.
 - **Custom:** **Record**, then press the new combination; it is saved as that action's `keybinds` entry. Plain Escape cancels; modified Escape can be recorded. An unsupported combination (including a letter without Ctrl, Alt, Cmd or AltGr, or a layout identity the accelerator cannot represent) asks you to try again; F1–F24 can stand alone. On macOS, Option without other modifiers can record observable top-row digits and some letters using the current keyboard layout. This is limited to ordinary letter/digit key positions and single ASCII layout letters, not every character on every layout. Dead keys, input methods, other characters or unavailable native support may not be recordable; try Option with an arrow or function key, or another modifier. Some dead-key sequences do not reach the recorder and may leave it waiting until you try another key or cancel. The `keyboard.optionAsAlt` setting affects terminal input, not application shortcuts. The recorder consumes observable shortcut candidates and their held repeats and releases; keys reported as composing are left to the normal input path.
@@ -384,10 +384,11 @@ its labels and shortcut display.
 **View → Move Auxiliary Panel to Other Side** uses
 `keybinds.moveAuxiliaryPanel` (Cmd+Shift+Option+P on macOS and
 Ctrl+Shift+Alt+P on Linux/Windows). Change or unbind it in **Settings →
-Shortcuts**. It moves the panel in the focused terminal window for that window's
-lifetime; the configured `window.auxiliaryPanelSide` remains the startup default
-and is not rewritten. Changing that preference in Settings takes effect and
-clears the window's temporary side choice.
+Shortcuts**. One physical press moves the panel once. It changes the focused
+window for that window's lifetime, including while Settings or a hosted tab is
+selected, without revealing a suspended panel or rewriting
+`window.auxiliaryPanelSide`. A modal still blocks it. Changing the saved
+preference takes effect and clears the window's temporary side choice.
 
 Example overriding a single shortcut:
 
