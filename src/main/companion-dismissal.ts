@@ -59,7 +59,16 @@ export function createCompanionDismissal(
     if (activation?.identity === identity && !down) activation = undefined;
     if (activationId && down && !input.isAutoRepeat && input.key === "Enter")
       activation = { id: activationId, identity };
-    if (!panelId || !down || input.key !== "Escape" || input.isComposing)
+    // A fresh composing Escape stays with the IME. An unowned repeat, including
+    // one that no longer reports composition, does not start dismissal.
+    // Already-owned repeats and releases are consumed above.
+    if (
+      !panelId ||
+      !down ||
+      input.isAutoRepeat ||
+      input.key !== "Escape" ||
+      input.isComposing
+    )
       return false;
     owned = identity;
     event.preventDefault();

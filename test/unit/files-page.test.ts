@@ -198,6 +198,53 @@ it("closes transient menus on host hiding while retaining operation drafts", asy
   );
 });
 
+it("keeps an operation draft and menu when Escape is composing or repeating", async () => {
+  await setup();
+  context("/root/alpha");
+  button("Rename / move", menu()).click();
+  const editor = document.querySelector<HTMLElement>(".operation-editor")!;
+  const input = editor.querySelector("input")!;
+  input.value = "/root/draft";
+  const press = (node: HTMLElement, init: KeyboardEventInit = {}) => {
+    const event = new KeyboardEvent("keydown", {
+      key: "Escape",
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    });
+    node.dispatchEvent(event);
+    return event;
+  };
+  input.dispatchEvent(
+    new CompositionEvent("compositionstart", { bubbles: true }),
+  );
+  expect(press(input).defaultPrevented).toBe(false);
+  expect(press(input, { repeat: true }).defaultPrevented).toBe(false);
+  input.dispatchEvent(
+    new CompositionEvent("compositionend", { bubbles: true }),
+  );
+  expect(press(input, { isComposing: true }).defaultPrevented).toBe(false);
+  expect(press(input, { repeat: true }).defaultPrevented).toBe(false);
+  expect(input.value).toBe("/root/draft");
+  expect(editor.hidden).toBe(false);
+  expect(press(input).defaultPrevented).toBe(true);
+  expect(editor.hidden).toBe(true);
+
+  context("/root/alpha");
+  const item = document.activeElement as HTMLElement;
+  item.dispatchEvent(
+    new CompositionEvent("compositionstart", { bubbles: true }),
+  );
+  expect(press(item).defaultPrevented).toBe(false);
+  expect(menu().hidden).toBe(false);
+  item.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+  expect(press(item, { isComposing: true }).defaultPrevented).toBe(false);
+  expect(press(item, { repeat: true }).defaultPrevented).toBe(false);
+  expect(menu().hidden).toBe(false);
+  expect(press(item).defaultPrevented).toBe(true);
+  expect(menu().hidden).toBe(true);
+});
+
 it("expands folders with keyboard, traverses rows and collapses without treating links as folders", async () => {
   await setup();
   row("/root/folder").focus();

@@ -759,6 +759,60 @@ it.each([true, false])(
   },
 );
 
+it("leaves a composing Escape with the hosted panel and still owns a later dismissal", async () => {
+  const f = await fixture(false);
+  const ipc = {
+    handle: vi.fn(),
+    removeHandler: vi.fn(),
+  } as unknown as IpcMain;
+  const host = startExtensionViewHost({ ...f.options, ipcMain: ipc });
+  cleanups.push(() => host.retire());
+  const descriptor = await host.open({ ...opening, presentation: "panel" });
+  const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+    ([channel]) => channel === extensionViewIpc.present,
+  )![1] as (
+    event: unknown,
+    request: HostedContentPresentation,
+  ) => Promise<unknown>;
+  await handler(
+    {
+      sender: f.owner.webContents,
+      senderFrame: f.owner.webContents.mainFrame,
+    },
+    present(descriptor.id),
+  );
+  const child = f.views[0]!.webContents;
+  const key = (overrides: Record<string, unknown> = {}) => {
+    const event = { preventDefault: vi.fn() };
+    child.emit("before-input-event", event, {
+      type: "keyDown",
+      key: "Escape",
+      code: "Escape",
+      ...overrides,
+    });
+    return event.preventDefault;
+  };
+  f.owner.webContents.send.mockClear();
+  for (const overrides of [
+    { isComposing: true },
+    { isComposing: true, isAutoRepeat: true },
+    { type: "keyUp", isComposing: true },
+    { isComposing: true },
+    { isAutoRepeat: true, isComposing: false },
+  ]) {
+    expect(key(overrides)).not.toHaveBeenCalled();
+  }
+  expect(f.owner.webContents.send).not.toHaveBeenCalled();
+  expect(key()).toHaveBeenCalledOnce();
+  expect(f.owner.webContents.send).toHaveBeenCalledWith(
+    extensionViewIpc.dismissPanel,
+    descriptor.id,
+  );
+  expect(key({ isAutoRepeat: true, isComposing: true })).toHaveBeenCalledOnce();
+  expect(key({ type: "keyUp", isComposing: true })).toHaveBeenCalledOnce();
+  expect(f.owner.webContents.send).toHaveBeenCalledTimes(1);
+});
+
 it.each([true, false])(
   "claims a native view's Enter activation across core focus handoff (panel=%s)",
   async (panel) => {
