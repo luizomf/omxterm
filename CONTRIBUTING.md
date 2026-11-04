@@ -93,7 +93,7 @@ npm run check:portable
 
 `npm run check:portable` runs Prettier (`format:check`), lint (`npm run lint`), TypeScript type checking (`npm run typecheck`), the default Vitest suite (`npm test`), and the unpackaged build (`npm run build`).
 
-> **Warning:** Graphical integration tests included in `npm test` and `npm run check:portable` open and focus real Electron windows. Run one graphical suite at a time on an unlocked, idle desktop without moving the mouse or typing during the run. On macOS, temporary HOME/XDG/profile paths do not isolate OS-managed bundle preferences; see the [native verification precautions](docs/development.md#macos-preferences-and-native-verification) before running source or packaged Electron tests. For fast headless unit-test feedback while developing, run:
+> **Warning:** Graphical integration tests included in `npm test` and `npm run check:portable` open and focus real Electron windows. Run one graphical suite at a time on an unlocked, idle desktop without moving the mouse or typing during the run. Before source or packaged Electron tests, follow the [macOS preference precautions](docs/development.md#macos-preferences-and-native-verification) and [Linux desktop-service prerequisites](docs/development.md#linux-desktop-services-and-native-verification). Temporary HOME/XDG/profile paths do not isolate OS-managed preferences or per-user portal services; successful process cleanup does not prove their preservation. For fast headless unit-test feedback while developing, run:
 >
 > ```sh
 > npm test -- test/unit

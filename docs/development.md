@@ -233,7 +233,61 @@ Do not infer full-suite execution coverage from aggregate counters or empty pass
 
 ## Running native tests
 
-> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. On macOS, also follow the preference precautions below.
+> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. Follow the Linux desktop-service or macOS preference precautions below before launch.
+
+### Linux desktop services and native verification
+
+For Linux verification that launches Electron, a browser or a desktop harness
+(including headless probes), prefer an assigned disposable guest's **ordinary
+test user, logged-in desktop, normal user bus and actual per-user runtime directory**.
+Verify the actual account/session and inherited display, authentication, bus and
+runtime before launch. A dedicated ordinary test account with its own login and
+runtime avoids the original user's per-user services; it does not isolate shared
+machine state or grant permission to alter other users' resources.
+
+Temporary HOME/XDG/profile directories separate application files, not per-user
+services. Changing `XDG_RUNTIME_DIR`, authenticating an Xvfb/Openbox display or
+starting `dbus-run-session` under the existing logged-in account does **not**
+establish account/runtime isolation. Auto-activated services can still share
+paths and mounts with the original desktop. Do not create a competing same-user
+private-bus portal as an isolation workaround. If using the original guest
+user's ordinary desktop/bus, explicitly own that verification session and protect
+its shared resources instead.
+
+Launch and settlement prerequisites:
+
+1. Before launch, record a private baseline on the intended ordinary bus
+   **without activating absent services**: original document-portal service/helper
+   creation identities and bus owner (or established absence), mount namespace and document-path
+   mount mapping/device/type and portal FUSE connection when observable, current
+   consumers, and basic API/FUSE functionality when already active. Identify
+   consumers of the document mount, including open files and process working
+   directories, without reading exported document contents. Preserve the selected
+   original configuration/state and unrelated
+   evidence holds. Distinguish observed absence from unavailable inspection;
+   if the scope cannot be observed and protected, stop and arrange a suitable
+   user/session before launch. Do not interrupt original consumers to make a
+   lane available.
+2. After the run, join owned process outcomes and streams and release injected
+   input. Compare the same original portal/helper/bus identities, mount mapping
+   and API/FUSE scope, and original consumer state. Record unexplained consumer
+   changes or inspection errors rather than assuming no impact. Repeat
+   preservation checks after retiring only owned scratch, before releasing the
+   guest. Record these results separately from fixture assertions and process
+   settlement: exit0, no remaining task actors or a successful cleanup receipt
+   alone does not prove shared-service preservation.
+3. On unexplained changes or unavailable checks, retain evidence and report the
+   unresolved shared-resource state; stop further launches. Do not unmount,
+   kill or restart original services, delete their runtime/store, or reset the
+   guest as routine cleanup. Recovery requires separately authorized scope and
+   consumer assessment, not a generic retry or an assumed restoration baseline.
+
+[#793](https://github.com/luizomf/omxterm/issues/793) records a same-user/private-bus
+portal owning the visible document mount while the original portal retained a
+different FUSE connection. Scoped functional recovery is complete, but the full
+initial displacement sequence and any rendering-failure causality remain
+unproven. Preservation checks are point-in-time observations, not a guarantee
+against later changes or reconstruction of a missing historical baseline.
 
 ### macOS preferences and native verification
 
@@ -469,7 +523,9 @@ ARM64 complete native checks (and optional full x64 checks) run `check:portable`
 For macOS, apply the [preference precautions](#macos-preferences-and-native-verification)
 to graphical tests and packaged Electron probes, including FULL and inspection-only
 `package:verify` runs. A successful verifier result does not itself establish
-preference restoration.
+preference restoration. For Linux, apply the [desktop-service prerequisites](#linux-desktop-services-and-native-verification)
+before source/package launches; temporary profiles and headless execution do not
+establish account/runtime isolation.
 
 > **Warning:** Full Windows verification (`check:win` or `package:verify` with `--disposable-vm-allow-omxterm-replacement`) runs the NSIS installer and can replace an existing OMXTerm installation on the machine. Run it only in a disposable VM with a recovery snapshot ([Windows release procedure](release.md#windows-arm64-and-x64)). To verify only the unpacked Windows app directory without running the installer, use:
 >
@@ -636,7 +692,9 @@ Linux packaged-wrapper controls: [fixture reference](native-test-reference.md#li
 
 ### Graphical fixture supervision
 
-Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`):
+Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They inherit the caller's desktop/bus/runtime; neither these helpers nor the Linux packaged-process helper provision or validate per-user service isolation. The launching owner must satisfy the [Linux shared-resource prerequisites and preservation checks](#linux-desktop-services-and-native-verification).
+
+Within the fixture process/profile scope:
 
 - Fixture diagnostics and stdout/stderr logs are written under `.scratch/native-fixtures/`.
 - The supervisor removes temporary profiles only after verifying that child processes have exited and streams have closed. Its [cleanup-assistance classification](native-test-reference.md#supervisor-cleanup-assistance) distinguishes no observed attempt from attempted or unknown assistance; cleanup success alone is not natural Quit.
