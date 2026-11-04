@@ -221,6 +221,26 @@ headless runs and every nested delegate. Set `OMXTERM_TOOLBAR_EVIDENCE` to a
 private output directory to retain synthetic screenshots. This is not native or
 packaged-app qualification.
 
+The repository's `vitest.config.cts` sets Vite's root-relative `cacheDir` to
+`.scratch/vite`, so Vitest result caches and Vite optimizer artifacts belong to
+the selected worktree/project root, not a shared `node_modules` target. The CJS
+config form also keeps Vite's config bundling in memory: an ESM config would
+still write temporary modules under `node_modules/.vite-temp` before its
+`cacheDir` setting is read. Do not rely on `--no-cache` or a private reporter path
+to make linked dependencies read-only. Cache entries are cumulative scheduling
+and optimization state, not evidence of the current invocation's execution or
+coverage.
+
+Named projects must inherit this policy or select their own owned cache location;
+custom configs/CLI overrides are not sandboxed by the repository config. The
+optional experimental filesystem-module cache has a separate path setting and
+is not enabled here; enabling it requires an owned location too. Do not delete
+shared historical caches or claim their unknown original state was restored.
+The Node-only cache regression runs the pinned CLI with disposable shared
+cache destinations, multiple workers, inherited nested projects, dependency
+optimization and a symlinked working-directory alias; it does not qualify native
+or browser behavior.
+
 Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`. Confirm that the report belongs to the current invocation, and preserve it with the command, selected scope/configuration, exit status, and terminal output before another run overwrites it. A nonzero exit remains a failure regardless of JSON counters.
 
 In pinned Vitest 4.1.12:

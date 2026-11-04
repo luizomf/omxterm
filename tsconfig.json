@@ -16,6 +16,6 @@
     "src/**/*.ts",
     "extensions/**/*.ts",
     "test/**/*.ts",
-    "vitest.config.ts"
+    "vitest.config.cts"
   ]
 }
