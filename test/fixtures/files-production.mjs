@@ -24,15 +24,16 @@ const preparedArchives = new Map([
 const archivePath =
   fixture.archive ??
   path.join(source, `dist/extensions/files-${manifest.version}.omxext`);
+let preparedDigest;
 if (fixture.consumer070) {
   assert.ok(fixture.archive, "prepared consumer requires an explicit archive");
   assert.equal(fixture.https, false);
   assert.ok(path.isAbsolute(archivePath));
   const archive = await readFile(archivePath);
-  const digest = createHash("sha256").update(archive).digest("hex");
+  preparedDigest = createHash("sha256").update(archive).digest("hex");
   assert.equal(
     archive.length,
-    preparedArchives.get(digest),
+    preparedArchives.get(preparedDigest),
     "expected an exact retained Files0.7 preparation",
   );
 }

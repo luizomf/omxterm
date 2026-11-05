@@ -21,12 +21,25 @@ async function archiveResolver(hash: FixtureHash = createHash) {
   const end = entry.indexOf("const require =", start);
   expect(start).toBeGreaterThan(0);
   expect(end).toBeGreaterThan(start);
+  const consent = entry.slice(
+    entry.indexOf("dialog.showMessageBox ="),
+    entry.indexOf("const ready ="),
+  );
   const resolveArchive = new Function(
     "context",
-    `const {readFile, path, source, fixture, assert, createHash} = context;
-     return (async () => { ${entry.slice(start, end)} return archivePath; })();`,
+    `const {readFile, path, source, fixture, assert, createHash, prompt} = context;
+     return (async () => {
+       ${entry.slice(start, end)}
+       if (prompt) { const dialog = {}; let approved = 0; ${consent}
+         await dialog.showMessageBox({}, prompt); assert.equal(approved, 1); }
+       return archivePath;
+     })();`,
   ) as (context: unknown) => Promise<string>;
-  return (fixture: ArchiveFixture = {}, read = readArchiveFile) =>
+  return (
+    fixture: ArchiveFixture = {},
+    read = readArchiveFile,
+    prompt?: { title: string; detail: string },
+  ) =>
     resolveArchive({
       readFile: read,
       path,
@@ -34,6 +47,7 @@ async function archiveResolver(hash: FixtureHash = createHash) {
       fixture,
       assert,
       createHash: hash,
+      prompt,
     });
 }
 
@@ -133,6 +147,12 @@ it.each([
     const result = resolveArchive(
       { consumer070: true, https: false, archive: "/prepared.omxext" },
       read,
+      accepted
+        ? {
+            title: "Trust extension code?",
+            detail: `SHA-256: ${digest}\nnetwork Third-party`,
+          }
+        : undefined,
     );
     if (accepted) {
       await expect(result).resolves.toBe("/prepared.omxext");
