@@ -56,20 +56,26 @@ function controlledSession() {
 }
 
 function loadPublicScenario(electron: object, simulatedNow?: () => number) {
-  const sharedPath = path.resolve("test/fixtures/snippets-scenario.cjs");
-  const sharedRequire = createRequire(sharedPath);
-  const sharedModule = { exports: {} };
-  // Evaluate the real shared fixture without letting its Electron import load
-  // the package (whose loader can synchronously start the installer).
-  runInNewContext(readFileSync(sharedPath, "utf8"), {
-    module: sharedModule,
-    process,
-    Buffer,
-    setTimeout,
-    clearTimeout,
-    require: (name: string) =>
-      name === "electron" ? electron : (sharedRequire(name) as unknown),
-  });
+  let sharedModule: { exports: object } | undefined;
+  const loadSharedScenario = () => {
+    if (sharedModule) return sharedModule.exports;
+    const sharedPath = path.resolve("test/fixtures/snippets-scenario.cjs");
+    const sharedRequire = createRequire(sharedPath);
+    const loaded = { exports: {} };
+    // Evaluate the real shared fixture without letting its Electron import load
+    // the package (whose loader can synchronously start the installer).
+    runInNewContext(readFileSync(sharedPath, "utf8"), {
+      module: loaded,
+      process,
+      Buffer,
+      setTimeout,
+      clearTimeout,
+      require: (name: string) =>
+        name === "electron" ? electron : (sharedRequire(name) as unknown),
+    });
+    sharedModule = loaded;
+    return sharedModule.exports;
+  };
   const module = {
     exports: {} as {
       runPublicScenario(context: object): Promise<{
@@ -88,7 +94,7 @@ function loadPublicScenario(electron: object, simulatedNow?: () => number) {
       JSON,
       require(name: string) {
         if (name === "electron") return electron;
-        if (name === "./snippets-scenario.cjs") return sharedModule.exports;
+        if (name === "./snippets-scenario.cjs") return loadSharedScenario();
         if (name.startsWith("./"))
           return require(`../fixtures/${name.slice(2)}`) as unknown;
         return require(name) as unknown;
