@@ -89,9 +89,14 @@ rows are separated by 24 px.
 
 File problems and operation results use the same notice presentation. Raw saves
 retain error severity for rejected writes and saved-but-not-applied outcomes;
-returned warnings and newer unsaved edits remain warnings. Symlink notices give
-only external-target editing/reload guidance; they never imply that Config File
-can write through the link. Main-process validation and write policy are unchanged.
+returned warnings and newer unsaved edits remain warnings. Config File can save
+through valid configuration symlinks, including relative links, chains and linked
+parent directories: Settings replaces the resolved regular target and preserves
+the links. Notices for dangling or cyclic links and non-regular targets guide the
+user to fix the problem and reload. Conflict checks reduce races with external
+editors but do not eliminate them; replacement does not preserve hard-link
+relationships or all metadata. See the [configuration guide](configuration.md#settings)
+for recovery and write limitations.
 
 640×480 is the comfortable starting verification target, not a native minimum.
 Below 640 px, categories become a wrapping three-column navigation area; short
