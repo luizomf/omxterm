@@ -70,8 +70,8 @@ it
       expect(validated).toEqual({ digest, manifest: receipt.manifest });
       expect(receipt.manifest).toEqual(sourceManifest);
       expect(receipt.manifest).toMatchObject({
-        version: "0.6.0",
-        engines: { omxterm: ">=0.24.0-dev.21" },
+        version: "0.7.0",
+        engines: { omxterm: ">=0.25.0-dev.10" },
       });
       const bundled = (await import(
         pathToFileURL(path.join(extracted, "backend.mjs")).href
@@ -97,19 +97,19 @@ it
       backend.deactivate();
       expect(() =>
         checkCompatibility(validated.manifest, {
-          appVersion: "0.24.0-dev.21",
+          appVersion: "0.25.0-dev.10",
           apiVersion: "0.1.0",
         }),
       ).not.toThrow();
       expect(() =>
         checkCompatibility(validated.manifest, {
-          appVersion: "0.24.0-dev.20",
+          appVersion: "0.25.0-dev.9",
           apiVersion: "0.1.0",
         }),
       ).toThrow("incompatible");
       expect(() =>
         checkCompatibility(validated.manifest, {
-          appVersion: "0.24.0-dev.3",
+          appVersion: "0.24.0",
           apiVersion: "0.1.0",
         }),
       ).toThrow("incompatible");

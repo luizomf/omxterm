@@ -106,7 +106,7 @@ it.each(["files", "ssh"])(
     const manifest = parseManifest(
       JSON.parse(await readFile(`extensions/${name}/extension.json`, "utf8")),
     );
-    expect(manifest.version).toBe(name === "files" ? "0.6.0" : "0.3.1");
+    expect(manifest.version).toBe(name === "files" ? "0.7.0" : "0.3.1");
     const release = {
       ...manifest,
       targets: ["linux-arm64"],
@@ -120,7 +120,20 @@ it.each(["files", "ssh"])(
       "0.24.0-dev.6",
       "0.24.0-dev.7",
       ...(name === "files"
-        ? ["0.24.0-dev.8", "0.24.0-dev.11", "0.24.0-dev.16", "0.24.0-dev.20"]
+        ? [
+            "0.24.0-dev.8",
+            "0.24.0-dev.11",
+            "0.24.0-dev.16",
+            "0.24.0-dev.20",
+            "0.24.0-dev.21",
+            "0.24.0-dev.32",
+            "0.24.0",
+            "0.24.1-dev.0",
+            "0.24.1",
+            "0.25.0-dev.0",
+            "0.25.0-dev.9",
+            "0.25.1-dev.0",
+          ]
         : []),
     ];
     for (const appVersion of incompatibleHosts) {
@@ -130,18 +143,24 @@ it.each(["files", "ssh"])(
       );
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(false);
     }
-    const compatibleHosts = [
-      ...(name === "files"
-        ? ["0.24.0-dev.21", "0.24.0-dev.22"]
-        : ["0.24.0-dev.8", "0.24.0-dev.11", "0.24.0-dev.12"]),
-      "0.24.0-dev.31",
-      "0.24.0-dev.32",
-      "0.24.0",
-    ];
+    const compatibleHosts =
+      name === "files"
+        ? ["0.25.0-dev.10", "0.25.0-dev.11", "0.25.0"]
+        : [
+            "0.24.0-dev.8",
+            "0.24.0-dev.11",
+            "0.24.0-dev.12",
+            "0.24.0-dev.31",
+            "0.24.0-dev.32",
+            "0.24.0",
+          ];
     for (const appVersion of compatibleHosts) {
       const runtime = { appVersion, apiVersion: "0.1.0" };
       expect(() => checkCompatibility(manifest, runtime)).not.toThrow();
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(true);
+      expect(
+        packageCompatible(manifest, { ...runtime, apiVersion: "0.2.0" }),
+      ).toBe(false);
     }
   },
 );

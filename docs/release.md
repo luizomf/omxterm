@@ -223,8 +223,14 @@ OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
 so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
 sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.6.0` with minimum host `0.24.0-dev.21`; its qualification and
-publication are separate from those of Files `0.5.0`. The original Files `0.4.0` archive
+Files `0.7.0` with conservative minimum host `0.25.0-dev.10` / API `0.1.x`;
+see the [source compatibility rationale](files-development-preview.md#concrete-consumer).
+This is preparation of already-integrated filtering/keyboard and confirmed
+directory-move improvements, not new terminal insertion/drop support. Older hosts
+are unqualified for this combined source. No host version bump, catalog promotion
+or publication follows from building the separate archive. Published Files `0.6.0`
+retains minimum host `0.24.0-dev.21`, its original bytes and catalog entries;
+new 0.7 qualification and publication remain separate. The original Files `0.4.0` archive
 (minimum host `0.24.0-dev.8`) is published separately as `ext-files-v0.4.0`
 (see below). The historical published Files
 `0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; none of these

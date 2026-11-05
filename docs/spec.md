@@ -643,7 +643,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Shift+F10). Cancel returns to the initiating row/control where available,
   otherwise Actions; a late
   permanent-delete confirmation does not steal focus after the user moves away.
-  These source changes require a new Files archive and do not alter Files0.6.
+  These changes are included in the Files0.7 source preparation and do not alter published Files0.6.
   Its explicit reported-directory action captures the selected live pane's latest
   local OSC7 report at action time. Main asks the core renderer to confirm the captured session and selection
   revision, rejecting reordered or changed selection rather than retargeting.
@@ -660,7 +660,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   limitations in an inline hint, tooltip and accessible description. Compatible installed Files
   archives use the host behavior without modified package bytes, but retain their
   earlier label and lack the new inline hint and tooltip. The renamed action,
-  hint, tooltip and dynamically localized host-coded notices require a future archive.
+  hint, tooltip and dynamically localized host-coded notices are included in the Files0.7 source preparation, not published Files0.6.
   The narrow [development bridges](extension-installation-foundation.md#archive-contract)
   admit unchanged Files0.6 on recognized 0.24.1-dev.N and 0.25.0-dev.N hosts; admission alone
   does not qualify native behavior or packages.
@@ -2241,9 +2241,15 @@ moves and one-shot permanent-delete confirmation remain unchanged. See the
 [Files interaction contract](files-development-preview.md#concrete-consumer).
 
 Files archive version/compatibility is maintained separately from the host.
-Source Files0.6.0 requires `>=0.24.0-dev.21` / API `0.1.x`, uses a neutral ARM64
-preview name and includes corrected raw-path forwarding for macOS trash. The
-published Files0.5.0 archive has the same engine minimum. Its
+Source Files0.7.0 declares the conservative preparation floor
+`>=0.25.0-dev.10` / API `0.1.x`, retaining the neutral ARM64 preview name and
+existing host services. It packages integrated filtering/keyboard and confirmed
+directory-move workflows without Files-to-terminal insertion/drop. Older hosts
+are unqualified for these combined bytes; no native/package or publication result
+is inferred. The [preparation rationale](files-development-preview.md#concrete-consumer)
+distinguishes that floor from the unchanged compatibility bridges. Published
+Files0.6.0 and Files0.5.0 retain minimum host `>=0.24.0-dev.21` and corrected
+raw-path forwarding for macOS trash. The published Files0.5.0 archive's
 [controlled exact-DMG consumer checkpoint](files-development-preview.md#files-050-macos-controlled-qualification)
 passed real operations/recoverable trash, retained companion state, management
 and active-backend normal Quit. The separate immutable dev.21/Files0.5 releases
