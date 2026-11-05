@@ -56,6 +56,20 @@ function controlledSession() {
 }
 
 function loadPublicScenario(electron: object, simulatedNow?: () => number) {
+  const sharedPath = path.resolve("test/fixtures/snippets-scenario.cjs");
+  const sharedRequire = createRequire(sharedPath);
+  const sharedModule = { exports: {} };
+  // Evaluate the real shared fixture without letting its Electron import load
+  // the package (whose loader can synchronously start the installer).
+  runInNewContext(readFileSync(sharedPath, "utf8"), {
+    module: sharedModule,
+    process,
+    Buffer,
+    setTimeout,
+    clearTimeout,
+    require: (name: string) =>
+      name === "electron" ? electron : (sharedRequire(name) as unknown),
+  });
   const module = {
     exports: {} as {
       runPublicScenario(context: object): Promise<{
@@ -74,6 +88,7 @@ function loadPublicScenario(electron: object, simulatedNow?: () => number) {
       JSON,
       require(name: string) {
         if (name === "electron") return electron;
+        if (name === "./snippets-scenario.cjs") return sharedModule.exports;
         if (name.startsWith("./"))
           return require(`../fixtures/${name.slice(2)}`) as unknown;
         return require(name) as unknown;
@@ -409,6 +424,21 @@ async function exercise(
     await rm(root, { recursive: true, force: true });
   }
 }
+
+it("loads the shared scenario with the controlled Electron boundary", () => {
+  const accessed: string[] = [];
+  loadPublicScenario({
+    get Menu() {
+      accessed.push("Menu");
+      return {};
+    },
+    get webContents() {
+      accessed.push("webContents");
+      return {};
+    },
+  });
+  expect(accessed).toEqual(["Menu", "webContents"]);
+});
 
 it("accepts public Run then Ping without Insert and the ordinary full byte sequence", () => {
   for (const [input, expected] of [
