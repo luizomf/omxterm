@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { createRendererLanguage } from "../../src/renderer/renderer-language";
+import { observeSettingsLayout } from "../fixtures/settings-layout-observation";
 import {
   isSettingsChange,
   type SettingsResult,
@@ -146,6 +147,34 @@ it("submits the final adjustment before close and ignores its retired response",
   pending.resolve(saved(base));
   await view.settle();
   expect(document.querySelector(".settings-dialog")).toBeNull();
+});
+
+it("measures actual captions, not the range's nested control/readout as wrapped text", async () => {
+  const view = await open();
+  view.query<HTMLButtonElement>("#settings-tab-appearance").click();
+  const canvas = vi
+    .spyOn(HTMLCanvasElement.prototype, "getContext")
+    .mockReturnValue({
+      font: "",
+      measureText: () => ({ width: 100 }),
+    } as unknown as CanvasRenderingContext2D);
+  const rects = vi.spyOn(document, "createRange").mockReturnValue({
+    selectNodeContents() {},
+    getClientRects: () => [],
+  } as unknown as Range);
+  try {
+    const observation = observeSettingsLayout(false);
+    const captions = view
+      .query("#settings-panel-appearance")
+      .querySelectorAll(".settings-control-caption");
+    expect(captions).toHaveLength(7);
+    expect(observation.labels).toHaveLength(captions.length);
+    expect(observation.forms).toHaveLength(5);
+  } finally {
+    canvas.mockRestore();
+    rects.mockRestore();
+    view.dialog.dispose();
+  }
 });
 
 it.each([0, 0.001, 0.5, 1])(

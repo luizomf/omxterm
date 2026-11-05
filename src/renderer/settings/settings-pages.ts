@@ -244,6 +244,7 @@ export function renderControl(
   const row = document.createElement("label");
   row.className = `settings-row settings-${control.kind}`;
   const caption = document.createElement("span");
+  caption.className = "settings-control-caption";
   let t = englishLanguage.t;
   labels.push((translate) => {
     t = translate;

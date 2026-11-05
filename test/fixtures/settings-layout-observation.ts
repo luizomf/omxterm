@@ -131,12 +131,12 @@ export function observeSettingsLayout(
       .map((row) => ({
         display: getComputedStyle(row).display,
         direction: getComputedStyle(row).flexDirection,
-        label: box(row.querySelector("span")!),
+        label: box(row.querySelector(".settings-control-caption")!),
         field: box(row.querySelector("input, select")!),
       })),
     labels: [
       ...panel.querySelectorAll<HTMLElement>(
-        ".settings-row > span, .settings-shortcut-name",
+        ".settings-control-caption, .settings-shortcut-name",
       ),
     ]
       .slice(0, 16)
