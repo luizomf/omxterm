@@ -474,8 +474,9 @@ never configures the shell. Compatible installed Files archives use the host
 behavior without changing their published bytes; their original action label,
 missing inline hint and tooltip, and already-displayed literal error text
 do not change. Current
-Files source also relabels host-coded unavailable notices. A future archive needs
-a new immutable version.
+Files source also relabels host-coded unavailable notices. These changes are
+included in the Files0.7 source/archive preparation; native/package qualification
+and publication remain pending, and published Files0.6 is unchanged.
 The host's narrow [development bridges](extension-installation-foundation.md#archive-contract)
 admit unchanged Files0.6 on recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts. Admission is not
 native runtime or package qualification.

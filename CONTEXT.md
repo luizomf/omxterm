@@ -392,7 +392,9 @@ Move to folder action. Their fixed source and folder are rechecked before a
 no-replace move; external drags, same-directory, self/descendant and final
 symlink destinations are refused. Cross-volume moves do not copy/delete and
 symlink sources move as links. Files-to-terminal drag remains separate. These
-source UI changes need a future archive. Hide/reveal retains the dotfile choice;
+source UI changes are included in the Files0.7 source/archive preparation;
+native/package qualification and publication remain pending, and published
+Files0.6 is unchanged. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal
@@ -405,7 +407,9 @@ Current Files source labels the action as the last reported path and explains th
 limits in an inline hint, tooltip and accessible description. There is no automatic follow or
 retargeting of started operations. Compatible installed archives use this host
 behavior without modification; the renamed action, inline hint, tooltip and
-relocalizable host-coded notices require a future archive. Its application owner composes independent
+relocalizable host-coded notices are included in the Files0.7 source/archive
+preparation, not published Files0.6; qualification and publication remain pending.
+Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.
 Its separately built archive/checksum/receipt are not bundled into the host;
