@@ -17,16 +17,19 @@ export function bindTerminalWindowLanguage(
   },
 ) {
   let disposed = false;
-  let failure:
-    TerminalSurfaceFailure | { readonly kind: "clipboard" } | undefined;
+  let failure: TerminalSurfaceFailure | undefined;
+  let clipboardFailed = false;
   const renderFailure = (t: Translate) => {
-    if (!failure) return;
-    const message =
-      failure.kind === "clipboard"
-        ? t("dialog.clipboardError.message")
-        : failure.kind === "initialization"
+    if (!failure && !clipboardFailed) return;
+    const messages: string[] = [];
+    if (failure)
+      messages.push(
+        failure.kind === "initialization"
           ? t("terminal.initializationFailure", { detail: failure.detail })
-          : t("terminal.backendLost");
+          : t("terminal.backendLost"),
+      );
+    if (clipboardFailed) messages.push(t("dialog.clipboardError.message"));
+    const message = messages.join("\n");
     if (options.surfaceFailureBanner) {
       options.surfaceFailureBanner.textContent = message;
       options.surfaceFailureBanner.hidden = false;
@@ -53,8 +56,9 @@ export function bindTerminalWindowLanguage(
     options.onSurfaceFailure || options.surfaceFailureBanner
       ? {
           onClipboardError() {
-            if (disposed || (failure && failure.kind !== "clipboard")) return;
-            failure = { kind: "clipboard" };
+            if (disposed) return;
+            // A retained fatal notice must not hide another pane's action failure.
+            clipboardFailed = true;
             renderFailure(language.t);
           },
           onFatalError(value) {
@@ -70,6 +74,7 @@ export function bindTerminalWindowLanguage(
       disposed = true;
       unbind();
       failure = undefined;
+      clipboardFailed = false;
     },
   };
 }

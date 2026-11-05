@@ -184,6 +184,66 @@ describe("window localization lifecycle", () => {
     );
   });
 
+  it.each([false, true])(
+    "reports survivor refusal with a fatal sibling (removed: %s)",
+    async (removeFailed) => {
+      const f = fixture();
+      await f.host.ready;
+      const survivor = harness.instances[0]!;
+      f.command({ action: "split", direction: "right" });
+      await vi.waitFor(() =>
+        expect(f.adapters[1]?.start).toHaveBeenCalledOnce(),
+      );
+      const failed = harness.instances[1]!;
+      failed.canvas.dispatchEvent(
+        new Event("webglcontextlost", { cancelable: true }),
+      );
+      const banner = document.querySelector<HTMLElement>(
+        "#terminal-surface-failure",
+      )!;
+      const fatal = "The OMXTerm Terminal Surface rendering backend was lost";
+      expect(banner.textContent).toBe(fatal);
+      expect(failed.destroy).toHaveBeenCalledOnce();
+      if (removeFailed) {
+        f.command({ action: "close-pane" });
+        expect(failed.options.root.isConnected).toBe(false);
+      } else {
+        expect(failed.options.root.isConnected).toBe(true);
+      }
+      vi.spyOn(
+        survivor.pane.runtime.terminal,
+        "isBracketedPasteEnabled",
+      ).mockReturnValue(true);
+      survivor.options.services.beforeInput({
+        text: "before\u001b[201~after",
+        source: "paste",
+      });
+      await vi.waitFor(() =>
+        expect(banner.textContent).toBe(
+          `${fatal}\nClipboard operation failed.`,
+        ),
+      );
+      expect(banner.hidden).toBe(false);
+      expect(f.adapters[0]!.write).not.toHaveBeenCalled();
+      expect(f.adapters[0]!.close).not.toHaveBeenCalled();
+      expect(survivor.destroy).not.toHaveBeenCalled();
+      f.update({ ...configuration, language: "pt-BR" });
+      expect(banner.textContent).toBe(
+        "O backend de renderização da superfície do terminal do OMXTerm foi perdido\nA operação na área de transferência falhou.",
+      );
+      f.update(configuration);
+      expect(banner.textContent).toBe(`${fatal}\nClipboard operation failed.`);
+      survivor.options.services.beforeInput({ text: "safe", source: "paste" });
+      await vi.waitFor(() =>
+        expect(f.adapters[0]!.write).toHaveBeenCalledWith(
+          "\u001b[200~safe\u001b[201~",
+        ),
+      );
+      expect(f.adapters[0]!.close).not.toHaveBeenCalled();
+      expect(survivor.destroy).not.toHaveBeenCalled();
+    },
+  );
+
   it.each(["initialization", "backend-loss"])(
     "relabels a visible %s failure without restarting sessions",
     async (failure) => {

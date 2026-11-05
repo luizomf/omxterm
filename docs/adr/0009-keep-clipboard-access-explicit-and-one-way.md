@@ -33,7 +33,10 @@ closing marker (`ESC [ 201 ~`, without spaces) is refused before any bytes or
 optional Enter are sent. The shared delivery reports failure rather than removing
 or escaping content; explicit non-bracketed confirmation remains unchanged.
 The window shows the existing localized clipboard-operation failure notice without
-retiring the Surface. Otherwise it remains one semantic paste even if IPC or PTY
+retiring the Surface. A retained fatal Surface notice remains visible alongside
+this action failure in the same banner; it cannot suppress feedback from a healthy
+surviving pane, even after the failed pane is removed. Otherwise it remains one
+semantic paste even if IPC or PTY
 streaming splits its bytes internally. OMXTerm does not
 summarize or interpret large text; an interactive CLI may replace it with a
 placeholder or attachment inside its own input model.
