@@ -59,7 +59,9 @@ export interface SettingsThemeDocumentsBridge {
   exportTheme(theme: TerminalTheme): Promise<ThemeDocumentExportResult>;
 }
 
-function record(value: unknown): value is Record<string, unknown> {
+function isThemeDocumentRecord(
+  value: unknown,
+): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 function exact(
@@ -88,7 +90,7 @@ export function isThemeDocumentBase(
   value: unknown,
 ): value is ThemeDocumentBase {
   return (
-    record(value) &&
+    isThemeDocumentRecord(value) &&
     exact(value, ["path", "revision"]) &&
     isLocalThemeDocumentPath(value.path) &&
     typeof value.revision === "string" &&
@@ -99,7 +101,7 @@ export function isThemeDocumentSave(
   value: unknown,
 ): value is ThemeDocumentSave {
   if (
-    !record(value) ||
+    !isThemeDocumentRecord(value) ||
     !exact(value, ["theme", "target"]) ||
     !isTerminalTheme(value.theme)
   )
@@ -107,7 +109,7 @@ export function isThemeDocumentSave(
   const target = value.target;
   return (
     isThemeDocumentBase(target) ||
-    (record(target) &&
+    (isThemeDocumentRecord(target) &&
       exact(target, ["newFilename"]) &&
       typeof target.newFilename === "string" &&
       target.newFilename.length > 0 &&
@@ -133,7 +135,7 @@ function failure(value: Record<string, unknown>): boolean {
 export function isThemeDocumentOpenResult(
   value: unknown,
 ): value is ThemeDocumentOpenResult {
-  if (!record(value)) return false;
+  if (!isThemeDocumentRecord(value)) return false;
   if (value.status === "cancelled") return exact(value, ["status"]);
   if (value.status === "failed") return failure(value);
   return (
@@ -150,7 +152,7 @@ export function isThemeDocumentOpenResult(
 export function isThemeDocumentSaveResult(
   value: unknown,
 ): value is ThemeDocumentSaveResult {
-  if (!record(value)) return false;
+  if (!isThemeDocumentRecord(value)) return false;
   if (value.status === "failed") return failure(value);
   return (
     value.status === "saved" &&
@@ -166,7 +168,7 @@ export function isThemeDocumentSaveResult(
 export function isThemeDocumentExportResult(
   value: unknown,
 ): value is ThemeDocumentExportResult {
-  if (!record(value)) return false;
+  if (!isThemeDocumentRecord(value)) return false;
   if (value.status === "cancelled") return exact(value, ["status"]);
   if (value.status === "failed") return failure(value);
   return (
