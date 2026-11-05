@@ -673,6 +673,14 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Hide or Escape originating inside the panel only hides/deactivates it.
   Both return focus to the live selected terminal after native acknowledgement,
   unless a newer selection or modal owns focus. Neither closes terminal sessions.
+  In the native hosted-view Escape fallback, only a fresh non-composing Escape
+  starts dismissal. A composing Escape and an unowned repeat stay with the
+  focused control. An already-owned dismissal still consumes its repeats and
+  release during composition. This does not establish that a particular OS or
+  IME emits a composing Escape. Current Files source likewise leaves a composing
+  Escape, and an unowned Escape repeat, with an operation editor or menu, so
+  the unsubmitted draft stays. That page change needs a future Files archive
+  and does not alter published Files0.6.
   In the built-in panel, only a fresh non-composing Escape starts dismissal;
   composing Escape and unowned repeats remain with the focused control. An
   already-owned dismissal retains its repeats and release even during composition.

@@ -300,9 +300,14 @@ report remain separate. Existing released Files archives do not acquire this beh
 listing space for actions at that location. Shift+F10/the context-menu key opens
 the same menu from a focused row, and F2 opens Rename / move. Menus support arrow
 navigation; Tab or clicking outside dismisses a menu. In the companion panel,
-Escape is owned by the host and hides the entire panel, closing transient menus
-but retaining operation drafts. Use **Cancel** to discard an editor without
-hiding Files. New file/folder uses the targeted folder (or a targeted
+a fresh non-composing Escape is owned by the host and hides the entire panel,
+closing transient menus but retaining operation drafts. A composing Escape, and
+an unowned Escape repeat, stay with the focused control. Current source does
+not close an operation editor or menu for that event, so an unsubmitted draft
+remains. This does not establish that a particular OS or IME emits a composing
+Escape. Published Files archives keep their earlier editor and menu handling
+until a new archive is qualified separately. Use **Cancel** to discard an editor
+without hiding Files. New file/folder uses the targeted folder (or a targeted
 file's parent); background actions use the browsing root. Permanent deletion
 still requires explicit confirmation. Editors keep captured paths even if the
 selection or browsing root changes.

@@ -271,6 +271,47 @@ it("returns Cancel to the captured origin rather than a subsequently selected ro
   expect(document.activeElement).toBe(row("/root/alpha.txt"));
 });
 
+it("keeps an operation draft and menu when Escape is composing or repeating", async () => {
+  await setup();
+  row("/root/alpha.txt")!.focus();
+  key(row("/root/alpha.txt")!, "F2");
+  const editor = document.querySelector<HTMLElement>(".operation-editor")!;
+  const input = editor.querySelector("input")!;
+  input.value = "/root/draft";
+  input.dispatchEvent(
+    new CompositionEvent("compositionstart", { bubbles: true }),
+  );
+  expect(key(input, "Escape").defaultPrevented).toBe(false);
+  expect(key(input, "Escape", { repeat: true }).defaultPrevented).toBe(false);
+  input.dispatchEvent(
+    new CompositionEvent("compositionend", { bubbles: true }),
+  );
+  expect(key(input, "Escape", { isComposing: true }).defaultPrevented).toBe(
+    false,
+  );
+  expect(key(input, "Escape", { repeat: true }).defaultPrevented).toBe(false);
+  expect(input.value).toBe("/root/draft");
+  expect(editor.hidden).toBe(false);
+  expect(key(input, "Escape").defaultPrevented).toBe(true);
+  expect(editor.hidden).toBe(true);
+
+  key(row("/root/alpha.txt")!, "ContextMenu");
+  const item = document.activeElement as HTMLElement;
+  item.dispatchEvent(
+    new CompositionEvent("compositionstart", { bubbles: true }),
+  );
+  expect(key(item, "Escape").defaultPrevented).toBe(false);
+  expect(menu().hidden).toBe(false);
+  item.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+  expect(key(item, "Escape", { isComposing: true }).defaultPrevented).toBe(
+    false,
+  );
+  expect(key(item, "Escape", { repeat: true }).defaultPrevented).toBe(false);
+  expect(menu().hidden).toBe(false);
+  expect(key(item, "Escape").defaultPrevented).toBe(true);
+  expect(menu().hidden).toBe(true);
+});
+
 it("retains errors from loaded expanded folders while filtering", async () => {
   const { handle } = await setup();
   handle((value) =>

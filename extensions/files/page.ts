@@ -1042,6 +1042,8 @@ export function mountFilesPage(
     ];
     const index = items.indexOf(document.activeElement as HTMLButtonElement);
     if (event.key === "Escape") {
+      // A composing Escape, and an unowned repeat, stay with the IME.
+      if (event.repeat || composing || event.isComposing) return;
       event.preventDefault();
       closeMenu();
     } else if (event.key === "Tab") closeMenu();
@@ -1255,7 +1257,14 @@ export function mountFilesPage(
     }
   });
   editor.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !mutationPending) {
+    // A composing Escape, and an unowned repeat, stay with the IME.
+    if (
+      event.key === "Escape" &&
+      !mutationPending &&
+      !event.repeat &&
+      !composing &&
+      !event.isComposing
+    ) {
       event.preventDefault();
       dismissEditor();
     }
