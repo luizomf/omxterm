@@ -47,10 +47,13 @@ async function observeLaunch(
   };
   const suite = (_name: string, tests: () => void) => tests();
   const require = createRequire(import.meta.url);
+  const resolveExternal = (id: string): unknown =>
+    id === "electron" ? process.execPath : (require(id) as unknown);
   const stopped = new Error("Observed launch before native process creation");
   let args: string[] | undefined;
   let root: string | undefined;
-  const capture = (argv: string[]) => {
+  const capture = (executable: string, argv: string[]) => {
+    expect(executable).toBe(process.execPath);
     args = argv;
     const application = argv.find((value) => value.includes("omxterm-"));
     root = application?.endsWith("main.cjs")
@@ -100,6 +103,7 @@ async function observeLaunch(
           }),
         };
       if (id === "esbuild") return { build: async () => ({}) };
+      if (id === "node:module") return { createRequire: () => resolveExternal };
       if (id === "node:fs/promises")
         return {
           ...filesystem,
@@ -119,10 +123,10 @@ async function observeLaunch(
       if (id === "node:child_process")
         return {
           ...childProcess,
-          spawn: (_file: string, argv: string[]) => capture(argv),
+          spawn: (file: string, argv: string[]) => capture(file, argv),
           execFile: (...values: unknown[]) => {
             try {
-              capture(values[1] as string[]);
+              capture(values[0] as string, values[1] as string[]);
             } catch (error) {
               (values.at(-1) as (error: unknown) => void)(error);
             }
@@ -134,15 +138,15 @@ async function observeLaunch(
               connected: false,
               send(
                 this: EventEmitter,
-                request: { args: string[]; root: string },
+                request: { args: string[]; root: string; executable: string },
               ) {
                 root = request.root;
                 queueMicrotask(() => this.emit("close"));
-                capture(request.args);
+                capture(request.executable, request.args);
               },
             }),
         };
-      return require(id) as unknown;
+      return resolveExternal(id);
     },
   });
   try {

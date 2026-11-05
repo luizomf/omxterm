@@ -35,6 +35,7 @@ it.each(callers)(
     expect(observation.removed).toBe(false);
     expect(observation.removalAttempts).toBe(0);
     expect(observation.nativeRequests).toBe(1);
+    expect(observation.executables).toEqual([process.execPath]);
   },
 );
 
@@ -220,6 +221,8 @@ it.each(ordinaryCases)(
     expect(observed.outsidePreparation).toBe(0);
     expect(observed.finishHooks).toBe(1);
     expect(observed.nativeRequests).toBe(1);
+    if (name === "application-about")
+      expect(observed.executables).toEqual([process.execPath]);
     expect(observed.removalAttempts).toBe(0);
     expect(observed.removed).toBe(false);
   },
@@ -344,10 +347,19 @@ async function observeCaller(
   const require = module.createRequire(import.meta.url);
   const stopped = new Error("Controlled external boundary failure");
   const cleanupFailure = new Error("Controlled owned-root removal failure");
+  const resolveExternal = (target: string): unknown => {
+    // Loading the real package can synchronously run its installer.
+    if (target === "electron") {
+      if (failure === "setup failure") throw stopped;
+      return process.execPath;
+    }
+    return require(target) as unknown;
+  };
   let root: string | undefined;
   const roots: string[] = [];
   const preparedRoots = new Set<string>();
   let nativeRequests = 0;
+  const executables: string[] = [];
   let removalAttempts = 0;
   let outsidePreparation = 0;
   let fixtureBuilds = 0;
@@ -482,14 +494,7 @@ async function observeCaller(
                 : path.resolve(...args),
           };
         if (id === "node:module")
-          return {
-            ...module,
-            createRequire: () => (target: string) => {
-              if (target === "electron" && failure === "setup failure")
-                throw stopped;
-              return require(target) as unknown;
-            },
-          };
+          return { ...module, createRequire: () => resolveExternal };
         if (id === "node:child_process")
           return {
             ...childProcess,
@@ -502,9 +507,10 @@ async function observeCaller(
                 connected: false,
                 send(
                   this: EventEmitter,
-                  request: { root: string; args: string[] },
+                  request: { root: string; args: string[]; executable: string },
                 ) {
                   nativeRequests += 1;
+                  executables.push(request.executable);
                   if (
                     (failure === "phase abort" || failure === "loop abort") &&
                     request.args.some((value) =>
@@ -521,7 +527,7 @@ async function observeCaller(
                 },
               }),
           };
-        return require(id) as unknown;
+        return resolveExternal(id);
       },
     },
   );
@@ -590,6 +596,7 @@ async function observeCaller(
       preparedRoots: [...preparedRoots],
       finishHooks: finalizers.length,
       nativeRequests,
+      executables,
       removalAttempts,
       failure: observedFailure,
       setupFailure: stopped,
