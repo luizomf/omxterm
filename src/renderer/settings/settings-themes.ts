@@ -6,6 +6,7 @@ import type {
 import { DEFAULT_TERMINAL_THEME } from "../../shared/terminal-theme";
 import { englishLanguage, type Translate } from "../renderer-language";
 import { createPageButton } from "../application-page";
+import { createSettingsThemeEditor } from "./settings-theme-editor";
 
 const problemLabels = {
   size: "settings.themeErrorSize",
@@ -65,17 +66,25 @@ export function renderSettingsThemes(
   invalid.append(invalidList);
   header.append(heading, refresh);
   section.append(header, hint, grid, message, invalid);
+  const editor = bridge.themeDocuments
+    ? createSettingsThemeEditor(document, bridge.themeDocuments, {
+        live: options.live,
+        labels: options.labels,
+        saved: () => scan(),
+        busyChanged: (busy) => {
+          for (const button of grid.querySelectorAll("button"))
+            button.disabled = busy;
+        },
+        use: (path, settled) => options.change("theme.path", path, settled),
+      })
+    : undefined;
+  if (editor) section.append(editor.element);
 
   const defaultTheme: SettingsTheme = {
     path: "",
     name: DEFAULT_TERMINAL_THEME.name,
     colors: DEFAULT_TERMINAL_THEME.colors,
   };
-  const cleanPath = (path: string) =>
-    path.replace(/[\\\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{Zl}\p{Zp}]/gu, (char) =>
-      char === "\\" ? "\\\\" : `\\u{${char.codePointAt(0)!.toString(16)}}`,
-    );
-
   const updateSelection = () => {
     const selected =
       pendingChoice ?? (selectionFresh ? result?.selectedPath : undefined);
@@ -99,68 +108,14 @@ export function renderSettingsThemes(
     }
   };
 
-  const card = (theme: SettingsTheme): HTMLElement => {
-    const label = document.createElement("label");
-    label.className = "settings-theme-card";
-    const input = document.createElement("input");
-    input.type = "radio";
-    input.name = "settings-theme";
-    input.value = theme.path;
-    input.addEventListener("focus", () => {
-      // The visually hidden radio is smaller than its card; native focus
-      // scrolling alone can leave the choice and focus ring clipped.
-      label.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  const choose = (path: string) => {
+    if (!options.live()) return;
+    const request = ++selectionGeneration;
+    pendingChoice = path;
+    updateSelection();
+    options.change("theme.path", path || null, () => {
+      if (request === selectionGeneration) pendingChoice = undefined;
     });
-    input.addEventListener("change", () => {
-      if (!input.checked || !options.live()) return;
-      const request = ++selectionGeneration;
-      pendingChoice = theme.path;
-      updateSelection();
-      options.change("theme.path", theme.path || null, () => {
-        if (request === selectionGeneration) pendingChoice = undefined;
-      });
-    });
-    const content = document.createElement("span");
-    content.className = "settings-theme-content";
-    const preview = document.createElement("span");
-    preview.className = "settings-theme-preview";
-    preview.setAttribute("aria-hidden", "true");
-    preview.style.backgroundColor = theme.colors.background;
-    preview.style.color = theme.colors.foreground;
-    const sample = document.createElement("span");
-    sample.textContent = "~ $ ls";
-    const dots = document.createElement("span");
-    dots.className = "settings-theme-dots";
-    for (const color of [
-      "red",
-      "green",
-      "yellow",
-      "blue",
-      "magenta",
-      "cyan",
-    ] as const) {
-      const dot = document.createElement("span");
-      dot.style.backgroundColor = theme.colors[color];
-      dots.append(dot);
-    }
-    preview.append(sample, dots);
-    const title = document.createElement("span");
-    title.className = "settings-theme-title";
-    const name = document.createElement("span");
-    name.className = "settings-theme-name";
-    name.textContent = theme.path ? theme.name : t("settings.bundledTheme");
-    const selected = document.createElement("span");
-    selected.className = "settings-theme-selected";
-    selected.textContent = t("settings.themeSelected");
-    title.append(name, selected);
-    const path = document.createElement("span");
-    path.className = "settings-theme-path";
-    path.textContent = theme.path
-      ? cleanPath(theme.path)
-      : t("settings.themeDefaultDetail");
-    content.append(preview, title, path);
-    label.append(input, content);
-    return label;
   };
 
   const renderNotice = () => {
@@ -202,7 +157,11 @@ export function renderSettingsThemes(
       const focused = grid.contains(document.activeElement)
         ? (document.activeElement as HTMLInputElement).value
         : undefined;
-      grid.replaceChildren(...[defaultTheme, ...themes].map(card));
+      grid.replaceChildren(
+        ...[defaultTheme, ...themes].map((theme) =>
+          createThemeCard(document, theme, t, choose, editor),
+        ),
+      );
       rendered = next;
       if (focused !== undefined && document.activeElement === document.body)
         [...grid.querySelectorAll<HTMLInputElement>("input")]
@@ -217,6 +176,25 @@ export function renderSettingsThemes(
       defaultCard.querySelector(".settings-theme-path")!.textContent = t(
         "settings.themeDefaultDetail",
       );
+    }
+    for (const entry of grid.querySelectorAll<HTMLElement>(
+      ".settings-theme-entry",
+    )) {
+      const edit = entry.querySelector("button")!;
+      const path = entry.querySelector<HTMLInputElement>("input")!.value;
+      const theme = path
+        ? themes.find((theme) => theme.path === path)
+        : defaultTheme;
+      if (theme) {
+        edit.disabled = editor?.busy() ?? false;
+        edit.textContent = t("settings.author.title");
+        edit.setAttribute(
+          "aria-label",
+          t("settings.author.edit", {
+            name: `${path ? theme.name : t("settings.bundledTheme")}${path ? ` (${cleanPath(path)})` : ""}`,
+          }),
+        );
+      }
     }
     updateSelection();
     renderNotice();
@@ -275,4 +253,92 @@ export function renderSettingsThemes(
     render();
   });
   return section;
+}
+
+function cleanPath(path: string): string {
+  return path.replace(/[\\\p{Cc}\p{Cf}\p{Cs}\p{Cn}\p{Zl}\p{Zp}]/gu, (char) =>
+    char === "\\" ? "\\\\" : `\\u{${char.codePointAt(0)!.toString(16)}}`,
+  );
+}
+
+function createThemeCard(
+  document: Document,
+  theme: SettingsTheme,
+  t: Translate,
+  choose: (path: string) => void,
+  editor?: ReturnType<typeof createSettingsThemeEditor>,
+): HTMLElement {
+  const label = document.createElement("label");
+  label.className = "settings-theme-card";
+  const input = document.createElement("input");
+  input.type = "radio";
+  input.name = "settings-theme";
+  input.value = theme.path;
+  input.addEventListener("focus", () => {
+    // The visually hidden radio is smaller than its card; native focus
+    // scrolling alone can leave the choice and focus ring clipped.
+    label.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  });
+  input.addEventListener("change", () => {
+    if (input.checked) choose(theme.path);
+  });
+  const content = document.createElement("span");
+  content.className = "settings-theme-content";
+  const preview = document.createElement("span");
+  preview.className = "settings-theme-preview";
+  preview.setAttribute("aria-hidden", "true");
+  preview.style.backgroundColor = theme.colors.background;
+  preview.style.color = theme.colors.foreground;
+  const sample = document.createElement("span");
+  sample.textContent = "~ $ ls";
+  const dots = document.createElement("span");
+  dots.className = "settings-theme-dots";
+  for (const color of [
+    "red",
+    "green",
+    "yellow",
+    "blue",
+    "magenta",
+    "cyan",
+  ] as const) {
+    const dot = document.createElement("span");
+    dot.style.backgroundColor = theme.colors[color];
+    dots.append(dot);
+  }
+  preview.append(sample, dots);
+  const title = document.createElement("span");
+  title.className = "settings-theme-title";
+  const name = document.createElement("span");
+  name.className = "settings-theme-name";
+  name.textContent = theme.path ? theme.name : t("settings.bundledTheme");
+  const selected = document.createElement("span");
+  selected.className = "settings-theme-selected";
+  selected.textContent = t("settings.themeSelected");
+  title.append(name, selected);
+  const path = document.createElement("span");
+  path.className = "settings-theme-path";
+  path.textContent = theme.path
+    ? cleanPath(theme.path)
+    : t("settings.themeDefaultDetail");
+  content.append(preview, title, path);
+  label.append(input, content);
+  if (!editor) return label;
+  const entry = document.createElement("div");
+  entry.className = "settings-theme-entry";
+  const edit = createPageButton(document, "text");
+  const relabel = () => {
+    edit.textContent = t("settings.author.title");
+    edit.setAttribute(
+      "aria-label",
+      t("settings.author.edit", {
+        name: `${theme.name}${theme.path ? ` (${cleanPath(theme.path)})` : ""}`,
+      }),
+    );
+  };
+  relabel();
+  edit.addEventListener("click", () =>
+    theme.path ? editor.edit(theme.path, edit) : editor.editBundled(edit),
+  );
+  entry.append(label, edit);
+  return entry;
 }

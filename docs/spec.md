@@ -1709,7 +1709,64 @@ paint takes precedence over both, including during drag. Appearance-only reloads
 repaint window chrome without reconfiguring or refitting the Terminal Surface.
 Palette validation remains complete and non-nullable. Older builds reject this
 optional extension rather than silently ignoring it; no migration is performed.
-Configurable widths and a visual appearance editor are outside this slice.
+Configurable widths and controls for these optional roles are not provided.
+The inline palette editor below preserves them without flattening defaults.
+
+Settings → Appearance additionally provides one inline, retained theme editor.
+New starts from the bundled complete palette; Edit beside a card rereads its full
+validated local document without selecting it; Import uses a window-owned native
+JSON chooser and returns a copy, never an arbitrary-path overwrite target.
+Main bounds all authoring reads, including guarded-write comparisons, to 256 KiB,
+requires regular readable targets, and validates current UTF-8/JSON/theme schema.
+Unknown fields/versions and partial palettes are rejected rather than repaired.
+The editor never reconstructs a theme from the picker's eight-color summary.
+
+The labelled name, 21-role selector, native color well and hex field edit the
+complete memory draft. Invalid input remains associated with its role across
+selection and category/tab changes. Save/copy/export are disabled until every
+visible or retained name/color input is valid; the specimen uses last-valid colors.
+The compact DOM specimen includes all ANSI roles, cursor and both selection
+colors, not a live Surface/PTY or desktop-effects simulation. Draft paint is
+scoped to the specimen, never document-root appearance or live configuration.
+Optional appearance omission, empty object, hex/null values and untouched color
+spellings survive all theme-document operations even without dedicated controls.
+
+Save uses the local document's revision to guarded-replace its resolved regular
+target, keeping intentional links. Save copy publishes complete two-space JSON
+plus newline at a new direct logical `themes/*.json` filename, never replacing
+an existing entry. New filenames use portable OS-safe leaf rules; no path or
+shell expansion occurs. A successful copy becomes the subsequent local Save
+base. Detected revision/target/permission changes keep the draft and offer explicit
+source reload or copy, never automatic overwrite/rebase/retry. Linked parents,
+private temporary files, mode preservation, identity-checked cleanup and remaining
+last-check races follow ADR0003; no cross-process atomic CAS is promised.
+
+Theme-file saves do not write configuration or apply appearance. Use saved theme
+is deliberate, requires a clean saved draft, and submits the saved logical path
+through the ordinary Settings field change even when already configured. It
+validates/reloads the whole current configuration and current file bytes, not a
+reserved draft snapshot. File-save feedback and configuration/application status
+remain separate; failure or partial application does not roll back the theme.
+Export uses a window-owned native save chooser and no-replace publication for the
+captured valid draft. The UI explains choose-new-name semantics before opening it,
+even when a platform dialog offers replacement. Export returns no writable base,
+changes no configuration and does not mark local edits saved. Copy/export require
+filesystem no-replace linking support and fail rather than fall back to clobbering
+writes. Publication followed by cleanup failure remains saved/exported with warning.
+
+One theme operation is pending per editor while typing can continue during
+Save/export. The submitted bytes' base revision is retained for newer typing;
+responses do not overwrite newer inputs or focus retired/hidden editors. Category
+and application-tab changes retain the editor. Cancel/Settings closure discard
+unsaved memory, never undo completed operations or cancel accepted writes; the
+ordinary no-close-prompt rule remains. Chooser cancellation is a no-op and disposed
+or destroyed native owners cannot accept late choices. Unknown transport outcomes
+require refresh/reopen before another deliberate write, not an automatic retry.
+EN/PT labels, accessible names and status identities relabel without resetting
+inputs, revisions or caret. Theme operations share Settings request-order barriers;
+native chooser interaction does not hold the global queue while awaiting a user.
+No Studio draft migration, configuration transfer, framework port or released
+replacement/site sunset is implied by this source capability.
 
 The latest successfully applied Terminal Theme is the reset baseline for its 16
 ANSI colors. OSC 104 restores that baseline (all entries or only the requested

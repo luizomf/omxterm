@@ -116,6 +116,38 @@ default, but not no-op spelling changes). Exceptional reload failure after
 persistence remains a saved-but-not-applied outcome, with no rollback claim or
 private exception details. A resolved request is not reported as application.
 
+## Explicit theme authoring
+
+The inline Appearance editor makes deliberate writes to user-owned theme files,
+not automatic upgrades. Main owns complete bounded theme reads, current-schema
+validation, revision capture, serialization and filesystem writes; renderer drafts
+are never rebuilt from card summaries. The shared guarded writer retains existing
+configuration semantics while theme reads/comparisons are capped at 256 KiB.
+Local Save checks its opened revision before guarded replacement, preserving
+intentional symlinks and basic mode with the same metadata and remaining race
+limits above. A detected conflict retains the draft for explicit reload or copy;
+there is no overwrite/rebase/retry policy hidden in the editor.
+
+Save copy creates a direct logical `themes/*.json` file. Import only captures
+validated data for a copy; it confers no authority to replace arbitrary source
+paths. Export chooses a destination through the invoking window's native dialog.
+Copy/export publish complete private temporary bytes by no-replace hard link;
+existing entries, including dangling links, are never replaced. Filesystems that
+do not support this publication fail safely, without a direct-write fallback.
+Parent/temp identity checks reduce races but cannot lock linked parent paths.
+Cleanup after successful publication reports saved/exported with warning, not a
+false failed-write result. New filenames are OS-safe portable leaves, independent
+of printable theme names. Complete optional appearance values remain unmodified.
+
+Saving theme bytes does not write `config.json` or apply a draft globally. A
+separate Use saved theme invokes the existing validated configuration change and
+reload authority. This costs one explicit action but avoids a two-file transaction
+or rollback fiction. Existing sessions and Settings chrome remain unchanged by
+preview; failed activation does not undo a saved file. Accepted writes still run
+on editor closure, and newer typing retains the submitted revision. Main serializes
+file operations with Settings barriers but never holds the queue for user chooser
+interaction. See the specification for retained inputs and precise outcomes.
+
 ## Initial configuration kit
 
 Startup may seed absent files with built-in defaults. An existing `config.json`

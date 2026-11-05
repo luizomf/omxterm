@@ -1,3 +1,5 @@
+import { englishThemeAuthoringMessages } from "./theme-authoring";
+
 // English (United States) is the source catalog: every message key is
 // declared here, and other catalogs are checked against it. Keep `{name}`
 // placeholders identical across catalogs. Adapted from ruscher/omxterm PR
@@ -376,6 +378,7 @@ export const englishMessages = {
   "settings.themeSelected": "Selected",
   "settings.themePending": "Saving…",
   "settings.themeDefaultDetail": "Built-in default",
+  ...englishThemeAuthoringMessages,
   "settings.bundledFont": "Bundled FiraCode Nerd Font Mono",
   "settings.bundledTheme": "Bundled omtheme",
   "settings.defaultShell": "Windows PowerShell",

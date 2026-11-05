@@ -1,4 +1,5 @@
 import { isSupportedLanguage } from "./i18n";
+import type { SettingsThemeDocumentsBridge } from "./settings-theme-documents";
 import { isSettingsMessage, type SettingsMessage } from "./settings-messages";
 import {
   MAX_SCROLLBACK_LINES,
@@ -159,6 +160,7 @@ export type SettingsResult =
     };
 
 export interface SettingsBridge {
+  readonly themeDocuments?: SettingsThemeDocumentsBridge;
   snapshot(): Promise<SettingsSnapshot>;
   themes(): Promise<SettingsThemesResult>;
   change(change: SettingsChange): Promise<SettingsResult>;

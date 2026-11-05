@@ -5,6 +5,12 @@ import {
 } from "../shared/settings";
 import type { SettingsService } from "./settings-service";
 import {
+  isLocalThemeDocumentPath,
+  isThemeDocumentSave,
+  themeDocumentIpc,
+} from "../shared/settings-theme-documents";
+import { isTerminalTheme } from "../shared/terminal-theme";
+import {
   isSettingsKeybindChange,
   isShortcutCaptureRequest,
 } from "../shared/settings-keybinds";
@@ -28,6 +34,10 @@ export function startSettings(options: {
     payload?: unknown,
   ) => void;
   readonly capture?: Pick<KeybindCapture, "set">;
+  readonly themeDialogs?: {
+    chooseImport(owner: TrustedWebContents): Promise<string | null>;
+    chooseExport(owner: TrustedWebContents): Promise<string | null>;
+  };
 }) {
   let disposed = false;
   const trusted = (event: IpcEvent) =>
@@ -71,6 +81,58 @@ export function startSettings(options: {
       throw new TypeError("Invalid settings text");
     return options.service.saveText(payload.text, payload.revision);
   });
+  const documents = options.service.themeDocumentFiles;
+  if (documents) {
+    options.ipcMain.handle(
+      themeDocumentIpc.open,
+      async (event, payload, ...extra) => {
+        if (!trusted(event)) throw new Error("Rejected settings sender");
+        if (extra.length || !isLocalThemeDocumentPath(payload))
+          throw new TypeError("Invalid theme document request");
+        return documents.openTheme(payload);
+      },
+    );
+    options.ipcMain.handle(
+      themeDocumentIpc.save,
+      async (event, payload, ...extra) => {
+        if (!trusted(event)) throw new Error("Rejected settings sender");
+        if (extra.length || !isThemeDocumentSave(payload))
+          throw new TypeError("Invalid theme document request");
+        return documents.saveTheme(structuredClone(payload));
+      },
+    );
+    options.ipcMain.handle(
+      themeDocumentIpc.import,
+      async (event, payload, ...extra) => {
+        if (!trusted(event)) throw new Error("Rejected settings sender");
+        if (payload !== undefined || extra.length)
+          throw new TypeError("Invalid theme document request");
+        try {
+          const path = await options.themeDialogs?.chooseImport(event.sender);
+          if (!path || !trusted(event)) return { status: "cancelled" };
+          return await documents.importTheme(path);
+        } catch {
+          return { status: "failed", reason: "read" };
+        }
+      },
+    );
+    options.ipcMain.handle(
+      themeDocumentIpc.export,
+      async (event, payload, ...extra) => {
+        if (!trusted(event)) throw new Error("Rejected settings sender");
+        if (extra.length || !isTerminalTheme(payload))
+          throw new TypeError("Invalid theme document request");
+        const theme = structuredClone(payload);
+        try {
+          const path = await options.themeDialogs?.chooseExport(event.sender);
+          if (!path || !trusted(event)) return { status: "cancelled" };
+          return await documents.exportTheme(path, theme);
+        } catch {
+          return { status: "failed", reason: "write" };
+        }
+      },
+    );
+  }
   return {
     show() {
       const sender = options.selectedContents();
@@ -90,6 +152,7 @@ export function startSettings(options: {
         settingsIpc.saveText,
         settingsIpc.keybind,
         settingsIpc.capture,
+        ...Object.values(themeDocumentIpc),
       ])
         options.ipcMain.removeHandler(channel);
     },

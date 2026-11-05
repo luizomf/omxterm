@@ -1,5 +1,6 @@
 import type { Message } from "../i18n";
 import type { MessageKey } from "./en-US";
+import { brazilianPortugueseThemeAuthoringMessages } from "./theme-authoring";
 
 // Brazilian Portuguese. Every key of the English catalog is required here, with
 // the same `{name}` placeholders. Translations adapted from ruscher/omxterm PR
@@ -390,6 +391,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.themeSelected": "Selecionado",
   "settings.themePending": "Salvando…",
   "settings.themeDefaultDetail": "Padrão incluído",
+  ...brazilianPortugueseThemeAuthoringMessages,
   "settings.bundledFont": "FiraCode Nerd Font Mono incluída",
   "settings.bundledTheme": "omtheme incluído",
   "settings.defaultShell": "Windows PowerShell",

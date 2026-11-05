@@ -1,15 +1,12 @@
-import { createHash, randomBytes } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import {
-  mkdir,
-  lstat,
-  open,
-  readFile,
-  realpath,
-  rename,
-  rm,
-} from "node:fs/promises";
-import { constants, type Stats } from "node:fs";
-import path from "node:path";
+  nodeSettingsFiles,
+  revisionOf,
+  SettingsFileError,
+  type SettingsFile,
+  type SettingsFiles,
+} from "./settings-files";
+export { nodeSettingsFiles, type SettingsFiles } from "./settings-files";
 import {
   SETTINGS_FIELDS,
   type SettingsLifetime,
@@ -22,6 +19,7 @@ import type { UserConfiguration } from "../shared/user-configuration";
 import type { SettingsThemesResult } from "../shared/settings-themes";
 import { discoverSettingsThemes } from "./settings-themes";
 import { createSettingsQueue } from "./settings-queue";
+import { createSettingsThemeDocuments } from "./settings-theme-documents";
 import type { SettingsMessage } from "../shared/settings-messages";
 import {
   TERMINAL_ACTION_NAMES,
@@ -42,23 +40,8 @@ import {
   type LoadUserConfigurationOptions,
 } from "./user-configuration";
 
-interface SettingsFile {
-  readonly target: string;
-  readonly bytes: Uint8Array | null;
-  readonly mode?: number;
-}
-
-export interface SettingsFiles {
-  read(filePath: string): Promise<SettingsFile>;
-  // False means a concurrent edit or retargeting was detected; no replacement occurred.
-  replace(
-    filePath: string,
-    text: string,
-    expected: SettingsFile,
-  ): Promise<boolean>;
-}
-
 export interface SettingsService {
+  readonly themeDocumentFiles?: ReturnType<typeof createSettingsThemeDocuments>;
   snapshot(): Promise<SettingsSnapshot>;
   themes(): Promise<SettingsThemesResult>;
   change(change: SettingsChange): Promise<SettingsResult>;
@@ -261,7 +244,15 @@ export function createSettingsService(options: {
     edit((document) => setField(document, change.path, change.value)),
   );
 
+  const documents = createSettingsThemeDocuments({ configurationPath });
   return {
+    themeDocumentFiles: {
+      openTheme: (path) => queue.run(() => documents.openTheme(path)),
+      saveTheme: (request) => queue.run(() => documents.saveTheme(request)),
+      importTheme: (path) => queue.run(() => documents.importTheme(path)),
+      exportTheme: (path, theme) =>
+        queue.run(() => documents.exportTheme(path, theme)),
+    },
     snapshot: () => queue.run(async () => snapshotOf(await readCurrent())),
     themes: () => queue.run(() => discoverSettingsThemes(configurationPath)),
     change: queue.change,
@@ -387,14 +378,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isNotFound(cause: unknown): boolean {
-  return (
-    typeof cause === "object" &&
-    cause !== null &&
-    (cause as { code?: unknown }).code === "ENOENT"
-  );
-}
-
 // Compare validated effective values, not document spelling: removing an entry
 // can change its lifetime, while explicitly writing its default may be a no-op.
 function changedLifetimes(
@@ -415,148 +398,11 @@ function changedLifetimes(
   ];
 }
 
-function revisionOf(file: SettingsFile): string {
-  const hash = createHash("sha256").update(file.target).update("\0");
-  if (file.bytes === null) hash.update("0");
-  else hash.update("1").update(file.bytes);
-  return hash.digest("hex");
-}
-
-class SettingsFileError extends Error {
-  constructor(readonly kind: "symlink" | "target" | "conflict" | "cleanup") {
-    super(kind);
-  }
-}
-
 function settingsFileError(
   cause: unknown,
   fallback: "read" | "write",
 ): "symlink" | "target" | "conflict" | "cleanup" | "read" | "write" {
-  return cause instanceof SettingsFileError ? cause.kind : fallback;
+  return cause instanceof SettingsFileError && cause.kind !== "size"
+    ? cause.kind
+    : fallback;
 }
-
-// Resolve existing links with the OS, including relative links and linked
-// parents. An absent ordinary path is allowed; an existing dangling link is not.
-async function settingsTarget(filePath: string): Promise<string> {
-  let current = path.resolve(filePath);
-  const missing: string[] = [];
-  for (;;) {
-    try {
-      return path.join(await realpath(current), ...missing);
-    } catch (cause) {
-      if (!isNotFound(cause)) {
-        const code = (cause as NodeJS.ErrnoException).code;
-        if (code === "ELOOP") throw new SettingsFileError("symlink");
-        if (code === "ENOTDIR") throw new SettingsFileError("target");
-        throw cause;
-      }
-      try {
-        await lstat(current);
-        // An entry exists but its resolution failed: do not create its target.
-        throw new SettingsFileError("symlink");
-      } catch (entryError) {
-        if (!isNotFound(entryError)) throw entryError;
-      }
-      const parent = path.dirname(current);
-      if (parent === current) throw cause;
-      missing.unshift(path.basename(current));
-      current = parent;
-    }
-  }
-}
-
-function sameSettingsFile(first: SettingsFile, second: SettingsFile): boolean {
-  return revisionOf(first) === revisionOf(second) && first.mode === second.mode;
-}
-
-function sameTemporary(entry: Stats, original: Stats | undefined): boolean {
-  return (
-    original !== undefined &&
-    entry.isFile() &&
-    entry.dev === original.dev &&
-    entry.ino === original.ino
-  );
-}
-
-export const nodeSettingsFiles: SettingsFiles = {
-  async read(filePath) {
-    const target = await settingsTarget(filePath);
-    let entry;
-    try {
-      entry = await lstat(target);
-    } catch (cause) {
-      if (!isNotFound(cause)) throw cause;
-    }
-    let bytes: Uint8Array | null = null;
-    let mode: number | undefined;
-    if (entry) {
-      if (entry.isSymbolicLink()) throw new SettingsFileError("conflict");
-      if (!entry.isFile()) throw new SettingsFileError("target");
-      // Non-blocking open and fstat prevent a swapped FIFO or device from
-      // being read. The resolved final component must not become a link.
-      const handle = await open(
-        target,
-        constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0),
-      );
-      try {
-        const status = await handle.stat();
-        if (!status.isFile()) throw new SettingsFileError("target");
-        mode = status.mode & 0o777;
-        bytes = await handle.readFile();
-      } finally {
-        await handle.close();
-      }
-    }
-    if ((await settingsTarget(filePath)) !== target)
-      throw new SettingsFileError("conflict");
-    return { target, bytes, ...(mode === undefined ? {} : { mode }) };
-  },
-  async replace(filePath, text, expected) {
-    if (!sameSettingsFile(await nodeSettingsFiles.read(filePath), expected))
-      return false;
-    await mkdir(path.dirname(expected.target), { recursive: true });
-    const temporary = path.join(
-      path.dirname(expected.target),
-      `.omxterm-settings-${randomBytes(6).toString("hex")}.tmp`,
-    );
-    let created = false;
-    let replaced = false;
-    let identity: Stats | undefined;
-    try {
-      // The target may be private even when the process has a permissive umask.
-      const handle = await open(temporary, "wx", 0o600);
-      created = true;
-      try {
-        identity = await handle.stat();
-        await handle.writeFile(text, "utf8");
-        const latest = await nodeSettingsFiles.read(filePath);
-        if (!sameSettingsFile(latest, expected)) return false;
-        // Use the owned handle, never a path that another process can replace.
-        if (expected.mode !== undefined) await handle.chmod(expected.mode);
-      } finally {
-        await handle.close();
-      }
-      if (!sameSettingsFile(await nodeSettingsFiles.read(filePath), expected))
-        return false;
-      if (!sameTemporary(await lstat(temporary), identity))
-        throw new SettingsFileError("conflict");
-      // These checks minimize races, but are not a cross-process atomic CAS:
-      // either pathname can still change between its final check and rename.
-      await rename(temporary, expected.target);
-      replaced = true;
-      return true;
-    } finally {
-      if (created && !replaced) {
-        try {
-          const entry = await lstat(temporary);
-          // Never delete a replacement entry belonging to another writer.
-          if (!sameTemporary(entry, identity))
-            throw new Error("temporary changed");
-          await rm(temporary);
-        } catch (cause) {
-          if (!isNotFound(cause)) throw new SettingsFileError("cleanup");
-        }
-      }
-    }
-  },
-};

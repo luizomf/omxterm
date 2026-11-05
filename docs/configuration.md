@@ -538,9 +538,10 @@ links it in `config.json`. In **stable 0.24.0**, enter a theme file's path in
 **Settings → Appearance → Theme file**; clearing it uses the bundled default.
 Paths can be relative to the configuration directory or absolute.
 
-Settings selects themes; it does not edit their names or colors. To customize a
-palette, edit a theme JSON file as shown below. The
-[legacy Studio workflow](#edit-visually-with-omxterm-studio) is an option for
+Stable 0.24.0 selects themes but does not edit their names or colors. Development
+source additionally provides the [inline theme editor](#author-a-theme-development-source).
+You can still edit a theme JSON file as shown below. The
+[legacy Studio workflow](#edit-visually-with-omxterm-studio) remains an option for
 browser-only basic palette drafts, not current theme/config round trips.
 
 ### Local theme picker (development source)
@@ -554,6 +555,64 @@ distinct. The separate **Bundled omtheme** choice removes `theme.path` and uses
 the built-in default; it is distinct from the editable `themes/omtheme.json` copy.
 
 Choosing a card saves and applies it through the normal Settings path. A pending choice is marked **Saving…**; after it settles, a selected card identifies the saved configuration. If the status says it could not be applied, follow that message and reload after fixing the problem. Missing or empty folders, unreadable or invalid files and a limited list are reported. Discovery examines at most 2,048 directory entries and 128 JSON candidates, reads at most 256 KiB per theme and 4 MiB of configuration, and does not watch for changes. A configured custom path or another alias may not appear as a selected card; the **Theme file (advanced)** input remains available for relative or absolute paths. Discovery does not edit theme files.
+
+### Author a theme (development source)
+
+This editor is **development source**, not a control in published stable 0.24.0.
+In **Settings → Appearance**, choose **New theme**, **Import theme JSON…**, or
+**Edit theme** beneath a card. Editing a card does not select it. One inline
+editor is open at a time; **Cancel** finishes that editor before you start another.
+
+- Edit **Theme name**, then choose a **Color role** and use its labelled native
+  color picker or `#RRGGBB` field. All 21 required colors are available. Invalid
+  partial text stays with its role when you switch roles or categories; fix it
+  before saving or exporting. The specimen shows the last valid colors.
+- The **Palette preview** shows illustrative text, selection, cursor and all
+  normal/bright ANSI colors. It does not run a shell or change your actual
+  terminal, surrounding Settings colors, transparency or desktop blur.
+- **Save** updates an opened local theme using its original revision. It follows
+  intentional file/directory links to the regular target and preserves the links.
+  A detected external edit or retargeting refuses the save and keeps your draft;
+  **Discard draft and reload source** rereads explicitly, or **Save copy** keeps
+  your edits in a different file. There is no automatic rebase or retry.
+- **Save copy** creates a complete new JSON file directly in `themes/` beside the
+  logical configuration location. Choose a portable filename such as
+  `my-theme.json`; this is separate from the display name. It never replaces an
+  existing entry, including a broken link. Subsequent **Save** updates this copy.
+  New/bundled/imported themes first use **Save copy**. Importing does not authorize
+  overwriting the imported file; custom paths outside the cards can be imported
+  for editing as a copy.
+- Saving a theme does **not** apply it. **Use saved theme**, available after saving
+  all edits, saves its path through the ordinary Settings authority and reloads
+  the complete current configuration. See the Settings status for success or
+  saved-but-not-applied feedback. A failed activation leaves the theme file saved.
+  Normal card selection also remains available. Use reads the file as it exists
+  then, not a guarantee that another editor has left the saved bytes unchanged.
+- **Export JSON…** exports the complete valid draft, not `config.json` or a ZIP.
+  **Choose a new filename:** existing files are never replaced, even if the
+  operating-system dialog offers replacement. Export does not select a theme,
+  mark the local draft saved, or retarget subsequent Save. Cancelling the native
+  chooser changes nothing.
+
+All supported optional `appearance` values survive import/edit/save/copy/export,
+including omitted members, explicit `null`, hex values and an empty object, even
+though they have no controls yet. Unsupported fields and partial palettes are
+rejected, never silently stripped. Reads are limited to 256 KiB of UTF-8 JSON.
+Saves preserve values but reformat JSON with two-space indentation and a newline.
+
+Switching Settings categories or application tabs retains the draft, selected
+role and pending result. Closing Settings discards unsaved edits without a new
+prompt. **Cancel** discards only the editor, not previously saved/exported files
+or writes already requested. You may keep typing during a save/export; the result
+identifies newer edits that were not included. Closed editors ignore late results.
+
+Theme writes use the same guarded replacement and permission/metadata limits as
+[Settings configuration writes](#settings), not a cross-process lock or atomic
+compare-and-swap. New files are published complete without overwrite, using
+filesystem hard-link support; unsupported filesystems fail without a clobbering
+fallback. A cleanup warning after publication means the theme was saved/exported
+but a temporary file may remain. If a request result cannot be confirmed, refresh
+or reopen before deciding to write again. No automatic retry or rollback occurs.
 
 ### Edit theme files
 

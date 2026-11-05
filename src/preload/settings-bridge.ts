@@ -8,6 +8,15 @@ import {
 } from "../shared/settings";
 import { isSettingsThemesResult } from "../shared/settings-themes";
 import {
+  isLocalThemeDocumentPath,
+  isThemeDocumentSave,
+  isThemeDocumentOpenResult,
+  isThemeDocumentSaveResult,
+  isThemeDocumentExportResult,
+  themeDocumentIpc,
+} from "../shared/settings-theme-documents";
+import { isTerminalTheme } from "../shared/terminal-theme";
+import {
   isShortcutCaptureResult,
   isSettingsKeybindChange,
 } from "../shared/settings-keybinds";
@@ -40,6 +49,38 @@ export function createSettingsBridge(ipc: {
     return value;
   };
   return {
+    themeDocuments: {
+      async openTheme(path) {
+        if (!isLocalThemeDocumentPath(path))
+          throw new TypeError("Invalid theme document request");
+        const value = await ipc.invoke(themeDocumentIpc.open, path);
+        if (!isThemeDocumentOpenResult(value))
+          throw new TypeError("Invalid theme document response");
+        return value;
+      },
+      async saveTheme(request) {
+        if (!isThemeDocumentSave(request))
+          throw new TypeError("Invalid theme document request");
+        const value = await ipc.invoke(themeDocumentIpc.save, request);
+        if (!isThemeDocumentSaveResult(value))
+          throw new TypeError("Invalid theme document response");
+        return value;
+      },
+      async importTheme() {
+        const value = await ipc.invoke(themeDocumentIpc.import);
+        if (!isThemeDocumentOpenResult(value))
+          throw new TypeError("Invalid theme document response");
+        return value;
+      },
+      async exportTheme(theme) {
+        if (!isTerminalTheme(theme))
+          throw new TypeError("Invalid theme document request");
+        const value = await ipc.invoke(themeDocumentIpc.export, theme);
+        if (!isThemeDocumentExportResult(value))
+          throw new TypeError("Invalid theme document response");
+        return value;
+      },
+    },
     async snapshot() {
       const value: unknown = await ipc.invoke(settingsIpc.snapshot);
       if (!isSettingsSnapshot(value))

@@ -104,6 +104,18 @@ body.tabs-visible .settings-tab {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
   gap: 12px;
 }
+.settings-theme-entry {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+}
+.settings-theme-entry > .settings-theme-card {
+  flex: 1;
+}
+.settings-theme-entry > button {
+  align-self: flex-start;
+}
 .settings-theme-card {
   position: relative;
   min-width: 0;
@@ -183,6 +195,92 @@ body.tabs-visible .settings-tab {
 .settings-themes-invalid ul {
   margin-block: 8px 0;
   padding-inline-start: 20px;
+}
+.settings-theme-authoring,
+.settings-theme-editor,
+.settings-theme-copy-fields,
+.settings-theme-use {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.settings-theme-authoring {
+  margin-block-start: 4px;
+}
+.settings-theme-editor {
+  border-block-start: 1px solid var(--ui-decoration);
+  padding-block-start: 20px;
+  gap: 16px;
+}
+.settings-theme-editor[hidden],
+.settings-theme-copy-fields[hidden] {
+  display: none;
+}
+.settings-theme-editor h4 {
+  margin: 0;
+  font-size: 14px;
+}
+.settings-theme-color-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.settings-theme-color-controls input[type="color"] {
+  width: 48px;
+  height: 40px;
+  padding: 4px;
+}
+.settings-theme-color-controls .settings-row {
+  display: flex;
+  flex: 1;
+  min-width: 140px;
+  gap: 8px;
+}
+.settings-theme-color-controls .settings-theme-hex {
+  width: 100%;
+  max-width: 220px;
+  font-family: ui-monospace, monospace;
+}
+.settings-theme-specimen {
+  min-width: 0;
+  padding: 16px;
+  border-radius: var(--ui-radius);
+  font:
+    12px/1.5 ui-monospace,
+    monospace;
+  overflow-wrap: anywhere;
+}
+.settings-theme-selection {
+  display: inline-block;
+  padding-inline: 4px;
+  margin-block: 12px;
+}
+.settings-theme-cursor {
+  display: inline-block;
+  width: 1ch;
+  height: 1.2em;
+  vertical-align: middle;
+  margin-inline: 12px;
+}
+.settings-theme-ansi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 136px), 1fr));
+  gap: 6px 16px;
+}
+.settings-theme-ansi > span {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.settings-theme-ansi > span > :last-child {
+  flex: none;
+}
+.settings-theme-use {
+  align-items: flex-start;
 }
 .settings-row {
   display: flex;
