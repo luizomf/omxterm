@@ -81,8 +81,11 @@ export function createPanelDefault(options: {
     const abort = new AbortController();
     defaults.set(window, { token, abort });
     const signal = AbortSignal.any([target.signal, abort.signal]);
+    // Retain our cancellation source through pending work. Node's lazy
+    // AbortSignal.any can otherwise lose an unobserved abort after source GC.
     const current = () =>
       !options.stopping() &&
+      !abort.signal.aborted &&
       !signal.aborted &&
       BrowserWindow.getFocusedWindow() === window;
     try {

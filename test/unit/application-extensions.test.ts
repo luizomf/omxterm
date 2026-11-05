@@ -1000,44 +1000,56 @@ it.each(["denied", "cancelled", "disabled", "unfocused"])(
   },
 );
 
-it("cancels an in-flight activation before it can allocate a late view", async () => {
-  await installSnippets();
-  let finish!: () => void;
-  adapters.activate.mockImplementationOnce(
-    () =>
-      new Promise((resolve) => {
-        finish = () => {
-          void applicationBackend(
-            adapters.root,
-            adapters.backendLifetime.signal,
-          ).then(resolve);
-        };
-      }),
-  );
-  const prepared = await request({ operation: "panel-default" });
-  const opening = request({
-    operation: "open",
-    token: prepared.openToken,
-    accepted: true,
-  });
-  await vi.waitFor(() => expect(adapters.activate).toHaveBeenCalledOnce());
-  await request({
-    operation: "cancel-panel-default",
-    token: prepared.openToken,
-  });
-  finish();
-  const result = await opening;
-  // Keep phase facts if the original intermittent pre-activation failure recurs.
-  const phase = JSON.stringify({
-    activationCalls: adapters.activate.mock.calls.length,
-    allocatedViews: adapters.hosts.length,
-    retirementCalls: adapters.hosts.map(
-      (host) => host.retire.mock.calls.length,
-    ),
-  });
-  expect(result, phase).toEqual({ ok: false });
-  expect(adapters.hosts, phase).toHaveLength(0);
-});
+it.for(["same-turn", "post-cancel GC"] as const)(
+  "cancels an in-flight activation before it can allocate a late view: %s",
+  async (boundary, { skip }) => {
+    // The collection boundary runs with Vitest --execArgv=--expose-gc.
+    if (boundary === "post-cancel GC" && !globalThis.gc)
+      skip("Requires --expose-gc");
+    await installSnippets();
+    let finish!: () => void;
+    adapters.activate.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () => {
+            void applicationBackend(
+              adapters.root,
+              adapters.backendLifetime.signal,
+            ).then(resolve);
+          };
+        }),
+    );
+    const prepared = await request({ operation: "panel-default" });
+    const opening = request({
+      operation: "open",
+      token: prepared.openToken,
+      accepted: true,
+    });
+    await vi.waitFor(() => expect(adapters.activate).toHaveBeenCalledOnce());
+    await request({
+      operation: "cancel-panel-default",
+      token: prepared.openToken,
+    });
+    if (boundary === "post-cancel GC") {
+      // Do not observe the composite after cancellation: that would latch
+      // Node's lazy abort and hide loss of the now-unowned source.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      globalThis.gc!();
+    }
+    finish();
+    const result = await opening;
+    // Keep phase facts if the original intermittent pre-activation failure recurs.
+    const phase = JSON.stringify({
+      activationCalls: adapters.activate.mock.calls.length,
+      allocatedViews: adapters.hosts.length,
+      retirementCalls: adapters.hosts.map(
+        (host) => host.retire.mock.calls.length,
+      ),
+    });
+    expect(result, phase).toEqual({ ok: false });
+    expect(adapters.hosts, phase).toHaveLength(0);
+  },
+);
 
 it.each(["complete", "cancel", "supersede"] as const)(
   "settles a completed manager open before default acknowledgement: %s",
