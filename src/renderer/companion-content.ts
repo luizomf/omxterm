@@ -36,6 +36,27 @@ function createPanelSideController(
   };
 }
 
+type CompanionSlot = HostedContentSlot & {
+  removed: boolean;
+  closing: boolean;
+  canRestoreFocus?: () => boolean;
+};
+
+// A superseding selection can drain retired slots on its own acknowledged
+// presentation without letting the older hide continuation restore focus.
+function drainRetired(
+  slots: Map<string, CompanionSlot>,
+  panel: ReturnType<typeof createAuxiliaryPanel> | undefined,
+  presentation: ReturnType<typeof createHostedContentPresentation>,
+) {
+  for (const [id, slot] of slots) {
+    if (!slot.removed) continue;
+    panel?.remove(id);
+    slots.delete(id);
+    presentation.forget(slot);
+  }
+}
+
 // Window composition for the one native presenter and the exclusive companion
 // panel. Tools never enter the application-tab collection or own core sessions.
 export function createCompanionContent(
@@ -54,22 +75,7 @@ export function createCompanionContent(
     bridge,
     options.language,
   );
-  type CompanionSlot = HostedContentSlot & {
-    removed: boolean;
-    closing: boolean;
-    canRestoreFocus?: () => boolean;
-  };
   const slots = new Map<string, CompanionSlot>();
-  // A newer selection can supersede a retirement's hide continuation. Its
-  // acknowledged activation still drains retired slots, without stealing focus.
-  const drainRetired = () => {
-    for (const [id, slot] of slots) {
-      if (!slot.removed) continue;
-      panel?.remove(id);
-      slots.delete(id);
-      presentation.forget(slot);
-    }
-  };
   let application: ApplicationTab | undefined;
   let selectionRevision = 0;
   let pendingActivation: ((focusAllowed?: boolean) => void) | undefined;
@@ -96,7 +102,7 @@ export function createCompanionContent(
           presentation.select(
             id ? slots.get(id) : undefined,
             () => {
-              drainRetired();
+              drainRetired(slots, panel, presentation);
               activateApplication(
                 !options.blocked() && !presentation.isBlocked(),
               );
@@ -205,7 +211,7 @@ export function createCompanionContent(
             panel?.requested() === id &&
             !options.blocked() &&
             !presentation.isBlocked();
-          drainRetired();
+          drainRetired(slots, panel, presentation);
           const activated = activateApplication(
             !options.blocked() && !presentation.isBlocked(),
           );
@@ -244,7 +250,7 @@ export function createCompanionContent(
       presentation.select(
         target,
         (focusAllowed) => {
-          drainRetired();
+          drainRetired(slots, panel, presentation);
           activateApplication(focusAllowed);
         },
         tab,
