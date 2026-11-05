@@ -908,7 +908,8 @@ archive first. `OMXTERM_FILES_PRODUCTION_EVIDENCE` optionally captures fixture-o
 screenshots and the native supervisor receipt. Native chooser/consent answers are
 fixture-controlled, not physical-dialog-widget qualification; terminal input is
 synthetic Chromium input. Native input-lane admission is verified separately.
-The bounded prepared Files0.7 consumer is **prepared, not native-qualified**.
+The bounded Files0.7 consumer requires a separate exact-host/archive receipt;
+preparation alone does not establish native qualification.
 On an assigned disposable Linux ARM64 guest, after the
 [desktop-service prerequisites](development.md#linux-desktop-services-and-native-verification),
 install locked dependencies and build the selected source with `npm ci` and
@@ -924,10 +925,18 @@ OMXTERM_FILES_HTTPS=0 \
 npm test -- test/integration/files-production.test.ts
 ```
 
-The archive must be the retained 23,256-byte preparation with SHA-256
-`63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce`;
-do not rebuild it or overwrite its original receipt. The scenario verifies those
-bytes before installation, then checks loaded filtering, Chromium keyboard/focus
+The archive must match one of these exact retained private preparations:
+
+- Original source `1791af0`, 23,256 bytes, SHA-256
+  `63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce`.
+- Composing-Escape correction at source `af0ac4b`, 23,285 bytes, SHA-256
+  `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`.
+  Integrated dev.13 source preserves its build inputs; reuse does not rewrite
+  the original source/dev.12 build receipt or relabel earlier native evidence.
+
+Neither archive is published. Do not rebuild merely for host metadata or overwrite
+original bytes/receipts. The scenario verifies the selected size and digest
+before installation, then checks loaded filtering, Chromium keyboard/focus
 routing, one confirmed directory move with a no-clobber conflict control,
 Close/reset from a nonempty query, Disable/Uninstall and joined Quit. It reuses
 production installation and lifecycle setup rather than repeating the full
@@ -936,7 +945,7 @@ a detached Wayland-to-X11 relaunch; it does not qualify default backend selectio
 Temporary profiles do not isolate per-user services. The fixture does not provision
 or validate a safe guest session; record service preservation separately.
 
-A future passing run would be built-host evidence, not packaged-host,
+A passing run is built-host evidence, not packaged-host,
 public-catalog, physical-keyboard, native-drag or all-platform qualification.
 Do not combine it with the HTTPS lane. `consumer-files.png` is ordered after
 completed-move readiness and two child animation frames with a readiness recheck;

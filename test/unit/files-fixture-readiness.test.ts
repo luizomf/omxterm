@@ -12,7 +12,10 @@ type ArchiveFixture = {
 };
 const readArchiveFile = (file: string, encoding?: "utf8") =>
   encoding ? readFile(file, encoding) : readFile(file);
-async function archiveResolver() {
+type FixtureHash = (algorithm: string) => {
+  update(data: Buffer): { digest(encoding: "hex"): string };
+};
+async function archiveResolver(hash: FixtureHash = createHash) {
   const entry = await readFile("test/fixtures/files-production.mjs", "utf8");
   const start = entry.indexOf("const manifest = JSON.parse(");
   const end = entry.indexOf("const require =", start);
@@ -30,7 +33,7 @@ async function archiveResolver() {
       source: process.cwd(),
       fixture,
       assert,
-      createHash,
+      createHash: hash,
     });
 }
 
@@ -65,7 +68,7 @@ it.each([
   },
 );
 
-it.each([1, 23256])(
+it.each([1, 23256, 23285])(
   "rejects wrong prepared archive bytes (%s bytes)",
   async (size) => {
     const resolveArchive = await archiveResolver();
@@ -79,6 +82,62 @@ it.each([1, 23256])(
       ),
     ).rejects.toThrow();
     expect(read).toHaveBeenLastCalledWith("/prepared.omxext");
+  },
+);
+
+it.each([
+  [
+    23256,
+    "63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce",
+    true,
+  ],
+  [
+    23285,
+    "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
+    true,
+  ],
+  [
+    23255,
+    "63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce",
+    false,
+  ],
+  [
+    23284,
+    "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
+    false,
+  ],
+  [
+    23256,
+    "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
+    false,
+  ],
+  [
+    23285,
+    "63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce",
+    false,
+  ],
+] as const)(
+  "checks exact prepared archive size/hash pair (%s, %s)",
+  async (size, digest, accepted) => {
+    const bytes = Buffer.alloc(size);
+    const hash = vi.fn(() => ({
+      update(value: Buffer) {
+        expect(value).toBe(bytes);
+        return { digest: () => digest };
+      },
+    }));
+    const resolveArchive = await archiveResolver(hash);
+    const read = vi.fn(readArchiveFile);
+    read.mockResolvedValueOnce('{"version":"0.7.0"}');
+    read.mockResolvedValueOnce(bytes);
+    const result = resolveArchive(
+      { consumer070: true, https: false, archive: "/prepared.omxext" },
+      read,
+    );
+    if (accepted) {
+      await expect(result).resolves.toBe("/prepared.omxext");
+      expect(hash).toHaveBeenCalledWith("sha256");
+    } else await expect(result).rejects.toThrow();
   },
 );
 

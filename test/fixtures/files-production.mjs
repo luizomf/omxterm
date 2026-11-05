@@ -17,8 +17,10 @@ const source = fixture.source;
 const manifest = JSON.parse(
   await readFile(path.join(source, "extensions/files/extension.json"), "utf8"),
 );
-const preparedDigest =
-  "63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce";
+const preparedArchives = new Map([
+  ["63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce", 23256],
+  ["611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef", 23285],
+]);
 const archivePath =
   fixture.archive ??
   path.join(source, `dist/extensions/files-${manifest.version}.omxext`);
@@ -27,10 +29,11 @@ if (fixture.consumer070) {
   assert.equal(fixture.https, false);
   assert.ok(path.isAbsolute(archivePath));
   const archive = await readFile(archivePath);
-  assert.equal(archive.length, 23256);
+  const digest = createHash("sha256").update(archive).digest("hex");
   assert.equal(
-    createHash("sha256").update(archive).digest("hex"),
-    preparedDigest,
+    archive.length,
+    preparedArchives.get(digest),
+    "expected an exact retained Files0.7 preparation",
   );
 }
 const require = createRequire(path.join(source, "package.json"));
