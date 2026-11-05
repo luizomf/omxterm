@@ -1,28 +1,46 @@
 // @vitest-environment jsdom
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { expect, it, vi } from "vitest";
 
-it("selects the current source archive for both production installation paths", async () => {
+type ArchiveFixture = {
+  archive?: string;
+  consumer070?: boolean;
+  https?: boolean;
+};
+const readArchiveFile = (file: string, encoding?: "utf8") =>
+  encoding ? readFile(file, encoding) : readFile(file);
+async function archiveResolver() {
   const entry = await readFile("test/fixtures/files-production.mjs", "utf8");
   const start = entry.indexOf("const manifest = JSON.parse(");
   const end = entry.indexOf("const require =", start);
   expect(start).toBeGreaterThan(0);
   expect(end).toBeGreaterThan(start);
   const resolveArchive = new Function(
-    "readFile",
-    "path",
-    "source",
-    `return (async () => { ${entry.slice(start, end)} return archivePath; })();`,
-  ) as (
-    read: typeof readFile,
-    paths: typeof path,
-    source: string,
-  ) => Promise<string>;
+    "context",
+    `const {readFile, path, source, fixture, assert, createHash} = context;
+     return (async () => { ${entry.slice(start, end)} return archivePath; })();`,
+  ) as (context: unknown) => Promise<string>;
+  return (fixture: ArchiveFixture = {}, read = readArchiveFile) =>
+    resolveArchive({
+      readFile: read,
+      path,
+      source: process.cwd(),
+      fixture,
+      assert,
+      createHash,
+    });
+}
+
+it("selects the current source archive for both production installation paths", async () => {
+  const resolveArchive = await archiveResolver();
+  const entry = await readFile("test/fixtures/files-production.mjs", "utf8");
   const manifest = JSON.parse(
     await readFile("extensions/files/extension.json", "utf8"),
   ) as { version: string };
-  await expect(resolveArchive(readFile, path, process.cwd())).resolves.toBe(
+  await expect(resolveArchive()).resolves.toBe(
     path.join(
       process.cwd(),
       `dist/extensions/files-${manifest.version}.omxext`,
@@ -31,6 +49,38 @@ it("selects the current source archive for both production installation paths", 
   expect(entry).toContain("const archive = await readFile(archivePath)");
   expect(entry).toContain("filePaths: [archivePath]");
 });
+
+it.each([
+  { consumer070: true, https: false },
+  { consumer070: true, https: false, archive: "relative.omxext" },
+  { consumer070: true, https: true, archive: "/prepared.omxext" },
+])(
+  "rejects invalid prepared archive options before reading bytes: %j",
+  async (fixture) => {
+    const resolveArchive = await archiveResolver();
+    const read = vi.fn(readArchiveFile);
+    await expect(resolveArchive(fixture, read)).rejects.toThrow();
+    // Only the source manifest was read, never a bad archive selection.
+    expect(read).toHaveBeenCalledTimes(1);
+  },
+);
+
+it.each([1, 23256])(
+  "rejects wrong prepared archive bytes (%s bytes)",
+  async (size) => {
+    const resolveArchive = await archiveResolver();
+    const read = vi.fn(readArchiveFile);
+    read.mockResolvedValueOnce('{"version":"0.7.0"}');
+    read.mockResolvedValueOnce(Buffer.alloc(size));
+    await expect(
+      resolveArchive(
+        { consumer070: true, https: false, archive: "/prepared.omxext" },
+        read,
+      ),
+    ).rejects.toThrow();
+    expect(read).toHaveBeenLastCalledWith("/prepared.omxext");
+  },
+);
 
 it("rejects unavailable fixture controls instead of reporting an ignored click as admission", async () => {
   const source = await readFile("test/fixtures/files-production.mjs", "utf8");
