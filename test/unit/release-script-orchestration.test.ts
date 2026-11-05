@@ -83,6 +83,19 @@ await import(${JSON.stringify(new URL("../../scripts/check-windows.mjs", import.
 }
 
 describe("release script orchestration", () => {
+  it("portable checks include the focused GC-enabled cancellation discriminator", () => {
+    const focused = scripts["test:panel-cancellation"]!;
+    expect(focused).toContain(
+      "vitest run test/unit/application-extensions.test.ts",
+    );
+    expect(focused).toContain(
+      '--testNamePattern="cancels an in-flight activation"',
+    );
+    expect(focused).toContain("--execArgv=--expose-gc");
+    expect(commands("check:portable")).toContain(focused);
+    expect(scripts.test).not.toContain("--expose-gc");
+  });
+
   it.each([
     ["check", "mac"],
     ["check:linux", "linux"],

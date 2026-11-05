@@ -61,11 +61,16 @@ describe("bounded manual x64 artifact workflows", () => {
       const runs = steps
         .filter((step: { run?: string }) => step.run)
         .map((step: { run: string }) => step.run);
-      expect(runs).toContain(
-        platform === "linux"
-          ? "npm test -- test/unit"
-          : "npm.cmd test -- test/unit",
+      const npm = platform === "linux" ? "npm" : "npm.cmd";
+      const cancellation = steps.findIndex(
+        (step) => step.run === `${npm} run test:panel-cancellation`,
       );
+      expect(cancellation).toBeGreaterThan(-1);
+      expect(steps[cancellation]!.if).toBeUndefined();
+      expect(cancellation).toBeLessThan(
+        steps.findIndex((step) => step.run === `${npm} test -- test/unit`),
+      );
+      expect(runs).toContain(`${npm} test -- test/unit`);
       expect(runs).toContain(
         platform === "linux"
           ? "npm run package:verify -- --inspection-only"

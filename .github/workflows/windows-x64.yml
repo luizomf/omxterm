@@ -124,6 +124,10 @@ jobs:
         id: typecheck
         run: npm.cmd run typecheck
 
+      - name: Check headless panel cancellation across GC
+        id: panel-cancellation
+        run: npm.cmd run test:panel-cancellation
+
       - name: Run headless unit tests only
         id: unit
         run: npm.cmd test -- test/unit
@@ -176,6 +180,7 @@ jobs:
             format=${{ steps.format.outcome }}
             lint=${{ steps.lint.outcome }}
             typecheck=${{ steps.typecheck.outcome }}
+            panel-cancellation=${{ steps.panel-cancellation.outcome }}
             unit=${{ steps.unit.outcome }}
             build=${{ steps.build.outcome }}
             package=${{ steps.package.outcome }}

@@ -202,6 +202,7 @@ qualification or proof of containment of later native resize exceptions.
 Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/integration/`. Support code lives in `test/fixtures/`.
 
 - `npm test -- test/unit` — runs fast, headless unit tests only.
+- `npm run test:panel-cancellation` — runs only the held-activation cancellation cases in Node with GC enabled, including the post-cancel collection discriminator. `check:portable` and both x64 CI lanes require this headless check; ordinary unit runs skip the collection case without `--expose-gc`.
 - `npm test` — runs the full default suite (unit + integration).
 - `npm run test:integration` — runs `test/integration/local-shell.test.ts` only.
 - `npx vitest list --filesOnly --json` — lists discovered test files without running them.

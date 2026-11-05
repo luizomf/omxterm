@@ -61,6 +61,9 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Check headless panel cancellation across GC
+        run: npm run test:panel-cancellation
+
       - name: Run headless unit tests only
         run: npm test -- test/unit
 
