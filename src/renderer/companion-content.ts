@@ -15,7 +15,7 @@ import type { RendererLanguage } from "./renderer-language";
 function createPanelSideController(
   panel: ReturnType<typeof createAuxiliaryPanel> | undefined,
   layout: () => void,
-  isDisposed: () => boolean,
+  isBlocked: () => boolean,
 ) {
   let configuredSide: AuxiliaryPanelSide = "right";
   let override: AuxiliaryPanelSide | undefined;
@@ -29,7 +29,7 @@ function createPanelSideController(
       if (panel?.setSide(override ?? side)) layout();
     },
     toggle() {
-      if (!panel || isDisposed()) return;
+      if (!panel || isBlocked()) return;
       override = (override ?? configuredSide) === "left" ? "right" : "left";
       if (panel.setSide(override)) layout();
     },
@@ -111,7 +111,7 @@ export function createCompanionContent(
   const panelSide = createPanelSideController(
     panel,
     presentation.layout,
-    () => disposed,
+    () => disposed || options.blocked() || presentation.isBlocked(),
   );
   const selectedPanel = () => {
     const id = panel?.selected();

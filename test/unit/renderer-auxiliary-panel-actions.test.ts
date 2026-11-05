@@ -5,6 +5,7 @@ import type {
   HostedContentDescriptor,
 } from "../../src/shared/extension-view";
 import {
+  deferred,
   fixture,
   settle as companionSettle,
 } from "../fixtures/companion-content";
@@ -129,6 +130,49 @@ it("moves the panel per window and resets that choice when its configured side c
   f.host.dispose();
   f.panelSideToggle();
   expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBeUndefined();
+});
+
+it("suppresses side commands while About awaits native hide acknowledgement", async () => {
+  const f = await fixture();
+  f.open("files");
+  await companionSettle();
+  // Right is the CSS default until an explicit side change.
+  const side = () =>
+    f.root.parentElement!.dataset.auxiliaryPanelSide ?? "right";
+  const hide = deferred<boolean>();
+  vi.mocked(f.bridge.present).mockImplementationOnce(() => hide.promise);
+  f.about();
+  expect(document.querySelector(".about-dialog")).toBeNull();
+  expect(vi.mocked(f.bridge.present).mock.lastCall?.[0].id).toBeNull();
+  f.panelSideToggle();
+  expect(side()).toBe("right");
+  hide.resolve(true);
+  await companionSettle();
+  expect(document.querySelector(".about-dialog")).not.toBeNull();
+  f.panelSideToggle();
+  expect(side()).toBe("right");
+  document.querySelector<HTMLButtonElement>(".about-close")!.click();
+  await companionSettle();
+  expect(side()).toBe("right");
+  f.panelSideToggle();
+  expect(side()).toBe("left");
+});
+
+it("still applies live configured side changes during pending and visible overlays", async () => {
+  const f = await fixture();
+  f.open("files");
+  await companionSettle();
+  const content = f.root.parentElement!;
+  const hide = deferred<boolean>();
+  vi.mocked(f.bridge.present).mockImplementationOnce(() => hide.promise);
+  f.about();
+  f.setConfiguredSide("left");
+  expect(content.dataset.auxiliaryPanelSide).toBe("left");
+  hide.resolve(true);
+  await companionSettle();
+  expect(document.querySelector(".about-dialog")).not.toBeNull();
+  f.setConfiguredSide("right");
+  expect(content.dataset.auxiliaryPanelSide).toBe("right");
 });
 
 it("moves a suspended panel from a hosted tab without revealing it", async () => {
