@@ -74,7 +74,7 @@ const harness = vi.hoisted(() => {
           updateSize: this.updateSize,
         },
         terminal: {
-          isBracketedPasteEnabled: () => false,
+          isBracketedPasteEnabled: (): boolean => false,
           setFontSize: this.setFontSize,
           setLigatures: this.setLigatures,
           setOptionKeyMode: this.setOptionKeyMode,

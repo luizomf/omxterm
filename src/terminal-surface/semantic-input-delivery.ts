@@ -30,9 +30,10 @@ export function createSemanticInputDelivery(
 ): SemanticInputDelivery {
   let disposed = false;
   let tail = Promise.resolve();
+  const isLive = () => !disposed && options.isLive();
 
   const execute = async (text: string, submit: boolean): Promise<boolean> => {
-    if (disposed || !options.isLive() || text.length === 0) return false;
+    if (!isLive() || text.length === 0) return false;
     const protectedPaste = requiresProtectedPaste(text);
     let approved = false;
     if (protectedPaste && !options.isBracketedPasteEnabled()) {
@@ -46,18 +47,24 @@ export function createSemanticInputDelivery(
       if (!approved) return false;
     }
 
-    if (disposed || !options.isLive()) return false;
+    if (!isLive()) return false;
     const bracketed = options.isBracketedPasteEnabled();
     if (protectedPaste && !bracketed && !approved) return false;
+    // A literal closing marker cannot be represented inside this envelope.
+    // Refuse the whole delivery rather than rewrite text or emit a partial paste.
+    if (bracketed && text.includes("\u001b[201~")) {
+      options.onFailure?.();
+      return false;
+    }
     const payload = bracketed ? `\u001b[200~${text}\u001b[201~` : text;
     const chunks = splitTerminalPayload(payload, options.chunkBytes);
     for (const [index, chunk] of chunks.entries()) {
-      if (disposed || !options.isLive()) return false;
+      if (!isLive()) return false;
       options.write(chunk);
       if (index < chunks.length - 1) await options.pauseBetweenChunks?.();
     }
     if (submit) {
-      if (disposed || !options.isLive()) return false;
+      if (!isLive()) return false;
       options.write("\r");
     }
     return true;
@@ -73,7 +80,7 @@ export function createSemanticInputDelivery(
     });
     tail = tail
       .then(async () => {
-        if (disposed || !options.isLive()) {
+        if (!isLive()) {
           resolveResult(false);
           return;
         }

@@ -244,8 +244,9 @@ focus. The Scrollback Search query and unrelated application menus are excluded;
 existing Edit actions and configured keybindings remain available.
 
 **Protected Paste** — Confirmation for multiline or control-character paste when
-the receiving process has not enabled bracketed paste. It is not command
-validation; clipboard contents remain private.
+the receiving process has not enabled bracketed paste. In bracketed mode, text
+containing the literal closing paste marker is refused without rewriting or
+partial delivery. It is not command validation; clipboard contents remain private.
 
 **Clipboard Image Input** — A local terminal program reading an image from the
 OS clipboard after OMXTerm forwards its shortcut. Image bytes do not pass

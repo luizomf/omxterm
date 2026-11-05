@@ -471,16 +471,17 @@ describe("Restty Protected Paste", () => {
     expect(second.adapter.write.mock.calls.flat().join("")).not.toContain("\r");
   });
 
-  it("preserves embedded bracket terminators and controls unchanged", async () => {
-    const mounted = await mount();
+  it("refuses an embedded paste terminator before any bytes or Run Enter", async () => {
+    const onClipboardError = vi.fn();
+    const mounted = await mount(createHarness(), { onClipboardError });
     mounted.restty.bracketedPaste = true;
     const text = "before\u001b[201~inside\u0000\u0003after";
 
-    await mounted.surface.inject(text);
+    await mounted.surface.inject(text, { submit: true });
 
-    expect(mounted.adapter.write.mock.calls.flat().join("")).toBe(
-      `\u001b[200~${text}\u001b[201~`,
-    );
+    expect(mounted.adapter.write).not.toHaveBeenCalled();
+    expect(mounted.clipboard.confirmPaste).not.toHaveBeenCalled();
+    expect(onClipboardError).toHaveBeenCalledOnce();
     mounted.surface.dispose();
   });
 

@@ -17,13 +17,16 @@ export function bindTerminalWindowLanguage(
   },
 ) {
   let disposed = false;
-  let failure: TerminalSurfaceFailure | undefined;
+  let failure:
+    TerminalSurfaceFailure | { readonly kind: "clipboard" } | undefined;
   const renderFailure = (t: Translate) => {
     if (!failure) return;
     const message =
-      failure.kind === "initialization"
-        ? t("terminal.initializationFailure", { detail: failure.detail })
-        : t("terminal.backendLost");
+      failure.kind === "clipboard"
+        ? t("dialog.clipboardError.message")
+        : failure.kind === "initialization"
+          ? t("terminal.initializationFailure", { detail: failure.detail })
+          : t("terminal.backendLost");
     if (options.surfaceFailureBanner) {
       options.surfaceFailureBanner.textContent = message;
       options.surfaceFailureBanner.hidden = false;
@@ -43,9 +46,17 @@ export function bindTerminalWindowLanguage(
     );
     renderFailure(t);
   });
-  const surfaceOptions: Pick<TerminalSurfaceOptions, "onFatalError"> =
+  const surfaceOptions: Pick<
+    TerminalSurfaceOptions,
+    "onFatalError" | "onClipboardError"
+  > =
     options.onSurfaceFailure || options.surfaceFailureBanner
       ? {
+          onClipboardError() {
+            if (disposed || (failure && failure.kind !== "clipboard")) return;
+            failure = { kind: "clipboard" };
+            renderFailure(language.t);
+          },
           onFatalError(value) {
             if (disposed) return;
             failure = value;

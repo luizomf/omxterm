@@ -28,8 +28,13 @@ confirmation unless the receiving process has enabled bracketed paste. Neither
 clipboard contents nor pasted Terminal Payload may be logged. Accepted paste
 preserves its text and request order while the receiving Surface remains live.
 Disposal stops remaining chunks and a snippet's optional Enter; already delivered
-bytes are not recalled. With bracketed paste enabled, it remains one semantic
-paste even if IPC or PTY streaming splits its bytes internally. OMXTerm does not
+bytes are not recalled. With bracketed paste enabled, text containing the literal
+closing marker (`ESC [ 201 ~`, without spaces) is refused before any bytes or
+optional Enter are sent. The shared delivery reports failure rather than removing
+or escaping content; explicit non-bracketed confirmation remains unchanged.
+The window shows the existing localized clipboard-operation failure notice without
+retiring the Surface. Otherwise it remains one semantic paste even if IPC or PTY
+streaming splits its bytes internally. OMXTerm does not
 summarize or interpret large text; an interactive CLI may replace it with a
 placeholder or attachment inside its own input model.
 

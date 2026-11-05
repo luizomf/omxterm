@@ -1599,7 +1599,11 @@ multiline or control-character body requires Protected Paste approval; after
 approval, the body is delivered unchanged and may execute through its embedded
 line breaks or control characters. With bracketed paste enabled, paste-aware
 delivery bypasses the Protected Paste confirmation and sends the body as one
-bracketed paste. For default row activation, `execute` controls only whether
+bracketed paste, except that a body containing the literal closing marker
+(`ESC [ 201 ~`, without spaces) is refused in full before any bytes or Enter.
+This shared rule covers clipboard, DOM paste, snippets and path injection;
+it does not rewrite literal content. Refusal uses the existing localized
+clipboard-operation failure notice and leaves the Surface usable. For default row activation, `execute` controls only whether
 OMXTerm appends Enter after body delivery: `false` appends nothing, while `true`
 sends Enter after the body and any closing bracketed-paste marker. In the
 read-only preview, the final Insert/Run choice overrides this default in either

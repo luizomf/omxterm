@@ -152,6 +152,38 @@ describe("window localization lifecycle", () => {
     f.update(configuration);
     expect(names()).toEqual(portuguese);
   });
+  it("shows a localized paste failure without retiring the live Surface", async () => {
+    const f = fixture();
+    await f.host.ready;
+    const runtime = harness.instances[0]!;
+    vi.spyOn(
+      runtime.pane.runtime.terminal,
+      "isBracketedPasteEnabled",
+    ).mockReturnValue(true);
+    runtime.options.services.beforeInput({
+      text: "before\u001b[201~after",
+      source: "paste",
+    });
+    const banner = document.querySelector<HTMLElement>(
+      "#terminal-surface-failure",
+    )!;
+    await vi.waitFor(() => expect(banner.hidden).toBe(false));
+    expect(banner.textContent).toBe("Clipboard operation failed.");
+    expect(f.adapters[0]!.write).not.toHaveBeenCalled();
+    expect(f.adapters[0]!.close).not.toHaveBeenCalled();
+    expect(runtime.destroy).not.toHaveBeenCalled();
+    f.update({ ...configuration, language: "pt-BR" });
+    expect(banner.textContent).toBe(
+      "A operação na área de transferência falhou.",
+    );
+    runtime.options.services.beforeInput({ text: "safe", source: "paste" });
+    await vi.waitFor(() =>
+      expect(f.adapters[0]!.write).toHaveBeenCalledWith(
+        "\u001b[200~safe\u001b[201~",
+      ),
+    );
+  });
+
   it.each(["initialization", "backend-loss"])(
     "relabels a visible %s failure without restarting sessions",
     async (failure) => {

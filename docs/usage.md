@@ -160,7 +160,7 @@ Search only sees output the pane still holds in memory, so lines beyond your [sc
 
 When you paste multiple lines or control characters into a program that has not enabled **bracketed paste**, OMXTerm asks for confirmation before sending the text so pasted newlines do not accidentally execute commands right away.
 
-Modern shells and editors that enable bracketed paste receive pasted text directly without an extra dialog. Snippets and dropped file paths use the same protection.
+Modern shells and editors that enable bracketed paste receive pasted text directly without an extra dialog. Text containing a closing bracketed-paste marker is refused instead of being changed or partially sent; the window shows a clipboard-operation failure notice and the terminal stays usable. Snippets and dropped file paths use the same protection.
 
 ## Inserting file and folder paths
 
