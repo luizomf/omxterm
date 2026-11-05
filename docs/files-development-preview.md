@@ -903,6 +903,43 @@ archive first. `OMXTERM_FILES_PRODUCTION_EVIDENCE` optionally captures fixture-o
 screenshots and the native supervisor receipt. Native chooser/consent answers are
 fixture-controlled, not physical-dialog-widget qualification; terminal input is
 synthetic Chromium input. Native input-lane admission is verified separately.
+The bounded prepared Files0.7 consumer is **prepared, not native-qualified**.
+On an assigned disposable Linux ARM64 guest, after the
+[desktop-service prerequisites](development.md#linux-desktop-services-and-native-verification),
+install locked dependencies and build the selected source with `npm ci` and
+`npm run build`. From that source directory, using its normal test-user desktop,
+bus, authentication and runtime environment:
+
+```sh
+OMXTERM_FILES_PRODUCTION_SOURCE="$PWD" \
+OMXTERM_FILES_CONSUMER_070=1 \
+OMXTERM_FILES_PRODUCTION_ARCHIVE="/absolute/retained/files-0.7.0.omxext" \
+OMXTERM_FILES_PRODUCTION_EVIDENCE="/absolute/new/private/evidence" \
+OMXTERM_FILES_HTTPS=0 \
+npm test -- test/integration/files-production.test.ts
+```
+
+The archive must be the retained 23,256-byte preparation with SHA-256
+`63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce`;
+do not rebuild it or overwrite its original receipt. The scenario verifies those
+bytes before installation, then checks loaded filtering, Chromium keyboard/focus
+routing, one confirmed directory move with a no-clobber conflict control,
+Close/reset from a nonempty query, Disable/Uninstall and joined Quit. It reuses
+production installation and lifecycle setup rather than repeating the full
+mutation/crash matrix. The consumer explicitly selects X11 at bootstrap to avoid
+a detached Wayland-to-X11 relaunch; it does not qualify default backend selection.
+Temporary profiles do not isolate per-user services. The fixture does not provision
+or validate a safe guest session; record service preservation separately.
+
+A future passing run would be built-host evidence, not packaged-host,
+public-catalog, physical-keyboard, native-drag or all-platform qualification.
+Do not combine it with the HTTPS lane. `consumer-files.png` is ordered after
+completed-move readiness and two child animation frames with a readiness recheck;
+this does not prove fresh compositor pixels. Inspect the actual capture before
+accepting it as visual evidence. `consumer-window.png` captures core host content,
+not the separate Files view or final terminal paint. Existing primitive evidence
+retains its original input scope.
+
 Set `OMXTERM_FILES_HTTPS=1` on that same opt-in fixture for the bounded HTTPS
 installation lane instead of the full Files operations scenario. It requires
 `openssl`, creates a one-day localhost test certificate and supplies it only to

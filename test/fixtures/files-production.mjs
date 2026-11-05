@@ -3,6 +3,8 @@
 import { app, BrowserWindow, Menu, dialog, webContents } from "electron";
 import assert from "node:assert/strict";
 import { createRequire, syncBuiltinESMExports } from "node:module";
+import { createHash } from "node:crypto";
+import { runFiles070Consumer } from "./files-070-consumer.mjs";
 import { mkdir, readFile, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { createServer } from "node:https";
@@ -15,10 +17,22 @@ const source = fixture.source;
 const manifest = JSON.parse(
   await readFile(path.join(source, "extensions/files/extension.json"), "utf8"),
 );
-const archivePath = path.join(
-  source,
-  `dist/extensions/files-${manifest.version}.omxext`,
-);
+const preparedDigest =
+  "63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce";
+const archivePath =
+  fixture.archive ??
+  path.join(source, `dist/extensions/files-${manifest.version}.omxext`);
+if (fixture.consumer070) {
+  assert.ok(fixture.archive, "prepared consumer requires an explicit archive");
+  assert.equal(fixture.https, false);
+  assert.ok(path.isAbsolute(archivePath));
+  const archive = await readFile(archivePath);
+  assert.equal(archive.length, 23256);
+  assert.equal(
+    createHash("sha256").update(archive).digest("hex"),
+    preparedDigest,
+  );
+}
 const require = createRequire(path.join(source, "package.json"));
 await mkdir(path.join(root, "profile"));
 app.setPath("userData", path.join(root, "profile"));
@@ -119,6 +133,8 @@ dialog.showMessageBox = async (_window, options) => {
     "unexpected production dialog",
   );
   assert.match(options.detail, /SHA-256: [a-f0-9]{64}/);
+  if (fixture.consumer070)
+    assert.ok(options.detail.includes(`SHA-256: ${preparedDigest}`));
   assert.match(options.detail, /network/);
   assert.match(options.detail, /Third-party/);
   approved++;
@@ -556,6 +572,28 @@ void ready.then(async (window) => {
     await reopen(() => menu("Files"));
     await panel(view, true, "child");
     checks.push("menu-palette-hidden-reveal-settings-retain-same-terminal");
+    if (fixture.consumer070) {
+      await runFiles070Consumer({
+        view,
+        core,
+        files,
+        checks,
+        children,
+        hosted,
+        js,
+        menu,
+        click,
+        until,
+        panel,
+        terminal,
+        sameTerminal,
+        closeFiles,
+        listingReady,
+        evidence: fixture.evidence,
+      });
+      app.quit();
+      return;
+    }
     await location(view);
     await filesAction(view, "New file");
     await apply(view, "created.txt");

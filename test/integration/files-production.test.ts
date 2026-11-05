@@ -11,10 +11,22 @@ import { productionFixtureArguments } from "../fixtures/supported-fixture-chromi
 // Portable unit/native fixtures do not imply this opt-in production qualification.
 const source = process.env.OMXTERM_FILES_PRODUCTION_SOURCE;
 const https = process.env.OMXTERM_FILES_HTTPS === "1";
+const consumer070 = process.env.OMXTERM_FILES_CONSUMER_070 === "1";
+const archive = process.env.OMXTERM_FILES_PRODUCTION_ARCHIVE;
 it.skipIf(process.platform !== "linux" || process.arch !== "arm64" || !source)(
   "installs separate Files through production Settings, uses real operations and joins normal Quit",
   { timeout: 180_000 },
   async (testContext) => {
+    if (consumer070) {
+      expect(https, "prepared consumer is separate from the HTTPS lane").toBe(
+        false,
+      );
+      expect(
+        archive,
+        "prepared consumer needs an explicit retained archive",
+      ).toBeTruthy();
+      expect(path.isAbsolute(archive!)).toBe(true);
+    }
     const root = await mkdtemp(
       path.join(tmpdir(), "omxterm-files-production-"),
     );
@@ -46,7 +58,12 @@ it.skipIf(process.platform !== "linux" || process.arch !== "arm64" || !source)(
     }
     const execution = await runNativeFixture({
       executable: createRequire(import.meta.url)("electron") as string,
-      args: productionFixtureArguments(root),
+      // Keep this selected consumer in the initial owned process, avoiding the
+      // Wayland-to-X11 detached production relaunch. Not default-backend evidence.
+      args: [
+        ...(consumer070 ? ["--ozone-platform=x11"] : []),
+        ...productionFixtureArguments(root),
+      ],
       root,
       timeout: 120_000,
       testContext,
@@ -66,11 +83,21 @@ it.skipIf(process.platform !== "linux" || process.arch !== "arm64" || !source)(
         );
         await writeFile(
           path.join(root, "fixture.json"),
-          JSON.stringify({ source: path.resolve(source!), evidence, https }),
+          JSON.stringify({
+            source: path.resolve(source!),
+            evidence,
+            https,
+            archive,
+            consumer070,
+          }),
         );
         await cp(
           "test/fixtures/files-production.mjs",
           path.join(root, "main.mjs"),
+        );
+        await cp(
+          "test/fixtures/files-070-consumer.mjs",
+          path.join(root, "files-070-consumer.mjs"),
         );
       },
     }).finally(() => {
@@ -109,16 +136,28 @@ it.skipIf(process.platform !== "linux" || process.arch !== "arm64" || !source)(
             "HTTPS-redirect-captured-trust-dormant-no-backend",
             "HTTPS-local-replacement-same-PTY",
           ]
-        : [
-            "Settings-captured-trust-dormant-no-backend",
-            "selected-visible-toggle-header-close-destroy-empty-reveal-noop-fresh-view-same-backend-PTY",
-            "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
-            "menu-palette-hidden-reveal-settings-retain-same-terminal",
-            "real-create-folder-no-clobber-move-trash-confirmed-delete",
-            "backend-loss-retires-companion-core-survives",
-            "explicit-reopen-fresh-view-and-backend",
-            "disable-uninstall-real-settlement-retained-draft-same-PTY",
-          ],
+        : consumer070
+          ? [
+              "Settings-captured-trust-dormant-no-backend",
+              "selected-visible-toggle-header-close-destroy-empty-reveal-noop-fresh-view-same-backend-PTY",
+              "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
+              "menu-palette-hidden-reveal-settings-retain-same-terminal",
+              "loaded-filter-retains-ancestor-clears-selection-no-recursive-search",
+              "Chromium-Tab-End-F2-Cancel-focus-hide-reveal-query-retained",
+              "confirmed-directory-conflict-no-clobber-source-destination-preserved",
+              "one-explicit-confirmed-directory-move-same-inode-and-bytes",
+              "Close-reset-Disable-Uninstall-normal-backend-exit-same-PTY",
+            ]
+          : [
+              "Settings-captured-trust-dormant-no-backend",
+              "selected-visible-toggle-header-close-destroy-empty-reveal-noop-fresh-view-same-backend-PTY",
+              "explicit-hide-independent-panel-toggle-exact-view-directory-draft",
+              "menu-palette-hidden-reveal-settings-retain-same-terminal",
+              "real-create-folder-no-clobber-move-trash-confirmed-delete",
+              "backend-loss-retires-companion-core-survives",
+              "explicit-reopen-fresh-view-and-backend",
+              "disable-uninstall-real-settlement-retained-draft-same-PTY",
+            ],
     });
   },
 );
