@@ -571,6 +571,170 @@ it.each([
   },
 );
 
+it("moves once for a Control+Escape remap from core and a focused companion", async () => {
+  const f = await fixture(false);
+  const move = vi.fn();
+  const other = vi.fn();
+  const capture = createKeybindCapture(process.platform);
+  const owner = f.options.owner;
+  const catalog = createCoreActionCatalog(
+    "OMXTerm",
+    new Proxy({} as TerminalApplicationMenuActions, {
+      get: (_target, property) =>
+        property === "moveSelectedAuxiliaryPanel" ? move : other,
+    }),
+    {
+      ...terminalDefaultKeybinds(process.platform),
+      moveAuxiliaryPanel: "Control+Escape",
+    },
+  );
+  registerWindowActionDelivery(
+    owner,
+    () => catalog,
+    capture,
+    () => undefined,
+  );
+  const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;
+  const host = startExtensionViewHost({
+    ...f.options,
+    ipcMain: ipc,
+    onKeybind: (event, input, window, companionOnly) =>
+      deliverExtensionKeybind(catalog, event, input, window, capture, {
+        companionOnly,
+      }),
+  });
+  cleanups.push(() => host.retire());
+  const descriptor = await host.open({ ...opening, presentation: "panel" });
+  const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+    ([channel]) => channel === extensionViewIpc.present,
+  )![1] as (
+    event: unknown,
+    request: HostedContentPresentation,
+  ) => Promise<unknown>;
+  const sender = {
+    sender: f.owner.webContents,
+    senderFrame: f.owner.webContents.mainFrame,
+  };
+  await handler(sender, present(descriptor.id));
+  const child = f.views[0]!.webContents;
+  const send = (
+    contents: Contents,
+    overrides: Record<string, unknown> = {},
+  ) => {
+    let defaultPrevented = false;
+    const event = {
+      get defaultPrevented() {
+        return defaultPrevented;
+      },
+      preventDefault: vi.fn(() => {
+        defaultPrevented = true;
+      }),
+    };
+    contents.emit("before-input-event", event, {
+      type: "keyDown",
+      key: "Escape",
+      code: "Escape",
+      control: true,
+      alt: false,
+      meta: false,
+      shift: false,
+      ...overrides,
+    });
+    return event.preventDefault;
+  };
+  f.owner.webContents.send.mockClear();
+  expect(send(f.owner.webContents)).toHaveBeenCalledOnce();
+  expect(send(child, { isAutoRepeat: true })).toHaveBeenCalledOnce();
+  expect(send(child, { type: "keyUp", control: false })).toHaveBeenCalledOnce();
+  expect(move).toHaveBeenCalledOnce();
+  expect(
+    f.owner.webContents.send.mock.calls.filter(
+      ([channel]) => channel === extensionViewIpc.dismissPanel,
+    ),
+  ).toEqual([]);
+  expect(send(child)).toHaveBeenCalledOnce();
+  expect(
+    send(f.owner.webContents, { isAutoRepeat: true }),
+  ).toHaveBeenCalledOnce();
+  expect(send(f.owner.webContents, { type: "keyUp" })).toHaveBeenCalledOnce();
+  expect(move).toHaveBeenCalledTimes(2);
+  expect(send(child, { control: false })).toHaveBeenCalledOnce();
+  expect(f.owner.webContents.send).toHaveBeenCalledWith(
+    extensionViewIpc.dismissPanel,
+    descriptor.id,
+  );
+  expect(move).toHaveBeenCalledTimes(2);
+});
+
+it("keeps a non-panel Control+Escape binding behind companion dismissal", async () => {
+  const f = await fixture(false);
+  const zoom = vi.fn();
+  const capture = createKeybindCapture(process.platform);
+  const catalog = createCoreActionCatalog(
+    "OMXTerm",
+    new Proxy({} as TerminalApplicationMenuActions, {
+      get: (_target, property) =>
+        property === "zoomInSelectedWindow" ? zoom : vi.fn(),
+    }),
+    {
+      ...terminalDefaultKeybinds(process.platform),
+      zoomIn: "Control+Escape",
+    },
+  );
+  const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;
+  const host = startExtensionViewHost({
+    ...f.options,
+    ipcMain: ipc,
+    onKeybind: (event, input, window, companionOnly) =>
+      deliverExtensionKeybind(catalog, event, input, window, capture, {
+        companionOnly,
+      }),
+  });
+  cleanups.push(() => host.retire());
+  const descriptor = await host.open({ ...opening, presentation: "panel" });
+  const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+    ([channel]) => channel === extensionViewIpc.present,
+  )![1] as (
+    event: unknown,
+    request: HostedContentPresentation,
+  ) => Promise<unknown>;
+  await handler(
+    {
+      sender: f.owner.webContents,
+      senderFrame: f.owner.webContents.mainFrame,
+    },
+    present(descriptor.id),
+  );
+  const child = f.views[0]!.webContents;
+  let prevented = false;
+  child.emit(
+    "before-input-event",
+    {
+      get defaultPrevented() {
+        return prevented;
+      },
+      preventDefault() {
+        prevented = true;
+      },
+    },
+    {
+      type: "keyDown",
+      key: "Escape",
+      code: "Escape",
+      control: true,
+      alt: false,
+      meta: false,
+      shift: false,
+    },
+  );
+  expect(prevented).toBe(true);
+  expect(zoom).not.toHaveBeenCalled();
+  expect(f.owner.webContents.send).toHaveBeenCalledWith(
+    extensionViewIpc.dismissPanel,
+    descriptor.id,
+  );
+});
+
 it.each([
   {
     platform: "linux",

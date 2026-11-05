@@ -75,7 +75,7 @@ Atomic replacement keeps the target's basic permission bits where supported, but
 
 The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Transparency, blur and snippets are still edited in the files.
 
-The **Shortcuts** page lists every remappable action with the shortcut it uses now and how it is set:
+The **Shortcuts** page lists every remappable application action with the shortcut it uses now and how it is set. Operating-system shortcuts, ordinary text editing inside a field, and intentionally fixed context-specific gestures are not global commands and do not appear there. Escape still hides the auxiliary panel, and Left/Right/Home/End still move its focused separator; those keys cannot be rebound on this page.
 
 - **Default:** follows OMXTerm's built-in shortcut (no entry in `config.json`). **Default** removes your entry again. Command Palette defaults to `Cmd+Shift+P` on macOS and `Ctrl+Shift+P` on Linux and Windows.
 - **Custom:** **Record**, then press the new combination; it is saved as that action's `keybinds` entry. Plain Escape cancels; modified Escape can be recorded. An unsupported combination (including a letter without Ctrl, Alt, Cmd or AltGr, or a layout identity the accelerator cannot represent) asks you to try again; F1–F24 can stand alone. On macOS, Option without other modifiers can record observable top-row digits and some letters using the current keyboard layout. This is limited to ordinary letter/digit key positions and single ASCII layout letters, not every character on every layout. Dead keys, input methods, other characters or unavailable native support may not be recordable; try Option with an arrow or function key, or another modifier. Some dead-key sequences do not reach the recorder and may leave it waiting until you try another key or cancel. The `keyboard.optionAsAlt` setting affects terminal input, not application shortcuts. The recorder consumes observable shortcut candidates and their held repeats and releases; keys reported as composing are left to the normal input path.
@@ -337,42 +337,43 @@ Reload your configuration and open a new tab to start the new shell. Only the ex
 
 Customize application shortcuts under `keybinds` using [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators) syntax (or edit them with conflict checking in [OMXTerm Studio](#edit-visually-with-omxterm-studio)):
 
-| Action                      | macOS default                | Linux/Windows default |
-| --------------------------- | ---------------------------- | --------------------- |
-| `commandPalette`            | `CommandOrControl+Shift+P`   | `Control+Shift+P`     |
-| `quit`                      | `CommandOrControl+Q`         | `Control+Alt+Shift+Q` |
-| `copy`                      | `CommandOrControl+C`         | `Control+Shift+C`     |
-| `paste`                     | `CommandOrControl+V`         | `Control+Shift+V`     |
-| `selectAll`                 | `CommandOrControl+A`         | `Control+Shift+A`     |
-| `find`                      | `CommandOrControl+F`         | `Control+Shift+F`     |
-| `newWindow`                 | `CommandOrControl+N`         | `Control+Shift+N`     |
-| `newTab`                    | `CommandOrControl+T`         | `Control+Shift+T`     |
-| `closeTab`                  | `CommandOrControl+W`         | `Control+Shift+W`     |
-| `closeWindow`               | `CommandOrControl+Shift+W`   | `Control+Shift+Q`     |
-| `nextTab`                   | `Control+Tab`                | `Control+PageDown`    |
-| `previousTab`               | `Control+Shift+Tab`          | `Control+PageUp`      |
-| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9`   | `Alt+1` … `9`         |
-| `splitRight`                | `CommandOrControl+D`         | `Control+Shift+O`     |
-| `splitDown`                 | `CommandOrControl+Shift+E`   | `Control+Shift+E`     |
-| `closePane`                 | `CommandOrControl+Alt+W`     | `Control+Shift+K`     |
-| `focusNextPane`             | `CommandOrControl+]`         | `Control+Shift+]`     |
-| `focusPreviousPane`         | `CommandOrControl+[`         | `Control+Shift+[`     |
-| `focusPaneLeft`             | `CommandOrControl+Alt+Left`  | `Alt+Shift+Left`      |
-| `focusPaneRight`            | `CommandOrControl+Alt+Right` | `Alt+Shift+Right`     |
-| `focusPaneUp`               | `CommandOrControl+Alt+Up`    | `Alt+Shift+Up`        |
-| `focusPaneDown`             | `CommandOrControl+Alt+Down`  | `Alt+Shift+Down`      |
-| `equalizePanes`             | `Command+Control+=`          | `Control+Shift+0`     |
-| `zoomIn`                    | `CommandOrControl+Plus`      | `Control+Plus`        |
-| `zoomOut`                   | `CommandOrControl+-`         | `Control+-`           |
-| `actualSize`                | `CommandOrControl+0`         | `Control+0`           |
-| `toggleFullScreen`          | `Control+Command+F`          | `F11`                 |
-| `toggleSnippets`            | `CommandOrControl+Shift+S`   | `Control+Shift+S`     |
-| `toggleFiles`               | `null`                       | `null`                |
-| `toggleSshConnect`          | `null`                       | `null`                |
-| `toggleAuxiliaryPanel`      | `null`                       | `null`                |
-| `toggleTabBar`              | `CommandOrControl+Shift+B`   | `Control+Shift+B`     |
-| `toggleTitleBar`            | `CommandOrControl+Shift+D`   | `Control+Shift+D`     |
-| `reloadConfig`              | `CommandOrControl+Shift+,`   | `Control+Shift+,`     |
+| Action                      | macOS default                  | Linux/Windows default |
+| --------------------------- | ------------------------------ | --------------------- |
+| `commandPalette`            | `CommandOrControl+Shift+P`     | `Control+Shift+P`     |
+| `quit`                      | `CommandOrControl+Q`           | `Control+Alt+Shift+Q` |
+| `copy`                      | `CommandOrControl+C`           | `Control+Shift+C`     |
+| `paste`                     | `CommandOrControl+V`           | `Control+Shift+V`     |
+| `selectAll`                 | `CommandOrControl+A`           | `Control+Shift+A`     |
+| `find`                      | `CommandOrControl+F`           | `Control+Shift+F`     |
+| `newWindow`                 | `CommandOrControl+N`           | `Control+Shift+N`     |
+| `newTab`                    | `CommandOrControl+T`           | `Control+Shift+T`     |
+| `closeTab`                  | `CommandOrControl+W`           | `Control+Shift+W`     |
+| `closeWindow`               | `CommandOrControl+Shift+W`     | `Control+Shift+Q`     |
+| `nextTab`                   | `Control+Tab`                  | `Control+PageDown`    |
+| `previousTab`               | `Control+Shift+Tab`            | `Control+PageUp`      |
+| `selectTab1` … `selectTab9` | `CommandOrControl+1` … `9`     | `Alt+1` … `9`         |
+| `splitRight`                | `CommandOrControl+D`           | `Control+Shift+O`     |
+| `splitDown`                 | `CommandOrControl+Shift+E`     | `Control+Shift+E`     |
+| `closePane`                 | `CommandOrControl+Alt+W`       | `Control+Shift+K`     |
+| `focusNextPane`             | `CommandOrControl+]`           | `Control+Shift+]`     |
+| `focusPreviousPane`         | `CommandOrControl+[`           | `Control+Shift+[`     |
+| `focusPaneLeft`             | `CommandOrControl+Alt+Left`    | `Alt+Shift+Left`      |
+| `focusPaneRight`            | `CommandOrControl+Alt+Right`   | `Alt+Shift+Right`     |
+| `focusPaneUp`               | `CommandOrControl+Alt+Up`      | `Alt+Shift+Up`        |
+| `focusPaneDown`             | `CommandOrControl+Alt+Down`    | `Alt+Shift+Down`      |
+| `equalizePanes`             | `Command+Control+=`            | `Control+Shift+0`     |
+| `zoomIn`                    | `CommandOrControl+Plus`        | `Control+Plus`        |
+| `zoomOut`                   | `CommandOrControl+-`           | `Control+-`           |
+| `actualSize`                | `CommandOrControl+0`           | `Control+0`           |
+| `toggleFullScreen`          | `Control+Command+F`            | `F11`                 |
+| `toggleSnippets`            | `CommandOrControl+Shift+S`     | `Control+Shift+S`     |
+| `toggleFiles`               | `null`                         | `null`                |
+| `toggleSshConnect`          | `null`                         | `null`                |
+| `toggleAuxiliaryPanel`      | `null`                         | `null`                |
+| `moveAuxiliaryPanel`        | `CommandOrControl+Shift+Alt+P` | `Control+Shift+Alt+P` |
+| `toggleTabBar`              | `CommandOrControl+Shift+B`     | `Control+Shift+B`     |
+| `toggleTitleBar`            | `CommandOrControl+Shift+D`     | `Control+Shift+D`     |
+| `reloadConfig`              | `CommandOrControl+Shift+,`     | `Control+Shift+,`     |
 
 **Command Palette** is available from **View → Command Palette…** even when
 unbound. Its default is **Cmd+Shift+P** on macOS and **Ctrl+Shift+P** on Linux/Windows.
@@ -384,6 +385,15 @@ rejects the configuration with an actionable error. Remap either action or set
 one to `null`; OMXTerm does not silently reassign keys or rewrite your file.
 After changing bindings or language, reopen an already-open palette to refresh
 its labels and shortcut display.
+
+**View → Move Auxiliary Panel to Other Side** uses
+`keybinds.moveAuxiliaryPanel` (Cmd+Shift+Option+P on macOS and
+Ctrl+Shift+Alt+P on Linux/Windows). Change or unbind it in **Settings →
+Shortcuts**. One physical press moves the panel once. It changes the focused
+window for that window's lifetime, including while Settings or a hosted tab is
+selected, without revealing a suspended panel or rewriting
+`window.auxiliaryPanelSide`. A modal still blocks it. Changing the saved
+preference takes effect and clears the window's temporary side choice.
 
 Example overriding a single shortcut:
 

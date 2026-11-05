@@ -74,6 +74,7 @@ function createApplicationHarness(
   const sendSnippetsToggle = vi.fn();
   const sendTabBarToggle = vi.fn();
   const sendAuxiliaryPanelToggle = vi.fn();
+  const sendAuxiliaryPanelSideToggle = vi.fn();
   const sendFind = vi.fn();
   const sendTitleBarToggle = vi.fn();
   const sendLocalImageOpen = vi.fn();
@@ -100,6 +101,7 @@ function createApplicationHarness(
     sendSnippetsToggle,
     sendTabBarToggle,
     sendAuxiliaryPanelToggle,
+    sendAuxiliaryPanelSideToggle,
     sendFind,
     sendTitleBarToggle,
     sendLocalImageOpen,
@@ -121,6 +123,7 @@ function createApplicationHarness(
     sendSnippetsToggle,
     sendTabBarToggle,
     sendAuxiliaryPanelToggle,
+    sendAuxiliaryPanelSideToggle,
     sendFind,
     sendTitleBarToggle,
     sendLocalImageOpen,
@@ -154,6 +157,17 @@ describe("Window Chrome application actions", () => {
       expect(harness[`send${bar}Toggle`]).toHaveBeenCalledOnce();
     },
   );
+
+  it("routes auxiliary panel side changes to the selected terminal window", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    const selected = harness.windows[0]!.window;
+    harness.select(selected);
+    harness.application.moveSelectedAuxiliaryPanel();
+    expect(
+      harness.sendAuxiliaryPanelSideToggle,
+    ).toHaveBeenCalledExactlyOnceWith(selected);
+  });
 });
 
 function lastSessionEnd(sessionId = "s1") {
@@ -372,6 +386,7 @@ describe("Terminal application lifecycle", () => {
       sendSnippetsToggle: vi.fn(),
       sendTabBarToggle: vi.fn(),
       sendAuxiliaryPanelToggle: vi.fn(),
+      sendAuxiliaryPanelSideToggle: vi.fn(),
       sendFind: vi.fn(),
       sendTitleBarToggle: vi.fn(),
       sendLocalImageOpen: vi.fn(),

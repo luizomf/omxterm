@@ -42,6 +42,13 @@ const snapshot = (
     find,
     newTab: { effective: "Control+Shift+T", state: "inherit" },
     toggleAuxiliaryPanel: { effective: null, state: "inherit" },
+    moveAuxiliaryPanel: {
+      effective:
+        platform === "darwin"
+          ? "CommandOrControl+Shift+Alt+P"
+          : "Control+Shift+Alt+P",
+      state: "inherit",
+    },
     toggleFiles: { effective: null, state: "inherit" },
     toggleSshConnect: { effective: null, state: "inherit" },
   },
@@ -197,6 +204,13 @@ describe("Shortcuts page", () => {
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
     expect(view.cells("newTab")).toEqual(["Ctrl+Shift+T", "Default"]);
     expect(view.cells("toggleAuxiliaryPanel")).toEqual(["None", "Default"]);
+    expect(view.cells("moveAuxiliaryPanel")).toEqual([
+      "Ctrl+Alt+Shift+P",
+      "Default",
+    ]);
+    expect(
+      view.button("moveAuxiliaryPanel", "record").getAttribute("aria-label"),
+    ).toBe("Record shortcut for Move Auxiliary Panel to Other Side");
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
     ).toBe("Record shortcut for Toggle Auxiliary Panel");
@@ -306,8 +320,18 @@ describe("Shortcuts page", () => {
         `Gravar atalho para Alternar ${title}`,
       );
     }
+    expect(
+      document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
+    ).toContain("ações remapeáveis do aplicativo");
+    expect(
+      document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
+    ).toContain("não aparecem aqui");
     expect(view.cells("quit")).toEqual(["Nenhum", ""]);
     expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", "Padrão"]);
+    expect(view.cells("moveAuxiliaryPanel")).toEqual([
+      "Ctrl+Alt+Shift+P",
+      "Padrão",
+    ]);
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
     ).toBe("Gravar atalho para Alternar Painel Auxiliar");
@@ -318,6 +342,12 @@ describe("Shortcuts page", () => {
       )!.textContent,
     ).toBe("Selecionar Aba 3");
     language.set("en-US");
+    expect(
+      document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
+    ).toContain("remappable application actions");
+    expect(
+      document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
+    ).toContain("are not listed here");
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
     expect(view.button("find", "record").textContent).toBe("Record");
   });

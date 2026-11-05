@@ -96,6 +96,8 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
           subscribeToTabBarToggle: bridge.terminal.onTabBarToggle,
           subscribeToAuxiliaryPanelToggle:
             bridge.terminal.onAuxiliaryPanelToggle,
+          subscribeToAuxiliaryPanelSideToggle:
+            bridge.terminal.onAuxiliaryPanelSideToggle,
           subscribeToFind: bridge.terminal.onFind,
           subscribeToTabTitles: bridge.terminal.onTabTitle,
           notifyTabSelection: bridge.terminal.notifyTabSelection,

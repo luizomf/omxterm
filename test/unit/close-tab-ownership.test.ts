@@ -217,6 +217,7 @@ async function harness(confirmClose = true) {
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
     sendAuxiliaryPanelToggle() {},
+    sendAuxiliaryPanelSideToggle() {},
     sendFind() {},
     sendTitleBarToggle() {},
     sendLocalImageOpen() {},

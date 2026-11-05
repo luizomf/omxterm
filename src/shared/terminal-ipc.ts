@@ -27,6 +27,7 @@ export const terminalIpc = {
   snippetsToggle: "terminal:snippets-toggle",
   tabBarToggle: "terminal:tab-bar-toggle",
   auxiliaryPanelToggle: "terminal:auxiliary-panel-toggle",
+  auxiliaryPanelSideToggle: "terminal:auxiliary-panel-side-toggle",
   find: "terminal:find",
   titleBarToggle: "terminal:title-bar-toggle",
   windowChromeCommand: "terminal:window-chrome-command",

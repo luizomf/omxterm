@@ -5,6 +5,10 @@ import type {
   HostedContentDescriptor,
 } from "../../src/shared/extension-view";
 import {
+  fixture,
+  settle as companionSettle,
+} from "../fixtures/companion-content";
+import {
   cleanupSnippetsWindows,
   snippetsWindow,
 } from "../fixtures/snippets-window";
@@ -95,4 +99,50 @@ it("does not reveal a retained panel without a live selected terminal", async ()
   f.sessionHandlers[0]!.onExit({ exitCode: 0, signal: 0 });
   f.panelToggle();
   expect(f.root.hidden).toBe(true);
+});
+
+it("moves the panel per window and resets that choice when its configured side changes", async () => {
+  const f = await snippetsWindow();
+  f.toggle();
+  await settle();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.setLanguage("pt-BR");
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.settingsOpen();
+  await settle();
+  expect(f.root.hidden).toBe(true);
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  expect(f.root.hidden).toBe(true);
+  f.about();
+  await settle();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  document.querySelector<HTMLButtonElement>(".about-close")!.click();
+  f.tabCommand({ action: "select", position: 1 });
+  await settle();
+  f.setConfiguredSide("left");
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.setConfiguredSide("right");
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  f.host.dispose();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBeUndefined();
+});
+
+it("moves a suspended panel from a hosted tab without revealing it", async () => {
+  const f = await fixture();
+  f.toggle();
+  await companionSettle();
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("left");
+  f.open("general", false);
+  await companionSettle();
+  expect(document.querySelectorAll(".hosted-content-tab")).toHaveLength(1);
+  expect(f.root.hidden).toBe(true);
+  f.panelSideToggle();
+  expect(f.root.parentElement!.dataset.auxiliaryPanelSide).toBe("right");
+  expect(f.root.hidden).toBe(true);
+  expect(document.querySelectorAll(".hosted-content-tab")).toHaveLength(1);
 });

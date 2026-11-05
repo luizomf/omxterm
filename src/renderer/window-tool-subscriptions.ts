@@ -38,6 +38,7 @@ export function subscribeToWindowTools(
     modalClipboard(action: TerminalClipboardAction): boolean;
     focusTerminal?(): void;
     restoreSourceFocus?(id: string): boolean;
+    togglePanelSide?(): void;
   },
 ) {
   const { tabs, panel } = owner;
@@ -91,6 +92,20 @@ export function subscribeToWindowTools(
             });
         });
     });
+    const removePanelSide = options.subscribeToAuxiliaryPanelSideToggle?.(
+      () => {
+        // Side is a focused-window preference. Settings and hosted tabs may
+        // change it; suspension and modal owners still hide or block the panel.
+        if (!disposed && !owner.blocked()) owner.togglePanelSide?.();
+      },
+    );
+    if (removePanelSide) {
+      const previous = removePanel;
+      removePanel = () => {
+        previous?.();
+        removePanelSide();
+      };
+    }
     snippets = mountWindowSnippets(document, panel, options.snippets, {
       tabs,
       input,

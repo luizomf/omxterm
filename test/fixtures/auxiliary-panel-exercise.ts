@@ -94,6 +94,7 @@ function createScenario(options: PanelOptions) {
     toggleSelectedTabBar: () => application.toggleSelectedTabBar(),
     toggleSelectedAuxiliaryPanel: () =>
       application.toggleSelectedAuxiliaryPanel(),
+    moveSelectedAuxiliaryPanel: () => application.moveSelectedAuxiliaryPanel(),
     toggleSelectedTitleBar: () => application.toggleSelectedTitleBar(),
     reloadUserConfiguration: options.reload,
     openLocalImage: () => application.openLocalImageInSelectedWindow(),

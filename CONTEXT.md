@@ -164,7 +164,11 @@ archives can retain their own headings. It owns independent tool closure,
 retained panel hiding, focus and pointer/keyboard resizing; width and visibility
 are memory-only. Settings → Window
 persists `window.auxiliaryPanelSide` (`left`/`right`) and applies it live across
-windows without replacing views or changing their focus/state. Close disposes
+windows without replacing views or changing their focus/state. **View → Move
+Auxiliary Panel to Other Side** (Cmd+Shift+Option+P on macOS, Ctrl+Shift+Alt+P
+on Linux and Windows) keeps a temporary per-window side until that saved
+preference changes, and does not rewrite it. One press applies once, including
+from Settings or a hosted tab, without revealing a suspended panel. Close disposes
 the selected tool view, not its extension backend or previously created terminal
 sessions. Hide/Escape preserves open tools; panel reveal restores an open tool.
 An eligible empty-panel toggle instead opens available Snippets lazily, with a

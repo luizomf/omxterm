@@ -524,6 +524,9 @@ app
           sendAuxiliaryPanelToggle: notifyWindow(
             terminalIpc.auxiliaryPanelToggle,
           ),
+          sendAuxiliaryPanelSideToggle: notifyWindow(
+            terminalIpc.auxiliaryPanelSideToggle,
+          ),
           sendSnippetsToggle: (window) => {
             if (usesOptionalSnippets(process.platform, process.arch))
               extensions?.toggleSnippets(window);

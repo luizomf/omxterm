@@ -41,6 +41,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleSshConnect",
   "toggleTabBar",
   "toggleAuxiliaryPanel",
+  "moveAuxiliaryPanel",
   "toggleTitleBar",
   "reloadConfig",
   "commandPalette",
@@ -53,6 +54,14 @@ export function isCompanionToolAction(
   action: string,
 ): action is CompanionToolAction {
   return action === "toggleFiles" || action === "toggleSshConnect";
+}
+
+// A window preference, not a companion-tool slot. Delivery owns one physical
+// press separately from the extension-only classifier above.
+export function isDiscreteWindowAction(
+  action: string,
+): action is "moveAuxiliaryPanel" {
+  return action === "moveAuxiliaryPanel";
 }
 
 // null disables an action's shortcut; the action stays in the menu.
@@ -107,6 +116,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     toggleSshConnect: null,
     toggleTabBar: "CommandOrControl+Shift+B",
     toggleAuxiliaryPanel: null,
+    moveAuxiliaryPanel: "CommandOrControl+Shift+Alt+P",
     toggleTitleBar: "CommandOrControl+Shift+D",
     reloadConfig: "CommandOrControl+Shift+,",
   },
@@ -155,6 +165,7 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   toggleSshConnect: null,
   toggleTabBar: "Control+Shift+B",
   toggleAuxiliaryPanel: null,
+  moveAuxiliaryPanel: "Control+Shift+Alt+P",
   toggleTitleBar: "Control+Shift+D",
   reloadConfig: "Control+Shift+,",
 });

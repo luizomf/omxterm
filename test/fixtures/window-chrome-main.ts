@@ -87,6 +87,9 @@ const sendAction = (
   if (palette) palette.send(sender, channel, payload);
   else sender.send(channel, payload);
 };
+const notifyWindow =
+  (channel: string) => (window: { webContents: TrustedWebContents }) =>
+    sendAction(window.webContents, channel);
 type ChromeOptions = Parameters<typeof exerciseWindowChrome>[0];
 const root = __dirname;
 const auxiliaryOnly = process.argv.includes("--fixture-auxiliary-only");
@@ -713,10 +716,11 @@ app
       },
       sendTitleBarToggle: (window) =>
         window.webContents.send(terminalIpc.titleBarToggle),
-      sendTabBarToggle: (window) =>
-        sendAction(window.webContents, terminalIpc.tabBarToggle),
-      sendAuxiliaryPanelToggle: (window) =>
-        sendAction(window.webContents, terminalIpc.auxiliaryPanelToggle),
+      sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
+      sendAuxiliaryPanelToggle: notifyWindow(terminalIpc.auxiliaryPanelToggle),
+      sendAuxiliaryPanelSideToggle: notifyWindow(
+        terminalIpc.auxiliaryPanelSideToggle,
+      ),
       sendFind: (window) => window.webContents.send(terminalIpc.find),
       sendTabCommand: (window, command) =>
         window.webContents.send(terminalIpc.tabCommand, command),

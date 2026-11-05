@@ -374,6 +374,7 @@ export function mountTerminalWindowPage(
       modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
       focusTerminal: companion.focusTerminal,
       restoreSourceFocus: companion.restoreSourceFocus,
+      togglePanelSide: companion.toggleSide,
     });
     snippetPreview = tools.preview;
     removeToolSubscriptions = tools.unsubscribe;

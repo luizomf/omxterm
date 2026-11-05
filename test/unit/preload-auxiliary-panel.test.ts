@@ -29,13 +29,20 @@ it("delivers only payload-free panel actions and authenticates palette envelopes
   const bridge = (electron.expose.mock.calls[0]![1] as Window["omxterm"])
     .terminal;
   const listener = vi.fn();
+  const sideListener = vi.fn();
   const initialDispatchListeners = events.listenerCount(paletteIpc.dispatch);
   const remove = bridge.onAuxiliaryPanelToggle(listener);
+  const removeSide = bridge.onAuxiliaryPanelSideToggle(sideListener);
   for (const payload of [null, false, 0, "", {}, []])
     events.emit(terminalIpc.auxiliaryPanelToggle, {}, payload);
   expect(listener).not.toHaveBeenCalled();
   events.emit(terminalIpc.auxiliaryPanelToggle, {}, undefined);
   expect(listener).toHaveBeenCalledOnce();
+  for (const payload of [null, false, 0, "", {}, []])
+    events.emit(terminalIpc.auxiliaryPanelSideToggle, {}, payload);
+  expect(sideListener).not.toHaveBeenCalled();
+  events.emit(terminalIpc.auxiliaryPanelSideToggle, {}, undefined);
+  expect(sideListener).toHaveBeenCalledOnce();
   const envelope = (token: string, payload?: unknown) =>
     events.emit(
       paletteIpc.dispatch,
@@ -50,10 +57,14 @@ it("delivers only payload-free panel actions and authenticates palette envelopes
   envelope("current");
   expect(listener).toHaveBeenCalledTimes(2);
   remove();
+  removeSide();
   events.emit(terminalIpc.auxiliaryPanelToggle, {});
   envelope("current");
   expect(listener).toHaveBeenCalledTimes(2);
+  events.emit(terminalIpc.auxiliaryPanelSideToggle, {});
+  expect(sideListener).toHaveBeenCalledOnce();
   expect(events.listenerCount(terminalIpc.auxiliaryPanelToggle)).toBe(0);
+  expect(events.listenerCount(terminalIpc.auxiliaryPanelSideToggle)).toBe(0);
   expect(events.listenerCount(paletteIpc.dispatch)).toBe(
     initialDispatchListeners,
   );

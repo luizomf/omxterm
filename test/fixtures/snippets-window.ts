@@ -47,6 +47,7 @@ export async function snippetsWindow(
   let tabCommand!: (command: TerminalTabCommand) => void;
   let tabBar!: () => void;
   let panelToggle!: () => void;
+  let panelSideToggle!: () => void;
   const removePanelToggle = vi.fn();
   let settingsOpen!: () => void;
   let update!: (configuration: TerminalRendererConfiguration) => void;
@@ -189,6 +190,10 @@ export async function snippetsWindow(
         panelToggle = listener;
         return removePanelToggle;
       },
+      subscribeToAuxiliaryPanelSideToggle(listener) {
+        panelSideToggle = listener;
+        return vi.fn();
+      },
       subscribeToTabBarToggle(listener) {
         tabBar = listener;
         return vi.fn();
@@ -223,6 +228,9 @@ export async function snippetsWindow(
     tabCommand,
     tabBar,
     panelToggle,
+    panelSideToggle,
+    setConfiguredSide: (auxiliaryPanelSide: "left" | "right") =>
+      update({ ...configuration, auxiliaryPanelSide }),
     removePanelToggle,
     surfaces,
     adapters,

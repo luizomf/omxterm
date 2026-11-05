@@ -78,6 +78,7 @@ describe("main palette capability", () => {
   it.each([
     ["toggleTabBar", terminalIpc.tabBarToggle],
     ["toggleAuxiliaryPanel", terminalIpc.auxiliaryPanelToggle],
+    ["moveAuxiliaryPanel", terminalIpc.auxiliaryPanelSideToggle],
   ] as const)(
     "projects %s, executes once, and scopes dispatch only to the captured owner",
     (id, channel) => {

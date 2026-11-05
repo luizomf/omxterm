@@ -12,6 +12,12 @@ export type PreparedLayout = {
   directories: ReadonlyMap<string, string>;
 };
 
+export interface RestorationWindowOptions {
+  plan: PreparedLayout;
+  focus(): boolean;
+  accepted(): void;
+}
+
 // A timed-out filesystem operation still owns its admission slot until actual
 // settlement. No retry or replacement pool can accumulate hung mount I/O.
 export function createLayoutDirectoryResolver(

@@ -133,3 +133,97 @@ it.each(["darwin", "linux", "win32"])(
     ).toThrow("conflicts");
   },
 );
+
+it.each(["darwin", "linux", "win32"])(
+  "exposes the move-panel action in the menu and editable shortcut list on %s",
+  (platform) => {
+    const defaults = terminalDefaultKeybinds(platform);
+    const expected =
+      platform === "darwin"
+        ? "CommandOrControl+Shift+Alt+P"
+        : "Control+Shift+Alt+P";
+    expect(defaults.moveAuxiliaryPanel).toBe(expected);
+    const invoke = vi.fn();
+    const actions = new Proxy({} as TerminalApplicationMenuActions, {
+      get: () => invoke,
+    });
+    const { t } = translatorFor("en-US");
+    const catalog = createCoreActionCatalog("OMXTerm", actions, defaults, t);
+    expect(catalog.moveAuxiliaryPanel.label).toBe(t("menu.moveAuxiliaryPanel"));
+    expect(shortcutActionName("moveAuxiliaryPanel", t)).toBe(
+      catalog.moveAuxiliaryPanel.label,
+    );
+    const view = coreActionMenuTemplate("OMXTerm", catalog, t).find(
+      (item) => item.label === t("menu.view"),
+    )!;
+    if (!Array.isArray(view.submenu)) throw new Error("Missing View menu");
+    expect(
+      view.submenu.find(
+        (candidate) => candidate.label === catalog.moveAuxiliaryPanel.label,
+      )?.click,
+    ).toBe(catalog.moveAuxiliaryPanel.invoke);
+    expect(
+      coreActionForKeyboardInput(
+        catalog,
+        {
+          key: "p",
+          code: "KeyP",
+          control: platform !== "darwin",
+          alt: true,
+          shift: true,
+          meta: platform === "darwin",
+        },
+        platform,
+      ),
+    ).toBe(catalog.moveAuxiliaryPanel);
+    catalog.moveAuxiliaryPanel.invoke();
+    expect(invoke).toHaveBeenCalledOnce();
+  },
+);
+
+it("moves the panel once per physical press, including held repeats", () => {
+  const move = vi.fn();
+  const actions = new Proxy({} as TerminalApplicationMenuActions, {
+    get: (_target, property) =>
+      property === "moveSelectedAuxiliaryPanel" ? move : vi.fn(),
+  });
+  const contents = Object.assign(new EventEmitter(), {
+    send: vi.fn(),
+    isDestroyed: () => false,
+  });
+  const window = Object.assign(new EventEmitter(), { webContents: contents });
+  registerWindowActionDelivery(
+    window as unknown as BrowserWindow,
+    () =>
+      createCoreActionCatalog(
+        "OMXTerm",
+        actions,
+        terminalDefaultKeybinds(process.platform),
+      ),
+    createKeybindCapture(process.platform),
+    () => undefined,
+  );
+  const key = {
+    type: "keyDown",
+    key: "p",
+    code: "KeyP",
+    control: process.platform !== "darwin",
+    alt: true,
+    shift: true,
+    meta: process.platform === "darwin",
+  };
+  const preventDefault = vi.fn();
+  contents.emit("before-input-event", { preventDefault }, key);
+  contents.emit(
+    "before-input-event",
+    { preventDefault },
+    { ...key, isAutoRepeat: true },
+  );
+  contents.emit(
+    "before-input-event",
+    { preventDefault },
+    { ...key, type: "keyUp", control: false, alt: false, shift: false },
+  );
+  expect(move).toHaveBeenCalledOnce();
+  expect(preventDefault).toHaveBeenCalledTimes(3);
+});

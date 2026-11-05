@@ -227,6 +227,7 @@ async function run() {
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
     sendAuxiliaryPanelToggle() {},
+    sendAuxiliaryPanelSideToggle() {},
     sendFind() {},
     sendTitleBarToggle() {},
     sendLocalImageOpen() {},

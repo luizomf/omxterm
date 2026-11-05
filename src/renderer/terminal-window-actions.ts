@@ -18,6 +18,9 @@ export interface TerminalWindowActionSubscriptions {
   readonly subscribeToAuxiliaryPanelToggle?: (
     listener: () => void,
   ) => () => void;
+  readonly subscribeToAuxiliaryPanelSideToggle?: (
+    listener: () => void,
+  ) => () => void;
   readonly subscribeToFind?: (listener: () => void) => () => void;
 }
 

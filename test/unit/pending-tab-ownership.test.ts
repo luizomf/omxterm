@@ -287,6 +287,7 @@ async function harness(failure?: "rendering" | "spawn") {
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
     sendAuxiliaryPanelToggle() {},
+    sendAuxiliaryPanelSideToggle() {},
     sendFind() {},
     sendTitleBarToggle() {},
     sendLocalImageOpen() {},
