@@ -331,3 +331,79 @@ it("relabels retained invalid inputs and caret without a read/save and reports b
   expect(docs.saveTheme).not.toHaveBeenCalled();
   view.dialog.dispose();
 });
+
+it.each(["edit", "radio", "outside"] as const)(
+  "preserves %s focus when a cancelled editor's deferred Save refreshes changed cards",
+  async (kind) => {
+    const docs = documents();
+    const base = { path: "themes/local.json", revision: "f".repeat(64) };
+    const theme = { ...DEFAULT_TERMINAL_THEME, name: "Local before save" };
+    const other = {
+      path: "themes/other.json",
+      name: "Other theme",
+      colors: theme.colors,
+    };
+    let local = { path: base.path, name: theme.name, colors: theme.colors };
+    let reordered = false;
+    const themes = vi.fn(async () => ({
+      status: "ok" as const,
+      themes: reordered ? [local, other] : [other, local],
+      invalid: [],
+      truncated: false,
+      hasConfiguredTheme: false,
+    }));
+    vi.mocked(docs.openTheme).mockResolvedValue({
+      status: "opened",
+      theme,
+      base,
+    });
+    const pending =
+      deferred<
+        Awaited<ReturnType<SettingsThemeDocumentsBridge["saveTheme"]>>
+      >();
+    vi.mocked(docs.saveTheme).mockReturnValueOnce(pending.promise);
+    const view = await open({ themeDocuments: docs, themes });
+    try {
+      button("Appearance").click();
+      await view.settle();
+      const localEntry = () =>
+        [
+          ...document.querySelectorAll<HTMLElement>(".settings-theme-entry"),
+        ].find(
+          (entry) =>
+            entry.querySelector<HTMLInputElement>("input")!.value === base.path,
+        )!;
+      const original = localEntry();
+      const edit = original.querySelector<HTMLButtonElement>("button")!;
+      edit.click();
+      await view.settle();
+      button("Save").click();
+      button("Cancel").click();
+      expect(document.activeElement).toBe(edit);
+      const outside = button("Refresh themes");
+      if (kind === "radio")
+        original.querySelector<HTMLInputElement>("input")!.focus();
+      if (kind === "outside") outside.focus();
+      local = { ...local, name: "Local after save" };
+      reordered = true;
+      pending.resolve({
+        status: "saved",
+        base: { ...base, revision: "a".repeat(64) },
+      });
+      await view.settle();
+      expect(themes).toHaveBeenCalledTimes(2);
+      expect(original.isConnected).toBe(false);
+      const refreshed = localEntry();
+      expect(refreshed.textContent).toContain("Local after save");
+      expect(document.activeElement).toBe(
+        kind === "outside"
+          ? outside
+          : refreshed.querySelector(kind === "edit" ? "button" : "input"),
+      );
+      expect(document.querySelector(".settings-theme-editor")).toBeNull();
+      expect(view.bridge.change).not.toHaveBeenCalled();
+    } finally {
+      view.dialog.dispose();
+    }
+  },
+);

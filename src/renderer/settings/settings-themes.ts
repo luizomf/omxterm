@@ -154,19 +154,25 @@ export function renderSettingsThemes(
     const themes = result?.themes ?? [];
     const next = JSON.stringify(themes);
     if (rendered !== next) {
-      const focused = grid.contains(document.activeElement)
-        ? (document.activeElement as HTMLInputElement).value
-        : undefined;
+      const focused = focusedThemeControl(grid);
       grid.replaceChildren(
         ...[defaultTheme, ...themes].map((theme) =>
           createThemeCard(document, theme, t, choose, editor),
         ),
       );
       rendered = next;
-      if (focused !== undefined && document.activeElement === document.body)
-        [...grid.querySelectorAll<HTMLInputElement>("input")]
-          .find((input) => input.value === focused)
-          ?.focus({ preventScroll: true });
+      if (focused !== undefined && document.activeElement === document.body) {
+        const radio = [
+          ...grid.querySelectorAll<HTMLInputElement>("input"),
+        ].find((input) => input.value === focused.path);
+        const control =
+          focused.kind === "edit"
+            ? radio
+                ?.closest(".settings-theme-entry")
+                ?.querySelector<HTMLButtonElement>("button")
+            : radio;
+        control?.focus({ preventScroll: true });
+      }
     }
     const defaultCard = grid.querySelector(".settings-theme-card");
     if (defaultCard) {
@@ -253,6 +259,23 @@ export function renderSettingsThemes(
     render();
   });
   return section;
+}
+
+// Edit buttons have no theme value of their own. Preserve the entry identity
+// and action kind rather than treating every focused control as a radio.
+function focusedThemeControl(grid: HTMLElement) {
+  const active = grid.ownerDocument.activeElement;
+  if (!active || !grid.contains(active)) return undefined;
+  const kind = active.matches("button") ? "edit" : "radio";
+  const radio =
+    kind === "edit"
+      ? active
+          .closest(".settings-theme-entry")
+          ?.querySelector<HTMLInputElement>("input")
+      : active.matches('input[type="radio"]')
+        ? (active as HTMLInputElement)
+        : undefined;
+  return radio ? { path: radio.value, kind } : undefined;
 }
 
 function cleanPath(path: string): string {
