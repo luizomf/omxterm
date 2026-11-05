@@ -39,7 +39,7 @@ it("exposes labelled native background controls near themes without writing on o
     "settings-background-hint",
   );
   expect(view.query("#settings-background-hint").textContent).toContain(
-    "About and Command Palette blur underlying app content even with desktop blur off.",
+    "About and Command Palette blur content behind them independently of desktop blur.",
   );
   expect(view.bridge.change).not.toHaveBeenCalled();
   slider.value = "0.37";
@@ -123,7 +123,7 @@ it("relabels pending controls in place and keeps saved-but-not-applied feedback"
     "checkbox",
   );
   expect(view.query("#settings-background-hint").textContent).toContain(
-    "Sobre o OMXTerm e a Paleta de comandos desfocam o conteúdo ao fundo mesmo com o desfoque da área de trabalho desligado.",
+    "Sobre o OMXTerm e a Paleta de comandos desfocam o conteúdo ao fundo independentemente do desfoque da área de trabalho.",
   );
   pending.resolve(
     saved(
