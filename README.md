@@ -51,9 +51,9 @@ Omarchy screenshot are arranged by Hyprland.
 
 - **Ready out of the box:** starts your local shell with bundled Nerd Fonts and
   programming ligatures.
-- **Make it yours:** customize themes, fonts, keyboard shortcuts, and reusable
-  text snippets — in plain JSON or visually with
-  [OMXTerm Studio](https://luizomf.github.io/omxterm-studio/).
+- **Make it yours:** change fonts, preferences, and keyboard shortcuts in native
+  [Settings](docs/configuration.md#settings), and customize theme files and
+  reusable text snippets with the [configuration guide](docs/configuration.md).
 - **Clean workspace:** tabs, multiple windows, hideable title and tab bars, and
   optional background transparency and blur.
 - **Everyday conveniences:** drag files to insert quoted paths, click to preview
@@ -166,10 +166,9 @@ menu bar.
 ### Make it yours
 
 On first launch, stable OMXTerm creates `config.json` and `themes/omtheme.json`
-in `~/.config/omxterm`. You can edit them directly,
-[tweak a single setting](docs/configuration.md#add-one-display-change), or use
-[OMXTerm Studio](docs/configuration.md#edit-visually-with-omxterm-studio) to
-customize your settings and colors visually. Stable 0.24.0 also creates
+in `~/.config/omxterm`. Choose **Settings…** in the application menu to change
+fonts, preferences, and shortcuts without editing JSON. For custom colors, edit
+[a theme file](docs/configuration.md#terminal-themes). Stable 0.24.0 also creates
 `snippets.yaml` on Windows x64, which retains built-in Snippets. Linux ARM64/x64
 and macOS/Windows ARM64 use optional Snippets and do not create that file; follow
 the [migration guide](docs/snippets-migration.md#install-deliberately) to create a catalog.

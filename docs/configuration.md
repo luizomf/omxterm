@@ -1,7 +1,7 @@
 # User configuration
 
 > [!TIP]
-> **Prefer visual editing?** [OMXTerm Studio](#edit-visually-with-omxterm-studio) lets you import, customize, and export your settings, themes, and shortcuts in the browser.
+> Choose **Settings…** in the OMXTerm application menu for preferences and keyboard shortcuts without editing JSON. For custom colors, edit a [theme file](#terminal-themes).
 
 OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Targets with built-in Snippets also create the example catalog below; Linux ARM64/x64 and macOS/Windows ARM64 source with optional Snippets leave it user-owned and absent until you create it:
 
@@ -18,14 +18,14 @@ You can find them in:
 - **macOS and Linux:** `~/.config/omxterm` (or `$XDG_CONFIG_HOME/omxterm`)
 - **Windows:** `%USERPROFILE%\.config\omxterm`
 
-**Prefer a form?** Choose **Settings…** in the OMXTerm application menu to change common settings without editing JSON. See [Settings](#settings).
+**In the app:** [Settings](#settings) validates, saves, and applies control changes for you. **Config File** also lets you edit `config.json` with an explicit **Save**.
 
-**The basic workflow: edit, save, reload.** Edit your files in any text editor or [OMXTerm Studio](#edit-visually-with-omxterm-studio), then choose **View → Reload User Configuration** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux/Windows). Snippets reload automatically whenever you open the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`).
+**In a text editor: edit, save, reload.** After editing configuration or theme files, choose **View → Reload User Configuration** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux/Windows). Snippets reload automatically whenever you open the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`).
 
 - [Change settings in the app](#settings)
 - [Make your first display change](#add-one-display-change)
 - [Find or create your configuration folder](#create-the-configuration-directory)
-- [Edit visually with OMXTerm Studio](#edit-visually-with-omxterm-studio)
+- [Legacy palette editing and drafts in OMXTerm Studio](#edit-visually-with-omxterm-studio)
 - [Background transparency and blur](#background-transparency-and-blur)
 - [All settings reference](#configuration-reference)
 - [Choose the Windows default shell](#choose-the-windows-default-shell)
@@ -34,6 +34,12 @@ You can find them in:
 - [Reloading behavior and validation](#reloading-user-configuration)
 
 ## Settings
+
+Stable **0.24.0** includes font controls and a theme-file path in **Appearance**,
+plus preferences in **General**, **Terminal**, and **Window**. Use **Shortcuts**
+to record, reset, or unbind application shortcuts. The theme cards and background
+effect controls described below are newer development-source additions, not
+controls in stable 0.24.0.
 
 Settings opens as one graphical tab per window, beside your terminals, with no
 shell or terminal session. Choosing **Settings…** again selects that same tab
@@ -115,7 +121,9 @@ settings.
 
 ## Add one display change
 
-Open `config.json`, update `font.size` (for example, from `16` to `18`), save, and reload (`Cmd+Shift+,` / `Ctrl+Shift+,`) to resize your terminal text immediately:
+Change **Font size** in **Settings → Appearance** to resize your terminal text.
+To do the same in a text editor, update `font.size` in `config.json` (for example,
+from `16` to `18`), save, and reload (`Cmd+Shift+,` / `Ctrl+Shift+,`):
 
 ```json
 {
@@ -195,31 +203,44 @@ Invoke-Item -LiteralPath $configDirectory
 - Keep `"version": 1` at the top level (this identifies the config schema version, not the OMXTerm app version).
 - Do not include comments or undocumented keys.
 
-## Edit visually with OMXTerm Studio
+<a id="edit-visually-with-omxterm-studio"></a>
 
-[OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) is a local-first web editor for OMXTerm settings, themes, and shortcuts:
+## Legacy OMXTerm Studio
 
-1. Select your OS under **Configuration → Target platform** so shortcut checks match your platform.
-2. Click **Import config** and **Import theme** to load your existing files, or start from the built-in `omtheme` or `omtheme-darkice` presets.
-3. Customize your colors in **Theme**, preferences in **Configuration**, and bindings in **Keyboard shortcuts** (click **Apply shortcuts** or **Apply JSON** when editing those sections).
-4. Export your changes:
-   - **Theme JSON:** save inside `themes/` next to `config.json` and point `theme.path` to it.
-   - **Config JSON:** save as `config.json`.
-   - **Download edited pair:** downloads both `config.json` and `themes/theme.json` pre-linked together.
-5. Place the files in your [configuration directory](#create-the-configuration-directory) and reload in OMXTerm (`Cmd+Shift+,` / `Ctrl+Shift+,`).
+[OMXTerm Studio](https://luizomf.github.io/omxterm-studio/) remains available as a
+browser-only palette workshop and for existing drafts. Its
+[compatibility baseline](https://github.com/luizomf/omxterm-studio/blob/9fbe2871a01bf1446770280b8c99291efcd697fb/docs/contract-provenance.md)
+is **0.17.1-dev.0**, not current OMXTerm. Use native Settings for current
+preferences and shortcuts: Studio rejects newer fields such as `language` and
+`window.auxiliaryPanelSide`, has an older shortcut vocabulary/defaults, and rejects
+themes containing optional `appearance` roles.
+
+For browser-only editing of a basic palette:
+
+1. Start from Studio's `omtheme` or `omtheme-darkice` preset, or **Import theme**
+   with a legacy-compatible version-1 file containing only `version`, `name`, and
+   `colors`. Keep your original files; do not strip supported fields just to make
+   a current document importable.
+2. Edit colors and name in **Theme**, then download **Theme JSON** to a new file
+   such as `themes/my-theme.json` in your
+   [configuration directory](#create-the-configuration-directory). If adapting an
+   existing theme, preserve its optional `appearance` values in your text editor.
+3. Select the file in OMXTerm using the [theme instructions](#terminal-themes).
+   Keep your current `config.json` rather than replacing it with Studio's config
+   or paired export.
+
+To keep existing Studio work, apply pending configuration/shortcut edits, finish
+valid theme edits, and download the documents before clearing browser site storage.
+**Remember this draft** stores validated, applied documents in that browser
+profile, not unfinished text. Legacy config/shortcut downloads can be kept as
+backups and consulted when transferring individual preferences to Settings.
 
 ## Background transparency and blur
 
-In **Settings → Appearance**, below themes, adjust **Background transparency**
-with the slider (0–100%, 1% steps) and enable **Blur desktop background**.
-Arrow keys adjust the focused slider; Home/End select its endpoints. The percentage
-updates as you adjust, and each saved change updates the actual windows through
-the normal reload path. There is no separate Apply step; the usual status line
-reports save/application errors. Text and controls stay sharp. Blur is a native
-desktop effect, not the application-underlay softening used by About/Command Palette.
-Support depends on the platform/compositor; see below.
-
-Or set `window.transparency` above `0` (up to `1`) to let your desktop show through the terminal background, and enable `window.blur` to soften the background behind the window:
+In **stable 0.24.0**, use **Settings → Config File** (then **Save**) or a text
+editor (then reload) to set `window.transparency` above `0` (up to `1`) and enable
+`window.blur`. These settings let your desktop show through the terminal
+background and request native desktop blur:
 
 ```json
 {
@@ -232,6 +253,15 @@ Or set `window.transparency` above `0` (up to `1`) to let your desktop show thro
 ```
 
 Both settings update live across all open windows when you reload. Text, cursor, selection, and inline images keep full opacity so your terminal stays crisp and readable.
+
+**Development source only, since 0.25.0-dev.16 (#805):** **Settings → Appearance**
+adds a **Background transparency** slider (0–100%, 1% steps) and **Blur desktop
+background** checkbox below themes. Arrow keys adjust the focused slider;
+Home/End select its endpoints. Each saved change updates the actual windows
+through the normal reload path, with no separate Apply step; the usual status
+line reports save/application errors. These controls are not in published stable
+0.24.0. Desktop blur is distinct from About/Command Palette's application-underlay
+softening; support depends on the platform/compositor.
 
 | Platform | Behavior                                                                                                                                                    |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -344,7 +374,10 @@ Reload your configuration and open a new tab to start the new shell. Only the ex
 
 ### Keybinds
 
-Customize application shortcuts under `keybinds` using [Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators) syntax (or edit them with conflict checking in [OMXTerm Studio](#edit-visually-with-omxterm-studio)):
+Use **Settings → Shortcuts** to record, reset, or unbind application shortcuts
+with conflict checking. To edit JSON instead, customize `keybinds` using
+[Electron accelerator](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators)
+syntax:
 
 | Action                      | macOS default                  | Linux/Windows default |
 | --------------------------- | ------------------------------ | --------------------- |
@@ -500,11 +533,32 @@ snippets:
 
 ## Terminal themes
 
-On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and links it in `config.json`. In **Settings → Appearance**, choose a local theme by name and palette preview. Place version-1 JSON theme files directly in `themes/` beside the logical `config.json`, then choose **Refresh themes**. Both the directory and individual files may be symlinks. Names and paths are shown together, so themes with the same name remain distinct. The separate **Bundled omtheme** choice removes `theme.path` and uses the built-in default; it is distinct from the editable `themes/omtheme.json` copy.
+On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and
+links it in `config.json`. In **stable 0.24.0**, enter a theme file's path in
+**Settings → Appearance → Theme file**; clearing it uses the bundled default.
+Paths can be relative to the configuration directory or absolute.
+
+Settings selects themes; it does not edit their names or colors. To customize a
+palette, edit a theme JSON file as shown below. The
+[legacy Studio workflow](#edit-visually-with-omxterm-studio) is an option for
+browser-only basic palette drafts, not current theme/config round trips.
+
+### Local theme picker (development source)
+
+**Since 0.25.0-dev.1**, **Settings → Appearance** additionally offers local themes
+by name and palette preview. This picker is not in stable 0.24.0. Place version-1
+JSON theme files directly in `themes/` beside the logical `config.json`, then
+choose **Refresh themes**. Both the directory and individual files may be
+symlinks. Names and paths are shown together, so themes with the same name remain
+distinct. The separate **Bundled omtheme** choice removes `theme.path` and uses
+the built-in default; it is distinct from the editable `themes/omtheme.json` copy.
 
 Choosing a card saves and applies it through the normal Settings path. A pending choice is marked **Saving…**; after it settles, a selected card identifies the saved configuration. If the status says it could not be applied, follow that message and reload after fixing the problem. Missing or empty folders, unreadable or invalid files and a limited list are reported. Discovery examines at most 2,048 directory entries and 128 JSON candidates, reads at most 256 KiB per theme and 4 MiB of configuration, and does not watch for changes. A configured custom path or another alias may not appear as a selected card; the **Theme file (advanced)** input remains available for relative or absolute paths. Discovery does not edit theme files.
 
-You can edit `themes/omtheme.json` directly, design a palette in [OMXTerm Studio](#edit-visually-with-omxterm-studio), or create a new theme file such as `themes/my-theme.json`:
+### Edit theme files
+
+You can edit `themes/omtheme.json` directly or create a new theme file such as
+`themes/my-theme.json`:
 
 ```json
 {
@@ -582,8 +636,8 @@ Only the three documented keys and hex/null values are accepted; `appearance`
 itself must be an object, not `null`. The 21 required palette colors remain
 non-nullable. This optional extension keeps theme version 1, but older OMXTerm
 builds that predate it reject `appearance`; remove that object to use the same
-palette in those builds. There are no width preferences or appearance controls
-in Settings.
+palette in those builds. These pane/panel roles have no controls in Settings;
+there are no width preferences.
 
 ### Theme troubleshooting
 

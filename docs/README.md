@@ -4,7 +4,7 @@
 
 1. **[Install OMXTerm](installation.md)** on macOS, Linux, or Windows.
 2. **[Try your first session](../README.md#first-session)** with the built-in defaults.
-3. **[Customize your setup](configuration.md)** using the starter files or [OMXTerm Studio](configuration.md#edit-visually-with-omxterm-studio).
+3. **[Open Settings](configuration.md#settings)** for preferences and shortcuts; use the [configuration guide](configuration.md) for theme files and snippets.
 
 | Task                                                       | Guide                                                                   |
 | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
