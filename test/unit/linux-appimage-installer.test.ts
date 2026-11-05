@@ -2,7 +2,6 @@ import { execFile as execFileCallback } from "node:child_process";
 import {
   lstat,
   mkdir,
-  mkdtemp,
   readFile,
   readdir,
   rm,
@@ -10,33 +9,14 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 
-const execFile = promisify(execFileCallback);
-const repositoryRoot = path.resolve(import.meta.dirname, "../..");
-const helper = path.join(repositoryRoot, "scripts/install-linux-appimage.sh");
-const temporaryRoots: string[] = [];
+import { createAppImageInstallerFixture } from "../fixtures/appimage-installer-fixture";
 
-async function fixtureRoot() {
-  const root = await mkdtemp(path.join(tmpdir(), "omxterm-installer-test-"));
-  temporaryRoots.push(root);
-  const bin = path.join(root, "bin");
-  await mkdir(bin);
-  await writeFile(
-    path.join(bin, "uname"),
-    "#!/bin/sh\nprintf '%s\\n' 'aarch64'\n",
-    { mode: 0o755 },
-  );
-  await writeFile(
-    path.join(bin, "file"),
-    "#!/bin/sh\nprintf '%s\\n' 'ELF 64-bit LSB executable, ARM aarch64'\n",
-    { mode: 0o755 },
-  );
-  return { root, home: path.join(root, "home"), bin };
-}
+const execFile = promisify(execFileCallback);
+const { fixtureRoot, runHelper, cleanup } = createAppImageInstallerFixture();
 
 async function fakeAppImage(root: string, revision: string) {
   const appImage = path.join(root, `OMXTerm-${revision}.AppImage`);
@@ -130,30 +110,7 @@ function owned(home: string) {
   };
 }
 
-async function runHelper(
-  home: string,
-  bin: string,
-  arguments_: string[],
-  extraEnvironment: NodeJS.ProcessEnv = {},
-) {
-  return execFile("/bin/sh", [helper, ...arguments_], {
-    env: {
-      ...process.env,
-      HOME: home,
-      HYPRLAND_INSTANCE_SIGNATURE: "",
-      PATH: `${bin}:${process.env.PATH ?? ""}`,
-      ...extraEnvironment,
-    },
-  });
-}
-
-afterEach(async () => {
-  await Promise.all(
-    temporaryRoots
-      .splice(0)
-      .map((root) => rm(root, { recursive: true, force: true })),
-  );
-});
+afterEach(cleanup);
 
 describe.skipIf(process.platform === "win32")(
   "Linux AppImage desktop installer",
