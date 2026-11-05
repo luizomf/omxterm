@@ -57,7 +57,7 @@ its dismissal preserves the retained editor and restores a surviving focused con
 
 Choose **Settings…** in the OMXTerm application menu. **General → Language** selects **English (United States)** (`en-US`) or **Português (Brasil)** (`pt-BR`), always listed by their own names; it defaults to en-US and is never inferred from the system. A successful save/reload updates the menu and all open windows immediately, including Settings and snippet preview labels. Open editors keep their drafts, selected page, focus, selection/caret, scroll and pending saves; an open preview keeps its captured pane/Surface and disabled state if that terminal ended. Pane menus, close dialogs and existing Surface/separator accessible labels also update; panes completing initialization replay the latest labels. JSON, paths, snippet contents and diagnostic detail remain literal.
 
-Control changes are submitted right away for validation, saving to `config.json` and application. Rapid theme choices replace earlier consecutive choices that are still waiting to start, so stale selections do not all replay; an already-running save finishes normally. The status line tells you what happened (examples below use English):
+Control changes are submitted right away for validation, saving to `config.json` and application. Rapid theme choices or transparency adjustments replace earlier consecutive choices for the same control that are still waiting to start, so stale selections do not all replay; an already-running save finishes normally. The status line tells you what happened (examples below use English):
 
 - **Saved.** The change is active.
 - **Saved. New tabs use it.** or **It applies to new windows.** Open tabs and windows keep their current value.
@@ -65,7 +65,7 @@ Control changes are submitted right away for validation, saving to `config.json`
 - **Saved to config.json, but it could not be applied: …** The file was written, but reload failed; some settings may already be active. Fix the reported problem and reload again.
 - **Not saved: …** The value was rejected (for example, a font that isn't installed); your file is unchanged.
 - **Saving…** One or more graphical changes are still pending. An earlier result does not mark a later change completed.
-- **A newer theme choice replaced this selection before it was saved.** A later choice superseded this queued theme request, possibly from another window. This is not a saved confirmation for the replaced choice.
+- **A newer choice replaced this selection before it was saved.** A later choice superseded this queued theme or transparency request, possibly from another window. This is not a saved confirmation for the replaced choice.
 
 Clearing a text or number field removes that entry from `config.json`, so the default applies again. Settings changes only the field you edited and keeps the rest of your file, including edits you make in another editor while it's open. It rewrites the file with two-space indentation. If it detects an external edit or a changed link destination during validation or write preparation, it refuses the change and asks you to reload instead of overwriting it.
 
@@ -73,7 +73,7 @@ Settings can save through `config.json` symlinks, relative links, link chains an
 
 Atomic replacement keeps the target's basic permission bits where supported, but it creates a new file entry. Other hard links keep the old contents; ownership, ACLs, extended attributes and other metadata may not be preserved. Back up important metadata or use an editor that preserves it if that matters for your setup.
 
-The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Transparency, blur and snippets are still edited in the files.
+The **Config File** page shows `config.json` with an explicit **Save**, using the same application and deferred-setting feedback as graphical changes. If the file changes on disk while you edit there, your draft is kept and saving it is refused until you choose **Reload File**. Save and Reload File are disabled while a raw request is pending; you can keep typing, and newer text is kept but is not included in the earlier Save. Reload File replaces your draft only if you have not typed again during its read. Snippets are still edited in their file.
 
 The **Shortcuts** page lists every remappable application action with the shortcut it uses now and how it is set. Operating-system shortcuts, ordinary text editing inside a field, and intentionally fixed context-specific gestures are not global commands and do not appear there. Escape still hides the auxiliary panel, and Left/Right/Home/End still move its focused separator; those keys cannot be rebound on this page.
 
@@ -210,7 +210,16 @@ Invoke-Item -LiteralPath $configDirectory
 
 ## Background transparency and blur
 
-Set `window.transparency` above `0` (up to `1`) to let your desktop show through the terminal background, and enable `window.blur` to soften the background behind the window:
+In **Settings → Appearance**, below themes, adjust **Background transparency**
+with the slider (0–100%, 1% steps) and enable **Blur desktop background**.
+Arrow keys adjust the focused slider; Home/End select its endpoints. The percentage
+updates as you adjust, and each saved change updates the actual windows through
+the normal reload path. There is no separate Apply step; the usual status line
+reports save/application errors. Text and controls stay sharp. Blur is a native
+desktop effect, not the application-underlay softening used by About/Command Palette.
+Support depends on the platform/compositor; see below.
+
+Or set `window.transparency` above `0` (up to `1`) to let your desktop show through the terminal background, and enable `window.blur` to soften the background behind the window:
 
 ```json
 {

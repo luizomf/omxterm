@@ -85,8 +85,9 @@ Graphical responses reconcile only controls whose submitted edit still owns
 the field; unrelated or newer typing remains local. Queued changes retain
 pending feedback until all requested changes settle. Graphical requests are
 submitted immediately to the existing main-process queue, not retained in a
-view-local queue. Consecutive graphical `theme.path` requests that have not yet
-started share one queued operation, updated to the latest choice. The running
+view-local queue. Consecutive graphical requests for the same `theme.path` or
+`window.transparency` field that have not yet started share one queued operation,
+updated to the latest choice. The running
 validation/write/reload is never cancelled; any intervening read, raw save,
 shortcut or other field change ends that coalescing window. Superseded choices
 are not written and receive an explicit superseded result with the winning

@@ -78,6 +78,45 @@ describe("settings snapshot", () => {
 });
 
 describe("graphical settings changes", () => {
+  it.each([
+    ["window.transparency", 0.37, 0],
+    ["window.blur", true, false],
+  ] as const)(
+    "persists %s live, preserves other fields and inherits its default",
+    async (path, value, fallback) => {
+      const original = {
+        version: 1,
+        window: { showTabBar: false },
+        logLevel: "debug",
+      };
+      const { service, read, reload } = await setup(JSON.stringify(original));
+      expect((await service.snapshot()).values[path]).toBe(fallback);
+      const result = await service.change({ path, value });
+      expect(result).toMatchObject({
+        status: "saved",
+        lifetimes: [],
+        snapshot: { values: { [path]: value } },
+        application: { applied: true },
+      });
+      expect(JSON.parse(await read())).toEqual({
+        ...original,
+        window: { ...original.window, [path.split(".")[1]!]: value },
+      });
+      // A raw draft opened before this graphical save still conflicts.
+      expect(
+        await service.saveText('{"version":1}', "old-revision"),
+      ).toMatchObject({ status: "conflict" });
+      const reopened = await service.snapshot();
+      expect(reopened.values[path]).toBe(value);
+      expect(await service.change({ path, value: null })).toMatchObject({
+        status: "saved",
+        lifetimes: [],
+        snapshot: { values: { [path]: fallback } },
+      });
+      expect(JSON.parse(await read())).toEqual(original);
+      expect(reload).toHaveBeenCalledTimes(2);
+    },
+  );
   it("persists shared panel side live and removes it to inherit right", async () => {
     const original = {
       version: 1,

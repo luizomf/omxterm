@@ -120,7 +120,10 @@ subsequent edits belong to the user.
 
 **Settings** — One lazy, retained graphical Application Tab per window for editing
 `config.json`, without a pane, Surface, Adapter or PTY. Only deliberate changes
-write configuration; opening the editor does not. Valid configuration symlinks
+write configuration; opening the editor does not. Appearance includes a live
+background-transparency slider and native desktop-blur checkbox beside themes;
+these save through the ordinary validated reload path, without fading content
+or changing modal application-underlay blur. Valid configuration symlinks
 are preserved while their regular target is replaced; relative theme paths use
 the logical configuration directory. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for tab

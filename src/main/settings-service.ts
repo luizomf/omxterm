@@ -81,7 +81,7 @@ const RESTART_SUFFIX = " Fix the file and restart OMXTerm.";
 // Persistence adapted from ruscher/omxterm PR #622's preferences service at
 // b3c3a4ad6c1f2224bded65873ba0b09a07ec5d38 (MIT).
 // Explicit, user-requested writes to config.json. Requests run one at a time;
-// consecutive not-started theme choices coalesce to the latest selection.
+// consecutive not-started theme/transparency choices coalesce to the latest value.
 // A graphical change rereads the file and changes only its own field, so other
 // entries, including external edits, are kept; a raw JSON save must start from
 // the file's current revision. Every candidate passes the same loader as
@@ -333,6 +333,8 @@ function settingsValues(
     "scrollback.lines": configuration.scrollbackLines,
     "keyboard.optionAsAlt": configuration.optionKeyMode,
     "window.auxiliaryPanelSide": configuration.auxiliaryPanelSide,
+    "window.transparency": configuration.transparency,
+    "window.blur": configuration.blur,
     "window.alwaysOnTop": configuration.alwaysOnTop,
     "window.showTitleBar": configuration.showTitleBar,
     "window.showTabBar": configuration.showTabBar,

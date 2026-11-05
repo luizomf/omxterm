@@ -25,7 +25,7 @@ it("validates and localizes a superseded theme result without claiming it was sa
   for (const language of ["en-US", "pt-BR"] as const) {
     const t = translatorFor(language).t;
     expect(describeSettingsResult(result, t)).toEqual({
-      text: t("settings.themeSuperseded"),
+      text: t("settings.choiceSuperseded"),
       error: false,
       severity: "info",
     });

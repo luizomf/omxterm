@@ -343,6 +343,10 @@ export const englishMessages = {
   "settings.info": "Information",
   "settings.debug": "Debug",
   "settings.shell": "Shell executable",
+  "settings.transparency": "Background transparency",
+  "settings.blur": "Blur desktop background",
+  "settings.backgroundHint":
+    "0% is opaque; 100% is transparent. Blur needs transparency and desktop support; Windows needs both controls. Text stays sharp.",
   "settings.fontFamily": "Font family",
   "settings.fontSize": "Font size",
   "settings.lineHeight": "Line height",
@@ -401,8 +405,8 @@ export const englishMessages = {
   "settings.fileGuidance":
     "Graphical changes are checked against the whole file. Correct invalid values in Settings or edit Config File; if the file cannot be read, repair it externally and reload.",
   "settings.saved": "Saved.",
-  "settings.themeSuperseded":
-    "A newer theme choice replaced this selection before it was saved.",
+  "settings.choiceSuperseded":
+    "A newer choice replaced this selection before it was saved.",
   "settings.notSaved": "Not saved: {detail}",
   "settings.notApplied":
     "Saved to config.json, but it could not be applied: {notice}",

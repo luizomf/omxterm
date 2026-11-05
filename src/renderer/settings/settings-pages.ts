@@ -11,6 +11,7 @@ type Caption = { readonly path: SettingsPath; readonly label: MessageKey };
 export type Control = Caption &
   (
     | { readonly kind: "toggle" }
+    | { readonly kind: "range" }
     | {
         readonly kind: "choice";
         readonly options: readonly (readonly [string, MessageKey])[];
@@ -75,6 +76,16 @@ export function pages(platform: string): readonly Page[] {
       id: "appearance",
       label: "settings.page.appearance",
       controls: [
+        {
+          kind: "range",
+          path: "window.transparency",
+          label: "settings.transparency",
+        },
+        {
+          kind: "toggle",
+          path: "window.blur",
+          label: "settings.blur",
+        },
         {
           kind: "text",
           path: "font.family",
@@ -198,7 +209,7 @@ export function renderSettingsPage(
   panel.className = "settings-panel";
   if (page.id === "appearance")
     panel.append(renderSettingsThemes(document, options.bridge, options));
-  for (const control of page.controls)
+  for (const control of page.controls) {
     panel.append(
       renderControl(
         document,
@@ -209,6 +220,16 @@ export function renderSettingsPage(
         options.labels,
       ),
     );
+    if (control.path === "window.blur") {
+      const hint = document.createElement("p");
+      hint.id = "settings-background-hint";
+      hint.className = "settings-hint settings-background-hint";
+      options.labels.push((t) => {
+        hint.textContent = t("settings.backgroundHint");
+      });
+      panel.append(hint);
+    }
+  }
   return panel;
 }
 
@@ -242,6 +263,44 @@ export function renderControl(
       if (generation === submitted) dirty = false;
     });
   };
+  if (control.kind === "range") {
+    const field = document.createElement("input");
+    field.type = "range";
+    field.min = "0";
+    field.max = "1";
+    field.step = "0.01";
+    field.className = "page-control";
+    field.setAttribute("aria-describedby", "settings-background-hint");
+    const readout = document.createElement("span");
+    readout.className = "settings-range-value";
+    readout.setAttribute("aria-hidden", "true");
+    const showValue = () => {
+      const text = `${Math.round(Number(field.value) * 100)}%`;
+      readout.textContent = text;
+      field.setAttribute("aria-valuetext", text);
+    };
+    let submittedValue: number | undefined;
+    const submit = () => {
+      const next = Number(field.value);
+      showValue();
+      // Native range emits input during drag/key repeats, then change on
+      // release. Submit immediately, but do not save that release twice.
+      if (next === (dirty ? submittedValue : value(control.path))) return;
+      submittedValue = next;
+      commit(next);
+    };
+    field.addEventListener("input", submit);
+    field.addEventListener("change", submit);
+    syncs.push(() => {
+      if (!dirty) field.value = String(value(control.path) ?? 0);
+      showValue();
+    });
+    const slider = document.createElement("span");
+    slider.className = "settings-range-control";
+    slider.append(field, readout);
+    row.append(caption, slider);
+    return row;
+  }
   if (control.kind === "choice") {
     const select = document.createElement("select");
     for (const [optionValue, label] of control.options) {
@@ -261,6 +320,8 @@ export function renderControl(
     const field = document.createElement("input");
     if (control.kind === "toggle") {
       field.type = "checkbox";
+      if (control.path === "window.blur")
+        field.setAttribute("aria-describedby", "settings-background-hint");
       field.addEventListener("change", () => commit(field.checked));
       syncs.push(() => {
         if (!dirty) field.checked = value(control.path) === true;

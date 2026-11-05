@@ -206,6 +206,33 @@ body.tabs-visible .settings-tab {
 .settings-number input {
   max-width: 112px;
 }
+.settings-range-control {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 384px);
+  min-width: 0;
+}
+.settings-range-control input[type="range"] {
+  flex: 1;
+  width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--ui-text);
+  cursor: pointer;
+}
+.settings-range-value {
+  min-width: 4ch;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+.settings-background-hint {
+  margin-top: -12px;
+  font-size: 12px;
+}
 .settings-config-file,
 .settings-shortcuts {
   max-width: 1120px;

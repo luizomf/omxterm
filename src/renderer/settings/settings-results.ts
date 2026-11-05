@@ -38,7 +38,7 @@ export function describeSettingsResult(
 } {
   if (result.status === "superseded")
     return {
-      text: t("settings.themeSuperseded"),
+      text: t("settings.choiceSuperseded"),
       error: false,
       severity: "info",
     };

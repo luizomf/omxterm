@@ -1673,9 +1673,9 @@ refresh rereads local files; there is no watcher. A scan examines at most 2,048
 directory entries and 128 JSON candidates, reads at most 256 KiB per theme and
 4 MiB of configuration, and reports truncation. Selection saves `theme.path`
 through the existing serialized validation and reload path; built-in default
-removes it. Consecutive graphical `theme.path` requests that have not started
-are coalesced to the latest choice in main, rather than replaying every stale
-selection. An in-flight validation/write/reload is never cancelled. Reads, raw
+removes it. Consecutive graphical requests for the same `theme.path` or
+`window.transparency` field that have not started are coalesced to the latest
+choice in main, rather than replaying every stale selection. An in-flight validation/write/reload is never cancelled. Reads, raw
 saves, shortcut changes and other field changes preserve request-order barriers;
 coalescing never crosses them. Superseded requests are not reported as saved:
 they settle with an explicit superseded result and the winning request's
@@ -1795,8 +1795,15 @@ default.
 `terminal.padding`, `terminal.contextMenuEnabled`, `scrollback.lines`,
 `keyboard.optionAsAlt` (macOS), the
 new-window defaults `window.showTitleBar`, `window.showTabBar` and
-`window.alwaysOnTop`, the live `window.auxiliaryPanelSide` choice, and `theme.path`; transparency and blur stay file-only in
-this editor. Its **Shortcuts** page shows each action of the current keybind
+`window.alwaysOnTop`, the live `window.auxiliaryPanelSide` choice, `theme.path`,
+and live `window.transparency`/`window.blur`. Appearance places a labelled native
+transparency slider (0–100%, 1% steps, percentage readout) and desktop-blur checkbox
+beside the theme controls. Pointer and keyboard input submit slider changes during
+adjustment through the ordinary save/reload path, updating the actual windows,
+not a simulated preview; release does not duplicate the last request. No view-local
+timer delays a final choice. Native blur remains best effort and distinct from
+modal application-underlay blur; foreground opacity is unchanged. A compact hint
+explains endpoints and desktop/Windows requirements without repeated warnings. Its **Shortcuts** page shows each action of the current keybind
 vocabulary with its effective shortcut and whether it inherits the default,
 has a custom binding or is explicitly unbound: Default removes the action's
 `keybinds` entry (and an emptied group), Unbind writes `null` and a recorded

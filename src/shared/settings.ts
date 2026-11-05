@@ -91,6 +91,15 @@ export const SETTINGS_FIELDS = {
     lifetime: "live",
     accepts: oneOf(["left", "right"]),
   },
+  "window.transparency": {
+    lifetime: "live",
+    accepts: (value: unknown) =>
+      typeof value === "number" &&
+      Number.isFinite(value) &&
+      value >= 0 &&
+      value <= 1,
+  },
+  "window.blur": { lifetime: "live", accepts: isBoolean },
   "window.alwaysOnTop": { lifetime: "new-windows", accepts: isBoolean },
   "window.showTitleBar": { lifetime: "new-windows", accepts: isBoolean },
   "window.showTabBar": { lifetime: "new-windows", accepts: isBoolean },
@@ -131,7 +140,7 @@ export type SettingsApplication =
 
 export type SettingsResult =
   | {
-      // A newer consecutive theme choice replaced this request before it ran.
+      // A newer consecutive theme/transparency choice replaced this request before it ran.
       // The snapshot belongs to that winning request; this choice was not saved.
       readonly status: "superseded";
       readonly snapshot: SettingsSnapshot;

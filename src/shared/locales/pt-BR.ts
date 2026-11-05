@@ -357,6 +357,10 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.info": "Informações",
   "settings.debug": "Depuração",
   "settings.shell": "Executável do shell",
+  "settings.transparency": "Transparência do fundo",
+  "settings.blur": "Desfocar o fundo da área de trabalho",
+  "settings.backgroundHint":
+    "0% é opaco; 100% é transparente. O desfoque requer transparência e suporte da área de trabalho; no Windows, ative os dois controles. O texto fica nítido.",
   "settings.fontFamily": "Família da fonte",
   "settings.fontSize": "Tamanho da fonte",
   "settings.lineHeight": "Altura da linha",
@@ -415,8 +419,8 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.fileGuidance":
     "Alterações gráficas são verificadas no arquivo inteiro. Corrija valores inválidos em Configurações ou edite o Arquivo de Configuração; se não for possível ler o arquivo, repare-o externamente e recarregue.",
   "settings.saved": "Salvo.",
-  "settings.themeSuperseded":
-    "Uma escolha de tema mais recente substituiu esta seleção antes de ela ser salva.",
+  "settings.choiceSuperseded":
+    "Uma escolha mais recente substituiu esta seleção antes de ela ser salva.",
   "settings.notSaved": "Não salvo: {detail}",
   "settings.notApplied":
     "Salvo em config.json, mas não foi possível aplicar: {notice}",
