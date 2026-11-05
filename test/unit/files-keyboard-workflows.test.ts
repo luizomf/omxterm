@@ -223,6 +223,24 @@ it("selects the focused row for keyboard actions and leaves modified/composing g
   ).toBe(false);
 });
 
+it("renders each non-checkbox shortcut once and keeps its labels live", async () => {
+  const { language } = await setup();
+  const replacements = vi.spyOn(Element.prototype, "replaceChildren");
+  row("/root/alpha.txt")!.focus();
+  key(row("/root/alpha.txt")!, "ContextMenu");
+  const rename = button("Rename / move", menu());
+  expect(rename.classList.contains("menu-with-shortcut")).toBe(true);
+  expect(
+    replacements.mock.instances.filter((element) => element === rename),
+  ).toHaveLength(1);
+  const caption = rename.querySelector("span:not(.menu-shortcut)")!;
+  const shortcut = rename.querySelector(".menu-shortcut")!;
+  expect(shortcut.textContent).toBe("Shortcut: F2");
+  language("pt-BR");
+  expect(caption.textContent).toBe("Renomear / mover");
+  expect(shortcut.textContent).toBe("Atalho: F2");
+});
+
 it.each(["F2", "ContextMenu", "F10"] as const)(
   "makes an unselected fallback row the explicit target before %s",
   async (action) => {

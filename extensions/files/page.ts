@@ -1099,19 +1099,6 @@ export function mountFilesPage(
           item.append(shortcut);
         }
       }
-      if (action.shortcut && action.checked === undefined) {
-        const caption = document.createElement("span");
-        const shortcut = document.createElement("span");
-        shortcut.className = "menu-shortcut";
-        shortcut.id = `files-menu-shortcut-${menu.childElementCount}`;
-        labels.delete(item);
-        label(item, action.label, "aria-label");
-        label(caption, action.label);
-        label(shortcut, (m) => m.shortcut(action.shortcut!.display));
-        item.setAttribute("aria-describedby", shortcut.id);
-        item.setAttribute("aria-keyshortcuts", action.shortcut.keys);
-        item.replaceChildren(caption, shortcut);
-      }
       item.disabled = !!action.disabled;
       item.tabIndex = -1;
     }
