@@ -348,7 +348,7 @@ export const englishMessages = {
   "settings.transparency": "Background transparency",
   "settings.blur": "Blur desktop background",
   "settings.backgroundHint":
-    "0% is opaque; 100% is transparent. Blur needs transparency and desktop support; Windows needs both controls. Text stays sharp.",
+    "0% is opaque; 100% is transparent. Blur needs transparency and desktop support; Windows needs both controls. Text stays sharp outside dialogs. About and Command Palette blur underlying app content even with desktop blur off.",
   "settings.fontFamily": "Font family",
   "settings.fontSize": "Font size",
   "settings.lineHeight": "Line height",

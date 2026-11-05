@@ -361,7 +361,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.transparency": "Transparência do fundo",
   "settings.blur": "Desfocar o fundo da área de trabalho",
   "settings.backgroundHint":
-    "0% é opaco; 100% é transparente. O desfoque requer transparência e suporte da área de trabalho; no Windows, ative os dois controles. O texto fica nítido.",
+    "0% é opaco; 100% é transparente. O desfoque requer transparência e suporte da área de trabalho; no Windows, ative os dois controles. Fora dos diálogos, o texto fica nítido. Sobre o OMXTerm e a Paleta de comandos desfocam o conteúdo ao fundo mesmo com o desfoque da área de trabalho desligado.",
   "settings.fontFamily": "Família da fonte",
   "settings.fontSize": "Tamanho da fonte",
   "settings.lineHeight": "Altura da linha",

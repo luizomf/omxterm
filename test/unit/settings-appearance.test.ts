@@ -38,6 +38,9 @@ it("exposes labelled native background controls near themes without writing on o
   expect(blur.getAttribute("aria-describedby")).toBe(
     "settings-background-hint",
   );
+  expect(view.query("#settings-background-hint").textContent).toContain(
+    "About and Command Palette blur underlying app content even with desktop blur off.",
+  );
   expect(view.bridge.change).not.toHaveBeenCalled();
   slider.value = "0.37";
   slider.dispatchEvent(new Event("input"));
@@ -118,6 +121,9 @@ it("relabels pending controls in place and keeps saved-but-not-applied feedback"
   expect(slider.getAttribute("aria-valuetext")).toBe("100%");
   expect(view.field("Desfocar o fundo da área de trabalho").type).toBe(
     "checkbox",
+  );
+  expect(view.query("#settings-background-hint").textContent).toContain(
+    "Sobre o OMXTerm e a Paleta de comandos desfocam o conteúdo ao fundo mesmo com o desfoque da área de trabalho desligado.",
   );
   pending.resolve(
     saved(
