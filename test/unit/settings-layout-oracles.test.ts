@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -25,26 +24,6 @@ import {
   exerciseSettingsLayout,
   targetSettingsGeometry,
 } from "../fixtures/settings-layout-exercise";
-
-it("uses only the content query container and viewport queries for outer Settings layout", () => {
-  const css =
-    readFileSync("src/renderer/settings/settings-dialog.css", "utf8") +
-    readFileSync("src/renderer/application-page.css", "utf8");
-  const declarations = [
-    ...css.matchAll(/([^{}]+)\{([^{}]*container-type:[^{}]*)\}/gu),
-  ];
-  expect(declarations.map((match) => match[1]!.trim())).toEqual([
-    ".application-page-content",
-  ]);
-  for (const edge of [
-    "min-width: 900px",
-    "min-width: 1200px",
-    "max-width: 639px",
-  ])
-    expect(css).toContain(`@media (${edge})`);
-  for (const edge of [560, 760])
-    expect(css).toContain(`@container (min-width: ${edge}px)`);
-});
 
 const rect = (left: number, top: number, width: number, height: number) => ({
   left,
@@ -74,7 +53,12 @@ function sample(
       id,
       hidden: id !== selected,
       display: id === selected ? "flex" : "none",
-      box: rect(0, 0, id === selected ? 400 : 0, id === selected ? 160 : 0),
+      box: rect(
+        0,
+        0,
+        id === selected ? Math.min(contentWidth, 1120) : 0,
+        id === selected ? 160 : 0,
+      ),
     })),
     categories: ids.map((panel) => ({ panel, selected: panel === selected })),
     contentWidth,

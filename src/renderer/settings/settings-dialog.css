@@ -57,8 +57,16 @@ body.tabs-visible .settings-tab {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 720px;
+  width: 100%;
+  max-width: 1120px;
   min-width: 0;
+}
+.settings-panel > .settings-row {
+  max-width: 720px;
+}
+.extensions-panel > p,
+.extension-catalog p {
+  max-width: 72ch;
 }
 .extension-catalog,
 .extension-catalog-list,
@@ -101,7 +109,7 @@ body.tabs-visible .settings-tab {
 }
 .settings-themes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
   gap: 12px;
 }
 .settings-theme-entry {
@@ -331,10 +339,6 @@ body.tabs-visible .settings-tab {
   margin-top: -12px;
   font-size: 12px;
 }
-.settings-config-file,
-.settings-shortcuts {
-  max-width: 1120px;
-}
 .settings-config-file {
   min-height: 100%;
   gap: 16px;
@@ -431,20 +435,34 @@ body.tabs-visible .settings-tab {
     grid-column: auto;
   }
 }
-@media (max-height: 360px) {
-  .settings-tabs {
-    max-height: 40px;
+@media (max-width: 639px) {
+  /* Keep the sidebar at compact desktop widths; don't clip its last row. */
+  .settings-body.application-page.has-navigation {
+    grid-template-columns: minmax(120px, 168px) minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+  .settings-body .application-page-content {
+    grid-row: 3;
+  }
+  .settings-body .application-page-status {
+    grid-row: 4;
   }
 }
-@media (max-width: 639px) {
-  .settings-tabs {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    max-height: min(100px, 30vh);
+@media (max-width: 479px) {
+  .settings-body.application-page.has-navigation {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   }
-  @media (max-height: 360px) {
-    .settings-tabs {
-      max-height: 40px;
-    }
+  .settings-body .settings-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(36px, auto);
+    max-height: min(180px, 34vh);
+  }
+  .settings-body .application-page-content {
+    grid-row: 4;
+  }
+  .settings-body .application-page-status {
+    grid-row: 5;
   }
 }

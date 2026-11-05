@@ -74,9 +74,11 @@ The full-area workspace caps at 1440 px. Sidebar width is 168 px below 900 px
 and 192 px above; outer padding is 24 px, growing to 32 px at 1200 px.
 The title and Close share a ruled in-flow header, within the same content cap.
 These outer breakpoints use viewport media queries; `.application-page-content`
-(the Settings panels slot) is the only size-query container. The content edge stays consistent across categories.
-Ordinary forms cap at 720 px; Shortcuts and Config File at 1120 px. Content and
-navigation scroll independently, with wrapped translated labels and diagnostics.
+(the Settings panels slot) is the only size-query container. Every category uses
+the same 1120 px content boundary, aligning theme cards, Extension cards and
+Shortcuts separators. Form rows remain at most 720 px and ordinary fields at
+most 384 px; prose stays near 72 characters. Content and navigation scroll
+independently, with wrapped translated labels and diagnostics.
 
 Container width, not viewport width, controls density: below 560 px labels sit
 above their fields; number inputs cap at 112 px and other fields at 384 px.
@@ -99,9 +101,12 @@ relationships or all metadata. See the [configuration guide](configuration.md#se
 for recovery and write limitations.
 
 640×480 is the comfortable starting verification target, not a native minimum.
-Below 640 px, categories become a wrapping three-column navigation area; short
-windows allow additional vertical scrolling. No native bound/minimum changes
-are tied to Settings selection. Large JSON content scrolls within its editor.
+Below 640 px, the vertical sidebar remains in place while there is room for
+readable content (480–639 px). Below 480 px, categories form a two-column
+scrollable navigation area with rows tall enough for wrapped labels; there is
+no 40 px height clamp that conceals the last category. Short windows allow
+additional vertical scrolling. No native bound/minimum changes are tied to
+Settings selection. Large JSON content scrolls within its editor.
 
 ## Verification
 

@@ -210,11 +210,16 @@ export function assertSettingsLayout(
       panel.hidden,
       "Settings rendered and hidden state disagree",
     );
-    if (!panel.hidden)
+    if (!panel.hidden) {
       assert.ok(
         panel.box.width > 0 && panel.box.height > 0,
         "Settings rendered panel has no geometry",
       );
+      assert.ok(
+        Math.abs(panel.box.width - Math.min(contentWidth, 1120)) <= 2,
+        "Settings categories do not share a content boundary",
+      );
+    }
   }
   assert.equal(observation.overflow, false, "Settings horizontal overflow");
   assert.ok(contentWidth > 0, "Settings content has no width");
