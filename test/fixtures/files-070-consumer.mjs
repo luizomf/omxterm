@@ -183,7 +183,9 @@ export async function runFiles070Consumer(context) {
       "document.querySelector('.operation-editor input').select()",
     );
     await view.insertText(folder);
-    key("Enter");
+    // Keydown/up alone did not submit the native Chromium form. Preparation
+    // is explicit; the separate captured-path Move confirmation stays below.
+    await click(view, "Apply");
     await until(
       () =>
         evaluate(
