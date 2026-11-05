@@ -43,6 +43,7 @@ type Host = {
   retire: ReturnType<typeof vi.fn<() => Promise<{ status: "settled" }>>>;
 };
 import { startApplicationExtensions } from "../../src/main/application-extensions";
+import * as extensionManager from "../../src/main/extension-manager";
 import type { ExtensionRuntime } from "../../src/extension-runtime/runtime";
 import { createTerminalContextMenuTarget } from "../../src/main/terminal-context-menu";
 import { extensionInvocationTarget } from "../../src/main/extension-invocation-target";
@@ -1025,9 +1026,105 @@ it("cancels an in-flight activation before it can allocate a late view", async (
     token: prepared.openToken,
   });
   finish();
-  expect(await opening).toEqual({ ok: false });
-  expect(adapters.hosts).toHaveLength(0);
+  const result = await opening;
+  // Keep phase facts if the original intermittent pre-activation failure recurs.
+  const phase = JSON.stringify({
+    activationCalls: adapters.activate.mock.calls.length,
+    allocatedViews: adapters.hosts.length,
+    retirementCalls: adapters.hosts.map(
+      (host) => host.retire.mock.calls.length,
+    ),
+  });
+  expect(result, phase).toEqual({ ok: false });
+  expect(adapters.hosts, phase).toHaveLength(0);
 });
+
+it.each(["complete", "cancel", "supersede"] as const)(
+  "settles a completed manager open before default acknowledgement: %s",
+  async (outcome) => {
+    await service.dispose();
+    let entered!: () => void;
+    let release!: () => void;
+    const completed = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const reply = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let admitted: AbortSignal | undefined;
+    const create = extensionManager.createExtensionManager;
+    const spy = vi
+      .spyOn(extensionManager, "createExtensionManager")
+      .mockImplementationOnce((options) => {
+        const manager = create(options);
+        const action = manager.action;
+        manager.action = (selection) => {
+          const open = action(selection);
+          return async (target) => {
+            // Retain the real manager/store/view path, then hold only its reply.
+            // A cancelled completion must not acknowledge a now-retired view.
+            await open(target);
+            admitted = target.signal;
+            entered();
+            await reply;
+          };
+        };
+        return manager;
+      });
+    try {
+      await startService("linux");
+      await installSnippets();
+      const prepared = await request({ operation: "panel-default" });
+      const opening = request({
+        operation: "open",
+        token: prepared.openToken,
+        accepted: true,
+      });
+      await Promise.race([
+        completed,
+        opening.then(() => {
+          throw new Error("Open acknowledged before the controlled reply");
+        }),
+      ]);
+      expect(admitted?.aborted).toBe(false);
+      expect(adapters.hosts).toHaveLength(1);
+      let replacement: Awaited<ReturnType<typeof request>> | undefined;
+      if (outcome === "cancel")
+        await request({
+          operation: "cancel-panel-default",
+          token: prepared.openToken,
+        });
+      else if (outcome === "supersede")
+        replacement = await request({ operation: "panel-default" });
+      expect(admitted?.aborted).toBe(outcome !== "complete");
+      release();
+      expect(await opening).toEqual({ ok: outcome === "complete" });
+      if (outcome === "complete") {
+        await request({
+          operation: "cancel-panel-default",
+          token: prepared.openToken,
+        });
+        expect(adapters.hosts[0]!.retire).not.toHaveBeenCalled();
+      } else {
+        expect(adapters.hosts[0]!.retire).toHaveBeenCalledOnce();
+        if (replacement) {
+          const retirement = adapters.hosts[0]!.retire.mock.results[0]!;
+          if (retirement.type === "return") await retirement.value;
+          expect(
+            await request({
+              operation: "open",
+              token: replacement.openToken,
+              accepted: true,
+            }),
+          ).toEqual({ ok: true });
+        }
+      }
+    } finally {
+      release();
+      spy.mockRestore();
+    }
+  },
+);
 
 it("revokes a prepared default on native blur even when the window refocuses before acknowledgement", async () => {
   await installSnippets();

@@ -116,7 +116,7 @@ export function createPanelDefault(options: {
               panelDefaultToken: token,
               signal,
             });
-            return { ok: true };
+            return { ok: current() };
           } catch {
             return current() ? unavailable() : { ok: false };
           } finally {
