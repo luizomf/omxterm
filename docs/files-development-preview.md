@@ -172,12 +172,13 @@ produce `dist/extensions/files-0.7.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; source version 0.7.0 declares
-`>=0.25.0-dev.10` / API `0.1.x` as a conservative preparation floor.
+`extensions/files/extension.json`; Files0.7.0 declares
+`>=0.25.0-dev.10` / API `0.1.x` as a conservative compatibility floor.
 It packages the already-integrated reported-directory guidance, loaded-entry
-filtering/keyboard focus and confirmed directory-to-directory moves. It adds no
-Files-to-terminal insertion/drop or generic shortcut capability. Existing host
-focus-intent, action-time reported-directory, no-clobber move and trash services
+filtering/keyboard focus, composing-Escape draft preservation and confirmed
+directory-to-directory moves. It adds no Files-to-terminal insertion/drop or
+generic shortcut capability. Existing host focus-intent, action-time
+reported-directory, no-clobber move and trash services
 remain the required seams; no new host capability is introduced here. Older
 hosts have not been qualified for this combined source, so this floor is not a
 claim that every earlier host lacks those services. Ordinary semver admits
@@ -189,7 +190,7 @@ macOS Files0.7 and broader qualification remain separate. Published Files0.6.0 r
 0.24.0-dev.21 and its original catalog entries and receipts. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
 catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives. The
-prepared Files0.6 entries bind new immutable bytes and do not rebuild either
+Files0.6 catalog entries bind their own immutable bytes and do not rebuild either
 historical release. Building source alone does not update the public catalog.
 Current source removes the Files page's redundant visible identity in favor of
 the host's panel header, while retaining a named child region. Published
@@ -233,8 +234,8 @@ address field; the other toolbar buttons have no assigned shortcuts. Up is
 disabled but remains focusable at the filesystem root, so reaching root does not
 drop focus. Controls requiring a browsing root are disabled until one is
 available. New folder is also disabled during a mutation; Refresh remains
-available while listings load. These source changes do not alter
-already published Files archives.
+available while listings load. Older immutable Files archives do not acquire
+these changes from a host update.
 
 Current source offers **Filter loaded entries** before the tree. The host's
 explicit focus intent puts focus there when opening Files; Tab enters the tree,
@@ -262,8 +263,8 @@ otherwise Actions; a delayed permanent-delete confirmation does not take focus
 from a user who has moved elsewhere. If a filtered-away selection leaves focus
 on an unselected fallback row, invoking F2 or its context menu first selects
 that row as the explicit target. Host Escape ownership and retained drafts
-remain as described below. These source UI changes are included in the Files0.7 preparation;
-they do not modify published Files0.6.
+remain as described below. These UI changes are included in the published Linux
+ARM64 Files0.7 preview; they do not modify immutable Files0.6 or its catalog offers.
 
 In current source, **Actions… → Show dotfiles (names starting with .)** is a
 checked menu item, off by default. On both Linux and macOS, it hides dot-prefixed
@@ -311,10 +312,13 @@ closing transient menus but retaining operation drafts. A composing Escape, and
 an unowned Escape repeat, stay with the focused control. Current source does
 not close an operation editor or menu for that event, so an unsubmitted draft
 remains. This does not establish that a particular OS or IME emits a composing
-Escape. Published Files archives keep their earlier editor and menu handling
-until a new archive is qualified separately. Use **Cancel** to discard an editor
-without hiding Files. New file/folder uses the targeted folder (or a targeted
-file's parent); background actions use the browsing root. Permanent deletion
+Escape. The published Linux ARM64 Files0.7 archive includes this editor/menu
+handling; immutable Files0.6 retains its earlier behavior. Source inclusion and
+the bounded Linux packaged/public-link checkpoints do not establish
+physical-keyboard or native IME delivery, or macOS/Windows/x64 Files0.7
+qualification. Use **Cancel** to discard an editor without hiding Files. New
+file/folder uses the targeted folder (or a targeted file's parent); background
+actions use the browsing root. Permanent deletion
 still requires explicit confirmation. Editors keep captured paths even if the
 selection or browsing root changes.
 
@@ -337,8 +341,8 @@ hostile same-user filesystem races between checking and the native rename.
 Destination collisions never overwrite; cross-volume moves fail without copying
 or deleting. Permission, missing, unsupported and uncertain outcomes are reported;
 a failed or uncertain move is not retried automatically. Refresh to inspect an
-unknown outcome. This Files0.7 preparation workflow does not insert a path into
-the terminal and does not change published Files0.6.
+unknown outcome. This workflow is included in the published Linux ARM64 Files0.7
+preview; it does not insert a path into the terminal or change immutable Files0.6.
 
 Successful creation, move, trash and deletion automatically refresh the current
 root and surviving expanded folders, preserving selection where possible. A late

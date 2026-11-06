@@ -657,7 +657,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Shift+F10). Cancel returns to the initiating row/control where available,
   otherwise Actions; a late
   permanent-delete confirmation does not steal focus after the user moves away.
-  These changes are included in the Files0.7 source preparation and do not alter published Files0.6.
+  These changes are included in the published Linux ARM64 Files0.7 preview;
+  immutable Files0.6 and both official catalog offers are unchanged.
   Its explicit reported-directory action captures the selected live pane's latest
   local OSC7 report at action time. Main asks the core renderer to confirm the captured session and selection
   revision, rejecting reordered or changed selection rather than retargeting.
@@ -674,7 +675,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   limitations in an inline hint, tooltip and accessible description. Compatible installed Files
   archives use the host behavior without modified package bytes, but retain their
   earlier label and lack the new inline hint and tooltip. The renamed action,
-  hint, tooltip and dynamically localized host-coded notices are included in the Files0.7 source preparation, not published Files0.6.
+  hint, tooltip and dynamically localized host-coded notices are included in the
+  published Linux ARM64 Files0.7 preview, not Files0.6.
   The narrow [development bridges](extension-installation-foundation.md#archive-contract)
   admit unchanged Files0.6 on recognized 0.24.1-dev.N and 0.25.0-dev.N hosts; admission alone
   does not qualify native behavior or packages.
@@ -694,8 +696,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   release during composition. This does not establish that a particular OS or
   IME emits a composing Escape. Current Files source likewise leaves a composing
   Escape, and an unowned Escape repeat, with an operation editor or menu, so
-  the unsubmitted draft stays. That page change needs a future Files archive
-  and does not alter published Files0.6.
+  the unsubmitted draft stays. This handling is included in the
+  [published Linux ARM64 Files0.7 preview](files-development-preview.md#files07-linux-public-link-checkpoint),
+  not immutable Files0.6. Source inclusion and the bounded Linux checkpoint do
+  not establish physical-keyboard or native IME delivery, or macOS/Windows/x64
+  Files0.7 qualification.
   In the built-in panel, only a fresh non-composing Escape starts dismissal;
   composing Escape and unowned repeats remain with the focused control. An
   already-owned dismissal retains its repeats and release even during composition.
