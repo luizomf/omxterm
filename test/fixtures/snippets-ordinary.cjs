@@ -349,6 +349,9 @@ function arm(options) {
                     c.closed && c.exit?.code === 0 && c.exit?.signal === null,
                 ),
               ...record,
+              views: webContents
+                .getAllWebContents()
+                .map((view) => view.getURL()),
             },
             null,
             2,

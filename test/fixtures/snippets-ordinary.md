@@ -76,12 +76,17 @@ observed YAML mutation, Node HTTP(S)/fetch calls and Chromium URL/DNS/TCP/UDP at
 unchanged. These are passive test observations, not transport interception or
 security containment; they perturb timing and do not cover arbitrary native
 filesystem syscalls or an unknown backend mechanism. Failed/unknown evidence is
-not absence. The pinned loader/runtime boundary is deliberate, not a public API.
+not absence. NetLog must identify the pinned mandatory event IDs (TCP_CONNECT50,
+UDP_CONNECT94, HOST_RESOLVER_MANAGER_REQUEST5); absent, incompatible or invalid
+vocabulary and event IDs outside its vocabulary fail rather than proving absence.
+The pinned loader/runtime boundary is deliberate, not a public API.
 
 The initial actual PTY is observed from acquisition, emits a synthetic readiness
 marker and remains the same live PID through a simple Chromium-inserted command
-and ordinary Settings management. Enter is always released. Captures are synthetic
-WebContents images, not physical keyboard or OS-compositor proof. No old Insert /
+and ordinary Settings management. Enter is always released. Terminal PNGs are
+**timing-dependent illustrations**, not proof that the renderer displayed the
+completed command; the actual PTY transcript assertions prove execution. Captures
+are synthetic WebContents images, not physical keyboard or OS-compositor proof. No old Insert /
 Run/IME, Files handoff, catalog/network acquisition or public distribution campaign
 is replayed.
 
@@ -94,7 +99,13 @@ this is synthetic native-dialog acceptance, not physical-button input.
 
 Normal Quit must produce PTY actual-exit and child exit/close evidence before
 `will-quit`, followed by native main exit0, stream closure and the existing Linux
-process owner's unassisted settlement. Forced TERM/KILL is failure recovery only.
+process owner's unassisted settlement. The accumulated Quit observations must
+still have no backend, hosted view/navigation, Node network call or YAML mutation.
+After settlement the complete registry bytes, literal witness (or absence), YAML
+bytes/absence and retained config/theme files are rechecked before holding history.
+Forced TERM/KILL is failure recovery only. Primary scenario, receipt publication,
+integrity, finalization and cleanup failures are aggregated without replacement;
+selected finalizers still run after a prior failure, with no automatic retry.
 Each phase retains pause, initial/final snapshot, registry, NetLog, synthetic
 terminal/management PNGs, Quit and result receipts. Management capture waits for
 the selected Extensions tab and exact Snippets generation/state, scrolls that

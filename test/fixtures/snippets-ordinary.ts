@@ -124,13 +124,14 @@ export function assertColdPause(
   );
 }
 
-export function assertDormant(snapshot: {
+type DormantObservations = {
   forks: unknown[];
   views: string[];
   urls: string[];
   yamlWrites: unknown[];
   nodeNetwork: unknown[];
-}) {
+};
+export function assertDormant(snapshot: DormantObservations) {
   assert.deepEqual(snapshot.forks, [], "no cold-start backend process");
   assert.deepEqual(
     snapshot.nodeNetwork,
@@ -145,21 +146,107 @@ export function assertDormant(snapshot: {
   );
   assert.deepEqual(snapshot.yamlWrites, [], "no Node filesystem YAML mutation");
 }
-export function assertNoNetwork(log: {
-  constants: { logEventTypes: Record<string, number> };
-  events: Array<{ type: number; params?: { url?: string } }>;
-}) {
-  const types = log.constants.logEventTypes;
-  const forbidden = [
-    types.TCP_CONNECT,
-    types.UDP_CONNECT,
-    types.HOST_RESOLVER_MANAGER_REQUEST,
-  ].filter((x) => x !== undefined);
-  assert.ok(
-    log.events.every(
-      (e) =>
-        !forbidden.includes(e.type) && !/^https?:/i.test(e.params?.url ?? ""),
-    ),
-    "unexpected packaged network activity",
+export function assertOrdinaryQuit(
+  quit: DormantObservations & {
+    joined: boolean;
+    natural: boolean;
+    quitApprovals: number;
+  },
+) {
+  assertDormant(quit);
+  assert.equal(quit.joined, true);
+  assert.equal(quit.natural, true);
+  assert.equal(quit.quitApprovals, 1, "one controlled normal-Quit consent");
+}
+
+type SettledFiles = {
+  registry: Buffer;
+  witness: Buffer | undefined;
+  yaml: Buffer | undefined;
+};
+export function assertSettledFiles(
+  actual: SettledFiles,
+  expected: SettledFiles,
+) {
+  assert.deepEqual(
+    actual,
+    expected,
+    "postsettlement registry/witness/YAML bytes and absence",
   );
+}
+
+// Electron43.8.1's actual Chromium NetLog vocabulary, not arbitrary caller IDs.
+export const mandatoryNetLogTypes = {
+  TCP_CONNECT: 50,
+  UDP_CONNECT: 94,
+  HOST_RESOLVER_MANAGER_REQUEST: 5,
+} as const;
+export function assertNoNetwork(input: unknown) {
+  const log = input as {
+    constants?: { logEventTypes?: Record<string, unknown> };
+    events?: unknown[];
+  } | null;
+  const types = log?.constants?.logEventTypes;
+  assert.ok(types && typeof types === "object", "missing NetLog vocabulary");
+  for (const [name, id] of Object.entries(mandatoryNetLogTypes))
+    assert.equal(
+      types[name],
+      id,
+      `unknown mandatory NetLog identifier: ${name}`,
+    );
+  const known = Object.values(types);
+  assert.ok(
+    known.every((id) => Number.isSafeInteger(id) && (id as number) >= 0),
+    "invalid NetLog vocabulary",
+  );
+  assert.ok(Array.isArray(log.events), "missing NetLog events");
+  const forbidden: number[] = Object.values(mandatoryNetLogTypes);
+  for (const value of log.events) {
+    const event = value as {
+      type?: unknown;
+      params?: { url?: unknown };
+    } | null;
+    assert.ok(
+      event && Number.isSafeInteger(event.type) && known.includes(event.type),
+      "unknown NetLog event type",
+    );
+    assert.ok(
+      !forbidden.includes(event.type as number),
+      "unexpected packaged network activity",
+    );
+    const url = event.params?.url;
+    assert.ok(
+      url === undefined || (typeof url === "string" && !/^https?:/i.test(url)),
+      "unexpected packaged network URL",
+    );
+  }
+}
+
+// Local owner aggregation: keep original error objects and attempt every selected
+// recording/finalization stage. No retries and no framework-wide reporting policy.
+export function ordinaryOutcome() {
+  const failures: { stage: string; error: unknown }[] = [];
+  return {
+    failures,
+    async attempt(stage: string, operation: () => unknown | Promise<unknown>) {
+      try {
+        await operation();
+      } catch (error) {
+        failures.push({ stage, error });
+      }
+    },
+    records() {
+      return failures.map(({ stage, error }) => ({
+        stage,
+        error: String(error),
+      }));
+    },
+    throwIfFailed(message: string) {
+      if (failures.length)
+        throw new AggregateError(
+          failures.map((f) => f.error),
+          `${message}: ${failures.map((f) => f.stage).join(", ")}`,
+        );
+    },
+  };
 }

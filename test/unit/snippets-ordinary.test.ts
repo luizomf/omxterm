@@ -16,7 +16,11 @@ import {
   assertColdPause,
   assertDormant,
   assertNoNetwork,
+  assertOrdinaryQuit,
+  assertSettledFiles,
+  mandatoryNetLogTypes,
   ordinaryInputs,
+  ordinaryOutcome,
   type ColdPause,
 } from "../fixtures/snippets-ordinary";
 
@@ -267,11 +271,7 @@ it("rejects transient startup activation, YAML mutations and network attempts", 
   ).toThrow();
   expect(() => assertDormant({ ...state, yamlWrites: ["open"] })).toThrow();
   const constants = {
-    logEventTypes: {
-      TCP_CONNECT: 1,
-      UDP_CONNECT: 2,
-      HOST_RESOLVER_MANAGER_REQUEST: 3,
-    },
+    logEventTypes: { ...mandatoryNetLogTypes, URL_REQUEST: 10 },
   };
   expect(() =>
     assertNoNetwork({
@@ -280,10 +280,166 @@ it("rejects transient startup activation, YAML mutations and network attempts", 
     }),
   ).not.toThrow();
   for (const event of [
-    { type: 1 },
-    { type: 2 },
-    { type: 3 },
+    { type: mandatoryNetLogTypes.TCP_CONNECT },
+    { type: mandatoryNetLogTypes.UDP_CONNECT },
+    { type: mandatoryNetLogTypes.HOST_RESOLVER_MANAGER_REQUEST },
     { type: 10, params: { url: "https://example.invalid/" } },
   ])
     expect(() => assertNoNetwork({ constants, events: [event] })).toThrow();
+});
+
+it("rejects missing, invalid, incompatible or unknown NetLog vocabulary/events", () => {
+  for (const input of [
+    null,
+    {},
+    { constants: { logEventTypes: {} }, events: [] },
+    { constants: { logEventTypes: {} }, events: [{ type: 999 }] },
+  ])
+    expect(() => assertNoNetwork(input)).toThrow();
+  for (const name of Object.keys(mandatoryNetLogTypes)) {
+    for (const value of [undefined, null, "50", NaN, -1, 1.5, 999]) {
+      expect(() =>
+        assertNoNetwork({
+          constants: {
+            logEventTypes: { ...mandatoryNetLogTypes, [name]: value },
+          },
+          events: [],
+        }),
+      ).toThrow();
+    }
+    const types: Record<string, unknown> = { ...mandatoryNetLogTypes };
+    delete types[name];
+    expect(() =>
+      assertNoNetwork({ constants: { logEventTypes: types }, events: [] }),
+    ).toThrow();
+  }
+  for (const events of [
+    undefined,
+    {},
+    [{ type: 999 }],
+    [{ type: NaN }],
+    [null],
+  ])
+    expect(() =>
+      assertNoNetwork({
+        constants: { logEventTypes: mandatoryNetLogTypes },
+        events,
+      }),
+    ).toThrow();
+  expect(() =>
+    assertNoNetwork({
+      constants: { logEventTypes: mandatoryNetLogTypes },
+      events: [],
+    }),
+  ).not.toThrow();
+});
+
+it("rejects activity accumulated after the last live snapshot, even a joined late backend", () => {
+  const quiet = {
+    forks: [],
+    urls: [],
+    views: [],
+    yamlWrites: [],
+    nodeNetwork: [],
+    joined: true,
+    natural: true,
+    quitApprovals: 1,
+  };
+  expect(() => assertOrdinaryQuit(quiet)).not.toThrow();
+  for (const late of [
+    { forks: [{ closed: true, exit: { code: 0, signal: null } }] },
+    { urls: ["omx-extension://transient/index.html"] },
+    { views: ["omx-extension://active/index.html"] },
+    { yamlWrites: ["writeFile"] },
+    { nodeNetwork: ["https.request"] },
+    { joined: false },
+    { natural: false },
+    { quitApprovals: 0 },
+  ])
+    expect(() => assertOrdinaryQuit({ ...quiet, ...late })).toThrow();
+});
+
+it("requires exact postsettlement registry, permanent witness and YAML presence/bytes", () => {
+  const expected = {
+    registry: Buffer.from("generation3-tombstone"),
+    witness: Buffer.from("snippets-default-attempt-v1\n"),
+    yaml: undefined,
+  };
+  expect(() => assertSettledFiles({ ...expected }, expected)).not.toThrow();
+  for (const changed of [
+    { registry: Buffer.from("generation1-reprovisioned") },
+    { witness: undefined },
+    { witness: Buffer.alloc(0) },
+    { witness: Buffer.from("changed\n") },
+    { yaml: Buffer.from("late YAML") },
+  ])
+    expect(() =>
+      assertSettledFiles({ ...expected, ...changed }, expected),
+    ).toThrow();
+  const existing = {
+    registry: expected.registry,
+    witness: undefined,
+    yaml: Buffer.from("preserved synthetic YAML"),
+  };
+  expect(() => assertSettledFiles(existing, existing)).not.toThrow();
+  expect(() =>
+    assertSettledFiles({ ...existing, yaml: undefined }, existing),
+  ).toThrow();
+  expect(() =>
+    assertSettledFiles({ ...existing, witness: expected.witness }, existing),
+  ).toThrow();
+});
+
+it("retains original failure objects when recording, integrity, finalization and cleanup also fail", async () => {
+  const outcome = ordinaryOutcome();
+  const stages = [
+    "scenario",
+    "failure-receipt",
+    "integrity",
+    "scratch-cleanup",
+    "result-receipt",
+  ];
+  const errors = stages.map((stage) => Error(stage));
+  const attempted: string[] = [];
+  for (const [i, stage] of stages.entries())
+    await outcome.attempt(stage, () => {
+      attempted.push(stage);
+      throw errors[i];
+    });
+  expect(attempted).toEqual(stages);
+  expect(outcome.records().map((r) => r.stage)).toEqual(stages);
+  try {
+    outcome.throwIfFailed("owner failure");
+    throw Error("missing failure");
+  } catch (error) {
+    expect(error).toBeInstanceOf(AggregateError);
+    const combined = error as AggregateError;
+    expect(combined.errors).toEqual(errors);
+    for (const [i, original] of errors.entries())
+      expect(combined.errors[i]).toBe(original);
+  }
+  const outer = ordinaryOutcome();
+  await outer.attempt("phase", () => outcome.throwIfFailed("phase failure"));
+  const secondary = Error("outer integrity failure");
+  await outer.attempt("integrity", () => {
+    throw secondary;
+  });
+  expect(() => outer.throwIfFailed("outer failure")).toThrow(AggregateError);
+  expect((outer.failures[0]!.error as AggregateError).errors[0]).toBe(
+    errors[0],
+  );
+  expect(outer.failures[1]!.error).toBe(secondary);
+});
+
+it("records a secondary-only failure without inventing a primary or retrying work", async () => {
+  const outcome = ordinaryOutcome();
+  const work = vi.fn(() => undefined);
+  await outcome.attempt("scenario", work);
+  expect(() => outcome.throwIfFailed("success")).not.toThrow();
+  const cleanup = Error("cleanup");
+  await outcome.attempt("cleanup", () => {
+    throw cleanup;
+  });
+  expect(work).toHaveBeenCalledOnce();
+  expect(outcome.failures).toEqual([{ stage: "cleanup", error: cleanup }]);
 });

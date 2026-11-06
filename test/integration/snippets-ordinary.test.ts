@@ -23,8 +23,11 @@ import {
   assertColdPause,
   assertDormant,
   assertNoNetwork,
+  assertOrdinaryQuit,
+  assertSettledFiles,
   hash,
   ordinaryInputs,
+  ordinaryOutcome,
   packageSource,
   snippetsSha256,
   type ColdPause,
@@ -136,6 +139,11 @@ it.skipIf(!values)(
       for (const [file, bytes] of Object.entries(retained))
         assert.equal(await readFile(file, "utf8"), bytes);
     };
+    const settledFiles = async () => ({
+      registry: await readFile(registryFile),
+      witness: (await exists(witness)) ? await readFile(witness) : undefined,
+      yaml: (await exists(yaml)) ? await readFile(yaml) : undefined,
+    });
     const phases: unknown[] = [];
     let completed = false;
     async function phase(
@@ -181,13 +189,14 @@ it.skipIf(!values)(
         closed = true;
       });
       let stopped = false;
-      let phaseFailure: unknown;
+      const outcome = ordinaryOutcome();
+      let phaseResult: unknown;
       const observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(path.join(asar, "package.json"))})(${JSON.stringify(path.join(root, "observer.cjs"))})`;
       const call = (expression: string) => {
         assert.ok(client);
         return client.evaluate(`${observer}.current().${expression}`, 20000);
       };
-      try {
+      await outcome.attempt("scenario", async () => {
         await until(
           () =>
             /Debugger listening on ws:\/\/127\.0\.0\.1:/.test(
@@ -297,6 +306,8 @@ it.skipIf(!values)(
             ),
           "retained PTY synthetic output",
         );
+        // Timing-dependent illustration only. PTY transcript assertions above
+        // prove execution; this capture does not fence renderer presentation.
         await call(
           `capture(${JSON.stringify(path.join(directory, "terminal.png"))})`,
         );
@@ -332,6 +343,17 @@ it.skipIf(!values)(
         assert.equal(final.ptys[0]!.pid, initial.ptys[0]!.pid);
         assert.equal(final.ptys[0]!.exited, false);
         assert.equal(final.approvals, action === "install-disable" ? 1 : 0);
+        await expectRegistry(capturedGeneration, action ? false : enabled);
+        const expectedFiles = {
+          registry: await readFile(registryFile),
+          witness: seeded
+            ? Buffer.from("snippets-default-attempt-v1\n")
+            : undefined,
+          yaml:
+            retained[yaml] === undefined
+              ? undefined
+              : Buffer.from(retained[yaml]),
+        };
         await writeFile(
           path.join(directory, "snapshot.json"),
           JSON.stringify(
@@ -350,29 +372,32 @@ it.skipIf(!values)(
         client.close();
         client = undefined;
         await until(() => closed, "actual main exit and streams closed", 5000);
-        const outcome = await owner.stop();
         stopped = true;
-        assert.deepEqual(outcome, { code: 0, signal: null });
+        const nativeOutcome = await owner.stop();
+        assert.deepEqual(nativeOutcome, { code: 0, signal: null });
         const quit = JSON.parse(
           await readFile(path.join(directory, "quit.json"), "utf8"),
-        ) as { joined: boolean; natural: boolean; quitApprovals: number };
-        assert.equal(quit.joined, true);
-        assert.equal(quit.natural, true);
-        assert.equal(
-          quit.quitApprovals,
-          1,
-          "one controlled normal-Quit consent",
-        );
+        ) as Parameters<typeof assertOrdinaryQuit>[0];
+        assertOrdinaryQuit(quit);
         assertNoNetwork(
           JSON.parse(await readFile(netlog, "utf8")) as Parameters<
             typeof assertNoNetwork
           >[0],
         );
+        const settled = await settledFiles();
+        assertSettledFiles(settled, expectedFiles);
         await checkSentinels();
-        const result = {
+        phaseResult = {
           name,
           passed: true,
-          outcome,
+          outcome: nativeOutcome,
+          settledFileHashes: {
+            registry: hash(settled.registry),
+            witness: settled.witness ? hash(settled.witness) : null,
+            yaml: settled.yaml ? hash(settled.yaml) : null,
+          },
+          terminalCapture:
+            "timing-dependent illustration, not rendered completion proof",
           closed,
           cleanupAssistance: "none",
           initialGeneration: generation,
@@ -381,35 +406,34 @@ it.skipIf(!values)(
           pty: initial.ptys[0]!.pid,
           stderr: owner.stderrText(),
         };
-        await writeFile(
-          path.join(directory, "result.json"),
-          JSON.stringify(result, null, 2),
-        );
-        phases.push(result);
-      } catch (error) {
-        phaseFailure = error;
-        await writeFile(
-          path.join(directory, "failure.json"),
-          JSON.stringify(
-            { error: String(error), stderr: owner.stderrText(), closed },
-            null,
-            2,
+      });
+      if (!outcome.failures.length) {
+        await outcome.attempt("phase-result", () =>
+          writeFile(
+            path.join(directory, "result.json"),
+            JSON.stringify(phaseResult, null, 2),
           ),
         );
-        throw error;
-      } finally {
-        client?.close();
-        if (!stopped) {
-          try {
-            await owner.stop();
-          } catch (cleanup) {
-            throw new AggregateError(
-              [phaseFailure, cleanup],
-              "Ordinary fixture failure and recovery outcome",
-            );
-          }
-        }
+        if (!outcome.failures.length) phases.push(phaseResult);
       }
+      if (outcome.failures.length)
+        await outcome.attempt("failure-receipt", () =>
+          writeFile(
+            path.join(directory, "failure.json"),
+            JSON.stringify(
+              {
+                outcomes: outcome.records(),
+                stderr: owner.stderrText(),
+                closed,
+              },
+              null,
+              2,
+            ),
+          ),
+        );
+      await outcome.attempt("disconnect", () => client?.close());
+      if (!stopped) await outcome.attempt("recovery", () => owner.stop());
+      outcome.throwIfFailed("Ordinary phase failed");
     }
     const hold = async (prefix: string) => {
       for (const [name, file] of [
@@ -420,7 +444,8 @@ it.skipIf(!values)(
           await rename(file!, path.join(evidence, `${prefix}-${name}`));
       }
     };
-    try {
+    const finalization = ordinaryOutcome();
+    await finalization.attempt("scenario", async () => {
       await json("inputs.json", {
         packageSource,
         fixtureSource: process.env.OMXTERM_FIXTURE_SOURCE ?? "uncommitted",
@@ -432,6 +457,8 @@ it.skipIf(!values)(
         archiveSha256: snippetsSha256,
         scope:
           "ordinary guest account roots; no user-data-dir; pre-evaluation passive observer; Chromium synthetic input/capture; extracted AppImage, not FUSE/helper qualification",
+        terminalCaptures:
+          "timing-dependent illustrations; real PTY transcripts, not images, prove execution",
       });
       // Existing-history controls come first. They never consume a witness, and
       // their complete owned roots are held before a distinct absent-root history.
@@ -465,17 +492,27 @@ it.skipIf(!values)(
       await hold("held-fresh");
       assertAbsentRoots([values.profile, values.state]);
       completed = true;
-    } finally {
-      assert.equal(hash(await readFile(values.appImage)), values.digest);
-      assert.equal(hash(await readFile(asar)), asarDigest);
-      await json("result.json", {
-        passed: completed,
+    });
+    await finalization.attempt("AppImage-integrity", async () =>
+      assert.equal(hash(await readFile(values.appImage)), values.digest),
+    );
+    await finalization.attempt("ASAR-integrity", async () =>
+      assert.equal(hash(await readFile(asar)), asarDigest),
+    );
+    if (completed && !finalization.failures.length)
+      await finalization.attempt("scratch-cleanup", () =>
+        rm(root, { recursive: true, force: true }),
+      );
+    await finalization.attempt("result-receipt", () =>
+      json("result.json", {
+        passed: completed && !finalization.failures.length,
         phases,
         root,
+        outcomes: finalization.records(),
         ownedOrdinaryRootsRetainedOnFailure: !completed,
         noConsumedWitnessReset: true,
-      });
-      if (completed) await rm(root, { recursive: true, force: true });
-    }
+      }),
+    );
+    finalization.throwIfFailed("Ordinary consumer failed");
   },
 );
