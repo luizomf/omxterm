@@ -240,6 +240,22 @@ function verifyFilesConsent(prompt, options, approvals) {
       "manifest ID before consent",
     );
   }
+  if (options.consumer070 && options.publicLink) {
+    assert.ok(Number.isInteger(approvals) && approvals >= 0 && approvals < 3);
+    assert.ok(
+      prompt.detail.endsWith(`\nCurrent generation: ${[0, 3, 4][approvals]}`),
+      "captured Files0.7 installation generation before consent",
+    );
+    assert.equal(
+      prompt.detail.includes("Official means"),
+      false,
+      "direct links are not Official catalog selections",
+    );
+    assert.equal(prompt.type, "warning");
+    assert.deepEqual(prompt.buttons, ["Cancel", "Trust and install"]);
+    assert.equal(prompt.defaultId, 0);
+    assert.equal(prompt.cancelId, 0);
+  }
   if (options.publicCatalog && options.extensionVersion === "0.6.0") {
     const generations = [0, 1, 5];
     assert.ok(Number.isInteger(approvals) && approvals >= 0 && approvals < 3);
@@ -622,7 +638,9 @@ async function run(options) {
           `document.querySelector('.extensions-panel').textContent.includes(${JSON.stringify(text)}) && (${extensionsIdle.toString()})(document, ${!!options.publicCatalog})`,
         ),
       text,
-      options.linuxPublicCatalog ? 65000 : 15000,
+      options.linuxPublicCatalog || (options.consumer070 && options.publicLink)
+        ? 65000
+        : 15000,
     );
   }
   async function publicManagement(
@@ -914,6 +932,7 @@ async function run(options) {
       identity,
       shellStat,
       initialShell,
+      publicLinkInstalls,
     });
   if (!options.publicLink && !options.publicCatalog) {
     view = await closeFiles(view, () => menu("Files"));

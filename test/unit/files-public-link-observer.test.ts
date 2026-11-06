@@ -11,6 +11,10 @@ import type {
 
 const url =
   "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.5.0/files-0.5.0-a343704c0794.omxext";
+const publicLinks = [
+  url,
+  "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext",
+];
 const source = await readFile("test/fixtures/files-packaged.cjs", "utf8");
 function block(start: string, end: string) {
   const from = source.indexOf(start),
@@ -43,7 +47,7 @@ const createCatalogInstall = new Function(
 const catalogInstall = createCatalogInstall();
 afterEach(() => document.body.replaceChildren());
 
-it("uses real Settings HTTPS input/click for install, reinstall and final activation install", async () => {
+it.each(publicLinks)("submits three Settings links: %s", async (url) => {
   let finish: ((result: ExtensionsResult) => void) | undefined;
   const snapshot: ExtensionsResult = {
     ok: true,
@@ -476,7 +480,7 @@ it("routes three catalog installs through scoped UI without local or link fallba
     ),
   ).rejects.toThrow();
 });
-it("routes every public install through the renderer, never the local chooser or catalog", async () => {
+it.each(publicLinks)("uses only Settings-link routing: %s", async (url) => {
   const code = block(
     "  const publicLinkInstalls = [];",
     "  async function openFiles()",

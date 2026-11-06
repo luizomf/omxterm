@@ -30,6 +30,46 @@ const preparedInputs = () => ({
     "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
 });
 
+const publicLink =
+  "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext";
+const publicInputs = () => ({
+  ...preparedInputs(),
+  OMXTERM_FILES_PACKAGED_PUBLIC_LINK: publicLink,
+  OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256:
+    "ac18dc2e08cbebed6a8b5ce08976eab2e0f043d407bd8b0f24113c1e87534f62",
+});
+
+it("selects only the exact dev.19/Files0.7 public-link pair and refuses alternate acquisition modes or URLs", () => {
+  expect(linuxFilesInputs(publicInputs())).toMatchObject({
+    consumer070: true,
+    publicLink,
+    currentUi: false,
+  });
+  for (const changed of [
+    { OMXTERM_FILES_PACKAGED_CONSUMER_070: undefined },
+    { OMXTERM_FILES_PACKAGED_VERSION: "0.25.0-dev.20" },
+    { OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256: "a".repeat(64) },
+    { OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256: "b".repeat(64) },
+    { OMXTERM_FILES_PACKAGED_CATALOG: "controlled" },
+    { OMXTERM_FILES_PACKAGED_CATALOG: "public" },
+    { OMXTERM_FILES_PACKAGED_CATALOG_FILE: "/controlled.json" },
+    { OMXTERM_FILES_PACKAGED_ATTACH_ONLY: "1" },
+    { OMXTERM_FILES_PACKAGED_TERMINAL_ONLY: "1" },
+    ...[
+      "",
+      publicLink + "?x=1",
+      publicLink + "#x",
+      " " + publicLink,
+      publicLink.replace("https:", "http:"),
+      publicLink.replace("github.com", "user@github.com"),
+      publicLink.replace("github.com", "example.org"),
+      publicLink.replace("v0.7.0", "latest"),
+      publicLink.replace("files-0.7.0.omxext", "other.omxext"),
+    ].map((url) => ({ OMXTERM_FILES_PACKAGED_PUBLIC_LINK: url })),
+  ])
+    expect(() => linuxFilesInputs({ ...publicInputs(), ...changed })).toThrow();
+});
+
 it("selects the exact corrected Files0.7 local package lane without weakening catalog or identity checks", () => {
   expect(linuxFilesInputs(preparedInputs())).toMatchObject({
     consumer070: true,
@@ -49,6 +89,52 @@ it("selects the exact corrected Files0.7 local package lane without weakening ca
     expect(() =>
       linuxFilesInputs({ ...preparedInputs(), ...changed }),
     ).toThrow();
+});
+
+it("requires the three exact Settings-link submissions in both public scenario and Quit receipts", () => {
+  const selected = linuxFilesInputs(publicInputs())!;
+  const expected = {
+    consumer070: true,
+    currentUi: false,
+    version: selected.version,
+    extensionVersion: selected.extensionVersion,
+    extensionName: selected.extensionName,
+    archiveSha256: selected.archiveSha256,
+    publicLink,
+  };
+  const receipt = {
+    ...selected,
+    host: selected.version,
+    approvals: 3,
+    checks: [...linuxFiles070Checks],
+    publicLink: {
+      url: publicLink,
+      installs: [publicLink, publicLink, publicLink],
+    },
+  };
+  expect(() => assertLinuxFilesScenario(receipt, expected)).not.toThrow();
+  for (const changed of [
+    { publicLink: undefined },
+    { publicLink: { url: publicLink, installs: [publicLink, publicLink] } },
+    {
+      publicLink: {
+        url: "https://other.example/files.omxext",
+        installs: [publicLink, publicLink, publicLink],
+      },
+    },
+    {
+      publicLink: {
+        url: publicLink,
+        installs: [publicLink, "local-file", publicLink],
+      },
+    },
+    { publicCatalog: { url: "controlled" } },
+  ])
+    expect(() =>
+      assertLinuxFilesScenario({ ...receipt, ...changed }, expected),
+    ).toThrow();
+  const { publicLink: _link, ...localExpected } = expected;
+  expect(() => assertLinuxFilesScenario(receipt, localExpected)).toThrow();
 });
 
 it("requires every prepared consumer check, exact pair identity and three deliberate consents", () => {

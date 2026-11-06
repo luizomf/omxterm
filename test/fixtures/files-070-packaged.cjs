@@ -25,6 +25,7 @@ async function run(context) {
     identity,
     shellStat,
     initialShell,
+    publicLinkInstalls,
   } = context;
   assert.equal(options.extensionVersion, "0.7.0");
   assert.equal(options.extensionName, "Files — ARM64 preview");
@@ -32,10 +33,14 @@ async function run(context) {
     options.archiveSha256,
     "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
   );
-  assert.equal((await readFile(options.archive)).length, 23285);
-  assert.ok(
-    !options.catalogMode && !options.publicLink && !options.publicCatalog,
-  );
+  assert.ok(!options.catalogMode && !options.publicCatalog);
+  if (options.publicLink)
+    assert.equal(
+      options.archive,
+      undefined,
+      "public archive is only a controller-side hash oracle",
+    );
+  else assert.equal((await readFile(options.archive)).length, 23285);
   const sameTerminal = async () => {
     assert.equal(
       shellStat()?.start,
@@ -107,6 +112,14 @@ async function run(context) {
   const result = {
     checks: context.checks,
     approvals: globalThis.__omxtermPackagedState.approvals,
+    ...(options.publicLink
+      ? {
+          publicLink: {
+            url: options.publicLink,
+            installs: [...publicLinkInstalls],
+          },
+        }
+      : {}),
     archiveSha256: options.archiveSha256,
     extensionVersion: options.extensionVersion,
     extensionName: options.extensionName,
@@ -118,6 +131,12 @@ async function run(context) {
     input: "synthetic Chromium; native consent controlled; inspector observer",
   };
   assert.equal(result.approvals, 3);
+  if (options.publicLink)
+    assert.deepEqual(
+      publicLinkInstalls,
+      [options.publicLink, options.publicLink, options.publicLink],
+      "every installation must use the public Settings link",
+    );
   app.once("will-quit", () => {
     const remaining = shellStat();
     assert.ok(

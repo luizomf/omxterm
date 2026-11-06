@@ -39,8 +39,12 @@ const catalogMode = inputs?.catalogMode;
 const linuxPublicCatalog = inputs?.linuxPublicCatalog ?? false;
 const linuxHistoricalPublic = inputs?.linuxHistoricalPublic ?? false;
 const consumer070 = inputs?.consumer070 ?? false;
+const publicLink = inputs?.publicLink;
+const publicAcquisition = linuxPublicCatalog || !!publicLink;
 const scope = consumer070
-  ? "Files0.7-local-packaged-consumer"
+  ? publicLink
+    ? "Files0.7-public-HTTPS-link"
+    : "Files0.7-local-packaged-consumer"
   : linuxPublicCatalog
     ? "Files0.6-stable-public-HTTPS"
     : linuxHistoricalPublic
@@ -112,7 +116,7 @@ async function prepareEvidence(root: string) {
 }
 
 async function prepareObserver(root: string, archiveBytes: Buffer) {
-  const localArchive = linuxPublicCatalog
+  const localArchive = publicAcquisition
     ? undefined
     : path.join(root, "files.omxext");
   if (localArchive) await writeFile(localArchive, archiveBytes);
@@ -156,6 +160,7 @@ async function verifyPublicQuit(evidence: string) {
     extensionName: inputs.extensionName,
     currentUi: false,
     consumer070,
+    ...(inputs.publicLink ? { publicLink: inputs.publicLink } : {}),
     ...(linuxPublicCatalog ? { catalogSha256: inputs.catalogSha256! } : {}),
   });
   assert.equal(quit.joined, true);
@@ -237,7 +242,7 @@ async function observeScenario(
   if (attachOnly) return;
   const result = await client.evaluate(
     `${observer}.run(${JSON.stringify(options)})`,
-    linuxPublicCatalog ? 330000 : 90000,
+    publicAcquisition ? 330000 : 90000,
   );
   await writeFile(
     path.join(evidence, terminalOnly ? "terminal-entry.json" : "scenario.json"),
@@ -265,6 +270,7 @@ async function observeScenario(
       extensionName: options.extensionName,
       currentUi: options.linuxCurrentFilesUi,
       consumer070,
+      ...(publicLink ? { publicLink } : {}),
       ...(linuxPublicCatalog ? { catalogSha256: options.catalogSha256! } : {}),
     });
 }
@@ -325,6 +331,7 @@ it.skipIf(
             expectedExtensionName: inputs!.extensionName,
             expectedCatalogSha256: inputs!.catalogSha256,
             currentUi: inputs!.currentUi,
+            publicLink,
           },
           null,
           2,
@@ -470,6 +477,7 @@ it.skipIf(
         readiness,
         terminalOnly,
         consumer070,
+        publicLink,
         catalogMode,
         ...publicObserverOptions(),
         catalogFile: path.join(root, "catalog.json"),
@@ -502,7 +510,7 @@ it.skipIf(
       nativeStderr = owner.stderrText();
       nativeStderrTruncated = owner.stderrTruncated();
       owner = undefined;
-      assertCompletePublicStderr(linuxPublicCatalog, nativeStderrTruncated);
+      assertCompletePublicStderr(publicAcquisition, nativeStderrTruncated);
       expect(outcome).toEqual({ code: 0, signal: null });
       expect(digest(await readFile(asar))).toBe(readonlyAsarHash);
       expect(digest(await readFile(appImage!))).toBe(
@@ -547,7 +555,7 @@ it.skipIf(
             outcome,
             nativeStderr,
             nativeDiagnostics: publicNativeDiagnostics(
-              linuxPublicCatalog,
+              publicAcquisition,
               nativeStderrTruncated,
             ),
             failure: failure instanceof Error ? failure.stack : failure,

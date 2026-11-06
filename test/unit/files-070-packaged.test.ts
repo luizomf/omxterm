@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { transform } from "esbuild";
@@ -8,9 +8,11 @@ import { expect, it, vi } from "vitest";
 import {
   assertLinuxFilesScenario,
   linuxFiles070Checks,
+  linuxFiles070PublicLink,
 } from "../fixtures/files-packaged-linux-options";
 
-it("rejects a previous valid Quit receipt for every new Files0.7 packaged run without altering old evidence", async () => {
+const acquisitionModes = [undefined, linuxFiles070PublicLink];
+it.each(acquisitionModes)("isolates Quit evidence: %s", async (publicLink) => {
   const root = await mkdtemp(path.join(os.tmpdir(), "files-070-evidence-"));
   try {
     const directory = path.join(root, "evidence");
@@ -21,9 +23,18 @@ it("rejects a previous valid Quit receipt for every new Files0.7 packaged run wi
       extensionName: "Files — ARM64 preview",
       archiveSha256:
         "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
+      ...(publicLink ? { publicLink } : {}),
     };
     const previous = JSON.stringify({
       ...inputs,
+      ...(publicLink
+        ? {
+            publicLink: {
+              url: publicLink,
+              installs: [publicLink, publicLink, publicLink],
+            },
+          }
+        : {}),
       host: inputs.version,
       approvals: 3,
       checks: [...linuxFiles070Checks],
@@ -115,7 +126,65 @@ it("rejects a previous valid Quit receipt for every new Files0.7 packaged run wi
   }
 });
 
-async function setup(size = 23285) {
+it("prepares public observer helpers without copying the oracle archive or controlled transport into the application profile", async () => {
+  const root = await mkdtemp(
+    path.join(os.tmpdir(), "files-070-public-observer-"),
+  );
+  try {
+    const source = await readFile(
+      "test/integration/files-packaged.test.ts",
+      "utf8",
+    );
+    const start = source.indexOf("async function prepareObserver(");
+    const end = source.indexOf("async function verifyPublicQuit(", start);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const compiled = await transform(source.slice(start, end), {
+      loader: "ts",
+    });
+    const prepareCatalog = vi.fn(async () => {});
+    const load = new Function(
+      "path",
+      "writeFile",
+      "cp",
+      "prepareCatalog",
+      "linuxPublicCatalog",
+      "consumer070",
+      "publicAcquisition",
+      compiled.code + "\nreturn prepareObserver;",
+    ) as (
+      ...args: unknown[]
+    ) => (root: string, bytes: Buffer) => Promise<string | undefined>;
+    const prepare = load(
+      path,
+      writeFile,
+      cp,
+      prepareCatalog,
+      false,
+      true,
+      true,
+    );
+    await expect(
+      prepare(root, Buffer.from("oracle-only")),
+    ).resolves.toBeUndefined();
+    await expect(
+      readFile(path.join(root, "files.omxext")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(
+      readFile(path.join(root, "files-catalog-transport.cjs")),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(
+      readFile(path.join(root, "observer.cjs"), "utf8"),
+    ).resolves.toContain("public acquisition must not use local chooser");
+    await expect(
+      readFile(path.join(root, "files-070-consumer.mjs"), "utf8"),
+    ).resolves.toContain("runFiles070Consumer");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+async function setup(size = 23285, publicLink?: string) {
   const source = await readFile("test/fixtures/files-070-packaged.cjs", "utf8");
   const loadConsumer = vi.fn(async () => ({
     runFiles070Consumer: vi.fn(async () => {
@@ -130,6 +199,8 @@ async function setup(size = 23285) {
   }[] = [{ closed: false, exit: null }];
   const checks: string[] = [];
   const writes = vi.fn();
+  const readOracle = vi.fn(async () => Buffer.alloc(size));
+  const publicLinkInstalls = publicLink ? [publicLink] : [];
   let quit: (() => void) | undefined;
   let alive = true;
   const app = {
@@ -146,7 +217,7 @@ async function setup(size = 23285) {
     if (name === "electron") return { app };
     if (name === "node:assert/strict") return assert;
     if (name === "node:fs/promises")
-      return { readFile: async () => Buffer.alloc(size), writeFile: writes };
+      return { readFile: readOracle, writeFile: writes };
     if (name === "node:fs") return { writeFileSync: writes };
     if (name === "node:path") return path;
     if (name === "node:url") return { pathToFileURL };
@@ -170,7 +241,7 @@ async function setup(size = 23285) {
   const context = {
     options: {
       root: "/fixture",
-      archive: "/files.omxext",
+      ...(publicLink ? { publicLink } : { archive: "/files.omxext" }),
       evidence: "/evidence",
       files: "/owned-files",
       extensionVersion: "0.7.0",
@@ -180,6 +251,7 @@ async function setup(size = 23285) {
     },
     checks,
     children,
+    publicLinkInstalls,
     core: {
       insertText: vi.fn(),
       sendInputEvent: vi.fn(),
@@ -193,7 +265,9 @@ async function setup(size = 23285) {
     },
     terminal: vi.fn(),
     settings: vi.fn(),
-    installArchive: vi.fn(),
+    installArchive: vi.fn(async () => {
+      if (publicLink) publicLinkInstalls.push(publicLink);
+    }),
     state: async (label: string) => {
       if (label === "generation 5") {
         children[1]!.closed = true;
@@ -214,6 +288,7 @@ async function setup(size = 23285) {
     run: module.exports.run,
     loadConsumer,
     writes,
+    readOracle,
     quit: () => quit!(),
     endShell: () => {
       alive = false;
@@ -243,6 +318,32 @@ it("adapts the existing consumer, proves dormant reinstall and leaves the third 
     fixture.writes.mock.calls.at(-1)![1] as string,
   ) as { joined: boolean; baselineExited: boolean };
   expect(receipt).toMatchObject({ joined: true, baselineExited: true });
+});
+
+it("records all three public-link submissions without reading or substituting the local oracle in the application", async () => {
+  const fixture = await setup(0, linuxFiles070PublicLink);
+  const result = await fixture.run(fixture.context);
+  expect(fixture.readOracle).not.toHaveBeenCalled();
+  expect(result.publicLink).toEqual({
+    url: linuxFiles070PublicLink,
+    installs: [
+      linuxFiles070PublicLink,
+      linuxFiles070PublicLink,
+      linuxFiles070PublicLink,
+    ],
+  });
+  expect(fixture.context.installArchive).toHaveBeenCalledTimes(2);
+  expect(fixture.context.children[2]).toEqual({ closed: false, exit: null });
+  fixture.endShell();
+  fixture.context.children[2] = {
+    closed: true,
+    exit: { code: 0, signal: null },
+  };
+  fixture.quit();
+  const receipt = JSON.parse(
+    fixture.writes.mock.calls.at(-1)![1] as string,
+  ) as { publicLink: unknown };
+  expect(receipt.publicLink).toEqual(result.publicLink);
 });
 
 it("rejects wrong-sized bytes before the shared consumer or package operations", async () => {

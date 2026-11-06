@@ -264,6 +264,34 @@ add it. Public readback/checksums and a compatible public host are needed before
 claiming distribution; neither a branch, local artifact nor CI upload is shipment.
 The normal stable-release procedure and its complete asset set remain unchanged.
 
+## Files0.7 Linux link-first preview preparation
+
+The dev.19/Files0.7 [local exact-package checkpoint](files-development-preview.md#files07-linux-packaged-checkpoint)
+and separate FULL AppImage verification passed; this is not publication or public
+consumption. The [prepared public-link fixture](files-development-preview.md#files07-linux-public-link-consumer-preparation)
+reuses the qualified pair and bounded Linux operations, with the existing Settings
+HTTPS-link acquisition mechanism. Its new transport scope needs independent review
+before the actual checkpoint. No new application build/version/archive or catalog
+promotion is selected.
+
+After review, maintainers may publish separate immutable non-Latest prereleases
+for the qualified dev.19 host and Files0.7 archive, preserving original filenames,
+checksums and the fresh original build receipt. Bind tags/notes to actual build
+source `0cb89accd61f1f5d5263c60773454882793e2e99`; compare later test/docs-only
+inputs rather than relabeling binaries. Check proposed tags/releases first;
+never replace published bytes or mutate an immutable release. Files must be
+publicly available and anonymously byte-verified before advertising the pair.
+Keep stable Files0.6 catalogs and stable Latest unchanged.
+
+Record draft/public size/SHA-256 readback for both exact artifacts and sidecars.
+Then run the assigned public-link fixture using anonymous downloads, the immutable
+`ext-files-v0.7.0/files-0.7.0.omxext` URL and fresh per-run evidence. Assert actual
+Settings-link install/reinstall, exact captured-byte consent/dormancy, bounded
+operations/management, retained terminal, active-backend joined Quit, inspected
+captures and Linux service preservation. No controlled transport or local archive
+substitution is allowed. Do not infer this result from upload, local qualification
+or headless tests. No public run is recorded by this preparation.
+
 ## Files macOS link-first preview preparation
 
 The link-first preview was published on 2026-10-31 using the retained dev.21

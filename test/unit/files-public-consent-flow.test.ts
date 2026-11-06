@@ -26,7 +26,11 @@ const { verifyFilesConsent } = require("../fixtures/files-packaged.cjs") as {
   verifyFilesConsent: (
     prompt: MessageBoxOptions,
     options: {
-      publicCatalog: string;
+      publicCatalog?: string;
+      publicLink?: string;
+      consumer070?: boolean;
+      linuxExpectedIdentity?: boolean;
+      extensionName?: string;
       extensionVersion: string;
       archiveSha256: string;
     },
@@ -38,6 +42,84 @@ afterEach(async () => {
   vi.resetAllMocks();
   if (root) await rm(root, { recursive: true, force: true });
   root = undefined;
+});
+
+it("joins captured-link trust, the real dialog and store to the Files0.7 generation/dormancy oracle", async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), "files-link-consent-"));
+  const runtime = { appVersion: "0.25.0-dev.19", apiVersion: "0.1.0" };
+  const manifest = {
+    format: 1,
+    id: "omxterm.files",
+    name: "Files — ARM64 preview",
+    version: "0.7.0",
+    engines: { omxterm: ">=0.25.0-dev.10", api: "0.1.x" },
+    backend: "backend.mjs",
+  };
+  // Synthetic captured bytes test the production trust/store seam, not HTTPS
+  // availability or release-byte/native qualification.
+  const bytes = packageArchive([
+    { name: "extension.json", data: JSON.stringify(manifest) },
+    { name: "backend.mjs", data: "throw new Error('must remain dormant');" },
+  ]);
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const packages = await InstalledPackages.open({
+    root: path.join(root, "store"),
+    runtime,
+    leases: { tryAcquire: async () => ({ release: async () => {} }) },
+  });
+  const trust = createExtensionPackageTrust({
+    packages,
+    runtime,
+    temporaryDirectory: root,
+  });
+  const manager = trust as unknown as ReturnType<typeof createExtensionManager>;
+  const window = {
+    webContents: { isDestroyed: () => false },
+  } as unknown as BrowserWindow;
+  const options = {
+    consumer070: true,
+    linuxExpectedIdentity: true,
+    publicLink:
+      "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext",
+    extensionName: manifest.name,
+    extensionVersion: manifest.version,
+    archiveSha256: digest,
+  };
+  let approvals = 0;
+  const showMessageBox = vi.mocked(dialog.showMessageBox) as unknown as Mock<
+    (
+      window: BrowserWindow,
+      prompt: MessageBoxOptions,
+    ) => Promise<MessageBoxReturnValue>
+  >;
+  showMessageBox.mockImplementation(async (_window, prompt) => {
+    verifyFilesConsent(prompt, options, approvals++);
+    return { response: 1, checkboxChecked: false };
+  });
+  const install = () =>
+    installExtensionFromDialog(window, manager, () => false, undefined, bytes);
+  expect(await install()).toBe(true);
+  expect((await packages.snapshot())[0]).toMatchObject({
+    generation: 1,
+    digest,
+    enabled: true,
+  });
+  await packages.setEnabled(manifest.id, 1, false);
+  await packages.uninstall(manifest.id, 2);
+  expect(await install()).toBe(true);
+  expect((await packages.snapshot())[0]).toMatchObject({
+    generation: 4,
+    digest,
+    enabled: true,
+  });
+  expect(await install()).toBe(true);
+  expect((await packages.snapshot())[0]).toMatchObject({
+    generation: 5,
+    digest,
+    enabled: true,
+  });
+  expect(approvals).toBe(3);
+  expect(dialog.showOpenDialog).not.toHaveBeenCalled();
 });
 
 it("joins the real catalog trust, dialog and store to the Files0.6 consent oracle", async () => {

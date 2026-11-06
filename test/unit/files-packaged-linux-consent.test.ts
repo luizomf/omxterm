@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { runInNewContext } from "node:vm";
 import { expect, it } from "vitest";
 
 const source = await readFile("test/fixtures/files-packaged.cjs", "utf8");
@@ -22,15 +21,21 @@ const observer = {
         extensionName: string;
         extensionVersion: string;
         archiveSha256: string;
+        consumer070?: boolean;
+        publicLink?: string;
       },
+      approvals?: number,
     ) => void;
   },
 };
-runInNewContext(source, {
-  module: observer,
-  require: (name: string): unknown =>
-    name === "electron" ? {} : (require(name) as unknown),
-});
+// Keep assertion values in one realm, as in the actual packaged observer.
+const load = new Function("module", "require", source) as (
+  module: typeof observer,
+  require: (name: string) => unknown,
+) => void;
+load(observer, (name) =>
+  name === "electron" ? {} : (require(name) as unknown),
+);
 const verify = observer.exports.verifyFilesConsent;
 const currentUi = observer.exports.checksCurrentFilesUi;
 
@@ -55,6 +60,52 @@ it("runs the existing current Files UI checks for the explicit Linux stable pair
   ])
     expect(currentUi(options)).toBe(false);
 });
+
+it.each([0, 3, 4])(
+  "binds Files0.7 public-link consent to the captured generation %s without claiming Official catalog trust",
+  (generation) => {
+    const digest =
+      "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef";
+    const options = {
+      consumer070: true,
+      publicLink:
+        "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext",
+      linuxExpectedIdentity: true,
+      extensionName: "Files — ARM64 preview",
+      extensionVersion: "0.7.0",
+      archiveSha256: digest,
+    };
+    const prompt = {
+      title: "Trust extension code?",
+      message: "Install Files — ARM64 preview 0.7.0?",
+      detail: `Trusted code can use the network.\n\nPackage: omxterm.files\nSHA-256: ${digest}\nCurrent generation: ${generation}`,
+      type: "warning",
+      buttons: ["Cancel", "Trust and install"],
+      defaultId: 0,
+      cancelId: 0,
+    };
+    const approvals = [0, 3, 4].indexOf(generation);
+    expect(() => verify(prompt, options, approvals)).not.toThrow();
+    for (const wrong of [
+      {
+        ...prompt,
+        detail: prompt.detail.replace(
+          `generation: ${generation}`,
+          "generation: 99",
+        ),
+      },
+      {
+        ...prompt,
+        detail: prompt.detail + "\nOfficial means project-maintained.",
+      },
+      { ...prompt, type: "info" },
+      { ...prompt, defaultId: 1 },
+      { ...prompt, buttons: ["Trust and install", "Cancel"] },
+    ])
+      expect(() => verify(wrong, options, approvals)).toThrow();
+    expect(() => verify(prompt, options, 3)).toThrow();
+  },
+);
 
 it("binds Linux consent to the selected name, version, ID and exact digest", () => {
   const digest = "a".repeat(64);

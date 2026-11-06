@@ -4,6 +4,8 @@ import path from "node:path";
 import { satisfies, valid } from "semver";
 
 const prefix = "OMXTERM_FILES_PACKAGED_";
+export const linuxFiles070PublicLink =
+  "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext";
 export const linuxFilesPublicEndpoint =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
 export const linuxFilesPublicArchive =
@@ -46,6 +48,7 @@ export function assertLinuxFilesScenario(
   expected: {
     currentUi: boolean;
     consumer070?: boolean;
+    publicLink?: string;
     archiveSha256: string;
     version: string;
     extensionVersion: string;
@@ -78,6 +81,23 @@ export function assertLinuxFilesScenario(
   assert.equal(receipt.host, expected.version);
   assert.equal(receipt.extensionVersion, expected.extensionVersion);
   assert.equal(receipt.extensionName, expected.extensionName);
+  if (expected.consumer070) {
+    assert.equal(receipt.publicCatalog, undefined);
+    assert.deepEqual(
+      receipt.publicLink,
+      expected.publicLink
+        ? {
+            url: expected.publicLink,
+            installs: [
+              expected.publicLink,
+              expected.publicLink,
+              expected.publicLink,
+            ],
+          }
+        : undefined,
+      "exact public-link installation receipts required",
+    );
+  }
   if (expected.catalogSha256) {
     assert.deepEqual(receipt.publicCatalog, {
       url: linuxFilesPublicEndpoint,
@@ -185,6 +205,34 @@ function assertFiles070Inputs(
     "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
     "corrected Files0.7 bytes required",
   );
+}
+
+function files070PublicLink(
+  env: NodeJS.ProcessEnv,
+  consumer070: boolean,
+  version: string,
+  appImageSha256: string,
+) {
+  const url = env[prefix + "PUBLIC_LINK"];
+  if (url === undefined) return undefined;
+  assert.equal(consumer070, true, "Public link requires the Files0.7 consumer");
+  assert.equal(
+    url,
+    linuxFiles070PublicLink,
+    "Expected immutable Files0.7 archive URL",
+  );
+  assert.equal(version, "0.25.0-dev.19", "Expected qualified public-link host");
+  assert.equal(
+    appImageSha256,
+    "ac18dc2e08cbebed6a8b5ce08976eab2e0f043d407bd8b0f24113c1e87534f62",
+    "Expected qualified public-link AppImage",
+  );
+  assert.equal(
+    env[prefix + "CATALOG_FILE"],
+    undefined,
+    "Public link forbids controlled catalog",
+  );
+  return url;
 }
 
 export function linuxFilesInputs(env: NodeJS.ProcessEnv) {
@@ -315,6 +363,7 @@ export function linuxFilesInputs(env: NodeJS.ProcessEnv) {
     linuxPublicCatalog,
     linuxHistoricalPublic,
     consumer070,
+    publicLink: files070PublicLink(env, consumer070, version, appImageSha256),
     currentUi:
       stablePair && !attachOnly && !terminalOnly && catalogMode !== "public",
   };

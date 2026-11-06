@@ -1005,6 +1005,45 @@ No primitive matrix is replayed. Inspect `consumer-files.png` and
 Production public-link consumption remains a separate post-publication step.
 Stable Files0.6 catalogs remain unchanged.
 
+### Files0.7 Linux public-link consumer preparation
+
+**Prepared fixture, not a public-consumption pass.** Run only after the host and
+Files releases are published and their anonymous downloads match the qualified
+pair below. Reuse `test/integration/files-packaged.test.ts` with all exact-pair
+inputs from the local command above, set the host SHA-256 to
+`ac18dc2e08cbebed6a8b5ce08976eab2e0f043d407bd8b0f24113c1e87534f62`,
+and additionally set:
+
+```sh
+OMXTERM_FILES_PACKAGED_PUBLIC_LINK=https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext
+```
+
+Export that variable for the test invocation or add it as another inline
+assignment. This planned immutable URL is not a claim of current availability.
+`APPIMAGE` and `ARCHIVE` must be the anonymously downloaded dev.19 host and
+Files0.7 archive, with readback provenance recorded separately. The archive is
+only a controller-side digest oracle: it is not copied into the app profile or
+returned by a chooser. The lane pins this exact host/version/archive/URL and
+refuses catalog, controlled-catalog and diagnostic combinations.
+
+The existing macOS public-link mechanism fills the real Settings HTTPS field
+and clicks **Install from link** for initial install and both subsequent installs,
+including reinstall. Production HTTPS/validation is unchanged; no test CA,
+transport interception, local-file fallback or catalog offer is used. Three
+controlled native consents verify the Files name/version/ID, captured digest and
+generations 0, 3 and 4. A direct link is not an Official catalog selection.
+
+The existing bounded Linux0.7 consumer supplies operations/conflict, management,
+retained terminal and active-backend normal Quit; no primitive, Trash, crash or
+platform matrix is added. Scenario and Quit receipts require the same public URL
+and all three Settings-link submissions. Each run creates a fresh `run-*` child
+under `EVIDENCE`, preserving previous receipts. Inspect the actual Files and
+terminal captures there, all process joins, complete stderr and Linux shared-service
+preservation separately. Submitted-URL receipts describe the exercised UI route,
+not an independent passive network trace. The actual public checkpoint, physical
+input/compositor and other-platform qualification remain pending. Files0.6
+catalogs remain unchanged.
+
 ### Files0.7 Linux packaged checkpoint
 
 On 2026-11-06, an ordinary-user Fedora44 ARM64 guest passed seven bounded
@@ -1044,9 +1083,10 @@ and two portal atom-cache diagnostics; no user-facing failure was demonstrated,
 and their cause is not established here. Synthetic input, controlled native
 consent, X11 and WebContents captures are not physical-keyboard/drag/dialog or
 compositor qualification. This is **local packaged-pair qualification, not
-publication or public HTTPS consumption**. ROOT's independent review,
-integration/publication decision, anonymous byte readback and actual public-link
-checkpoint remain separate. Both official catalogs still select Files0.6;
+publication or public HTTPS consumption**. Local preparation and its review
+corrections were integrated at `14a813bbf07f84195981592a2eef5319e7ae488d`.
+The separately prepared public-link consumer still requires independent review,
+a publication decision, anonymous byte readback and an actual checkpoint. Both official catalogs still select Files0.6;
 macOS/other-platform Files0.7 and surviving-browser main-death exclusion remain
 unqualified. Historical built-host checks and failures retain their original scope.
 
