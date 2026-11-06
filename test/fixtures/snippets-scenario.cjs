@@ -13,6 +13,16 @@ const catalog = require(
 const insert = catalog.snippets[0].body;
 const run = catalog.snippets[1].body;
 
+function controlledPosixShellCommand(controlledPlainShell) {
+  // Readline's default may re-enable bracketed paste as the interactive shell
+  // starts. Only the fixture-owned inner shell reads this isolated inputrc;
+  // the preceding real account shell keeps its ordinary startup behavior.
+  const launch = controlledPlainShell
+    ? 'INPUTRC="$HOME/.snippets-plain-inputrc" exec /bin/sh -i'
+    : "exec /bin/sh -i";
+  return `exec /bin/sh -c 'printf "\\033[?2004lSNIPPETS_SHELL_READY\\n"; ${launch}'`;
+}
+
 // Count complete controlled-probe receipt lines without mutating PTY output.
 function countWindowsProbeReceipts(output, marker) {
   assert.equal(typeof output, "string");
@@ -390,7 +400,7 @@ async function runScenario({
     );
     if (process.platform !== "win32") {
       await core.insertText(
-        `exec /bin/sh -c 'printf "\\033[?2004lSNIPPETS_SHELL_READY\\n"; exec /bin/sh -i'`,
+        controlledPosixShellCommand(fixture.controlledPlainShell === true),
       );
       core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
       core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
@@ -1474,6 +1484,7 @@ print('Enter released')`,
   }
 }
 module.exports = {
+  controlledPosixShellCommand,
   countWindowsProbeReceipts,
   runScenario,
   withGestureRelease,

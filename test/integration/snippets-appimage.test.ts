@@ -89,6 +89,11 @@ it.skipIf(!values)(
         "config/omxterm",
       ])
         await mkdir(path.join(root, name), { recursive: true });
+      await writeFile(
+        path.join(root, "home/.snippets-plain-inputrc"),
+        "set enable-bracketed-paste off\n",
+        { flag: "wx", mode: 0o600 },
+      );
       await symlink("/usr/bin/xprop", path.join(root, "bin/xprop"));
       await symlink("/usr/bin/bwrap", path.join(root, "bin/bwrap"));
       await symlink("/bin/sh", path.join(root, "bin/sh"));
@@ -181,6 +186,7 @@ it.skipIf(!values)(
         archiveSha256: values.ARCHIVE_SHA256,
         version: values.VERSION,
         readiness,
+        controlledPlainShell: true,
       };
       await json(
         "attachment.json",

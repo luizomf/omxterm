@@ -400,8 +400,15 @@ disables bracketed paste; the fixture verifies that marker and that plain-paste
 mode remains selected at every exact-byte assertion. This makes source and
 account-shell launches comparable without stripping framing from observed writes
 or accepting either encoding. The Windows source adapter starts its controlled
-probe directly instead. Account-shell startup and bracketed-paste delivery are
-not qualified by either controlled scenario.
+probe directly instead. On the exact Linux AppImage adapter, only the inner
+controlled shell receives `INPUTRC` pointing to a fixture-owned file in its
+isolated HOME with `set enable-bracketed-paste off`. Readline otherwise defaults
+to enabling bracketed paste during interactive `/bin/sh -i` startup **after** the
+preceding plain-mode marker; a shell that ignores this setting must still satisfy
+the unchanged last-mode oracle. The real account shell keeps its normal startup
+settings, and no user inputrc, product path, output-reactive toggle or PTY-write
+normalization is involved. Account-shell startup and bracketed-paste delivery
+are not qualified by either controlled scenario.
 
 ## Exact macOS ARM64 DMG adapter
 
