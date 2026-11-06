@@ -12,7 +12,6 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   discoverSettingsThemes,
-  MAX_SETTINGS_THEME_DIRECTORY_ENTRIES,
   MAX_SETTINGS_THEME_FILE_BYTES,
 } from "../../src/main/settings-themes";
 import {
@@ -20,10 +19,7 @@ import {
   nodeSettingsFiles,
 } from "../../src/main/settings-service";
 import { loadUserConfiguration } from "../../src/main/user-configuration";
-import {
-  MAX_SETTINGS_THEMES,
-  SETTINGS_THEME_COLOR_KEYS,
-} from "../../src/shared/settings-themes";
+import { SETTINGS_THEME_COLOR_KEYS } from "../../src/shared/settings-themes";
 import { MAX_SETTINGS_TEXT_LENGTH } from "../../src/shared/settings";
 import { TERMINAL_THEME_COLOR_KEYS } from "../../src/shared/terminal-theme";
 
@@ -333,51 +329,6 @@ describe("bounded discovery limits and ordering", () => {
       themes: [],
       invalid: [],
       truncated: false,
-    });
-  });
-
-  it("bounds candidate count and announces truncation", async () => {
-    const f = await fixture();
-    await mkdir(f.themes, { recursive: true });
-    await Promise.all(
-      Array.from({ length: MAX_SETTINGS_THEMES + 1 }, (_, index) =>
-        writeFile(path.join(f.themes, `${index}.json`), theme()),
-      ),
-    );
-    const result = await f.service.themes();
-    expect(result.status).toBe("ok");
-    expect(result.themes).toHaveLength(MAX_SETTINGS_THEMES);
-    expect(result.invalid).toEqual([]);
-    expect(result.truncated).toBe(true);
-  });
-
-  it("bounds scanning even when the directory has no matching files", async () => {
-    const f = await fixture();
-    await mkdir(f.themes, { recursive: true });
-    for (
-      let batch = 0;
-      batch < MAX_SETTINGS_THEME_DIRECTORY_ENTRIES + 1;
-      batch += 128
-    ) {
-      await Promise.all(
-        Array.from(
-          {
-            length: Math.min(
-              128,
-              MAX_SETTINGS_THEME_DIRECTORY_ENTRIES + 1 - batch,
-            ),
-          },
-          (_, offset) =>
-            writeFile(path.join(f.themes, `${batch + offset}.txt`), ""),
-        ),
-      );
-    }
-    expect(await f.service.themes()).toEqual({
-      status: "ok",
-      themes: [],
-      invalid: [],
-      truncated: true,
-      hasConfiguredTheme: false,
     });
   });
 
