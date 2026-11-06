@@ -19,6 +19,7 @@ import {
   createSettingsService,
   nodeSettingsFiles,
 } from "../../src/main/settings-service";
+import { loadUserConfiguration } from "../../src/main/user-configuration";
 import {
   MAX_SETTINGS_THEMES,
   SETTINGS_THEME_COLOR_KEYS,
@@ -42,16 +43,17 @@ async function fixture() {
   const directory = path.join(root, "config", "omxterm");
   const config = path.join(directory, "config.json");
   const themes = path.join(directory, "themes");
+  const loadOptions = {
+    environment: { XDG_CONFIG_HOME: path.dirname(directory) },
+    homeDirectory: root,
+    platform: "linux",
+    getInstalledFontFamilyMetrics: async () => undefined,
+  };
   const service = createSettingsService({
-    loadOptions: {
-      environment: { XDG_CONFIG_HOME: path.dirname(directory) },
-      homeDirectory: root,
-      platform: "linux",
-      getInstalledFontFamilyMetrics: async () => undefined,
-    },
+    loadOptions,
     reload: async () => ({ applied: true, notices: [] }),
   });
-  return { root, directory, config, themes, service };
+  return { root, directory, config, themes, service, loadOptions };
 }
 
 const configText = (value?: string) =>
@@ -142,17 +144,45 @@ describe("bounded settings theme discovery", () => {
     await writeFile(target, configText(`${f.themes}/ordinary/../first.json`));
     expect((await f.service.themes()).selectedPath).toBe("themes/first.json");
     await writeFile(target, configText(`${f.themes}/missing/../first.json`));
+    // Windows resolves missing/.. before opening the file; POSIX requires the
+    // missing parent. The picker must reflect the actual loader's result.
+    expect((await f.service.themes()).selectedPath).toBe(
+      process.platform === "win32" ? "themes/first.json" : undefined,
+    );
+    expect((await loadUserConfiguration(f.loadOptions)).fallback?.surface).toBe(
+      process.platform === "win32" ? undefined : "theme",
+    );
+    await writeFile(target, configText(`${f.themes}/missing/first.json`));
     expect((await f.service.themes()).selectedPath).toBeUndefined();
+    expect((await loadUserConfiguration(f.loadOptions)).fallback?.surface).toBe(
+      "theme",
+    );
     const elsewhere = path.join(f.root, "elsewhere");
     await mkdir(path.join(elsewhere, "subdir"), { recursive: true });
     await writeFile(path.join(elsewhere, "first.json"), theme("Different"));
+    await writeFile(
+      path.join(elsewhere, "subdir", "first.json"),
+      theme("Different"),
+    );
     await symlink(
       path.join(elsewhere, "subdir"),
       path.join(managed, "escape"),
       "dir",
     );
-    await writeFile(target, configText(`${f.themes}/escape/../first.json`));
+    await writeFile(target, configText(`${f.themes}/escape/first.json`));
     expect((await f.service.themes()).selectedPath).toBeUndefined();
+    expect(
+      (await loadUserConfiguration(f.loadOptions)).configuration.terminalTheme
+        .name,
+    ).toBe("Different");
+    await writeFile(target, configText(`${f.themes}/escape/../first.json`));
+    expect((await f.service.themes()).selectedPath).toBe(
+      process.platform === "win32" ? "themes/first.json" : undefined,
+    );
+    expect(
+      (await loadUserConfiguration(f.loadOptions)).configuration.terminalTheme
+        .name,
+    ).toBe(process.platform === "win32" ? "Same name" : "Different");
     await writeFile(target, configText(`${f.themes}/first.json/`));
     expect((await f.service.themes()).selectedPath).toBeUndefined();
     // The physical target is an alias, not the logical path of either entry.
