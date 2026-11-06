@@ -38,6 +38,7 @@ type Snapshot = {
   views: string[];
   urls: string[];
   yamlWrites: string[];
+  nodeNetwork: string[];
   approvals: number;
   identity: { pid: number };
 };

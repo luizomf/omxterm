@@ -63,6 +63,28 @@ function observeYamlWrites(fs, record) {
   return () => restore.reverse().forEach((f) => f());
 }
 
+function observeNodeNetwork(record, modules) {
+  const restore = [];
+  for (const [label, target, names] of [
+    ["http", modules.http, ["request", "get"]],
+    ["https", modules.https, ["request", "get"]],
+    ["global", modules.global, ["fetch"]],
+  ]) {
+    for (const name of names) {
+      const original = target[name];
+      if (typeof original !== "function") continue;
+      target[name] = function (...args) {
+        record(`${label}.${name}`);
+        return original.apply(this, args);
+      };
+      restore.push(() => {
+        target[name] = original;
+      });
+    }
+  }
+  return () => restore.reverse().forEach((f) => f());
+}
+
 function managementReady(document, generation, enabled) {
   if (
     document
@@ -122,6 +144,7 @@ function arm(options) {
     forks: [],
     urls: [],
     yamlWrites: [],
+    nodeNetwork: [],
     approvals: 0,
     quitApprovals: 0,
   };
@@ -130,6 +153,11 @@ function arm(options) {
     record[field].push(value);
   };
   observeYamlWrites(fs, (operation) => append("yamlWrites", operation));
+  observeNodeNetwork((operation) => append("nodeNetwork", operation), {
+    http: require("node:http"),
+    https: require("node:https"),
+    global: globalThis,
+  });
   const fork = cp.fork;
   cp.fork = function (...args) {
     const child = fork.apply(this, args);
@@ -341,6 +369,7 @@ function arm(options) {
 module.exports = {
   arm,
   managementReady,
+  observeNodeNetwork,
   answerDialog,
   observeYamlWrites,
   current: () => active,

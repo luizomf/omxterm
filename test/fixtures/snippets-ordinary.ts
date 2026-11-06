@@ -129,8 +129,14 @@ export function assertDormant(snapshot: {
   views: string[];
   urls: string[];
   yamlWrites: unknown[];
+  nodeNetwork: unknown[];
 }) {
   assert.deepEqual(snapshot.forks, [], "no cold-start backend process");
+  assert.deepEqual(
+    snapshot.nodeNetwork,
+    [],
+    "no Node HTTP(S)/fetch acquisition",
+  );
   assert.ok(
     [...snapshot.views, ...snapshot.urls].every(
       (u) => typeof u === "string" && !u.startsWith("omx-extension:"),

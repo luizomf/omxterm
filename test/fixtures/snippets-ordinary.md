@@ -67,10 +67,12 @@ is used. Native entry/import evaluation and the production capture/claim proceed
 
 Before resuming, the observer registers web-content navigation observations,
 forwards `child_process.fork` and node-pty instance events unchanged, and observes
-public Node filesystem mutation calls for `snippets.yaml`. Chromium's NetLog is
-started by its normal launch option, independently of the late renderer snapshot.
-All phases reject backend forks, transient/current hosted-extension URLs, observed
-YAML mutation and network URL/DNS/TCP/UDP attempts. Existing YAML bytes must remain
+public Node filesystem mutation calls for `snippets.yaml`. It also observes Node
+HTTP(S) request/get and fetch, including the production archive/catalog acquisition
+path; Chromium NetLog alone would not cover `node:https.request`. Chromium's
+NetLog starts by its normal launch option, independently of the late renderer
+snapshot. All phases reject backend forks, transient/current hosted-extension URLs,
+observed YAML mutation, Node HTTP(S)/fetch calls and Chromium URL/DNS/TCP/UDP attempts. Existing YAML bytes must remain
 unchanged. These are passive test observations, not transport interception or
 security containment; they perturb timing and do not cover arbitrary native
 filesystem syscalls or an unknown backend mechanism. Failed/unknown evidence is

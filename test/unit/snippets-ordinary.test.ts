@@ -32,6 +32,10 @@ const observer = require("../fixtures/snippets-ordinary.cjs") as {
     manualInstall: boolean,
     digest: string,
   ): { kind: string; response: number };
+  observeNodeNetwork(
+    record: (operation: string) => void,
+    modules: unknown,
+  ): () => void;
   observeYamlWrites(
     fs: unknown,
     record: (operation: string) => void,
@@ -175,6 +179,31 @@ it("forwards Node filesystem calls, catches YAML mutations and restores methods"
   expect(fs.rename).toBe(rename);
   expect(fs.promises.writeFile).toBe(writeFile);
 });
+it("observes the product's Node HTTP(S) path and fetch without replacing results or errors", () => {
+  const request = vi.fn<(...args: unknown[]) => string>(
+    () => "original-request",
+  );
+  const fetch = vi.fn<(...args: unknown[]) => never>(() => {
+    throw Error("original network failure");
+  });
+  const modules = { http: { request }, https: { request }, global: { fetch } };
+  const calls: string[] = [];
+  const restore = observer.observeNodeNetwork(
+    (operation) => calls.push(operation),
+    modules,
+  );
+  expect(modules.https.request("https://example.invalid")).toBe(
+    "original-request",
+  );
+  expect(() => modules.global.fetch("https://example.invalid")).toThrow(
+    "original network failure",
+  );
+  expect(calls).toEqual(["https.request", "global.fetch"]);
+  expect(request).toHaveBeenCalledWith("https://example.invalid");
+  restore();
+  expect(modules.https.request).toBe(request);
+  expect(modules.global.fetch).toBe(fetch);
+});
 it("requires selected Extensions and the actual committed Snippets generation before capture", () => {
   document.body.innerHTML = `<button id="settings-tab-extensions" aria-selected="true"></button><div class="extensions-panel"><section><p>omxterm.snippets · generation 3 · uninstalled · local inactive</p></section></div>`;
   const doc = document;
@@ -226,9 +255,13 @@ it("rejects transient startup activation, YAML mutations and network attempts", 
     views: ["file:///core/index.html"],
     urls: ["file:///core/index.html"],
     yamlWrites: [],
+    nodeNetwork: [],
   };
   expect(() => assertDormant(state)).not.toThrow();
   expect(() => assertDormant({ ...state, forks: [{}] })).toThrow();
+  expect(() =>
+    assertDormant({ ...state, nodeNetwork: ["https.request"] }),
+  ).toThrow();
   expect(() =>
     assertDormant({ ...state, urls: ["omx-extension://transient/index.html"] }),
   ).toThrow();
