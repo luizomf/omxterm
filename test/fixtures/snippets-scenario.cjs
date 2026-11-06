@@ -1,6 +1,5 @@
 // One scenario for source and unchanged extracted-package launch adapters.
 // Native dialogs/input are fixture-controlled; all product admission stays real.
-const { Menu, webContents } = require("electron");
 const assert = require("node:assert/strict");
 const { readFile, writeFile } = require("node:fs/promises");
 const { execFileSync } = require("node:child_process");
@@ -307,6 +306,8 @@ async function runScenario({
       `(() => { const e = [...document.querySelectorAll('button')].find(e => e.textContent === ${JSON.stringify(text)} && !e.closest('[hidden]')); if (!e || e.disabled) throw Error('Unavailable button'); e.click(); })()`,
     );
   const menu = (label) => {
+    // Keep Node-only helpers and early failure diagnostics independent of Electron.
+    const { Menu } = require("electron");
     const find = (items) => {
       for (const item of items) {
         if (item.label.replace(/…$/, "") === label) return item;
@@ -319,8 +320,8 @@ async function runScenario({
     item.click(item, window, {});
   };
   const hosted = () =>
-    webContents
-      .getAllWebContents()
+    require("electron")
+      .webContents.getAllWebContents()
       .filter(
         (v) => !v.isDestroyed() && v.getURL().startsWith("omx-extension://"),
       );

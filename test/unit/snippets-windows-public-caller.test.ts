@@ -431,7 +431,7 @@ async function exercise(
   }
 }
 
-it("loads the shared scenario with the controlled Electron boundary", () => {
+it("loads the shared helpers without accessing the controlled Electron boundary", () => {
   const accessed: string[] = [];
   loadPublicScenario({
     get Menu() {
@@ -443,7 +443,7 @@ it("loads the shared scenario with the controlled Electron boundary", () => {
       return {};
     },
   });
-  expect(accessed).toEqual(["Menu", "webContents"]);
+  expect(accessed).toEqual([]);
 });
 
 it("accepts public Run then Ping without Insert and the ordinary full byte sequence", () => {
