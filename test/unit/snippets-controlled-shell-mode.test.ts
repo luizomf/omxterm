@@ -22,6 +22,8 @@ async function shellMode(command: string, home: string): Promise<string> {
       PATH: "/usr/bin:/bin",
       TERM: "xterm-256color",
       LANG: "C",
+      ENV: path.join(home, ".snippets-prompt"),
+      INPUTRC: path.join(home, ".snippets-bracketed-inputrc"),
     },
     cols: 80,
     rows: 24,
@@ -44,7 +46,7 @@ async function shellMode(command: string, home: string): Promise<string> {
         terminal.kill();
         return;
       }
-      const prompts = output.match(/\$ /g)?.length ?? 0;
+      const prompts = output.match(/MODE_PROBE> /g)?.length ?? 0;
       if (phase === 0 && prompts >= 1) {
         phase = 1;
         terminal.write(`${command}\r`);
@@ -81,6 +83,18 @@ it.skipIf(process.platform !== "linux")(
     const home = path.join(root, "home");
     mkdirSync(home);
     try {
+      writeFileSync(
+        path.join(home, ".snippets-prompt"),
+        "PS1='MODE_PROBE> '\n",
+        {
+          mode: 0o600,
+        },
+      );
+      writeFileSync(
+        path.join(home, ".snippets-bracketed-inputrc"),
+        "set enable-bracketed-paste on\n",
+        { mode: 0o600 },
+      );
       writeFileSync(
         path.join(home, ".snippets-plain-inputrc"),
         "set enable-bracketed-paste off\n",
