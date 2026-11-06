@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+/* eslint-disable max-lines -- Keep the window routing controls beside the native-file and inert Files transport matrix. */
 import { describe, expect, it, vi } from "vitest";
 import { surfaceLabels } from "../../src/renderer/renderer-language";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
@@ -678,6 +679,26 @@ describe("renderer Terminal Window page host continued", () => {
     expect(targetDragOver).not.toHaveBeenCalled();
 
     const file = new File([""], "A B.txt");
+    for (const extra of [[], ["Files"], [TERMINAL_TAB_DRAG_DATA_TYPE]]) {
+      const data = {
+        types: [
+          "application/x-omxterm-files-entry",
+          "application/x-omxterm-files-terminal",
+          ...extra,
+        ],
+        files: [file],
+        dropEffect: "copy",
+      };
+      for (const type of ["dragover", "drop"]) {
+        const candidate = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(candidate, "dataTransfer", { value: data });
+        elements.tabStrip.dispatchEvent(candidate);
+        expect(candidate.defaultPrevented).toBe(true);
+      }
+      expect(data.dropEffect).toBe("none");
+    }
+    expect(droppedFilePathInsertion).not.toHaveBeenCalled();
+    expect(first.inject).not.toHaveBeenCalled();
     const drop = new Event("drop", { bubbles: true, cancelable: true });
     Object.defineProperty(drop, "dataTransfer", {
       value: {

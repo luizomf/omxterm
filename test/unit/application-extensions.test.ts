@@ -33,7 +33,9 @@ import {
 } from "../fixtures/ssh-view-routing";
 import { extensionsIpc } from "../../src/shared/extensions";
 import type { IpcEvent } from "../../src/main/terminal-ipc-types";
-import type { ExtensionViewHostOptions } from "../../src/main/extension-view-host";
+type ExtensionViewHostOptions = Parameters<
+  typeof import("../../src/main/extension-view-ipc").startExtensionViewHost
+>[0];
 import type { Handler } from "../fixtures/ssh-view-routing";
 type Host = {
   options: ExtensionViewHostOptions;
@@ -329,7 +331,7 @@ async function startService(
   platform: string,
   provisioning: Pick<
     Parameters<typeof startApplicationExtensions>[0],
-    "defaultSnippets" | "onDefaultSnippetsWarning"
+    "defaultSnippets" | "onDefaultSnippetsWarning" | "filesTerminalDrop"
   > = {},
 ) {
   // Model preview admission/catalog targeting, not the host filesystem. Startup
@@ -481,6 +483,54 @@ async function installTool(id: string, title: string) {
   );
   expect(await request({ operation: "install" })).toMatchObject({ ok: true });
 }
+
+it.each(["omxterm.files", "omxterm.ssh"])(
+  "selects terminal transport only for the installed Files companion (%s)",
+  async (id) => {
+    await service.dispose();
+    const consumer = vi.fn<
+      NonNullable<
+        Parameters<typeof startApplicationExtensions>[0]["filesTerminalDrop"]
+      >
+    >(async (_input, admit) => {
+      let admitted = false;
+      await admit(_input.signal, () => {
+        admitted = true;
+      });
+      return { status: admitted ? "accepted" : "refused" };
+    });
+    await startService("linux", { filesTerminalDrop: consumer });
+    await installTool(id, "Tool");
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+    const host = adapters.hosts[0]!;
+    if (id !== "omxterm.files") {
+      expect(host.options.filesTerminalDrop).toBeUndefined();
+      expect(consumer).not.toHaveBeenCalled();
+      return;
+    }
+    const input = {
+      entry: { path: "/synthetic/a b", kind: "file" as const, entryToken: "1" },
+      source: { id: "hosted-view", isCurrentVisible: () => true },
+      revision: 3,
+      signal: new AbortController().signal,
+    };
+    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+      status: "accepted",
+    });
+    expect(consumer).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ entry: input.entry, revision: 3 }),
+      expect.any(Function),
+    );
+    expect(host.options.filesDragSignal?.aborted).toBe(false);
+    await service.dispose();
+    expect(host.options.filesDragSignal?.aborted).toBe(true);
+    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+      status: "refused",
+    });
+    expect(consumer).toHaveBeenCalledOnce();
+  },
+);
 
 it.each([
   ["omxterm.files", "toggleFiles"],

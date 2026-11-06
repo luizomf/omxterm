@@ -308,6 +308,8 @@ describe("hosted child preload subscriptions and requests", () => {
     const [name, bridge] = expose.mock.calls[0]!;
     expect(name).toBe("omxHostedContent");
     expect(Object.keys(bridge).sort()).toEqual([
+      "beginFilesTerminalDrag",
+      "endFilesTerminalDrag",
       "onActivity",
       "onAppearance",
       "onFocusIntent",

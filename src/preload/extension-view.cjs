@@ -92,6 +92,39 @@ if (process.isMainFrame) {
     onActivity,
     onLanguage,
     onFocusIntent,
+    // Synchronous, bounded and main-owned: dragstart must finish writing its
+    // opaque DataTransfer ticket before Chromium leaves the child view.
+    beginFilesTerminalDrag(value) {
+      if (
+        !visible ||
+        !value ||
+        typeof value !== "object" ||
+        Array.isArray(value) ||
+        Object.keys(value).sort().join() !== "entryToken,kind,path" ||
+        typeof value.path !== "string" ||
+        value.path.length > 32768 ||
+        !["file", "directory", "link"].includes(value.kind) ||
+        typeof value.entryToken !== "string" ||
+        !/^[1-9][0-9]{0,15}$/.test(value.entryToken)
+      )
+        return null;
+      try {
+        const ticket = ipcRenderer.sendSync("files-terminal-drag:start", value);
+        return typeof ticket === "string" &&
+          /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(ticket)
+          ? ticket
+          : null;
+      } catch {
+        return null;
+      }
+    },
+    endFilesTerminalDrag(ticket) {
+      if (
+        typeof ticket === "string" &&
+        /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(ticket)
+      )
+        ipcRenderer.send("files-terminal-drag:end", ticket);
+    },
     async request(value) {
       if (pending >= 32) throw new Error("Request capacity exceeded");
       pending++;

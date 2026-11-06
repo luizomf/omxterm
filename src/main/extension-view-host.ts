@@ -37,6 +37,7 @@ import {
 } from "./extension-view-resources";
 
 import { extensionViewBounds } from "./extension-view-geometry";
+import { filesTerminalDragIpc } from "../shared/files-terminal-drag";
 
 export const extensionViewScheme = "omx-extension";
 // Call once before app readiness. No service-worker, stream or CSP bypass flags.
@@ -90,6 +91,18 @@ export interface ExtensionViewHostOptions {
     signal: AbortSignal,
     context: ExtensionViewRequestContext,
   ): Promise<Value>;
+  // Installed Files composition only; absent without a protected consumer.
+  filesDrag?:
+    | {
+        start(
+          value: unknown,
+          context: ExtensionViewRequestContext,
+          signal: AbortSignal,
+        ): string | null;
+        end(id: string, ticket: unknown): void;
+        revoke(id?: string): void;
+      }
+    | undefined;
   // Host/native-test seam only. Not exposed to either renderer.
   runtime?: ExtensionViewRuntime;
 }
@@ -162,10 +175,12 @@ class NativeExtensionViewHost {
   #admissionGeneration = 0;
   #windowHidden = () => {
     this.#admissionGeneration++;
+    this.options.filesDrag?.revoke();
   };
   #reportFocus = () => notify(() => this.options.onFocusChange?.());
   #blur = () => {
     this.#focusGeneration++;
+    this.options.filesDrag?.revoke();
     this.#reportFocus();
   };
   #cleanupFailed = false;
@@ -259,7 +274,10 @@ class NativeExtensionViewHost {
   #visibility(entry: Entry, visible: boolean) {
     // Losing visible ownership is final for captured semantic requests. A
     // same-view geometry refresh must not invalidate otherwise live admission.
-    if (entry.visible && !visible) this.#admissionGeneration++;
+    if (entry.visible && !visible) {
+      this.#admissionGeneration++;
+      this.options.filesDrag?.revoke(entry.descriptor.id);
+    }
     entry.visible = visible;
     entry.view.setVisible(visible);
     // WebContents can outlive its disposed frame after renderer loss. Native
@@ -288,6 +306,7 @@ class NativeExtensionViewHost {
   #destroy(entry: Entry) {
     if (entry.closing) return;
     entry.closing = true;
+    this.options.filesDrag?.revoke(entry.descriptor.id);
     entry.abort.abort();
     notify(() => this.options.onViewRevoked?.(entry.descriptor.id));
     if (this.#selected === entry.descriptor.id) this.#selected = null;
@@ -449,10 +468,60 @@ class NativeExtensionViewHost {
     )
       void this.retire();
   }
+  #captureVisible(entry: Entry): ExtensionViewRequestContext {
+    const generation = this.#admissionGeneration;
+    const visible =
+      entry.visible &&
+      this.#selected === entry.descriptor.id &&
+      this.options.owner.isVisible() &&
+      !this.options.owner.isMinimized();
+    return {
+      id: entry.descriptor.id,
+      isCurrentVisible: () =>
+        visible &&
+        this.#live() &&
+        this.options.owner.isVisible() &&
+        !this.options.owner.isMinimized() &&
+        this.#admissionGeneration === generation &&
+        this.#selected === entry.descriptor.id &&
+        entry.visible &&
+        !entry.closing &&
+        !entry.rendererGone &&
+        !entry.abort.signal.aborted &&
+        !entry.contents.isDestroyed(),
+    };
+  }
   #bindView(entry: Entry) {
     const contents = entry.contents;
     entry.view.setVisible(false);
     contents.setWindowOpenHandler(() => ({ action: "deny" }));
+    // sendSync is deliberately limited to bounded in-memory registration. No
+    // backend, store, filesystem or asynchronous admission belongs in this turn.
+    contents.ipc.on(filesTerminalDragIpc.start, (event, ...args: unknown[]) => {
+      event.returnValue = null;
+      if (
+        event.sender !== contents ||
+        event.senderFrame !== contents.mainFrame ||
+        args.length !== 1 ||
+        this.focusedId() !== entry.descriptor.id ||
+        entry.loading ||
+        !this.options.filesDrag
+      )
+        return;
+      event.returnValue = this.options.filesDrag.start(
+        args[0],
+        this.#captureVisible(entry),
+        entry.abort.signal,
+      );
+    });
+    contents.ipc.on(filesTerminalDragIpc.end, (event, ...args: unknown[]) => {
+      if (
+        event.sender === contents &&
+        event.senderFrame === contents.mainFrame &&
+        args.length === 1
+      )
+        this.options.filesDrag?.end(entry.descriptor.id, args[0]);
+    });
     if (this.options.onRequest) {
       let pending = 0;
       contents.ipc.handle(
@@ -469,27 +538,7 @@ class NativeExtensionViewHost {
           )
             throw new Error("Request unavailable");
           const value = captureValue(args[0]);
-          const generation = this.#admissionGeneration;
-          const visible =
-            entry.visible &&
-            this.#selected === entry.descriptor.id &&
-            this.options.owner.isVisible() &&
-            !this.options.owner.isMinimized();
-          const context: ExtensionViewRequestContext = {
-            id: entry.descriptor.id,
-            isCurrentVisible: () =>
-              visible &&
-              this.#live() &&
-              this.options.owner.isVisible() &&
-              !this.options.owner.isMinimized() &&
-              this.#admissionGeneration === generation &&
-              this.#selected === entry.descriptor.id &&
-              entry.visible &&
-              !entry.closing &&
-              !entry.rendererGone &&
-              !entry.abort.signal.aborted &&
-              !contents.isDestroyed(),
-          };
+          const context = this.#captureVisible(entry);
           pending++;
           try {
             const result = await this.options.onRequest!(

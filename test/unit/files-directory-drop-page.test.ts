@@ -18,7 +18,12 @@ const deferred = <T>() => {
   });
   return { promise, resolve };
 };
-async function setup() {
+async function setup(
+  transport: Pick<
+    Parameters<typeof mountFilesPage>[1],
+    "beginFilesTerminalDrag" | "endFilesTerminalDrag"
+  > = {},
+) {
   let handler:
     ((value: Record<string, string>) => Promise<Reply> | undefined) | undefined;
   const request = vi.fn(async (value: unknown): Promise<Reply> => {
@@ -42,6 +47,7 @@ async function setup() {
   let visibility!: (visible: boolean) => void;
   let focusIntent!: (intent: "search" | "restore") => void;
   const page = mountFilesPage(document, {
+    ...transport,
     request,
     onLanguage(listener) {
       language = listener;
@@ -113,6 +119,9 @@ function transfer(external = false) {
     get types() {
       return [...data.keys()];
     },
+    clearData() {
+      data.clear();
+    },
     setData(type: string, value: string) {
       data.set(type, value);
     },
@@ -139,6 +148,86 @@ function moveReply(value: Record<string, string>): Reply {
   };
 }
 
+it("offers copyMove only with a registered opaque terminal ticket and keeps internal confirmation", async () => {
+  const ticket = "12345678-1234-1234-1234-123456789abc";
+  const beginFilesTerminalDrag = vi.fn(() => ticket);
+  const endFilesTerminalDrag = vi.fn();
+  const { request, handle } = await setup({
+    beginFilesTerminalDrag,
+    endFilesTerminalDrag,
+  });
+  handle((value) =>
+    value.operation === "prepare-move-into"
+      ? Promise.resolve(moveReply(value))
+      : undefined,
+  );
+  const data = transfer();
+  data.setData("text/plain", "/must-not-escape");
+  dragEvent(row("/root/alpha"), "dragstart", data);
+  expect(beginFilesTerminalDrag).toHaveBeenCalledExactlyOnceWith({
+    path: "/root/alpha",
+    kind: "file",
+    entryToken: "1",
+  });
+  expect(data.types).toEqual([
+    "application/x-omxterm-files-entry",
+    "application/x-omxterm-files-terminal",
+  ]);
+  expect(data.types.map((type) => data.getData(type)).join()).not.toContain(
+    "/",
+  );
+  expect(data.effectAllowed).toBe("copyMove");
+  dragEvent(row("/root/folder"), "dragover", data);
+  expect(data.dropEffect).toBe("move");
+  dragEvent(row("/root/folder"), "drop", data);
+  expect(endFilesTerminalDrag).toHaveBeenCalledExactlyOnceWith(ticket);
+  await vi.waitFor(() => expect(button("Move")).toBeTruthy());
+  expect(request).toHaveBeenCalledWith({
+    operation: "prepare-move-into",
+    path: "/root/alpha",
+    kind: "file",
+    directory: "/root/folder",
+  });
+  expect(
+    request.mock.calls.some(
+      ([value]) => (value as { operation: string }).operation === "move-into",
+    ),
+  ).toBe(false);
+  button("Cancel").click();
+  expect(request).toHaveBeenCalledWith({
+    operation: "cancel-move",
+    token: "move-token",
+  });
+});
+it.each([null, "forged"])(
+  "keeps move-only semantics when terminal registration returns %s",
+  async (ticket) => {
+    await setup({
+      beginFilesTerminalDrag: () => ticket,
+      endFilesTerminalDrag: vi.fn(),
+    });
+    const data = transfer();
+    dragEvent(row("/root/alpha"), "dragstart", data);
+    expect(data.types).toEqual(["application/x-omxterm-files-entry"]);
+    expect(data.effectAllowed).toBe("move");
+  },
+);
+it.each(["dragend", "hide", "dispose"])(
+  "revokes source ticket on %s without reading dragend DataTransfer",
+  async (loss) => {
+    const ticket = "12345678-1234-1234-1234-123456789abc";
+    const endFilesTerminalDrag = vi.fn();
+    const { visibility } = await setup({
+      beginFilesTerminalDrag: () => ticket,
+      endFilesTerminalDrag,
+    });
+    dragEvent(row("/root/alpha"), "dragstart", transfer());
+    if (loss === "dragend") document.dispatchEvent(new Event("dragend"));
+    else if (loss === "hide") visibility(false);
+    else dispose?.();
+    expect(endFilesTerminalDrag).toHaveBeenCalledExactlyOnceWith(ticket);
+  },
+);
 it("confirms a captured internal drag without exporting a local path", async () => {
   const { handle, request, language } = await setup();
   const pending = deferred<Reply>();

@@ -63,6 +63,22 @@ export function applicationViews(
       return { x: 0, y: 34, width: width!, height: Math.max(0, height! - 34) };
     },
     onKeybind: options.keybind,
+    filesDragSignal: AbortSignal.any([epochSignal, target.signal]),
+    filesTerminalDrop:
+      target.presentation === "panel" &&
+      pin.manifest.id === "omxterm.files" &&
+      options.filesTerminalDrop
+        ? (input) => {
+            const signal = AbortSignal.any([
+              input.signal,
+              epochSignal,
+              target.signal,
+            ]);
+            if (signal.aborted || !input.source.isCurrentVisible())
+              return Promise.resolve({ status: "refused" });
+            return options.filesTerminalDrop!({ ...input, signal }, admit);
+          }
+        : undefined,
     onRequest(value, signal, context) {
       if (epochSignal.aborted || target.signal.aborted || signal.aborted)
         return Promise.reject(new PackageError("unavailable"));

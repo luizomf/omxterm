@@ -173,7 +173,8 @@ It packages the already-integrated reported-directory guidance, loaded-entry
 filtering/keyboard focus and confirmed directory-to-directory moves. It adds no
 Files-to-terminal insertion/drop or generic shortcut capability. Existing host
 focus-intent, action-time reported-directory, no-clobber move and trash services
-remain the required seams; no new host capability is introduced here. Older
+remain the required seams for those workflows. The separate inactive terminal
+transport preparation below is not a stable manifest capability. Older
 hosts have not been qualified for this combined source, so this floor is not a
 claim that every earlier host lacks those services. Ordinary semver admits
 0.25.0-dev.10 and later dev.N in that same family, plus stable 0.25.0; the
@@ -408,6 +409,59 @@ source preserves the original request spelling for the optional host hook so
 normalization cannot bypass its rejection. Historical Files0.4 archive bytes
 retain their earlier normalization behavior; a future macOS-capable archive must
 include this correction, not inherit a qualification claim from the host alone.
+
+## Terminal drag transport source increment
+
+The #774 transport slice is an integration input, **not an enabled terminal
+insertion feature**. No protected consumer is supplied by application startup;
+Files remains move-only, and core explicitly refuses Files candidate payloads
+rather than advertising copy/insert or treating mixed native files as a fallback.
+Archive/version/catalog metadata and published Files0.6 bytes are unchanged.
+
+`createFilesTerminalDrag` owns one ten-second gesture/claim per actual window.
+The app-owned child preload registers synchronously during the real row's
+`dragstart`; the host authenticates the actual child main frame, selected visible
+view and focused owner. Only installed Files companion composition may supply
+`filesTerminalDrop`, with its captured installation admission and epoch signal.
+Absent that consumer, registration returns no ticket. No backend, filesystem or
+store work runs inside synchronous IPC. The captured absolute path/kind stays in
+main; DataTransfer carries only the existing internal token and a distinct opaque
+terminal ticket. The source clears other data, offers copyMove only after
+registration, and retains move on eligible internal directory targets. Existing
+fixed-source/folder confirmation and no-clobber backend are unchanged.
+
+The core preload offers synchronous claim and asynchronous handoff. The
+`claimFilesTerminalDrop` renderer seam is deliberately **not installed** on a
+live target yet. Its caller must synchronously capture the exact selected,
+focused live pane, Surface and selection revision from that pane's visible
+terminal area, excluding chrome, other panes, panels, overlays and blocked native
+presentation. Main claims the exact ticket plus matching internal token once,
+before any await. Later child dragend revokes only an unclaimed gesture; hide,
+retirement, epoch/package loss, window blur/hide/minimize/loss and timeout revoke
+both claimed and unclaimed authority. Reopening cannot revive it. Candidate MIME
+is not authorization. Native files, tab/text/URI mixtures, forged, oversized,
+expired and replayed inputs are refused; ordinary spaces/quotes are preserved,
+while source paths with C0/C1 controls are refused. No path is inferred from a
+string/URI, and no path or native error text is returned by core transport IPC.
+
+ROOT's composition with reviewed #768 remains necessary: adapt the drop's
+captured revision to its `actionSelectionRevision`, reuse the existing main
+`terminal.insertPath.v1` lexical quote/Protected Paste handoff and installation
+`admit`, and keep the original captured Surface/focus owner through final
+acceptance. The consumer must check transport source/signal and selection at
+final admission, stop Mirror Typing, preserve native held-gesture ownership,
+never append Enter or retarget, and report local Files status without stealing
+focus on failure. There is no second raw-input implementation here. The
+consumer result is refused, unknown or accepted; acceptance means transfer to
+Surface-owned input, not receiving-program consumption. A timed-out pending
+consumer is unknown and never retried; its signal/source lose authority.
+
+Headless tests cover the production page/preload/host/router/transport seams with
+fake native and consumer adapters, including claim-before-dragend, delayed
+handoff, lifecycle races and preserved internal confirmation. They do not qualify
+actual Electron native drag, complete terminal input/focus, other platforms,
+archives or packages. Earlier guest transport observations inform this design,
+not product qualification; this increment does not repeat them.
 
 ## Owned composition modules
 

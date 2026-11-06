@@ -142,6 +142,16 @@ accepted by a Surface remains Surface-owned, including Protected Paste; hiding,
 disabling or uninstalling the tool does not redirect or replay it. Ending that
 Surface stops remaining chunks and final Enter.
 
+The independent Files terminal-drag source increment does not broaden this
+semantic-input capability. It transports one main-owned captured row behind an
+opaque single-use ticket, with synchronous core claim before asynchronous work.
+No protected consumer or live terminal copy target is enabled by that slice.
+Final composition must reuse #768's path quote/Protected Paste handoff with the
+drop's synchronously captured pane/Surface and selection revision, including the
+existing focus, native gesture and Mirror Typing owners; a transport ticket is
+never raw PTY authority. See the
+[Files transport seam](../files-development-preview.md#terminal-drag-transport-source-increment).
+
 ### Catalog location and transport
 
 Continue reading the user-owned `snippets.yaml` beside `config.json`, using the

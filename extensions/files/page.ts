@@ -13,6 +13,12 @@ import {
 import type { SupportedLanguage } from "../../src/shared/i18n.js";
 import { filesMessages, type FilesMessages } from "./messages.js";
 import { createFilesToolbar } from "./toolbar.js";
+import {
+  FILES_ENTRY_DRAG_TYPE,
+  FILES_TERMINAL_DRAG_TYPE,
+  isFilesDragTicket,
+  type FilesDragEntry,
+} from "../../src/shared/files-terminal-drag.js";
 
 type Label = (messages: FilesMessages) => string;
 type Reply = FilesTreeReply & {
@@ -39,6 +45,8 @@ export function mountFilesPage(
   document: Document,
   bridge: {
     request(value: unknown): Promise<Reply>;
+    beginFilesTerminalDrag?(value: FilesDragEntry): string | null;
+    endFilesTerminalDrag?(ticket: string): void;
     onVisibility?(listener: (visible: boolean) => void): () => void;
     onLanguage?(listener: (language: SupportedLanguage) => void): () => void;
     onFocusIntent?(
@@ -135,10 +143,11 @@ export function mountFilesPage(
   let moveConfirmation: string | undefined;
   let preparingDelete: number | undefined;
   let preparingMove: number | undefined;
-  let drag: { source: Target; token: string } | undefined;
+  let drag:
+    { source: Target; token: string; terminalTicket?: string } | undefined;
   let deferredDragSnapshot: FilesTreeSnapshot | undefined;
   let dragSerial = 0;
-  const dragType = "application/x-omxterm-files-entry";
+  const dragType = FILES_ENTRY_DRAG_TYPE;
   let editorRevision = 0;
   let navigationRevision = 0;
   let menuReturn: HTMLElement | undefined;
@@ -354,14 +363,32 @@ export function mountFilesPage(
           event.preventDefault();
           return;
         }
+        resetDrag();
         select(item);
         drag = {
           source: { path: item.path, kind: item.kind },
           token: String(++dragSerial),
         };
         // Never put local paths into a payload that can leave this view.
+        event.dataTransfer.clearData();
         event.dataTransfer.setData(dragType, drag.token);
         event.dataTransfer.effectAllowed = "move";
+        if (bridge.beginFilesTerminalDrag && bridge.endFilesTerminalDrag) {
+          try {
+            const ticket = bridge.beginFilesTerminalDrag({
+              path: item.path,
+              kind: item.kind as FilesDragEntry["kind"],
+              entryToken: drag.token,
+            });
+            if (isFilesDragTicket(ticket)) {
+              drag.terminalTicket = ticket;
+              event.dataTransfer.setData(FILES_TERMINAL_DRAG_TYPE, ticket);
+              event.dataTransfer.effectAllowed = "copyMove";
+            }
+          } catch {
+            /* Unavailable transport preserves the internal move. */
+          }
+        }
       });
       row.addEventListener("keydown", (event) => rowKey(event, item));
       row.addEventListener("contextmenu", (event) => {
@@ -1149,7 +1176,15 @@ export function mountFilesPage(
       delete row.dataset.drop;
   }
   function resetDrag() {
+    const ticket = drag?.terminalTicket;
     drag = undefined;
+    if (ticket) {
+      try {
+        bridge.endFilesTerminalDrag?.(ticket);
+      } catch {
+        /* Main also owns timeout and view-loss revocation. */
+      }
+    }
     clearDragFeedback();
     const pending = deferredDragSnapshot;
     deferredDragSnapshot = undefined;
@@ -1165,7 +1200,18 @@ export function mountFilesPage(
   }
   function internalDrag(event: DragEvent) {
     const types = Array.from(event.dataTransfer?.types ?? []);
-    return !!drag && types.includes(dragType) && !types.includes("Files");
+    return (
+      !!drag &&
+      types.includes(dragType) &&
+      types.length <= 3 &&
+      types.every((type) =>
+        [
+          dragType,
+          FILES_TERMINAL_DRAG_TYPE,
+          "application/x-chromium-drag-id",
+        ].includes(type),
+      )
+    );
   }
   function validDrop(target: FilesTreeRow | undefined) {
     if (!drag || !target || target.kind !== "directory" || !canStartMove())
@@ -1212,7 +1258,10 @@ export function mountFilesPage(
     const valid =
       internal &&
       validDrop(target) &&
-      event.dataTransfer?.getData(dragType) === drag?.token;
+      event.dataTransfer?.getData(dragType) === drag?.token &&
+      (!drag?.terminalTicket ||
+        event.dataTransfer?.getData(FILES_TERMINAL_DRAG_TYPE) ===
+          drag.terminalTicket);
     resetDrag();
     if (valid && source && target) void prepareMove(source, target.path, true);
     else message((m) => (internal ? m.dropInvalid : m.dropExternal), "warning");

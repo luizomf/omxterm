@@ -451,6 +451,15 @@ by default and reuses the existing tool entry point; unavailable tools do not
 consume it. No startup code activation, default shortcut or stable SDK is implied;
 see [the preview contract](docs/files-development-preview.md) for qualification limits.
 
+**Files Terminal Drag Ticket** — A path-free, single-gesture transport identity
+owned by main for one installed Files view/epoch/window, not a path or terminal
+input capability. Core claims it synchronously once before asynchronous handoff;
+dragend revokes only unclaimed tickets, while view/window/epoch loss and the
+ten-second deadline revoke both phases. The source-only increment stays
+move-only without an available protected consumer and exposes no live terminal
+copy/insert target. Final insertion must reuse the captured-pane Protected Paste
+owner; see the [transport seam](docs/files-development-preview.md#terminal-drag-transport-source-increment).
+
 **Extension View Host** — Internal owner of lazy native packaged-content views
 and their reads in a nonpersistent epoch, retaining an immutable package-version
 pin. Shared window presentation composes tab/panel slots, focus and overlays;

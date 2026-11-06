@@ -44,6 +44,7 @@ import {
 import { publishHostedAppearance } from "../../src/main/hosted-appearance";
 import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
+import { filesTerminalDragIpc } from "../../src/shared/files-terminal-drag";
 import {
   extensionViewIpc,
   type HostedContentPresentation,
@@ -1056,11 +1057,156 @@ function deferred<T = void>() {
   });
   return { promise, resolve, reject };
 }
+it("authenticates actual child/core main frames and preserves a claimed Files drop through dragend", async () => {
+  const f = await fixture(false);
+  const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;
+  const consume = vi.fn(async () => ({ status: "accepted" as const }));
+  const host = startExtensionViewHost({
+    ...f.options,
+    ipcMain: ipc,
+    filesTerminalDrop: consume,
+  });
+  cleanups.push(() => host.retire());
+  const opened = await host.open(opening);
+  const presentation = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+    ([name]) => name === extensionViewIpc.present,
+  )![1] as (event: unknown, ...args: unknown[]) => Promise<unknown>;
+  const handoff = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+    ([name]) => name === filesTerminalDragIpc.handoff,
+  )![1] as (event: unknown, ...args: unknown[]) => Promise<unknown>;
+  const core = f.owner.webContents;
+  const child = f.views[0]!.webContents;
+  const coreEvent = { sender: core, senderFrame: core.mainFrame };
+  const sourceEvent = () => ({
+    sender: child,
+    senderFrame: child.mainFrame,
+    returnValue: undefined as unknown,
+  });
+  const input = {
+    path:
+      process.platform === "win32"
+        ? "C:\\synthetic\\entry"
+        : "/synthetic/entry",
+    kind: "link",
+    entryToken: "1",
+  };
+  const start = () => {
+    const event = sourceEvent();
+    child.ipc.emit(filesTerminalDragIpc.start, event, input);
+    return event.returnValue;
+  };
+  expect(start()).toBeNull(); // Not presented.
+  await presentation(coreEvent, present(opened.id));
+  const foreignFrame = { ...sourceEvent(), senderFrame: {} };
+  child.ipc.emit(filesTerminalDragIpc.start, foreignFrame, input);
+  expect(foreignFrame.returnValue).toBeNull();
+  const foreignSender = { ...sourceEvent(), sender: core };
+  child.ipc.emit(filesTerminalDragIpc.start, foreignSender, input);
+  expect(foreignSender.returnValue).toBeNull();
+  const ticket = start();
+  expect(ticket).toEqual(expect.any(String));
+  const claim = { ticket, entryToken: "1" };
+  const wrong = {
+    sender: child,
+    senderFrame: child.mainFrame,
+    returnValue: undefined as unknown,
+  };
+  core.ipc.emit(filesTerminalDragIpc.claim, wrong, claim);
+  expect(wrong.returnValue).toBe(false);
+  const admitted = { ...coreEvent, returnValue: undefined as unknown };
+  core.ipc.emit(filesTerminalDragIpc.claim, admitted, claim);
+  expect(admitted.returnValue).toBe(true);
+  await presentation(coreEvent, { ...present(opened.id, 2), focus: false });
+  child.ipc.emit(filesTerminalDragIpc.end, sourceEvent(), ticket);
+  expect(await handoff(coreEvent, ticket, 4)).toEqual({ status: "accepted" });
+  expect(consume).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ entry: input, revision: 4 }),
+  );
+  expect(await handoff(coreEvent, ticket, 4)).toEqual({ status: "refused" });
+  expect(() => handoff({ ...coreEvent, senderFrame: {} }, ticket, 4)).toThrow(
+    "Rejected hosted owner",
+  );
+});
+it.each(["hide", "blur", "minimize", "close", "epoch", "owner-loss"])(
+  "revokes claimed Files transport on actual hosted %s",
+  async (loss) => {
+    const f = await fixture(false);
+    const ipc = {
+      handle: vi.fn(),
+      removeHandler: vi.fn(),
+    } as unknown as IpcMain;
+    const consume = vi.fn(async () => ({ status: "accepted" as const }));
+    const epoch = new AbortController();
+    const host = startExtensionViewHost({
+      ...f.options,
+      ipcMain: ipc,
+      filesTerminalDrop: consume,
+      filesDragSignal: epoch.signal,
+    });
+    cleanups.push(() => host.retire());
+    const opened = await host.open(opening);
+    const core = f.owner.webContents;
+    const child = f.views[0]!.webContents;
+    const event = { sender: core, senderFrame: core.mainFrame };
+    const invoke = (channel: string, ...args: unknown[]) => {
+      const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
+        ([name]) => name === channel,
+      )![1] as (event: unknown, ...args: unknown[]) => Promise<unknown>;
+      return handler(event, ...args);
+    };
+    await invoke(extensionViewIpc.present, present(opened.id));
+    const source = {
+      sender: child,
+      senderFrame: child.mainFrame,
+      returnValue: null as unknown,
+    };
+    child.ipc.emit(filesTerminalDragIpc.start, source, {
+      path: process.platform === "win32" ? "C:\\synthetic" : "/synthetic",
+      kind: "file",
+      entryToken: "1",
+    });
+    const ticket = source.returnValue;
+    const claim = { ...event, returnValue: false };
+    core.ipc.emit(filesTerminalDragIpc.claim, claim, {
+      ticket,
+      entryToken: "1",
+    });
+    expect(claim.returnValue).toBe(true);
+    if (loss === "hide") {
+      await invoke(extensionViewIpc.present, present(null, 2));
+      await invoke(extensionViewIpc.present, present(opened.id, 3));
+    } else if (loss === "close")
+      await invoke(extensionViewIpc.close, opened.id);
+    else if (loss === "epoch") epoch.abort();
+    else f.owner.emit(loss === "owner-loss" ? "closed" : loss);
+    expect(await invoke(filesTerminalDragIpc.handoff, ticket, 1)).toEqual({
+      status: "refused",
+    });
+    expect(consume).not.toHaveBeenCalled();
+  },
+);
+it("does not register terminal transport without a supplied protected consumer", async () => {
+  const f = await fixture();
+  const opened = await f.host.open(opening);
+  await f.host.present(present(opened.id));
+  const child = f.views[0]!.webContents;
+  const event = {
+    sender: child,
+    senderFrame: child.mainFrame,
+    returnValue: undefined as unknown,
+  };
+  child.ipc.emit(filesTerminalDragIpc.start, event, {
+    path: "/synthetic",
+    kind: "file",
+    entryToken: "1",
+  });
+  expect(event.returnValue).toBeNull();
+});
 let sequence = 0;
 class Contents extends EventEmitter {
   id = ++sequence;
   mainFrame = {};
-  ipc = { handle: vi.fn() };
+  ipc = Object.assign(new EventEmitter(), { handle: vi.fn() });
   dead = false;
   focused = false;
   pid = this.id + 100;
@@ -1842,7 +1988,7 @@ it("IPC composition authenticates actual terminal main frame and rejects cross-o
     extensionViewIpc.retired,
     da.id,
   );
-  expect(handlers.size).toBe(2); // Other window still owns the shared handlers.
+  expect(handlers.size).toBe(3); // Other window still owns the shared handlers.
   await second.retire();
   expect(
     await invoke(extensionViewIpc.present, event(a), present(null, 3)),
@@ -1895,7 +2041,7 @@ it("IPC composition authenticates actual terminal main frame and rejects cross-o
   ).toBe(true);
   expect(d.views[0]!.setVisible).toHaveBeenLastCalledWith(false);
   await concurrent.retire();
-  expect(handlers.size).toBe(2); // Safe hide ACKs survive epoch retirement.
+  expect(handlers.size).toBe(3); // Safe hide ACKs survive epoch retirement.
   a.owner.webContents.emit("destroyed");
   b.owner.webContents.emit("destroyed");
   expect(handlers.size).toBe(0);
