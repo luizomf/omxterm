@@ -278,17 +278,23 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 ### Insert, run or preview a snippet
 
-Linux ARM64/x64 and macOS/Windows ARM64 source, along with the published Linux ARM64
-**0.24.0-dev.11**, macOS ARM64 **0.24.0-dev.16**, Linux x64 **0.24.0-dev.30** and
-Windows ARM64 **0.24.0-dev.36** previews, use optional installed Snippets. Stable
-**0.23.0**, earlier Windows hosts and Windows x64 retain the built-in tool. The
-Linux/macOS previews have separate public-catalog checkpoints; Windows installed
-public-HTTPS consumption remains pending. Explicit local/offline archive
-installation is also available.
-The [migration guide](snippets-migration.md) links the matching previews and explains
-installation, disabled/unavailable states, unchanged catalogs and qualification
-limits. On optional-Snippets hosts, the existing shortcut opens Extensions
-management when no enabled package is available.
+Published **OMXTerm 0.24.0** uses optional, separately installed **Snippets 0.1.0**
+on Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
+**0.23.0** hosts retain the built-in tool. Install deliberately through
+**Settings → Extensions → Browse official extensions** or a verified local archive;
+the local route works offline after download. Existing YAML and shortcuts stay
+intact. Without an enabled package, the existing Snippets shortcut opens Extensions
+management.
+
+The Windows ARM64 installed-public checkpoint remains unresolved under the
+[release-risk decision](snippets-migration.md#stable-0240-release-disposition).
+The [migration guide](snippets-migration.md) explains disabled/unavailable states
+and preserves historical preview receipts with their exact qualification limits.
+
+Newer source separately implements a [removable default](default-snippets.md),
+enabled but dormant only for positively new packaged profiles. This is not
+published `0.24.0` behavior: existing profiles are not enrolled, and disabled or
+removed choices are preserved.
 
 Each snippet row shows what clicking it does: **Insert** types the snippet without pressing Enter, and **Run · adds Enter** types it and presses Enter (`execute: true` in `snippets.yaml`). Click **Preview** to see the exact text first, then choose **Insert — no added Enter** or **Run — adds Enter**; that choice wins over the snippet's default. The snippet goes only to the focused pane captured when you opened the preview, never to a later selected or replacement pane. If that terminal ends, fails or is removed, the actions are disabled and nothing is sent, even if its pane remains visible for failure acknowledgement. Insert only skips the final Enter: a snippet with several lines can still run each line, and multiline text may still ask for paste confirmation.
 

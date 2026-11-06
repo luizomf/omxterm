@@ -1,5 +1,13 @@
 # Optional Snippets migration
 
+Published **[OMXTerm 0.24.0](https://github.com/luizomf/omxterm/releases/tag/v0.24.0)**
+uses separately installed **[Snippets 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)**
+on Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
+`0.23.0` hosts retain built-in Snippets. Installation through the official catalog
+or a verified local/offline archive remains deliberate; it does not activate the
+tool or rewrite user data. The Windows ARM64 installed-public checkpoint remains
+unresolved under the [release-risk decision](#stable-0240-release-disposition).
+
 Current source adds a [removable one-time default](default-snippets.md) only for
 positively new packaged profiles on existing optional targets: exact public0.1.0
 bytes, installed+enabled but dormant, no startup network/view/backend/YAML, no
@@ -8,11 +16,7 @@ and Windows x64 are excluded. This is not published0.24.0 behavior or qualificat
 of the changed startup/package paths; historical receipts/failures and the Windows
 installed-public risk decision below retain their original scope.
 
-In OMXTerm `0.24.0` source, Linux ARM64/x64, macOS ARM64 and Windows ARM64 use
-separately installed Snippets. Windows x64 retains the built-in tool. The
-instructions below describe the selected host behavior, not proof that a stable
-host or a particular catalog offer has been published or qualified. Check the
-[installation guide](installation.md) and the selected release for available files.
+Historical preview pairs retain their own exact receipts and qualification limits.
 
 The published [OMXTerm 0.24.0-dev.11 Linux ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),
 [OMXTerm 0.24.0-dev.16 macOS ARM64 preview](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.16),
@@ -37,6 +41,12 @@ The exact dev.36 stage/local-archive ten-check campaign and its matching FULL
 NSIS verification passed separately. Stable 0.24.0 was rebuilt and passed FULL
 NSIS verification; unchanged host inputs support reuse of the bounded behavioral
 evidence, not relabeling it as a stable installed-public test.
+
+Later bounded checks on an unpublished Windows ARM64 `0.25.0-dev.10` package
+passed [installed Insert/Run](https://github.com/luizomf/omxterm/issues/741#issuecomment-6646984328)
+and [disabled restart](https://github.com/luizomf/omxterm/issues/741#issuecomment-6663106717).
+They do not qualify published `0.24.0` or current source, nor complete
+cold/default/network coverage. Earlier failed occurrences retain their outcomes.
 
 Several ordinary public runs ended when the controlled terminal child exited
 unexpectedly. One diagnostic captured an unexpected prefix before the exact Run

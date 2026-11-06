@@ -70,8 +70,8 @@ authentication.
 
 ## Optional Snippets preview
 
-In `0.24.0` source, Linux ARM64/x64, macOS ARM64 and Windows ARM64 use the
-separately installed [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
+Published **OMXTerm 0.24.0** uses optional Snippets on Linux ARM64/x64, macOS
+ARM64 and Windows ARM64, through the separately installed [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
 Windows x64 retains built-in Snippets. The earlier 0.23.0 host also keeps its
 built-in tool. Existing `snippets.yaml` files are not rewritten or deleted.
 

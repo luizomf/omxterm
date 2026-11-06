@@ -550,20 +550,19 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) opens, reveals or closes the
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
-  below full-width title/tab chrome. Linux ARM64/x64 and macOS/Windows ARM64 source use the
-  separately installed Snippets extension; other targets retain the built-in view.
-  Windows ARM64 passed the bounded ordinary [Snippets source checkpoint](snippets-migration.md#windows-arm64-source-transition)
-  and later fresh full portable, exact staged ten-check and matching FULL NSIS gates
-  for its published [dev.36 preview](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).
-  Common-catalog promotion and installed public-HTTPS consumption remain separate
-  pending milestones at this revision; older Windows hosts and Windows x64 are unchanged.
-  The published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and
-  Linux x64 `0.24.0-dev.30` previews use optional Snippets; stable `0.23.0` retains
-  the built-in view. All three previews offer the same immutable archive through
-  the official catalog, retaining local/offline installation. Exact public catalog
-  readback and separate bounded packaged public-HTTPS checkpoints passed for these
-  pairs. Source, exact-package/FULL, publication and catalog-consumption evidence
-  remain distinct in the [migration guide](snippets-migration.md). The existing
+  below full-width title/tab chrome. Published stable `0.24.0` and current source
+  use optional, separately installed Snippets `0.1.0` on Linux ARM64/x64, macOS
+  ARM64 and Windows ARM64. Windows x64 and unchanged `0.23.0` hosts retain the
+  built-in view. Stable `0.24.0` offers deliberate installation through the official
+  catalog or a verified local/offline archive; catalog availability is delivered,
+  not proof of public-consumption qualification. The Windows ARM64 installed-public
+  checkpoint remains unresolved under the [release-risk decision](snippets-migration.md#stable-0240-release-disposition).
+  Historical preview, source, exact-package/FULL, publication and bounded
+  public-HTTPS receipts retain their separate scopes in the [migration guide](snippets-migration.md).
+  Current source separately implements a [removable default](default-snippets.md)
+  enabled but dormant only for positively new packaged profiles, not existing-user
+  enrollment or published `0.24.0` behavior. Existing YAML, bindings and
+  disabled/removed choices remain preserved. The existing
   command remains the sole menu/palette entry, including remapped/null bindings.
   Without an enabled installation, it opens Extensions management with an
   optional-tool explanation and the actual installation/runtime status, without
@@ -2276,8 +2275,10 @@ the optional tool through the catalog or a local archive; its bounded public-HTT
 checkpoint passed separately. The published Windows ARM64 dev.36 preview uses
 optional Snippets after its exact-stage and separate FULL NSIS gates; its
 [public boundary](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
-still distinguishes pending installed public consumption. Stable `0.23.0`, older
-Windows hosts and Windows x64 retain built-in Snippets. Remaining platform gates in
+still distinguishes pending installed public consumption. Published stable
+`0.24.0` uses optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64;
+Windows x64 and unchanged `0.23.0` hosts retain built-in Snippets. Historical
+preview receipts remain bound to their recorded host/archive pairs. Remaining platform gates in
 [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
 still apply. Isolated foundation/runtime builds remain available.
 Explicit activation through the application manager lazily forks one

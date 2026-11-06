@@ -192,17 +192,17 @@ Insert, Run and read-only preview deliver exact text through Protected Paste to
 a captured live Surface, never a replacement target. See
 [interaction behavior](docs/spec.md#window-and-session-behavior) and
 [catalog configuration](docs/spec.md#configuration-and-local-state).
-Published Linux ARM64 `0.24.0-dev.11`, macOS ARM64 `0.24.0-dev.16` and Linux x64
-`0.24.0-dev.30` previews use optional Snippets `0.1.0`, available through the
-official catalog or a local archive. See the [delivery evidence and limits](docs/snippets-migration.md).
-The separately published Windows ARM64 `0.24.0-dev.36` preview also uses optional
-Snippets: its fresh full portable, exact staged ten-check and matching FULL NSIS
-checkpoints passed. Its [publication and common-catalog candidate](docs/snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
-are separate from the pending installed public-HTTPS checkpoint. At publication,
-stable `0.23.0` remained Latest with built-in Snippets; older Windows hosts and
-Windows x64 were unchanged. No dev.36 result qualifies later stable bytes.
-Published artifacts
-and original receipts remain immutable. Each remaining cutover requires matching host/package qualification,
+Published stable `0.24.0` and current source use optional, separately installed
+Snippets `0.1.0` on Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64
+and unchanged `0.23.0` hosts retain built-in Snippets. Stable `0.24.0` offers
+deliberate official-catalog or verified local/offline installation. The Windows
+ARM64 installed-public checkpoint remains unresolved under the
+[release-risk decision](docs/snippets-migration.md#stable-0240-release-disposition).
+Historical preview receipts retain their exact host/archive scopes; see the
+[delivery evidence and limits](docs/snippets-migration.md). The
+[new-profile default](docs/default-snippets.md) is source-only, not published
+`0.24.0` behavior. Published artifacts and original receipts remain immutable.
+Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
 
