@@ -7,7 +7,8 @@ import {
   rmSync,
   symlinkSync,
 } from "node:fs";
-import { createRequire } from "node:module";
+import childProcess from "node:child_process";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
@@ -21,6 +22,9 @@ import {
   mandatoryNetLogTypes,
   ordinaryInputs,
   ordinaryOutcome,
+  ordinaryProtocol,
+  observeOrdinarySignals,
+  traceOrdinaryInspector,
   type ColdPause,
 } from "../fixtures/snippets-ordinary";
 
@@ -51,6 +55,7 @@ afterEach(() => {
   Object.defineProperty(process, "platform", platform);
   Object.defineProperty(process, "arch", arch);
   vi.restoreAllMocks();
+  syncBuiltinESMExports();
 });
 it("opts out without configuration and rejects partial or substituted ordinary identity", () => {
   expect(ordinaryInputs({})).toBeUndefined();
@@ -442,4 +447,122 @@ it("records a secondary-only failure without inventing a primary or retrying wor
   });
   expect(work).toHaveBeenCalledOnce();
   expect(outcome.failures).toEqual([{ stage: "cleanup", error: cleanup }]);
+});
+
+it("observes literal pidfd signal boundaries while forwarding original results and errors", () => {
+  const result = {
+    pid: 1,
+    output: [null, Buffer.alloc(0), Buffer.alloc(0)],
+    stdout: Buffer.alloc(0),
+    stderr: Buffer.alloc(0),
+    status: 0,
+    signal: null,
+  };
+  const original = vi.spyOn(childProcess, "spawnSync").mockReturnValue(result);
+  const events: string[] = [];
+  const observer = observeOrdinarySignals((event) => {
+    events.push(event);
+  });
+  const helper = path.resolve(
+    import.meta.dirname,
+    "../../scripts/linux-packaged-signal.py",
+  );
+  try {
+    expect(
+      childProcess.spawnSync("python3", ["-I", helper], {
+        input: '{"check":true}',
+      }),
+    ).toBe(result);
+    expect(observer.calls).toEqual([{ check: true }]);
+    expect(events).toEqual(["signal-helper:submit", "signal-helper:result"]);
+    const error = Error("original signal failure");
+    original.mockImplementationOnce(() => {
+      throw error;
+    });
+    expect(() =>
+      childProcess.spawnSync("python3", ["-I", helper], {
+        input: '{"signal":"SIGTERM","targets":[]}',
+      }),
+    ).toThrow(error);
+    expect(observer.calls[1]).toEqual({ signal: "SIGTERM", targets: [] });
+    expect(events.slice(-2)).toEqual([
+      "signal-helper:submit",
+      "signal-helper:error",
+    ]);
+    expect(original).toHaveBeenCalledTimes(2);
+  } finally {
+    observer.restore();
+  }
+});
+
+it("traces actual inspector requests without bypassing replies, errors or closure", async () => {
+  const failure = Error("original CDP failure");
+  const request = vi
+    .fn<(...args: unknown[]) => Promise<unknown>>()
+    .mockResolvedValueOnce({ result: { value: true } })
+    .mockRejectedValueOnce(failure);
+  const close = vi.fn();
+  const raw = { request, close } as unknown as Parameters<
+    typeof traceOrdinaryInspector
+  >[0];
+  const events: string[] = [];
+  const client = traceOrdinaryInspector(raw, (event) => {
+    events.push(event);
+  });
+  expect(await client.evaluate("observer.current().ready()", 123)).toBe(true);
+  expect(request).toHaveBeenCalledWith(
+    "Runtime.evaluate",
+    {
+      expression: "observer.current().ready()",
+      awaitPromise: true,
+      returnByValue: true,
+    },
+    123,
+  );
+  await expect(client.request("Debugger.enable", {}, 456)).rejects.toBe(
+    failure,
+  );
+  expect(events).toEqual([
+    "observer:call",
+    "protocol:submit",
+    "protocol:reply",
+    "protocol:submit",
+    "protocol:error",
+  ]);
+  client.close();
+  expect(close).toHaveBeenCalledOnce();
+});
+
+it("keeps protocol recording faults from changing the actual signal operation", () => {
+  const result = {
+    pid: 1,
+    output: [null, Buffer.alloc(0), Buffer.alloc(0)],
+    stdout: Buffer.alloc(0),
+    stderr: Buffer.alloc(0),
+    status: 0,
+    signal: null,
+  };
+  const original = vi.spyOn(childProcess, "spawnSync").mockReturnValue(result);
+  const recorderError = Error("recorder failed");
+  const observer = observeOrdinarySignals(() => {
+    throw recorderError;
+  });
+  const helper = path.resolve(
+    import.meta.dirname,
+    "../../scripts/linux-packaged-signal.py",
+  );
+  try {
+    expect(
+      childProcess.spawnSync("python3", ["-I", helper], {
+        input: '{"signal":"SIGTERM","targets":[]}',
+      }),
+    ).toBe(result);
+    expect(original).toHaveBeenCalledOnce();
+    expect(observer.failures).toEqual([recorderError, recorderError]);
+    const log = ordinaryProtocol("/nonexistent-ordinary-fixture/trace.jsonl");
+    log.record("example");
+    expect(log.failures).toHaveLength(1);
+  } finally {
+    observer.restore();
+  }
 });

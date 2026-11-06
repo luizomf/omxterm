@@ -65,6 +65,22 @@ readiness. No replacement entry, profile getter/setter, defaultSession access,
 production module injection, preload, startup configuration or provisioning bypass
 is used. Native entry/import evaluation and the production capture/claim proceed.
 
+After resume, the controller first admits the external initial-PTY receipt, rejects
+malformed/wrong-main/nonpositive probe identities, and invokes the unchanged process
+owner's ancestry/birth/executable verification. Only then may async CDP renderer
+readiness polling begin. External receipt, identity admission and renderer polling
+share the existing 20-second startup budget; neither that bound nor the normal
+shutdown bound is enlarged. Protocol operations, receipt/identity admission, native
+exit/stream closure and literal pidfd-helper signal submission/result boundaries
+are recorded per phase in `protocol-order.jsonl`. Recording failures are retained
+without suppressing the real signaling operation. A successful natural Quit must
+show capability preflight only, with no shutdown/recovery signal request.
+
+This is clearer fixture ordering, not a claimed fix for the historical CDP
+`Promise was collected` failure or the later recovery-time GPU fatal. The prior
+one-launch existing-profile discriminator was only one successful observation;
+it did not establish either initiating cause or qualify fresh enrollment.
+
 Before resuming, the observer registers web-content navigation observations,
 forwards `child_process.fork` and node-pty instance events unchanged, and observes
 public Node filesystem mutation calls for `snippets.yaml`. It also observes Node
@@ -117,7 +133,7 @@ settlement **and again after owned cleanup**, independently of its assertions.
 Headless controls (Node/filesystem only):
 
 ```sh
-npm test -- test/unit/snippets-ordinary.test.ts test/unit/packaged-inspector-early.test.ts
+npm test -- test/unit/snippets-ordinary.test.ts test/unit/snippets-ordinary-readiness.test.ts test/unit/packaged-inspector-early.test.ts
 ```
 
 This consumer does not qualify FUSE/helper installation (covered separately by the

@@ -1,14 +1,229 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { lstatSync } from "node:fs";
+import childProcess from "node:child_process";
+import { appendFileSync, lstatSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { userInfo } from "node:os";
 import path from "node:path";
+import { inspector, until } from "./packaged-inspector";
 
 export const packageSource = "575407cc61648b8dbf598dd7e1c4d46345c31ff2";
 export const snippetsSha256 =
   "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
 export const hash = (bytes: string | Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
+type ProtocolRecord = (event: string, data?: unknown) => void;
+export const ordinaryStartupMs = 20000;
+export function parseOrdinaryReadiness(bytes: Buffer, expectedMainPid: number) {
+  assert.ok(
+    bytes.length > 0 && bytes.length <= 4096,
+    "invalid PTY receipt size",
+  );
+  const receipt = JSON.parse(bytes.toString()) as {
+    mainPid?: unknown;
+    probePid?: unknown;
+  } | null;
+  assert.ok(
+    receipt && Object.keys(receipt).sort().join(",") === "mainPid,probePid",
+    "invalid PTY receipt shape",
+  );
+  assert.equal(
+    receipt.mainPid,
+    expectedMainPid,
+    "PTY receipt main PID mismatch",
+  );
+  assert.ok(
+    Number.isSafeInteger(receipt.mainPid) && (receipt.mainPid as number) > 0,
+  );
+  assert.ok(
+    Number.isSafeInteger(receipt.probePid) &&
+      (receipt.probePid as number) > 0 &&
+      receipt.probePid !== receipt.mainPid,
+    "invalid PTY receipt probe PID",
+  );
+  return {
+    mainPid: receipt.mainPid as number,
+    probePid: receipt.probePid as number,
+  };
+}
+
+export async function admitOrdinaryReadiness(options: {
+  file: string;
+  expectedMainPid: number;
+  verifyMain(): Promise<void>;
+  ready(remainingMs: number): Promise<boolean>;
+  nativeExited(): boolean;
+  record: ProtocolRecord;
+}) {
+  // External receipt, identity admission and async renderer polling share the
+  // existing 20-second startup allowance; this does not add another timeout.
+  const deadline = Date.now() + ordinaryStartupMs;
+  const remaining = () => {
+    const left = deadline - Date.now();
+    assert.ok(left > 0, "ordinary startup deadline exceeded");
+    return left;
+  };
+  let receipt: ReturnType<typeof parseOrdinaryReadiness> | undefined;
+  options.record("external-readiness:wait", { budgetMs: ordinaryStartupMs });
+  await until(
+    async () => {
+      assert.equal(
+        options.nativeExited(),
+        false,
+        "native exit before PTY admission",
+      );
+      const bytes = await readFile(options.file).catch(
+        (error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return undefined;
+          throw error;
+        },
+      );
+      if (!bytes?.length) return false;
+      receipt = parseOrdinaryReadiness(bytes, options.expectedMainPid);
+      return true;
+    },
+    "external initial PTY readiness",
+    remaining(),
+  );
+  assert.ok(receipt);
+  options.record("external-readiness:receipt", receipt);
+  await options.verifyMain(); // Real process-owner ancestry/start/executable check.
+  options.record("external-readiness:verified", {
+    ...receipt,
+    remainingMs: remaining(),
+  });
+  await until(
+    () => options.ready(remaining()),
+    "renderer readiness after PTY admission",
+    remaining(),
+  );
+  remaining();
+  return receipt;
+}
+
+export function ordinaryProtocol(file: string) {
+  let sequence = 0;
+  const failures: unknown[] = [];
+  return {
+    failures,
+    record(event: string, data: unknown = {}) {
+      try {
+        appendFileSync(
+          file,
+          JSON.stringify({
+            sequence: ++sequence,
+            wall: new Date().toISOString(),
+            monotonicNs: process.hrtime.bigint().toString(),
+            event,
+            data,
+          }) + "\n",
+        );
+      } catch (error) {
+        failures.push(error);
+      }
+    },
+  };
+}
+
+export function traceOrdinaryInspector(
+  client: Awaited<ReturnType<typeof inspector>>,
+  record: ProtocolRecord,
+) {
+  const request = async (
+    method: string,
+    params: object = {},
+    timeout = 5000,
+  ) => {
+    record("protocol:submit", { method });
+    try {
+      const reply = await client.request(method, params, timeout);
+      record("protocol:reply", { method });
+      return reply;
+    } catch (error) {
+      record("protocol:error", { method, error: String(error) });
+      throw error;
+    }
+  };
+  return {
+    ...client,
+    request,
+    async evaluate(expression: string, timeout = 20000) {
+      record("observer:call", {
+        operation: /\.current\(\)\.(\w+)/.exec(expression)?.[1],
+      });
+      const reply = (await request(
+        "Runtime.evaluate",
+        { expression, awaitPromise: true, returnByValue: true },
+        timeout,
+      )) as { result?: { value?: unknown } };
+      return reply.result?.value;
+    },
+  };
+}
+
+// Observe the unchanged owner's literal pidfd requests in this controller only.
+// Logging must never prevent or replace its actual signaling/recovery operation.
+export function observeOrdinarySignals(record: ProtocolRecord) {
+  const original = childProcess.spawnSync;
+  const helper = path.resolve(
+    import.meta.dirname,
+    "../../scripts/linux-packaged-signal.py",
+  );
+  const failures: unknown[] = [];
+  const calls: unknown[] = [];
+  const note: ProtocolRecord = (event, data) => {
+    try {
+      record(event, data);
+    } catch (error) {
+      failures.push(error);
+    }
+  };
+  const wrapped = function (...args: Parameters<typeof original>) {
+    const [command, argv, options] = args;
+    const observed =
+      command === "python3" &&
+      Array.isArray(argv) &&
+      argv[0] === "-I" &&
+      argv[1] === helper;
+    let request: unknown;
+    if (observed) {
+      try {
+        request = JSON.parse(String(options?.input));
+      } catch (error) {
+        request = { invalidInput: String(error) };
+      }
+      calls.push(request);
+      note("signal-helper:submit", request);
+    }
+    try {
+      const result = original(...args);
+      if (observed)
+        note("signal-helper:result", {
+          request,
+          status: result.status,
+          signal: result.signal,
+          error: result.error?.message,
+        });
+      return result;
+    } catch (error) {
+      if (observed)
+        note("signal-helper:error", { request, error: String(error) });
+      throw error;
+    }
+  } as typeof original;
+  childProcess.spawnSync = wrapped;
+  syncBuiltinESMExports();
+  return {
+    calls,
+    failures,
+    restore() {
+      childProcess.spawnSync = original;
+      syncBuiltinESMExports();
+    },
+  };
+}
+
 export function ordinaryInputs(env = process.env, home = userInfo().homedir) {
   const prefix = "OMXTERM_SNIPPETS_ORDINARY_";
   if (

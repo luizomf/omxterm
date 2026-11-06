@@ -16,9 +16,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { it } from "vitest";
+import type { Registry } from "../../src/installed-packages/registry";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector";
 import {
+  admitOrdinaryReadiness,
   assertAbsentRoots,
   assertColdPause,
   assertDormant,
@@ -28,6 +30,9 @@ import {
   hash,
   ordinaryInputs,
   ordinaryOutcome,
+  ordinaryProtocol,
+  observeOrdinarySignals,
+  traceOrdinaryInspector,
   packageSource,
   snippetsSha256,
   type ColdPause,
@@ -35,15 +40,9 @@ import {
 
 const values = ordinaryInputs();
 const execute = promisify(execFile);
-type Snapshot = {
+type Snapshot = Parameters<typeof assertDormant>[0] & {
   ptys: Array<{ pid: number; output: string; exited: boolean }>;
-  forks: unknown[];
-  views: string[];
-  urls: string[];
-  yamlWrites: string[];
-  nodeNetwork: string[];
   approvals: number;
-  identity: { pid: number };
 };
 
 it.skipIf(!values)(
@@ -105,14 +104,7 @@ it.skipIf(!values)(
         },
       );
     const registry = async () =>
-      JSON.parse(await readFile(registryFile, "utf8")) as {
-        installations: Array<{
-          generation: number;
-          enabled: boolean;
-          digest: string | null;
-          id: string;
-        }>;
-      };
+      JSON.parse(await readFile(registryFile, "utf8")) as Registry;
     const expectRegistry = async (generation: number, enabled: boolean) => {
       const entries = (await registry()).installations;
       assert.equal(entries.length, generation === 0 ? 0 : 1);
@@ -146,6 +138,7 @@ it.skipIf(!values)(
     });
     const phases: unknown[] = [];
     let completed = false;
+    // eslint-disable-next-line max-lines-per-function -- One phase owns cold admission, protocol/signaling traces, natural settlement and exact state checks.
     async function phase(
       name: string,
       generation: number,
@@ -166,37 +159,80 @@ it.skipIf(!values)(
         "APPDIR",
       ])
         delete env[key];
-      const owner = await launchLinuxPackagedProcess({
-        executable,
-        expectedExecutable: executable,
-        args: [
-          "--no-sandbox",
-          "--ozone-platform=x11",
-          "--inspect-brk=127.0.0.1:0",
-          `--log-net-log=${netlog}`,
-          "-e",
-          "/bin/sh",
-          shell,
-          readiness,
-        ],
-        env,
-        readinessFile: readiness,
-        profileRoot: directory,
-      });
+      const outcome = ordinaryOutcome();
+      const protocol = ordinaryProtocol(
+        path.join(directory, "protocol-order.jsonl"),
+      );
+      const trace = protocol.record;
+      const signals = observeOrdinarySignals(trace);
+      let processOwner:
+        Awaited<ReturnType<typeof launchLinuxPackagedProcess>> | undefined;
       let client: Awaited<ReturnType<typeof inspector>> | undefined;
       let closed = false;
-      owner.child.once("close", () => {
-        closed = true;
-      });
+      let observedExit:
+        { code: number | null; signal: NodeJS.Signals | null } | undefined;
       let stopped = false;
-      const outcome = ordinaryOutcome();
+      let externalAdmitted = false;
+      let asyncReadyCalls = 0;
       let phaseResult: unknown;
       const observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(path.join(asar, "package.json"))})(${JSON.stringify(path.join(root, "observer.cjs"))})`;
-      const call = (expression: string) => {
+      const call = (expression: string, timeout = 20000) => {
         assert.ok(client);
-        return client.evaluate(`${observer}.current().${expression}`, 20000);
+        return client.evaluate(`${observer}.current().${expression}`, timeout);
+      };
+      const stopOwner = async (kind: "natural" | "recovery") => {
+        assert.ok(processOwner);
+        stopped = true;
+        trace(`owner-stop:${kind}:submit`, {
+          closed,
+          observedExit,
+          externalAdmitted,
+        });
+        try {
+          const result = await processOwner.stop();
+          trace(`owner-stop:${kind}:result`, result);
+          return result;
+        } catch (error) {
+          trace(`owner-stop:${kind}:error`, {
+            error: String(error),
+            closed,
+            observedExit,
+          });
+          throw error;
+        }
       };
       await outcome.attempt("scenario", async () => {
+        trace("launch:submit");
+        const owner = await launchLinuxPackagedProcess({
+          executable,
+          expectedExecutable: executable,
+          args: [
+            "--no-sandbox",
+            "--ozone-platform=x11",
+            "--inspect-brk=127.0.0.1:0",
+            `--log-net-log=${netlog}`,
+            "-e",
+            "/bin/sh",
+            shell,
+            readiness,
+          ],
+          env,
+          readinessFile: readiness,
+          profileRoot: directory,
+        });
+        processOwner = owner;
+        trace("launch:accepted", { pid: owner.child.pid });
+        owner.child.once("exit", (code, signal) => {
+          observedExit = { code, signal };
+          trace("native:exit", observedExit);
+        });
+        owner.child.once("close", (code, signal) => {
+          closed = true;
+          trace("native:close", { code, signal });
+        });
+        owner.child.stderr!.on("data", (chunk: Buffer) =>
+          trace("native:stderr", { text: String(chunk).slice(-4000) }),
+        );
         await until(
           () =>
             /Debugger listening on ws:\/\/127\.0\.0\.1:/.test(
@@ -208,7 +244,7 @@ it.skipIf(!values)(
           /Debugger listening on (ws:\/\/127\.0\.0\.1:\d+\/[a-f0-9-]+)/.exec(
             owner.stderrText(),
           )![1]!;
-        client = await inspector(endpoint);
+        client = traceOrdinaryInspector(await inspector(endpoint), trace);
         await client.request("Debugger.enable", {}, 5000);
         await client.request("Runtime.runIfWaitingForDebugger", {}, 5000);
         const pause = (await client.nextEvent(
@@ -278,10 +314,21 @@ it.skipIf(!values)(
         });
         await client.request("Debugger.resume", {}, 5000);
         await client.request("Debugger.disable", {}, 5000);
-        await until(
-          async () => (await call("ready()")) === true,
-          "real production Surface and PTY readiness",
-        );
+        const admitted = await admitOrdinaryReadiness({
+          file: readiness,
+          expectedMainPid: owner.child.pid!,
+          verifyMain: () => owner.verifyMain(),
+          nativeExited: () => observedExit !== undefined,
+          ready: async (remaining) => {
+            asyncReadyCalls++;
+            return (await call("ready()", remaining)) === true;
+          },
+          record(event, data) {
+            if (event === "external-readiness:verified")
+              externalAdmitted = true;
+            trace(event, data);
+          },
+        });
         await owner.verifyMain();
         const initial = (await call("snapshot()")) as Snapshot;
         assertDormant(initial);
@@ -364,26 +411,29 @@ it.skipIf(!values)(
         );
         await call("closeSettings()");
         await owner.verifyMain();
+        trace("normal-quit:request");
         await call("quit()");
         await until(
           () => exists(path.join(directory, "quit.json")),
           "natural Quit receipt",
         );
+        trace("normal-quit:receipt");
+        trace("inspector:disconnect");
         client.close();
         client = undefined;
         await until(() => closed, "actual main exit and streams closed", 5000);
-        stopped = true;
-        const nativeOutcome = await owner.stop();
+        const nativeOutcome = await stopOwner("natural");
         assert.deepEqual(nativeOutcome, { code: 0, signal: null });
+        assert.deepEqual(
+          signals.calls,
+          [{ check: true }],
+          "only pidfd capability preflight; no shutdown/recovery signal",
+        );
         const quit = JSON.parse(
           await readFile(path.join(directory, "quit.json"), "utf8"),
         ) as Parameters<typeof assertOrdinaryQuit>[0];
         assertOrdinaryQuit(quit);
-        assertNoNetwork(
-          JSON.parse(await readFile(netlog, "utf8")) as Parameters<
-            typeof assertNoNetwork
-          >[0],
-        );
+        assertNoNetwork(JSON.parse(await readFile(netlog, "utf8")));
         const settled = await settledFiles();
         assertSettledFiles(settled, expectedFiles);
         await checkSentinels();
@@ -401,12 +451,51 @@ it.skipIf(!values)(
           closed,
           cleanupAssistance: "none",
           initialGeneration: generation,
+          admitted,
+          asyncReadyCalls,
+          signalCalls: signals.calls,
           finalRegistry: await registry(),
           seeded,
           pty: initial.ptys[0]!.pid,
           stderr: owner.stderrText(),
         };
       });
+      if (outcome.failures.length)
+        await outcome.attempt("failure-receipt", () =>
+          writeFile(
+            path.join(directory, "failure.json"),
+            JSON.stringify(
+              {
+                outcomes: outcome.records(),
+                stderr: processOwner?.stderrText(),
+                closed,
+                observedExit,
+                externalAdmitted,
+                asyncReadyCalls,
+              },
+              null,
+              2,
+            ),
+          ),
+        );
+      await outcome.attempt("disconnect", () => {
+        if (client) {
+          trace("inspector:disconnect-after-failure");
+          client.close();
+        }
+      });
+      if (processOwner && !stopped)
+        await outcome.attempt("recovery", () => stopOwner("recovery"));
+      await outcome.attempt("signal-observer-restore", () => signals.restore());
+      trace("phase:finished", {
+        closed,
+        observedExit,
+        outcomes: outcome.records(),
+      });
+      for (const error of [...protocol.failures, ...signals.failures])
+        await outcome.attempt("protocol-recording", () => {
+          throw error;
+        });
       if (!outcome.failures.length) {
         await outcome.attempt("phase-result", () =>
           writeFile(
@@ -417,22 +506,22 @@ it.skipIf(!values)(
         if (!outcome.failures.length) phases.push(phaseResult);
       }
       if (outcome.failures.length)
-        await outcome.attempt("failure-receipt", () =>
+        await outcome.attempt("finalization-receipt", () =>
           writeFile(
-            path.join(directory, "failure.json"),
+            path.join(directory, "finalization.json"),
             JSON.stringify(
               {
                 outcomes: outcome.records(),
-                stderr: owner.stderrText(),
+                signalCalls: signals.calls,
+                stderr: processOwner?.stderrText(),
                 closed,
+                observedExit,
               },
               null,
               2,
             ),
           ),
         );
-      await outcome.attempt("disconnect", () => client?.close());
-      if (!stopped) await outcome.attempt("recovery", () => owner.stop());
       outcome.throwIfFailed("Ordinary phase failed");
     }
     const hold = async (prefix: string) => {
