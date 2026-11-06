@@ -76,7 +76,11 @@ export function applicationViews(
             ]);
             if (signal.aborted || !input.source.isCurrentVisible())
               return Promise.resolve({ status: "refused" });
-            return options.filesTerminalDrop!({ ...input, signal }, admit);
+            return options.filesTerminalDrop!(
+              window,
+              { ...input, signal },
+              admit,
+            );
           }
         : undefined,
     onRequest(value, signal, context) {

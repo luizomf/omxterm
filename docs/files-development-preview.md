@@ -423,6 +423,8 @@ The app-owned child preload registers synchronously during the real row's
 `dragstart`; the host authenticates the actual child main frame, selected visible
 view and focused owner. Only installed Files companion composition may supply
 `filesTerminalDrop`, with its captured installation admission and epoch signal.
+The application callback receives the exact BrowserWindow captured for that
+view, never a renderer-selected owner or a later focused-window lookup.
 Absent that consumer, registration returns no ticket. No backend, filesystem or
 store work runs inside synchronous IPC. The captured absolute path/kind stays in
 main; DataTransfer carries only the existing internal token and a distinct opaque

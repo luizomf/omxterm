@@ -124,6 +124,7 @@ export type ApplicationExtensionsOptions = {
   // Integration seam only. Absent until the captured-pane #768 protected
   // handoff is composed; source drag stays move-only without it.
   filesTerminalDrop?: (
+    window: BrowserWindow,
     input: Parameters<
       import("./files-terminal-drag").FilesTerminalDropConsumer
     >[0],

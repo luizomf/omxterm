@@ -329,9 +329,14 @@ beforeEach(async () => {
 });
 async function startService(
   platform: string,
-  provisioning: Pick<
-    Parameters<typeof startApplicationExtensions>[0],
-    "defaultSnippets" | "onDefaultSnippetsWarning" | "filesTerminalDrop"
+  provisioning: Partial<
+    Pick<
+      Parameters<typeof startApplicationExtensions>[0],
+      | "defaultSnippets"
+      | "onDefaultSnippetsWarning"
+      | "filesTerminalDrop"
+      | "isTrustedSender"
+    >
   > = {},
 ) {
   // Model preview admission/catalog targeting, not the host filesystem. Startup
@@ -361,7 +366,9 @@ async function startService(
       },
       translator: () => translatorFor(language),
       sendAction: adapters.sendOpen,
-      isTrustedSender: (event) => event.sender === window.webContents,
+      isTrustedSender:
+        provisioning.isTrustedSender ??
+        ((event) => event.sender === window.webContents),
       changed() {},
       keybind() {},
     });
@@ -492,7 +499,7 @@ it.each(["omxterm.files", "omxterm.ssh"])(
       NonNullable<
         Parameters<typeof startApplicationExtensions>[0]["filesTerminalDrop"]
       >
-    >(async (_input, admit) => {
+    >(async (_window, _input, admit) => {
       let admitted = false;
       await admit(_input.signal, () => {
         admitted = true;
@@ -519,6 +526,7 @@ it.each(["omxterm.files", "omxterm.ssh"])(
       status: "accepted",
     });
     expect(consumer).toHaveBeenCalledExactlyOnceWith(
+      window,
       expect.objectContaining({ entry: input.entry, revision: 3 }),
       expect.any(Function),
     );
@@ -531,6 +539,84 @@ it.each(["omxterm.files", "omxterm.ssh"])(
     expect(consumer).toHaveBeenCalledOnce();
   },
 );
+
+it("delivers each Files drop's captured owner despite another window becoming focused", async () => {
+  await service.dispose();
+  const consumer = vi.fn<
+    NonNullable<
+      Parameters<typeof startApplicationExtensions>[0]["filesTerminalDrop"]
+    >
+  >(async () => ({ status: "refused" }));
+  await startService("linux", {
+    filesTerminalDrop: consumer,
+    isTrustedSender: (event) => adapters.windows.has(event.sender),
+  });
+  adapters.sendOpen.mockImplementation((sender, _channel, command) => {
+    if (!isTerminalTabCommand(command) || command.action !== "open-extension")
+      throw new Error("Expected extension admission command");
+    void request(
+      { operation: "open", token: command.token, accepted: true },
+      { sender, senderFrame: sender.mainFrame },
+    );
+  });
+  await installTool("omxterm.files", "Files");
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  const first = adapters.hosts[0]!;
+  const otherWindow = Object.assign(new EventEmitter(), {
+    webContents: Object.assign(new EventEmitter(), {
+      mainFrame: {},
+      send: vi.fn(),
+      isDestroyed: () => false,
+    }),
+    isDestroyed: () => false,
+    getContentSize: () => [800, 600],
+  }) as unknown as BrowserWindow;
+  adapters.windows.set(otherWindow.webContents, otherWindow);
+  service.registerWindow(otherWindow, () => ({
+    owner: otherWindow,
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+  }));
+  adapters.selected = otherWindow;
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[1]?.open).toHaveBeenCalled());
+  const second = adapters.hosts[1]!;
+  expect(first.options.owner).toBe(window);
+  expect(second.options.owner).toBe(otherWindow);
+  const input = {
+    entry: { path: "/synthetic/a b", kind: "file" as const, entryToken: "1" },
+    source: { id: "hosted-view", isCurrentVisible: () => true },
+    revision: 3,
+    signal: new AbortController().signal,
+  };
+  adapters.selected = window;
+  await second.options.filesTerminalDrop!(input);
+  expect(consumer.mock.calls[0]![0]).toBe(otherWindow);
+  expect(consumer).toHaveBeenNthCalledWith(
+    1,
+    otherWindow,
+    expect.objectContaining({
+      entry: input.entry,
+      source: input.source,
+      revision: 3,
+    }),
+    expect.any(Function),
+  );
+  adapters.selected = otherWindow;
+  await first.options.filesTerminalDrop!(input);
+  expect(consumer.mock.calls[1]![0]).toBe(window);
+  expect(consumer).toHaveBeenNthCalledWith(
+    2,
+    window,
+    expect.objectContaining({
+      entry: input.entry,
+      source: input.source,
+      revision: 3,
+    }),
+    expect.any(Function),
+  );
+});
 
 it.each([
   ["omxterm.files", "toggleFiles"],
