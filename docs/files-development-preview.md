@@ -178,8 +178,8 @@ hosts have not been qualified for this combined source, so this floor is not a
 claim that every earlier host lacks those services. Ordinary semver admits
 0.25.0-dev.10 and later dev.N in that same family, plus stable 0.25.0; the
 existing development bridges do not bypass this minimum or automatically admit
-other prerelease families. Native/package qualification and publication remain
-pending for these new bytes. Published Files0.6.0 retains minimum host
+other prerelease families. The bounded [Linux exact-package checkpoint](#files07-linux-packaged-checkpoint)
+below passed; macOS qualification and public delivery of these bytes remain separate. Published Files0.6.0 retains minimum host
 0.24.0-dev.21 and its original catalog entries and receipts. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
 catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives. The
@@ -480,8 +480,9 @@ behavior without changing their published bytes; their original action label,
 missing inline hint and tooltip, and already-displayed literal error text
 do not change. Current
 Files source also relabels host-coded unavailable notices. These changes are
-included in the Files0.7 source/archive preparation; native/package qualification
-and publication remain pending, and published Files0.6 is unchanged.
+included in the Files0.7 source/archive preparation and the bounded Linux
+packaged checkpoint below; macOS/public delivery remains separate, and published
+Files0.6 is unchanged.
 The host's narrow [development bridges](extension-installation-foundation.md#archive-contract)
 admit unchanged Files0.6 on recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts. Admission is not
 native runtime or package qualification.
@@ -1003,6 +1004,51 @@ No primitive matrix is replayed. Inspect `consumer-files.png` and
 `terminal-after.png`; filenames and DOM readiness are not pixel evidence.
 Production public-link consumption remains a separate post-publication step.
 Stable Files0.6 catalogs remain unchanged.
+
+### Files0.7 Linux packaged checkpoint
+
+On 2026-11-06, an ordinary-user Fedora44 ARM64 guest passed seven bounded
+scenario groups using fresh, locally built **OMXTerm0.25.0-dev.19** and
+**Files0.7.0**. Host and archive were built from clean committed source
+`0cb89accd61f1f5d5263c60773454882793e2e99`; the observer used
+`cec0011a9e30089dc4341dcf3a457c0378d07325`, which changes tests/docs only.
+
+- Host AppImage: 128,279,459 bytes, SHA-256
+  `ac18dc2e08cbebed6a8b5ce08976eab2e0f043d407bd8b0f24113c1e87534f62`.
+- Separate Files archive: 23,285 bytes, SHA-256
+  `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`.
+  Its fresh receipt retains `qualification.status: not-run`; actual qualification
+  is recorded separately, not retrofitted into build provenance.
+
+The untouched extracted package passed exact captured-byte consent and dormant
+installation, filtering, Chromium keyboard/focus, confirmed directory conflict
+without clobbering, a confirmed same-inode/content move with exact source absence,
+Close/reset, Disable/Uninstall, reinstall retirement/dormancy, the same PTY/Surface
+and third-consent active Files at normal Quit. All three backends exited zero
+and closed; shell kernel exit, main exit/streams and owned process settlement
+joined. The actual Files capture shows the completed move under its destination;
+the final terminal capture shows the shell marker and prompt. The core-window
+capture does not include the separate native child and is not Files paint proof.
+
+Locked install/build, package inspection and the separate unchanged **FULL**
+package verifier passed (eight startup events, direct/extract-and-run startup
+and scoped helper checks). Formatting, lint, types, 6,409 headless unit tests
+(10 skips), 39 focused builder/fixture checks and two GC-enabled cancellation
+checks passed. No full portable/default-native suite or repeated Files primitive
+matrix is claimed. Original document/desktop service identities, bus owners,
+mount/FUSE scope, API/root enumeration and original consumer state matched before
+launch, after settlement and after owned-scratch removal; no injected keys remained.
+
+The passing Files run retained one Chromium negative-frame-latency diagnostic
+and two portal atom-cache diagnostics; no user-facing failure was demonstrated,
+and their cause is not established here. Synthetic input, controlled native
+consent, X11 and WebContents captures are not physical-keyboard/drag/dialog or
+compositor qualification. This is **local packaged-pair qualification, not
+publication or public HTTPS consumption**. ROOT's independent review,
+integration/publication decision, anonymous byte readback and actual public-link
+checkpoint remain separate. Both official catalogs still select Files0.6;
+macOS/other-platform Files0.7 and surviving-browser main-death exclusion remain
+unqualified. Historical built-host checks and failures retain their original scope.
 
 ### Historical/current Files0.6 packaged lanes
 
