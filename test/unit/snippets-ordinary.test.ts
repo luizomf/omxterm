@@ -21,6 +21,11 @@ import {
 
 const require = createRequire(import.meta.url);
 const observer = require("../fixtures/snippets-ordinary.cjs") as {
+  answerDialog(
+    prompt: unknown,
+    manualInstall: boolean,
+    digest: string,
+  ): { kind: string; response: number };
   observeYamlWrites(
     fs: unknown,
     record: (operation: string) => void,
@@ -163,6 +168,36 @@ it("forwards Node filesystem calls, catches YAML mutations and restores methods"
   expect(fs.open).toBe(open);
   expect(fs.rename).toBe(rename);
   expect(fs.promises.writeFile).toBe(writeFile);
+});
+it("answers actual normal-Quit consent separately from local archive trust", () => {
+  const quit = {
+    title: "Quit OMXTerm",
+    type: "question",
+    message: "Quit OMXTerm and close all Terminal Windows?",
+    buttons: ["Quit", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+  };
+  expect(observer.answerDialog(quit, false, "digest")).toEqual({
+    kind: "quit",
+    response: 0,
+  });
+  expect(() =>
+    observer.answerDialog(
+      { ...quit, buttons: ["Cancel", "Quit"] },
+      false,
+      "digest",
+    ),
+  ).toThrow();
+  const trust = { title: "Trust extension code?", detail: "SHA-256: digest" };
+  expect(observer.answerDialog(trust, true, "digest")).toEqual({
+    kind: "install",
+    response: 1,
+  });
+  expect(() => observer.answerDialog(trust, false, "digest")).toThrow();
+  expect(() =>
+    observer.answerDialog({ title: "unexpected" }, false, "digest"),
+  ).toThrow();
 });
 it("rejects transient startup activation, YAML mutations and network attempts", () => {
   const state = {

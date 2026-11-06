@@ -180,6 +180,7 @@ it.skipIf(!values)(
         closed = true;
       });
       let stopped = false;
+      let phaseFailure: unknown;
       const observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(path.join(asar, "package.json"))})(${JSON.stringify(path.join(root, "observer.cjs"))})`;
       const call = (expression: string) => {
         assert.ok(client);
@@ -347,9 +348,14 @@ it.skipIf(!values)(
         assert.deepEqual(outcome, { code: 0, signal: null });
         const quit = JSON.parse(
           await readFile(path.join(directory, "quit.json"), "utf8"),
-        ) as { joined: boolean; natural: boolean };
+        ) as { joined: boolean; natural: boolean; quitApprovals: number };
         assert.equal(quit.joined, true);
         assert.equal(quit.natural, true);
+        assert.equal(
+          quit.quitApprovals,
+          1,
+          "one controlled normal-Quit consent",
+        );
         assertNoNetwork(
           JSON.parse(await readFile(netlog, "utf8")) as Parameters<
             typeof assertNoNetwork
@@ -374,6 +380,7 @@ it.skipIf(!values)(
         );
         phases.push(result);
       } catch (error) {
+        phaseFailure = error;
         await writeFile(
           path.join(directory, "failure.json"),
           JSON.stringify(
@@ -385,7 +392,16 @@ it.skipIf(!values)(
         throw error;
       } finally {
         client?.close();
-        if (!stopped) await owner.stop(); // Failure recovery remains failure.
+        if (!stopped) {
+          try {
+            await owner.stop();
+          } catch (cleanup) {
+            throw new AggregateError(
+              [phaseFailure, cleanup],
+              "Ordinary fixture failure and recovery outcome",
+            );
+          }
+        }
       }
     }
     const hold = async (prefix: string) => {
@@ -414,18 +430,14 @@ it.skipIf(!values)(
       // their complete owned roots are held before a distinct absent-root history.
       await mkdir(values.config);
       await phase("existing-empty", 0, false, false, "install-disable");
-      retained[path.join(values.config, "config.json")] = JSON.stringify({
-        version: 1,
-        language: "en-US",
-        confirmClose: false,
-        window: { blur: false },
-      });
+      // Ordinary startup creates config/theme defaults. Preserve their actual
+      // bytes as existing-user inputs rather than assuming those files are absent.
+      for (const name of ["config.json", "themes/omtheme.json"]) {
+        const file = path.join(values.config, name);
+        retained[file] = await readFile(file, "utf8");
+      }
       retained[yaml] = JSON.stringify({ version: 1, snippets: [] });
-      await mkdir(path.join(values.config, "themes"), { recursive: true });
-      retained[path.join(values.config, "themes/ordinary-sentinel.txt")] =
-        "fixture-owned preserved theme sentinel\n";
-      for (const [file, bytes] of Object.entries(retained))
-        await writeFile(file, bytes, { flag: "wx" });
+      await writeFile(yaml, retained[yaml], { flag: "wx" });
       await phase("existing-disabled", 2, false, false, "Uninstall");
       await phase("existing-tombstone", 3, false, false);
       await hold("held-existing");

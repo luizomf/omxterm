@@ -63,6 +63,24 @@ function observeYamlWrites(fs, record) {
   return () => restore.reverse().forEach((f) => f());
 }
 
+function answerDialog(prompt, manualInstall, digest) {
+  if (prompt.title === "Quit OMXTerm") {
+    assert.equal(prompt.type, "question");
+    assert.equal(
+      prompt.message,
+      "Quit OMXTerm and close all Terminal Windows?",
+    );
+    assert.deepEqual(prompt.buttons, ["Quit", "Cancel"]);
+    assert.equal(prompt.defaultId, 1);
+    assert.equal(prompt.cancelId, 1);
+    return { kind: "quit", response: 0 };
+  }
+  assert.equal(manualInstall, true);
+  assert.equal(prompt.title, "Trust extension code?");
+  assert.ok(prompt.detail.includes(digest));
+  return { kind: "install", response: 1 };
+}
+
 let active;
 function arm(options) {
   assert.equal(active, undefined, "one cold observer per process");
@@ -86,6 +104,7 @@ function arm(options) {
     urls: [],
     yamlWrites: [],
     approvals: 0,
+    quitApprovals: 0,
   };
   const append = (field, value) => {
     assert.ok(record[field].length < 1024, "bounded cold observations");
@@ -140,12 +159,15 @@ function arm(options) {
     );
     return { canceled: false, filePaths: [options.archive] };
   };
-  dialog.showMessageBox = async (_window, prompt) => {
-    assert.equal(options.manualInstall, true);
-    assert.equal(prompt.title, "Trust extension code?");
-    assert.ok(prompt.detail.includes(options.archiveSha256));
-    record.approvals++;
-    return { response: 1, checkboxChecked: false };
+  dialog.showMessageBox = async (owner, prompt = owner) => {
+    const result = answerDialog(
+      prompt,
+      options.manualInstall,
+      options.archiveSha256,
+    );
+    if (result.kind === "install") record.approvals++;
+    else record.quitApprovals++;
+    return { response: result.response, checkboxChecked: false };
   };
   const menu = (label) => {
     const find = (items) => {
@@ -286,4 +308,9 @@ function arm(options) {
     ptys: record.ptys.length,
   };
 }
-module.exports = { arm, observeYamlWrites, current: () => active };
+module.exports = {
+  arm,
+  answerDialog,
+  observeYamlWrites,
+  current: () => active,
+};
