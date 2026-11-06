@@ -35,3 +35,9 @@ The only external resource exception is `resources/bundled-snippets/snippets-0.1
 One bounded pre-change Ubuntu26.04.1 ARM64 / Electron43.8.1 **source** diagnostic on `8169c2c` observed absent default roots before and after full product-module evaluation, then `Crashpad` before product readiness writes, with exact later-userData matching. It supports the simpler existing-main seam, not a different import graph or any packaged/other-platform promise. That disposable scope was exported/retired; it is not a replacement for earlier failed Ubuntu gates or A's separate panel-focus qualification.
 
 Local Node/filesystem regressions exercise actual public archive extraction, actual registry/generation admission, one-time/concurrent/failed claims, disable/tombstone/uninstall/collection/restart and narrow resource filters. Their deterministic lease adapter does **not** qualify kernel locks. Before target delivery, separately verify the changed startup graph and exact package: truly absent ordinary roots, **no user-data-dir override**, packaged identity/name/path, successful generation1 enabled+dormant publication, no backend/view/network/YAML, ordinary Quit/PTY/process/input settlement, restart, existing-profile preservation and deliberate disable/uninstall. Platform-native store locks, packaging/installer/deployment-floor and ordinary Snippets input/rendering qualification retain their own gates. Source delivery alone is not release or #741 closure.
+
+The separate opt-in [Linux ARM64 ordinary-profile consumer](../test/fixtures/snippets-ordinary.md)
+checks an exact supplied package with cold-start observation, no user-data-dir
+override, genuinely absent ordinary roots, distinct existing-profile controls,
+normal Quit/restart and disable/uninstall persistence. Its test-only source is
+not an outcome or a replacement for exact-package/shared-service verification.
