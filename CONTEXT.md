@@ -391,7 +391,7 @@ clipboard, configuration and environment contents, commands and titles.
 
 **Files Development Preview** — Separately installed, precompiled Linux and macOS ARM64
 extension consumed through Settings captured-byte trust and shared namespaced
-actions. Published Files0.4.0 browses expandable local folders with contextual and
+actions. It browses expandable local folders with contextual and
 keyboard-accessible actions, captured operation targets and automatic refresh
 after successful mutations; manual refresh handles external changes without
 watchers. Current source additionally offers a view-local checked Actions item
@@ -405,10 +405,11 @@ Move to folder action. Their fixed source and folder are rechecked before a
 no-replace move; external drags, same-directory, self/descendant and final
 symlink destinations are refused. Cross-volume moves do not copy/delete and
 symlink sources move as links. Files-to-terminal drag remains separate. These
-source UI changes are included in the Files0.7 source/archive preparation and
-its bounded [Linux exact-package checkpoint](docs/files-development-preview.md#files07-linux-packaged-checkpoint).
-Public delivery, macOS and broader qualification remain pending; published
-Files0.6 is unchanged. Hide/reveal retains the dotfile choice;
+source UI changes are included in the published Files0.7 Linux ARM64 link-first
+preview with host dev.19. Its bounded [actual public Settings-link checkpoint](docs/files-development-preview.md#files07-linux-public-link-checkpoint)
+passed using fresh anonymous downloads. Published Files0.6 and both official
+catalog offers are unchanged; macOS Files0.7 and broader qualification remain
+unestablished. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal
@@ -421,9 +422,12 @@ Current Files source labels the action as the last reported path and explains th
 limits in an inline hint, tooltip and accessible description. There is no automatic follow or
 retargeting of started operations. Compatible installed archives use this host
 behavior without modification; the renamed action, inline hint, tooltip and
-relocalizable host-coded notices are included in the Files0.7 source/archive
-preparation and the bounded Linux packaged checkpoint, not published Files0.6.
-Public delivery, macOS and broader qualification remain pending.
+relocalizable host-coded notices are included in the Files0.7 preview and its
+separate Linux packaged/public-link checkpoints, not published
+Files0.6. The host/archive build and public release tags bind source
+`0cb89accd61f1f5d5263c60773454882793e2e99`; public qualification used test/docs
+source `ed84ce729e03656018eb2e1b971dd8f458123df3`. macOS Files0.7 and broader
+qualification remain unestablished.
 Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.

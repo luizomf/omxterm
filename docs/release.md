@@ -230,7 +230,9 @@ directory-move improvements, not new terminal insertion/drop support. Older host
 are unqualified for this combined source. No host version bump, catalog promotion
 or publication follows from building the separate archive. Published Files `0.6.0`
 retains minimum host `0.24.0-dev.21`, its original bytes and catalog entries;
-new 0.7 qualification and publication remain separate. The original Files `0.4.0` archive
+Files0.7's separate Linux package/public-link checkpoints and publication have
+passed as recorded below; macOS and broader qualification are not implied.
+The original Files `0.4.0` archive
 (minimum host `0.24.0-dev.8`) is published separately as `ext-files-v0.4.0`
 (see below). The historical published Files
 `0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; none of these
@@ -264,33 +266,43 @@ add it. Public readback/checksums and a compatible public host are needed before
 claiming distribution; neither a branch, local artifact nor CI upload is shipment.
 The normal stable-release procedure and its complete asset set remain unchanged.
 
-## Files0.7 Linux link-first preview preparation
+<a id="files07-linux-link-first-preview-preparation"></a>
 
-The dev.19/Files0.7 [local exact-package checkpoint](files-development-preview.md#files07-linux-packaged-checkpoint)
-and separate FULL AppImage verification passed; this is not publication or public
-consumption. The [prepared public-link fixture](files-development-preview.md#files07-linux-public-link-consumer-preparation)
-reuses the qualified pair and bounded Linux operations, with the existing Settings
-HTTPS-link acquisition mechanism. Its new transport scope needs independent review
-before the actual checkpoint. No new application build/version/archive or catalog
-promotion is selected.
+## Files0.7 Linux link-first distribution
 
-After review, maintainers may publish separate immutable non-Latest prereleases
-for the qualified dev.19 host and Files0.7 archive, preserving original filenames,
-checksums and the fresh original build receipt. Bind tags/notes to actual build
-source `0cb89accd61f1f5d5263c60773454882793e2e99`; compare later test/docs-only
-inputs rather than relabeling binaries. Check proposed tags/releases first;
-never replace published bytes or mutate an immutable release. Files must be
-publicly available and anonymously byte-verified before advertising the pair.
-Keep stable Files0.6 catalogs and stable Latest unchanged.
+On 2026-11-06, the qualified dev.19 host and Files0.7 archive were published as
+separate immutable, non-Latest Linux ARM64 prereleases:
+[host `v0.25.0-dev.19`](https://github.com/luizomf/omxterm/releases/tag/v0.25.0-dev.19)
+and [Files `ext-files-v0.7.0`](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.7.0).
+Both tags identify actual build source `0cb89accd61f1f5d5263c60773454882793e2e99`.
+All seven original assets matched draft and anonymous public size/SHA-256
+readback; Files publication/readback preceded the host. Stable0.24.0 remains
+Latest, both Files0.6 catalogs remain unchanged, and original archive receipts
+retain their build-time `not-run` field.
 
-Record draft/public size/SHA-256 readback for both exact artifacts and sidecars.
-Then run the assigned public-link fixture using anonymous downloads, the immutable
-`ext-files-v0.7.0/files-0.7.0.omxext` URL and fresh per-run evidence. Assert actual
-Settings-link install/reinstall, exact captured-byte consent/dormancy, bounded
-operations/management, retained terminal, active-backend joined Quit, inspected
-captures and Linux service preservation. No controlled transport or local archive
-substitution is allowed. Do not infer this result from upload, local qualification
-or headless tests. No public run is recorded by this preparation.
+The separately reviewed [actual public Settings-link checkpoint](files-development-preview.md#files07-linux-public-link-checkpoint)
+then passed seven bounded scenario groups using fresh anonymous downloads and
+qualification fixture `ed84ce729e03656018eb2e1b971dd8f458123df3`, not the
+build/tag commit. Later test/docs-only source does not rebuild or relabel the
+published pair. Three exact captured-byte consents and dormant installs,
+filtering/keyboard, confirmed directory conflict/move, management/reinstall,
+the retained terminal and active-backend normal Quit passed. All three backend
+exit/close outcomes and shell/main settlement joined. Actual Files/terminal
+captures were inspected and Linux shared-service preservation was verified again
+after owned-scratch cleanup. No controlled transport, fixture CA or local
+archive substitution supplied the application.
+
+The prior [local checkpoint](files-development-preview.md#files07-linux-packaged-checkpoint)
+and unchanged FULL AppImage verification retain their separate scopes; no
+primitive/platform matrix or host/archive build was repeated for public
+consumption. Synthetic input/consent, extracted-AppImage/WebContents capture and
+native diagnostic limits remain explicit in the preview guide. This is not
+macOS/Windows/x64 Files0.7 or a stable SDK/all-platform release claim.
+
+The linked fixture instructions remain available for an explicitly assigned
+future check, including verified downloads followed by `chmod u+x` before direct
+extraction. Do not recreate sealed releases, modify their assets/receipts, promote
+catalogs or infer new consumption results from this completed checkpoint.
 
 ## Files macOS link-first preview preparation
 
