@@ -5,11 +5,21 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { build } from "esbuild";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
-// Execute the real fixture main and registered parent test. Only Electron's
-// renderer/capture boundary and child execution/I/O are simulated: no GUI.
+// Execute the real fixture main and registered parent test. Electron's
+// executable path, renderer/capture boundary and child execution/I/O are
+// simulated: no runtime provisioning or GUI.
 const require = createRequire(import.meta.url);
+const controlledExecutable = "controlled-electron-executable";
 const parentFile = path.resolve(
   "test/integration/restty-font-styles-rendering.test.ts",
 );
@@ -107,10 +117,11 @@ async function runScenario(scenario: Scenario) {
       ),
   };
   const executeChild = async (
-    _executable: string,
+    executable: string,
     args: string[],
     options: { env: Record<string, string | undefined> },
   ) => {
+    expect(executable).toBe(controlledExecutable);
     const profile = args[1]!;
     const mode = args[2]!;
     const renderer = await fs.readFile(
@@ -288,6 +299,15 @@ async function runScenario(scenario: Scenario) {
         expect,
       };
     if (id === "node:child_process") return { execFile };
+    // The parent's top-level executable lookup uses its own createRequire,
+    // so intercept that factory before evaluating the real parent bundle.
+    if (id === "node:module")
+      return {
+        createRequire: () => (dependency: string) => {
+          expect(dependency).toBe("electron");
+          return controlledExecutable;
+        },
+      };
     if (id === "node:fs/promises" && scenario.observationWriteFails)
       return {
         ...fs,
@@ -346,182 +366,238 @@ async function runScenario(scenario: Scenario) {
   return { reports, diagnostics, exits, destroyed, encodings, error, jsonPath };
 }
 
-describe("font report to parent failure priority", () => {
-  it.each([false, true])(
-    "preserves renderer failure and Observation when retention fails=%s",
-    async (retentionFails) => {
+describe.each(["cold", "warm"] as const)(
+  "font report to parent failure priority (%s Electron runtime)",
+  (runtime) => {
+    // Model the pinned Node loader's filesystem inputs, never a real runtime.
+    // If parent evaluation escapes the executable seam, block its installer.
+    const index = require.resolve("electron");
+    const marker = path.join(path.dirname(index), "path.txt");
+    const executable = path.join(
+      path.dirname(index),
+      "dist",
+      "controlled-electron",
+    );
+    const syncFs = require("node:fs") as typeof import("node:fs");
+    const childProcess =
+      require("node:child_process") as typeof import("node:child_process");
+    beforeEach(() => {
+      expect(require.cache[index]).toBeUndefined();
+      vi.stubEnv("ELECTRON_OVERRIDE_DIST_PATH", undefined);
+      const exists = syncFs.existsSync;
+      const read = syncFs.readFileSync;
+      vi.spyOn(syncFs, "existsSync").mockImplementation((file) =>
+        file === marker || file === executable
+          ? runtime === "warm"
+          : exists(file),
+      );
+      vi.spyOn(syncFs, "readFileSync").mockImplementation(
+        (file, ...options) => {
+          if (file !== marker) return read(file, ...options);
+          if (runtime === "cold")
+            throw new Error("Controlled runtime marker is absent");
+          return "controlled-electron";
+        },
+      );
+      vi.spyOn(childProcess, "spawnSync").mockImplementation(() => {
+        throw new Error("Unexpected Electron installer request");
+      });
+    });
+    afterEach(() => {
+      const installerRequests = vi.mocked(childProcess.spawnSync).mock.calls
+        .length;
+      const electronLoaded = !!require.cache[index];
+      delete require.cache[index];
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+      expect(installerRequests).toBe(0);
+      expect(electronLoaded).toBe(false);
+    });
+    it.each([false, true])(
+      "preserves renderer failure and Observation when retention fails=%s",
+      async (retentionFails) => {
+        const outcome = await runScenario({
+          primary: "renderer-error",
+          retentionFails,
+        });
+        expect(outcome.error).toBeInstanceOf(Error);
+        expect((outcome.error as Error).message).toContain(
+          "Synthetic original renderer failure",
+        );
+        expect(outcome.reports[0]!.result.error).toBe(
+          "Synthetic original renderer failure",
+        );
+        expect(outcome.reports[0]!.phases).toHaveLength(13);
+        expect(outcome.reports[0]!.retention?.status).toBe(
+          retentionFails ? "failed" : "written",
+        );
+        const saved = JSON.parse(
+          await fs.readFile(outcome.jsonPath, "utf8"),
+        ) as {
+          regular: Report;
+        };
+        expect(saved.regular).toEqual(outcome.reports[0]);
+        expect(outcome.exits).toEqual([0]);
+        expect(outcome.destroyed).toBe(1);
+      },
+      20_000,
+    );
+
+    it.each([false, true])(
+      "checks retention after successful original assertions when retention fails=%s",
+      async (retentionFails) => {
+        const outcome = await runScenario({
+          primary: "success",
+          retentionFails,
+        });
+        if (retentionFails) {
+          expect(outcome.error).toBeInstanceOf(Error);
+          expect((outcome.error as Error).message).toContain(
+            "Font style evidence retention failed",
+          );
+          expect((outcome.error as Error).message).toContain("EACCES");
+          expect(outcome.reports[0]!.retention?.error).toMatchObject({
+            operation: "write-image",
+            code: "EACCES",
+            phase: "blank",
+          });
+        } else expect(outcome.error).toBeUndefined();
+        expect(outcome.reports).toHaveLength(5);
+        expect(outcome.exits).toEqual([0, 0, 0, 0, 0]);
+        expect(outcome.destroyed).toBe(5);
+        const saved = JSON.parse(
+          await fs.readFile(outcome.jsonPath, "utf8"),
+        ) as {
+          regular: Report;
+          priorRegular: Report;
+        };
+        expect(saved.regular).toEqual(outcome.reports[0]);
+        expect(saved.priorRegular).toEqual(outcome.reports[4]);
+        expect(JSON.stringify(outcome.reports[0]!.retention)).not.toContain(
+          "/private/",
+        );
+        expect(outcome.diagnostics.join("\n")).not.toContain("raw payload");
+      },
+      20_000,
+    );
+
+    it("preserves prior-regular renderer failure and all available observations on retention failure", async () => {
       const outcome = await runScenario({
         primary: "renderer-error",
-        retentionFails,
+        retentionFails: true,
+        faultVariant: "prior-regular",
       });
-      expect(outcome.error).toBeInstanceOf(Error);
       expect((outcome.error as Error).message).toContain(
         "Synthetic original renderer failure",
       );
-      expect(outcome.reports[0]!.result.error).toBe(
-        "Synthetic original renderer failure",
-      );
-      expect(outcome.reports[0]!.phases).toHaveLength(13);
-      expect(outcome.reports[0]!.retention?.status).toBe(
-        retentionFails ? "failed" : "written",
-      );
-      const saved = JSON.parse(await fs.readFile(outcome.jsonPath, "utf8")) as {
-        regular: Report;
-      };
-      expect(saved.regular).toEqual(outcome.reports[0]);
-      expect(outcome.exits).toEqual([0]);
-      expect(outcome.destroyed).toBe(1);
-    },
-    20_000,
-  );
-
-  it.each([false, true])(
-    "checks retention after successful original assertions when retention fails=%s",
-    async (retentionFails) => {
-      const outcome = await runScenario({ primary: "success", retentionFails });
-      if (retentionFails) {
-        expect(outcome.error).toBeInstanceOf(Error);
-        expect((outcome.error as Error).message).toContain(
-          "Font style evidence retention failed",
-        );
-        expect((outcome.error as Error).message).toContain("EACCES");
-        expect(outcome.reports[0]!.retention?.error).toMatchObject({
-          operation: "write-image",
-          code: "EACCES",
-          phase: "blank",
-        });
-      } else expect(outcome.error).toBeUndefined();
       expect(outcome.reports).toHaveLength(5);
+      const saved = JSON.parse(
+        await fs.readFile(outcome.jsonPath, "utf8"),
+      ) as Record<string, Report>;
+      expect(saved.regular).toEqual(outcome.reports[0]);
+      expect(saved.priorRegular).toEqual(outcome.reports[4]);
+      expect(saved.priorRegular!.retention?.status).toBe("failed");
       expect(outcome.exits).toEqual([0, 0, 0, 0, 0]);
       expect(outcome.destroyed).toBe(5);
+    }, 20_000);
+
+    it("keeps the original pixel assertion ahead of a simultaneous retention failure", async () => {
+      const outcome = await runScenario({
+        primary: "pixel-failure",
+        retentionFails: true,
+      });
+      expect((outcome.error as Error).message).toContain(
+        "expected 5 to be greater than 10",
+      );
       const saved = JSON.parse(await fs.readFile(outcome.jsonPath, "utf8")) as {
         regular: Report;
         priorRegular: Report;
       };
+      expect(saved.regular.retention?.status).toBe("failed");
+      expect(
+        saved.regular.phases.find((phase) => phase.name === "strokeBold")!.ink!
+          .centerColumnInk,
+      ).toBe(5);
+      expect(
+        saved.priorRegular.phases.find((phase) => phase.name === "strokeBold")!
+          .ink!.centerColumnInk,
+      ).toBe(10);
+      expect(outcome.exits).toEqual([0, 0, 0, 0, 0]);
+    }, 20_000);
+
+    it("reports encoding failure without leaking its message or passing the test", async () => {
+      const outcome = await runScenario({
+        primary: "success",
+        retentionFails: false,
+        encodingFails: true,
+      });
+      expect((outcome.error as Error).message).toContain(
+        "Font style evidence retention failed",
+      );
+      expect(outcome.reports[0]!.retention?.error).toEqual({
+        operation: "encode-image",
+        code: "UNKNOWN",
+        phase: "blank",
+      });
+      const saved = JSON.parse(await fs.readFile(outcome.jsonPath, "utf8")) as {
+        regular: Report;
+      };
       expect(saved.regular).toEqual(outcome.reports[0]);
-      expect(saved.priorRegular).toEqual(outcome.reports[4]);
-      expect(JSON.stringify(outcome.reports[0]!.retention)).not.toContain(
+      expect(JSON.stringify(saved.regular.retention)).not.toContain(
         "/private/",
       );
       expect(outcome.diagnostics.join("\n")).not.toContain("raw payload");
-    },
-    20_000,
-  );
+    }, 20_000);
 
-  it("preserves prior-regular renderer failure and all available observations on retention failure", async () => {
-    const outcome = await runScenario({
-      primary: "renderer-error",
-      retentionFails: true,
-      faultVariant: "prior-regular",
-    });
-    expect((outcome.error as Error).message).toContain(
-      "Synthetic original renderer failure",
+    it.each(["success", "renderer-error", "pixel-failure"] as const)(
+      "keeps primary=%s priority when writing the Observation JSON fails",
+      async (primary) => {
+        const outcome = await runScenario({
+          primary,
+          retentionFails: false,
+          observationWriteFails: true,
+        });
+        const message = (outcome.error as Error).message;
+        if (primary === "success") {
+          expect(message).toContain("Font style evidence retention failed");
+          expect(message).toContain("write-observations");
+        } else if (primary === "renderer-error")
+          expect(message).toContain("Synthetic original renderer failure");
+        else expect(message).toContain("expected 5 to be greater than 10");
+        expect(outcome.reports[0]!.retention?.status).toBe("written");
+        expect(outcome.reports[0]!.phases).toHaveLength(13);
+        expect(await fs.readFile(outcome.jsonPath, "utf8")).toBe("");
+        const entries = await fs.readdir(root);
+        const captureRoot = path.join(
+          root,
+          entries.find((name) => name.startsWith("font-style-captures-"))!,
+        );
+        expect(
+          await fs.readdir(path.join(captureRoot, "current-regular")),
+        ).toContain("manifest.json");
+        expect(outcome.diagnostics.join("\n")).toContain("EIO");
+        expect(outcome.diagnostics.join("\n")).not.toContain("/private/");
+        expect(outcome.diagnostics.join("\n")).not.toContain("raw payload");
+        expect(outcome.exits.every((code) => code === 0)).toBe(true);
+        expect(outcome.destroyed).toBe(outcome.reports.length);
+      },
+      20_000,
     );
-    expect(outcome.reports).toHaveLength(5);
-    const saved = JSON.parse(
-      await fs.readFile(outcome.jsonPath, "utf8"),
-    ) as Record<string, Report>;
-    expect(saved.regular).toEqual(outcome.reports[0]);
-    expect(saved.priorRegular).toEqual(outcome.reports[4]);
-    expect(saved.priorRegular!.retention?.status).toBe("failed");
-    expect(outcome.exits).toEqual([0, 0, 0, 0, 0]);
-    expect(outcome.destroyed).toBe(5);
-  }, 20_000);
 
-  it("keeps the original pixel assertion ahead of a simultaneous retention failure", async () => {
-    const outcome = await runScenario({
-      primary: "pixel-failure",
-      retentionFails: true,
-    });
-    expect((outcome.error as Error).message).toContain(
-      "expected 5 to be greater than 10",
-    );
-    const saved = JSON.parse(await fs.readFile(outcome.jsonPath, "utf8")) as {
-      regular: Report;
-      priorRegular: Report;
-    };
-    expect(saved.regular.retention?.status).toBe("failed");
-    expect(
-      saved.regular.phases.find((phase) => phase.name === "strokeBold")!.ink!
-        .centerColumnInk,
-    ).toBe(5);
-    expect(
-      saved.priorRegular.phases.find((phase) => phase.name === "strokeBold")!
-        .ink!.centerColumnInk,
-    ).toBe(10);
-    expect(outcome.exits).toEqual([0, 0, 0, 0, 0]);
-  }, 20_000);
-
-  it("reports encoding failure without leaking its message or passing the test", async () => {
-    const outcome = await runScenario({
-      primary: "success",
-      retentionFails: false,
-      encodingFails: true,
-    });
-    expect((outcome.error as Error).message).toContain(
-      "Font style evidence retention failed",
-    );
-    expect(outcome.reports[0]!.retention?.error).toEqual({
-      operation: "encode-image",
-      code: "UNKNOWN",
-      phase: "blank",
-    });
-    const saved = JSON.parse(await fs.readFile(outcome.jsonPath, "utf8")) as {
-      regular: Report;
-    };
-    expect(saved.regular).toEqual(outcome.reports[0]);
-    expect(JSON.stringify(saved.regular.retention)).not.toContain("/private/");
-    expect(outcome.diagnostics.join("\n")).not.toContain("raw payload");
-  }, 20_000);
-
-  it.each(["success", "renderer-error", "pixel-failure"] as const)(
-    "keeps primary=%s priority when writing the Observation JSON fails",
-    async (primary) => {
+    it("leaves disabled/default reports and encoding behavior unchanged", async () => {
       const outcome = await runScenario({
-        primary,
-        retentionFails: false,
-        observationWriteFails: true,
+        primary: "success",
+        retentionFails: true,
+        enabled: false,
       });
-      const message = (outcome.error as Error).message;
-      if (primary === "success") {
-        expect(message).toContain("Font style evidence retention failed");
-        expect(message).toContain("write-observations");
-      } else if (primary === "renderer-error")
-        expect(message).toContain("Synthetic original renderer failure");
-      else expect(message).toContain("expected 5 to be greater than 10");
-      expect(outcome.reports[0]!.retention?.status).toBe("written");
-      expect(outcome.reports[0]!.phases).toHaveLength(13);
-      expect(await fs.readFile(outcome.jsonPath, "utf8")).toBe("");
-      const entries = await fs.readdir(root);
-      const captureRoot = path.join(
-        root,
-        entries.find((name) => name.startsWith("font-style-captures-"))!,
+      expect(outcome.error).toBeUndefined();
+      expect(outcome.reports).toHaveLength(5);
+      expect(outcome.reports.every((report) => !("retention" in report))).toBe(
+        true,
       );
-      expect(
-        await fs.readdir(path.join(captureRoot, "current-regular")),
-      ).toContain("manifest.json");
-      expect(outcome.diagnostics.join("\n")).toContain("EIO");
-      expect(outcome.diagnostics.join("\n")).not.toContain("/private/");
-      expect(outcome.diagnostics.join("\n")).not.toContain("raw payload");
-      expect(outcome.exits.every((code) => code === 0)).toBe(true);
-      expect(outcome.destroyed).toBe(outcome.reports.length);
-    },
-    20_000,
-  );
-
-  it("leaves disabled/default reports and encoding behavior unchanged", async () => {
-    const outcome = await runScenario({
-      primary: "success",
-      retentionFails: true,
-      enabled: false,
-    });
-    expect(outcome.error).toBeUndefined();
-    expect(outcome.reports).toHaveLength(5);
-    expect(outcome.reports.every((report) => !("retention" in report))).toBe(
-      true,
-    );
-    expect(outcome.encodings).toBe(0);
-    expect(outcome.diagnostics).toEqual([]);
-    expect(await fs.readdir(root)).toEqual([]);
-  }, 20_000);
-});
+      expect(outcome.encodings).toBe(0);
+      expect(outcome.diagnostics).toEqual([]);
+      expect(await fs.readdir(root)).toEqual([]);
+    }, 20_000);
+  },
+);
