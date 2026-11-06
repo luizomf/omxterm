@@ -317,8 +317,14 @@ it.skipIf(!values)(
           await call(`management(${JSON.stringify(action)})`);
           await waitRegistry(action === "Disable" ? 2 : 3, false);
         } else await call("management()");
+        const capturedGeneration =
+          action === "Disable" || action === "install-disable"
+            ? 2
+            : action === "Uninstall"
+              ? 3
+              : generation;
         await call(
-          `capture(${JSON.stringify(path.join(directory, "management.png"))})`,
+          `captureManagement(${JSON.stringify(path.join(directory, "management.png"))}, ${capturedGeneration}, ${action ? false : enabled})`,
         );
         const final = (await call("snapshot()")) as Snapshot;
         assertDormant(final);

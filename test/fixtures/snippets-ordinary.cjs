@@ -63,6 +63,25 @@ function observeYamlWrites(fs, record) {
   return () => restore.reverse().forEach((f) => f());
 }
 
+function managementReady(document, generation, enabled) {
+  if (
+    document
+      .querySelector("#settings-tab-extensions")
+      ?.getAttribute("aria-selected") !== "true"
+  )
+    return false;
+  const state =
+    generation === 3 ? "uninstalled" : enabled ? "enabled" : "disabled";
+  const prefix = `omxterm.snippets · generation ${generation} · ${state} ·`;
+  const row = [...document.querySelectorAll(".extensions-panel section")].find(
+    (row) =>
+      [...row.querySelectorAll("p")].some((p) =>
+        p.textContent.startsWith(prefix),
+      ),
+  );
+  return !!row && ![...row.querySelectorAll("button")].some((b) => b.disabled);
+}
+
 function answerDialog(prompt, manualInstall, digest) {
   if (prompt.title === "Quit OMXTerm") {
     assert.equal(prompt.type, "question");
@@ -276,6 +295,17 @@ function arm(options) {
     async capture(file) {
       fs.writeFileSync(file, (await core().capturePage()).toPNG());
     },
+    async captureManagement(file, generation, enabled) {
+      const expression = `(${managementReady.toString()})(document, ${generation}, ${enabled})`;
+      await waitFor(() => core().executeJavaScript(expression));
+      await core().executeJavaScript(`(() => {
+        const row = [...document.querySelectorAll('.extensions-panel section')].find(row => [...row.querySelectorAll('p')].some(p => p.textContent.startsWith('omxterm.snippets · generation ')));
+        row.scrollIntoView({block: 'center'});
+        return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      })()`);
+      await active.capture(file);
+      assert.equal(await core().executeJavaScript(expression), true);
+    },
     quit() {
       app.once("will-quit", () => {
         fs.writeFileSync(
@@ -310,6 +340,7 @@ function arm(options) {
 }
 module.exports = {
   arm,
+  managementReady,
   answerDialog,
   observeYamlWrites,
   current: () => active,

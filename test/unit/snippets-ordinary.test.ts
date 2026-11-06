@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import {
   constants,
   mkdtempSync,
@@ -21,6 +22,11 @@ import {
 
 const require = createRequire(import.meta.url);
 const observer = require("../fixtures/snippets-ordinary.cjs") as {
+  managementReady(
+    document: Document,
+    generation: number,
+    enabled: boolean,
+  ): boolean;
   answerDialog(
     prompt: unknown,
     manualInstall: boolean,
@@ -168,6 +174,21 @@ it("forwards Node filesystem calls, catches YAML mutations and restores methods"
   expect(fs.open).toBe(open);
   expect(fs.rename).toBe(rename);
   expect(fs.promises.writeFile).toBe(writeFile);
+});
+it("requires selected Extensions and the actual committed Snippets generation before capture", () => {
+  document.body.innerHTML = `<button id="settings-tab-extensions" aria-selected="true"></button><div class="extensions-panel"><section><p>omxterm.snippets · generation 3 · uninstalled · local inactive</p></section></div>`;
+  const doc = document;
+  expect(observer.managementReady(doc, 3, false)).toBe(true);
+  expect(observer.managementReady(doc, 2, false)).toBe(false);
+  doc.querySelector("p")!.textContent =
+    "omxterm.files · generation 3 · uninstalled · local inactive";
+  expect(observer.managementReady(doc, 3, false)).toBe(false);
+  doc.querySelector("p")!.textContent =
+    "omxterm.snippets · generation 1 · enabled · local inactive";
+  expect(observer.managementReady(doc, 1, true)).toBe(true);
+  doc.querySelector("button")!.setAttribute("aria-selected", "false");
+  expect(observer.managementReady(doc, 1, true)).toBe(false);
+  document.body.replaceChildren();
 });
 it("answers actual normal-Quit consent separately from local archive trust", () => {
   const quit = {

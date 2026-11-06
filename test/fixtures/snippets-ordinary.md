@@ -83,12 +83,21 @@ WebContents images, not physical keyboard or OS-compositor proof. No old Insert 
 Run/IME, Files handoff, catalog/network acquisition or public distribution campaign
 is replayed.
 
+Ordinary startup retains the product's generated config/theme bytes; the existing
+history adds only its synthetic YAML after the empty-root checkpoint. No startup
+config is prewritten to disable close confirmation. Normal **Quit OMXTerm** consent
+is answered separately from archive trust after checking its real question,
+buttons and cancel/default IDs. Each phase requires one such controlled consent;
+this is synthetic native-dialog acceptance, not physical-button input.
+
 Normal Quit must produce PTY actual-exit and child exit/close evidence before
 `will-quit`, followed by native main exit0, stream closure and the existing Linux
 process owner's unassisted settlement. Forced TERM/KILL is failure recovery only.
 Each phase retains pause, initial/final snapshot, registry, NetLog, synthetic
-terminal/management PNGs, Quit and result receipts. AppImage and ASAR hashes are
-rechecked. The fixture does not provision or verify shared-service isolation:
+terminal/management PNGs, Quit and result receipts. Management capture waits for
+the selected Extensions tab and exact Snippets generation/state, scrolls that
+card into view and crosses two renderer frames before capture; a registry update
+alone is not visual-state evidence. AppImage and ASAR hashes are rechecked. The fixture does not provision or verify shared-service isolation:
 its owner must compare original portal/bus/mount/FUSE/consumer preservation after
 settlement **and again after owned cleanup**, independently of its assertions.
 
