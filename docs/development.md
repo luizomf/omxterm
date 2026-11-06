@@ -252,6 +252,20 @@ In pinned Vitest 4.1.12:
 
 Do not infer full-suite execution coverage from aggregate counters or empty passed entries.
 
+Theme discovery's count/scan limits use controlled filesystem streams in
+`test/unit/settings-theme-limits.test.ts`: exact/full and overflowing inputs
+assert truncation, bounded iteration/reads and handle settlement without creating
+thousands of files. `test/unit/settings-themes.test.ts` retains real filesystem,
+link, validation and serialized Settings-service coverage. These are work bounds,
+not a native filesystem throughput benchmark; the redesign does not establish the
+cause of historical Windows fixture timeouts or `ENOTEMPTY` teardown failures.
+
+The ASAR cancellation unit sets glob's `cwd` to its input directory so the injected
+filesystem remains on that Windows drive when the checkout and `TEMP` differ.
+It requires hook entry, abort, the exact rejection, pending-read settlement,
+no extra crawl and no archive; operation settlement before hook entry fails
+explicitly rather than leaving an unjoined rejection assertion.
+
 ## Running native tests
 
 > **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. Follow the Linux desktop-service or macOS preference precautions below before launch.

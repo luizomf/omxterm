@@ -51,9 +51,12 @@ const observer = require("../fixtures/snippets-ordinary.cjs") as {
 };
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const arch = Object.getOwnPropertyDescriptor(process, "arch")!;
+const getuid = Object.getOwnPropertyDescriptor(process, "getuid");
 afterEach(() => {
   Object.defineProperty(process, "platform", platform);
   Object.defineProperty(process, "arch", arch);
+  if (getuid) Object.defineProperty(process, "getuid", getuid);
+  else Reflect.deleteProperty(process, "getuid");
   vi.restoreAllMocks();
   syncBuiltinESMExports();
 });
@@ -61,38 +64,49 @@ it("opts out without configuration and rejects partial or substituted ordinary i
   expect(ordinaryInputs({})).toBeUndefined();
   Object.defineProperty(process, "platform", { value: "linux" });
   Object.defineProperty(process, "arch", { value: "arm64" });
-  vi.spyOn(process, "getuid").mockReturnValue(1000);
+  Object.defineProperty(process, "getuid", {
+    configurable: true,
+    value: () => 1000,
+  });
+  // Platform mocking does not change node:path's native path implementation.
+  const home = path.resolve("synthetic-ordinary-home");
   const env = {
-    HOME: "/home/test",
-    OMXTERM_SNIPPETS_ORDINARY_APPIMAGE: "/tmp/host.AppImage",
+    HOME: home,
+    OMXTERM_SNIPPETS_ORDINARY_APPIMAGE: path.resolve("host.AppImage"),
     OMXTERM_SNIPPETS_ORDINARY_SHA256: "a".repeat(64),
-    OMXTERM_SNIPPETS_ORDINARY_EVIDENCE: "/tmp/evidence",
+    OMXTERM_SNIPPETS_ORDINARY_EVIDENCE: path.resolve("ordinary-evidence"),
   };
-  expect(ordinaryInputs(env, "/home/test")?.profile).toBe(
-    "/home/test/.config/omxterm",
+  expect(ordinaryInputs(env, home)?.profile).toBe(
+    path.join(home, ".config", "omxterm"),
   );
   expect(() =>
-    ordinaryInputs({ ...env, HOME: "/temporary/home" }, "/home/test"),
+    ordinaryInputs({ ...env, HOME: path.join(home, "temporary") }, home),
   ).toThrow();
   expect(() =>
-    ordinaryInputs({ ...env, NODE_OPTIONS: "--require=x" }, "/home/test"),
+    ordinaryInputs({ ...env, NODE_OPTIONS: "--require=x" }, home),
   ).toThrow();
   expect(() =>
     ordinaryInputs(
       { ...env, OMXTERM_SNIPPETS_ORDINARY_SHA256: undefined },
-      "/home/test",
+      home,
     ),
   ).toThrow();
   expect(() =>
     ordinaryInputs(
       {
         ...env,
-        OMXTERM_SNIPPETS_ORDINARY_EVIDENCE:
-          "/home/test/.config/omxterm/evidence",
+        OMXTERM_SNIPPETS_ORDINARY_EVIDENCE: path.join(
+          home,
+          ".config",
+          "omxterm",
+          "evidence",
+        ),
       },
-      "/home/test",
+      home,
     ),
   ).toThrow();
+  Object.defineProperty(process, "getuid", { value: () => 0 });
+  expect(() => ordinaryInputs(env, home)).toThrow();
 });
 it("requires absent roots and unlinked real ancestors; existing empty is not fresh", () => {
   const root = realpathSync(

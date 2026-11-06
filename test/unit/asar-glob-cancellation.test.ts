@@ -29,6 +29,9 @@ it("stops the ASAR fixture crawl after glob cancellation, including pending read
     }
     operation = createPackageWithOptions(input, archive, {
       globOptions: {
+        // Keep path-scurry's injected filesystem on the crawl's Windows drive,
+        // even when TEMP and the checkout are on different drives.
+        cwd: input,
         signal: controller.signal,
         fs: {
           readdir(directory, options, callback) {
@@ -46,11 +49,24 @@ it("stops the ASAR fixture crawl after glob cancellation, including pending read
         },
       },
     });
-    const rejected = expect(operation).rejects.toBe(reason);
-    await started;
+    // Observe rejection immediately, but do not create an unjoined assertion
+    // promise while waiting for a hook that a broken fixture may never reach.
+    const settled = operation.then(
+      () => undefined,
+      (error: unknown) => error,
+    );
+    expect(
+      await Promise.race([
+        started.then(() => "read"),
+        settled.then(() => "settled-before-read"),
+      ]),
+      "ASAR must enter the injected read before settling",
+    ).toBe("read");
     expect(reads).toBe(1);
+    expect(controller.signal.aborted).toBe(true);
+    expect(pending).toHaveLength(1);
     pending.shift()!();
-    await rejected;
+    expect(await settled).toBe(reason);
     const readsAtRejection = reads;
     // Deliver every queued completion, including any incorrectly scheduled work.
     drain();
