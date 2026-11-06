@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import type { SettingsGeometrySize } from "./settings-layout-observation";
 
 export const settingsExactViewports = [
+  [600, 320],
+  [600, 480],
   [640, 480],
   [800, 600],
+  [960, 320],
   [960, 640],
   [1280, 800],
   [1920, 1080],

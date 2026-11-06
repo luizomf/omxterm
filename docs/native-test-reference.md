@@ -480,13 +480,15 @@ matrix/targeting behavior:
 They do not qualify native layout.
 
 The Window Chrome `settings-only` case additionally runs the graphical editor's
-layout matrix: six categories after a native-minimum request and at five exact
-renderer viewports (640×480, 800×600, 960×640, 1280×800 and 1920×1080), en-US/pt-BR,
-representative dark/light palettes and actual panel breakpoint edges. It checks
-clicked/selected/hidden/rendered category agreement,
-readable label width/line geometry, actual form and shortcut placement on both
-sides of their content breakpoints, horizontal containment and reachable focused
-controls. Retained editor identity, palette color-scheme and native minima are
+layout matrix: seven categories after a native-minimum request and at eight exact
+renderer viewports (600×320, 600×480, 640×480, 800×600, 960×320, 960×640,
+1280×800 and 1920×1080), en-US/pt-BR, representative dark/light palettes and
+actual panel breakpoint edges. Synthetic local theme and Extension entries
+exercise the theme grid, catalog/installed cards and nested editor rows without
+network or installation. It checks clicked/selected/hidden/rendered category agreement,
+readable label width/line geometry, theme/card content edges, actual form and
+shortcut placement on both sides of their content breakpoints, horizontal
+containment, and scroll-reachable navigation tabs and focused controls. Retained editor identity, palette color-scheme and native minima are
 also checked. Immediately after the existing focus request, opening Settings
 must preserve native outer bounds and minimum, before any deliberate config save.
 
@@ -496,21 +498,23 @@ Four bounded language/palette records report requested minimum and actual
 outer/content/viewport sizes. Positive finite geometry, outer size at least the
 minimum, and an actual compact viewport (at most 639 px wide / 360 px high and
 smaller on both axes than the original desktop viewport) are required. An
-ignored resize fails. All six categories run at that stable observed viewport;
+ignored resize fails. All seven categories run at that stable observed viewport;
 this does not assert an exact 320×200 viewport or physically smallest OS rectangle.
 
-The five larger exact viewport targets retain the initial request plus at most
+The eight larger exact viewport targets retain the initial request plus at most
 two request-delta corrections on both axes, each followed by the same two-frame
 boundary. Deltas accumulate from the last request, not observed/native size.
 Breakpoint targeting uses the same bounded rule for panel width and exact
 640 px viewport height. Exact first observations stop immediately; unreachable
 exact targets fail without tolerance, minimum/zoom/scale changes or layout
-retries. All 144 matrix cases and four breakpoint targets remain required.
+retries. All 252 matrix cases and four breakpoint targets remain required.
 The fixture finally requests the saved outer bounds once via `setBounds`, in the same domain
 as the entry `getBounds` snapshot. This restoration request is not independent
 proof of physical/native geometry restoration; a primary failure is preserved.
 `OMXTERM_SETTINGS_EVIDENCE_DIR` optionally saves synthetic-only
-PNGs. Before throwing, a failure captures bounded app-only geometry and a frame
+PNGs (including focused compact navigation and a synthetic Config File result)
+and one bounded geometry JSON for representative en-US dark viewports, without
+configuration or terminal content. Before throwing, a failure captures bounded app-only geometry and a frame
 (up to 1920×1080 logical pixels and 32 MiB encoded), without refocusing or
 restoring the renderer first. The runner's per-invocation failure destination is
 outside the removed profile under `.scratch/native-fixtures/`; with an explicit

@@ -104,18 +104,21 @@ for recovery and write limitations.
 Below 640 px, the vertical sidebar remains in place while there is room for
 readable content (480–639 px). Below 480 px, categories form a two-column
 scrollable navigation area with rows tall enough for wrapped labels; there is
-no 40 px height clamp that conceals the last category. Short windows allow
-additional vertical scrolling. No native bound/minimum changes are tied to
+no 40 px height clamp that conceals the last category. At 360 px height and
+below, the navigation keeps a 72 px (or 34vh) minimum scrollport while the page
+can scroll; focused tabs must enter both the navigation and viewport. Short
+windows allow additional vertical scrolling. No native bound/minimum changes are tied to
 Settings selection. Large JSON content scrolls within its editor.
 
 ## Verification
 
 Headless host/Settings tests establish ownership, retained identity and palette
 selection, not visual quality. The real `window-chrome` **settings-only** fixture
-covers six categories after a native-minimum window-size request, then at five
-exact renderer viewports: 640×480, 800×600, 960×640, 1280×800 and 1920×1080.
-Both Interface Languages and representative light/dark palettes retain 144
-matrix cases plus four exact panel-container edges (559/560/759/760 px at viewport
+covers seven categories after a native-minimum window-size request, then at eight
+exact renderer viewports: 600×320, 600×480, 640×480, 800×600, 960×320,
+960×640, 1280×800 and 1920×1080. Both Interface Languages and representative
+light/dark palettes retain 252 matrix cases plus four exact panel-container edges
+(559/560/759/760 px at viewport
 height 640). Opening Settings separately preserves native outer bounds and
 minimum before deliberate configuration edits.
 
@@ -128,7 +131,10 @@ cause is inferred. The fixture finally requests the original outer bounds once,
 without claiming independent physical restoration proof. It checks the clicked category
 against selected/hidden/computed-display state, form and shortcut placement on
 each side of the content breakpoints, and label width/line geometry (not only
-last-control reachability). Optional synthetic-only captures use
+last-control reachability), theme grid/card and Extension card edges, nested
+editor row width, and navigation scroll reachability on focus. The fixture uses
+only synthetic local themes and Extension entries, without catalog network or
+installation. Optional synthetic-only captures use
 `OMXTERM_SETTINGS_EVIDENCE_DIR`. Failures capture a bounded frame and geometry
 before restoring the renderer and requesting the saved outer bounds; the normal
 runner retains them outside its removed profile under `.scratch/native-fixtures/`. Its programmatic focus/input

@@ -61,11 +61,9 @@ body.tabs-visible .settings-tab {
   max-width: 1120px;
   min-width: 0;
 }
-.settings-panel > .settings-row {
-  max-width: 720px;
-}
-.extensions-panel > p,
-.extension-catalog p {
+.extensions-panel p,
+.extensions-panel [role="status"],
+.settings-config-file [role="status"] {
   max-width: 72ch;
 }
 .extension-catalog,
@@ -296,6 +294,7 @@ body.tabs-visible .settings-tab {
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
+  max-width: 720px;
 }
 .settings-row > span {
   overflow-wrap: anywhere;
@@ -433,6 +432,12 @@ body.tabs-visible .settings-tab {
   }
   .settings-shortcut-actions {
     grid-column: auto;
+  }
+}
+@media (max-height: 360px) {
+  /* Reserve a usable navigation scrollport even when the page itself scrolls. */
+  .settings-body .settings-tabs {
+    min-height: min(72px, 34vh);
   }
 }
 @media (max-width: 639px) {

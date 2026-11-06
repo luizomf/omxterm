@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { exerciseSettingsLayout } from "./settings-layout-exercise";
 import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
 import { ipcMain, type BrowserWindow } from "electron";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createSettingsService } from "../../src/main/settings-service";
 import { startSettings } from "../../src/main/settings-wiring";
@@ -16,8 +16,10 @@ import type {
 import {
   extensionsIpc,
   isExtensionsRequest,
+  type ExtensionsRequest,
   type ExtensionsResult,
 } from "../../src/shared/extensions";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   createUserConfigurationReloader,
   type ActiveUserConfiguration,
@@ -86,9 +88,9 @@ export function createSettingsExercise(
     process.platform,
     capture,
   );
-  // This core Settings fixture has no extension store/runtime. Keep the real
-  // preload's Extensions category and an explicit unavailable response, rather
-  // than leaving an unhandled IPC request or claiming extension qualification.
+  // This core Settings fixture has no extension store/runtime. Supply a fixed
+  // local snapshot for rendered card geometry; other operations stay unavailable.
+  // No catalog network or installation is exercised.
   ipcMain.handle(
     extensionsIpc,
     (event, ...args: unknown[]): ExtensionsResult => {
@@ -99,7 +101,41 @@ export function createSettingsExercise(
         throw new Error("Rejected fixture extension management owner");
       if (args.length !== 1 || !isExtensionsRequest(args[0]))
         throw new TypeError("Invalid fixture extension management request");
-      return { ok: false, error: "runtime-unavailable" };
+      if ((args[0] as ExtensionsRequest).operation !== "snapshot")
+        return { ok: false, error: "runtime-unavailable" };
+      return {
+        ok: true,
+        entries: [
+          {
+            id: "synthetic-layout",
+            generation: 1,
+            name: "Synthetic extension for layout checks",
+            version: "0.0.0",
+            installed: true,
+            enabled: false,
+            local: "dormant",
+          },
+        ],
+        catalog: {
+          loaded: true,
+          stale: false,
+          entries: [
+            {
+              selection: "synthetic-only",
+              id: "synthetic-layout",
+              name: "Synthetic catalog entry",
+              description:
+                "Local fixture text for measuring readable Extensions prose without any remote fetch or installation.",
+              version: "0.0.0",
+              installedVersion: "0.0.0",
+              compatible: true,
+              targets: ["linux-arm64"],
+              incompatibility: null,
+              action: "reinstall",
+            },
+          ],
+        },
+      };
     },
   );
   const settings = startSettings({
@@ -116,8 +152,19 @@ export function createSettingsExercise(
   return {
     show: settings.show,
     file,
-    exercise: () =>
-      exerciseSettingsDialog(
+    exercise: async () => {
+      const themes = path.join(root, "settings-xdg", "omxterm", "themes");
+      await mkdir(themes, { recursive: true });
+      for (let index = 1; index <= 5; index++)
+        await writeFile(
+          path.join(themes, `synthetic-${index}.json`),
+          JSON.stringify({
+            version: 1,
+            name: `Synthetic layout ${index}`,
+            colors: DEFAULT_TERMINAL_THEME.colors,
+          }),
+        );
+      return exerciseSettingsDialog(
         getWindow(),
         settings.show,
         () => readFile(file, "utf8"),
@@ -155,7 +202,8 @@ export function createSettingsExercise(
                 ),
               ),
           ),
-      ),
+      );
+    },
     dispose() {
       settings.dispose();
       ipcMain.removeHandler(extensionsIpc);

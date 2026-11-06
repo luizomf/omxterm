@@ -26,6 +26,7 @@ interface Box {
 interface Form {
   readonly display: string;
   readonly direction: string;
+  readonly box: Box;
   readonly label: Box;
   readonly field: Box;
 }
@@ -53,6 +54,17 @@ export interface SettingsLayoutObservation {
     readonly selected: boolean;
   }[];
   readonly contentWidth: number;
+  readonly navigation: { readonly mode: string; readonly reachable: boolean };
+  readonly theme: {
+    readonly grid: Box;
+    readonly cards: readonly Box[];
+  } | null;
+  readonly extensions: {
+    readonly catalog: Box;
+    readonly cards: readonly Box[];
+    readonly installed: Box;
+    readonly installedRows: readonly Box[];
+  } | null;
   readonly forms: readonly Form[];
   readonly labels: readonly Label[];
   readonly shortcuts: readonly Shortcut[];
@@ -74,6 +86,7 @@ export function observeSettingsLayout(
     ".settings-panel:not([hidden])",
   )!;
   const scroll = root.querySelector<HTMLElement>(".settings-panels")!;
+  const nav = root.querySelector<HTMLElement>(".settings-tabs")!;
   const box = (element: Element): Box => {
     const r = element.getBoundingClientRect();
     return {
@@ -85,6 +98,22 @@ export function observeSettingsLayout(
       height: r.height,
     };
   };
+  const navReachable =
+    !focusTarget ||
+    [...nav.querySelectorAll<HTMLElement>("[role=tab]")].every((tab) => {
+      tab.focus();
+      const tabBox = box(tab);
+      const navBox = box(nav);
+      return (
+        document.activeElement === tab &&
+        tabBox.width > 0 &&
+        tabBox.height > 0 &&
+        tabBox.left >= navBox.left - 1 &&
+        tabBox.right <= navBox.right + 1 &&
+        tabBox.top >= Math.max(0, navBox.top) - 1 &&
+        tabBox.bottom <= Math.min(innerHeight, navBox.bottom) + 1
+      );
+    });
   const target = [
     ...panel.querySelectorAll<HTMLElement>(
       "button:not(:disabled), input, select, textarea",
@@ -122,21 +151,51 @@ export function observeSettingsLayout(
       scroll.clientWidth -
       parseFloat(style.paddingLeft) -
       parseFloat(style.paddingRight),
+    navigation: {
+      mode: getComputedStyle(nav).display,
+      reachable: navReachable,
+    },
+    theme:
+      panel.id === "settings-panel-appearance"
+        ? {
+            grid: box(panel.querySelector(".settings-themes-grid")!),
+            cards: [
+              ...panel.querySelectorAll(
+                ".settings-themes-grid .settings-theme-card",
+              ),
+            ].map(box),
+          }
+        : null,
+    extensions:
+      panel.id === "settings-panel-extensions"
+        ? {
+            catalog: box(panel.querySelector(".extension-catalog-list")!),
+            cards: [...panel.querySelectorAll(".extension-catalog-card")].map(
+              box,
+            ),
+            installed: box(panel.querySelector(".extension-installed-list")!),
+            installedRows: [
+              ...panel.querySelectorAll(".extension-installed-list > section"),
+            ].map(box),
+          }
+        : null,
     forms: [
       ...panel.querySelectorAll<HTMLElement>(
         ".settings-row:not(.settings-toggle)",
       ),
     ]
+      .filter((row) => !row.closest("[hidden]"))
       .slice(0, 16)
       .map((row) => ({
         display: getComputedStyle(row).display,
         direction: getComputedStyle(row).flexDirection,
-        label: box(row.querySelector(".settings-control-caption")!),
+        box: box(row),
+        label: box(row.querySelector(".settings-control-caption, span")!),
         field: box(row.querySelector("input, select")!),
       })),
     labels: [
       ...panel.querySelectorAll<HTMLElement>(
-        ".settings-control-caption, .settings-shortcut-name",
+        ".settings-control-caption, .settings-shortcut-name, .extensions-panel .settings-row > span",
       ),
     ]
       .slice(0, 16)
@@ -178,6 +237,63 @@ export function observeSettingsLayout(
     width: innerWidth,
     height: innerHeight,
   };
+}
+
+function assertSettingsDetails(
+  observation: SettingsLayoutObservation,
+  expectedPanel: string,
+) {
+  assert.equal(
+    observation.navigation.reachable,
+    true,
+    "Settings navigation tab is not scroll-reachable by focus",
+  );
+  assert.equal(
+    observation.navigation.mode,
+    observation.width < 480 ? "grid" : "flex",
+    "Settings compact navigation did not follow its viewport breakpoint",
+  );
+  if (expectedPanel === "settings-panel-appearance") {
+    const theme = observation.theme;
+    assert.ok(
+      theme && theme.cards.length >= 6,
+      "Settings synthetic theme cards missing",
+    );
+    assert.ok(
+      Math.abs(
+        theme.grid.right -
+          observation.panels.find((item) => item.id === expectedPanel)!.box
+            .right,
+      ) <= 2,
+      "Settings theme grid misses the shared content edge",
+    );
+    const firstRow = theme.cards.filter(
+      (card) => Math.abs(card.top - theme.cards[0]!.top) <= 1,
+    );
+    assert.ok(
+      Math.abs(firstRow[0]!.left - theme.grid.left) <= 2 &&
+        Math.abs(firstRow.at(-1)!.right - theme.grid.right) <= 2,
+      "Settings theme card row misses the grid edges",
+    );
+  }
+  if (expectedPanel === "settings-panel-extensions") {
+    const extensions = observation.extensions;
+    assert.ok(
+      extensions && extensions.cards.length && extensions.installedRows.length,
+      "Settings synthetic Extension cards missing",
+    );
+    const right = observation.panels.find((item) => item.id === expectedPanel)!
+      .box.right;
+    assert.ok(
+      [
+        extensions.catalog,
+        ...extensions.cards,
+        extensions.installed,
+        ...extensions.installedRows,
+      ].every((item) => Math.abs(item.right - right) <= 2),
+      "Settings Extension cards miss the shared content edge",
+    );
+  }
 }
 
 export function assertSettingsLayout(
@@ -223,6 +339,7 @@ export function assertSettingsLayout(
   }
   assert.equal(observation.overflow, false, "Settings horizontal overflow");
   assert.ok(contentWidth > 0, "Settings content has no width");
+  assertSettingsDetails(observation, expectedPanel);
   if (
     [
       "settings-panel-general",
@@ -232,6 +349,7 @@ export function assertSettingsLayout(
   )
     assert.ok(observation.forms.length > 0, "Settings form geometry missing");
   for (const row of observation.forms) {
+    assert.ok(row.box.width <= 722, "Settings form row exceeds readable width");
     assert.ok(
       row.field.width > 0 && row.field.height > 0,
       "Settings field has no geometry",

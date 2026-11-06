@@ -23,7 +23,9 @@ it.each(["panel", "category"])(
       "extensions",
     ];
     document.body.innerHTML = `<div class="settings-dialog"><div class="settings-tabs"></div><div class="settings-panels" style="padding: 0px"></div></div>`;
-    const tabs = document.querySelector(".settings-tabs")!;
+    // jsdom does not load the production stylesheet in this inventory-only test.
+    const tabs = document.querySelector<HTMLElement>(".settings-tabs")!;
+    tabs.style.display = "flex";
     const panels = document.querySelector<HTMLElement>(".settings-panels")!;
     for (const id of ids) {
       const selected = id === "config-file";
