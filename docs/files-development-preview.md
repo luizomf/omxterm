@@ -1021,10 +1021,20 @@ OMXTERM_FILES_PACKAGED_PUBLIC_LINK=https://github.com/luizomf/omxterm/releases/d
 Export that variable for the test invocation or add it as another inline
 assignment. This planned immutable URL is not a claim of current availability.
 `APPIMAGE` and `ARCHIVE` must be the anonymously downloaded dev.19 host and
-Files0.7 archive, with readback provenance recorded separately. The archive is
-only a controller-side digest oracle: it is not copied into the app profile or
-returned by a chooser. The lane pins this exact host/version/archive/URL and
-refuses catalog, controlled-catalog and diagnostic combinations.
+Files0.7 archive, with readback provenance recorded separately. After successfully
+verifying the downloaded AppImage's size and SHA-256 against the qualified pair,
+restore its owner-executable bit **before running the fixture**:
+
+```sh
+chmod u+x /absolute/public-downloads/OMXTerm-0.25.0-dev.19-arm64.AppImage
+```
+
+Downloads do not preserve executable mode. This changes file metadata, not bytes;
+it requires no rebuild or helper installation. The fixture directly executes the
+AppImage with `--appimage-extract`. The archive is only a controller-side digest
+oracle: it is not copied into the app profile or returned by a chooser. The lane
+pins this exact host/version/archive/URL and refuses catalog, controlled-catalog
+and diagnostic combinations.
 
 The existing macOS public-link mechanism fills the real Settings HTTPS field
 and clicks **Install from link** for initial install and both subsequent installs,
