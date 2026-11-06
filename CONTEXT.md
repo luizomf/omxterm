@@ -405,8 +405,9 @@ Move to folder action. Their fixed source and folder are rechecked before a
 no-replace move; external drags, same-directory, self/descendant and final
 symlink destinations are refused. Cross-volume moves do not copy/delete and
 symlink sources move as links. Files-to-terminal drag remains separate. These
-source UI changes are included in the Files0.7 source/archive preparation;
-native/package qualification and publication remain pending, and published
+source UI changes are included in the Files0.7 source/archive preparation and
+its bounded [Linux exact-package checkpoint](docs/files-development-preview.md#files07-linux-packaged-checkpoint).
+Public delivery, macOS and broader qualification remain pending; published
 Files0.6 is unchanged. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
@@ -421,7 +422,8 @@ limits in an inline hint, tooltip and accessible description. There is no automa
 retargeting of started operations. Compatible installed archives use this host
 behavior without modification; the renamed action, inline hint, tooltip and
 relocalizable host-coded notices are included in the Files0.7 source/archive
-preparation, not published Files0.6; qualification and publication remain pending.
+preparation and the bounded Linux packaged checkpoint, not published Files0.6.
+Public delivery, macOS and broader qualification remain pending.
 Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.

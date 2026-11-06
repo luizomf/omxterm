@@ -1,8 +1,119 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { transform } from "esbuild";
 import { pathToFileURL } from "node:url";
 import { expect, it, vi } from "vitest";
+import {
+  assertLinuxFilesScenario,
+  linuxFiles070Checks,
+} from "../fixtures/files-packaged-linux-options";
+
+it("rejects a previous valid Quit receipt for every new Files0.7 packaged run without altering old evidence", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "files-070-evidence-"));
+  try {
+    const directory = path.join(root, "evidence");
+    await mkdir(directory);
+    const inputs = {
+      version: "0.25.0-dev.19",
+      extensionVersion: "0.7.0",
+      extensionName: "Files — ARM64 preview",
+      archiveSha256:
+        "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
+    };
+    const previous = JSON.stringify({
+      ...inputs,
+      host: inputs.version,
+      approvals: 3,
+      checks: [...linuxFiles070Checks],
+      joined: true,
+      quit: "joined",
+      baselineExited: true,
+      children: Array.from({ length: 3 }, () => ({
+        closed: true,
+        exit: { code: 0, signal: null },
+      })),
+    });
+    await writeFile(path.join(directory, "quit.json"), previous);
+    const source = await readFile(
+      "test/integration/files-packaged.test.ts",
+      "utf8",
+    );
+    // Exercise the actual evidence allocator and Quit verifier with real files,
+    // without loading or launching Electron.
+    const functions = [
+      ["async function prepareEvidence(", "async function prepareObserver("],
+      [
+        "async function verifyPublicQuit(",
+        "async function captureListingFailure(",
+      ],
+    ]
+      .map(([start, end]) => {
+        const first = source.indexOf(start!);
+        const last = source.indexOf(end!, first);
+        expect(first).toBeGreaterThan(0);
+        expect(last).toBeGreaterThan(first);
+        return source.slice(first, last);
+      })
+      .join("\n");
+    const compiled = await transform(functions, { loader: "ts" });
+    const load = new Function(
+      "process",
+      "path",
+      "mkdir",
+      "mkdtemp",
+      "readFile",
+      "assert",
+      "assertLinuxFilesScenario",
+      "inputs",
+      "linuxPublicCatalog",
+      "consumer070",
+      compiled.code + "\nreturn { prepareEvidence, verifyPublicQuit };",
+    ) as (...args: unknown[]) => {
+      prepareEvidence(root: string): Promise<string>;
+      verifyPublicQuit(evidence: string): Promise<void>;
+    };
+    const fixture = load(
+      { env: { OMXTERM_FILES_PACKAGED_EVIDENCE: directory } },
+      path,
+      mkdir,
+      mkdtemp,
+      readFile,
+      assert,
+      assertLinuxFilesScenario,
+      inputs,
+      false,
+      true,
+    );
+    // Establish that the old receipt really passes the unchanged verifier.
+    await fixture.verifyPublicQuit(directory);
+    const current = await fixture.prepareEvidence(root);
+    await expect(fixture.verifyPublicQuit(current)).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    expect(path.dirname(current)).toBe(directory);
+    expect(current).not.toBe(directory);
+    expect(await readFile(path.join(directory, "quit.json"), "utf8")).toBe(
+      previous,
+    );
+    await writeFile(path.join(current, "quit.json"), previous);
+    await fixture.verifyPublicQuit(current);
+    const next = await fixture.prepareEvidence(root);
+    expect(next).not.toBe(current);
+    await expect(fixture.verifyPublicQuit(next)).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    expect(await readFile(path.join(current, "quit.json"), "utf8")).toBe(
+      previous,
+    );
+    expect(await readFile(path.join(directory, "quit.json"), "utf8")).toBe(
+      previous,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 async function setup(size = 23285) {
   const source = await readFile("test/fixtures/files-070-packaged.cjs", "utf8");

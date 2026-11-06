@@ -105,8 +105,10 @@ async function prepareEvidence(root: string) {
     process.env.OMXTERM_FILES_PACKAGED_EVIDENCE ?? path.join(root, "evidence"),
   );
   await mkdir(directory, { recursive: true });
-  // Never accept an older run's Quit receipt as this public run's result.
-  return linuxPublicCatalog ? mkdtemp(path.join(directory, "run-")) : directory;
+  // Never accept an older run's Quit receipt as this selected run's result.
+  return linuxPublicCatalog || consumer070
+    ? mkdtemp(path.join(directory, "run-"))
+    : directory;
 }
 
 async function prepareObserver(root: string, archiveBytes: Buffer) {
