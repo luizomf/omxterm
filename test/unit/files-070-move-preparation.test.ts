@@ -11,7 +11,7 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { activate } from "../../extensions/files/backend";
 import { mountFilesPage } from "../../extensions/files/page";
 import type { Value } from "../../src/extension-runtime/protocol";
@@ -139,37 +139,46 @@ async function setup(
   return { source, folder, prepare, request, moveNoReplace };
 }
 
-it("submits move preparation despite key-only Enter not performing implicit submission", async () => {
-  const h = await setup();
-  await h.prepare(h.folder);
-  expect(h.request).toHaveBeenCalledWith({
-    operation: "prepare-move-into",
-    path: h.source,
-    kind: "directory",
-    directory: h.folder,
-  });
-  expect(document.activeElement?.textContent).toBe("Cancel");
-  expect(h.moveNoReplace).not.toHaveBeenCalled();
-  expect(
-    h.request.mock.calls.some(
-      ([value]) => (value as { operation: string }).operation === "move-into",
-    ),
-  ).toBe(false);
-});
-
-it.each(["wrong-source", "wrong-folder", "refused"] as const)(
-  "does not bypass fixed confirmation checks after submitting: %s",
-  async (control) => {
-    const h = await setup(control);
-    await expect(h.prepare(h.folder)).rejects.toThrow(
-      "fixture deadline: fixed move confirmation",
-    );
-    expect(h.moveNoReplace).not.toHaveBeenCalled();
-    expect(h.request).toHaveBeenCalledWith({
-      operation: "prepare-move-into",
-      path: h.source,
-      kind: "directory",
-      directory: h.folder,
+// The production Files 0.7 consumer is a Linux/macOS ARM64 preview. Its page
+// and tree use slash-delimited paths; a Windows-native filesystem fixture cannot
+// supply a matching tree row or exercise the move-preparation control.
+describe.skipIf(process.platform === "win32")(
+  "Linux/macOS Files 0.7 move-preparation consumer",
+  () => {
+    it("submits move preparation despite key-only Enter not performing implicit submission", async () => {
+      const h = await setup();
+      await h.prepare(h.folder);
+      expect(h.request).toHaveBeenCalledWith({
+        operation: "prepare-move-into",
+        path: h.source,
+        kind: "directory",
+        directory: h.folder,
+      });
+      expect(document.activeElement?.textContent).toBe("Cancel");
+      expect(h.moveNoReplace).not.toHaveBeenCalled();
+      expect(
+        h.request.mock.calls.some(
+          ([value]) =>
+            (value as { operation: string }).operation === "move-into",
+        ),
+      ).toBe(false);
     });
+
+    it.each(["wrong-source", "wrong-folder", "refused"] as const)(
+      "does not bypass fixed confirmation checks after submitting: %s",
+      async (control) => {
+        const h = await setup(control);
+        await expect(h.prepare(h.folder)).rejects.toThrow(
+          "fixture deadline: fixed move confirmation",
+        );
+        expect(h.moveNoReplace).not.toHaveBeenCalled();
+        expect(h.request).toHaveBeenCalledWith({
+          operation: "prepare-move-into",
+          path: h.source,
+          kind: "directory",
+          directory: h.folder,
+        });
+      },
+    );
   },
 );

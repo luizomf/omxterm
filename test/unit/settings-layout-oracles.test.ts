@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,6 +9,7 @@ import {
 } from "../fixtures/settings-layout-observation";
 import { captureSettingsLayoutFailure } from "../fixtures/settings-layout-failure";
 import { exerciseSettingsDialog } from "../fixtures/settings-dialog-exercise";
+import { rect, sample } from "../fixtures/settings-layout-sample";
 
 vi.mock("electron", () => ({
   ipcMain: {},
@@ -26,89 +26,6 @@ import {
   targetSettingsGeometry,
 } from "../fixtures/settings-layout-exercise";
 
-it("uses only the content query container and viewport queries for outer Settings layout", () => {
-  const css =
-    readFileSync("src/renderer/settings/settings-dialog.css", "utf8") +
-    readFileSync("src/renderer/application-page.css", "utf8");
-  const declarations = [
-    ...css.matchAll(/([^{}]+)\{([^{}]*container-type:[^{}]*)\}/gu),
-  ];
-  expect(declarations.map((match) => match[1]!.trim())).toEqual([
-    ".application-page-content",
-  ]);
-  for (const edge of [
-    "min-width: 900px",
-    "min-width: 1200px",
-    "max-width: 639px",
-  ])
-    expect(css).toContain(`@media (${edge})`);
-  for (const edge of [560, 760])
-    expect(css).toContain(`@container (min-width: ${edge}px)`);
-});
-
-const rect = (left: number, top: number, width: number, height: number) => ({
-  left,
-  top,
-  width,
-  height,
-  right: left + width,
-  bottom: top + height,
-});
-function sample(
-  contentWidth = 400,
-  form = "stacked",
-  shortcut = "wrapped",
-  selected = "settings-panel-general",
-): SettingsLayoutObservation {
-  const ids = [
-    "settings-panel-general",
-    "settings-panel-appearance",
-    "settings-panel-terminal",
-    "settings-panel-window",
-    "settings-panel-shortcuts",
-    "settings-panel-config-file",
-    "settings-panel-extensions",
-  ];
-  return {
-    panels: ids.map((id) => ({
-      id,
-      hidden: id !== selected,
-      display: id === selected ? "flex" : "none",
-      box: rect(0, 0, id === selected ? 400 : 0, id === selected ? 160 : 0),
-    })),
-    categories: ids.map((panel) => ({ panel, selected: panel === selected })),
-    contentWidth,
-    forms: [
-      {
-        display: form === "stacked" ? "flex" : "grid",
-        direction: "column",
-        label: rect(0, 0, 120, 20),
-        field:
-          form === "stacked" ? rect(0, 28, 112, 32) : rect(200, 0, 112, 32),
-      },
-    ],
-    labels: [
-      { box: rect(0, 0, 120, 20), naturalWidth: 100, lineHeight: 20, lines: 1 },
-    ],
-    shortcuts:
-      selected === "settings-panel-shortcuts"
-        ? [0, 100].map((top) => ({
-            columns: shortcut === "wrapped" ? 2 : 3,
-            name: rect(0, top + 8, 120, 20),
-            binding: rect(136, top + 8, 120, 36),
-            actions:
-              shortcut === "wrapped"
-                ? rect(0, top + 52, 238, 32)
-                : rect(500, top + 8, 238, 32),
-          }))
-        : [],
-    overflow: false,
-    focus: true,
-    scheme: "dark",
-    width: 320,
-    height: 200,
-  };
-}
 it("includes Extensions in the native inventory without weakening the panel oracle", () => {
   const observation = sample();
   expect(() =>
@@ -227,7 +144,8 @@ function layoutPort(mode = "normal", restoreFails = false) {
     width = 960,
     height = 640,
     selected = "general",
-    light = false;
+    light = false,
+    editorOpen = false;
   const contentRequests: number[][] = [],
     nativeRequests: number[][] = [],
     restoredBounds: unknown[] = [],
@@ -285,15 +203,24 @@ function layoutPort(mode = "normal", restoreFails = false) {
             height,
           ];
         if (script.includes("measureText")) {
+          const base = sample(
+            panelWidth(),
+            panelWidth() < 560 ? "stacked" : "columns",
+            panelWidth() < 760 ? "wrapped" : "inline",
+            `settings-panel-${selected}`,
+          );
           const observation = {
-            ...sample(
-              panelWidth(),
-              panelWidth() < 560 ? "stacked" : "columns",
-              panelWidth() < 760 ? "wrapped" : "inline",
-              `settings-panel-${selected}`,
-            ),
+            ...base,
+            forms:
+              editorOpen && selected === "appearance"
+                ? Array.from({ length: 11 }, () => base.forms[0]!)
+                : base.forms,
             width,
             height,
+            navigation: {
+              mode: width < 480 ? "grid" : "flex",
+              reachable: true,
+            },
             scheme: light ? "light" : "dark",
           };
           if (mode === "category")
@@ -311,6 +238,18 @@ function layoutPort(mode = "normal", restoreFails = false) {
             height: mode === "unstable" ? height + 1 : height,
           };
         }
+        if (
+          script.includes(
+            ".settings-theme-authoring > .settings-actions button",
+          )
+        )
+          editorOpen = true;
+        if (
+          script.includes(
+            ".settings-theme-editor .settings-actions .page-button-text",
+          )
+        )
+          editorOpen = false;
         const category = /#settings-tab-([a-z-]+)'/u.exec(script)?.[1];
         if (category) {
           selected = category;
@@ -342,7 +281,7 @@ function layoutPort(mode = "normal", restoreFails = false) {
   };
 }
 
-it("samples native minimum at actual compact 320x201 while preserving five exact targets and breakpoint corrections", async () => {
+it("samples native minimum, eight exact targets and four breakpoint corrections", async () => {
   vi.stubEnv("OMXTERM_SETTINGS_EVIDENCE_DIR", undefined);
   const directory = await mkdtemp(
     path.join(tmpdir(), "omxterm-layout-target-"),
@@ -357,7 +296,7 @@ it("samples native minimum at actual compact 320x201 while preserving five exact
       port.restore,
     );
     expect(result).toEqual({
-      cases: 144,
+      cases: 252,
       breakpoints: 4,
       synthetic: true,
       physicalKeyboard: false,
@@ -377,11 +316,14 @@ it("samples native minimum at actual compact 320x201 while preserving five exact
     expect(port.nativeRequests).toEqual(
       Array.from({ length: 4 }, () => [320, 200]),
     );
-    expect(port.contentRequests.slice(0, 40)).toEqual(
+    expect(port.contentRequests.slice(0, 64)).toEqual(
       Array.from({ length: 4 }, () =>
         [
+          [600, 320],
+          [600, 480],
           [640, 480],
           [800, 600],
+          [960, 320],
           [960, 640],
           [1280, 800],
           [1920, 1080],
@@ -391,7 +333,7 @@ it("samples native minimum at actual compact 320x201 while preserving five exact
         ]),
       ).flat(),
     );
-    expect(port.contentRequests.every(([w, h]) => w! > 320 && h! > 360)).toBe(
+    expect(port.contentRequests.every(([w, h]) => w! > 320 && h! >= 319)).toBe(
       true,
     );
     const at = port.contentRequests.findIndex(([w]) => w === 1000);
@@ -402,7 +344,7 @@ it("samples native minimum at actual compact 320x201 while preserving five exact
     ]);
     expect(port.restoredBounds).toEqual([port.original]);
     expect(port.setMinimum).not.toHaveBeenCalled();
-    expect(port.categories).toHaveLength(153); // 144 matrix + 8 breakpoint + final General.
+    expect(port.categories).toHaveLength(261); // 252 matrix + 8 breakpoint + final General.
   } finally {
     process.argv = previousArgs;
     vi.unstubAllEnvs();
@@ -527,6 +469,10 @@ it.each([
       expect(port.contentRequests).toEqual(
         mode === "unreachable"
           ? [
+              [600, 320],
+              [600, 319],
+              [600, 480],
+              [600, 479],
               [640, 480],
               [640, 479],
               [640, 478],

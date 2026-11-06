@@ -74,9 +74,11 @@ The full-area workspace caps at 1440 px. Sidebar width is 168 px below 900 px
 and 192 px above; outer padding is 24 px, growing to 32 px at 1200 px.
 The title and Close share a ruled in-flow header, within the same content cap.
 These outer breakpoints use viewport media queries; `.application-page-content`
-(the Settings panels slot) is the only size-query container. The content edge stays consistent across categories.
-Ordinary forms cap at 720 px; Shortcuts and Config File at 1120 px. Content and
-navigation scroll independently, with wrapped translated labels and diagnostics.
+(the Settings panels slot) is the only size-query container. Every category uses
+the same 1120 px content boundary, aligning theme cards, Extension cards and
+Shortcuts separators. Form rows remain at most 720 px and ordinary fields at
+most 384 px; prose stays near 72 characters. Content and navigation scroll
+independently, with wrapped translated labels and diagnostics.
 
 Container width, not viewport width, controls density: below 560 px labels sit
 above their fields; number inputs cap at 112 px and other fields at 384 px.
@@ -99,18 +101,24 @@ relationships or all metadata. See the [configuration guide](configuration.md#se
 for recovery and write limitations.
 
 640×480 is the comfortable starting verification target, not a native minimum.
-Below 640 px, categories become a wrapping three-column navigation area; short
-windows allow additional vertical scrolling. No native bound/minimum changes
-are tied to Settings selection. Large JSON content scrolls within its editor.
+Below 640 px, the vertical sidebar remains in place while there is room for
+readable content (480–639 px). Below 480 px, categories form a two-column
+scrollable navigation area with rows tall enough for wrapped labels; there is
+no 40 px height clamp that conceals the last category. At 360 px height and
+below, the navigation keeps a 72 px (or 34vh) minimum scrollport while the page
+can scroll; focused tabs must enter both the navigation and viewport. Short
+windows allow additional vertical scrolling. No native bound/minimum changes are tied to
+Settings selection. Large JSON content scrolls within its editor.
 
 ## Verification
 
 Headless host/Settings tests establish ownership, retained identity and palette
 selection, not visual quality. The real `window-chrome` **settings-only** fixture
-covers six categories after a native-minimum window-size request, then at five
-exact renderer viewports: 640×480, 800×600, 960×640, 1280×800 and 1920×1080.
-Both Interface Languages and representative light/dark palettes retain 144
-matrix cases plus four exact panel-container edges (559/560/759/760 px at viewport
+covers seven categories after a native-minimum window-size request, then at eight
+exact renderer viewports: 600×320, 600×480, 640×480, 800×600, 960×320,
+960×640, 1280×800 and 1920×1080. Both Interface Languages and representative
+light/dark palettes retain 252 matrix cases plus four exact panel-container edges
+(559/560/759/760 px at viewport
 height 640). Opening Settings separately preserves native outer bounds and
 minimum before deliberate configuration edits.
 
@@ -123,7 +131,10 @@ cause is inferred. The fixture finally requests the original outer bounds once,
 without claiming independent physical restoration proof. It checks the clicked category
 against selected/hidden/computed-display state, form and shortcut placement on
 each side of the content breakpoints, and label width/line geometry (not only
-last-control reachability). Optional synthetic-only captures use
+last-control reachability), theme grid/card and Extension card edges, nested
+editor row width, and navigation scroll reachability on focus. The fixture uses
+only synthetic local themes and Extension entries, without catalog network or
+installation. Optional synthetic-only captures use
 `OMXTERM_SETTINGS_EVIDENCE_DIR`. Failures capture a bounded frame and geometry
 before restoring the renderer and requesting the saved outer bounds; the normal
 runner retains them outside its removed profile under `.scratch/native-fixtures/`. Its programmatic focus/input

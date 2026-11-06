@@ -12,6 +12,15 @@ import {
   hasAboutPhaseEvidence,
   readAboutDiagnostics,
 } from "../fixtures/application-about-diagnostics";
+import { fixtureProcesses } from "../fixtures/native-fixture-processes";
+
+// This unit seam tests About ordering, not the OS-wide process inventory used
+// by the native supervisor. Keep its producer identity check deterministic.
+vi.mock("../fixtures/native-fixture-processes", () => ({
+  fixtureProcesses: vi.fn(() => [
+    { pid: process.pid, parent: process.ppid, identity: "unit-producer" },
+  ]),
+}));
 
 vi.mock("electron", async () => {
   const { EventEmitter } = await import("node:events");
@@ -102,6 +111,7 @@ it.for(["missing-result", "published-hang", "published-failure"] as const)(
       ];
       vi.useFakeTimers();
       await import("../fixtures/application-about-main");
+      expect(fixtureProcesses).toHaveBeenCalledOnce();
       const defaultMenu = { items: [] } as unknown as Electron.Menu;
       Menu.setApplicationMenu(defaultMenu);
       expect(application.isQuitting()).toBe(false);

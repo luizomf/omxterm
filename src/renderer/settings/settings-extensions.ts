@@ -116,6 +116,7 @@ export function renderExtensions(
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
   const list = document.createElement("div");
+  list.className = "extension-installed-list";
   let busy = false;
   let token: string | undefined;
   const urlLabel = document.createElement("label");

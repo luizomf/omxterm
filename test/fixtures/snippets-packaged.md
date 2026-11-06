@@ -346,7 +346,11 @@ same observer and shared scenario, with architecture-specific expected input
 receipts; admitting x64 is tooling, not an exact-package PASS or release gate
 completion. It uses the existing packaged process owner and loopback inspector,
 loading a separate CommonJS observer. The application runs with isolated
-HOME/XDG/profile and a PATH without source Node/npm dependencies. The ordinary
+HOME/XDG/profile and a PATH containing only the fixture bin and ordinary system
+`/usr/bin:/bin`, never the caller's source Node/npm paths or startup overrides.
+The account's login shell needs system tools during startup (for example Fedora's
+profile scripts use `grep` and `tr`); retaining only fixture-bin links prevents
+the controlled plain-paste shell from starting reliably. The ordinary
 guest account shell must be sh or bash. Provision xdotool, Python 3/libX11,
 xprop and bwrap in that guest; keep the desktop idle with no competing GUI suite.
 Rendering explicitly remains X11/ANGLE SwiftShader on both architectures.
@@ -396,8 +400,15 @@ disables bracketed paste; the fixture verifies that marker and that plain-paste
 mode remains selected at every exact-byte assertion. This makes source and
 account-shell launches comparable without stripping framing from observed writes
 or accepting either encoding. The Windows source adapter starts its controlled
-probe directly instead. Account-shell startup and bracketed-paste delivery are
-not qualified by either controlled scenario.
+probe directly instead. On the exact Linux AppImage adapter, only the inner
+controlled shell receives `INPUTRC` pointing to a fixture-owned file in its
+isolated HOME with `set enable-bracketed-paste off`. Readline otherwise defaults
+to enabling bracketed paste during interactive `/bin/sh -i` startup **after** the
+preceding plain-mode marker; a shell that ignores this setting must still satisfy
+the unchanged last-mode oracle. The real account shell keeps its normal startup
+settings, and no user inputrc, product path, output-reactive toggle or PTY-write
+normalization is involved. Account-shell startup and bracketed-paste delivery
+are not qualified by either controlled scenario.
 
 ## Exact macOS ARM64 DMG adapter
 

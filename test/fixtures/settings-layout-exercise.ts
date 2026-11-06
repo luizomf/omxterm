@@ -18,6 +18,10 @@ import {
   captureSettingsLayoutFailure,
   type SettingsLayoutContext,
 } from "./settings-layout-failure";
+import {
+  captureLayoutEvidence,
+  recordLayoutGeometry,
+} from "./settings-layout-evidence";
 
 const sizeOf = ({
   width,
@@ -81,6 +85,93 @@ export async function targetSettingsGeometry(options: {
   assert.fail("Settings exact geometry target was not reached");
 }
 
+function inspectThemeEditor(
+  category: string,
+  width: number,
+  language: SupportedLanguage,
+  light: boolean,
+) {
+  return (
+    category === "appearance" &&
+    width === 1920 &&
+    language === "en-US" &&
+    !light
+  );
+}
+
+async function checkThemeEditor(
+  contents: BrowserWindow["webContents"],
+  frame: () => Promise<unknown>,
+  observe: () => Promise<SettingsLayoutObservation>,
+  evidence?: string,
+) {
+  await contents.executeJavaScript(
+    "document.querySelector('.settings-theme-authoring > .settings-actions button').click()",
+    true,
+  );
+  await frame();
+  const editor = await observe();
+  assertSettingsLayout(editor, "settings-panel-appearance");
+  assert.ok(
+    editor.forms.length >= 9,
+    "Settings nested theme editor rows missing",
+  );
+  if (evidence)
+    await writeFile(
+      path.join(evidence, "en-US-dark-1920x1080-appearance-editor.png"),
+      (await contents.capturePage()).toPNG(),
+    );
+  await contents.executeJavaScript(
+    "document.querySelector('.settings-theme-editor .settings-actions .page-button-text:not([hidden])').click()",
+    true,
+  );
+  await frame();
+}
+
+async function checkCompactKeyboardNavigation(
+  contents: BrowserWindow["webContents"],
+  frame: () => Promise<unknown>,
+  width: number,
+  category: string,
+) {
+  if (width > 600 || category !== "config-file") return;
+  await contents.executeJavaScript(
+    "document.getElementById('settings-tab-extensions').focus()",
+    true,
+  );
+  contents.sendInputEvent({ type: "keyDown", keyCode: "Down" });
+  contents.sendInputEvent({ type: "keyUp", keyCode: "Down" });
+  await frame();
+  assert.equal(
+    await contents.executeJavaScript(
+      "document.activeElement.id === 'settings-tab-config-file' && document.activeElement.matches(':focus-visible') && document.activeElement.getAttribute('aria-selected') === 'true'",
+      true,
+    ),
+    true,
+    "Settings compact keyboard navigation lost focus or selected category",
+  );
+}
+
+async function checkConfigProse(
+  contents: BrowserWindow["webContents"],
+  category: string,
+) {
+  if (category !== "config-file") return;
+  await contents.executeJavaScript(
+    `(() => {
+    const message = document.querySelector('.settings-config-file [role=status]');
+    message.textContent = 'Synthetic result: ' + 'This configuration confirmation stays readable. '.repeat(5);
+    message.hidden = false;
+    const box = message.getBoundingClientRect();
+    if (box.width <= 0 || box.height <= 0 ||
+        (innerWidth >= 960 && box.width >=
+        document.querySelector('.settings-config-file').getBoundingClientRect().width - 1))
+      throw Error('Settings Config File result spans the full wide panel');
+  })()`,
+    true,
+  );
+}
+
 // Real Chromium layout/focus over the retained production Settings view. This
 // establishes synthetic native input, not physical keyboard or OS widgets.
 export async function exerciseSettingsLayout(
@@ -127,11 +218,13 @@ export async function exerciseSettingsLayout(
   let context: SettingsLayoutContext = { phase: "display-prerequisite" };
   let cases = 0;
   let failed = false;
+  const geometryEvidence: Record<string, unknown>[] = [];
   const checkCategory = async (category: string) => {
     await evaluate(
       `document.querySelector('#settings-tab-${category}').click()`,
     );
     await frame();
+    await checkConfigProse(contents, category);
     const result = await observe();
     assertSettingsLayout(result, `settings-panel-${category}`);
     assert.equal(result.focus, true, "Settings unreachable control");
@@ -202,10 +295,24 @@ export async function exerciseSettingsLayout(
         "terminal",
         "window",
         "shortcuts",
+        "extensions",
         "config-file",
       ]) {
         context = { ...context, category };
         const result = await checkCategory(category);
+        recordLayoutGeometry({
+          evidence,
+          records: geometryEvidence,
+          result,
+          category,
+          width,
+          height,
+          language,
+          light,
+          nativeMinimum: size === "native-minimum-request",
+        });
+        if (inspectThemeEditor(category, width, language, light))
+          await checkThemeEditor(contents, frame, observe, evidence);
         assert.equal(result.scheme, light ? "light" : "dark");
         assert.equal(result.width, width);
         assert.equal(result.height, height);
@@ -230,17 +337,17 @@ export async function exerciseSettingsLayout(
           "Settings native synthetic keyboard traversal/focus cue failed",
         );
         cases += 1;
-        if (
-          evidence &&
-          ["general", "shortcuts", "config-file"].includes(category)
-        )
-          await writeFile(
-            path.join(
-              evidence,
-              `${language}-${light ? "light" : "dark"}-${width}x${height}-${category}.png`,
-            ),
-            (await contents.capturePage()).toPNG(),
-          );
+        await checkCompactKeyboardNavigation(contents, frame, width, category);
+        await captureLayoutEvidence({
+          evidence,
+          contents,
+          frame,
+          category,
+          width,
+          height,
+          language,
+          light,
+        });
       }
     }
     context = { phase: "minimum" };
@@ -276,6 +383,11 @@ export async function exerciseSettingsLayout(
       }
     }
     assertMinimum();
+    if (evidence)
+      await writeFile(
+        path.join(evidence, "layout-geometry.json"),
+        JSON.stringify(geometryEvidence, null, 2),
+      );
     return {
       cases,
       breakpoints: 4,

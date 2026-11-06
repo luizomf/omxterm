@@ -1979,12 +1979,16 @@ contract. Diagnostics shown in Settings never enter operational logs.
 Settings occupies a full-area, theme-aware surface with six core categories plus
 Extensions, and independently scrolling content, not a modal perimeter/backdrop. Its 640×480
 renderer viewport target is comfortable desktop coverage, not a new native
-minimum. Below it, compact wrapping navigation and scrolling retain small-window
-access. Native bounds/minima are unchanged by opening Settings. The workspace
-caps at 1440 px, ordinary forms at 720 px and dense pages at 1120 px. Panel-width
-container queries stack form labels below 560 px and wrap shortcut actions below
-760 px. Outer layout uses viewport media queries at 639/900/1200 px, with only
-the content panel acting as a size-query container. Shortcuts retain visible
+minimum. Navigation remains a vertical sidebar at 480–639 px, then becomes a
+two-column, scrollable fallback below 480 px; short windows preserve access by
+scrolling rather than clipping the last category. Native bounds/minima are
+unchanged by opening Settings. The workspace caps at 1440 px; every category's
+content uses a shared 1120 px boundary so theme and Extension cards align with
+Shortcuts separators. Form rows stay within 720 px, ordinary controls within
+384 px and prose at a readable measure, including Extension details and Config
+File results. Panel-width container queries stack form labels below 560 px and
+wrap shortcut actions below 760 px. Outer layout uses viewport media queries at
+479/639/900/1200 px, with only the content panel acting as a size-query container. Shortcuts retain visible
 Record/Cancel, Unbind, Default and textual state;
 config JSON overflow stays within its editor. Shared palette-aware tokens keep
 decoration subdued, inputs identifiable and keyboard focus foreground-colored,

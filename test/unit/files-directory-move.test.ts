@@ -107,6 +107,14 @@ it("refuses same-directory, self, descendant, symlink destination and changed ki
     ok: false,
     error: "target-not-directory",
   });
+  expect(await prepare(files, source, source)).toEqual({
+    ok: false,
+    error: "target-not-directory",
+  });
+  expect(await prepare(files, source, path.join(root, "missing"))).toEqual({
+    ok: false,
+    error: "not-found",
+  });
   expect(await prepare(files, source, folder, "directory")).toEqual({
     ok: false,
     error: "changed-entry",
@@ -115,9 +123,11 @@ it("refuses same-directory, self, descendant, symlink destination and changed ki
     ok: false,
     error: "invalid-path",
   });
+  // Windows lstat reports ENOENT for a child under a regular file, while
+  // POSIX reports ENOTDIR. The backend intentionally maps the OS error.
   expect(await prepare(files, source, path.join(source, "child"))).toEqual({
     ok: false,
-    error: "not-directory",
+    error: process.platform === "win32" ? "not-found" : "not-directory",
   });
   expect(moveNoReplace).not.toHaveBeenCalled();
 });

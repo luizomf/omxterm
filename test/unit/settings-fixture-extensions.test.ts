@@ -9,7 +9,7 @@ vi.mock("electron", () => ({
   ipcMain: { handle: vi.fn(), removeHandler: vi.fn() },
 }));
 
-it("owns a validated unavailable Extensions route for the core Settings fixture", () => {
+it("owns a validated local synthetic Extensions snapshot without enabling operations", () => {
   const contents = Object.assign(new EventEmitter(), { mainFrame: {} });
   const window = Object.assign(new EventEmitter(), { webContents: contents });
   const trusted = vi.fn(() => true);
@@ -30,7 +30,12 @@ it("owns a validated unavailable Extensions route for the core Settings fixture"
     senderFrame: contents.mainFrame,
   } as unknown as Electron.IpcMainInvokeEvent;
   try {
-    expect(handle(event, { operation: "snapshot" })).toEqual({
+    expect(handle(event, { operation: "snapshot" })).toMatchObject({
+      ok: true,
+      entries: [{ id: "synthetic-layout", installed: true }],
+      catalog: { loaded: true, entries: [{ id: "synthetic-layout" }] },
+    });
+    expect(handle(event, { operation: "install" })).toEqual({
       ok: false,
       error: "runtime-unavailable",
     });

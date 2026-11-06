@@ -3,6 +3,29 @@ import os from "node:os";
 import path from "node:path";
 
 const prefix = "OMXTERM_SNIPPETS_APPIMAGE_";
+
+// Keep the packaged process clear of the source checkout's Node/npm paths and
+// startup overrides. Its real account shell still needs ordinary system tools.
+export function appImageEnvironment(root: string, inherited = process.env) {
+  const env: NodeJS.ProcessEnv = {
+    HOME: path.join(root, "home"),
+    PATH: `${path.join(root, "bin")}:/usr/bin:/bin`,
+    XDG_CONFIG_HOME: path.join(root, "config"),
+    XDG_STATE_HOME: path.join(root, "state"),
+    XDG_DATA_HOME: path.join(root, "data"),
+  };
+  for (const key of [
+    "DISPLAY",
+    "XAUTHORITY",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "XDG_RUNTIME_DIR",
+    "LANG",
+    "USER",
+    "LOGNAME",
+  ])
+    if (inherited[key]) env[key] = inherited[key];
+  return env;
+}
 const names = [
   "APPIMAGE",
   "ARCHIVE",

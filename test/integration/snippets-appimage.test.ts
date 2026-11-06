@@ -17,7 +17,10 @@ import { promisify } from "node:util";
 import { it } from "vitest";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
-import { appImageInputs } from "../fixtures/snippets-appimage-inputs";
+import {
+  appImageEnvironment,
+  appImageInputs,
+} from "../fixtures/snippets-appimage-inputs";
 
 const values = appImageInputs();
 const execute = promisify(execFile);
@@ -86,6 +89,11 @@ it.skipIf(!values)(
         "config/omxterm",
       ])
         await mkdir(path.join(root, name), { recursive: true });
+      await writeFile(
+        path.join(root, "home/.snippets-plain-inputrc"),
+        "set enable-bracketed-paste off\n",
+        { flag: "wx", mode: 0o600 },
+      );
       await symlink("/usr/bin/xprop", path.join(root, "bin/xprop"));
       await symlink("/usr/bin/bwrap", path.join(root, "bin/bwrap"));
       await symlink("/bin/sh", path.join(root, "bin/sh"));
@@ -123,23 +131,7 @@ it.skipIf(!values)(
         "snippets-process-identity.cjs",
       ])
         await cp(path.join("test/fixtures", name), path.join(root, name));
-      const env: NodeJS.ProcessEnv = {
-        HOME: path.join(root, "home"),
-        PATH: path.join(root, "bin"),
-        XDG_CONFIG_HOME: path.join(root, "config"),
-        XDG_STATE_HOME: path.join(root, "state"),
-        XDG_DATA_HOME: path.join(root, "data"),
-      };
-      for (const key of [
-        "DISPLAY",
-        "XAUTHORITY",
-        "DBUS_SESSION_BUS_ADDRESS",
-        "XDG_RUNTIME_DIR",
-        "LANG",
-        "USER",
-        "LOGNAME",
-      ])
-        if (process.env[key]) env[key] = process.env[key];
+      const env = appImageEnvironment(root);
       owner = await launchLinuxPackagedProcess({
         executable,
         args: [
@@ -194,6 +186,7 @@ it.skipIf(!values)(
         archiveSha256: values.ARCHIVE_SHA256,
         version: values.VERSION,
         readiness,
+        controlledPlainShell: true,
       };
       await json(
         "attachment.json",
