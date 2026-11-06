@@ -71,8 +71,9 @@ terminal-output or key-injection handle. See [ADR 0044](adr/0044-migrate-snippet
 Its availability does not install Snippets or remove the built-in feature.
 Path insertion requires a host that recognizes `terminal.insertPath.v1`; older
 hosts reject the declaration even if an unchanged development engine range
-would otherwise match. Future archive metadata and catalog compatibility must
-be assigned when ROOT selects the release and minimum host.
+would otherwise match. The integration maintainer must align future archive
+metadata and catalog compatibility with the selected release and minimum host
+before publication.
 
 The immutable Files0.1.0 manifest's exact historical engine metadata is admitted
 on the deliberately enumerated hosts 0.24.0-dev.0, 0.24.0-dev.1,

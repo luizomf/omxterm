@@ -2376,13 +2376,17 @@ moves and one-shot permanent-delete confirmation remain unchanged. See the
 [Files interaction contract](files-development-preview.md#concrete-consumer).
 
 Files archive version/compatibility is maintained separately from the host.
-Source Files0.7.0 declares the conservative preparation floor
-`>=0.25.0-dev.10` / API `0.1.x`, retaining the neutral ARM64 preview name and
-existing host services. It packages integrated filtering/keyboard and confirmed
-directory-move workflows without Files-to-terminal insertion/drop. Older hosts
-are unqualified for these combined bytes; no native/package or publication result
-is inferred. The [preparation rationale](files-development-preview.md#concrete-consumer)
-distinguishes that floor from the unchanged compatibility bridges. Published
+Source Files0.7.0 retains preparation metadata
+`>=0.25.0-dev.10` / API `0.1.x`, the neutral ARM64 preview name and existing host
+services. It packages integrated filtering/keyboard, confirmed directory moves
+and selected-path insertion, but not Files-to-terminal drag. Insertion additionally
+requires `terminal.insertPath.v1`; an older host rejects that declaration even
+when the engine range matches. The integration maintainer must align the future
+archive identity and minimum host/catalog compatibility with this capability
+before publication; the retained engine floor does not establish dev.10 support.
+Older hosts are unqualified for these combined bytes; no native/package or
+publication result is inferred. The [preparation rationale](files-development-preview.md#concrete-consumer)
+distinguishes that metadata from the unchanged compatibility bridges. Published
 Files0.6.0 and Files0.5.0 retain minimum host `>=0.24.0-dev.21` and corrected
 raw-path forwarding for macOS trash. The published Files0.5.0 archive's
 [controlled exact-DMG consumer checkpoint](files-development-preview.md#files-050-macos-controlled-qualification)

@@ -167,19 +167,22 @@ produce `dist/extensions/files-0.7.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; source version 0.7.0 declares
-`>=0.25.0-dev.10` / API `0.1.x` as a conservative preparation floor.
+`extensions/files/extension.json`; source version 0.7.0 retains
+`>=0.25.0-dev.10` / API `0.1.x` preparation metadata.
 It packages the already-integrated reported-directory guidance, loaded-entry
-filtering/keyboard focus and confirmed directory-to-directory moves. It adds no
-Files-to-terminal insertion/drop or generic shortcut capability. Existing host
-focus-intent, action-time reported-directory, no-clobber move and trash services
-remain the required seams; no new host capability is introduced here. Older
-hosts have not been qualified for this combined source, so this floor is not a
-claim that every earlier host lacks those services. Ordinary semver admits
-0.25.0-dev.10 and later dev.N in that same family, plus stable 0.25.0; the
-existing development bridges do not bypass this minimum or automatically admit
-other prerelease families. Native/package qualification and publication remain
-pending for these new bytes. Published Files0.6.0 retains minimum host
+filtering/keyboard focus, confirmed directory-to-directory moves and the selected
+path insertion action described below. Insertion additionally declares the new
+`terminal.insertPath.v1` host capability; older hosts reject it even when the
+engine range matches. Before publication, the integration maintainer must select
+an archive identity and minimum host aligned with that capability, then update
+archive/catalog compatibility. The retained engine floor alone is not a claim
+that dev.10 supports insertion. Existing host focus-intent, action-time
+reported-directory, no-clobber move and trash services remain required;
+Files-to-terminal drag and generic shortcut capabilities remain absent.
+Ordinary semver admits 0.25.0-dev.10 and later dev.N in that same family, plus
+stable 0.25.0; the existing development bridges do not bypass this minimum or
+automatically admit other prerelease families. Native/package qualification and
+publication remain pending for these new bytes. Published Files0.6.0 retains minimum host
 0.24.0-dev.21 and its original catalog entries and receipts. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
 catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives. The
