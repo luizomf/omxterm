@@ -346,7 +346,11 @@ same observer and shared scenario, with architecture-specific expected input
 receipts; admitting x64 is tooling, not an exact-package PASS or release gate
 completion. It uses the existing packaged process owner and loopback inspector,
 loading a separate CommonJS observer. The application runs with isolated
-HOME/XDG/profile and a PATH without source Node/npm dependencies. The ordinary
+HOME/XDG/profile and a PATH containing only the fixture bin and ordinary system
+`/usr/bin:/bin`, never the caller's source Node/npm paths or startup overrides.
+The account's login shell needs system tools during startup (for example Fedora's
+profile scripts use `grep` and `tr`); retaining only fixture-bin links prevents
+the controlled plain-paste shell from starting reliably. The ordinary
 guest account shell must be sh or bash. Provision xdotool, Python 3/libX11,
 xprop and bwrap in that guest; keep the desktop idle with no competing GUI suite.
 Rendering explicitly remains X11/ANGLE SwiftShader on both architectures.

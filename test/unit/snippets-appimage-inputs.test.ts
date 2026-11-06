@@ -1,6 +1,12 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import os from "node:os";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { appImageInputs } from "../fixtures/snippets-appimage-inputs";
+import {
+  appImageEnvironment,
+  appImageInputs,
+} from "../fixtures/snippets-appimage-inputs";
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const arch = Object.getOwnPropertyDescriptor(process, "arch")!;
@@ -36,6 +42,63 @@ function inputs() {
     }).map(([key, value]) => ["OMXTERM_SNIPPETS_APPIMAGE_" + key, value]),
   );
 }
+
+describe("exact AppImage account-shell environment", () => {
+  it("retains only selected desktop admission and system-tool paths, not source overrides", () => {
+    const root = "/synthetic-appimage-root";
+    const env = appImageEnvironment(root, {
+      PATH: "/source/node_modules/.bin:/source/bin",
+      HOME: "/source/home",
+      NODE_OPTIONS: "--require=/source/observer.cjs",
+      ELECTRON_RUN_AS_NODE: "1",
+      DISPLAY: ":0",
+      LANG: "C",
+    });
+    expect(env).toEqual({
+      HOME: path.join(root, "home"),
+      PATH: `${path.join(root, "bin")}:/usr/bin:/bin`,
+      XDG_CONFIG_HOME: path.join(root, "config"),
+      XDG_STATE_HOME: path.join(root, "state"),
+      XDG_DATA_HOME: path.join(root, "data"),
+      DISPLAY: ":0",
+      LANG: "C",
+    });
+  });
+
+  it.skipIf(process.platform !== "linux")(
+    "admits actual account-shell system helpers without source PATH inheritance",
+    () => {
+      const root = mkdtempSync(path.join(os.tmpdir(), "snippets-shell-env-"));
+      mkdirSync(path.join(root, "home"));
+      mkdirSync(path.join(root, "bin"));
+      try {
+        const env = appImageEnvironment(root, {
+          LANG: "C",
+          PATH: "/source/node_modules/.bin",
+          NODE_OPTIONS: "--require=/source/observer.cjs",
+        });
+        const result = spawnSync(
+          "/bin/bash",
+          [
+            "-l",
+            "-i",
+            "-c",
+            "command -v grep >/dev/null && command -v tr >/dev/null && printf 'SHELL_READY\\n'",
+          ],
+          { env, input: "", encoding: "utf8", timeout: 5000 },
+        );
+        expect(result.error).toBeUndefined();
+        expect(result.status).toBe(0);
+        expect(result.stdout).toContain("SHELL_READY");
+        expect(result.stderr).not.toMatch(
+          /grep: command not found|tr: command not found/,
+        );
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    },
+  );
+});
 
 describe("exact AppImage admission and independent expected receipt", () => {
   it.each([

@@ -17,7 +17,10 @@ import { promisify } from "node:util";
 import { it } from "vitest";
 import { launchLinuxPackagedProcess } from "../../scripts/linux-packaged-process.mjs";
 import { inspector, until } from "../fixtures/packaged-inspector.js";
-import { appImageInputs } from "../fixtures/snippets-appimage-inputs";
+import {
+  appImageEnvironment,
+  appImageInputs,
+} from "../fixtures/snippets-appimage-inputs";
 
 const values = appImageInputs();
 const execute = promisify(execFile);
@@ -123,23 +126,7 @@ it.skipIf(!values)(
         "snippets-process-identity.cjs",
       ])
         await cp(path.join("test/fixtures", name), path.join(root, name));
-      const env: NodeJS.ProcessEnv = {
-        HOME: path.join(root, "home"),
-        PATH: path.join(root, "bin"),
-        XDG_CONFIG_HOME: path.join(root, "config"),
-        XDG_STATE_HOME: path.join(root, "state"),
-        XDG_DATA_HOME: path.join(root, "data"),
-      };
-      for (const key of [
-        "DISPLAY",
-        "XAUTHORITY",
-        "DBUS_SESSION_BUS_ADDRESS",
-        "XDG_RUNTIME_DIR",
-        "LANG",
-        "USER",
-        "LOGNAME",
-      ])
-        if (process.env[key]) env[key] = process.env[key];
+      const env = appImageEnvironment(root);
       owner = await launchLinuxPackagedProcess({
         executable,
         args: [
