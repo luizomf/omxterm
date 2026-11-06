@@ -248,6 +248,14 @@ live PTY and joined Quit. Preserve source/lock/tool/runtime identities, package
 and archive hashes, actual tested host/target, outcomes and limitations alongside
 the build receipt; never turn its `not-run` field into an inferred pass.
 
+For Files0.7, use the bounded [exact Linux packaged consumer](files-development-preview.md#exact-linux-arm64-files07-packaged-consumer)
+without promoting the stable Files0.6 catalogs. Historical built-host checks are
+not package qualification, and old private inputs may no longer exist. Reuse a
+retained host only after checking actual bytes, source/version provenance and
+security relevance; otherwise build a compatible committed host. A missing
+archive needs a fresh build receipt, not a reconstructed historical receipt,
+even when the new digest equals historical bytes.
+
 Root/maintainers decide publication after review and qualification. If publishing
 a partial Linux ARM64 preview, label it explicitly as a prerelease and not Latest,
 keep Files as a separately downloadable versioned artifact, and disclose missing

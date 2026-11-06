@@ -890,6 +890,31 @@ async function run(options) {
   let view = await openFiles();
   listeners("first-view-active");
   assert.equal(children.length, 1);
+  if (options.consumer070)
+    return require("./files-070-packaged.cjs").run({
+      options,
+      view,
+      core,
+      checks,
+      children,
+      hosted,
+      js,
+      menu,
+      click,
+      until,
+      panel,
+      terminal,
+      closeFiles,
+      listingReady,
+      settings,
+      installArchive,
+      state,
+      openFiles,
+      shell,
+      identity,
+      shellStat,
+      initialShell,
+    });
   if (!options.publicLink && !options.publicCatalog) {
     view = await closeFiles(view, () => menu("Files"));
     view = await closeFiles(view, () =>

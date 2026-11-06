@@ -6,6 +6,7 @@ import {
   assertLinuxFilesHost,
   assertLinuxFilesScenario,
   linuxFilesChecks,
+  linuxFiles070Checks,
   linuxFilesInputs,
   prepareLinuxFiles,
 } from "../fixtures/files-packaged-linux-options";
@@ -18,6 +19,68 @@ const inputs = () => ({
   OMXTERM_FILES_PACKAGED_EXTENSION_NAME: "Files — ARM64 preview",
   OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256: "a".repeat(64),
   OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256: "b".repeat(64),
+});
+
+const preparedInputs = () => ({
+  ...inputs(),
+  OMXTERM_FILES_PACKAGED_CONSUMER_070: "1",
+  OMXTERM_FILES_PACKAGED_VERSION: "0.25.0-dev.19",
+  OMXTERM_FILES_PACKAGED_EXTENSION_VERSION: "0.7.0",
+  OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256:
+    "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
+});
+
+it("selects the exact corrected Files0.7 local package lane without weakening catalog or identity checks", () => {
+  expect(linuxFilesInputs(preparedInputs())).toMatchObject({
+    consumer070: true,
+    currentUi: false,
+  });
+  for (const changed of [
+    { OMXTERM_FILES_PACKAGED_VERSION: "0.25.0-dev.9" },
+    { OMXTERM_FILES_PACKAGED_VERSION: "0.24.0" },
+    { OMXTERM_FILES_PACKAGED_EXTENSION_VERSION: "0.6.0" },
+    { OMXTERM_FILES_PACKAGED_EXTENSION_NAME: "Other Files" },
+    { OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256: "a".repeat(64) },
+    { OMXTERM_FILES_PACKAGED_ATTACH_ONLY: "1" },
+    { OMXTERM_FILES_PACKAGED_TERMINAL_ONLY: "1" },
+    { OMXTERM_FILES_PACKAGED_CATALOG: "controlled" },
+    { OMXTERM_FILES_PACKAGED_CATALOG: "public" },
+  ])
+    expect(() =>
+      linuxFilesInputs({ ...preparedInputs(), ...changed }),
+    ).toThrow();
+});
+
+it("requires every prepared consumer check, exact pair identity and three deliberate consents", () => {
+  const selected = linuxFilesInputs(preparedInputs())!;
+  const expected = {
+    currentUi: selected.currentUi,
+    consumer070: selected.consumer070,
+    version: selected.version,
+    extensionVersion: selected.extensionVersion,
+    extensionName: selected.extensionName,
+    archiveSha256: selected.archiveSha256,
+  };
+  const receipt = {
+    ...selected,
+    host: selected.version,
+    approvals: 3,
+    checks: [...linuxFiles070Checks],
+  };
+  expect(() => assertLinuxFilesScenario(receipt, expected)).not.toThrow();
+  for (const changed of [
+    { approvals: 2 },
+    { host: "0.24.0" },
+    { archiveSha256: "a".repeat(64) },
+    { extensionVersion: "0.6.0" },
+    { extensionName: "Other Files" },
+    ...linuxFiles070Checks.map((check) => ({
+      checks: receipt.checks.filter((value) => value !== check),
+    })),
+  ])
+    expect(() =>
+      assertLinuxFilesScenario({ ...receipt, ...changed }, expected),
+    ).toThrow();
 });
 
 it("rejects an extracted host whose version differs from the explicit expectation", () => {

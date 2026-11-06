@@ -38,17 +38,20 @@ const terminalOnly = inputs?.terminalOnly ?? false;
 const catalogMode = inputs?.catalogMode;
 const linuxPublicCatalog = inputs?.linuxPublicCatalog ?? false;
 const linuxHistoricalPublic = inputs?.linuxHistoricalPublic ?? false;
-const scope = linuxPublicCatalog
-  ? "Files0.6-stable-public-HTTPS"
-  : linuxHistoricalPublic
-    ? "Files0.4-historical-public"
-    : catalogMode
-      ? `Files-catalog-${catalogMode}`
-      : attachOnly
-        ? "observer-attachment-only"
-        : terminalOnly
-          ? "terminal-entry-only"
-          : "Files-lifecycle";
+const consumer070 = inputs?.consumer070 ?? false;
+const scope = consumer070
+  ? "Files0.7-local-packaged-consumer"
+  : linuxPublicCatalog
+    ? "Files0.6-stable-public-HTTPS"
+    : linuxHistoricalPublic
+      ? "Files0.4-historical-public"
+      : catalogMode
+        ? `Files-catalog-${catalogMode}`
+        : attachOnly
+          ? "observer-attachment-only"
+          : terminalOnly
+            ? "terminal-entry-only"
+            : "Files-lifecycle";
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 async function prepareCatalog(root: string) {
@@ -114,6 +117,12 @@ async function prepareObserver(root: string, archiveBytes: Buffer) {
   for (const [source, target] of [
     ["files-packaged.cjs", "observer.cjs"],
     ["snippets-process-identity.cjs", "snippets-process-identity.cjs"],
+    ...(consumer070
+      ? [
+          ["files-070-packaged.cjs", "files-070-packaged.cjs"],
+          ["files-070-consumer.mjs", "files-070-consumer.mjs"],
+        ]
+      : []),
     ...(linuxPublicCatalog
       ? [["public-catalog-observer.cjs", "public-catalog-observer.cjs"]]
       : []),
@@ -124,8 +133,9 @@ async function prepareObserver(root: string, archiveBytes: Buffer) {
 }
 
 async function verifyPublicQuit(evidence: string) {
-  if (!linuxPublicCatalog) return;
-  assert.ok(inputs?.catalogSha256);
+  if (!linuxPublicCatalog && !consumer070) return;
+  assert.ok(inputs);
+  if (linuxPublicCatalog) assert.ok(inputs.catalogSha256);
   const quit = JSON.parse(
     await readFile(path.join(evidence, "quit.json"), "utf8"),
   ) as {
@@ -143,7 +153,8 @@ async function verifyPublicQuit(evidence: string) {
     extensionVersion: inputs.extensionVersion,
     extensionName: inputs.extensionName,
     currentUi: false,
-    catalogSha256: inputs.catalogSha256,
+    consumer070,
+    ...(linuxPublicCatalog ? { catalogSha256: inputs.catalogSha256! } : {}),
   });
   assert.equal(quit.joined, true);
   assert.equal(quit.quit, "joined");
@@ -251,6 +262,7 @@ async function observeScenario(
       extensionVersion: options.extensionVersion,
       extensionName: options.extensionName,
       currentUi: options.linuxCurrentFilesUi,
+      consumer070,
       ...(linuxPublicCatalog ? { catalogSha256: options.catalogSha256! } : {}),
     });
 }
@@ -455,6 +467,7 @@ it.skipIf(
         files: path.join(root, "owned-files"),
         readiness,
         terminalOnly,
+        consumer070,
         catalogMode,
         ...publicObserverOptions(),
         catalogFile: path.join(root, "catalog.json"),

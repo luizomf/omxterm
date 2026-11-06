@@ -925,17 +925,27 @@ OMXTERM_FILES_HTTPS=0 \
 npm test -- test/integration/files-production.test.ts
 ```
 
-The archive must match one of these exact retained private preparations:
+The built-host fixture recognizes these historical preparation identities; this
+list does not promise that private files or their receipts remain available:
 
 - Original source `1791af0`, 23,256 bytes, SHA-256
   `63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce`.
 - Composing-Escape correction at source `af0ac4b`, 23,285 bytes, SHA-256
   `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`.
-  Integrated dev.13 source preserves its build inputs; reuse does not rewrite
-  the original source/dev.12 build receipt or relabel earlier native evidence.
+  Integrated dev.13 source preserves its build inputs; reuse, when the original
+  trio is actually available, does not rewrite its source/dev.12 receipt.
 
-Neither archive is published. Do not rebuild merely for host metadata or overwrite
-original bytes/receipts. The scenario verifies the selected size and digest
+The Ubuntu built-host checkpoint integrated at `424d9f9f` and the Fedora
+built-host checkpoint integrated at `899979fb` passed nine bounded checks on
+their recorded inputs. Neither establishes an exact packaged or public-host
+checkpoint. Neither archive was published at those checkpoints. The historical
+corrected archive was unavailable during the later Linux delivery preparation;
+a fresh clean-commit build produced the same 23,285 bytes/digest, with a **new**
+receipt bound to source `0cb89accd61f1f5d5263c60773454882793e2e99` and its actual
+toolchain. Equal bytes do not recover the historical receipt or relabel earlier
+native results. If retained inputs are missing, build from verified committed
+inputs with fresh provenance and compare the actual digest; never reconstruct
+an old receipt or chase deleted archives. Do not overwrite original outputs. The scenario verifies the selected size and digest
 before installation, then checks loaded filtering, Chromium keyboard/focus
 routing, one confirmed directory move with a no-clobber conflict control,
 Close/reset from a nonempty query, Disable/Uninstall and joined Quit. It reuses
@@ -963,6 +973,38 @@ relative redirect, captured-byte native consent/dormant installation, explicit
 local replacement, retained real terminal/PTY and joined Quit. Its loopback TLS
 server is fixture-owned and closed before Quit. Consent answers and clicks remain
 controlled; it does not qualify public hosting, physical dialogs or other platforms.
+
+### Exact Linux ARM64 Files0.7 packaged consumer
+
+For the corrected Files0.7 bytes above, the separate exact-AppImage fixture can
+reuse the bounded filtering/keyboard/confirmed directory-move consumer:
+
+```sh
+OMXTERM_FILES_PACKAGED_APPIMAGE=/absolute/host.AppImage \
+OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256=EXPECTED_HOST_SHA256 \
+OMXTERM_FILES_PACKAGED_VERSION=0.25.0-dev.19 \
+OMXTERM_FILES_PACKAGED_ARCHIVE=/absolute/files-0.7.0.omxext \
+OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256=611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef \
+OMXTERM_FILES_PACKAGED_EXTENSION_VERSION=0.7.0 \
+OMXTERM_FILES_PACKAGED_EXTENSION_NAME='Files — ARM64 preview' \
+OMXTERM_FILES_PACKAGED_CONSUMER_070=1 \
+OMXTERM_FILES_PACKAGED_EVIDENCE=/absolute/new/private/evidence \
+npm test -- test/integration/files-packaged.test.ts
+```
+
+Follow the Linux service/session prerequisites before launch. This local-file
+lane is separate from catalog/public HTTPS and diagnostic modes. It verifies
+captured-byte trust/dormancy, loaded filtering, synthetic keyboard/focus,
+confirmed directory conflict/move with inode/content/source-absence oracles,
+Close/reset, Disable/Uninstall, deliberate reinstall retirement, the retained
+PTY/Surface and a third consent/active backend at normal joined Quit. The observer
+runs in the unchanged extracted package; only fixture helpers come from source.
+No primitive matrix is replayed. Inspect `consumer-files.png` and
+`terminal-after.png`; filenames and DOM readiness are not pixel evidence.
+Production public-link consumption remains a separate post-publication step.
+Stable Files0.6 catalogs remain unchanged.
+
+### Historical/current Files0.6 packaged lanes
 
 For exact-package qualification, the separate opt-in
 `test/integration/files-packaged.test.ts` takes absolute
