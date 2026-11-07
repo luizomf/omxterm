@@ -398,6 +398,66 @@ afterEach(async () => {
   await service?.dispose();
   await rm(adapters.root, { recursive: true, force: true });
 });
+
+// These mocked requests use literal host path grammars; expected shell quoting
+// is independent of the production formatter. No native filesystem is spoofed.
+const pathCases = [
+  {
+    platform: "linux",
+    simple: "/synthetic/a b",
+    simpleText: "'/synthetic/a b'",
+    quoted: "/root/a 'b'",
+    quotedText: "'/root/a '\\''b'\\'''",
+    multiline: "/root/a 'b'\nname",
+    multilineText: "'/root/a '\\''b'\\''\nname'",
+    root: "/root/",
+    otherGrammar: "C:\\root\\file",
+  },
+  {
+    platform: "win32",
+    simple: "C:\\synthetic\\a b",
+    simpleText: "'C:\\synthetic\\a b'",
+    quoted: "C:\\root\\a 'b'",
+    quotedText: "'C:\\root\\a ''b'''",
+    multiline: "C:\\root\\a 'b'\nname",
+    multilineText: "'C:\\root\\a ''b''\nname'",
+    root: "C:\\root\\",
+    otherGrammar: "/root/file",
+  },
+] as const;
+
+async function withPathPlatform<T>(
+  platform: "linux" | "win32",
+  run: () => Promise<T>,
+): Promise<T> {
+  const previous = Object.getOwnPropertyDescriptor(process, "platform")!;
+  try {
+    Object.defineProperty(process, "platform", {
+      value: platform,
+      configurable: true,
+    });
+    return await run();
+  } finally {
+    Object.defineProperty(process, "platform", previous);
+  }
+}
+
+it.each(pathCases)(
+  "restores the actual platform after a rejected mocked $platform path request",
+  async ({ platform }) => {
+    const previous = Object.getOwnPropertyDescriptor(process, "platform");
+    await expect(
+      withPathPlatform(platform, async () => {
+        expect(process.platform).toBe(platform);
+        throw new Error("synthetic request failure");
+      }),
+    ).rejects.toThrow("synthetic request failure");
+    expect(Object.getOwnPropertyDescriptor(process, "platform")).toEqual(
+      previous,
+    );
+  },
+);
+
 it.each([
   ["darwin", "arm64", true],
   ["darwin", "x64", false],
@@ -502,9 +562,13 @@ async function installTool(id: string, title: string, capabilities?: string[]) {
   expect(await request({ operation: "install" })).toMatchObject({ ok: true });
 }
 
-it.each(["omxterm.files", "omxterm.ssh"])(
-  "selects terminal transport only for the installed Files companion (%s)",
-  async (id) => {
+it.each(
+  pathCases.flatMap((paths) =>
+    ["omxterm.files", "omxterm.ssh"].map((id) => [paths, id] as const),
+  ),
+)(
+  "selects terminal transport only for the installed Files companion (%s, %s)",
+  async (paths, id) => {
     adapters.semanticRequest.mockResolvedValue({ ok: true });
     await installTool(id, "Tool", ["terminal.insertPath.v1"]);
     service.actions()[0]!.invoke();
@@ -517,19 +581,23 @@ it.each(["omxterm.files", "omxterm.ssh"])(
     }
     const input = {
       ticket: "00000000-0000-4000-8000-000000000001",
-      entry: { path: "/synthetic/a b", kind: "file" as const, entryToken: "1" },
+      entry: { path: paths.simple, kind: "file" as const, entryToken: "1" },
       source: { id: "hosted-view", isCurrentVisible: () => true },
       revision: 3,
       signal: new AbortController().signal,
     };
-    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+    expect(
+      await withPathPlatform(paths.platform, () =>
+        host.options.filesTerminalDrop!(input),
+      ),
+    ).toEqual({
       status: "accepted",
     });
     expect(adapters.semanticRequest).toHaveBeenCalledExactlyOnceWith(
       window,
       expect.objectContaining({
         operation: "terminal.semanticInput.v1",
-        text: "'/synthetic/a b'",
+        text: paths.simpleText,
         intent: "insert",
       }),
       expect.objectContaining({
@@ -543,21 +611,31 @@ it.each(["omxterm.files", "omxterm.ssh"])(
     expect(host.options.filesDragSignal?.aborted).toBe(false);
     await service.dispose();
     expect(host.options.filesDragSignal?.aborted).toBe(true);
-    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+    expect(
+      await withPathPlatform(paths.platform, () =>
+        host.options.filesTerminalDrop!(input),
+      ),
+    ).toEqual({
       status: "refused",
     });
     expect(adapters.semanticRequest).toHaveBeenCalledOnce();
   },
 );
 
-it.each([
-  [false, false],
-  [false, true],
-  [true, false],
-  [true, true],
-])(
-  "composes the protected Files drop only with declared path capability=%s and semantic owner=%s",
-  async (declared, owner) => {
+it.each(
+  pathCases.flatMap((paths) =>
+    (
+      [
+        [false, false],
+        [false, true],
+        [true, false],
+        [true, true],
+      ] as const
+    ).map(([declared, owner]) => [paths, declared, owner] as const),
+  ),
+)(
+  "composes protected Files drop with %s, declared capability=%s and semantic owner=%s",
+  async (paths, declared, owner) => {
     if (!owner) {
       await service.dispose();
       await startService("linux", {}, false);
@@ -577,7 +655,7 @@ it.each([
     }
     const input = {
       ticket: "00000000-0000-4000-8000-000000000001",
-      entry: { path: "/root/a 'b'", kind: "link" as const, entryToken: "1" },
+      entry: { path: paths.quoted, kind: "link" as const, entryToken: "1" },
       source: {
         id: "authenticated-native-view",
         isCurrentVisible: vi.fn(() => true),
@@ -586,14 +664,18 @@ it.each([
       signal: new AbortController().signal,
     };
     adapters.semanticRequest.mockResolvedValue({ ok: true });
-    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+    const drop = () =>
+      withPathPlatform(paths.platform, () =>
+        host.options.filesTerminalDrop!(input),
+      );
+    expect(await drop()).toEqual({
       status: "accepted",
     });
     expect(adapters.semanticRequest).toHaveBeenCalledExactlyOnceWith(
       window,
       {
         operation: "terminal.semanticInput.v1",
-        text: "'/root/a '\\''b'\\'''",
+        text: paths.quotedText,
         title: "File path",
         intent: "insert",
         preview: false,
@@ -612,107 +694,118 @@ it.each([
       [{ ok: false, reason: "terminal-not-completed" }, "unknown"],
     ] as const) {
       adapters.semanticRequest.mockResolvedValue(reply);
-      expect(await host.options.filesTerminalDrop!(input)).toEqual({
+      expect(await drop()).toEqual({
         status,
         reason: reply.reason,
       });
     }
     input.source.isCurrentVisible.mockReturnValue(false);
-    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+    expect(await drop()).toEqual({
       status: "refused",
     });
     expect(adapters.semanticRequest).toHaveBeenCalledTimes(3);
   },
 );
 
-it("delivers each Files drop's captured owner despite another window becoming focused", async () => {
-  await service.dispose();
-  adapters.semanticRequest.mockResolvedValue({ ok: true });
-  await startService("linux", {
-    isTrustedSender: (event) => adapters.windows.has(event.sender),
-  });
-  adapters.sendOpen.mockImplementation((sender, _channel, command) => {
-    if (!isTerminalTabCommand(command) || command.action !== "open-extension")
-      throw new Error("Expected extension admission command");
-    void request(
-      { operation: "open", token: command.token, accepted: true },
-      { sender, senderFrame: sender.mainFrame },
-    );
-  });
-  await installTool("omxterm.files", "Files", ["terminal.insertPath.v1"]);
-  service.actions()[0]!.invoke();
-  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
-  const first = adapters.hosts[0]!;
-  const otherWindow = Object.assign(new EventEmitter(), {
-    webContents: Object.assign(new EventEmitter(), {
-      mainFrame: {},
-      send: vi.fn(),
+it.each(pathCases)(
+  "delivers each Files drop's captured owner on $platform despite another window becoming focused",
+  async (paths) => {
+    await service.dispose();
+    adapters.semanticRequest.mockResolvedValue({ ok: true });
+    await startService("linux", {
+      isTrustedSender: (event) => adapters.windows.has(event.sender),
+    });
+    adapters.sendOpen.mockImplementation((sender, _channel, command) => {
+      if (!isTerminalTabCommand(command) || command.action !== "open-extension")
+        throw new Error("Expected extension admission command");
+      void request(
+        { operation: "open", token: command.token, accepted: true },
+        { sender, senderFrame: sender.mainFrame },
+      );
+    });
+    await installTool("omxterm.files", "Files", ["terminal.insertPath.v1"]);
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+    const first = adapters.hosts[0]!;
+    const otherWindow = Object.assign(new EventEmitter(), {
+      webContents: Object.assign(new EventEmitter(), {
+        mainFrame: {},
+        send: vi.fn(),
+        isDestroyed: () => false,
+      }),
       isDestroyed: () => false,
-    }),
-    isDestroyed: () => false,
-    getContentSize: () => [800, 600],
-  }) as unknown as BrowserWindow;
-  adapters.windows.set(otherWindow.webContents, otherWindow);
-  service.registerWindow(otherWindow, () => ({
-    owner: otherWindow,
-    signal: new AbortController().signal,
-    terminalDirectory: null,
-  }));
-  adapters.selected = otherWindow;
-  service.actions()[0]!.invoke();
-  await vi.waitFor(() => expect(adapters.hosts[1]?.open).toHaveBeenCalled());
-  const second = adapters.hosts[1]!;
-  expect(first.options.owner).toBe(window);
-  expect(second.options.owner).toBe(otherWindow);
-  const input = {
-    ticket: "00000000-0000-4000-8000-000000000001",
-    entry: { path: "/synthetic/a b", kind: "file" as const, entryToken: "1" },
-    source: { id: "hosted-view", isCurrentVisible: () => true },
-    revision: 3,
-    signal: new AbortController().signal,
-  };
-  adapters.selected = window;
-  expect(await second.options.filesTerminalDrop!(input)).toEqual({
-    status: "accepted",
-  });
-  expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
-    1,
-    otherWindow,
-    expect.objectContaining({
-      operation: "terminal.semanticInput.v1",
-      text: "'/synthetic/a b'",
-      intent: "insert",
-    }),
-    expect.objectContaining({
-      id: input.source.id,
-      actionSelectionRevision: 3,
-    }),
-    expect.any(AbortSignal),
-    expect.any(Function),
-    { dropTicket: input.ticket },
-  );
-  adapters.selected = otherWindow;
-  expect(await first.options.filesTerminalDrop!(input)).toEqual({
-    status: "accepted",
-  });
-  expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
-    2,
-    window,
-    expect.objectContaining({
-      operation: "terminal.semanticInput.v1",
-      text: "'/synthetic/a b'",
-      intent: "insert",
-    }),
-    expect.objectContaining({
-      id: input.source.id,
-      actionSelectionRevision: 3,
-    }),
-    expect.any(AbortSignal),
-    expect.any(Function),
-    { dropTicket: input.ticket },
-  );
-  expect(adapters.semanticRequest).toHaveBeenCalledTimes(2);
-});
+      getContentSize: () => [800, 600],
+    }) as unknown as BrowserWindow;
+    adapters.windows.set(otherWindow.webContents, otherWindow);
+    service.registerWindow(otherWindow, () => ({
+      owner: otherWindow,
+      signal: new AbortController().signal,
+      terminalDirectory: null,
+    }));
+    adapters.selected = otherWindow;
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[1]?.open).toHaveBeenCalled());
+    const second = adapters.hosts[1]!;
+    expect(first.options.owner).toBe(window);
+    expect(second.options.owner).toBe(otherWindow);
+    const input = {
+      ticket: "00000000-0000-4000-8000-000000000001",
+      entry: { path: paths.simple, kind: "file" as const, entryToken: "1" },
+      source: { id: "hosted-view", isCurrentVisible: () => true },
+      revision: 3,
+      signal: new AbortController().signal,
+    };
+    adapters.selected = window;
+    expect(
+      await withPathPlatform(paths.platform, () =>
+        second.options.filesTerminalDrop!(input),
+      ),
+    ).toEqual({
+      status: "accepted",
+    });
+    expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
+      1,
+      otherWindow,
+      expect.objectContaining({
+        operation: "terminal.semanticInput.v1",
+        text: paths.simpleText,
+        intent: "insert",
+      }),
+      expect.objectContaining({
+        id: input.source.id,
+        actionSelectionRevision: 3,
+      }),
+      expect.any(AbortSignal),
+      expect.any(Function),
+      { dropTicket: input.ticket },
+    );
+    adapters.selected = otherWindow;
+    expect(
+      await withPathPlatform(paths.platform, () =>
+        first.options.filesTerminalDrop!(input),
+      ),
+    ).toEqual({
+      status: "accepted",
+    });
+    expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
+      2,
+      window,
+      expect.objectContaining({
+        operation: "terminal.semanticInput.v1",
+        text: paths.simpleText,
+        intent: "insert",
+      }),
+      expect.objectContaining({
+        id: input.source.id,
+        actionSelectionRevision: 3,
+      }),
+      expect.any(AbortSignal),
+      expect.any(Function),
+      { dropTicket: input.ticket },
+    );
+    expect(adapters.semanticRequest).toHaveBeenCalledTimes(2);
+  },
+);
 
 it.each([
   ["omxterm.files", "toggleFiles"],
@@ -1890,9 +1983,13 @@ it.each([true, false])(
   },
 );
 
-it.each([false, true])(
-  "admits lexical path insertion only from a declared visible view (%s)",
-  async (declared) => {
+it.each(
+  pathCases.flatMap((paths) =>
+    [false, true].map((declared) => [paths, declared] as const),
+  ),
+)(
+  "admits lexical path insertion with %s only from a declared visible view (%s)",
+  async (paths, declared) => {
     await writeFile(
       archive,
       packageArchive([
@@ -1924,31 +2021,29 @@ it.each([false, true])(
       listener,
     );
     const signal = new AbortController().signal;
-    const value = {
+    const value: { operation: string; path: string } = {
       operation: "terminal.insertPath.v1",
-      path: "/root/a 'b'\nname",
+      path: paths.multiline,
     };
     adapters.semanticRequest.mockResolvedValue({ ok: true });
+    const invoke = (input: typeof value & { target?: string }) =>
+      withPathPlatform(paths.platform, () =>
+        host.options.onRequest!(input, signal, context),
+      );
     if (!declared) {
-      await expect(
-        host.options.onRequest!(value, signal, context),
-      ).rejects.toThrow("unavailable");
+      await expect(invoke(value)).rejects.toThrow("unavailable");
       expect(adapters.semanticRequest).not.toHaveBeenCalled();
       return;
     }
     visible.mockReturnValue(false);
-    await expect(
-      host.options.onRequest!(value, signal, context),
-    ).rejects.toThrow("unavailable");
+    await expect(invoke(value)).rejects.toThrow("unavailable");
     visible.mockReturnValue(true);
-    await expect(
-      host.options.onRequest!(value, signal, context),
-    ).resolves.toEqual({ ok: true });
+    await expect(invoke(value)).resolves.toEqual({ ok: true });
     expect(adapters.semanticRequest).toHaveBeenCalledExactlyOnceWith(
       window,
       {
         operation: "terminal.semanticInput.v1",
-        text: "'/root/a '\\''b'\\''\nname'",
+        text: paths.multilineText,
         title: "File path",
         intent: "insert",
         preview: false,
@@ -1959,17 +2054,32 @@ it.each([false, true])(
       true,
     );
     expect(host.claimActivation).toHaveBeenCalledExactlyOnceWith(context.id);
-    for (const path of ["relative", "/root/\0bad", "/" + "'".repeat(20_000)])
+    for (const path of [
+      "relative",
+      paths.otherGrammar,
+      paths.root + "\0bad",
+      paths.root + "x".repeat(32_768),
+    ])
+      await expect(invoke({ ...value, path })).resolves.toEqual({
+        ok: false,
+        reason: "invalid-path",
+      });
+    if (paths.platform === "linux")
       await expect(
-        host.options.onRequest!({ ...value, path }, signal, context),
+        invoke({ ...value, path: paths.root + "'".repeat(20_000) }),
       ).resolves.toEqual({ ok: false, reason: "invalid-path" });
-    for (const path of ["/root/\u001b[201~bad", "/root/\u009b201~bad"])
-      await expect(
-        host.options.onRequest!({ ...value, path }, signal, context),
-      ).resolves.toEqual({ ok: false, reason: "unsafe-path" });
-    await expect(
-      host.options.onRequest!({ ...value, target: "s1" }, signal, context),
-    ).resolves.toEqual({ ok: false, reason: "invalid-path" });
+    for (const path of [
+      paths.root + "\u001b[201~bad",
+      paths.root + "\u009b201~bad",
+    ])
+      await expect(invoke({ ...value, path })).resolves.toEqual({
+        ok: false,
+        reason: "unsafe-path",
+      });
+    await expect(invoke({ ...value, target: "s1" })).resolves.toEqual({
+      ok: false,
+      reason: "invalid-path",
+    });
     expect(adapters.semanticRequest).toHaveBeenCalledOnce();
   },
 );
