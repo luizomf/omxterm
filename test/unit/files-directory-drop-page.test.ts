@@ -148,57 +148,61 @@ function moveReply(value: Record<string, string>): Reply {
   };
 }
 
-it("offers copyMove only with a registered opaque terminal ticket and keeps internal confirmation", async () => {
-  const ticket = "12345678-1234-1234-1234-123456789abc";
-  const beginFilesTerminalDrag = vi.fn(() => ticket);
-  const endFilesTerminalDrag = vi.fn();
-  const { request, handle } = await setup({
-    beginFilesTerminalDrag,
-    endFilesTerminalDrag,
-  });
-  handle((value) =>
-    value.operation === "prepare-move-into"
-      ? Promise.resolve(moveReply(value))
-      : undefined,
-  );
-  const data = transfer();
-  data.setData("text/plain", "/must-not-escape");
-  dragEvent(row("/root/alpha"), "dragstart", data);
-  expect(beginFilesTerminalDrag).toHaveBeenCalledExactlyOnceWith({
-    path: "/root/alpha",
-    kind: "file",
-    entryToken: "1",
-  });
-  expect(data.types).toEqual([
-    "application/x-omxterm-files-entry",
-    "application/x-omxterm-files-terminal",
-  ]);
-  expect(data.types.map((type) => data.getData(type)).join()).not.toContain(
-    "/",
-  );
-  expect(data.effectAllowed).toBe("copyMove");
-  dragEvent(row("/root/folder"), "dragover", data);
-  expect(data.dropEffect).toBe("move");
-  dragEvent(row("/root/folder"), "drop", data);
-  expect(endFilesTerminalDrag).toHaveBeenCalledExactlyOnceWith(ticket);
-  await vi.waitFor(() => expect(button("Move")).toBeTruthy());
-  expect(request).toHaveBeenCalledWith({
-    operation: "prepare-move-into",
-    path: "/root/alpha",
-    kind: "file",
-    directory: "/root/folder",
-  });
-  expect(
-    request.mock.calls.some(
-      ([value]) => (value as { operation: string }).operation === "move-into",
-    ),
-  ).toBe(false);
-  button("Cancel").click();
-  expect(request).toHaveBeenCalledWith({
-    operation: "cancel-move",
-    token: "move-token",
-  });
-});
+it.each([false, true])(
+  "offers copyMove with a registered ticket and keeps internal confirmation with Chromium metadata=%s",
+  async (chromium) => {
+    const ticket = "12345678-1234-1234-1234-123456789abc";
+    const beginFilesTerminalDrag = vi.fn(() => ticket);
+    const endFilesTerminalDrag = vi.fn();
+    const { request, handle } = await setup({
+      beginFilesTerminalDrag,
+      endFilesTerminalDrag,
+    });
+    handle((value) =>
+      value.operation === "prepare-move-into"
+        ? Promise.resolve(moveReply(value))
+        : undefined,
+    );
+    const data = transfer();
+    data.setData("text/plain", "/must-not-escape");
+    dragEvent(row("/root/alpha"), "dragstart", data);
+    expect(beginFilesTerminalDrag).toHaveBeenCalledExactlyOnceWith({
+      path: "/root/alpha",
+      kind: "file",
+      entryToken: "1",
+    });
+    expect(data.types).toEqual([
+      "application/x-omxterm-files-entry",
+      "application/x-omxterm-files-terminal",
+    ]);
+    expect(data.types.map((type) => data.getData(type)).join()).not.toContain(
+      "/",
+    );
+    expect(data.effectAllowed).toBe("copyMove");
+    if (chromium) data.setData("chromium/x-drag-id", "synthetic");
+    dragEvent(row("/root/folder"), "dragover", data);
+    expect(data.dropEffect).toBe("move");
+    dragEvent(row("/root/folder"), "drop", data);
+    expect(endFilesTerminalDrag).toHaveBeenCalledExactlyOnceWith(ticket);
+    await vi.waitFor(() => expect(button("Move")).toBeTruthy());
+    expect(request).toHaveBeenCalledWith({
+      operation: "prepare-move-into",
+      path: "/root/alpha",
+      kind: "file",
+      directory: "/root/folder",
+    });
+    expect(
+      request.mock.calls.some(
+        ([value]) => (value as { operation: string }).operation === "move-into",
+      ),
+    ).toBe(false);
+    button("Cancel").click();
+    expect(request).toHaveBeenCalledWith({
+      operation: "cancel-move",
+      token: "move-token",
+    });
+  },
+);
 it.each([null, "forged"])(
   "keeps move-only semantics when terminal registration returns %s",
   async (ticket) => {

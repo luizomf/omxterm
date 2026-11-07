@@ -1292,11 +1292,9 @@ export function mountFilesPage(
       types.includes(dragType) &&
       types.length <= 3 &&
       types.every((type) =>
-        [
-          dragType,
-          FILES_TERMINAL_DRAG_TYPE,
-          "application/x-chromium-drag-id",
-        ].includes(type),
+        [dragType, FILES_TERMINAL_DRAG_TYPE, "chromium/x-drag-id"].includes(
+          type,
+        ),
       )
     );
   }
