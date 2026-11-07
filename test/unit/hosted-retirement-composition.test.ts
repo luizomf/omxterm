@@ -24,6 +24,7 @@ import {
 
 let pid = 0;
 class Contents extends EventEmitter {
+  ipc = new EventEmitter();
   mainFrame = {};
   id = ++pid;
   dead = false;

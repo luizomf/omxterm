@@ -27,6 +27,15 @@ Surface-queued semantic input until a definitive late receipt, if one arrives;
 there is no automatic replay. This Files action refuses paths containing a
 bracketed-paste terminator rather than stripping or rewriting them.
 
+The source-only Files drag increment adds opaque transport, not another
+insertion policy. Its main-owned ticket captures one bounded absolute path and
+kind; DataTransfer contains no path. Registration remains unavailable without a
+protected consumer, and no live terminal target is installed. Composition must
+reuse the core path handoff's quoting, captured Surface/selection revision,
+Protected Paste and no-Enter behavior. Transport refuses control-bearing source
+paths without rewriting them; it never parses text/URI data into paths or looks
+up a file. See the [integration seam](../files-development-preview.md#terminal-drag-transport-source-increment).
+
 Paths are lexical only: OMXTerm never reads, resolves, normalizes, or stats a
 target. Probing the filesystem from drop or clipboard data would turn
 untrusted payload into filesystem access and make OMXTerm interpret what only

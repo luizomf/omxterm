@@ -44,6 +44,17 @@ stale observations fail closed, including across hide/reveal before commit;
 same-view geometry refreshes preserve admission. This does not impose a total
 order between processes.
 
+Files' source-only terminal drag transport uses that same actual child
+main-frame/view/epoch/window ownership. Its synchronous preload registration is
+bounded in-memory work only, available solely when installed Files composition
+supplies a protected handoff consumer. Main retains one path-free ticket per
+window for ten seconds; core claims it synchronously once before asynchronous
+redemption so later child dragend cannot erase a claimed drop. Hiding, epoch or
+window loss and timeout still revoke claimed authority; no hide/reveal revival
+or renderer-selected source owner is permitted. No live terminal target or
+second input route is enabled by the transport increment. See the
+[transport contract](../files-development-preview.md#terminal-drag-transport-source-increment).
+
 DOM selection and overlay opening await an acknowledged native hide. When that
 hide removes the selected, natively focused child of an already focused window,
 main returns native focus to the core WebContents before acknowledging. Hiding

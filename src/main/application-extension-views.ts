@@ -70,6 +70,26 @@ export function applicationViews(
     onKeybind: options.keybind,
     subscribeSelection: (listener) =>
       options.semanticInput?.subscribeSelection(window, listener) ?? (() => {}),
+    filesDragSignal: AbortSignal.any([epochSignal, target.signal]),
+    filesTerminalDrop:
+      target.presentation === "panel" &&
+      pin.manifest.id === "omxterm.files" &&
+      options.filesTerminalDrop
+        ? (input) => {
+            const signal = AbortSignal.any([
+              input.signal,
+              epochSignal,
+              target.signal,
+            ]);
+            if (signal.aborted || !input.source.isCurrentVisible())
+              return Promise.resolve({ status: "refused" });
+            return options.filesTerminalDrop!(
+              window,
+              { ...input, signal },
+              admit,
+            );
+          }
+        : undefined,
     onRequest(value, signal, context) {
       if (epochSignal.aborted || target.signal.aborted || signal.aborted)
         return Promise.reject(new PackageError("unavailable"));

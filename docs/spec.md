@@ -519,7 +519,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   are separated by one space, and are delivered through Protected Paste without
   sending Enter. Drag navigation is prevented over the whole renderer document.
   Internal tab dragging only reorders tabs and never inserts a path; any other
-  drop with no native files has no terminal side effect.
+  drop with no native files has no terminal side effect. Files entry/candidate
+  MIME payloads, including mixtures with native files or tab drags, never fall
+  through to native-file insertion. The source transport below has no active
+  terminal target until its protected handoff consumer is composed.
 - `View -> Reload User Configuration` defaults to `Cmd+Shift+,` on macOS and
   `Ctrl+Shift+,` on Linux and Windows. It manually rereads and validates the
   complete configuration. Successful application updates font-size baseline,
@@ -2369,6 +2372,28 @@ symlink destinations are refused; symlink sources move as links. Conflicts never
 overwrite, cross-volume moves never fall back to copy/delete, and unknown outcomes
 are not retried. These checks are not a hostile filesystem race sandbox. The
 separate Files-to-terminal drag remains outside this workflow.
+
+A source-only Files terminal transport retains one opaque gesture per owner
+window for at most ten seconds, including claim and pending handoff. Actual child
+main-frame registration captures the literal bounded absolute path/kind against
+its installed view/epoch/window; no path enters DataTransfer. With an available
+protected handoff consumer, the row adds a distinct terminal-candidate MIME and
+uses copyMove; internal directory targets still use move and require the same
+confirmation. Without that consumer registration is unavailable and the row
+remains move-only. Core exposes no active insert/copy target in this increment.
+A tested drop seam captures the eligible target synchronously, claims the exact
+terminal ticket and matching internal token once before any asynchronous work,
+then carries the captured selection revision to main. Dragend revokes unclaimed
+rows but cannot erase a claimed drop by itself. Hide, retirement, window loss,
+blur/minimize, installation revocation and timeout revoke either phase without
+hide/reveal revival. Mixed/native/tab, forged, expired or replayed claims are
+refused. Results distinguish refused, unknown and consumer-accepted handoff;
+acceptance is not evidence of shell/program consumption. No string/URI is parsed
+as a path, no filesystem lookup occurs, and no PTY/paste route is added.
+Composition must reuse #768's quote/Protected Paste owner and captured-pane focus,
+not recapture a successor; this source increment does not ship terminal insertion.
+See the [transport seam](files-development-preview.md#terminal-drag-transport-source-increment).
+
 The page follows the host's explicit en-US/pt-BR
 language and relabels retained controls, accessible names, menus, confirmations and
 notices without rereading listings, replaying operations or resetting focus/caret,

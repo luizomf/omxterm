@@ -21,6 +21,7 @@ import type { LocalImageActivation, LocalImageData } from "./local-image";
 
 export interface TerminalBridge {
   readonly semanticInput?: import("./semantic-input").SemanticInputBridge;
+  readonly filesTerminalDrag?: import("./files-terminal-drag").FilesTerminalDragBridge;
   readonly mirrorTyping?: import("./mirror-typing").MirrorTypingBridge;
   readonly layout?: import("./terminal-layout").TerminalLayoutBridge;
   readonly hostedContent?: import("./extension-view").HostedContentBridge;

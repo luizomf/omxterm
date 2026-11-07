@@ -3,6 +3,10 @@ import type {
   TerminalLayoutBridge,
 } from "../shared/terminal-layout";
 import { createCompanionContent } from "./companion-content";
+import {
+  FILES_ENTRY_DRAG_TYPE,
+  FILES_TERMINAL_DRAG_TYPE,
+} from "../shared/files-terminal-drag";
 import type { HostedContentBridge } from "../shared/extension-view";
 import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
 import { createCommandPalette } from "./command-palette";
@@ -413,17 +417,26 @@ function installFileDrops(
   format: TerminalWindowPageOptions["droppedFilePathInsertion"],
 ): () => void {
   const isInternalTabDrag = (event: DragEvent) =>
-    [...(event.dataTransfer?.types ?? [])].includes(
-      TERMINAL_TAB_DRAG_DATA_TYPE,
+    event.dataTransfer?.types?.includes(TERMINAL_TAB_DRAG_DATA_TYPE) ?? false;
+  const isFilesEntryDrag = (event: DragEvent) =>
+    [...(event.dataTransfer?.types ?? [])].some(
+      (type) =>
+        type === FILES_ENTRY_DRAG_TYPE || type === FILES_TERMINAL_DRAG_TYPE,
     );
   const onDragOver = (event: DragEvent) => {
     event.preventDefault();
-    if (blocked() || !isInternalTabDrag(event)) event.stopPropagation();
+    // No protected Files consumer is composed yet. Never advertise a copy
+    // target, or fall through to native files/tab handling for mixed payloads.
+    const filesEntry = isFilesEntryDrag(event);
+    if (filesEntry && event.dataTransfer)
+      event.dataTransfer.dropEffect = "none";
+    if (blocked() || filesEntry || !isInternalTabDrag(event))
+      event.stopPropagation();
   };
   const onDrop = (event: DragEvent) => {
     // Capture before the Surface can interpret a native file URI.
     event.preventDefault();
-    if (blocked()) {
+    if (blocked() || isFilesEntryDrag(event)) {
       event.stopPropagation();
       return;
     }

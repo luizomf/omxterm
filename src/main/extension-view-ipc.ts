@@ -1,11 +1,21 @@
 import { isAbsolute } from "node:path";
 import { createCompanionDismissal } from "./companion-dismissal";
 import { terminalIpc } from "../shared/terminal-ipc";
+import { filesTerminalDragIpc } from "../shared/files-terminal-drag";
+import {
+  createFilesTerminalDrag,
+  type FilesTerminalDropConsumer,
+} from "./files-terminal-drag";
 import type {
   TerminalClipboardAction,
   TerminalContextMenuTarget,
 } from "../shared/terminal-contract";
-import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
+import type {
+  IpcMain,
+  IpcMainInvokeEvent,
+  IpcMainEvent,
+  WebContents,
+} from "electron";
 import {
   extensionViewIpc,
   isHostedContentId,
@@ -26,6 +36,7 @@ type Route = {
   focused: string | null;
   panels: Set<string>;
   dismissal: ReturnType<typeof createCompanionDismissal>;
+  filesDrag: ReturnType<typeof createFilesTerminalDrag>;
 };
 const routers = new WeakMap<IpcMain, Map<WebContents, Route>>();
 
@@ -50,7 +61,7 @@ function registryFor(ipcMain: IpcMain) {
   if (routes) return routes;
   routes = new Map<WebContents, Route>();
   const registry = routes;
-  const routeFor = (event: IpcMainInvokeEvent) => {
+  const routeFor = (event: IpcMainInvokeEvent | IpcMainEvent) => {
     const route = registry.get(event.sender);
     if (
       !route ||
@@ -111,6 +122,12 @@ function registryFor(ipcMain: IpcMain) {
     if (!host?.owns(id)) throw new Error("Unknown hosted content");
     await host.close(id);
   });
+  ipcMain.handle(filesTerminalDragIpc.handoff, (event, ...args: unknown[]) => {
+    const route = routeFor(event);
+    return args.length === 2
+      ? route.filesDrag.handoff(args[0], args[1])
+      : { status: "refused" };
+  });
   routers.set(ipcMain, routes);
   return routes;
 }
@@ -118,7 +135,11 @@ function registryFor(ipcMain: IpcMain) {
 // Multiple epochs/windows share the actual-sender router. Payload identities
 // only select IDs already issued to that window; they never choose an owner.
 export function startExtensionViewHost(
-  options: ExtensionViewHostOptions & { ipcMain: IpcMain },
+  options: ExtensionViewHostOptions & {
+    ipcMain: IpcMain;
+    filesTerminalDrop?: FilesTerminalDropConsumer | undefined;
+    filesDragSignal?: AbortSignal;
+  },
 ) {
   const contents = options.owner.webContents;
   if (
@@ -138,13 +159,27 @@ export function startExtensionViewHost(
       focused: null,
       panels: new Set(),
       dismissal: createCompanionDismissal(options.owner),
+      filesDrag: createFilesTerminalDrag(options.owner),
     };
     registry.set(contents, route);
+    contents.ipc.on(filesTerminalDragIpc.claim, (event, ...args: unknown[]) => {
+      event.returnValue = false;
+      if (
+        event.sender === contents &&
+        event.senderFrame === contents.mainFrame &&
+        !contents.isDestroyed() &&
+        args.length === 1
+      )
+        event.returnValue =
+          registry.get(contents)?.filesDrag.claim(args[0]) ?? false;
+    });
     contents.once("destroyed", () => {
+      registry.get(contents)?.filesDrag.revoke();
       registry.delete(contents);
       if (!registry.size) {
         options.ipcMain.removeHandler(extensionViewIpc.present);
         options.ipcMain.removeHandler(extensionViewIpc.close);
+        options.ipcMain.removeHandler(filesTerminalDragIpc.handoff);
         routers.delete(options.ipcMain);
       }
     });
@@ -162,6 +197,21 @@ export function startExtensionViewHost(
   };
   const host = createExtensionViewHost({
     ...options,
+    filesDrag: options.filesTerminalDrop
+      ? {
+          start: (value, context, signal) =>
+            ownerRoute.filesDrag.start(
+              value,
+              context,
+              options.filesDragSignal
+                ? AbortSignal.any([signal, options.filesDragSignal])
+                : signal,
+              options.filesTerminalDrop!,
+            ),
+          end: ownerRoute.filesDrag.end,
+          revoke: ownerRoute.filesDrag.revoke,
+        }
+      : undefined,
     onFocusChange: reportFocus,
     interceptInput(event, input, sourceId) {
       const id = host.focusedId();

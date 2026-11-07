@@ -121,6 +121,15 @@ async function applicationManager(
 
 export type ApplicationExtensionsOptions = {
   applicationRoot: string;
+  // Integration seam only. Absent until the captured-pane #768 protected
+  // handoff is composed; source drag stays move-only without it.
+  filesTerminalDrop?: (
+    window: BrowserWindow,
+    input: Parameters<
+      import("./files-terminal-drag").FilesTerminalDropConsumer
+    >[0],
+    admit: (signal: AbortSignal, commit: () => void) => Promise<void>,
+  ) => ReturnType<import("./files-terminal-drag").FilesTerminalDropConsumer>;
   defaultSnippets?: DefaultSnippetsSeed;
   onDefaultSnippetsWarning?(warning: string): void;
   semanticInput?: Pick<
