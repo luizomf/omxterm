@@ -211,7 +211,7 @@ Windows ARM64's unrun graphical suite and unresolved public-install failures are
 accepted [for 0.25.0 only](docs/snippets-migration.md#stable-0250-release-disposition).
 The migration guide retains historical preview/0.24.0 receipts. Published Snippets
 `0.1.1` fixes the [home override limitation](docs/snippets-migration.md#existing-catalogs-and-shortcuts)
-through a deliberate local update; the official catalog and bundled default remain
+through a deliberate official-catalog or local update. The bundled default remains
 `0.1.0`, and existing installations are not automatically updated.
 Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal

@@ -44,25 +44,29 @@ describe("published Snippets catalog candidate", () => {
     expect(snippets.name).toBe(
       "Snippets — Linux, macOS and Windows ARM64 preview",
     );
-    expect(snippets.description).toContain("0.24.0-dev.36 on Windows ARM64");
-    expect(snippets.description).toContain("Windows x64 is unqualified");
+    expect(snippets.description).toContain(
+      "Windows ARM64 public-install failures are unresolved",
+    );
+    expect(snippets.description).toContain(
+      "Windows x64 retains built-in Snippets",
+    );
   });
 
   it("binds the verified immutable archive, original receipt and embedded manifest", () => {
     // Recorded from public archive/checksum/receipt readback, not a new build.
     expect(snippets).toMatchObject({
       id: "omxterm.snippets",
-      version: "0.1.0",
+      version: "0.1.1",
       engines: { omxterm: ">=0.24.0-dev.8", api: "0.1.x" },
       targets: ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
-      sourceCommit: "805e95dbc77552dc137707578b18b48ad6d047e9",
+      sourceCommit: "12c54a09060364982de4e9833d112167a4e21d26",
       releaseUrl:
-        "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0",
+        "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1",
       archive: {
-        url: "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.0/snippets-0.1.0.omxext",
-        bytes: 76653,
+        url: "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.1/snippets-0.1.1.omxext",
+        bytes: 82635,
         sha256:
-          "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",
+          "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b",
       },
     });
   });
@@ -84,6 +88,8 @@ describe("published Snippets catalog candidate", () => {
         ["0.24.1-dev.0", true],
         ["0.25.0-dev.0", true],
         ["0.25.0-dev.1", true],
+        ["0.25.0", true],
+        ["0.26.0-dev.4", true],
         ["0.25.1-dev.0", false],
       ])(
         "applies host compatibility for %s (not qualification)",
@@ -159,6 +165,26 @@ describe("published Snippets catalog candidate", () => {
         .entries.find((entry) => entry.id === snippets.id)!;
       expect(card).toMatchObject({ compatible: true, action: "install" });
       expect(catalog.select(card.selection)).toEqual(snippets);
+      const oldDefault = JSON.parse(
+        await readFile("assets/default-snippets.json", "utf8"),
+      ) as { id: string; version: string; sha256: string };
+      expect(oldDefault).toMatchObject({
+        id: "omxterm.snippets",
+        version: "0.1.0",
+        sha256:
+          "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",
+      });
+      expect(
+        catalog
+          .snapshot([
+            {
+              id: oldDefault.id,
+              manifest: { version: oldDefault.version },
+              digest: oldDefault.sha256,
+            },
+          ])
+          .entries.find((entry) => entry.id === snippets.id),
+      ).toMatchObject({ action: "update", installedVersion: "0.1.0" });
       expect(
         catalog
           .snapshot([

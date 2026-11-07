@@ -228,18 +228,19 @@ authentication.
 ## Optional Snippets preview
 
 Published **OMXTerm 0.25.0** uses optional Snippets on Linux ARM64/x64, macOS
-ARM64 and Windows ARM64, using the unchanged [Snippets 0.1.0 archive](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0).
+ARM64 and Windows ARM64. Its bundled default is Snippets 0.1.0; the official
+catalog offers [Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
+for deliberate installation or update.
 Windows x64 retains built-in Snippets. The earlier 0.23.0 host also keeps its
 built-in tool. Existing `snippets.yaml` files are not rewritten or deleted.
 
 Positively new packaged profiles on those four targets make one attempt to install
 the [removable default](default-snippets.md), enabled but dormant. Existing
 profiles are not enrolled; disabled or removed choices are preserved. For manual
-installation or reinstallation, download and verify the archive and its checksum,
-then choose **Settings → Extensions → Install local .omxext…**. Review
-the trusted-code prompt, enable the extension if needed, and open **View → Toggle
-Snippets**. Alternatively, use **Browse official extensions** where your host and
-target have a compatible offer. Installation is deliberate and remains dormant
+installation or update, choose **Settings → Extensions → Browse official extensions**
+and select Snippets. Alternatively, download and verify the archive and checksum,
+then choose **Install local .omxext…**. Review the trusted-code prompt, enable the
+extension if needed, and open **View → Toggle Snippets**. Installation is deliberate and remains dormant
 until activation; extensions are trusted code, not sandboxed. On those targets,
 without an enabled package, the shortcut opens Extensions guidance; Windows x64
 instead opens built-in Snippets.

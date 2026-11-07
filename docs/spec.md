@@ -554,8 +554,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
   below full-width title/tab chrome. Published stable `0.25.0` and current source
   support optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64.
-  The bundled default and official catalog remain `0.1.0`; published `0.1.1` is
-  available for deliberate local installation or update, not automatically.
+  The bundled default remains `0.1.0`; the official catalog offers `0.1.1` for
+  deliberate installation or update, not automatically.
   Windows x64 and unchanged `0.23.0` hosts retain the built-in view. Existing users
   choose installation through the official catalog or a verified local/offline
   archive. Windows ARM64's graphical suite did not run and public-install Snippets
@@ -1664,7 +1664,7 @@ An optional user-owned `snippets.yaml` next to `config.json` defines the
 Snippets Sidebar contents. Published Snippets `0.1.1` uses the account-home
 fallback; installed and bundled-default `0.1.0` can instead resolve a different
 catalog when XDG is unset or empty and the environment home is overridden. A
-local update is deliberate; the default and catalog remain `0.1.0`. See the
+catalog or local update is deliberate; the bundled default remains `0.1.0`. See the
 [migration guide](snippets-migration.md#existing-catalogs-and-shortcuts)
 for the delivery boundary. The file is one UTF-8 YAML 1.2 core document parsed
 with `yaml` v2, containing exactly `version: 1` and a `snippets` array of at
@@ -2364,8 +2364,8 @@ the package's duplicate Snippets action stays withheld. The [bounded source
 qualification](snippets-migration.md#macos-arm64-source-transition) does not qualify
 macOS Files or itself establish host publication. The separately
 [published macOS ARM64 `0.24.0-dev.16` preview](snippets-migration.md#macos-arm64-published-preview)
-uses optional Snippets `0.1.0`, available through the official catalog or local
-archive installation. The published Linux x64 `0.24.0-dev.30` preview also offers
+uses optional Snippets, originally qualified with `0.1.0`; the official catalog
+now offers `0.1.1`. The published Linux x64 `0.24.0-dev.30` preview also offers
 the optional tool through the catalog or a local archive; its bounded public-HTTPS
 checkpoint passed separately. The published Windows ARM64 dev.36 preview uses
 optional Snippets after its exact-stage and separate FULL NSIS gates; its

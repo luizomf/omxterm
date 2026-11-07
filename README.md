@@ -132,17 +132,19 @@ See the [device chooser](#choose-your-device) and follow the
 ### Optional Snippets
 
 Stable **0.25.0** supports optional Snippets on Linux ARM64/x64, macOS ARM64
-and Windows ARM64. Its bundled default and official catalog offer Snippets 0.1.0.
+and Windows ARM64. Its bundled default is Snippets 0.1.0; the official catalog
+offers 0.1.1.
 New packaged profiles try to install the
 [removable default](docs/default-snippets.md) once, ready to open but inactive at
 startup. Existing profiles still choose installation; your YAML and disabled or
 removed choices stay intact. Windows x64 retains built-in Snippets.
 
 [Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
-is a separate non-Latest patch that fixes catalog home resolution. To install or
-update deliberately, download and verify its archive and checksum, then use local
-installation and approve its trust prompt; see the [steps and limits](docs/snippets-migration.md#install-deliberately).
-The catalog and bundled default remain 0.1.0; there is no automatic update.
+is a separate non-Latest patch that fixes catalog home resolution. Install or
+update deliberately through **Settings → Extensions → Browse official extensions**
+and approve the trust prompt, or use the verified local archive; see the
+[steps and limits](docs/snippets-migration.md#install-deliberately). The bundled
+default remains 0.1.0; there is no automatic update.
 
 **Windows ARM64:** public-install Snippets tests still have unresolved failures,
 and the full graphical suite did not run. Read the
@@ -152,7 +154,7 @@ upgrading if you depend on the previous built-in experience.
 Historical previews:
 
 [Linux ARM64 host 0.24.0-dev.11, macOS ARM64 host 0.24.0-dev.16, Linux x64 host 0.24.0-dev.30 and Windows ARM64 host 0.24.0-dev.36](docs/installation.md#optional-snippets-preview)
-use the separate Snippets 0.1.0 archive. These non-Latest prereleases require
+originally used the separate Snippets 0.1.0 archive. These non-Latest prereleases require
 deliberate installation; existing catalogs stay intact. Separate bounded
 public-HTTPS checkpoints passed for the three Linux/macOS pairs. Windows public
 consumption is separate from its published preview and catalog source. Stable

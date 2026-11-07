@@ -188,19 +188,21 @@ Follow the [SSH preview procedure](release.md#ssh-preview-publication) for the
 extension-only publication and bounded public-consumption gate.
 Catalog admission is not qualification of every version in an engine range.
 
-The public catalog also lists Snippets0.1.0 for Linux ARM64, bound to the
-published `snippets-0.1.0.omxext`, original receipt and checksum.
-Its embedded host range remains `>=0.24.0-dev.8` with API `0.1.x`; the qualified
-published pair is host `0.24.0-dev.11`, not every admitted host. That Snippets
-promotion left Files/SSH entries unchanged. The fixed endpoint was read back byte-for-byte and the separate
+The original Linux ARM64 catalog promotion listed Snippets0.1.0, bound to the
+published archive, original receipt and checksum. Its host range was
+`>=0.24.0-dev.8` with API `0.1.x`; the qualified published pair was host
+`0.24.0-dev.11`, not every admitted host. That promotion left Files/SSH entries unchanged.
+At that promotion the fixed endpoint was read back byte-for-byte and the separate
 [packaged public-HTTPS checkpoint](snippets-migration.md#preview-coverage-and-remaining-platforms)
-passed on that exact pair. The [promotion procedure](release.md#snippets-catalog-promotion)
+passed on that exact 0.1.0 pair. The current catalog offers Snippets0.1.1 on the
+same declared targets; see the [migration guide](snippets-migration.md) for its
+distinct evidence and limits. The [promotion procedure](release.md#snippets-catalog-promotion)
 retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),
 and explicit trust/enablement remain unchanged. Older Windows releases retain
 built-in Snippets; the separate Windows ARM64 dev.36 preview is described below.
 
-The Linux x64 `0.24.0-dev.30` host offers the same archive through the official
-catalog or local installation. The promoted catalogs add `linux-x64` to the common
+The Linux x64 `0.24.0-dev.30` host originally offered the same 0.1.0 archive
+through the official catalog or local installation. That promotion added `linux-x64` to the common
 Snippets entry without altering Files/SSH or archive identity. The host selects the
 legacy endpoint listed above; its public readback and a separate bounded packaged
 public-HTTPS checkpoint passed. See the [Linux x64 checkpoint](snippets-migration.md#linux-x64-public-catalog-checkpoint)

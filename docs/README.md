@@ -28,10 +28,10 @@ not install or update tools.
   **[SSH Connect 0.3.1](ssh-connect.md)** are published previews offered through
   the official catalogs on **Linux and macOS ARM64**. Follow each tool's guide
   for installation, compatible hosts and platform/qualification limits.
-- **[Snippets 0.1.0](snippets-migration.md)** is optional on stable 0.25.0 for
-  **Linux ARM64/x64, macOS ARM64 and Windows ARM64**. New packaged profiles try to
-  install the [removable default](default-snippets.md) once; existing users choose
-  installation. Your YAML and disabled/removed choices stay intact. Windows x64
+- **[Snippets](snippets-migration.md)** is optional on stable 0.25.0 for
+  **Linux ARM64/x64, macOS ARM64 and Windows ARM64**. The official catalog offers
+  0.1.1; new packaged profiles try to install the 0.1.0
+  [removable default](default-snippets.md) once. Existing users choose installation. Your YAML and disabled/removed choices stay intact. Windows x64
   retains built-in Snippets. Windows ARM64 has
   [unresolved public-install failures and testing gaps](snippets-migration.md#stable-0250-release-disposition);
   users needing built-in Snippets may remain on 0.23.0.

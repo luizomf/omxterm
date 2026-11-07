@@ -2,7 +2,8 @@
 
 Published **[OMXTerm 0.25.0](https://github.com/luizomf/omxterm/releases/tag/v0.25.0)**
 supports optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64.
-Its bundled default and official catalog offer **[Snippets 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)**.
+Its bundled default remains **[Snippets 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)**;
+the official catalog offers **[Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)**.
 Windows x64 and unchanged
 `0.23.0` hosts retain built-in Snippets. Existing users choose installation through
 the official catalog or a verified local/offline archive; user YAML and deliberate
@@ -16,13 +17,13 @@ or silent restore after uninstall. Developer startup and Windows x64 are exclude
 Read the [0.25.0 known limits](#stable-0250-release-disposition), especially before
 upgrading Windows ARM64 if you rely on built-in Snippets.
 
-**Manual patch:** [Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
-fixes catalog home resolution. Download and verify its archive and checksum, then
-[install or update locally](#install-deliberately) with explicit trust. The
-catalog and bundled default remain 0.1.0; existing installations do not update
-automatically. A Fedora extracted-AppImage check exercised 0.1.1 on the exact
-0.25.0 host with synthetic input and controlled consent. Native update, public
-acquisition and other platforms were not qualified; see the release notes.
+**Deliberate patch:** Snippets 0.1.1 fixes catalog home resolution. Select Install
+or Update in the official catalog, or download and verify the archive for a local
+installation; both require explicit trust. The bundled default remains 0.1.0 and
+existing installations do not update automatically. A Fedora extracted-AppImage
+check exercised 0.1.1 on the exact 0.25.0 host with synthetic input and controlled
+consent. Native update, 0.1.1 public-catalog acquisition and other platforms were
+not qualified by that check; see the release notes.
 
 Historical preview pairs retain their own exact receipts and qualification limits.
 
@@ -45,7 +46,7 @@ and [macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
 Stable 0.25.0 was published on **2026-11-07 at 11:39:10 UTC** as immutable Latest,
 from cut `13ea6873e6c45240a0a757156b7a4f694c2b43af`. All twelve downloads matched
 their local sizes and SHA-256 hashes, both before publication and through anonymous
-public downloads. Snippets 0.1.0 and the existing catalogs are unchanged.
+public downloads. At that release, Snippets 0.1.0 and the catalogs were unchanged.
 
 The maintainer chose to ship **0.25.0 only** with these known limits, lifting the
 earlier release hold. The failed and unrun checks below remain unresolved:
@@ -118,7 +119,8 @@ If `HOME` (or `USERPROFILE` on Windows) differs from the OS account home, it can
 read a different catalog from the one beside `config.json`. A nonempty
 `XDG_CONFIG_HOME` takes precedence for both. Published Snippets `0.1.1` uses
 the account home. Updating the app does not update an installed or default `0.1.0`
-copy; deliberately install the verified 0.1.1 archive to update it. This is not
+copy; deliberately update to 0.1.1 through the official catalog or verified local
+archive. This is not
 portable-data relocation.
 
 **View → Toggle Snippets**, its Command Palette entry and existing shortcut
@@ -165,7 +167,7 @@ enabled by the new-profile default, just open it; you do not need to reinstall.
 Windows x64 uses built-in Snippets instead. For a preview, use its exact host and
 archive pair linked above; the Windows dev.36 section has [installer and SmartScreen
 instructions](#windows-arm64-published-preview-and-catalog-candidate).
-For the 0.1.1 patch, download `snippets-0.1.1.omxext` and its checksum from the
+For offline installation of the 0.1.1 patch, download `snippets-0.1.1.omxext` and its checksum from the
 [Snippets 0.1.1 release](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
 into the same folder, then verify before installation:
 
@@ -188,18 +190,17 @@ The 0.1.1 archive SHA-256 is
 `e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b`.
 For historical preview evidence, use its recorded 0.1.0 archive and checksum;
 the 0.1.1 update has not been natively qualified on those hosts. Existing Files/SSH
-packages were not newly qualified. The official catalog still offers 0.1.0 on its
-admitted targets; its Windows ARM64 promotion changed no archive or manifest range. Separate bounded public-HTTPS
-checkpoints passed on the three Linux/macOS pairs; Windows public consumption
-remains pending at this revision. See
+packages were not newly qualified. The official catalog offers 0.1.1 on the same
+admitted targets. Earlier bounded public-HTTPS checkpoints used 0.1.0 on the three
+Linux/macOS pairs; Windows public consumption remains unresolved. See
 [Linux x64](#linux-x64-public-catalog-checkpoint), [macOS](#macos-arm64-catalog-delivery)
 and [Linux ARM64](#preview-coverage-and-remaining-platforms).
 
-1. Open **Settings → Extensions** and choose **Install local .omxext…** to install
-   or update to the verified 0.1.1 archive; it works offline after download. For
-   0.1.0 instead, choose **Browse official extensions** and select Snippets.
-   Browse/Refresh is explicit; reopening Settings does not fetch the catalog.
-   Both routes use the same captured-byte trust and installation flow.
+1. Open **Settings → Extensions**, choose **Browse official extensions** and
+   select Install or Update on Snippets. Browse/Refresh is explicit; reopening
+   Settings does not fetch the catalog. Alternatively, choose **Install local
+   .omxext…** for the verified archive; it works offline after download. Both
+   routes use the same captured-byte trust and installation flow.
 2. Inspect the captured package identity and trust information before approving.
    Extension code is trusted code, not a sandboxed command catalog.
 3. Approving installation or update enables the selected package but does not
@@ -291,8 +292,8 @@ neither was rerun. No application version, published release/tag/asset, original
 receipt or Files/SSH entry changed; no new Files/SSH qualification or stable SDK
 is implied.
 
-**Browse official extensions** now offers the same archive on macOS ARM64.
-Installation/trust, enablement and Toggle remain deliberate; no startup acquisition
+At that checkpoint, **Browse official extensions** offered the same 0.1.0 archive
+on macOS ARM64. Installation/trust, enablement and Toggle remain deliberate; no startup acquisition
 or automatic activation is added. The local archive route remains available
 offline after download. Existing YAML and terminal sessions remain untouched by
 installation/removal.

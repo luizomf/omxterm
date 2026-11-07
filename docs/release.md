@@ -27,7 +27,7 @@ build-only; terminal-input rules and future test-isolation requirements are unch
 The release includes native theme authoring and the one-time Snippets 0.1.0 default.
 It excludes Files 0.8 insertion/drop and #818's later palette presentation. The
 frozen host cannot run Files 0.8: it lacks the required capability despite matching
-the version range. Extension archives, versions and catalogs are unchanged.
+the version range. At publication, extension archives, versions and catalogs were unchanged.
 See [development metadata](versioning.md#post-0250-development-baseline) for the
 next development baseline. Historical release records below keep their original inputs.
 
@@ -38,8 +38,9 @@ is an immutable non-Latest prerelease from `12c54a09060364982de4e9833d112167a4e2
 Its 82,635-byte archive SHA-256 is
 `e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b`;
 the original receipt remains `not-run`. See the release notes for exact evidence
-and limits. Catalog and bundled-default Snippets remain 0.1.0; installation or
-update to 0.1.1 is deliberate. Application Latest remains 0.25.0.
+and limits. The original publication did not change the catalog or bundled default.
+The catalog now offers 0.1.1; the bundled default remains 0.1.0. Installation or
+update is deliberate. Application Latest remains 0.25.0.
 
 ## Release workflow
 

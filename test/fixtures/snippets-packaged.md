@@ -615,6 +615,27 @@ normal Quit. The separate stock FULL verifier on the matching NSIS installer and
 stage remains required where applicable; it does not run installed-path Snippets
 GUI, and this staged campaign does not replace it.
 
+## Snippets 0.1.1 public-catalog follow-up
+
+The existing Linux AppImage adapter exercises a local archive, not public catalog
+acquisition or an older-to-newer update. The Windows public adapter below is pinned
+to the historical 0.1.0 scenario and cannot qualify 0.1.1. Neither should be
+relabeled as the missing check.
+
+Before a new public-consumption run, prepare and independently review a bounded
+adapter using the existing packaged-process, Snippets scenario and passive
+`public-catalog-observer.cjs` seams. On an assigned disposable Linux ARM64 guest,
+bind the unchanged public 0.25.0 AppImage and both catalog/0.1.1 archive digests;
+start with the exact 0.1.0 installed generation and unchanged synthetic YAML.
+Observe an explicit Browse/Refresh and Update through production HTTPS, the
+0.1.0-to-0.1.1 card and digest/generation-bound Official trust, dormant new
+generation, retirement of any old backend, explicit activation, retained YAML and
+usable terminal, then natural joined Quit. An independently downloaded archive is
+an identity reference, never an installation fallback. Retain all failures and
+process/stream and shared-service preservation evidence. Do not claim this flow
+is implemented or passed until that adapter and its tests exist and are reviewed.
+The existing Windows failures and all other target limitations stay separate.
+
 ## Windows ARM64 installed public-catalog adapter
 
 🤖 AI-assisted.
