@@ -40,6 +40,8 @@ export function recordLayoutGeometry(options: {
     ![
       "general",
       "appearance",
+      "terminal",
+      "window",
       "shortcuts",
       "extensions",
       "config-file",
@@ -55,7 +57,8 @@ export function recordLayoutGeometry(options: {
     formWidths: result.forms.map((row) => row.box.width),
     theme: result.theme,
     extensions: result.extensions,
-    shortcutColumns: result.shortcuts.map((row) => row.columns),
+    shortcuts: result.shortcuts,
+    shortcutIntro: result.shortcutIntro,
     focus: result.focus,
   });
 }
@@ -82,11 +85,12 @@ export async function captureLayoutEvidence(options: {
     light,
   } = options;
   if (!evidence) return;
-  if (
-    ["general", "shortcuts", "config-file"].includes(category) ||
-    (["appearance", "extensions"].includes(category) &&
-      (width === 600 || width === 1920 || width < 480))
-  )
+  if (width === 600 || width === 1920 || width < 480) {
+    await contents.executeJavaScript(
+      "document.activeElement?.blur(); for (const selector of ['.settings-body', '.settings-tabs', '.settings-panels']) document.querySelector(selector).scrollTo({ top: 0, behavior: 'instant' })",
+      true,
+    );
+    await frame();
     await writeFile(
       path.join(
         evidence,
@@ -94,6 +98,7 @@ export async function captureLayoutEvidence(options: {
       ),
       (await contents.capturePage()).toPNG(),
     );
+  }
   if (
     category === "config-file" &&
     language === "en-US" &&

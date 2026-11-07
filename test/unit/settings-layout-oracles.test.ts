@@ -110,6 +110,46 @@ it.each([
     ).toThrow("shortcuts did not follow content breakpoint");
   },
 );
+it("rejects conflicting form and shortcut proportions inside a wide panel", () => {
+  const form = sample(1200, "columns", "inline", "settings-panel-window");
+  expect(() =>
+    assertSettingsLayout(form, "settings-panel-window"),
+  ).not.toThrow();
+  expect(() =>
+    assertSettingsLayout(
+      { ...form, forms: [{ ...form.forms[0]!, box: rect(0, 0, 720, 60) }] },
+      "settings-panel-window",
+    ),
+  ).toThrow("form row misses the common content boundary");
+  const shortcuts = sample(
+    1200,
+    "columns",
+    "inline",
+    "settings-panel-shortcuts",
+  );
+  expect(() =>
+    assertSettingsLayout(shortcuts, "settings-panel-shortcuts"),
+  ).not.toThrow();
+  expect(() =>
+    assertSettingsLayout(
+      { ...shortcuts, shortcutIntro: rect(0, 0, 600, 40) },
+      "settings-panel-shortcuts",
+    ),
+  ).toThrow("shortcut introduction misses the common content boundary");
+  expect(() =>
+    assertSettingsLayout(
+      {
+        ...shortcuts,
+        shortcuts: shortcuts.shortcuts.map((row) => ({
+          ...row,
+          binding: rect(136, 8, 300, 36),
+        })),
+      },
+      "settings-panel-shortcuts",
+    ),
+  ).toThrow("shortcut columns are over-spread");
+});
+
 it("rejects the removed-inner-container control and one-character-per-line labels", () => {
   expect(() =>
     assertSettingsLayout(sample(400, "columns"), "settings-panel-general"),

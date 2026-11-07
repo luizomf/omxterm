@@ -38,7 +38,7 @@ export function sample(
       box: rect(
         0,
         0,
-        id === selected ? Math.min(contentWidth, 1120) : 0,
+        id === selected ? Math.min(contentWidth, 880) : 0,
         id === selected ? 160 : 0,
       ),
     })),
@@ -48,12 +48,12 @@ export function sample(
     theme:
       selected === "settings-panel-appearance"
         ? {
-            grid: rect(0, 0, Math.min(contentWidth, 1120), 40),
+            grid: rect(0, 0, Math.min(contentWidth, 880), 40),
             cards: Array.from({ length: 6 }, (_, index) =>
               rect(
-                (Math.min(contentWidth, 1120) / 6) * index,
+                (Math.min(contentWidth, 880) / 6) * index,
                 0,
-                Math.min(contentWidth, 1120) / 6,
+                Math.min(contentWidth, 880) / 6,
                 40,
               ),
             ),
@@ -62,17 +62,18 @@ export function sample(
     extensions:
       selected === "settings-panel-extensions"
         ? {
-            catalog: rect(0, 0, Math.min(contentWidth, 1120), 160),
-            cards: [rect(0, 0, Math.min(contentWidth, 1120), 40)],
-            installed: rect(0, 0, Math.min(contentWidth, 1120), 160),
-            installedRows: [rect(0, 0, Math.min(contentWidth, 1120), 40)],
+            catalog: rect(0, 0, Math.min(contentWidth, 880), 160),
+            cards: [rect(0, 0, Math.min(contentWidth, 880), 40)],
+            installed: rect(0, 0, Math.min(contentWidth, 880), 160),
+            installedRows: [rect(0, 0, Math.min(contentWidth, 880), 40)],
           }
         : null,
     forms: [
       {
+        nestedColor: false,
         display: form === "stacked" ? "flex" : "grid",
         direction: "column",
-        box: rect(0, 0, Math.min(contentWidth, 720), 60),
+        box: rect(0, 0, Math.min(contentWidth, 880), 60),
         label: rect(0, 0, 120, 20),
         field:
           form === "stacked" ? rect(0, 28, 112, 32) : rect(200, 0, 112, 32),
@@ -84,6 +85,7 @@ export function sample(
     shortcuts:
       selected === "settings-panel-shortcuts"
         ? [0, 100].map((top) => ({
+            box: rect(0, top, Math.min(contentWidth, 880), 100),
             columns: shortcut === "wrapped" ? 2 : 3,
             name: rect(0, top + 8, 120, 20),
             binding: rect(136, top + 8, 120, 36),
@@ -93,6 +95,10 @@ export function sample(
                 : rect(500, top + 8, 238, 32),
           }))
         : [],
+    shortcutIntro:
+      selected === "settings-panel-shortcuts"
+        ? rect(0, 0, Math.min(contentWidth, 880), 40)
+        : null,
     overflow: false,
     focus: true,
     scheme: "dark",

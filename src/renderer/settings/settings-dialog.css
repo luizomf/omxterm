@@ -58,7 +58,7 @@ body.tabs-visible .settings-tab {
   flex-direction: column;
   gap: 24px;
   width: 100%;
-  max-width: 1120px;
+  max-width: 880px;
   min-width: 0;
 }
 .extensions-panel p,
@@ -318,7 +318,7 @@ body.tabs-visible .settings-tab {
   align-items: flex-start;
   gap: 12px;
   min-width: 0;
-  max-width: 720px;
+  width: 100%;
 }
 .settings-row > span {
   overflow-wrap: anywhere;
@@ -398,6 +398,7 @@ body.tabs-visible .settings-tab {
   gap: 0;
 }
 .settings-shortcuts > .settings-hint {
+  max-width: none;
   margin-bottom: 16px;
 }
 .settings-shortcut {
@@ -452,7 +453,7 @@ body.tabs-visible .settings-tab {
 }
 @container (min-width: 760px) {
   .settings-shortcut {
-    grid-template-columns: minmax(144px, 1fr) minmax(112px, 1fr) auto;
+    grid-template-columns: minmax(144px, 1fr) minmax(112px, 200px) auto;
   }
   .settings-shortcut-actions {
     grid-column: auto;

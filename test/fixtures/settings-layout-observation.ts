@@ -24,6 +24,7 @@ interface Box {
   readonly height: number;
 }
 interface Form {
+  readonly nestedColor: boolean;
   readonly display: string;
   readonly direction: string;
   readonly box: Box;
@@ -37,6 +38,7 @@ interface Label {
   readonly lines: number;
 }
 interface Shortcut {
+  readonly box: Box;
   readonly columns: number;
   readonly name: Box;
   readonly binding: Box;
@@ -68,6 +70,7 @@ export interface SettingsLayoutObservation {
   readonly forms: readonly Form[];
   readonly labels: readonly Label[];
   readonly shortcuts: readonly Shortcut[];
+  readonly shortcutIntro: Box | null;
   readonly overflow: boolean;
   readonly focus: boolean;
   readonly scheme: string;
@@ -187,6 +190,7 @@ export function observeSettingsLayout(
       .filter((row) => !row.closest("[hidden]"))
       .slice(0, 16)
       .map((row) => ({
+        nestedColor: !!row.closest(".settings-theme-color-controls"),
         display: getComputedStyle(row).display,
         direction: getComputedStyle(row).flexDirection,
         box: box(row),
@@ -216,11 +220,16 @@ export function observeSettingsLayout(
     shortcuts: [...panel.querySelectorAll<HTMLElement>(".settings-shortcut")]
       .slice(0, 2)
       .map((row) => ({
+        box: box(row),
         columns: getComputedStyle(row).gridTemplateColumns.split(/\s+/u).length,
         name: box(row.querySelector(".settings-shortcut-name")!),
         binding: box(row.querySelector(".settings-shortcut-binding")!),
         actions: box(row.querySelector(".settings-shortcut-actions")!),
       })),
+    shortcutIntro:
+      panel.id === "settings-panel-shortcuts"
+        ? box(panel.querySelector(".settings-shortcuts > .settings-hint")!)
+        : null,
     overflow:
       document.documentElement.scrollWidth > innerWidth ||
       root.scrollWidth > root.clientWidth ||
@@ -296,6 +305,39 @@ function assertSettingsDetails(
   }
 }
 
+function assertCommonFormBoundary(row: Form, panel: Box) {
+  if (row.nestedColor) return;
+  assert.ok(
+    Math.abs(row.box.left - panel.left) <= 2 &&
+      Math.abs(row.box.right - panel.right) <= 2,
+    "Settings form row misses the common content boundary",
+  );
+}
+
+function assertShortcutProportions(
+  observation: SettingsLayoutObservation,
+  expectedPanel: string,
+) {
+  if (expectedPanel !== "settings-panel-shortcuts") return;
+  assert.equal(
+    observation.shortcuts.length,
+    2,
+    "Settings shortcut geometry missing",
+  );
+  const panel = observation.panels.find((item) => item.id === expectedPanel)!;
+  assert.ok(
+    observation.shortcutIntro &&
+      Math.abs(observation.shortcutIntro.right - panel.box.right) <= 2,
+    "Settings shortcut introduction misses the common content boundary",
+  );
+  if (observation.contentWidth >= 760)
+    for (const row of observation.shortcuts)
+      assert.ok(
+        row.binding.width <= 202 && row.actions.right <= row.box.right + 1,
+        "Settings shortcut columns are over-spread",
+      );
+}
+
 export function assertSettingsLayout(
   observation: SettingsLayoutObservation,
   expectedPanel: string,
@@ -332,7 +374,7 @@ export function assertSettingsLayout(
         "Settings rendered panel has no geometry",
       );
       assert.ok(
-        Math.abs(panel.box.width - Math.min(contentWidth, 1120)) <= 2,
+        Math.abs(panel.box.width - Math.min(contentWidth, 880)) <= 2,
         "Settings categories do not share a content boundary",
       );
     }
@@ -349,7 +391,10 @@ export function assertSettingsLayout(
   )
     assert.ok(observation.forms.length > 0, "Settings form geometry missing");
   for (const row of observation.forms) {
-    assert.ok(row.box.width <= 722, "Settings form row exceeds readable width");
+    assertCommonFormBoundary(
+      row,
+      panels.find((item) => item.id === expectedPanel)!.box,
+    );
     assert.ok(
       row.field.width > 0 && row.field.height > 0,
       "Settings field has no geometry",
@@ -391,12 +436,7 @@ export function assertSettingsLayout(
       "Settings label wraps into excessive lines",
     );
   }
-  if (expectedPanel === "settings-panel-shortcuts")
-    assert.equal(
-      observation.shortcuts.length,
-      2,
-      "Settings shortcut geometry missing",
-    );
+  assertShortcutProportions(observation, expectedPanel);
   for (const row of observation.shortcuts) {
     assert.ok(
       row.actions.width > 0 && row.actions.height > 0,

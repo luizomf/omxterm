@@ -75,15 +75,17 @@ and 192 px above; outer padding is 24 px, growing to 32 px at 1200 px.
 The title and Close share a ruled in-flow header, within the same content cap.
 These outer breakpoints use viewport media queries; `.application-page-content`
 (the Settings panels slot) is the only size-query container. Every category uses
-the same 1120 px content boundary, aligning theme cards, Extension cards and
-Shortcuts separators. Form rows remain at most 720 px and ordinary fields at
-most 384 px; prose stays near 72 characters. Content and navigation scroll
+the same 880 px content boundary, aligning form rows, theme cards, Extension
+cards and Shortcuts separators. Ordinary fields remain at most 384 px; prose
+stays near 72 characters, except the Shortcuts introduction which shares the
+list edge. Content and navigation scroll
 independently, with wrapped translated labels and diagnostics.
 
 Container width, not viewport width, controls density: below 560 px labels sit
 above their fields; number inputs cap at 112 px and other fields at 384 px.
 Shortcut rows have action name, binding plus state, and visible actions; below
-760 px the actions wrap onto their own line. This changes layout without
+760 px the actions wrap onto their own line; at wider sizes the binding column
+is at most 200 px to prevent over-spread rows. This changes layout without
 replacing controls or recording focus. Rows have 16/20 px vertical padding,
 12 px internal row gaps and 8 px between actions; the recording button gains an
 explicit border while its binding displays the recording prompt. Ordinary form

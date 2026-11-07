@@ -25,8 +25,8 @@ it("uses only the content query container and viewport queries for outer Setting
 
 it("shares the wide panel cap and keeps compact desktop navigation vertical", () => {
   const css = readFileSync("src/renderer/settings/settings-dialog.css", "utf8");
-  expect(css).toMatch(/\.settings-panel\s*\{[^}]*max-width:\s*1120px;/u);
-  expect(css).toMatch(/\.settings-row\s*\{[^}]*max-width:\s*720px;/u);
+  expect(css).toMatch(/\.settings-panel\s*\{[^}]*max-width:\s*880px;/u);
+  expect(css).toMatch(/\.settings-row\s*\{[^}]*width:\s*100%;/u);
   expect(css).toMatch(
     /\.extensions-panel p,\s*\.extensions-panel \[role="status"\],\s*\.settings-config-file \[role="status"\]\s*\{[^}]*max-width:\s*72ch;/u,
   );

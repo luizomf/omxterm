@@ -2019,10 +2019,11 @@ minimum. Navigation remains a vertical sidebar at 480–639 px, then becomes a
 two-column, scrollable fallback below 480 px; short windows preserve access by
 scrolling rather than clipping the last category. Native bounds/minima are
 unchanged by opening Settings. The workspace caps at 1440 px; every category's
-content uses a shared 1120 px boundary so theme and Extension cards align with
-Shortcuts separators. Form rows stay within 720 px, ordinary controls within
+content uses a shared 880 px boundary so major groups, form rows, theme and
+Extension cards, and Shortcuts separators align. Ordinary controls remain within
 384 px and prose at a readable measure, including Extension details and Config
-File results. Panel-width container queries stack form labels below 560 px and
+File results. The Shortcuts introduction shares the list edge and binding columns
+remain bounded to avoid excessive spacing. Panel-width container queries stack form labels below 560 px and
 wrap shortcut actions below 760 px. Outer layout uses viewport media queries at
 479/639/900/1200 px, with only the content panel acting as a size-query container. Shortcuts retain visible
 Record/Cancel, Unbind, Default and textual state;
