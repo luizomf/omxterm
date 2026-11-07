@@ -774,7 +774,7 @@ metadata or untracked-file inventory. The transient bundled driver was built
 from that source but its executed output was not separately retained or hashed.
 A later snapshot found all 15 recorded controller/supervisor process identities
 absent, not arbitrary escaped descendants. The profile and copied application
-remain retained for review.
+were retained through evidence review.
 Stderr retained the same 11-listener BrowserWindow warning covered by closed
 [#742](https://github.com/luizomf/omxterm/issues/742); its cause is unestablished.
 The DMG helper also emitted hdiutil deprecation warnings.
