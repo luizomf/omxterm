@@ -81,6 +81,8 @@ sudo dnf install fontconfig file xorg-x11-server-Xwayland
 
 ### Run the AppImage
 
+You can run the AppImage directly without a conventional installation or the menu helper. Copying only the AppImage does not move your settings, themes, snippets, extensions, Electron profile, or logs into a folder beside it; they remain in their normal per-user locations. See [Configuration](configuration.md) and [Local diagnostics](usage.md#local-diagnostics) for details.
+
 For direct launch, you can verify the AppImage first: download its matching `.sha256` file into the same folder, then run `sha256sum --check OMXTerm-0.25.0-arm64.AppImage.sha256` there. The menu helper steps below require verification of both files.
 
 In a terminal, change to the folder containing the downloaded AppImage (for example, `cd ~/Downloads`), then make it executable and run it:
