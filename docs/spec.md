@@ -702,8 +702,9 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   A path containing a bracketed-paste terminator is refused rather than rewritten.
   Explicit focus returns to terminal input rather than a retained search query;
   a newer companion selection or pending overlay prevents focus theft.
-  This source behavior requires both a compatible new host and a future Files archive; installed
-  Files0.6/0.7 bytes remain unchanged.
+  Files0.8.0 preparation packages this behavior with `terminal.insertPath.v1`,
+  minimum host `>=0.25.0-dev.20` and API `0.1.x`. Exact shipping-pair qualification
+  and publication remain separate; installed Files0.6/0.7 bytes are unchanged.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
   core while the panel remains visible; a background result does not steal focus.
@@ -2428,15 +2429,19 @@ moves and one-shot permanent-delete confirmation remain unchanged. See the
 Files archive version/compatibility is maintained separately from the host.
 Published Files0.7.0 uses `>=0.25.0-dev.10` / API `0.1.x`, the neutral ARM64
 preview name and existing host services for filtering/keyboard and confirmed
-directory moves, without terminal insertion/drop. Newer source retains that
-metadata but adds selected-path insertion and Files-to-terminal drop requiring
-`terminal.insertPath.v1`; an older host rejects the declaration even when the
-engine range matches. Published Files0.7 bytes must not be replaced. The integration maintainer must align the future
-archive identity and minimum host/catalog compatibility with this capability
-before publication; the retained engine floor does not establish dev.10 support.
-Older hosts are unqualified for these combined bytes; no native/package or
-publication result is inferred. The [preparation rationale](files-development-preview.md#concrete-consumer)
-distinguishes that metadata from the unchanged compatibility bridges. Published
+directory moves, without terminal insertion/drop. Current Files0.8.0 prepares
+selected-path insertion and Files-to-terminal drop with `terminal.insertPath.v1`,
+minimum host `>=0.25.0-dev.20` and API `0.1.x`, matching the integrated host
+consumer. Production archive admission refuses lower hosts; ordinary semver
+admits dev.20 and later dev.N in the same 0.25.0 family, not unrelated development
+families or incompatible APIs. No new compatibility bridge is added.
+Published Files0.6/0.7 bytes and both catalogs remain unchanged. Preparation is
+not exact shipping-pair qualification or publication. Prior Linux native UI used
+production modules with inert session/backend/package dependencies, not a real
+PTY or shipping pair. Its observed Surface receipt timeout does not qualify the
+ten-second transport deadline, which is covered headlessly. The
+[preparation rationale](files-development-preview.md#concrete-consumer)
+retains these separate evidence boundaries. Published
 Files0.6.0 and Files0.5.0 retain minimum host `>=0.24.0-dev.21` and corrected
 raw-path forwarding for macOS trash. The published Files0.5.0 archive's
 [controlled exact-DMG consumer checkpoint](files-development-preview.md#files-050-macos-controlled-qualification)

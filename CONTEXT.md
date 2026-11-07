@@ -432,8 +432,13 @@ Current source also inserts one selected file/folder/link path through the core'
 lexical quoting and Protected Paste into the action-time captured Surface; its
 visible menu action and Shift+Enter row shortcut add no Enter. Focus returns
 only while the captured target remains selected. Incomplete or unknown delivery
-is not automatically retried. This needs a future archive and a host supporting
-`terminal.insertPath.v1`; published Files0.6/0.7 remain unchanged. Its composed
+is not automatically retried. Current Files0.8.0 preparation declares
+`terminal.insertPath.v1` and minimum host `>=0.25.0-dev.20` / API `0.1.x`, matching
+the integrated protected consumer. Lower hosts are refused; ordinary admission is
+not shipping-pair qualification or publication. Published Files0.6/0.7 and both
+catalogs remain unchanged. Prior native UI used production modules with inert
+session/backend/package dependencies, not a real PTY or shipping pair; its timeout
+was the Surface receipt timeout, not the ten-second transport deadline. Its composed
 terminal drop offers copy only over the selected tab's focused live terminal area,
 with a bounded localized candidate. One path-free, single-use main ticket binds
 the authenticated Files gesture to the exact drop-turn pane/Surface and selection

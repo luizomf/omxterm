@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { satisfies } from "semver";
 import { expect, it } from "vitest";
 import {
   checkCompatibility,
@@ -106,7 +107,14 @@ it.each(["files", "ssh"])(
     const manifest = parseManifest(
       JSON.parse(await readFile(`extensions/${name}/extension.json`, "utf8")),
     );
-    expect(manifest.version).toBe(name === "files" ? "0.7.0" : "0.3.1");
+    expect(manifest.version).toBe(name === "files" ? "0.8.0" : "0.3.1");
+    if (name === "files") {
+      expect(manifest.engines).toEqual({
+        omxterm: ">=0.25.0-dev.20",
+        api: "0.1.x",
+      });
+      expect(manifest.capabilities).toEqual(["terminal.insertPath.v1"]);
+    }
     const release = {
       ...manifest,
       targets: ["linux-arm64"],
@@ -132,7 +140,11 @@ it.each(["files", "ssh"])(
             "0.24.1",
             "0.25.0-dev.0",
             "0.25.0-dev.9",
+            "0.25.0-dev.10",
+            "0.25.0-dev.11",
+            "0.25.0-dev.19",
             "0.25.1-dev.0",
+            "0.26.0-dev.0",
           ]
         : []),
     ];
@@ -143,9 +155,12 @@ it.each(["files", "ssh"])(
       );
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(false);
     }
+    const host = JSON.parse(await readFile("package.json", "utf8")) as {
+      version: string;
+    };
     const compatibleHosts =
       name === "files"
-        ? ["0.25.0-dev.10", "0.25.0-dev.11", "0.25.0"]
+        ? ["0.25.0-dev.20", "0.25.0-dev.21", "0.25.0", host.version]
         : [
             "0.24.0-dev.8",
             "0.24.0-dev.11",
@@ -158,12 +173,46 @@ it.each(["files", "ssh"])(
       const runtime = { appVersion, apiVersion: "0.1.0" };
       expect(() => checkCompatibility(manifest, runtime)).not.toThrow();
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(true);
-      expect(
-        packageCompatible(manifest, { ...runtime, apiVersion: "0.2.0" }),
-      ).toBe(false);
+      for (const apiVersion of ["0.1.0", "0.1.9"]) {
+        const admitted = { ...runtime, apiVersion };
+        if (name === "files")
+          // Ordinary semver admission, not a new development bridge.
+          expect(satisfies(appVersion, manifest.engines.omxterm)).toBe(true);
+        expect(() => checkCompatibility(manifest, admitted)).not.toThrow();
+        expect(catalogCompatible(release, admitted, "linux-arm64")).toBe(true);
+      }
+      for (const apiVersion of ["0.2.0", "0.1.1-dev.0"]) {
+        const refused = { ...runtime, apiVersion };
+        expect(packageCompatible(manifest, refused)).toBe(false);
+        expect(() => checkCompatibility(manifest, refused)).toThrow(
+          "incompatible",
+        );
+        expect(catalogCompatible(release, refused, "linux-arm64")).toBe(false);
+      }
     }
   },
 );
+
+it("retains the published Files0.7 floor independently of current source", () => {
+  const manifest = parseManifest({
+    format: 1,
+    id: "omxterm.files",
+    name: "Files — ARM64 preview",
+    version: "0.7.0",
+    engines: { omxterm: ">=0.25.0-dev.10", api: "0.1.x" },
+    backend: "backend.mjs",
+  });
+  for (const appVersion of ["0.25.0-dev.10", "0.25.0-dev.19", "0.25.0-dev.20"])
+    expect(() =>
+      checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
+    ).not.toThrow();
+  expect(() =>
+    checkCompatibility(manifest, {
+      appVersion: "0.25.0-dev.9",
+      apiVersion: "0.1.0",
+    }),
+  ).toThrow("incompatible");
+});
 
 it.each([
   "0.24.0-dev.1",

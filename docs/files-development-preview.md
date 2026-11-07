@@ -11,7 +11,10 @@ passed with locally built hosts; they do not establish public stable-host downlo
 A separate [Linux ARM64 Files0.7 link-first preview](#files07-linux-public-link-checkpoint)
 now pairs the published dev.19 host with Files0.7; its actual public Settings-link
 checkpoint passed with fresh anonymous downloads. It does not replace either
-Files0.6 catalog offer.
+Files0.6 catalog offer. Current source prepares **Files0.8.0**, requiring host
+`>=0.25.0-dev.20` / API `0.1.x` for the integrated protected path-insertion/drop
+consumer. This is archive preparation only, not an exact shipping-pair
+qualification or publication; see [the current archive contract](#concrete-consumer).
 
 The earlier Linux catalog offered
 [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
@@ -168,11 +171,29 @@ or qualification of other platforms is implied.
 
 `extensions/files` is separately built, not imported into application main or the
 terminal renderer. Maintainers run `node scripts/build-files-extension.mjs` to
-produce `dist/extensions/files-0.7.0.omxext`. This build needs Python 3's ZIP
+produce `dist/extensions/files-0.8.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`. Published Files0.7.0 declares
+`extensions/files/extension.json`. Current Files0.8.0 declares
+`>=0.25.0-dev.20` / API `0.1.x` and `terminal.insertPath.v1`. The integrated
+dev.20 host owns the shared protected handoff for Insert path/Shift+Enter and
+eligible focused-pane terminal drop. Dev.19 and earlier hosts are refused by
+archive admission; ordinary semver admits dev.20 and later dev.N in the same
+0.25.0 family, plus stable0.25.0. Existing development bridges do not bypass
+this minimum or admit other prerelease families. Local/link admission checks
+host/API and capability grammar, not target/platform qualification.
+
+This preparation reuses the existing builder and consumer, without new input or
+focus routes. Headless archive admission/content checks do not qualify a shipping
+host/archive pair. Prior bounded Linux native UI evidence exercised production
+Files/core/Surface modules with inert session/backend/package dependencies, not
+a real PTY, receiving program or package store. Its observed timeout was the
+Surface receipt timeout, not the ten-second transport deadline (covered
+headlessly). Exact Files0.8 host/archive qualification and publication remain
+separate; historical failed or restricted native work is not relabeled or replayed.
+
+Published Files0.7.0 declares
 `>=0.25.0-dev.10` / API `0.1.x` as a conservative compatibility floor.
 It packages reported-directory guidance, loaded-entry filtering/keyboard focus,
 composing-Escape draft preservation and confirmed directory-to-directory moves,
@@ -181,17 +202,10 @@ not Files-to-terminal insertion/drop. Its bounded
 followed by separate [Linux publication and actual public-link consumption](#files07-linux-public-link-checkpoint).
 macOS Files0.7 and broader qualification remain separate.
 
-Newer source additionally declares `terminal.insertPath.v1` for the selected-path
-insertion action below. Older hosts reject this capability even when the retained
-engine range matches. Before building/publishing new bytes, the integration
-maintainer must select a new archive version and minimum host aligned with the
-capability; the unchanged source metadata is not permission to replace Files0.7.
-The retained floor alone does not mean dev.10 supports insertion. Native/package
-qualification and publication remain pending for this new behavior. Existing
+Files0.8 is a new archive identity, not permission to replace published Files0.7
+or relabel its dev.19 qualification. Dev.10 does not support insertion. Existing
 host focus-intent, action-time reported-directory, no-clobber move and trash
-services remain required. Ordinary semver admits dev.10 and later dev.N in the
-same 0.25.0 family, plus stable0.25.0; existing development bridges do not bypass
-this minimum or admit other prerelease families. Published Files0.6.0 retains minimum host
+services remain required. Published Files0.6.0 retains minimum host
 0.24.0-dev.21 and its original catalog entries and receipts. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
 catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives. The

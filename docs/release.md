@@ -223,12 +223,16 @@ OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
 so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
 sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.7.0` with conservative minimum host `0.25.0-dev.10` / API `0.1.x`;
-see the [source compatibility rationale](files-development-preview.md#concrete-consumer).
-This is preparation of already-integrated filtering/keyboard and confirmed
-directory-move improvements, not new terminal insertion/drop support. Older hosts
-are unqualified for this combined source. No host version bump, catalog promotion
-or publication follows from building the separate archive. Published Files `0.6.0`
+Files `0.8.0` with minimum host `0.25.0-dev.20` / API `0.1.x` and declared
+`terminal.insertPath.v1`; see the [source compatibility rationale](files-development-preview.md#concrete-consumer).
+This packages the already-integrated shared protected path-insertion/terminal-drop
+consumer alongside filtering/keyboard and confirmed directory movement; it does
+not redesign them. Lower hosts are refused through archive admission. Node-only
+archive preparation may use a private output path instead of `dist/extensions`;
+it needs no browser/Electron launch or host package build. Keep generated archives
+and original sidecars outside Git. No host version bump, catalog promotion,
+exact-pair qualification or publication follows from building the separate archive.
+Published Files `0.6.0`
 retains minimum host `0.24.0-dev.21`, its original bytes and catalog entries;
 Files0.7's separate Linux package/public-link checkpoints and publication have
 passed as recorded below; macOS and broader qualification are not implied.
@@ -250,8 +254,14 @@ live PTY and joined Quit. Preserve source/lock/tool/runtime identities, package
 and archive hashes, actual tested host/target, outcomes and limitations alongside
 the build receipt; never turn its `not-run` field into an inferred pass.
 
-For Files0.7, use the bounded [exact Linux packaged consumer](files-development-preview.md#exact-linux-arm64-files07-packaged-consumer)
-without promoting the stable Files0.6 catalogs. Historical built-host checks are
+The historical Files0.7 [exact Linux packaged consumer](files-development-preview.md#exact-linux-arm64-files07-packaged-consumer)
+remains pinned to its published pair; do not relabel it as Files0.8 evidence.
+Files0.8 needs separately selected exact-host/archive qualification through the
+existing consumer seams before any publication decision, including production
+package admission, protected insertion/drop and real PTY behavior. Prior native
+UI used inert session/backend/package dependencies; its receipt timeout was not
+the transport deadline. No native replay or broader campaign is selected by
+archive preparation. Preserve both stable Files0.6 catalogs and published0.7 bytes. Historical built-host checks are
 not package qualification, and old private inputs may no longer exist. Reuse a
 retained host only after checking actual bytes, source/version provenance and
 security relevance; otherwise build a compatible committed host. A missing

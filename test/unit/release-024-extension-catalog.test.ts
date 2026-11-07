@@ -91,8 +91,8 @@ describe("0.24.0 first-party catalog candidate", () => {
           name === "files"
             ? {
                 id: release.id,
-                version: "0.7.0",
-                engines: { omxterm: ">=0.25.0-dev.10", api: "0.1.x" },
+                version: "0.8.0",
+                engines: { omxterm: ">=0.25.0-dev.20", api: "0.1.x" },
               }
             : {
                 id: release.id,

@@ -70,9 +70,17 @@ it
       expect(validated).toEqual({ digest, manifest: receipt.manifest });
       expect(receipt.manifest).toEqual(sourceManifest);
       expect(receipt.manifest).toMatchObject({
-        version: "0.7.0",
-        engines: { omxterm: ">=0.25.0-dev.10" },
+        version: "0.8.0",
+        engines: { omxterm: ">=0.25.0-dev.20", api: "0.1.x" },
+        capabilities: ["terminal.insertPath.v1"],
       });
+      const page = await readFile(path.join(extracted, "view.js"), "utf8");
+      for (const feature of [
+        "terminal.insertPath.v1",
+        "application/x-omxterm-files-terminal",
+        "copyMove",
+      ])
+        expect(page).toContain(feature);
       const bundled = (await import(
         pathToFileURL(path.join(extracted, "backend.mjs")).href
       )) as typeof import("../../extensions/files/backend");
@@ -95,24 +103,41 @@ it
       ).toEqual({ ok: true });
       expect(received).toEqual([raw]);
       backend.deactivate();
-      expect(() =>
-        checkCompatibility(validated.manifest, {
-          appVersion: "0.25.0-dev.10",
-          apiVersion: "0.1.0",
+      for (const appVersion of ["0.25.0-dev.20", "0.25.0-dev.21", "0.25.0"])
+        expect(() =>
+          checkCompatibility(validated.manifest, {
+            appVersion,
+            apiVersion: "0.1.0",
+          }),
+        ).not.toThrow();
+      // Exercise actual archive admission, not just the embedded range string.
+      for (const [index, runtime] of [
+        { appVersion: "0.25.0-dev.10", apiVersion: "0.1.0" },
+        { appVersion: "0.25.0-dev.19", apiVersion: "0.1.0" },
+        { appVersion: "0.24.0", apiVersion: "0.1.0" },
+        { appVersion: "0.25.1-dev.0", apiVersion: "0.1.0" },
+        { appVersion: host.version, apiVersion: "0.2.0" },
+        { appVersion: host.version, apiVersion: "0.1.1-dev.0" },
+      ].entries()) {
+        expect(() => checkCompatibility(validated.manifest, runtime)).toThrow(
+          "incompatible",
+        );
+        const refused = path.join(root, `refused-${index}`);
+        await mkdir(refused);
+        await expect(
+          extractPackage(bytes, refused, runtime),
+        ).rejects.toMatchObject({
+          code: "incompatible",
+        });
+      }
+      const current = path.join(root, "current-api");
+      await mkdir(current);
+      expect(
+        await extractPackage(bytes, current, {
+          appVersion: host.version,
+          apiVersion: "0.1.9",
         }),
-      ).not.toThrow();
-      expect(() =>
-        checkCompatibility(validated.manifest, {
-          appVersion: "0.25.0-dev.9",
-          apiVersion: "0.1.0",
-        }),
-      ).toThrow("incompatible");
-      expect(() =>
-        checkCompatibility(validated.manifest, {
-          appVersion: "0.24.0",
-          apiVersion: "0.1.0",
-        }),
-      ).toThrow("incompatible");
+      ).toEqual(validated);
       expect(await readFile(path.join(extracted, "LICENSE"), "utf8")).toContain(
         "MIT License",
       );
