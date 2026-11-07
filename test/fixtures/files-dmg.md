@@ -287,7 +287,11 @@ also survives failure and refuses replacement. A missing or unverified destinati
 is never recoverability proof, even if the source disappeared. Root must inspect
 and settle the entry before removing a failed profile or starting another run.
 
-## Actual assertions when executed
+## Legacy local lifecycle assertions
+
+This checklist applies to the original local lifecycle campaign. Files0.7
+Files-only, public-link and public-catalog modes use their own checklists above;
+they do not inherit this campaign's three consents or Trash requirements.
 
 - Exact local captured-byte trust, dormant installation, explicit Files menu
   activation, real installed backend/listing and captured OSC7 directory.
@@ -309,8 +313,8 @@ and settle the entry before removing a failed profile or starting another run.
 
 `scenario.json`, `quit.json`, `controller.json`, `artifacts.json`,
 `trash-lookup.json`, `trash-recovery.json` and supervisor receipts retain distinct
-facts. A successful receipt requires all selected checks, three consents and
-verified restoration. Captures require actual inspection; separate WebContents
+facts. A successful legacy local receipt requires all its checks, three consents
+and verified restoration. Captures require actual inspection; separate WebContents
 captures are not full OS-compositor evidence.
 
 Each run has fresh `run-*` evidence, but the same configured evidence lane owns
