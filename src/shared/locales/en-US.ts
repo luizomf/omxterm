@@ -18,6 +18,8 @@ export const englishMessages = {
   "menu.paste": "Paste",
   "menu.selectAll": "Select All",
   "menu.find": "Find…",
+  "menu.exportSelection": "Export Selection…",
+  "menu.exportContent": "Export Terminal Content…",
   "menu.file": "File",
   "menu.newWindow": "New Window",
   "menu.newTab": "New Tab",
@@ -87,6 +89,21 @@ export const englishMessages = {
   "dialog.openLocalImage": "Open Local Image",
   "dialog.imageFilter": "PNG and JPEG Images",
   "dialog.allFiles": "All Files",
+
+  "export.title.selection": "Export Selection",
+  "export.title.content": "Export Terminal Content",
+  "export.empty.selection": "The selection has no text to export.",
+  "export.empty.content": "The terminal has no text to export.",
+  "export.textFiles": "Text",
+  "export.tooLarge.title": "Export Too Large",
+  "export.tooLarge.message":
+    "The requested text exceeds the {limit} MiB UTF-8 export limit.",
+  "export.tooLarge.detail":
+    "Select a smaller portion of the terminal text and export the selection. Nothing was saved or truncated.",
+  "export.failed": "Export Failed",
+  "export.writeError": "OMXTerm could not save the exported text.",
+  "export.failureDetail":
+    "Try exporting again and choose a writable destination with enough free space.",
 
   "failure.rendering.title": "Terminal rendering failed",
   "failure.rendering.message":

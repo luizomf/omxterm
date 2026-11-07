@@ -41,6 +41,7 @@ it("repaints independent theme roles across custom, hidden and default reloads w
     paste: vi.fn(),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
     inject: vi.fn(),
   };
   const mount = vi.fn(async () => surface);

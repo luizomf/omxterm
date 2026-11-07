@@ -97,6 +97,7 @@ it.each([
       paste: vi.fn(async () => {}),
       selectAll: vi.fn(),
       find: vi.fn(),
+      exportText: vi.fn(() => ""),
     };
     const strip = document.createElement("nav");
     const content = document.createElement("div");

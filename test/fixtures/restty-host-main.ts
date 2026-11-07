@@ -5,15 +5,16 @@ import { spawnFixturePty } from "./native-fixture-pty";
 import { mkdirSync, writeSync } from "node:fs";
 import path from "node:path";
 import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
+import { createResttyExportOwner } from "./restty-host-export-owner";
 import { createResttyHostSessions } from "./restty-host-sessions";
 import { createFixtureMetricReplyRouter } from "./restty-host-metric-replies";
 import {
   registerTerminalIpcRouter,
   type IpcMainPort,
 } from "../../src/main/terminal-ipc-controller";
-import { registerTerminalWindowHost } from "../../src/main/terminal-window-host";
 import * as resttyConfiguration from "./restty-host-configuration";
 import type { LocalImageRequest } from "../../src/shared/local-image";
+import { recordExport, resttyExportEvidence } from "./restty-host-export";
 import { fixtureLocalImageLoader } from "./restty-local-image-links";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { exerciseExplicitResttyTab } from "./restty-host-explicit-tab";
@@ -70,7 +71,6 @@ const ended: Array<{ closeRequested: boolean; liveSessions: number }> = [];
 let clipboardReads = 0;
 let clipboardWrites = 0;
 let selectAllCoveredScrollback = false;
-let selectedUnicodeExactly = false;
 let protectedPasteConfirmations = 0;
 let contextMenus = 0;
 const externalLinks: string[] = [];
@@ -97,7 +97,7 @@ const { defaultShell, configuredFontFamily, reloadedFontFamily } =
 
 const { waitFor } = fixtureSessions;
 
-function createHost(window: BrowserWindow) {
+async function createHost(window: BrowserWindow) {
   const router = registerTerminalIpcRouter(
     fontLoads.ipcPort(outputStress.ipcPort(ipcMain as unknown as IpcMainPort)),
     undefined,
@@ -170,11 +170,8 @@ function createHost(window: BrowserWindow) {
     onSessionStartError() {
       throw new Error("Unexpected PTY start failure");
     },
-    onSessionExit(_exit, context) {
-      ended.push({
-        closeRequested: context.closeRequested,
-        liveSessions: context.liveSessions,
-      });
+    onSessionExit(_exit, { closeRequested, liveSessions }) {
+      ended.push({ closeRequested, liveSessions });
     },
     onSessionStarted() {
       launchKinds.push(terminals[sessionIndex - 1]!.launchKind!);
@@ -182,13 +179,12 @@ function createHost(window: BrowserWindow) {
     onSessionSelected() {},
     writeClipboardText(text) {
       clipboardWrites += 1;
+      resttyExportEvidence.clipboardTexts.push(text);
       outputStress.observeClipboard(text);
       // Both claims must come from the same complete copy, not separate writes
       // or marker substrings in the submitted command.
-      const completeSelection =
-        resttyPlatform.hasSelectionFixtureTranscript(text);
-      selectAllCoveredScrollback ||= completeSelection;
-      selectedUnicodeExactly ||= completeSelection;
+      const complete = resttyPlatform.hasSelectionFixtureTranscript(text);
+      selectAllCoveredScrollback ||= complete;
     },
     readClipboardText() {
       clipboardReads += 1;
@@ -198,8 +194,9 @@ function createHost(window: BrowserWindow) {
       protectedPasteConfirmations += 1;
       return true;
     },
-    showClipboardContextMenu() {
+    showClipboardContextMenu(request) {
       contextMenus += 1;
+      exportOwner.showContextMenu(request);
     },
     onTitleRequest(sessionId, title) {
       const fixture =
@@ -224,9 +221,15 @@ function createHost(window: BrowserWindow) {
     },
     onExternalLinkOpenError() {},
     loadSnippets: async () => ({ snippets: [] }),
+    exportText: recordExport,
     loadLocalImage: fixtureLocalImageLoader(window, root, localImageRequests),
   });
-  registerTerminalWindowHost(window, controller, () => router.dispose());
+  const exportOwner = await createResttyExportOwner(
+    window,
+    controller,
+    router.dispose,
+    () => reloader.current().configuration,
+  );
   const reloader = resttyConfiguration.createResttyHostConfigurationReloader(
     router,
     controller,
@@ -269,6 +272,7 @@ async function completeFocusedScenario(
       inputs,
       deliverOutputs,
       resizes,
+      exportEvidence: resttyExportEvidence,
       ptyExits: () => ptyExits,
       sessionStarts: () => sessionIndex,
       sessionExited: (index) => exitedSessionIndices.has(index),
@@ -296,7 +300,7 @@ app
       () => (navigations += 1),
     );
 
-    const { reloader } = createHost(window);
+    const { reloader } = await createHost(window);
 
     await resttyWindows.initializeResttyHostWindow(
       window,
@@ -490,7 +494,7 @@ app
       clipboardReads,
       clipboardWrites,
       selectAllCoveredScrollback,
-      selectedUnicodeExactly,
+      selectedUnicodeExactly: selectAllCoveredScrollback,
       protectedPasteConfirmations,
       contextMenus,
       largePasteLength: largePaste.length,

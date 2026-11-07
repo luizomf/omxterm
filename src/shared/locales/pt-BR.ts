@@ -21,6 +21,8 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.paste": "Colar",
   "menu.selectAll": "Selecionar Tudo",
   "menu.find": "Buscar…",
+  "menu.exportSelection": "Exportar Seleção…",
+  "menu.exportContent": "Exportar Conteúdo do Terminal…",
   "menu.file": "Arquivo",
   "menu.newWindow": "Nova Janela",
   "menu.newTab": "Nova Aba",
@@ -95,6 +97,21 @@ export const brazilianPortugueseMessages: Readonly<
   "dialog.openLocalImage": "Abrir Imagem Local",
   "dialog.imageFilter": "Imagens PNG e JPEG",
   "dialog.allFiles": "Todos os Arquivos",
+
+  "export.title.selection": "Exportar Seleção",
+  "export.title.content": "Exportar Conteúdo do Terminal",
+  "export.empty.selection": "A seleção não tem texto para exportar.",
+  "export.empty.content": "O terminal não tem texto para exportar.",
+  "export.textFiles": "Texto",
+  "export.tooLarge.title": "Exportação Muito Grande",
+  "export.tooLarge.message":
+    "O texto solicitado excede o limite de exportação de {limit} MiB em UTF-8.",
+  "export.tooLarge.detail":
+    "Selecione uma parte menor do texto do terminal e exporte a seleção. Nada foi salvo ou truncado.",
+  "export.failed": "Falha na Exportação",
+  "export.writeError": "O OMXTerm não conseguiu salvar o texto exportado.",
+  "export.failureDetail":
+    "Tente exportar de novo e escolha um destino com permissão de escrita e espaço livre suficiente.",
 
   "failure.rendering.title": "Falha na renderização do terminal",
   "failure.rendering.message":

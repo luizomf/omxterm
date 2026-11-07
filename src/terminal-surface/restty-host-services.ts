@@ -12,10 +12,15 @@ export function resttyClipboardActions(
   delivery: SemanticInputDelivery,
   options: TerminalSurfaceOptions,
   liveSelection: () =>
-    { getSelectionText(): string; selectAll(): boolean } | undefined,
+    | {
+        getSelectionText(): string;
+        getBufferText(): string;
+        selectAll(): boolean;
+      }
+    | undefined,
 ): Pick<
   TerminalSurface,
-  "copy" | "paste" | "inject" | "injectTracked" | "selectAll"
+  "copy" | "paste" | "inject" | "injectTracked" | "selectAll" | "exportText"
 > {
   return {
     async copy() {
@@ -43,6 +48,13 @@ export function resttyClipboardActions(
     selectAll: () => {
       liveSelection()?.selectAll();
     },
+    exportText(kind) {
+      const interaction = liveSelection();
+      if (!interaction) return "";
+      return kind === "selection"
+        ? interaction.getSelectionText()
+        : interaction.getBufferText();
+    },
   };
 }
 
@@ -52,6 +64,8 @@ export function createResttyContextMenu(
     TerminalSurfaceOptions,
     "clipboard" | "contextMenuEnabled" | "onContextMenu"
   >,
+  liveSelection: () => { getSelectionText(): string } | undefined = () =>
+    undefined,
 ) {
   let enabled = options.contextMenuEnabled ?? true;
   return {
@@ -68,7 +82,12 @@ export function createResttyContextMenu(
         event.target instanceof HTMLInputElement &&
         event.target.closest('[role="search"]') !== null &&
         container.contains(event.target);
-      if (enabled || query) options.clipboard.requestContextMenu();
+      if (query) options.clipboard.requestContextMenu({ target: "field" });
+      else if (enabled)
+        options.clipboard.requestContextMenu({
+          target: "terminal",
+          hasSelection: (liveSelection()?.getSelectionText() ?? "") !== "",
+        });
     },
   };
 }

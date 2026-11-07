@@ -105,6 +105,20 @@ export type TerminalTabCommand =
 export type TerminalFontZoom = "in" | "out" | "reset";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 
+// The contextual kind is fixed at popup opening, before the synchronous read.
+export type TerminalExportKind = "selection" | "content";
+export interface TerminalExportContext {
+  readonly kind: TerminalExportKind;
+  readonly target: TerminalContextMenuTarget;
+}
+// Oversized text is neither truncated nor transported to obtain a notice.
+export type TerminalExportSaveRequest =
+  | { readonly kind: TerminalExportKind; readonly text: string }
+  | { readonly notice: "too-large" };
+// A finite IPC bound in UTF-8 bytes. The core's scrollback byte limit does not
+// imply extracted text fits: combining marks and wide graphemes can exceed it.
+export const MAX_TERMINAL_EXPORT_BYTES = 16 * 1024 * 1024;
+
 const encoder = new TextEncoder();
 
 export function isBoundedTerminalPayload(value: unknown): value is string {
@@ -375,6 +389,7 @@ export function isTerminalContextMenuClipboardAction(
 // Every live pane captures a popup target; only split panes offer Close Pane.
 // The Snippets field retains the no-argument request.
 export interface TerminalContextMenuRequest extends TerminalContextMenuTarget {
+  readonly hasSelection: boolean;
   readonly closePane?: true;
 }
 
@@ -382,9 +397,15 @@ export function isTerminalContextMenuRequest(
   value: unknown,
 ): value is TerminalContextMenuRequest {
   return (
-    (isStrictRecord(value, ["sessionId", "menuId"]) ||
-      (isStrictRecord(value, ["sessionId", "menuId", "closePane"]) &&
+    (isStrictRecord(value, ["sessionId", "menuId", "hasSelection"]) ||
+      (isStrictRecord(value, [
+        "sessionId",
+        "menuId",
+        "hasSelection",
+        "closePane",
+      ]) &&
         value.closePane === true)) &&
+    typeof value.hasSelection === "boolean" &&
     isTerminalContextMenuTarget({
       sessionId: value.sessionId,
       menuId: value.menuId,
@@ -415,4 +436,51 @@ function isStrictRecord(
     actualKeys.length === keys.length &&
     keys.every((key) => actualKeys.includes(key))
   );
+}
+
+export function isTerminalExportKind(
+  value: unknown,
+): value is TerminalExportKind {
+  return value === "selection" || value === "content";
+}
+
+export function isTerminalExportContext(
+  value: unknown,
+): value is TerminalExportContext {
+  return (
+    isStrictRecord(value, ["kind", "target"]) &&
+    isTerminalExportKind(value.kind) &&
+    isTerminalContextMenuTarget(value.target)
+  );
+}
+
+export function isTerminalExportSaveRequest(
+  value: unknown,
+): value is TerminalExportSaveRequest {
+  if (isStrictRecord(value, ["notice"])) return value.notice === "too-large";
+  return (
+    isStrictRecord(value, ["kind", "text"]) &&
+    isTerminalExportKind(value.kind) &&
+    typeof value.text === "string" &&
+    utf8ByteLength(value.text) <= MAX_TERMINAL_EXPORT_BYTES
+  );
+}
+
+// UTF-8 length without encoding a copy; a lone surrogate counts as U+FFFD.
+export function utf8ByteLength(value: string): number {
+  let bytes = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit < 0x80) bytes += 1;
+    else if (unit < 0x800) bytes += 2;
+    else if (
+      unit >= 0xd800 &&
+      unit <= 0xdbff &&
+      (value.charCodeAt(index + 1) & 0xfc00) === 0xdc00
+    ) {
+      bytes += 4;
+      index += 1;
+    } else bytes += 3;
+  }
+  return bytes;
 }

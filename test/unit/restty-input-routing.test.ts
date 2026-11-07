@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { inputRoutingCorrections } from "../../scripts/restty-input-routing-corrections.mjs";
 import { applicationCursorCorrections } from "../../scripts/restty-application-cursor-corrections.mjs";
 import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
+import { bufferTextCorrections } from "../../scripts/restty-buffer-text-corrections.mjs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
 import { describe, expect, it, vi } from "vitest";
@@ -69,7 +70,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(2);
         return value.replace(corrected, original);
       }, text);
-    const routingBaseline = reverse(source, applicationCursorCorrections);
+    const preExport = reverse(source, bufferTextCorrections);
+    expect(hash(preExport)).toBe(
+      "7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7",
+    );
+    const routingBaseline = reverse(preExport, applicationCursorCorrections);
     expect(hash(routingBaseline)).toBe(
       "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df",
     );

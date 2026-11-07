@@ -16,6 +16,8 @@ import type { UserConfiguration } from "../../src/shared/user-configuration";
 import type { popupPtyObservation } from "./terminal-popup-native-pty";
 import { waitFor } from "./window-chrome-exercise";
 import { POPUP_INPUT_ADMISSION_MS } from "./terminal-popup-input-admission";
+import { translatorFor } from "../../src/shared/i18n";
+import { popupClosePaneIndex } from "./terminal-popup-native-actions";
 
 export interface NativePopup {
   readonly window: BrowserWindow;
@@ -180,6 +182,11 @@ async function capturePopup(window: BrowserWindow) {
 // Broad lifetime combinatorics remain in the production headless regressions.
 export async function exerciseTerminalPopup(options: PopupOptions) {
   const { window, application, children } = options;
+  const closePaneIndex = (popup: NativePopup) =>
+    popupClosePaneIndex(
+      popup.menu.items,
+      translatorFor(options.configuration().language).t,
+    );
   await evaluate(window, "globalThis.__windowChromeHostReady()");
   await focus(window);
   await waitFor(
@@ -217,9 +224,13 @@ export async function exerciseTerminalPopup(options: PopupOptions) {
   // Real native menu keyboard activation, not a copied callback expression.
   clipboard.writeText("native-paste");
   const current = await open(options, window, 1);
-  assert.equal(current.menu.items[5]!.label, "Close Pane");
+  const currentClose = current.menu.items[closePaneIndex(current)]!;
   assert.equal(
-    current.menu.items[5]!.accelerator,
+    currentClose.label,
+    translatorFor(options.configuration().language).t("menu.closePane"),
+  );
+  assert.equal(
+    currentClose.accelerator,
     options.configuration().keybinds.closePane,
   );
   const captured = options.capture && (await capturePopup(window));
@@ -262,21 +273,25 @@ export async function exerciseTerminalPopup(options: PopupOptions) {
     keybinds: { ...keybinds, closePane: null },
   });
   const nullable = await open(options, window, 1);
-  assert.equal(nullable.menu.items[5]!.label, "Fechar Painel");
+  const nullableClose = nullable.menu.items[closePaneIndex(nullable)]!;
+  assert.equal(nullableClose.label, "Fechar Painel");
   // Electron's constructed MenuItem exposes an unset accelerator as null.
-  assert.equal(nullable.menu.items[5]!.accelerator, null);
+  assert.equal(nullableClose.accelerator, null);
   await dismiss(nullable);
   options.configure({
     language: "en-US",
     keybinds: { ...keybinds, closePane: "Control+Alt+K" },
   });
   const remapped = await open(options, window, 1);
-  assert.equal(remapped.menu.items[5]!.accelerator, "Control+Alt+K");
+  assert.equal(
+    remapped.menu.items[closePaneIndex(remapped)]!.accelerator,
+    "Control+Alt+K",
+  );
   await dismiss(remapped);
 
   const denied = await open(options, window, 1);
   await dismiss(denied);
-  activate(denied, 5);
+  activate(denied, closePaneIndex(denied));
   assert.equal(options.confirmations(), 1);
   const shared = application.closeSelectedTab();
   application.focusSelectedPane("previous");
@@ -295,7 +310,7 @@ export async function exerciseTerminalPopup(options: PopupOptions) {
   );
   const approved = await open(options, window, 1);
   await dismiss(approved);
-  activate(approved, 5);
+  activate(approved, closePaneIndex(approved));
   assert.equal(options.confirmations(), 2);
   const pending = application.closeSelectedPane();
   await focus(other);
@@ -317,7 +332,11 @@ export async function exerciseTerminalPopup(options: PopupOptions) {
 
   const wrongWindow = await open(options, window, 0);
   assert.equal(
-    wrongWindow.menu.items.some((item) => item.label === "Close Pane"),
+    wrongWindow.menu.items.some(
+      (item) =>
+        item.label ===
+        translatorFor(options.configuration().language).t("menu.closePane"),
+    ),
     false,
   );
   await dismiss(wrongWindow);
@@ -355,7 +374,7 @@ export async function exerciseTerminalPopup(options: PopupOptions) {
     async () => children[3]!.exited && (await paneCount(window)) === 1,
     "source child exits ordinarily before retained callback activation",
   );
-  activate(stale, 5);
+  activate(stale, closePaneIndex(stale));
   assert.equal(
     options.confirmations(),
     confirmationsBeforeExit,

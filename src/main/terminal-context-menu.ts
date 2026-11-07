@@ -28,6 +28,7 @@ export function terminalContextMenuTemplate<
   const target = request
     ? { sessionId: request.sessionId, menuId: request.menuId }
     : undefined;
+  const kind = request?.hasSelection ? "selection" : "content";
   const send = (action: "copy" | "paste" | "select-all") => {
     if (target) application.clipboardPane(window, action, target);
     else if (!window.isDestroyed() && !window.webContents.isDestroyed())
@@ -38,6 +39,14 @@ export function terminalContextMenuTemplate<
       copy: () => send("copy"),
       paste: () => send("paste"),
       selectAll: () => send("select-all"),
+      ...(target
+        ? {
+            exportText: {
+              kind,
+              click: () => application.exportPane(window, { kind, target }),
+            },
+          }
+        : {}),
       ...(request?.closePane && target
         ? {
             closePane: {

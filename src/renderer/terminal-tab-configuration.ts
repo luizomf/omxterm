@@ -8,10 +8,9 @@ import { tabPanes, type TerminalTab } from "./terminal-panes";
 
 // Window Font Zoom and live Surface settings apply to retained terminals only;
 // new/mounting panes read the same current baseline and zoom delta.
-export function createTerminalTabConfiguration(
-  initial: TerminalSurfaceOptions,
-  tabs: () => readonly TerminalTab[],
-) {
+export function createTerminalTabConfiguration<
+  T extends Omit<TerminalSurfaceOptions, "clipboard">,
+>(initial: T, tabs: () => readonly TerminalTab[]) {
   let current = initial;
   let steps = 0;
   return {

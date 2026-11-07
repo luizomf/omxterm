@@ -14,10 +14,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareResttyRuntime } from "../../scripts/prepare-restty-runtime.mjs";
 import history from "../fixtures/restty-runtime-history.json";
+import exportSeed from "../fixtures/restty-export-seed-history.json";
+import exportHistory from "../fixtures/restty-export-runtime-history.json";
 
 const dist = path.dirname(createRequire(import.meta.url).resolve("restty"));
 const correctedDigest =
-  "7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7";
+  "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf";
 
 // Prepare only task-owned copies, including core and types: other fixtures may
 // still be exercising the installed prior runtime during a correction review.
@@ -71,6 +73,27 @@ for (const state of history) {
     name: state.name,
     sha256: state.sha256,
     source: lines.join("\n"),
+  });
+}
+
+// The older composed export is a separate seed for both historical branches.
+const exportLines = corrected.split("\n");
+for (const edit of exportSeed.edits)
+  exportLines.splice(edit.start, edit.deleteCount, ...edit.lines);
+const exportSource = exportLines.join("\n");
+states.push({
+  name: exportSeed.name,
+  sha256: exportSeed.sha256,
+  source: exportSource,
+});
+for (const state of exportHistory) {
+  const branch = exportSource.split("\n");
+  for (const edit of state.edits)
+    branch.splice(edit.start, edit.deleteCount, ...edit.lines);
+  states.push({
+    name: state.name,
+    sha256: state.sha256,
+    source: branch.join("\n"),
   });
 }
 

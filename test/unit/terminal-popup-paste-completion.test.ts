@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { exerciseTerminalPopup } from "../fixtures/terminal-popup-native-exercise";
 import { observePopupInput } from "../fixtures/terminal-popup-input-admission";
 import { popupPtyObservation } from "../fixtures/terminal-popup-native-pty";
+import { terminalClipboardContextMenuTemplate } from "../../src/main/application-menu";
 
 const port = vi.hoisted(() => ({
   focused: undefined as unknown,
@@ -71,9 +72,13 @@ async function exercise(first: string, second: string, alternate = "") {
         popups.push({
           shown: true,
           menu: {
-            items: Array.from({ length: 6 }, (_, index) =>
-              index === 5 ? { label: "Close Pane", accelerator: "Ctrl+W" } : {},
-            ),
+            items: terminalClipboardContextMenuTemplate({
+              copy() {},
+              paste() {},
+              selectAll() {},
+              exportText: { kind: "content", click() {} },
+              closePane: { click() {}, accelerator: "Ctrl+W" },
+            }),
           },
         });
       }
@@ -114,7 +119,10 @@ async function exercise(first: string, second: string, alternate = "") {
     activationWindows: [1],
     capture: false,
     application: { splitSelectedPane() {} },
-    configuration: () => ({ keybinds: { closePane: "Ctrl+W" } }),
+    configuration: () => ({
+      language: "en-US",
+      keybinds: { closePane: "Ctrl+W" },
+    }),
     async admitNativeInput() {
       await admission.calibrate(async (key) => {
         submitted.push(key);

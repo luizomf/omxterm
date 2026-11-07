@@ -237,7 +237,7 @@ export function createCommandPalette(
     });
     query.addEventListener("contextmenu", (event) => {
       event.preventDefault();
-      options.clipboard?.requestContextMenu();
+      options.clipboard?.requestContextMenu({ target: "field" });
     });
     current.append(heading, query, list, status);
     document.body.append(current);

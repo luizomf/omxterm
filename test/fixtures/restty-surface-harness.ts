@@ -67,6 +67,7 @@ const harness = vi.hoisted(() => {
         interaction: {
           focus: this.focus,
           getSelectionText: vi.fn(() => ""),
+          getBufferText: vi.fn(() => ""),
           selectAll: vi.fn(() => false),
           scrollToBottom: vi.fn(),
           getVisibleLinkAtClientPoint: vi.fn(() => null),

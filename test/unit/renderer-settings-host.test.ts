@@ -53,6 +53,7 @@ it("owns selected graphical input, allows tab creation and restores Settings bel
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
   };
   const change = vi.fn(
     async (change: SettingsChange): Promise<SettingsResult> => ({

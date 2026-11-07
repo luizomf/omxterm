@@ -1,0 +1,126 @@
+[
+  {
+    "name": "maintainerExportDigest",
+    "sha256": "3b1076d32880f0f28b8cbb465687825c4bb980d34d1af67862e23b5eda2871e3",
+    "edits": [
+      {
+        "start": 49353,
+        "deleteCount": 0,
+        "lines": [
+          "    const cell = normalizeSelectionCell(positionToCell({ clientX, clientY }));"
+        ]
+      },
+      {
+        "start": 49345,
+        "deleteCount": 1,
+        "lines": [
+          "      const pair = wasm.getSelectionText(",
+          "        wasmHandle,",
+          "        firstRow,",
+          "        0,",
+          "        secondRow,",
+          "        render.cols - 1,",
+          "      );"
+        ]
+      },
+      {
+        "start": 49341,
+        "deleteCount": 1,
+        "lines": [
+          "        : wasm.getSelectionText(wasmHandle, row, 0, row, render.cols - 1);"
+        ]
+      },
+      {
+        "start": 49334,
+        "deleteCount": 1,
+        "lines": [
+          "      const pair = wasm.getSelectionText(wasmHandle, row, 0, row + 1, render.cols - 1);"
+        ]
+      },
+      {
+        "start": 49326,
+        "deleteCount": 1,
+        "lines": [
+          "      if (wasm.getSelectionText(wasmHandle, row, 0, row, render.cols - 1) !== rowText[row])"
+        ]
+      },
+      {
+        "start": 49307,
+        "deleteCount": 17,
+        "lines": []
+      },
+      {
+        "start": 47847,
+        "deleteCount": 1,
+        "lines": [
+          "            const sanitized = inputHandler.filterOutput(text);"
+        ]
+      },
+      {
+        "start": 1528,
+        "deleteCount": 1,
+        "lines": ["    filterOutput: (output) => filter.filter(output),"]
+      },
+      {
+        "start": 1464,
+        "deleteCount": 9,
+        "lines": []
+      },
+      {
+        "start": 1336,
+        "deleteCount": 1,
+        "lines": ["  filter(output) {"]
+      },
+      {
+        "start": 905,
+        "deleteCount": 0,
+        "lines": [
+          "  if (seq === \"\\x1B[6n\") {",
+          "    const { row, col } = handlers.getCursorPosition();",
+          "    handlers.sendReply(`\\x1B[${row};${col}R`);",
+          "    return true;",
+          "  }"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "contributorExportDigest",
+    "sha256": "c55a8f4068e18131a3be762e49b8015a62d8fa4bf8b852edf60f5e85f0cb3380",
+    "edits": [
+      {
+        "start": 47847,
+        "deleteCount": 1,
+        "lines": [
+          "            const sanitized = inputHandler.filterOutput(text);"
+        ]
+      },
+      {
+        "start": 1528,
+        "deleteCount": 1,
+        "lines": ["    filterOutput: (output) => filter.filter(output),"]
+      },
+      {
+        "start": 1464,
+        "deleteCount": 9,
+        "lines": []
+      },
+      {
+        "start": 1336,
+        "deleteCount": 1,
+        "lines": ["  filter(output) {"]
+      },
+      {
+        "start": 905,
+        "deleteCount": 0,
+        "lines": [
+          "  if (seq === \"\\x1B[6n\") {",
+          "    const { row, col } = handlers.getCursorPosition();",
+          "    handlers.sendReply(`\\x1B[${row};${col}R`);",
+          "    return true;",
+          "  }"
+        ]
+      }
+    ]
+  }
+]

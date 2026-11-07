@@ -1,0 +1,48 @@
+{
+  "name": "combinedExportDigest",
+  "sha256": "f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b",
+  "edits": [
+    { "start": 55822, "deleteCount": 1, "lines": [] },
+    { "start": 55809, "deleteCount": 1, "lines": [] },
+    { "start": 55781, "deleteCount": 5, "lines": [] },
+    {
+      "start": 48331,
+      "deleteCount": 1,
+      "lines": ["        sendKeyInput(seq);"]
+    },
+    { "start": 48121, "deleteCount": 1, "lines": [] },
+    { "start": 48072, "deleteCount": 1, "lines": [] },
+    { "start": 47874, "deleteCount": 2, "lines": [] },
+    {
+      "start": 1525,
+      "deleteCount": 1,
+      "lines": [
+        "    encodeKeyEvent: (event) => encodeKeyEvent(event, config, options.getKittyKeyboardFlags?.() ?? 0),"
+      ]
+    },
+    {
+      "start": 531,
+      "deleteCount": 1,
+      "lines": ["    seq = encodeDefaultKeyEvent(event);"]
+    },
+    {
+      "start": 513,
+      "deleteCount": 1,
+      "lines": [
+        "function encodeKeyEvent(event, config = DEFAULT_CONFIG, kittyFlags = 0) {"
+      ]
+    },
+    {
+      "start": 143,
+      "deleteCount": 1,
+      "lines": [
+        "    return event.shiftKey || event.altKey || event.ctrlKey ? `\\x1B[1;${modifierCode(event)}${modifierFinal}` : `\\x1B[${modifierFinal}`;"
+      ]
+    },
+    {
+      "start": 131,
+      "deleteCount": 1,
+      "lines": ["function encodeDefaultKeyEvent(event) {"]
+    }
+  ]
+}

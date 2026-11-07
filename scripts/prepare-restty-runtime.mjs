@@ -11,6 +11,7 @@ import { blinkCorrections } from "./restty-blink-corrections.mjs";
 import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
+import { bufferTextCorrections } from "./restty-buffer-text-corrections.mjs";
 import {
   applicationCursorCorrections,
   applicationCursorCoreCorrections,
@@ -140,8 +141,16 @@ const priorInputRoutingDigest =
   "f15c6c25cb2efb879b5a00b09640fcdb2d364c8d566237ff5d0ae63975bb3e44";
 const priorApplicationCursorDigest =
   "e0ca1593ded32df536777fba23b835fafd7993680b6e550958fe0ac6c8e4b7df";
-const correctedDigest =
+const priorBufferTextDigest =
   "7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7";
+const maintainerExportDigest =
+  "3b1076d32880f0f28b8cbb465687825c4bb980d34d1af67862e23b5eda2871e3";
+const contributorExportDigest =
+  "c55a8f4068e18131a3be762e49b8015a62d8fa4bf8b852edf60f5e85f0cb3380";
+const combinedExportDigest =
+  "f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b";
+const correctedDigest =
+  "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1994,13 +2003,25 @@ export async function prepareResttyRuntime(options = {}) {
       case priorBlinkDigest:
         source = applyCorrections(source, blinkCorrections);
       case priorWideWrapLinkDigest:
+      case maintainerExportDigest:
         source = applyCorrections(source, wideWrapLinkCorrections);
       case priorCprDigest:
+      case contributorExportDigest:
         source = applyCorrections(source, cprCorrections);
       case priorInputRoutingDigest:
+      case combinedExportDigest:
         source = applyCorrections(source, inputRoutingCorrections);
       case priorApplicationCursorDigest:
         source = applyCorrections(source, applicationCursorCorrections);
+      case priorBufferTextDigest:
+        if (
+          ![
+            maintainerExportDigest,
+            contributorExportDigest,
+            combinedExportDigest,
+          ].includes(sourceDigest)
+        )
+          source = applyCorrections(source, bufferTextCorrections);
         break;
       default:
         throw new Error(

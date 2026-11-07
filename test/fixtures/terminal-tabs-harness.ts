@@ -32,6 +32,7 @@ export function createFakeSurface() {
     inject: vi.fn(async () => {}),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
     dispose: vi.fn(),
   };
 }
@@ -44,7 +45,7 @@ export function createTabsHarness(
     beforeStart?: (mountIndex: number) => Promise<void>;
     tabSize?: { width: number; height: number };
     surfaceGeometry?: TerminalSurfaceGeometry;
-    surfaceOptions?: TerminalSurfaceOptions;
+    surfaceOptions?: TerminalTabsOptions["surfaceOptions"];
     tabsOptions?: Partial<TerminalTabsOptions>;
   } = {},
 ) {

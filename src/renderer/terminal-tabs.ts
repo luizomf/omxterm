@@ -23,11 +23,14 @@ import type { SettingsTabSelection } from "../shared/terminal-panes";
 import type {
   TerminalClipboardAction,
   TerminalContextMenuTarget,
+  TerminalExportContext,
+  TerminalExportSaveRequest,
   TerminalFontZoom,
   TerminalSessionId,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
 import type {
+  TerminalClipboard,
   TerminalSurface,
   TerminalSurfaceConfiguration,
   TerminalSurfaceOptions,
@@ -44,7 +47,10 @@ import {
   terminalTabCreator,
   relabelEndedPane,
 } from "./terminal-tab-lifetime";
-import { createPaneContextMenu } from "./terminal-pane-context-menu";
+import {
+  createPaneContextMenu,
+  type TerminalHostClipboard,
+} from "./terminal-pane-context-menu";
 import {
   disposePane,
   findPaneBySession,
@@ -96,7 +102,9 @@ export interface TerminalTabsOptions {
   readonly sshPane?:
     ((token: string, accepted: boolean | null) => void) | undefined;
   readonly mount: MountTerminalSurface;
-  readonly surfaceOptions: TerminalSurfaceOptions;
+  readonly surfaceOptions: Omit<TerminalSurfaceOptions, "clipboard"> & {
+    readonly clipboard?: TerminalHostClipboard;
+  };
   readonly showTabBar?: boolean;
   readonly canFocus?: () => boolean;
   // A deliberate mount may restore focus if no control took focus while it
@@ -138,6 +146,13 @@ export interface TerminalTabs {
     action: TerminalClipboardAction,
     target?: TerminalContextMenuTarget,
   ): void;
+  exportRequest(
+    context: TerminalExportContext,
+    allowed: boolean,
+  ): TerminalExportSaveRequest | undefined;
+  fieldClipboard(
+    clipboard?: TerminalHostClipboard,
+  ): TerminalClipboard | undefined;
   find(): void;
   injectText(text: string): void;
   // The selected live terminal, captured for one snippet action.
@@ -343,6 +358,7 @@ export function createTerminalTabs(
     },
     focusClicked: (pane) => panes.focusPane(pane.tab, pane, true),
     captureContextMenuTarget: contextMenu.capture,
+    fieldClipboard: contextMenu.fieldClipboard,
     routeKeyInput: (pane, data) => mirror?.route(pane, data) ?? false,
     onSemanticInput: (pane) => mirror?.semantic(pane),
   });
@@ -452,13 +468,16 @@ export function createTerminalTabs(
       if (!disposed && selectedTab()) configuration.zoom(command);
     },
     clipboardAction(action, target) {
-      if (!interactivePane()) return;
-      const surface = (target ? contextMenu.take(target) : focusedPane())
-        ?.surface;
+      // Consume targeted claims even if modal or hosted content blocks input.
+      const pane = target ? contextMenu.take(target) : interactivePane();
+      if (!interactivePane() || options.canFocus?.() === false) return;
+      const surface = pane?.surface;
       if (action === "copy") void surface?.copy();
       else if (action === "paste") void surface?.paste();
       else surface?.selectAll();
     },
+    exportRequest: contextMenu.exportRequest,
+    fieldClipboard: contextMenu.fieldClipboard,
     find: () => interactivePane()?.surface?.find(),
     injectText: (text) => void interactivePane()?.surface?.inject(text),
     captureSnippetTarget: () => {

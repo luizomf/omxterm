@@ -65,8 +65,8 @@ OMXTerm:
   per Terminal Tab and one or more Application Tabs per native Terminal Window,
   including an optional graphical Settings tab;
 - provides native new-window, new-tab, close, copy, paste, select-all,
-  scrollback search, zoom, fullscreen, always-on-top, bounded local-image
-  preview, and quit actions without an in-window toolbar;
+  scrollback search, explicit text export, zoom, fullscreen, always-on-top,
+  bounded local-image preview, and quit actions without an in-window toolbar;
 - renders the bundled [`omtheme`](omtheme.json) palette by default, allows one
   explicitly configured external Terminal Theme, keeps SGR bold text on its
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
@@ -1284,6 +1284,32 @@ Only an explicit Copy from the focused field moves the selected query text,
 through the same main-owned clipboard IPC as any other Copy. Find is ignored
 while a Local Image Preview or About owns modal input.
 
+Explicit Export is offered in the terminal context menu: **Export Selection…**
+when selected text exists, otherwise **Export Terminal Content…**. The label
+and kind are captured when the menu opens. A field menu offers editing only.
+Content export reads the source pane's retained Scrollback Buffer and screen,
+or only the alternate screen when active, without modifying selection. The
+one-shot popup belongs to its exact pane and Surface; pane/tab changes, pane
+end or removal, a field or newer popup, and owner disposal invalidate it. A
+matching blocked or wrong-kind callback consumes its own claim without reading;
+a stale callback cannot consume a newer one. A valid callback snapshots once
+before the asynchronous dialog, so later focus changes do not change its text.
+The context-menu opt-out also suppresses the export offer.
+
+The inclusive limit is 16 MiB of UTF-8, measured in bytes and independently
+validated at preload and main. The core storage limit does not guarantee that
+extracted text fits. Over-limit text is neither truncated nor sent; main reports
+that nothing was saved and suggests a smaller selection. Main owns the native
+save chooser, suggested timestamped text filename and overwrite confirmation.
+Cancellation writes nothing. Whitespace-only text shows a notice instead of a
+chooser. Files use UTF-8 with LF line breaks; row padding and trailing blank rows
+are trimmed, with exactly one final line break. Newly created files are owner-only
+on macOS and Linux. Setup, chooser and write failures receive a fixed actionable
+notice without private details; notices are not retried. Owner loss before a
+chooser resolves prevents a write or orphan notice; an already-started write may
+settle. Export is user-requested, never automatic, and payload and destination
+stay out of operational logs.
+
 ## Clipboard
 
 - Selection never copies automatically.
@@ -2015,6 +2041,10 @@ contents, or Terminal Payload. Logs may describe OMXTerm lifecycle, validation,
 IPC, PTY control, resize, duration, and failures; they must never contain PTY
 input/output, clipboard data, environment contents, configuration contents,
 executable names, command arguments, commands, titles, secrets, or transcripts.
+
+Explicit user-requested copying, local search and export are separate from
+logging. Search remains in memory; export may persist only requested text to the
+chosen file. Neither authorizes automatic recording or diagnostic capture.
 
 The application makes remote requests only for deliberate official-catalog browsing
 and HTTPS extension archive installation on Linux ARM64/x64 and macOS/Windows ARM64 source.

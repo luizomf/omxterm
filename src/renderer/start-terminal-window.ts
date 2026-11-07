@@ -102,6 +102,8 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
           subscribeToAuxiliaryPanelSideToggle:
             bridge.terminal.onAuxiliaryPanelSideToggle,
           subscribeToFind: bridge.terminal.onFind,
+          subscribeToExportRequests: bridge.terminal.onExportRequest,
+          saveTerminalExport: bridge.terminal.saveTerminalExport,
           subscribeToTabTitles: bridge.terminal.onTabTitle,
           notifyTabSelection: bridge.terminal.notifyTabSelection,
           syncTabTitle: bridge.terminal.syncTabTitle,

@@ -1,4 +1,9 @@
 /* eslint-disable max-lines, max-lines-per-function -- Keep session start, early native callbacks and retirement in the same controller lifetime. */
+import {
+  exportBoundary,
+  registerTerminalExportIpc,
+  type TerminalExportOwner,
+} from "./terminal-export-ipc";
 import type {
   TerminalExit,
   TerminalSessionId,
@@ -89,7 +94,7 @@ import {
 } from "./terminal-output-flow";
 
 interface RoutedTerminalIpcController
-  extends TerminalIpcController, SurfaceFontRequests {
+  extends TerminalIpcController, SurfaceFontRequests, TerminalExportOwner {
   configuration(payload?: unknown): TerminalRendererConfiguration;
   initialLayout(payload?: unknown): InitialLayout | null;
   start(payload?: unknown): TerminalSessionId;
@@ -277,25 +282,27 @@ export function registerTerminalIpcRouter(
   const snippets: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
+      rejectSender();
       throw new Error("Rejected snippets IPC from an untrusted sender");
     }
     return controller.snippets(payload);
   };
 
+  const rejectSender = () =>
+    operationalEvents?.write({
+      name: "boundary.rejected",
+      boundary: "ipc",
+      reason: "untrusted-sender",
+    });
   const removeSurfaceFontIpc = registerSurfaceFontIpc(
     ipcMain,
     controllerFor,
-    () =>
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      }),
+    rejectSender,
+  );
+  const removeExportIpc = registerTerminalExportIpc(
+    ipcMain,
+    controllerFor,
+    rejectSender,
   );
   ipcMain.handle(layoutIpc.initial, (event, payload) => {
     const controller = controllerFor(event);
@@ -366,6 +373,7 @@ export function registerTerminalIpcRouter(
       for (const controller of [...controllers.values()]) controller.dispose();
       removeSurfaceFontIpc();
       ipcMain.removeHandler(layoutIpc.initial);
+      removeExportIpc();
       ipcMain.removeHandler(terminalIpc.start);
       ipcMain.removeHandler(terminalIpc.configuration);
       ipcMain.removeHandler(terminalIpc.fontData);
@@ -820,6 +828,11 @@ function createTerminalIpcController(
         showClipboardContextMenu: contextMenu.show,
       },
       reject,
+    ),
+    saveExport: exportBoundary(
+      options,
+      reject,
+      () => !disposed && !options.webContents.isDestroyed(),
     ),
     bell,
     openExternalLink,
