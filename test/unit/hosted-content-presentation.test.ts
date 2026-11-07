@@ -434,6 +434,9 @@ it("does not let a scoped rejection overwrite an epoch failure or another reject
     "could not",
   );
   h.fail();
+  expect(
+    document.querySelector<HTMLElement>('[role="status"]')?.dataset.severity,
+  ).toBe("error");
   h.retire(first.id);
   h.owner.select(undefined, () => {}, {});
   await settle();

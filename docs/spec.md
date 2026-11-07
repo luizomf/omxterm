@@ -2029,7 +2029,11 @@ wrap shortcut actions below 760 px. Outer layout uses viewport media queries at
 Record/Cancel, Unbind, Default and textual state;
 config JSON overflow stays within its editor. Shared palette-aware tokens keep
 decoration subdued, inputs identifiable and keyboard focus foreground-colored,
-independent of optionally transparent pane paint. Native control color-scheme
+independent of optionally transparent pane paint. Shared core page notices use
+theme green/red/yellow accents and tints for success/error/warning, distinct
+foreground markers and theme-foreground message text; informational notices stay
+neutral. Theme changes repaint retained notices without replacing them. Installed
+extension notices remain independently styled. Native control color-scheme
 follows palette luminance. These are not universal accessibility guarantees for
 arbitrary custom palettes. See the [UI style guide](ui-style-guide.md).
 

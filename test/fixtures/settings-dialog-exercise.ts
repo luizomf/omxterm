@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { exerciseSettingsLayout } from "./settings-layout-exercise";
+import { captureSettingsNoticeEvidence } from "./settings-notice-exercise";
 import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
 import { ipcMain, type BrowserWindow } from "electron";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -169,8 +170,34 @@ export function createSettingsExercise(
         settings.show,
         () => readFile(file, "utf8"),
         delivered,
-        () =>
-          exerciseSettingsLayout(
+        async () => {
+          const evidence = process.env.OMXTERM_NOTICE_EVIDENCE_DIR;
+          if (evidence)
+            await captureSettingsNoticeEvidence(
+              getWindow(),
+              evidence,
+              (language, colors) => {
+                const current = reloader.current();
+                const configuration = {
+                  ...current.configuration,
+                  language,
+                  terminalTheme: {
+                    ...current.configuration.terminalTheme,
+                    colors: {
+                      ...current.configuration.terminalTheme.colors,
+                      ...colors,
+                    },
+                  },
+                };
+                router.applyConfiguration(
+                  terminalRendererConfiguration(
+                    { ...current, configuration },
+                    process.platform === "darwin" ? 30 : 0,
+                  ),
+                );
+              },
+            );
+          return exerciseSettingsLayout(
             getWindow(),
             (language, light) => {
               const current = reloader.current();
@@ -201,7 +228,8 @@ export function createSettingsExercise(
                   process.platform === "darwin" ? 30 : 0,
                 ),
               ),
-          ),
+          );
+        },
       );
     },
     dispose() {

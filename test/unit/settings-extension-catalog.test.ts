@@ -231,6 +231,10 @@ it("keeps local controls usable during cold offline loading and failure, with ow
     expect(document.body.textContent).toContain("Catalog unavailable."),
   );
   expect(document.body.textContent).not.toContain("no published extensions");
+  const notice = [
+    ...document.querySelectorAll<HTMLElement>(".page-notice"),
+  ].find((node) => node.textContent?.includes("Catalog unavailable."));
+  expect(notice?.dataset.severity).toBe("warning");
   expect(document.body.textContent).toContain(
     "If extension management is available, you can still install local files and manage installed extensions offline",
   );

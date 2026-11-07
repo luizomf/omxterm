@@ -397,6 +397,12 @@ it("explains new-name export before the chooser and keeps local dirty state on c
   expect(view.query(".settings-theme-authoring").textContent).toContain(
     "published successfully",
   );
+  const notice = [
+    ...view
+      .query(".settings-theme-authoring")
+      .querySelectorAll<HTMLElement>(".page-notice"),
+  ].find((node) => node.textContent?.includes("published successfully"));
+  expect(notice?.dataset.severity).toBe("warning");
   expect(button("Save").disabled).toBe(true);
   expect(view.bridge.change).not.toHaveBeenCalled();
   view.dialog.dispose();

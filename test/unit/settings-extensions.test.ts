@@ -176,6 +176,10 @@ it("does not repeat unknown mutation outcomes; Refresh is a separate deliberate 
   await vi.waitFor(() =>
     expect(document.body.textContent).toContain("No automatic retry"),
   );
+  const notice = [
+    ...document.querySelectorAll<HTMLElement>(".page-notice"),
+  ].find((node) => node.textContent?.includes("No automatic retry"));
+  expect(notice?.dataset.severity).toBe("warning");
   expect(request).toHaveBeenCalledTimes(2);
   click("Refresh");
   await vi.waitFor(() =>

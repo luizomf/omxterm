@@ -14,6 +14,9 @@ export function applyWindowTheme(
   style.setProperty("--terminal-background-opacity", String(1 - transparency));
   style.setProperty("--terminal-background", background);
   style.setProperty("--terminal-foreground", foreground);
+  style.setProperty("--ui-success-accent", theme.colors.green);
+  style.setProperty("--ui-error-accent", theme.colors.red);
+  style.setProperty("--ui-warning-accent", theme.colors.yellow);
   style.setProperty(
     "--ui-color-scheme",
     luminance(background) > 0.179 ? "light" : "dark",

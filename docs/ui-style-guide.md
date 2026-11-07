@@ -22,9 +22,12 @@ native fields and keep their native labels, validation and keyboard behavior.
 Use `setPageNotice(element, { text, severity })` for retained feedback, with
 `info`, `success`, `warning` or `error`. The caller supplies `role="status"` for
 operation feedback or `role="alert"` for blocking file problems. Empty feedback
-is hidden; updates do not take focus. Errors/warnings combine an exclamation
-marker, bounded tinted container and semantic accent with actionable text;
-color alone does not convey the problem. Keep user data literal, not HTML.
+is hidden; updates do not take focus. Success, error and warning use distinct
+foreground markers and bounded tinted containers with active-theme green, red
+and yellow accents. Message text keeps the theme foreground; info remains
+neutral. Weak accents cannot hide the foreground markers or actionable text.
+Color alone does not convey the result. This applies to core page notices, not
+independently styled installed extensions. Keep user data literal, not HTML.
 
 ## Palette and hierarchy
 

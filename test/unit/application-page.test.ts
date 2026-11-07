@@ -13,6 +13,8 @@ import {
   saved,
 } from "../fixtures/settings-dialog-dom";
 import type { SettingsResult } from "../../src/shared/settings";
+import { applyWindowTheme } from "../../src/renderer/terminal-window-theme";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 
 afterEach(() => document.body.replaceChildren());
 
@@ -110,6 +112,47 @@ it.each([
     view.dialog.dispose();
   },
 );
+
+it("repaints a retained real saved notice from the current theme without disturbing focus or language", async () => {
+  const language = createRendererLanguage();
+  const view = await open({ saveText: async () => saved(base) }, language);
+  button("Config File").click();
+  button("Save").click();
+  await view.settle();
+  const editor = view.query<HTMLTextAreaElement>("textarea");
+  const notice = view.query(".settings-config-file [role=status]");
+  editor.focus();
+  const theme = {
+    ...DEFAULT_TERMINAL_THEME,
+    colors: {
+      ...DEFAULT_TERMINAL_THEME.colors,
+      green: "#123456",
+      red: "#234567",
+      yellow: "#345678",
+    },
+  };
+  const tabs = document.createElement("div");
+  applyWindowTheme(document, tabs, theme, 0);
+  const style = document.documentElement.style;
+  expect(
+    ["--ui-success-accent", "--ui-error-accent", "--ui-warning-accent"].map(
+      (key) => style.getPropertyValue(key),
+    ),
+  ).toEqual(["#123456", "#234567", "#345678"]);
+  applyWindowTheme(
+    document,
+    tabs,
+    { ...theme, colors: { ...theme.colors, green: "#456789" } },
+    0,
+  );
+  language.set("pt-BR");
+  expect(style.getPropertyValue("--ui-success-accent")).toBe("#456789");
+  expect(view.query(".settings-config-file [role=status]")).toBe(notice);
+  expect(notice.dataset.severity).toBe("success");
+  expect(notice.textContent).toContain(language.t("settings.saved"));
+  expect(document.activeElement).toBe(editor);
+  view.dialog.dispose();
+});
 
 it("retains error precedence over newer unsaved typing after application failure", async () => {
   const pending = deferred<SettingsResult>();
