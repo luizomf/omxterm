@@ -2397,7 +2397,10 @@ request to the original renderer Surface, consumed once, never recaptured.
 Stale selection/Surface/DOM focus and blocked presentation refuse admission.
 The Surface stops Mirror Typing before ordinary single-target Protected Paste
 with no added Enter. Visible Files receives localized accepted, refused,
-incomplete or unknown notices. Successful still-current completion focuses only
+incomplete or unknown notices. A claimed timeout revokes input authority and sends
+one unknown notice only to its original still-live, visible source; hidden,
+retired or replaced sources remain silent, and late settlement sends no second
+notice. Successful still-current completion focuses only
 the captured pane's input through the native presentation owner; newer tool,
 field, pane or overlay intent suppresses that focus. Unknown results are never
 retried. Accepted Surface-owned work is independent of source retirement;

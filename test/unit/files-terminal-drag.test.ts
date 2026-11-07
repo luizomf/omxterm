@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import {
   createFilesTerminalDrag,
   FILES_DRAG_LIFETIME_MS,
+  type FilesTerminalDropConsumer,
 } from "../../src/main/files-terminal-drag";
 import type { FilesDragResult } from "../../src/shared/files-terminal-drag";
 const entry = {
@@ -25,7 +26,7 @@ function fixture() {
   const transport = createFilesTerminalDrag(window as unknown as BrowserWindow);
   const context = { id: "view-a", isCurrentVisible: vi.fn(() => true) };
   const abort = new AbortController();
-  const consume = vi.fn(async (): Promise<FilesDragResult> => ({
+  const consume = vi.fn<FilesTerminalDropConsumer>(async () => ({
     status: "accepted",
   }));
   const report = vi.fn();
@@ -128,17 +129,136 @@ it("keeps revocation effective during asynchronous protected admission", async (
   finish({ status: "refused" });
   expect(await result).toEqual({ status: "unknown" });
 });
-it("bounds a nonsettling consumer by the gesture deadline without retrying it", async () => {
+it("reports one unknown notice to the original visible source after a claimed timeout without reviving delivery or focus", async () => {
   vi.useFakeTimers();
   const f = fixture();
-  f.consume.mockImplementation(() => new Promise(() => {}));
+  let finish!: (result: FilesDragResult) => void;
+  const focus = vi.fn();
+  const delivery = new Promise<FilesDragResult>((resolve) => {
+    finish = resolve;
+  });
+  f.consume.mockImplementation(async (input) => {
+    const result = await delivery;
+    if (!input.signal.aborted && input.source.isCurrentVisible()) focus();
+    return result;
+  });
   const ticket = f.start();
-  f.claim(ticket);
+  expect(f.claim(ticket)).toBe(true);
   const pending = f.transport.handoff(ticket, 1);
+  const input = f.consume.mock.calls[0]![0];
+  f.transport.end("view-a", ticket);
   vi.advanceTimersByTime(FILES_DRAG_LIFETIME_MS);
   expect(await pending).toEqual({ status: "unknown" });
-  expect(f.consume).toHaveBeenCalledOnce();
+  expect(f.report).toHaveBeenCalledExactlyOnceWith({ status: "unknown" });
+  expect(input.signal.aborted).toBe(true);
+  expect(input.source.isCurrentVisible()).toBe(false);
+  expect(f.context.isCurrentVisible()).toBe(true);
+  expect(f.claim(ticket)).toBe(false);
   expect(await f.transport.handoff(ticket, 1)).toEqual({ status: "refused" });
+  finish({ status: "accepted" });
+  await delivery;
+  await Promise.resolve();
+  expect(f.consume).toHaveBeenCalledOnce();
+  expect(f.report).toHaveBeenCalledExactlyOnceWith({ status: "unknown" });
+  expect(focus).not.toHaveBeenCalled();
+});
+it.each(["dragging", "claimed"])(
+  "expires a %s gesture without permitting a later handoff",
+  async (phase) => {
+    vi.useFakeTimers();
+    const f = fixture();
+    const ticket = f.start();
+    if (phase === "claimed") expect(f.claim(ticket)).toBe(true);
+    vi.advanceTimersByTime(FILES_DRAG_LIFETIME_MS);
+    expect(await f.transport.handoff(ticket, 1)).toEqual({ status: "refused" });
+    expect(f.claim(ticket)).toBe(false);
+    expect(f.consume).not.toHaveBeenCalled();
+    if (phase === "claimed")
+      expect(f.report).toHaveBeenCalledExactlyOnceWith({ status: "unknown" });
+    else expect(f.report).not.toHaveBeenCalled();
+  },
+);
+it.each(["hidden", "retired", "window-hidden", "blurred", "hide/reveal"])(
+  "keeps a timed-out pending handoff silent for a %s source",
+  async (loss) => {
+    vi.useFakeTimers();
+    const f = fixture();
+    let finish!: (result: FilesDragResult) => void;
+    f.consume.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const ticket = f.start();
+    expect(f.claim(ticket)).toBe(true);
+    const pending = f.transport.handoff(ticket, 1);
+    const input = f.consume.mock.calls[0]![0];
+    if (loss === "hidden") f.context.isCurrentVisible.mockReturnValue(false);
+    if (loss === "retired") f.abort.abort();
+    if (loss === "window-hidden") f.window.isVisible.mockReturnValue(false);
+    if (loss === "blurred") f.window.isFocused.mockReturnValue(false);
+    if (loss === "hide/reveal") {
+      f.context.isCurrentVisible.mockReturnValue(false);
+      f.transport.revoke("view-a");
+      f.context.isCurrentVisible.mockReturnValue(true);
+    }
+    vi.advanceTimersByTime(FILES_DRAG_LIFETIME_MS);
+    expect(await pending).toEqual({ status: "unknown" });
+    expect(input.signal.aborted).toBe(true);
+    expect(input.source.isCurrentVisible()).toBe(false);
+    expect(f.report).not.toHaveBeenCalled();
+    finish({ status: "accepted" });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(f.report).not.toHaveBeenCalled();
+    expect(f.consume).toHaveBeenCalledOnce();
+  },
+);
+it("does not send a replaced handoff's timeout or late result to either source", async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  let finish!: (result: FilesDragResult) => void;
+  const delivery = new Promise<FilesDragResult>((resolve) => {
+    finish = resolve;
+  });
+  f.consume.mockImplementation(() => delivery);
+  const ticket = f.start();
+  expect(f.claim(ticket)).toBe(true);
+  const pending = f.transport.handoff(ticket, 1);
+  const input = f.consume.mock.calls[0]![0];
+  vi.advanceTimersByTime(FILES_DRAG_LIFETIME_MS / 2);
+  const successorReport = vi.fn();
+  const successorConsume = vi.fn<FilesTerminalDropConsumer>(async () => ({
+    status: "accepted",
+  }));
+  const successor = f.transport.start(
+    entry,
+    { id: "view-b", isCurrentVisible: () => true },
+    new AbortController().signal,
+    successorConsume,
+    successorReport,
+  );
+  vi.advanceTimersByTime(FILES_DRAG_LIFETIME_MS / 2);
+  expect(await pending).toEqual({ status: "unknown" });
+  expect(input.signal.aborted).toBe(true);
+  expect(input.source.isCurrentVisible()).toBe(false);
+  finish({ status: "accepted" });
+  await delivery;
+  await Promise.resolve();
+  expect(f.report).not.toHaveBeenCalled();
+  expect(successorReport).not.toHaveBeenCalled();
+  expect(f.claim(ticket)).toBe(false);
+  expect(await f.transport.handoff(ticket, 1)).toEqual({ status: "refused" });
+  expect(f.consume).toHaveBeenCalledOnce();
+  expect(f.claim(successor)).toBe(true);
+  expect(await f.transport.handoff(successor, 2)).toEqual({
+    status: "accepted",
+  });
+  expect(successorConsume).toHaveBeenCalledOnce();
+  expect(successorReport).toHaveBeenCalledExactlyOnceWith({
+    status: "accepted",
+  });
 });
 it.each([
   null,

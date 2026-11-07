@@ -56,7 +56,11 @@ reuses the declared path handoff and captured installation admission, with the
 original drop-turn Surface retained privately in core. A missing/stale/consumed
 capture refuses rather than selecting a successor. Candidate feedback carries
 no authorization; accepted/refused/unknown notices return only to the still-visible
-source. Successful still-current delivery uses the existing core-focus
+source. Timeout notification eligibility is separate from insertion authority:
+a claimed deadline revokes authority first, then reports one unknown result to
+the original still-live, visible source. Hidden, retired or replaced sources stay
+silent; neither late settlement nor a successor receives that notice.
+Successful still-current delivery uses the existing core-focus
 presentation while keeping Files visible. No second input or focus owner is
 introduced, and no native qualification follows from this composition. See the
 [transport contract](../files-development-preview.md#terminal-drag-transport-source-increment).

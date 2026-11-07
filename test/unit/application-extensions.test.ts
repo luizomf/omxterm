@@ -339,12 +339,10 @@ async function startService(
   provisioning: Partial<
     Pick<
       Parameters<typeof startApplicationExtensions>[0],
-      | "defaultSnippets"
-      | "onDefaultSnippetsWarning"
-      | "filesTerminalDrop"
-      | "isTrustedSender"
+      "defaultSnippets" | "onDefaultSnippetsWarning" | "isTrustedSender"
     >
   > = {},
+  semanticOwner = true,
 ) {
   // Model preview admission/catalog targeting, not the host filesystem. Startup
   // captures both synchronously before its first await; Windows store operations
@@ -363,11 +361,15 @@ async function startService(
       ...provisioning,
       applicationRoot: adapters.root,
       ssh: { open: adapters.sshOpen },
-      semanticInput: {
-        request: adapters.semanticRequest,
-        confirmSelection: adapters.semanticConfirm,
-        subscribeSelection: adapters.semanticSubscribe,
-      },
+      ...(semanticOwner
+        ? {
+            semanticInput: {
+              request: adapters.semanticRequest,
+              confirmSelection: adapters.semanticConfirm,
+              subscribeSelection: adapters.semanticSubscribe,
+            },
+          }
+        : {}),
       layout: {
         capture: vi.fn(() => Promise.reject(new Error("unavailable"))),
         open: vi.fn(async () => ({ ok: false, error: "unavailable" })),
@@ -503,26 +505,14 @@ async function installTool(id: string, title: string, capabilities?: string[]) {
 it.each(["omxterm.files", "omxterm.ssh"])(
   "selects terminal transport only for the installed Files companion (%s)",
   async (id) => {
-    await service.dispose();
-    const consumer = vi.fn<
-      NonNullable<
-        Parameters<typeof startApplicationExtensions>[0]["filesTerminalDrop"]
-      >
-    >(async (_window, _input, admit) => {
-      let admitted = false;
-      await admit(_input.signal, () => {
-        admitted = true;
-      });
-      return { status: admitted ? "accepted" : "refused" };
-    });
-    await startService("linux", { filesTerminalDrop: consumer });
-    await installTool(id, "Tool");
+    adapters.semanticRequest.mockResolvedValue({ ok: true });
+    await installTool(id, "Tool", ["terminal.insertPath.v1"]);
     service.actions()[0]!.invoke();
     await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
     const host = adapters.hosts[0]!;
     if (id !== "omxterm.files") {
       expect(host.options.filesTerminalDrop).toBeUndefined();
-      expect(consumer).not.toHaveBeenCalled();
+      expect(adapters.semanticRequest).not.toHaveBeenCalled();
       return;
     }
     const input = {
@@ -535,10 +525,20 @@ it.each(["omxterm.files", "omxterm.ssh"])(
     expect(await host.options.filesTerminalDrop!(input)).toEqual({
       status: "accepted",
     });
-    expect(consumer).toHaveBeenCalledExactlyOnceWith(
+    expect(adapters.semanticRequest).toHaveBeenCalledExactlyOnceWith(
       window,
-      expect.objectContaining({ entry: input.entry, revision: 3 }),
+      expect.objectContaining({
+        operation: "terminal.semanticInput.v1",
+        text: "'/synthetic/a b'",
+        intent: "insert",
+      }),
+      expect.objectContaining({
+        id: input.source.id,
+        actionSelectionRevision: 3,
+      }),
+      expect.any(AbortSignal),
       expect.any(Function),
+      { dropTicket: input.ticket },
     );
     expect(host.options.filesDragSignal?.aborted).toBe(false);
     await service.dispose();
@@ -546,13 +546,22 @@ it.each(["omxterm.files", "omxterm.ssh"])(
     expect(await host.options.filesTerminalDrop!(input)).toEqual({
       status: "refused",
     });
-    expect(consumer).toHaveBeenCalledOnce();
+    expect(adapters.semanticRequest).toHaveBeenCalledOnce();
   },
 );
 
-it.each([false, true])(
-  "composes the protected Files drop only with the declared path capability (%s)",
-  async (declared) => {
+it.each([
+  [false, false],
+  [false, true],
+  [true, false],
+  [true, true],
+])(
+  "composes the protected Files drop only with declared path capability=%s and semantic owner=%s",
+  async (declared, owner) => {
+    if (!owner) {
+      await service.dispose();
+      await startService("linux", {}, false);
+    }
     await installTool(
       "omxterm.files",
       "Files",
@@ -561,8 +570,9 @@ it.each([false, true])(
     service.actions()[0]!.invoke();
     await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
     const host = adapters.hosts[0]!;
-    if (!declared) {
+    if (!declared || !owner) {
       expect(host.options.filesTerminalDrop).toBeUndefined();
+      expect(adapters.semanticRequest).not.toHaveBeenCalled();
       return;
     }
     const input = {
@@ -617,13 +627,8 @@ it.each([false, true])(
 
 it("delivers each Files drop's captured owner despite another window becoming focused", async () => {
   await service.dispose();
-  const consumer = vi.fn<
-    NonNullable<
-      Parameters<typeof startApplicationExtensions>[0]["filesTerminalDrop"]
-    >
-  >(async () => ({ status: "refused" }));
+  adapters.semanticRequest.mockResolvedValue({ ok: true });
   await startService("linux", {
-    filesTerminalDrop: consumer,
     isTrustedSender: (event) => adapters.windows.has(event.sender),
   });
   adapters.sendOpen.mockImplementation((sender, _channel, command) => {
@@ -634,7 +639,7 @@ it("delivers each Files drop's captured owner despite another window becoming fo
       { sender, senderFrame: sender.mainFrame },
     );
   });
-  await installTool("omxterm.files", "Files");
+  await installTool("omxterm.files", "Files", ["terminal.insertPath.v1"]);
   service.actions()[0]!.invoke();
   await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
   const first = adapters.hosts[0]!;
@@ -667,31 +672,46 @@ it("delivers each Files drop's captured owner despite another window becoming fo
     signal: new AbortController().signal,
   };
   adapters.selected = window;
-  await second.options.filesTerminalDrop!(input);
-  expect(consumer.mock.calls[0]![0]).toBe(otherWindow);
-  expect(consumer).toHaveBeenNthCalledWith(
+  expect(await second.options.filesTerminalDrop!(input)).toEqual({
+    status: "accepted",
+  });
+  expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
     1,
     otherWindow,
     expect.objectContaining({
-      entry: input.entry,
-      source: input.source,
-      revision: 3,
+      operation: "terminal.semanticInput.v1",
+      text: "'/synthetic/a b'",
+      intent: "insert",
     }),
+    expect.objectContaining({
+      id: input.source.id,
+      actionSelectionRevision: 3,
+    }),
+    expect.any(AbortSignal),
     expect.any(Function),
+    { dropTicket: input.ticket },
   );
   adapters.selected = otherWindow;
-  await first.options.filesTerminalDrop!(input);
-  expect(consumer.mock.calls[1]![0]).toBe(window);
-  expect(consumer).toHaveBeenNthCalledWith(
+  expect(await first.options.filesTerminalDrop!(input)).toEqual({
+    status: "accepted",
+  });
+  expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
     2,
     window,
     expect.objectContaining({
-      entry: input.entry,
-      source: input.source,
-      revision: 3,
+      operation: "terminal.semanticInput.v1",
+      text: "'/synthetic/a b'",
+      intent: "insert",
     }),
+    expect.objectContaining({
+      id: input.source.id,
+      actionSelectionRevision: 3,
+    }),
+    expect.any(AbortSignal),
     expect.any(Function),
+    { dropTicket: input.ticket },
   );
+  expect(adapters.semanticRequest).toHaveBeenCalledTimes(2);
 });
 
 it.each([

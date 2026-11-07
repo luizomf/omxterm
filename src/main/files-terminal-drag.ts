@@ -104,7 +104,20 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
       const lost = () => {
         if (current?.ticket === ticket) revoke();
       };
-      const timer = setTimeout(lost, FILES_DRAG_LIFETIME_MS);
+      const timer = setTimeout(() => {
+        const gesture = current;
+        if (gesture?.ticket !== ticket) return;
+        revoke();
+        // Expiration ends input authority, not the original source's ability
+        // to receive one unknown notice. Never consult a replacement gesture.
+        if (
+          gesture.phase !== "dragging" &&
+          windowLive() &&
+          !signal.aborted &&
+          source.isCurrentVisible()
+        )
+          gesture.report({ status: "unknown" });
+      }, FILES_DRAG_LIFETIME_MS);
       timer.unref?.();
       signal.addEventListener("abort", lost, { once: true });
       const gesture: Gesture = {

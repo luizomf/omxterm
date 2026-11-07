@@ -80,19 +80,12 @@ export function applicationViews(
     filesTerminalDrop:
       target.presentation === "panel" &&
       pin.manifest.id === "omxterm.files" &&
-      (options.filesTerminalDrop ||
-        (options.semanticInput &&
-          pin.manifest.capabilities?.includes("terminal.insertPath.v1")))
+      options.semanticInput &&
+      pin.manifest.capabilities?.includes("terminal.insertPath.v1")
         ? (input) => {
             const signal = AbortSignal.any([input.signal, lifetime]);
             if (signal.aborted || !input.source.isCurrentVisible())
               return Promise.resolve({ status: "refused" });
-            if (options.filesTerminalDrop)
-              return options.filesTerminalDrop(
-                window,
-                { ...input, signal },
-                admit,
-              );
             return insertDrop({ ...input, signal });
           }
         : undefined,
