@@ -18,7 +18,7 @@ export function activate(
   context: { signal: AbortSignal },
   options: LoadTerminalSnippetsOptions = {
     environment: process.env,
-    homeDirectory: os.homedir(),
+    homeDirectory: os.userInfo().homedir,
   },
 ) {
   const activations = new Map<string, Activation>();

@@ -103,6 +103,15 @@ before. Installation, upgrade, disable and uninstall do not copy, rewrite or
 delete that file. YAML v1, exact text, search, Insert/Run, preview and Protected
 Paste remain the same. There is no conversion or second Commands catalog.
 
+**Home override limitation:** Published and bundled-default Snippets `0.1.0`
+uses the environment-sensitive home when `XDG_CONFIG_HOME` is unset or empty.
+If `HOME` (or `USERPROFILE` on Windows) differs from the OS account home, it can
+read a different catalog from the one beside `config.json`. A nonempty
+`XDG_CONFIG_HOME` takes precedence for both. Corrected Snippets `0.1.1` source
+uses the account home, but is unpublished; changing host source or updating the
+app does not update an installed or default `0.1.0` copy. A separate extension
+publication and update would be needed. This is not portable-data relocation.
+
 **View → Toggle Snippets**, its Command Palette entry and existing shortcut
 (`Ctrl+Shift+S` on Linux/Windows, `Cmd+Shift+S` on macOS, including custom remaps or
 `null`) remain supported.

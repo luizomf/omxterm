@@ -21,10 +21,12 @@ const roots: string[] = [];
 const backends: ReturnType<typeof activate>[] = [];
 afterEach(async () => {
   for (const backend of backends.splice(0)) backend.deactivate();
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
   for (const root of roots.splice(0))
     await rm(root, { recursive: true, force: true });
 });
-function setup(options: LoadTerminalSnippetsOptions) {
+function setup(options?: LoadTerminalSnippetsOptions) {
   const owner = new AbortController();
   const backend = activate({ signal: owner.signal }, options);
   backends.push(backend);
@@ -61,6 +63,62 @@ function deferredRead() {
 }
 
 describe("Snippets backend caller interface", () => {
+  it.each([
+    { xdg: undefined, overriddenHome: true, expected: "account" },
+    { xdg: "", overriddenHome: true, expected: "account" },
+    { xdg: "explicit", overriddenHome: true, expected: "explicit" },
+    { xdg: undefined, overriddenHome: false, expected: "account" },
+  ])(
+    "default activation chooses $expected catalog (XDG=$xdg, overridden home=$overriddenHome)",
+    async ({ xdg, overriddenHome, expected }) => {
+      const root = await directory();
+      const accountHome = path.join(root, "account");
+      const environmentHome = overriddenHome
+        ? path.join(root, "environment")
+        : accountHome;
+      const explicitRoot = path.join(root, "explicit");
+      const catalogs = [
+        { root: path.join(accountHome, ".config"), name: "account" },
+        ...(overriddenHome
+          ? [
+              {
+                root: path.join(environmentHome, ".config"),
+                name: "environment",
+              },
+            ]
+          : []),
+        { root: explicitRoot, name: "explicit" },
+      ];
+      for (const catalog of catalogs) {
+        const folder = path.join(catalog.root, "omxterm");
+        await mkdir(folder, { recursive: true });
+        await writeFile(
+          path.join(folder, "snippets.yaml"),
+          `version: 1\nsnippets:\n  - name: ${catalog.name}\n    body: synthetic\n`,
+        );
+      }
+      vi.stubEnv("HOME", environmentHome);
+      vi.stubEnv("USERPROFILE", environmentHome);
+      vi.stubEnv("XDG_CONFIG_HOME", xdg === "explicit" ? explicitRoot : xdg);
+      vi.spyOn(os, "homedir").mockReturnValue(environmentHome);
+      vi.spyOn(os, "userInfo").mockReturnValue({
+        username: "synthetic",
+        uid: 1,
+        gid: 1,
+        shell: null,
+        homedir: accountHome,
+      });
+
+      const { call } = setup();
+      expect(await call({ operation: "open", activation: token })).toEqual({
+        ok: true,
+        rows: [{ name: expected, body: "synthetic", execute: false }],
+        total: 1,
+        cursor: null,
+      });
+    },
+  );
+
   it.each([undefined, "", "xdg"])(
     "loads real YAML only on open, preserving environment resolution and file bytes (%s)",
     async (xdg) => {

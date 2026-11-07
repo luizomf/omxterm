@@ -1,23 +1,29 @@
 # Optional Snippets package
 
 This separately built package preserves the built-in Snippets YAML v1 catalog,
-search, exact text, Insert/Run and core-owned preview. Linux ARM64 development
-source uses this installed tool; other targets retain built-in Snippets. This
-source does not announce a published replacement. See the
-[migration guide](../../docs/snippets-migration.md) and its release prerequisite.
+search, exact text, Insert/Run and core-owned preview. Current host source uses
+optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64; Windows x64
+retains built-in Snippets. See the [migration guide](../../docs/snippets-migration.md)
+for distribution and qualification boundaries.
 
 Build committed source with `node scripts/build-snippets-extension.mjs`. The
 archive, checksum and receipt are separate artifacts; the receipt starts with
 `qualification.status: not-run`. Install the archive through the ordinary
 Extensions management path. Installation does not create or change a catalog.
 Production intentionally omits the package's duplicate action: the existing
-Toggle Snippets menu, palette and shortcut command opens or hides the single
+Toggle Snippets menu, palette and shortcut command opens or closes the single
 installed companion. Absent/disabled packages open Extensions guidance instead.
-Native qualification uses unchanged production composition. No automatic
-installation, enablement or catalog listing is implied.
+The host's [new-profile default](../../docs/default-snippets.md) uses the pinned
+`0.1.0` archive, not this corrected source. Building this source does not publish,
+install or enable it, or change a catalog listing.
 
-The backend reads `snippets.yaml` beside the host's `config.json`, honoring the
-same XDG/home configuration root. A missing catalog is an empty state. To create
+The corrected, unpublished Snippets `0.1.1` source reads `snippets.yaml` beside
+the host's `config.json`: a nonempty `XDG_CONFIG_HOME` takes precedence; otherwise
+it uses the OS account home, independent of `HOME` or `USERPROFILE`. The existing
+published and bundled-default `0.1.0` instead uses the environment-sensitive home
+when XDG is unset or empty, so it can read a different catalog. This source change
+does not update installed or default copies; a separate extension publication and
+update would be needed. A missing catalog is an empty state. To create
 a catalog deliberately, use `snippets.example.yaml` as an example; do not replace
 an existing file. Literal block bodies preserve their exact text. `execute:
 false` adds no final Enter, but embedded line breaks/control characters can still

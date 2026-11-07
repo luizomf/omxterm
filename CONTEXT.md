@@ -209,8 +209,10 @@ or verified local/offline installation; positively new packaged profiles get the
 [removable one-time default](docs/default-snippets.md), enabled but dormant.
 Windows ARM64's unrun graphical suite and unresolved public-install failures are
 accepted [for 0.25.0 only](docs/snippets-migration.md#stable-0250-release-disposition).
-The migration guide retains historical preview/0.24.0 receipts. Extension versions,
-catalogs and published bytes are unchanged.
+The migration guide retains historical preview/0.24.0 receipts. Corrected
+Snippets `0.1.1` source is unpublished; installed and bundled-default `0.1.0`
+retains its [home override limitation](docs/snippets-migration.md#existing-catalogs-and-shortcuts).
+Catalogs and published bytes are unchanged.
 Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).

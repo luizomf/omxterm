@@ -1659,7 +1659,11 @@ unintentionally. Creating new actions, system-global shortcuts, chords or
 sequences, and per-platform alternate maps are unsupported.
 
 An optional user-owned `snippets.yaml` next to `config.json` defines the
-Snippets Sidebar contents. The file is one UTF-8 YAML 1.2 core document parsed
+Snippets Sidebar contents. Corrected unpublished Snippets `0.1.1` source uses
+the account-home fallback; installed and bundled-default `0.1.0` can instead
+resolve a different catalog when XDG is unset or empty and the environment home
+is overridden. See the [migration guide](snippets-migration.md#existing-catalogs-and-shortcuts)
+for the delivery boundary. The file is one UTF-8 YAML 1.2 core document parsed
 with `yaml` v2, containing exactly `version: 1` and a `snippets` array of at
 most 512 entries; each entry has a non-empty `name` (the searchable label, at most 128 UTF-16 code units), a
 non-empty `body` (the text to inject, at most 65,536 UTF-16 code units), an
@@ -1696,7 +1700,7 @@ syntax line/column coordinates, in place of the list, and the terminal is
 unaffected. Parser excerpts and arbitrary parser messages are never displayed.
 For built-in Snippets, Electron main reads and validates the file and sends only
 validated, typed data over the preload bridge. On Linux ARM64/x64 and macOS/Windows ARM64 source, the installed
-Snippets backend reuses that parser and configuration-root resolution, returning
+Snippets backend reuses that parser and configuration-root logic, returning
 complete activation-scoped catalog snapshots in bounded pages. Installation,
 disabling and uninstalling never modify the catalog. Core retains captured-target
 semantic input and preview authority in both modes ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)).
