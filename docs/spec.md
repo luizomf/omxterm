@@ -658,8 +658,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Shift+F10). Cancel returns to the initiating row/control where available,
   otherwise Actions; a late
   permanent-delete confirmation does not steal focus after the user moves away.
-  These changes are included in the published Linux ARM64 Files0.7 preview;
-  immutable Files0.6 and both official catalog offers are unchanged.
+  These changes are included in published Files0.7; immutable Files0.6 remains
+  unchanged. The macOS source catalog candidate selects Files0.7.
   Its explicit reported-directory action captures the selected live pane's latest
   local OSC7 report at action time. Main asks the core renderer to confirm the captured session and selection
   revision, rejecting reordered or changed selection rather than retargeting.
@@ -723,7 +723,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   the unsubmitted draft stays. This handling is included in the
   [published Linux ARM64 Files0.7 preview](files-development-preview.md#files07-linux-public-link-checkpoint),
   not immutable Files0.6. Source inclusion and the bounded Linux checkpoint do
-  not establish physical-keyboard or native IME delivery, or macOS/Windows/x64
+  not establish physical-keyboard or native IME delivery, or broad macOS/Windows/x64
   Files0.7 qualification.
   In the built-in panel, only a fresh non-composing Escape starts dismissal;
   composing Escape and unowned repeats remain with the focused control. An
@@ -2064,8 +2064,9 @@ Windows public consumption remains unqualified. macOS source composition include
 (see [qualification scope](macos-extension-composition.md)). Main selects the
 complete fixed macOS ARM64 schema1 catalog for `darwin-arm64`, and the legacy
 schema1 catalog for every other target. Common
-SSH/Snippets entries remain identical. The published catalogs select Files0.6
-and SSH0.3.1 for Linux and macOS ARM64. The SSH offer uses the same original
+SSH/Snippets entries remain identical. Source catalogs select Linux Files0.6,
+candidate macOS Files0.7 and SSH0.3.1 for Linux and macOS ARM64. The Files0.7
+source catalog change is not yet public-catalog consumption evidence. The SSH offer uses the same original
 archive; source integration, public endpoint readback and the separate bounded
 [macOS public-catalog checkpoint](ssh-connect.md#macos-arm64-public-catalog-checkpoint)
 have completed. The earlier catalog promotion
@@ -2486,7 +2487,7 @@ consumer. Production archive admission refuses lower hosts; ordinary semver
 admits dev.20 and later dev.N in the same 0.25.0 family. The explicit 0.26.0
 bridge also admits this range; unrelated development families and incompatible
 APIs remain refused unless ordinary semver admits them.
-Published Files0.6/0.7 bytes and both catalogs remain unchanged. Preparation is
+Published Files0.6/0.7 bytes remain unchanged. Preparation is
 not exact shipping-pair qualification or publication. Prior Linux native UI used
 production modules with inert session/backend/package dependencies, not a real
 PTY or shipping pair. Its observed Surface receipt timeout does not qualify the
@@ -2503,8 +2504,11 @@ and actual public Settings-link checkpoint are delivered; see
 That published dev.21 host still uses the legacy catalog URL. Published dev.26
 passed a separate Files0.5 [public-catalog checkpoint](files-development-preview.md#macos-catalog-distribution)
 with three Official consents, retained PTY and normal joined Quit. The source
-catalog now binds Files0.6 to target-specific Linux/macOS ARM64 entries. The
-separate [macOS public-catalog checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+catalog candidate binds Files0.7 for macOS ARM64 while Linux retains Files0.6.
+A separate [macOS Files0.7 local checkpoint](files-development-preview.md#files07-macos-stable-local-checkpoint)
+passed with published stable0.25.0 and the unchanged archive, not public catalog
+consumption. macOS0.24.0 and other hosts below the Files0.7 floor may install
+Files0.6 locally/by link or upgrade. The earlier [macOS public-catalog checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
 passed with a retained locally built 0.24.0 DMG, not a downloaded-public stable host.
 The earlier Linux Files0.4
 [distribution checkpoint](files-development-preview.md#files-040-distribution-and-controlled-qualification)

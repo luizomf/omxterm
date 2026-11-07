@@ -24,7 +24,7 @@ Files and SSH are installed separately. Snippets is included as a removable
 default for new profiles on the targets below. Updating an existing profile does
 not install or update tools.
 
-- **[Files 0.6.0](files-development-preview.md)** and
+- **[Files](files-development-preview.md)** and
   **[SSH Connect 0.3.1](ssh-connect.md)** are published previews offered through
   the official catalogs on **Linux and macOS ARM64**. Follow each tool's guide
   for installation, compatible hosts and platform/qualification limits.

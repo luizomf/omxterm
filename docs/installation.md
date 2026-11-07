@@ -159,11 +159,14 @@ Updating or uninstalling never touches your settings, themes, snippets, or logs.
 
 ## Optional Files preview
 
-Files is separately installed, never bundled. The official catalogs select
-Files0.6.0 for Linux and macOS ARM64 with host `>=0.24.0-dev.21` and API `0.1.x`;
-see its guide for tested host pairs. Stable 0.25.0 cannot run Files 0.8 or its
-path insertion/terminal drop feature. The separate Files 0.7 Linux preview is
-unchanged. The earlier catalog offered
+Files is separately installed, never bundled. The source catalogs select
+Files0.6.0 for Linux ARM64 (host `>=0.24.0-dev.21`) and candidate Files0.7.0
+for macOS ARM64 (host `>=0.25.0-dev.10`), both API `0.1.x`. The macOS change
+is not yet an actual public-catalog checkpoint. macOS hosts including 0.24.0
+can install the unchanged [Files0.6 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.6.0)
+locally or by HTTPS link, or upgrade.
+See the guide for tested pairs. Stable 0.25.0 cannot run Files 0.8 or its
+path insertion/terminal drop feature. The earlier Linux catalog offered
 [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
 requiring host `>=0.24.0-dev.8` on Linux ARM64. For that historical pair, use the
 [Linux ARM64 host 0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11),

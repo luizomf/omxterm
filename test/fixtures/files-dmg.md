@@ -52,6 +52,74 @@ under `runNativeFixture`. The controller selects the actual Files CommonJS
 observer through a loopback inspector. Snippets retains its original default
 observer and input assertions. A new generic campaign framework is not introduced.
 
+## Files0.7 macOS Files-only mode
+
+On an assigned disposable, unlocked ordinary-user macOS ARM64 guest, after the
+[console and resource checks](../../docs/development.md#macos-console-admission),
+use independently verified public inputs and a fresh private evidence lane:
+
+```sh
+OMXTERM_FILES_DMG_DMG=/absolute/OMXTerm-0.25.0-arm64.dmg \
+OMXTERM_FILES_DMG_DMG_SHA256=eab799c16150ddb0852299a669df53cf7eb098cf223978cc30aa34ea8a20f32c \
+OMXTERM_FILES_DMG_ARCHIVE=/absolute/files-0.7.0.omxext \
+OMXTERM_FILES_DMG_ARCHIVE_SHA256=611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef \
+OMXTERM_FILES_DMG_VERSION=0.25.0 \
+OMXTERM_FILES_DMG_EXTENSION_VERSION=0.7.0 \
+OMXTERM_FILES_DMG_FILES_070_ONLY=1 \
+OMXTERM_FILES_DMG_EVIDENCE=/absolute/private-lane \
+npm test -- test/integration/files-dmg.test.ts
+```
+
+The mode refuses other host/archive identities and direct-link acquisition. Its
+local form uses a copied DMG app, exact local captured-byte consent, the installed backend
+and a synthetic guest-owned tree. It checks loaded filtering and keyboard focus,
+cancelled confirmation, conflict preservation, confirmed same-inode/content
+move, refreshed UI and active-backend normal Quit. It sends no terminal input
+and does not request terminal-directory, insertion or drag. It does not exercise
+trash, reinstall or public catalog/link consumption. The selected observer uses
+synthetic Chromium input, not the OS clipboard. Inspect captures and process
+settlement separately; neither DOM predicates nor a copied app prove compositor
+or Finder behavior.
+
+The [actual prior run](../../docs/files-development-preview.md#files07-macos-stable-local-checkpoint)
+used a temporary adapted controller; this durable mode has not itself been run
+natively. The mapping is:
+
+- The executed Files consumer used the existing 0.7 filtering/move code, added
+  the cancellation check, and ended after the completed-move capture. The durable
+  shared consumer gates the same cancellation check and early return on
+  `filesOnly`, preserving the Linux continuation otherwise.
+- The executed packaged observer skipped the initial terminal-input call and
+  omitted the unused continuation. The durable observer keeps legacy branches,
+  skips that call for this mode and additionally refuses terminal calls in it.
+- The executed local adapter checked one approval and active backend, then joined
+  backend exit/close at Quit. The durable adapter retains those checks and adds
+  an explicit mode guard. The durable DMG wrapper adds exact host identity
+  admission and retains the existing supervisor and read-only mount/copy paths.
+  These are guards/composition changes, not a new host or archive build.
+- The new short public-catalog branch is additional, unrun behavior; it cannot
+  be inferred from the local run. Existing local, public-link and public-catalog
+  fixture results remain distinct.
+
+### Later public-catalog consumption
+
+After the maintainer publishes the candidate endpoint and verifies its exact
+public readback, the same exact-pair inputs above may additionally set:
+
+```sh
+OMXTERM_FILES_DMG_PUBLIC_CATALOG=https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json
+```
+
+This separate **unrun** short mode uses real Settings Browse and the exact
+Files0.7 card, production HTTPS, one catalog-bound captured-byte consent at
+generation 0, dormant installation, explicit activation and active-backend
+normal Quit. The separately downloaded archive is only a controller digest
+oracle; no local chooser or direct-link fallback is permitted. It does not repeat
+the filesystem/filter matrix; reuse the prior local exact-pair result only for
+matching inputs. The recorded endpoint and install action are not a passive
+network trace. Publication, fresh public endpoint readback and the actual native
+public-catalog outcome are separate maintainer actions.
+
 ## Public-link mode
 
 The default local eleven-check campaign above is unchanged. The separate bounded
@@ -104,9 +172,9 @@ did not modify the v1 Linux0.4 catalog or any immutable asset.
 
 The following Files0.5 recipe records the **historical** six-check checkpoint
 that passed on published dev.26 on 2026-10-31; see [actual evidence and limits](../../docs/files-development-preview.md#macos-catalog-distribution).
-The current macOS endpoint selects Files0.6, so the old Files0.5 card is no longer
-available there. For current execution, follow the [Files0.6 checkpoint](#prepared-files06-public-catalog-checkpoint)
-instead. Published dev.21 still selects the legacy Linux Files offer; its existing
+After the historical Files0.6 promotion, the old Files0.5 card was no longer
+available there. The current source candidate selects Files0.7; the earlier
+[Files0.6 checkpoint](#prepared-files06-public-catalog-checkpoint) remains historical. Published dev.21 still selects the legacy Linux Files offer; its existing
 local/link qualification cannot prove macOS catalog discovery.
 
 For that historical 0.5 run, the ordinary DMG/hash/archive/hash/version/evidence
@@ -164,9 +232,8 @@ Files0.5 nor teaches already published dev.21 a new endpoint.
 
 The [bounded Files0.6 public-catalog checkpoint](../../docs/files-development-preview.md#files-060-macos-public-catalog-checkpoint)
 passed on 2026-11-02 using a retained locally built host DMG, not a downloaded
-public stable host. A separate run still requires ROOT to verify original archive,
-checksum and `not-run` receipt publication and fixed-endpoint readback, then
-authorize execution. Keep the original Files0.5 instructions, receipts and captures
+public stable host. A separate run requires verification that the selected public endpoint still
+offers those exact bytes; the current source candidate selects Files0.7 instead. Keep the original Files0.5 instructions, receipts and captures
 as historical separate evidence; do not overwrite or relabel them.
 
 Use the exact independently downloaded Files0.6 archive as `ARCHIVE` and set:

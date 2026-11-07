@@ -164,6 +164,38 @@ describe.skipIf(process.platform === "win32")(
       ).toBe(false);
     });
 
+    it("cancels the captured move without dispatching a mutation", async () => {
+      const h = await setup();
+      const original = await lstat(h.source);
+      await h.prepare(h.folder);
+      const cancel = [
+        ...document.querySelectorAll<HTMLButtonElement>(
+          ".operation-editor button",
+        ),
+      ].find((button) => button.textContent === "Cancel");
+      expect(cancel).toBeDefined();
+      cancel!.click();
+      expect(
+        document.querySelector<HTMLFormElement>(".operation-editor")!.hidden,
+      ).toBe(true);
+      await vi.waitFor(() =>
+        expect(h.request).toHaveBeenCalledWith(
+          expect.objectContaining({ operation: "cancel-move" }),
+        ),
+      );
+      expect(h.moveNoReplace).not.toHaveBeenCalled();
+      expect((await lstat(h.source)).ino).toBe(original.ino);
+      expect(await readFile(path.join(h.source, "needle.txt"), "utf8")).toBe(
+        "owned-source",
+      );
+      expect(
+        h.request.mock.calls.some(
+          ([value]) =>
+            (value as { operation: string }).operation === "move-into",
+        ),
+      ).toBe(false);
+    });
+
     it.each(["wrong-source", "wrong-folder", "refused"] as const)(
       "does not bypass fixed confirmation checks after submitting: %s",
       async (control) => {

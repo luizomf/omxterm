@@ -383,6 +383,67 @@ it.each([
   },
 );
 
+it("selects the Files0.7 card and binds its single Official consent", () => {
+  document.body.innerHTML =
+    '<section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.6.0</h4><button>Install</button></section><section class="extension-catalog-card"><h4>Files — ARM64 preview · 0.7.0</h4><button>Install</button></section>';
+  const historical = vi.fn();
+  const selected = vi.fn();
+  const buttons = document.querySelectorAll("button");
+  buttons[0]!.addEventListener("click", historical);
+  buttons[1]!.addEventListener("click", selected);
+  catalogInstall(document, "Install", "0.7.0");
+  expect(selected).toHaveBeenCalledOnce();
+  expect(historical).not.toHaveBeenCalled();
+  const digest =
+    "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef";
+  const t = translatorFor("en-US");
+  const prompt = {
+    type: "warning",
+    title: t.t("extensions.trustTitle"),
+    message: t.t("extensions.trustMessage", {
+      name: "Files — ARM64 preview",
+      version: "0.7.0",
+    }),
+    detail:
+      t.t("extensions.trustDetail", {
+        id: "omxterm.files",
+        digest,
+        generation: 0,
+      }) +
+      "\n\n" +
+      t.t("extensions.catalogTrust"),
+    buttons: [t.t("common.cancel"), t.t("extensions.trustInstall")],
+    defaultId: 0,
+    cancelId: 0,
+  };
+  const options = {
+    filesOnly: true,
+    linuxExpectedIdentity: true,
+    extensionName: "Files — ARM64 preview",
+    publicCatalog: "fixed",
+    extensionVersion: "0.7.0",
+    archiveSha256: digest,
+  };
+  expect(() => consent(prompt, options, 0)).not.toThrow();
+  for (const wrong of [
+    {
+      ...prompt,
+      detail: prompt.detail.replace(
+        "Current generation: 0",
+        "Current generation: 1",
+      ),
+    },
+    { ...prompt, detail: prompt.detail.replace(digest, "a".repeat(64)) },
+    {
+      ...prompt,
+      detail: prompt.detail.replace("Official means", "Third party means"),
+    },
+    { ...prompt, message: prompt.message.replace("0.7.0", "0.6.0") },
+  ])
+    expect(() => consent(wrong, options, 0)).toThrow();
+  expect(() => consent(prompt, options, 1)).toThrow();
+});
+
 it("requires Official catalog trust in addition to exact Files manifest and digest", () => {
   const digest = "a".repeat(64);
   const prompt = {

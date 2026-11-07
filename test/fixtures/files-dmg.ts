@@ -14,6 +14,12 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { build } from "esbuild";
 import {
+  assertFilesOnlyInputs,
+  files070Sha256,
+  filesDmgMode,
+  verifyFilesOnlyScenario,
+} from "./files-dmg-070";
+import {
   runNativeFixture,
   type NativeFixtureTestContext,
 } from "./run-native-fixture";
@@ -32,14 +38,18 @@ function assertPublicCatalogIdentity(
   publicCatalog: string | undefined,
   version: string | undefined,
   digest: string,
+  filesOnly = false,
 ) {
   if (!publicCatalog) return;
   assert.ok(
-    ["0.5.0", "0.6.0"].includes(version ?? "0.5.0"),
+    ["0.5.0", "0.6.0"].includes(version ?? "0.5.0") ||
+      (version === "0.7.0" && filesOnly),
     "unsupported public Files version",
   );
   if (version === "0.6.0")
     assert.equal(digest, files06Sha256, "Files0.6 archive digest");
+  if (version === "0.7.0")
+    assert.equal(digest, files070Sha256, "Files0.7 archive digest");
 }
 const prefix = "OMXTERM_FILES_DMG_";
 const names = [
@@ -100,6 +110,7 @@ export function filesDmgInputs(env = process.env) {
       publicCatalog,
       extensionVersion,
       values.ARCHIVE_SHA256,
+      env[prefix + "FILES_070_ONLY"] === "1",
     );
   }
   const publicLink = env[prefix + "PUBLIC_LINK"];
@@ -118,14 +129,19 @@ export function filesDmgInputs(env = process.env) {
       "PUBLIC_LINK must name an immutable project Files0.5 HTTPS archive",
     );
   }
-  return {
+  const filesOnly = env[prefix + "FILES_070_ONLY"];
+  if (filesOnly !== undefined) assert.equal(filesOnly, "1");
+  const result = {
     ...values,
+    ...(filesOnly ? { FILES_070_ONLY: true as const } : {}),
     ...(extensionVersion !== undefined
       ? { EXTENSION_VERSION: extensionVersion }
       : {}),
     ...(publicLink !== undefined ? { PUBLIC_LINK: publicLink } : {}),
     ...(publicCatalog !== undefined ? { PUBLIC_CATALOG: publicCatalog } : {}),
   };
+  assertFilesOnlyInputs(result);
+  return result;
 }
 export const filesPublicLinkChecks = [
   "exact-archive-trust-dormant-install",
@@ -158,6 +174,14 @@ async function verifyScenario(
   const scenario = JSON.parse(
     await readFile(path.join(evidence, "scenario.json"), "utf8"),
   ) as Record<string, unknown>;
+  if (values.FILES_070_ONLY) {
+    verifyFilesOnlyScenario(
+      scenario,
+      values.ARCHIVE_SHA256,
+      values.PUBLIC_CATALOG,
+    );
+    return;
+  }
   const publicAcquisition = !!(values.PUBLIC_LINK || values.PUBLIC_CATALOG);
   assert.deepEqual(
     scenario.checks,
@@ -215,13 +239,10 @@ async function prepareOwnedFiles(
     await writeFile(path.join(root, "owned-files/.release-dotfile"), "dotfile");
 }
 
-// Preparation/ownership/observer paths are the same ones exercised by headless
-// tests. No alternate application entry, stock Node backend or Quartz input.
-export async function runFilesDmgCampaign(
+function assertCampaignInputs(
   values: NonNullable<ReturnType<typeof filesDmgInputs>>,
-  testContext: NativeFixtureTestContext,
 ) {
-  const publicAcquisition = !!(values.PUBLIC_LINK || values.PUBLIC_CATALOG);
+  assertFilesOnlyInputs(values);
   assert.ok(
     !(values.PUBLIC_LINK && values.PUBLIC_CATALOG),
     "Choose one public acquisition mode",
@@ -232,6 +253,7 @@ export async function runFilesDmgCampaign(
     values.PUBLIC_CATALOG,
     values.EXTENSION_VERSION,
     values.ARCHIVE_SHA256,
+    values.FILES_070_ONLY,
   );
   assert.equal(process.platform, "darwin");
   assert.equal(process.arch, "arm64");
@@ -239,6 +261,16 @@ export async function runFilesDmgCampaign(
   assert.ok(
     ["/bin/sh", "/bin/bash", "/bin/zsh"].includes(os.userInfo().shell ?? ""),
   );
+}
+
+// Preparation/ownership/observer paths are the same ones exercised by headless
+// tests. No alternate application entry, stock Node backend or Quartz input.
+export async function runFilesDmgCampaign(
+  values: NonNullable<ReturnType<typeof filesDmgInputs>>,
+  testContext: NativeFixtureTestContext,
+) {
+  const publicAcquisition = !!(values.PUBLIC_LINK || values.PUBLIC_CATALOG);
+  assertCampaignInputs(values);
   await mkdir(values.EVIDENCE, { recursive: true });
   const evidence = await mkdtemp(
     path.join(await realpath(values.EVIDENCE), "run-"),
@@ -255,12 +287,15 @@ export async function runFilesDmgCampaign(
   const failures: unknown[] = [];
   let bundle: Awaited<ReturnType<typeof copyDmgApplication>> | undefined;
   const lookup = path.join(evidence, "trash-directory");
+  const mode = filesDmgMode(!!values.FILES_070_ONLY, publicAcquisition, lookup);
   let lookupHash: string | undefined;
   try {
     assert.equal(sha256(await readFile(values.DMG)), values.DMG_SHA256);
     const archiveBytes = await readFile(values.ARCHIVE);
     if (values.PUBLIC_CATALOG && values.EXTENSION_VERSION === "0.6.0")
       assert.equal(archiveBytes.length, 17331, "Files0.6 archive size");
+    if (values.FILES_070_ONLY)
+      assert.equal(archiveBytes.length, 23285, "Files0.7 archive size");
     assert.equal(sha256(archiveBytes), values.ARCHIVE_SHA256);
     testContext.signal.throwIfAborted();
     bundle = await copyDmgApplication(values.DMG, evidence);
@@ -297,7 +332,7 @@ export async function runFilesDmgCampaign(
     for (const name of [
       "files-packaged.cjs",
       "snippets-process-identity.cjs",
-      ...(publicAcquisition ? [] : ["files-trash-recovery.cjs"]),
+      ...mode.files,
     ])
       await cp(path.join("test/fixtures", name), path.join(root, name));
     // Public mode retains only the external digest oracle, never local chooser bytes.
@@ -322,12 +357,12 @@ export async function runFilesDmgCampaign(
         readiness: path.join(root, "shell.json"),
         files: path.join(root, "owned-files"),
         observer: "files-packaged.cjs",
-        macosLifecycle: !publicAcquisition,
+        ...mode.options,
         ...(values.PUBLIC_CATALOG
           ? { publicCatalog: values.PUBLIC_CATALOG, catalogMode: "public" }
           : values.PUBLIC_LINK
             ? { publicLink: values.PUBLIC_LINK }
-            : { trashLookup: lookup }),
+            : {}),
       }),
     );
     const launcher = await mkdtemp(
@@ -343,7 +378,7 @@ export async function runFilesDmgCampaign(
       testContext,
       prepare: async () => {
         // Runs only on the assigned native lane, after its unresolved-owner guard.
-        if (!publicAcquisition) {
+        if (mode.compileTrash) {
           await promisify(execFile)(
             "/usr/bin/xcrun",
             [
@@ -439,11 +474,15 @@ export async function runFilesDmgCampaign(
         error instanceof Error ? error.stack : String(error),
       ),
       profileRetained: true,
-      scope: values.PUBLIC_CATALOG
-        ? "Exact DMG-derived app and Files public catalog; synthetic Chromium input; controlled Official consent; configured endpoint, not a passive network trace; no trash matrix or native-I/O cancellation qualification"
-        : values.PUBLIC_LINK
-          ? "Exact DMG-derived app and Files public HTTPS link; synthetic Chromium input; controlled consent; no catalog, trash matrix or native-I/O cancellation qualification"
-          : "Exact DMG-derived app and separate Files; synthetic Chromium input; controlled consent; local same-device trash recovery; not public installation or native-I/O cancellation",
+      scope: values.FILES_070_ONLY
+        ? values.PUBLIC_CATALOG
+          ? "Exact DMG-derived app and Files0.7 public catalog; synthetic Chromium input and controlled Official consent; no terminal input or filesystem matrix"
+          : "Exact DMG-derived app and Files0.7 local archive; synthetic Chromium input and controlled consent; no terminal input or public acquisition"
+        : values.PUBLIC_CATALOG
+          ? "Exact DMG-derived app and Files public catalog; synthetic Chromium input; controlled Official consent; configured endpoint, not a passive network trace; no trash matrix or native-I/O cancellation qualification"
+          : values.PUBLIC_LINK
+            ? "Exact DMG-derived app and Files public HTTPS link; synthetic Chromium input; controlled consent; no catalog, trash matrix or native-I/O cancellation qualification"
+            : "Exact DMG-derived app and separate Files; synthetic Chromium input; controlled consent; local same-device trash recovery; not public installation or native-I/O cancellation",
     });
     try {
       await json("result.json", {

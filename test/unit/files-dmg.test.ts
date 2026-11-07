@@ -139,7 +139,7 @@ const inputEnv = () =>
   Object.fromEntries(
     Object.entries(values).map(([key, value]) => [
       "OMXTERM_FILES_DMG_" + key,
-      value,
+      value === true ? "1" : value,
     ]),
   );
 async function receipt() {

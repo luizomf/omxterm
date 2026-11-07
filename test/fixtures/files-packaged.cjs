@@ -167,6 +167,7 @@ function filesPublicManagementState(
   action,
   click,
   local = "dormant",
+  version = "0.6.0",
 ) {
   const rows = [
     ...document.querySelectorAll(".extensions-panel section"),
@@ -185,7 +186,7 @@ function filesPublicManagementState(
       `omxterm.files · generation ${generation} · ${state} · local ${local} · other instances unknown` ||
     (state !== "uninstalled" &&
       row.querySelector(":scope > h3")?.textContent !==
-        "Files — ARM64 preview · 0.6.0")
+        `Files — ARM64 preview · ${version}`)
   )
     return false;
   if (!action) return !click;
@@ -256,9 +257,17 @@ function verifyFilesConsent(prompt, options, approvals) {
     assert.equal(prompt.defaultId, 0);
     assert.equal(prompt.cancelId, 0);
   }
-  if (options.publicCatalog && options.extensionVersion === "0.6.0") {
-    const generations = [0, 1, 5];
-    assert.ok(Number.isInteger(approvals) && approvals >= 0 && approvals < 3);
+  if (
+    options.publicCatalog &&
+    (options.extensionVersion === "0.6.0" || options.filesOnly)
+  ) {
+    if (options.filesOnly) assert.equal(options.extensionVersion, "0.7.0");
+    const generations = options.filesOnly ? [0] : [0, 1, 5];
+    assert.ok(
+      Number.isInteger(approvals) &&
+        approvals >= 0 &&
+        approvals < generations.length,
+    );
     assert.equal(prompt.type, "warning");
     assert.equal(
       prompt.detail,
@@ -595,6 +604,8 @@ async function run(options) {
   assert.ok(identity);
   const quote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
   async function terminal(marker) {
+    if (options.filesOnly)
+      throw new Error("Terminal input prohibited in Files-only campaign");
     // A single terminal deliberately has no tab-strip button.
     await js("document.querySelector('#tab-strip [role=tab]')?.click()");
     await until(
@@ -810,7 +821,7 @@ async function run(options) {
     assert.equal(terminalEntry.name, "TypeError");
     assert.match(terminalEntry.message, /null.*click/);
   }
-  await terminal("before");
+  if (!options.filesOnly) await terminal("before");
   if (options.terminalOnly) {
     return {
       check: "terminal-entry-only",
@@ -873,6 +884,14 @@ async function run(options) {
     else await click(core, "Install");
   } else await installArchive();
   await state("generation 1");
+  if (options.filesOnly && options.publicCatalog)
+    await until(
+      () =>
+        js(
+          `(${filesPublicManagementState.toString()})(document, 1, "enabled", "Disable", false, "dormant", "0.7.0")`,
+        ),
+      "exact Files0.7 enabled and dormant",
+    );
   await publicManagement(1, "enabled", "Disable");
   assert.equal(approvals, 1);
   assert.equal(children.length, 0);
@@ -909,7 +928,11 @@ async function run(options) {
   listeners("first-view-active");
   assert.equal(children.length, 1);
   if (options.consumer070)
-    return require("./files-070-packaged.cjs").run({
+    return require(
+      options.filesOnly
+        ? "./files-070-macos-adapter.cjs"
+        : "./files-070-packaged.cjs",
+    ).run({
       options,
       view,
       core,
@@ -933,6 +956,7 @@ async function run(options) {
       shellStat,
       initialShell,
       publicLinkInstalls,
+      publicCatalogInstalls,
     });
   if (!options.publicLink && !options.publicCatalog) {
     view = await closeFiles(view, () => menu("Files"));

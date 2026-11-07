@@ -326,7 +326,7 @@ existing consumer seams before any publication decision, including production
 package admission, protected insertion/drop and real PTY behavior. Prior native
 UI used inert session/backend/package dependencies; its receipt timeout was not
 the transport deadline. No native replay or broader campaign is selected by
-archive preparation. Preserve both stable Files0.6 catalogs and published0.7 bytes. Historical built-host checks are
+archive preparation. At that checkpoint both Files0.6 catalogs and published0.7 bytes were preserved. Historical built-host checks are
 not package qualification, and old private inputs may no longer exist. Reuse a
 retained host only after checking actual bytes, source/version provenance and
 security relevance; otherwise build a compatible committed host. A missing
@@ -352,7 +352,7 @@ and [Files `ext-files-v0.7.0`](https://github.com/luizomf/omxterm/releases/tag/e
 Both tags identify actual build source `0cb89accd61f1f5d5263c60773454882793e2e99`.
 All seven original assets matched draft and anonymous public size/SHA-256
 readback; Files publication/readback preceded the host. At that checkpoint,
-stable0.24.0 remained Latest; both Files0.6 catalogs remain unchanged, and original archive receipts
+stable0.24.0 remained Latest; both Files0.6 catalogs were unchanged, and original archive receipts
 retain their build-time `not-run` field.
 
 The separately reviewed [actual public Settings-link checkpoint](files-development-preview.md#files07-linux-public-link-checkpoint)
@@ -371,7 +371,7 @@ The prior [local checkpoint](files-development-preview.md#files07-linux-packaged
 and unchanged FULL AppImage verification retain their separate scopes; no
 primitive/platform matrix or host/archive build was repeated for public
 consumption. Synthetic input/consent, extracted-AppImage/WebContents capture and
-native diagnostic limits remain explicit in the preview guide. This is not
+native diagnostic limits remain explicit in the preview guide. That Linux checkpoint is not
 macOS/Windows/x64 Files0.7 or a stable SDK/all-platform release claim.
 
 The linked fixture instructions remain available for an explicitly assigned
@@ -482,7 +482,7 @@ See [catalog semantics](extension-distribution.md) and the
 
 ### Files0.6 / SSH0.3.1 promotion
 
-The promoted catalogs bind the separately built Files0.6.0 and SSH0.3.1 archive
+At that historical promotion, both catalogs bound the separately built Files0.6.0 and SSH0.3.1 archive
 trios to their original receipts and immutable versioned URLs; see
 [distribution](extension-distribution.md#files06-and-ssh031-candidate). They are
 not bundled into the stable host. The selected local host/archive pair checks

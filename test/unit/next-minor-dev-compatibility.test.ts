@@ -164,7 +164,13 @@ it.each([
     const releases = parseCatalog(await readFile(file));
     for (const id of ["omxterm.files", "omxterm.ssh"]) {
       const release = releases.find((entry) => entry.id === id)!;
-      expect(release.version).toBe(id === "omxterm.files" ? "0.6.0" : "0.3.1");
+      expect(release.version).toBe(
+        id === "omxterm.files"
+          ? target === "darwin-arm64"
+            ? "0.7.0"
+            : "0.6.0"
+          : "0.3.1",
+      );
       expect(catalogCompatible(release, runtime("0.26.0-dev.0"), target)).toBe(
         true,
       );

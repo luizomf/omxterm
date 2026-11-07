@@ -3,15 +3,17 @@
 Files is a separately installed Linux and macOS ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
-The official catalogs select Files0.6.0 for Linux and macOS ARM64, requiring
-host `>=0.24.0-dev.21` and API `0.1.x`. The bounded
+The source catalogs select Files0.6.0 for Linux ARM64 (host `>=0.24.0-dev.21`)
+and Files0.7.0 for macOS ARM64 (host `>=0.25.0-dev.10`), both API `0.1.x`.
+The macOS catalog change is a candidate, not public catalog consumption. The bounded
 [Linux](#files-060-linux-public-catalog-checkpoint) and
 [macOS](#files-060-macos-public-catalog-checkpoint) public-catalog checkpoints
 passed with locally built hosts; they do not establish public stable-host download.
 A separate [Linux ARM64 Files0.7 link-first preview](#files07-linux-public-link-checkpoint)
 now pairs the published dev.19 host with Files0.7; its actual public Settings-link
-checkpoint passed with fresh anonymous downloads. It does not replace either
-Files0.6 catalog offer. Current source prepares **Files0.8.0**, requiring host
+checkpoint passed with fresh anonymous downloads. A separate [macOS exact-pair
+local checkpoint](#files07-macos-stable-local-checkpoint) passed with the published
+stable0.25.0 DMG and Files0.7 archive. Current source prepares **Files0.8.0**, requiring host
 `>=0.25.0-dev.20` / API `0.1.x` for the integrated protected path-insertion/drop
 consumer. This is archive preparation only, not an exact shipping-pair
 qualification or publication; see [the current archive contract](#concrete-consumer).
@@ -200,17 +202,18 @@ composing-Escape draft preservation and confirmed directory-to-directory moves,
 not Files-to-terminal insertion/drop. Its bounded
 [Linux exact-package checkpoint](#files07-linux-packaged-checkpoint) passed,
 followed by separate [Linux publication and actual public-link consumption](#files07-linux-public-link-checkpoint).
-macOS Files0.7 and broader qualification remain separate.
+A bounded macOS Files0.7 local exact-pair checkpoint is recorded separately;
+broader qualification remains separate.
 
 Files0.8 is a new archive identity, not permission to replace published Files0.7
 or relabel its dev.19 qualification. Dev.10 does not support insertion. Existing
 host focus-intent, action-time reported-directory, no-clobber move and trash
 services remain required. Published Files0.6.0 retains minimum host
-0.24.0-dev.21 and its original catalog entries and receipts. Historical0.4.0 requires
+0.24.0-dev.21 and its original archive and receipts. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
-catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives. The
-Files0.6 catalog entries bind their own immutable bytes and do not rebuild either
-historical release. Building source alone does not update the public catalog.
+catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives.
+The Linux Files0.6 catalog entry binds its immutable bytes; the macOS source
+catalog candidate selects the separately published Files0.7 bytes. Building source alone does not update the public catalog.
 Current source removes the Files page's redundant visible identity in favor of
 the host's panel header, while retaining a named child region. Published
 Files0.4.0/0.5.0 archives keep their original heading, including on a newer host.
@@ -283,7 +286,7 @@ from a user who has moved elsewhere. If a filtered-away selection leaves focus
 on an unselected fallback row, invoking F2 or its context menu first selects
 that row as the explicit target. Host Escape ownership and retained drafts
 remain as described below. These UI changes are included in the published Linux
-ARM64 Files0.7 preview; they do not modify immutable Files0.6 or its catalog offers.
+ARM64 Files0.7 preview; they do not modify immutable Files0.6.
 
 Current source offers **Insert path into terminal** in the selection menu,
 with its `Shift+Enter` shortcut shown and exposed to assistive technology. The
@@ -358,7 +361,7 @@ remains. This does not establish that a particular OS or IME emits a composing
 Escape. The published Linux ARM64 Files0.7 archive includes this editor/menu
 handling; immutable Files0.6 retains its earlier behavior. Source inclusion and
 the bounded Linux packaged/public-link checkpoints do not establish
-physical-keyboard or native IME delivery, or macOS/Windows/x64 Files0.7
+physical-keyboard or native IME delivery, or broad macOS/Windows/x64 Files0.7
 qualification. Use **Cancel** to discard an editor without hiding Files. New
 file/folder uses the targeted folder (or a targeted file's parent); background
 actions use the browsing root. Permanent deletion
@@ -466,7 +469,7 @@ include this correction, not inherit a qualification claim from the host alone.
 
 Current source composes #774's path-free transport with #768's protected path
 handoff. This is **source behavior, not native qualification or publication**.
-Published Files0.6/0.7 bytes and catalog offers remain unchanged; new source needs
+Published Files0.6/0.7 bytes remain unchanged; new source needs
 a new archive version and a host supporting `terminal.insertPath.v1`.
 
 Drag one Files row over the visible terminal area of the selected tab's focused,
@@ -595,7 +598,7 @@ missing inline hint and tooltip, and already-displayed literal error text
 do not change. Current
 Files source also relabels host-coded unavailable notices. These changes are
 included in Files0.7 and its bounded Linux packaged/public-link checkpoints
-below; macOS Files0.7 and broader qualification remain separate, and published
+below; the later macOS local checkpoint and broader qualification are separate, and published
 Files0.6 is unchanged.
 The host's narrow [development bridges](extension-installation-foundation.md#archive-contract)
 admit unchanged Files0.6 on recognized `0.24.1-dev.N`, `0.25.0-dev.N` and
@@ -703,6 +706,45 @@ physical/Gatekeeper/notarization, deployment-floor, native-I/O cancellation and
 main-death limits remain. Earlier primitive/local lifecycle campaigns were not
 replayed or relabeled. Original release notes retain their publication-time status.
 
+## Files0.7 macOS stable local checkpoint
+
+On 2026-11-07 an ordinary-user macOS 27.0.1 ARM64 disposable guest used the
+publicly downloaded **stable OMXTerm0.25.0 DMG** (129,841,467 bytes, SHA-256
+`eab799c16150ddb0852299a669df53cf7eb098cf223978cc30aa34ea8a20f32c`)
+and the separate published **Files0.7.0** archive (23,285 bytes, SHA-256
+`611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`).
+The app was copied from the read-only mounted DMG; it was not installed through
+Finder. The archive's original Linux-targeted build receipt remains `not-run`;
+this macOS observation is separate from that receipt and the Linux preview.
+
+A Files-only adaptation of the exact-DMG controller, based on source
+`9c5492e37b23fb80e96bb71e550d34c65d0083ca`, passed captured-byte local trust,
+dormant install and explicit activation; loaded filtering and keyboard/focus;
+confirmation cancellation without effects; conflict preserving both directories;
+and a confirmed directory move preserving device/inode and contents with the
+old source absent. The refreshed hosted view showed the completed move. One
+active backend exited 0 and closed at normal Quit; main exit and owned process
+settlement joined without cleanup assistance. The copied bundle and input hashes
+matched after the run. The actual Files capture was inspected separately from the
+core-window capture. The filter assertion is DOM/input evidence, not a separate
+paint capture. No terminal input, terminal-directory, path insertion or drag
+was exercised.
+
+The temporary executed adapter and its raw receipts retain their own identities;
+the [durable fixture](../test/fixtures/files-dmg.md#files07-macos-files-only-mode)
+is a subsequent source adaptation, not the controller executed in that run.
+An initial headless adapter check failed four existing-mode controls; those failures
+remain distinct from the corrected adapter's 38 passing controls and native run.
+Stderr retained a BrowserWindow 11-listener warning. Closed [#742](https://github.com/luizomf/omxterm/issues/742)
+already records the same bounded macOS diagnostic; neither observation establishes
+its cause, a new regression or an accumulating leak.
+
+Synthetic Chromium input and controlled consent do not qualify physical input,
+Finder/Gatekeeper, default GPU, compositor behavior, all filesystems, public
+Settings-link/catalog consumption or surviving-browser main-death exclusion.
+The macOS catalog update in source is a candidate; publication and an actual
+public-catalog consumer are separate maintainer actions.
+
 ## Files 0.6.0 Linux public-catalog checkpoint
 
 🤖 AI-assisted.
@@ -789,9 +831,10 @@ remain usable. en-US/pt-BR controls relabel without repeating requests.
 Main owns the fixed project HTTPS endpoints and captured release selections.
 Current source chooses the complete `official-extensions-darwin-arm64-v1.json`
 for macOS ARM64; every other target retains `official-extensions-v1.json`.
-Only one endpoint is fetched, with no merge or fallback. The promoted catalogs
-select Files0.6 on both ARM64 endpoints and keep SSH/Snippets identical between
-them. Published dev.21 still embeds the legacy URL; its Linux-only Files entry
+Only one endpoint is fetched, with no merge or fallback. The source catalogs
+select Files0.6 on Linux ARM64 and candidate Files0.7 on macOS ARM64, keeping
+SSH/Snippets identical between them. This source change is not a public readback
+or public-catalog consumption checkpoint. Published dev.21 still embeds the legacy URL; its Linux-only Files entry
 does not offer macOS discovery. The earlier dev.26/Files0.5
 [public-catalog checkpoint](#macos-catalog-distribution) establishes that exact
 historical route; it does not qualify Files0.6. Before
@@ -805,8 +848,10 @@ Installation/replacement remains dormant. Cancel or owner loss before approval
 revokes consent; publication already dispatched cannot be recalled or retried
 implicitly. Refresh cannot retarget a captured installation.
 
-The selected Files0.6 entries require at least dev.21; compatibility is separate
-from which endpoint a particular host fetches and from actual qualification.
+Linux Files0.6 requires at least dev.21. The macOS Files0.7 candidate requires
+`>=0.25.0-dev.10`; macOS 0.24.0 and earlier compatible hosts lose the prior catalog
+offer and can deliberately install the unchanged Files0.6 archive by local file or
+HTTPS link, or upgrade. Compatibility is separate from endpoint and qualification.
 Historical Files0.1.0 remains available for local/link installation from
 0.23.0-dev.8; catalog-capable host source started at 0.23.0-dev.9. Its engine
 range excludes host 0.24.0. The catalog is not an index of every historical
@@ -1118,7 +1163,7 @@ No primitive matrix is replayed. Inspect `consumer-files.png` and
 `terminal-after.png`; filenames and DOM readiness are not pixel evidence.
 The separate [public-link checkpoint](#files07-linux-public-link-checkpoint)
 below passed after publication; local execution alone does not establish it.
-Stable Files0.6 catalogs remain unchanged.
+At that checkpoint both Files0.6 catalogs remained unchanged.
 
 <a id="files07-linux-public-link-consumer-preparation"></a>
 
@@ -1130,7 +1175,7 @@ were published as separate immutable, non-Latest Linux ARM64 previews. Both tags
 identify actual host/archive build source `0cb89accd61f1f5d5263c60773454882793e2e99`.
 All seven original assets matched draft and anonymous public readback; Files was
 published and anonymously verified before the host. Stable0.24.0 remains Latest,
-and both official catalogs still select Files0.6.
+and at that checkpoint both official catalogs still selected Files0.6.
 
 A separate ordinary-user Fedora44 ARM64 checkpoint passed all seven bounded
 groups using **fresh anonymous downloads**, not the old local copies. The exact
@@ -1216,7 +1261,7 @@ terminal captures there, all process joins, complete stderr and Linux shared-ser
 preservation separately. Submitted-URL receipts describe the exercised UI route,
 not an independent passive network trace. The actual public checkpoint passed
 as recorded above; physical input/compositor and other-platform qualification
-remain unestablished. Files0.6 catalogs remain unchanged.
+remain unestablished. At that checkpoint the Files0.6 catalogs remained unchanged.
 
 ### Files0.7 Linux packaged checkpoint
 
@@ -1262,9 +1307,9 @@ corrections were integrated at `14a813bbf07f84195981592a2eef5319e7ae488d`.
 The separately reviewed public-link consumer subsequently passed the
 [actual public checkpoint](#files07-linux-public-link-checkpoint) above with
 qualification source `ed84ce729e03656018eb2e1b971dd8f458123df3`. This does not
-relabel the earlier locally built-host run. Both official catalogs still select Files0.6;
-macOS/other-platform Files0.7 and surviving-browser main-death exclusion remain
-unqualified. Historical built-host checks and failures retain their original scope.
+relabel the earlier locally built-host run. At that checkpoint both catalogs still
+selected Files0.6. The later macOS local checkpoint is separate; other-platform
+Files0.7 and surviving-browser main-death exclusion remain unqualified. Historical built-host checks and failures retain their original scope.
 
 ### Historical/current Files0.6 packaged lanes
 

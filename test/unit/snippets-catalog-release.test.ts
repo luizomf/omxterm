@@ -179,9 +179,7 @@ describe("published Snippets catalog candidate", () => {
           .snapshot([])
           .entries.filter((entry) => entry.id !== snippets.id)) {
           const compatible =
-            target === "darwin-arm64" &&
-            (other.id === "omxterm.ssh" ||
-              (other.id === "omxterm.files" && appVersion === "0.24.0-dev.26"));
+            target === "darwin-arm64" && other.id === "omxterm.ssh";
           expect(other.compatible).toBe(compatible);
           if (!compatible)
             expect(() => catalog.select(other.selection)).toThrow(

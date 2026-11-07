@@ -357,9 +357,10 @@ only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
 and manifest identity must match before ordinary one-shot trust. Its in-memory
 last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
-endpoint offered Linux Files0.4; the published catalogs select Files0.6 for each
-ARM64 target and the same SSH0.3.1 archive for Linux and macOS ARM64. Its separate
-bounded macOS public-consumption checkpoint has passed.
+endpoint offered Linux Files0.4; the source catalogs now select Linux Files0.6
+and candidate macOS Files0.7, plus the same SSH0.3.1 archive for both ARM64
+targets. The earlier macOS Files0.6 public-consumption checkpoint passed; the
+Files0.7 source catalog candidate has not yet had public-catalog consumption.
 Common SSH/Snippets entries match; no merging or fallback occurs. Cards show the
 selected offer's platforms and distinguish target from host/API incompatibility.
 Target and shared host/API compatibility govern catalog selection, while local/link
@@ -423,9 +424,10 @@ symlink destinations are refused. Cross-volume moves do not copy/delete and
 symlink sources move as links. Files-to-terminal drag remains separate. These
 source UI changes are included in the published Files0.7 Linux ARM64 link-first
 preview with host dev.19. Its bounded [actual public Settings-link checkpoint](docs/files-development-preview.md#files07-linux-public-link-checkpoint)
-passed using fresh anonymous downloads. Published Files0.6 and both official
-catalog offers are unchanged; macOS Files0.7 and broader qualification remain
-unestablished. Hide/reveal retains the dotfile choice;
+passed using fresh anonymous downloads. A separate macOS stable0.25.0 / Files0.7
+[local checkpoint](docs/files-development-preview.md#files07-macos-stable-local-checkpoint)
+passed filtering and confirmed directory movement; broader macOS qualification
+and public-catalog consumption remain separate. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal
@@ -442,8 +444,8 @@ relocalizable host-coded notices are included in the Files0.7 preview and its
 separate Linux packaged/public-link checkpoints, not published
 Files0.6. The host/archive build and public release tags bind source
 `0cb89accd61f1f5d5263c60773454882793e2e99`; public qualification used test/docs
-source `ed84ce729e03656018eb2e1b971dd8f458123df3`. macOS Files0.7 and broader
-qualification remain unestablished.
+source `ed84ce729e03656018eb2e1b971dd8f458123df3`. The macOS local checkpoint
+is separate from that Linux public-link result and broader qualification.
 Current source also inserts one selected file/folder/link path through the core's
 lexical quoting and Protected Paste into the action-time captured Surface; its
 visible menu action and Shift+Enter row shortcut add no Enter. Focus returns
@@ -451,8 +453,8 @@ only while the captured target remains selected. Incomplete or unknown delivery
 is not automatically retried. Current Files0.8.0 preparation declares
 `terminal.insertPath.v1` and minimum host `>=0.25.0-dev.20` / API `0.1.x`, matching
 the integrated protected consumer. Lower hosts are refused; ordinary admission is
-not shipping-pair qualification or publication. Published Files0.6/0.7 and both
-catalogs remain unchanged. Prior native UI used production modules with inert
+not shipping-pair qualification or publication. Published Files0.6/0.7 archive
+bytes remain unchanged. Prior native UI used production modules with inert
 session/backend/package dependencies, not a real PTY or shipping pair; its timeout
 was the Surface receipt timeout, not the ten-second transport deadline. Its composed
 terminal drop offers copy only over the selected tab's focused live terminal area,
@@ -483,8 +485,9 @@ including three Official consents and normal joined Quit; prior link evidence
 is not relabeled.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
 display metadata, not a manifest platform fence or blanket native qualification.
-The earlier Linux catalog selected Files0.4.0; the promoted catalogs select
-Files0.6.0 on both ARM64 endpoints after separate publication and qualification.
+The earlier Linux catalog selected Files0.4.0; the later promotion selected
+Files0.6.0 on both ARM64 endpoints. The current macOS source catalog candidate
+selects Files0.7; Linux retains Files0.6.
 A separate [macOS public-catalog checkpoint](docs/files-development-preview.md#files-060-macos-public-catalog-checkpoint)
 passed with a retained locally built 0.24.0 DMG, not a downloaded-public host.
 The host's optional `toggleFiles` shortcut is unbound

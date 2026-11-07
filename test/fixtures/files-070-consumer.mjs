@@ -22,6 +22,7 @@ export async function runFiles070Consumer(context) {
     closeFiles,
     listingReady,
     evidence,
+    filesOnly,
   } = context;
   const evaluate = (code) => view.executeJavaScript(code);
   const source = path.join(files, "project");
@@ -210,6 +211,23 @@ export async function runFiles070Consumer(context) {
   }
   const original = await lstat(source);
   const existing = await lstat(path.join(conflict, "project"));
+  if (filesOnly) {
+    await prepareMove(destination);
+    await click(view, "Cancel");
+    await until(
+      () => evaluate("document.querySelector('.operation-editor').hidden"),
+      "cancelled confirmation closed",
+    );
+    assert.equal((await lstat(source)).ino, original.ino);
+    assert.equal(
+      await readFile(path.join(source, "needle.txt"), "utf8"),
+      "owned-source",
+    );
+    await assert.rejects(lstat(path.join(destination, "project")), {
+      code: "ENOENT",
+    });
+    checks.push("cancelled-directory-move-no-effects");
+  }
   await prepareMove(conflict);
   await click(view, "Move");
   await until(
@@ -282,6 +300,8 @@ export async function runFiles070Consumer(context) {
       (await core.capturePage()).toPNG(),
     );
   }
+  // The exact-DMG Files-only checkpoint intentionally never sends PTY input.
+  if (filesOnly) return;
   await query("needle");
   const replacement = await closeFiles(view, () => menu("Files"));
   assert.equal(

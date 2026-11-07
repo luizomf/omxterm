@@ -13,6 +13,7 @@ const { filesPublicManagementState } =
       action?: string,
       click?: boolean,
       local?: string,
+      version?: string,
     ): boolean;
   };
 
@@ -39,6 +40,47 @@ it("checks and acts only on the exact Files management row and captured generati
     filesPublicManagementState(document, 1, "enabled", "Disable", true),
   ).toBe(false);
   expect(files).toHaveBeenCalledOnce();
+  document.body.replaceChildren();
+});
+
+it("requires the exact Files0.7 generation and dormant state", () => {
+  document.body.innerHTML = `<div class="extensions-panel"><section><h3>Files — ARM64 preview · 0.7.0</h3><p>omxterm.files · generation 1 · enabled · local dormant · other instances unknown</p><button>Disable</button></section></div>`;
+  expect(
+    filesPublicManagementState(
+      document,
+      1,
+      "enabled",
+      "Disable",
+      false,
+      "dormant",
+      "0.7.0",
+    ),
+  ).toBe(true);
+  expect(filesPublicManagementState(document, 1, "enabled", "Disable")).toBe(
+    false,
+  );
+  expect(
+    filesPublicManagementState(
+      document,
+      1,
+      "enabled",
+      "Disable",
+      false,
+      "active",
+      "0.7.0",
+    ),
+  ).toBe(false);
+  expect(
+    filesPublicManagementState(
+      document,
+      2,
+      "enabled",
+      "Disable",
+      false,
+      "dormant",
+      "0.7.0",
+    ),
+  ).toBe(false);
   document.body.replaceChildren();
 });
 

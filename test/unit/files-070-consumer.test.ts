@@ -15,7 +15,7 @@ function block(source: string, start: string, end: string) {
 }
 const run = new Function(
   "context",
-  `const {assert, path, evaluate, until, checks, evidence, writeFile, view, core, query, closeFiles, menu} = context;
+  `const {assert, path, evaluate, until, checks, evidence, writeFile, view, core, query, closeFiles, menu, filesOnly} = context;
    const files = '/owned', source = '/owned/project', moved = '/owned/destination/project';
    ${block(production, "  function listingReady(", "  function entryQuery(")}
    ${block(consumer, "  const row =", "  const ready =")}
@@ -64,8 +64,9 @@ function harness() {
     writeFile,
     query,
     closeFiles,
-    start: () =>
+    start: (filesOnly = false) =>
       run({
+        filesOnly,
         assert,
         path: path.posix,
         evaluate,
@@ -95,6 +96,17 @@ it("orders consumer captures after final-state frames and closes a nonempty filt
   expect(h.writeFile.mock.calls).toHaveLength(2);
   expect(h.query).toHaveBeenCalledWith("needle");
   expect(h.closeFiles).toHaveBeenCalledOnce();
+});
+it("Files-only mode captures the completed move without entering the terminal continuation", async () => {
+  const h = harness();
+  const result = h.start(true);
+  await vi.waitFor(() => expect(h.frames).toHaveLength(1));
+  h.frames.shift()!(0);
+  h.frames.shift()!(1);
+  await result;
+  expect(h.writeFile).toHaveBeenCalledTimes(2);
+  expect(h.query).not.toHaveBeenCalled();
+  expect(h.closeFiles).not.toHaveBeenCalled();
 });
 it.each([
   "busy",
