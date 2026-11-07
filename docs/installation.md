@@ -20,11 +20,10 @@ You need an Apple Silicon Mac (M1 or later) with macOS 12 Monterey or newer. To 
 
 ### First launch on macOS
 
-OMXTerm is not signed with an Apple Developer ID or notarized by Apple, so macOS blocks it the first time. Verify the download as described below, then to allow it:
+OMXTerm is not signed with an Apple Developer ID or notarized by Apple, so macOS blocks it the first time. Verify the download as described below, then review and allow OMXTerm specifically:
 
-1. Open **System Settings → Privacy & Security**.
-2. Scroll down to **Security**.
-3. Click **Open Anyway** next to the OMXTerm message.
+- On current macOS, open **System Settings → Privacy & Security**, scroll down to **Security**, and click **Open Anyway** next to the OMXTerm message. See [Apple's instructions](https://support.apple.com/en-us/102445).
+- On macOS 12 Monterey, open **System Preferences → Security & Privacy → General** and click **Open Anyway** next to the OMXTerm message. See [Apple's Monterey instructions](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/12.0/mac).
 
 You only do this once. Later, macOS may also ask before OMXTerm opens protected folders such as Documents or Downloads.
 
@@ -82,6 +81,8 @@ sudo dnf install fontconfig file xorg-x11-server-Xwayland
 
 ### Run the AppImage
 
+For direct launch, you can verify the AppImage first: download its matching `.sha256` file into the same folder, then run `sha256sum --check OMXTerm-0.25.0-arm64.AppImage.sha256` there. The menu helper steps below require verification of both files.
+
 In a terminal, change to the folder containing the downloaded AppImage (for example, `cd ~/Downloads`), then make it executable and run it:
 
 ```sh
@@ -97,25 +98,16 @@ If you get a FUSE error, run it this way instead:
 
 ### Add it to your application menu (optional)
 
-Download the matching `linux_install.sh` and its checksum from the same target row as the AppImage. Verify the helper with `sha256sum --check linux_install.sh.sha256`, place it next to the AppImage, and run:
+Download the AppImage, `linux_install.sh`, and both matching `.sha256` files from the same target row. Place them in the same folder and run the following there. Both checksum checks must succeed before the helper is made executable and run:
 
 ```sh
-chmod +x linux_install.sh
-./linux_install.sh install ./OMXTerm-0.25.0-arm64.AppImage
+sha256sum --check OMXTerm-0.25.0-arm64.AppImage.sha256 &&
+  sha256sum --check linux_install.sh.sha256 &&
+  chmod +x linux_install.sh &&
+  ./linux_install.sh install ./OMXTerm-0.25.0-arm64.AppImage
 ```
 
 OMXTerm now shows up in your application launcher. The [Linux installer guide](linux-installer.md) has the details. For blur, HiDPI scaling, or VM graphics, see [Linux desktop tips](linux-desktop.md).
-
-<details>
-<summary>Optional: verify the download</summary>
-
-Download the matching `.sha256` file next to the AppImage and run:
-
-```sh
-sha256sum --check OMXTerm-0.25.0-arm64.AppImage.sha256
-```
-
-</details>
 
 ## Windows
 
