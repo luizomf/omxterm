@@ -10,16 +10,20 @@ const helper = path.resolve(
   "../../scripts/install-linux-appimage.sh",
 );
 
+type HelperObservation = { started: number; exited?: number; closed?: number };
+
 // Local ownership for the synthetic installer tests, not a native supervisor.
 export function createAppImageInstallerFixture() {
   const roots = new Map<
     string,
     {
+      created: number;
       nextInvocation: number;
-      pending: Map<
-        number,
-        { started: number; exited?: number; closed: boolean }
-      >;
+      pending: Map<number, HelperObservation>;
+      lastSettled?: HelperObservation & {
+        invocation: number;
+        finished: number;
+      };
     }
   >();
   return {
@@ -27,7 +31,11 @@ export function createAppImageInstallerFixture() {
       const root = await mkdtemp(
         path.join(tmpdir(), "omxterm-installer-test-"),
       );
-      roots.set(root, { nextInvocation: 0, pending: new Map() });
+      roots.set(root, {
+        created: performance.now(),
+        nextInvocation: 0,
+        pending: new Map(),
+      });
       const bin = path.join(root, "bin");
       await mkdir(bin);
       await writeFile(
@@ -51,11 +59,7 @@ export function createAppImageInstallerFixture() {
       const owner = roots.get(path.dirname(bin));
       if (!owner) throw new Error("Installer fixture root is no longer active");
       const invocation = ++owner.nextInvocation;
-      const observation: { started: number; exited?: number; closed: boolean } =
-        {
-          started: performance.now(),
-          closed: false,
-        };
+      const observation: HelperObservation = { started: performance.now() };
       owner.pending.set(invocation, observation);
       try {
         // Keep the original promisified result/error; events only observe the
@@ -73,14 +77,19 @@ export function createAppImageInstallerFixture() {
           observation.exited = performance.now();
         });
         result.child?.once("close", () => {
-          observation.closed = true;
+          observation.closed = performance.now();
         });
         return await result;
       } finally {
         owner.pending.delete(invocation);
+        owner.lastSettled = {
+          ...observation,
+          invocation,
+          finished: performance.now(),
+        };
       }
     },
-    async cleanup() {
+    async cleanup(failed = false) {
       const now = performance.now();
       const selected = [...roots].map(([root, owner]) => {
         const pending = [...owner.pending];
@@ -91,12 +100,38 @@ export function createAppImageInstallerFixture() {
             state.exited === undefined
               ? "exit not observed"
               : `exit observed ${Math.max(0, Math.round(now - state.exited))}ms ago`;
-          return `invocation #${invocation}: elapsed ${elapsed}ms, ${exit}, close ${state.closed ? "observed" : "not observed"}, execFile settlement pending`;
+          return `invocation #${invocation}: elapsed ${elapsed}ms, ${exit}, close ${state.closed === undefined ? "not observed" : "observed"}, execFile settlement pending`;
         });
         if (pending.length > 8)
           diagnostics.push(`${pending.length - 8} more pending`);
         return { root, pending: pending.length, diagnostics };
       });
+      if (failed) {
+        const summaries = [...roots.values()]
+          .slice(0, 4)
+          .map((owner, index) => {
+            const duration = (end: number, start: number) =>
+              Math.max(0, Math.round(end - start));
+            let summary = `root #${index + 1}: age ${duration(now, owner.created)}ms, started ${owner.nextInvocation}, pending ${owner.pending.size}`;
+            const last = owner.lastSettled;
+            if (last) {
+              const exit =
+                last.exited === undefined
+                  ? "exit not observed"
+                  : `exit at ${duration(last.exited, last.started)}ms`;
+              const close =
+                last.closed === undefined
+                  ? "close not observed"
+                  : `close at ${duration(last.closed, last.started)}ms`;
+              summary += `, last settled #${last.invocation}: elapsed ${duration(last.finished, last.started)}ms, ${exit}, ${close}`;
+            }
+            return summary;
+          });
+        if (roots.size > 4) summaries.push(`${roots.size - 4} more roots`);
+        console.error(
+          `Installer fixture failure snapshot: ${summaries.join("; ") || "no active roots"}`,
+        );
+      }
       // Retire helper admission before any await: timed-out tests can resume.
       // Later cleanup never deletes a root retained by this invocation.
       roots.clear();

@@ -9,16 +9,19 @@ vi.mock("node:child_process", () => {
   const execFile = vi.fn();
   Object.defineProperty(execFile, Symbol.for("nodejs.util.promisify.custom"), {
     value: (...args: unknown[]) => {
-      let child: unknown;
-      const promise = new Promise((resolve, reject) => {
-        child = execFile(
-          ...args,
-          (error: Error | null, stdout: string, stderr: string) => {
-            if (error) reject(error);
-            else resolve({ stdout, stderr });
-          },
-        );
+      let resolve!: (value: unknown) => void;
+      let reject!: (reason: unknown) => void;
+      const promise = new Promise((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise;
+        reject = rejectPromise;
       });
+      const child: unknown = execFile(
+        ...args,
+        (error: Error | null, stdout: string, stderr: string) => {
+          if (error) reject(Object.assign(error, { stdout, stderr }));
+          else resolve({ stdout, stderr });
+        },
+      );
       return Object.assign(promise, { child });
     },
   });
@@ -50,6 +53,75 @@ function holdHelper() {
     callbacks[index]!(error, "", "");
   };
 }
+
+it("reports settled invocations at test failure without exposing inputs", async () => {
+  const clock = vi.spyOn(performance, "now").mockReturnValue(100);
+  const report = vi.spyOn(console, "error").mockImplementation(() => {});
+  const f = createAppImageInstallerFixture();
+  const { home, bin } = await f.fixtureRoot();
+  const children: EventEmitter[] = [];
+  const callbacks: ((
+    error: Error | null,
+    stdout: string,
+    stderr: string,
+  ) => void)[] = [];
+  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+    callbacks.push(args.at(-1) as (typeof callbacks)[number]);
+    const child = new EventEmitter();
+    children.push(child);
+    return child as ReturnType<typeof execFile>;
+  });
+  try {
+    const first = f.runHelper(home, bin, ["private-argument"]);
+    callbacks[0]!(null, "", "");
+    await first;
+    clock.mockReturnValue(150);
+    const second = f.runHelper(home, bin, ["private-argument"]);
+    clock.mockReturnValue(180);
+    children[1]!.emit("exit", 70, null);
+    clock.mockReturnValue(185);
+    children[1]!.emit("close", 70, null);
+    callbacks[1]!(
+      new Error("private-error"),
+      "private-stdout",
+      "private-stderr",
+    );
+    await expect(second).rejects.toThrow("private-error");
+    clock.mockReturnValue(200);
+    await f.cleanup(true);
+    expect(report).toHaveBeenCalledExactlyOnceWith(
+      "Installer fixture failure snapshot: root #1: age 100ms, started 2, pending 0, last settled #2: elapsed 35ms, exit at 30ms, close at 35ms",
+    );
+  } finally {
+    report.mockRestore();
+    clock.mockRestore();
+  }
+});
+
+it("reports only failures and bounds root summaries", async () => {
+  const report = vi.spyOn(console, "error").mockImplementation(() => {});
+  const f = createAppImageInstallerFixture();
+  try {
+    await f.fixtureRoot();
+    await f.cleanup();
+    expect(report).not.toHaveBeenCalled();
+    for (let index = 0; index < 5; index++) {
+      vi.mocked(mkdtemp).mockResolvedValueOnce(
+        path.resolve(`private-root-${index}`),
+      );
+      await f.fixtureRoot();
+    }
+    await f.cleanup(true);
+    expect(report).toHaveBeenCalledOnce();
+    const message = vi.mocked(report).mock.calls[0]![0] as string;
+    expect(message).toContain("root #4:");
+    expect(message).not.toContain("root #5:");
+    expect(message).toContain("1 more roots");
+    expect(message).not.toContain("private-root");
+  } finally {
+    report.mockRestore();
+  }
+});
 
 it("snapshots the first executing invocation without its inputs", async () => {
   const clock = vi.spyOn(performance, "now").mockReturnValue(100);
@@ -221,8 +293,10 @@ it("does not retain a root when helper launch throws synchronously", async () =>
   vi.mocked(execFile).mockImplementation(() => {
     throw failure;
   });
-  await expect(f.runHelper(home, bin, ["--help"])).rejects.toBe(failure);
+  const operation = f.runHelper(home, bin, ["--help"]);
+  const rejected = expect(operation).rejects.toBe(failure);
   await f.cleanup();
+  await rejected;
   expect(rm).toHaveBeenCalledExactlyOnceWith(root, {
     recursive: true,
     force: true,

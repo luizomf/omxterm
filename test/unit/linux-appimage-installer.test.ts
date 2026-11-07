@@ -110,7 +110,7 @@ function owned(home: string) {
   };
 }
 
-afterEach(cleanup);
+afterEach(({ task }) => cleanup(task.result?.state === "fail"));
 
 describe.skipIf(process.platform === "win32")(
   "Linux AppImage desktop installer",
