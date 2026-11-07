@@ -1,10 +1,29 @@
 import { execFile } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import { beforeEach, expect, it, vi } from "vitest";
 import { createAppImageInstallerFixture } from "../fixtures/appimage-installer-fixture";
 
-vi.mock("node:child_process", () => ({ execFile: vi.fn() }));
+vi.mock("node:child_process", () => {
+  const execFile = vi.fn();
+  Object.defineProperty(execFile, Symbol.for("nodejs.util.promisify.custom"), {
+    value: (...args: unknown[]) => {
+      let child: unknown;
+      const promise = new Promise((resolve, reject) => {
+        child = execFile(
+          ...args,
+          (error: Error | null, stdout: string, stderr: string) => {
+            if (error) reject(error);
+            else resolve({ stdout, stderr });
+          },
+        );
+      });
+      return Object.assign(promise, { child });
+    },
+  });
+  return { execFile };
+});
 vi.mock("node:fs/promises", () => ({
   mkdir: vi.fn(),
   mkdtemp: vi.fn(),
@@ -24,13 +43,132 @@ function holdHelper() {
   const callbacks: Callback[] = [];
   vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
     callbacks.push(args.at(-1) as Callback);
-    return {} as ReturnType<typeof execFile>;
+    return new EventEmitter() as ReturnType<typeof execFile>;
   });
   return (error: Error | null = null, index = 0) => {
     expect(callbacks[index]).toBeTypeOf("function");
     callbacks[index]!(error, "", "");
   };
 }
+
+it("snapshots the first executing invocation without its inputs", async () => {
+  const clock = vi.spyOn(performance, "now").mockReturnValue(100);
+  const f = createAppImageInstallerFixture();
+  const { root, home, bin } = await f.fixtureRoot();
+  const child = new EventEmitter();
+  let callback!: (error: Error | null, stdout: string, stderr: string) => void;
+  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+    callback = args.at(-1) as typeof callback;
+    return child as ReturnType<typeof execFile>;
+  });
+  const operation = f.runHelper(home, bin, ["private-argument"], {
+    SECRET: "private-environment",
+  });
+  clock.mockReturnValue(125);
+  try {
+    const failure = await f.cleanup().catch((error: unknown) => error);
+    expect((failure as AggregateError).errors).toEqual([
+      new Error(
+        `Retained installer fixture: ${root}; invocation #1: elapsed 25ms, exit not observed, close not observed, execFile settlement pending`,
+      ),
+    ]);
+    expect(String((failure as AggregateError).errors[0])).not.toContain(
+      "private-",
+    );
+  } finally {
+    callback(null, "out", "err");
+    await expect(operation).resolves.toEqual({ stdout: "out", stderr: "err" });
+    clock.mockRestore();
+  }
+});
+
+it("snapshots the later exited invocation before another root's removal settles it", async () => {
+  const clock = vi.spyOn(performance, "now").mockReturnValue(100);
+  const f = createAppImageInstallerFixture();
+  const idle = await f.fixtureRoot();
+  vi.mocked(mkdtemp).mockResolvedValueOnce(path.resolve("synthetic-held-root"));
+  const held = await f.fixtureRoot();
+  const children: EventEmitter[] = [];
+  const callbacks: ((
+    error: Error | null,
+    stdout: string,
+    stderr: string,
+  ) => void)[] = [];
+  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+    callbacks.push(args.at(-1) as (typeof callbacks)[number]);
+    const child = new EventEmitter();
+    children.push(child);
+    return child as ReturnType<typeof execFile>;
+  });
+  const first = f.runHelper(held.home, held.bin, ["install"]);
+  callbacks[0]!(null, "", "");
+  await first;
+  clock.mockReturnValue(200);
+  const second = f.runHelper(held.home, held.bin, ["install"]);
+  clock.mockReturnValue(230);
+  children[1]!.emit("exit", 70, null);
+  clock.mockReturnValue(250);
+  let finishRemoval!: () => void;
+  vi.mocked(rm).mockImplementationOnce(
+    () =>
+      new Promise<void>((resolve) => {
+        finishRemoval = resolve;
+      }),
+  );
+  const cleanup = f.cleanup();
+  const error = new Error("late failure");
+  children[1]!.emit("close", 70, null);
+  callbacks[1]!(error, "", "");
+  await expect(second).rejects.toBe(error);
+  clock.mockReturnValue(500);
+  finishRemoval();
+  try {
+    const failure = await cleanup.catch((cause: unknown) => cause);
+    expect((failure as AggregateError).errors).toEqual([
+      new Error(
+        `Retained installer fixture: ${held.root}; invocation #2: elapsed 50ms, exit observed 20ms ago, close not observed, execFile settlement pending`,
+      ),
+    ]);
+    expect(rm).toHaveBeenCalledExactlyOnceWith(idle.root, {
+      recursive: true,
+      force: true,
+    });
+  } finally {
+    clock.mockRestore();
+  }
+});
+
+it("bounds concurrent diagnostics and records an observed close", async () => {
+  const f = createAppImageInstallerFixture();
+  const { home, bin } = await f.fixtureRoot();
+  const children: EventEmitter[] = [];
+  const callbacks: ((
+    error: Error | null,
+    stdout: string,
+    stderr: string,
+  ) => void)[] = [];
+  vi.mocked(execFile).mockImplementation((...args: unknown[]) => {
+    callbacks.push(args.at(-1) as (typeof callbacks)[number]);
+    const child = new EventEmitter();
+    children.push(child);
+    return child as ReturnType<typeof execFile>;
+  });
+  const operations = Array.from({ length: 9 }, () =>
+    f.runHelper(home, bin, []),
+  );
+  children[0]!.emit("close", 0, null);
+  try {
+    const failure = await f.cleanup().catch((error: unknown) => error);
+    const message = ((failure as AggregateError).errors[0] as Error).message;
+    expect(message).toContain("close observed, execFile settlement pending");
+    expect(message).toContain("invocation #8:");
+    expect(message).not.toContain("invocation #9:");
+    expect(message).toContain("1 more pending");
+  } finally {
+    for (const callback of callbacks) callback(null, "", "");
+    await Promise.all(operations);
+  }
+});
 
 it("retains the fixture root when cleanup runs before helper settlement", async () => {
   const f = createAppImageInstallerFixture();
@@ -148,9 +286,14 @@ it("cleans an unrelated settled root but keeps a failed test's pending root and 
   try {
     const failure = await f.cleanup().catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(AggregateError);
-    expect((failure as AggregateError).errors).toEqual([
-      new Error(`Retained installer fixture: ${held.root}`),
-    ]);
+    const errors = (failure as AggregateError).errors as unknown[];
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(Error);
+    const retained = errors[0] as Error;
+    expect(retained.message).toMatch(
+      /^Retained installer fixture: .*; invocation #1: elapsed \d+ms, exit not observed, close not observed, execFile settlement pending$/,
+    );
+    expect(retained.message).toContain(held.root);
     expect(rm).toHaveBeenCalledExactlyOnceWith(idle.root, {
       recursive: true,
       force: true,

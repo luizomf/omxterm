@@ -12,13 +12,22 @@ const helper = path.resolve(
 
 // Local ownership for the synthetic installer tests, not a native supervisor.
 export function createAppImageInstallerFixture() {
-  const roots = new Map<string, { pending: number }>();
+  const roots = new Map<
+    string,
+    {
+      nextInvocation: number;
+      pending: Map<
+        number,
+        { started: number; exited?: number; closed: boolean }
+      >;
+    }
+  >();
   return {
     async fixtureRoot() {
       const root = await mkdtemp(
         path.join(tmpdir(), "omxterm-installer-test-"),
       );
-      roots.set(root, { pending: 0 });
+      roots.set(root, { nextInvocation: 0, pending: new Map() });
       const bin = path.join(root, "bin");
       await mkdir(bin);
       await writeFile(
@@ -41,11 +50,17 @@ export function createAppImageInstallerFixture() {
     ) {
       const owner = roots.get(path.dirname(bin));
       if (!owner) throw new Error("Installer fixture root is no longer active");
-      owner.pending += 1;
+      const invocation = ++owner.nextInvocation;
+      const observation: { started: number; exited?: number; closed: boolean } =
+        {
+          started: performance.now(),
+          closed: false,
+        };
+      owner.pending.set(invocation, observation);
       try {
-        // execFile's callback settles after its child/stdio handling, not when
-        // Vitest's test deadline expires. Preserve the original result/error.
-        return await execFile("/bin/sh", [helper, ...arguments_], {
+        // Keep the original promisified result/error; events only observe the
+        // child and do not establish why its execFile settlement is pending.
+        const result = execFile("/bin/sh", [helper, ...arguments_], {
           env: {
             ...process.env,
             HOME: home,
@@ -54,22 +69,45 @@ export function createAppImageInstallerFixture() {
             ...extraEnvironment,
           },
         });
+        result.child?.once("exit", () => {
+          observation.exited = performance.now();
+        });
+        result.child?.once("close", () => {
+          observation.closed = true;
+        });
+        return await result;
       } finally {
-        owner.pending -= 1;
+        owner.pending.delete(invocation);
       }
     },
     async cleanup() {
-      const selected = [...roots].map(([root, owner]) => ({
-        root,
-        pending: owner.pending,
-      }));
+      const now = performance.now();
+      const selected = [...roots].map(([root, owner]) => {
+        const pending = [...owner.pending];
+        // Snapshot all reported state before any root removal can yield.
+        const diagnostics = pending.slice(0, 8).map(([invocation, state]) => {
+          const elapsed = Math.max(0, Math.round(now - state.started));
+          const exit =
+            state.exited === undefined
+              ? "exit not observed"
+              : `exit observed ${Math.max(0, Math.round(now - state.exited))}ms ago`;
+          return `invocation #${invocation}: elapsed ${elapsed}ms, ${exit}, close ${state.closed ? "observed" : "not observed"}, execFile settlement pending`;
+        });
+        if (pending.length > 8)
+          diagnostics.push(`${pending.length - 8} more pending`);
+        return { root, pending: pending.length, diagnostics };
+      });
       // Retire helper admission before any await: timed-out tests can resume.
       // Later cleanup never deletes a root retained by this invocation.
       roots.clear();
       const errors: unknown[] = [];
-      for (const { root, pending } of selected) {
+      for (const { root, pending, diagnostics } of selected) {
         if (pending > 0) {
-          errors.push(new Error(`Retained installer fixture: ${root}`));
+          errors.push(
+            new Error(
+              `Retained installer fixture: ${root}; ${diagnostics.join("; ")}`,
+            ),
+          );
           continue;
         }
         try {
