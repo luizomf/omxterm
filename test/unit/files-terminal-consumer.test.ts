@@ -196,26 +196,33 @@ it("advertises only a bounded path-free copy candidate and clears it on leave", 
   expect(hint.isConnected).toBe(false);
 });
 
-it("claims in the drop turn, then consumes only its retained Surface via tracked semantic input, never Enter", async () => {
-  const f = await fixture();
-  drag(f.surfaces[0]!.canvas, "drop");
-  expect(f.bridge.claim).toHaveBeenCalledExactlyOnceWith({
-    ticket,
-    entryToken: "1",
-  });
-  expect(f.bridge.handoff).not.toHaveBeenCalled();
-  // Native child dragend is not cancellation of an already-claimed drop.
-  document.dispatchEvent(new Event("dragend", { bubbles: true }));
-  await vi.waitFor(() => expect(f.bridge.handoff).toHaveBeenCalledOnce());
-  f.deliver();
-  expect(f.surfaces[0]!.injectTracked).toHaveBeenCalledExactlyOnceWith(text);
-  expect(f.surfaces[0]!.inject).not.toHaveBeenCalled();
-  expect(f.nativeFormat).not.toHaveBeenCalled();
-  f.finish(true);
-  await Promise.resolve();
-  f.deliver(); // a duplicate command cannot acquire another capture
-  expect(f.surfaces[0]!.injectTracked).toHaveBeenCalledOnce();
-});
+it.each([false, true])(
+  "claims in the drop turn with Chromium metadata=%s, then delivers only to its retained Surface without Enter",
+  async (chromium) => {
+    const f = await fixture();
+    const metadata = chromium ? ["chromium/x-drag-id"] : [];
+    expect(
+      drag(f.surfaces[0]!.canvas, "dragover", metadata).data.dropEffect,
+    ).toBe("copy");
+    drag(f.surfaces[0]!.canvas, "drop", metadata);
+    expect(f.bridge.claim).toHaveBeenCalledExactlyOnceWith({
+      ticket,
+      entryToken: "1",
+    });
+    expect(f.bridge.handoff).not.toHaveBeenCalled();
+    // Native child dragend is not cancellation of an already-claimed drop.
+    document.dispatchEvent(new Event("dragend", { bubbles: true }));
+    await vi.waitFor(() => expect(f.bridge.handoff).toHaveBeenCalledOnce());
+    f.deliver();
+    expect(f.surfaces[0]!.injectTracked).toHaveBeenCalledExactlyOnceWith(text);
+    expect(f.surfaces[0]!.inject).not.toHaveBeenCalled();
+    expect(f.nativeFormat).not.toHaveBeenCalled();
+    f.finish(true);
+    await Promise.resolve();
+    f.deliver(); // a duplicate command cannot acquire another capture
+    expect(f.surfaces[0]!.injectTracked).toHaveBeenCalledOnce();
+  },
+);
 
 it.each([
   "text/plain",

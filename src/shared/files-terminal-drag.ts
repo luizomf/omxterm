@@ -67,7 +67,7 @@ export function isFilesTerminalDrag(
       [
         FILES_ENTRY_DRAG_TYPE,
         FILES_TERMINAL_DRAG_TYPE,
-        "application/x-chromium-drag-id",
+        "chromium/x-drag-id",
       ].includes(type),
     )
   );
