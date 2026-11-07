@@ -86,6 +86,7 @@ it("keeps earlier hosts, future minor families and incompatible APIs refused", a
     "0.25.0-beta.1",
     "0.25.1-dev.0",
     "0.26.0-dev.0",
+    "0.26.0-dev.1",
     "0.26.0",
   ])
     expect(() =>

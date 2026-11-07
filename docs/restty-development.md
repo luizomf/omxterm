@@ -28,6 +28,13 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 - Accepted user input (typing, paste, snippets, or dropped paths) returns the viewport to the live bottom; background output, focus, and selection do not jump the scroll position.
 - Desktops with a fine pointer use native scrolling even if touch hardware is present.
 
+### Read-only export snapshots
+
+The prepared runtime reads retained scrollback and screen through the selection-text
+query without changing selection, hover, cursor or render state. The alternate
+screen reads only its active contents. The host owns explicit saving and its
+inclusive 16 MiB UTF-8 limit; the core storage ceiling is not an export-size guarantee.
+
 ### Pending-wrap resize coverage
 
 The bundled-core reflow tests preserve exact pending-wrap insertion/copy across
@@ -232,7 +239,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7` |
+| Restty JavaScript runtime | `70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf` |
 | Embedded-core chunk       | `0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513` |

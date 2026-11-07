@@ -22,6 +22,8 @@ export type PatchedResttyRuntime = {
   > &
     ResttyVisibleLinkInteraction & {
       getSelectionText(): string;
+      // Retained scrollback plus screen as text, leaving the selection as is.
+      getBufferText(): string;
       selectAll(): boolean;
       scrollToBottom(): void;
     };

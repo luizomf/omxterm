@@ -35,6 +35,10 @@ import { registerSemanticInputIpc } from "./semantic-input-ipc";
 import { startApplicationLayout } from "./application-layout";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
+import {
+  saveTerminalExport,
+  electronTerminalExportHost,
+} from "./terminal-export";
 import * as applicationAbout from "./application-about";
 import { startApplicationSettings } from "./application-settings";
 import {
@@ -444,6 +448,13 @@ app
                   currentTranslator(),
                 ),
               confirmPaste: () => nativeDialogs.confirmPaste(window),
+              exportText: async (request, isOwnerAlive) => {
+                await saveTerminalExport(
+                  request,
+                  electronTerminalExportHost(window, isOwnerAlive),
+                  currentTranslator().t,
+                );
+              },
               showClipboardContextMenu(request) {
                 Menu.buildFromTemplate([
                   ...terminalContextMenuTemplate(
@@ -518,6 +529,8 @@ app
               action,
               target,
             ),
+          sendExportRequest: (window, context) =>
+            window.webContents.send(terminalIpc.exportRequest, context),
           sendFind: notifyWindow(terminalIpc.find),
           sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
           sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),

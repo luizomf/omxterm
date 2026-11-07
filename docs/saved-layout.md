@@ -4,7 +4,7 @@ Saved Layout **0.1.1** is an optional, separately installed extension for host
 **>=0.24.0-dev.1 <0.26.0**, with preview API **^0.1.0**. The host's explicit
 0.24.1-dev.N and 0.25.0-dev.N compatibility bridges also admit this range.
 The 0.26.0-dev.N bridge does not: the range excludes its 0.26.0 endpoint, so
-current 0.26.0-dev.0 source refuses this unchanged package. Other prerelease
+current 0.26.0-dev.1 source refuses this unchanged package. Other prerelease
 families follow ordinary semver rules. It is not bundled, automatically
 installed, or a stable SDK. This change does not publish an archive or catalog
 entry. Build instructions below are for developers; install a separately

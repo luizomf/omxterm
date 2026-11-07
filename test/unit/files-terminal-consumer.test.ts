@@ -144,6 +144,7 @@ async function fixture() {
             copy: vi.fn(async () => {}),
             paste: vi.fn(async () => {}),
             selectAll: vi.fn(),
+            exportText: vi.fn(() => ""),
             find: vi.fn(),
           };
           surfaces.push(surface);

@@ -6,6 +6,8 @@ import type { LocalImageData } from "../../src/shared/local-image";
 import type { TerminalRendererConfiguration } from "../../src/shared/user-configuration";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import type {
+  TerminalContextMenuRequest,
+  TerminalExportContext,
   TerminalFontZoom,
   TerminalTabCommand,
 } from "../../src/shared/terminal-contract";
@@ -80,11 +82,16 @@ async function setup(
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn((kind: string) => `${kind} text`),
   };
   let openImage!: () => void;
   let openAbout!: () => void;
   let toggleTabBar!: () => void;
   let find!: () => void;
+  let exportRequest!: (context: TerminalExportContext) => void;
+  const saveTerminalExport = vi.fn(async () => {});
+  const requestContextMenu =
+    vi.fn<(request?: TerminalContextMenuRequest) => void>();
   let toggleTitleBar = () => {};
   const chromeCommand = vi.fn();
   let clipboard!: (action: "copy" | "paste" | "select-all") => void;
@@ -151,6 +158,12 @@ async function setup(
         return () => {};
       },
       droppedFilePathInsertion: () => "'fixture.png'",
+      clipboard: {
+        writeText: async () => {},
+        readText: async () => "",
+        confirmPaste: async () => true,
+        requestContextMenu,
+      },
       subscribeToClipboardActions: (listener) => {
         clipboard = listener;
         return () => {};
@@ -167,6 +180,11 @@ async function setup(
         find = listener;
         return () => {};
       },
+      subscribeToExportRequests(listener) {
+        exportRequest = listener;
+        return () => {};
+      },
+      saveTerminalExport,
       subscribeToTabCommands: (listener) => {
         tabCommand = listener;
         return () => {};
@@ -186,6 +204,9 @@ async function setup(
     openAbout,
     toggleTabBar,
     find: () => find(),
+    exportRequest: (context: TerminalExportContext) => exportRequest(context),
+    saveTerminalExport,
+    requestContextMenu,
     toggleTitleBar: () => toggleTitleBar(),
     chromeCommand,
     tabStrip,
@@ -378,6 +399,13 @@ describe("local image preview through the Terminal Window host", () => {
         }),
     );
     try {
+      // Retain a real popup before the preview blocks its callback.
+      view.surfaceOptions.clipboard!.requestContextMenu({
+        target: "terminal",
+        hasSelection: true,
+      });
+      // Opening that popup legitimately focuses its clicked pane.
+      view.surface.focus.mockClear();
       view.surfaceOptions.onLocalImageActivation!({
         source: "native-path",
         path: "/tmp/fixture.png",
@@ -387,6 +415,16 @@ describe("local image preview through the Terminal Window host", () => {
         view.clipboard("copy");
         view.clipboard("select-all");
         view.find();
+        view.surfaceOptions.clipboard!.requestContextMenu({
+          target: "terminal",
+          hasSelection: true,
+        });
+        const request = view.requestContextMenu.mock.lastCall?.[0];
+        if (!request) throw new Error("Missing captured export popup");
+        view.exportRequest({
+          kind: "selection",
+          target: { sessionId: request.sessionId, menuId: request.menuId },
+        });
         view.zoom("in");
         fileDrop();
         window.dispatchEvent(new Event("focus"));
@@ -401,6 +439,8 @@ describe("local image preview through the Terminal Window host", () => {
       expect.soft(view.surface.copy).not.toHaveBeenCalled();
       expect.soft(view.surface.selectAll).not.toHaveBeenCalled();
       expect.soft(view.surface.find).not.toHaveBeenCalled();
+      expect.soft(view.surface.exportText).not.toHaveBeenCalled();
+      expect.soft(view.saveTerminalExport).not.toHaveBeenCalled();
       expect.soft(view.surface.inject).not.toHaveBeenCalled();
       expect.soft(view.surface.zoom).not.toHaveBeenCalled();
       expect.soft(view.surface.focus).not.toHaveBeenCalled();
@@ -411,6 +451,13 @@ describe("local image preview through the Terminal Window host", () => {
       expect(view.surface.copy).toHaveBeenCalledOnce();
       expect(view.surface.selectAll).toHaveBeenCalledOnce();
       expect(view.surface.find).toHaveBeenCalledOnce();
+      expect(view.surface.exportText).toHaveBeenCalledExactlyOnceWith(
+        "selection",
+      );
+      expect(view.saveTerminalExport).toHaveBeenCalledExactlyOnceWith({
+        kind: "selection",
+        text: "selection text",
+      });
       expect(view.surface.inject).toHaveBeenCalledOnce();
       expect(view.surface.zoom).toHaveBeenCalledOnce();
       expect(view.surface.focus).toHaveBeenCalled();

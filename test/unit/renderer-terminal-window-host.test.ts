@@ -55,6 +55,7 @@ function createSurface(overrides: Record<string, unknown> = {}) {
     paste: vi.fn(async () => undefined),
     selectAll: vi.fn(),
     find: vi.fn(),
+    exportText: vi.fn(() => ""),
     ...overrides,
   };
 }

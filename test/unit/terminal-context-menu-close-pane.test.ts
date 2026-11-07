@@ -41,7 +41,9 @@ const forgedOffers = [
   { sessionId: "s1", menuId: 1.5 },
   { sessionId: "s1", menuId: Number.MAX_SAFE_INTEGER + 1 },
   { sessionId: "foreign", menuId: 1 },
-  { sessionId: "s1", menuId: 1, closePane: false },
+  { sessionId: "s1", menuId: 1, closePane: false, hasSelection: false },
+  { sessionId: "s1", menuId: 1, hasSelection: "yes" },
+  { sessionId: "s1", menuId: 1, hasSelection: false, extra: true },
   { closePane: false },
   { closePane: "yes" },
   { closePane: true, extra: 1 },
@@ -105,11 +107,13 @@ describe("Close Pane context menu offer", () => {
     bridge.requestClipboardContextMenu({
       sessionId: "s1",
       menuId: 1,
+      hasSelection: false,
       closePane: true,
     });
     expect(electron.send).toHaveBeenLastCalledWith(channel, {
       sessionId: "s1",
       menuId: 1,
+      hasSelection: false,
       closePane: true,
     });
     electron.send.mockClear();
@@ -143,11 +147,13 @@ describe("Close Pane context menu offer", () => {
     requests.showClipboardContextMenu({
       sessionId: "s1",
       menuId: 1,
+      hasSelection: false,
       closePane: true,
     });
     expect(showClipboardContextMenu).toHaveBeenLastCalledWith({
       sessionId: "s1",
       menuId: 1,
+      hasSelection: false,
       closePane: true,
     });
   });

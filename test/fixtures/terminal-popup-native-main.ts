@@ -35,6 +35,7 @@ import {
   submitPopupCalibrationKey,
   type NativePopup,
 } from "./terminal-popup-native-exercise";
+import { installPopupRoutingControl } from "./terminal-popup-native-actions";
 import {
   observePopupInput,
   requireProvisionedPopupInput,
@@ -176,22 +177,21 @@ app
             throw new Error("Unexpected Protected Paste for fixture text");
           },
           showClipboardContextMenu(request) {
+            const t = translatorFor(configuration.language).t;
             const template = terminalContextMenuTemplate(
               window,
               application,
               request,
               configuration.keybinds.closePane,
-              translatorFor(configuration.language).t,
+              t,
             );
-            // Deliberate old-routing controls alter only the external fixture's
-            // installed callbacks. Source mode always invokes production callbacks.
-            if (control === "close-retarget" && request?.closePane)
-              template[5]!.click = () => {
-                void application.closeSelectedPane();
-              };
-            if (control === "clipboard-retarget")
-              template[1]!.click = () =>
-                application.clipboardSelectedWindow("paste");
+            installPopupRoutingControl(
+              template,
+              control,
+              request?.closePane === true,
+              application,
+              t,
+            );
             for (const item of template) {
               const original = item.click;
               if (original)

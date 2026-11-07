@@ -4,6 +4,8 @@ import type { SettingsTabSelection } from "./terminal-panes";
 import type { AboutBridge } from "./about";
 import type {
   TerminalExit,
+  TerminalExportContext,
+  TerminalExportSaveRequest,
   TerminalClipboardAction,
   TerminalContextMenuTarget,
   TerminalContextMenuRequest,
@@ -86,6 +88,10 @@ export interface TerminalBridge {
   droppedFilePathInsertion(files: readonly File[]): string;
   confirmPaste(text: string): Promise<boolean>;
   requestClipboardContextMenu(request?: TerminalContextMenuRequest): void;
+  onExportRequest(
+    listener: (context: TerminalExportContext) => void,
+  ): () => void;
+  saveTerminalExport(request: TerminalExportSaveRequest): Promise<void>;
   onClipboardAction(
     listener: (
       action: TerminalClipboardAction,

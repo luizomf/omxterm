@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep window and pane lifecycle routing under the application owner. */
 import type {
   TerminalPaneFocusTarget,
   TerminalSplitDirection,
@@ -7,6 +8,7 @@ import type {
   TerminalFontZoom,
   TerminalClipboardAction,
   TerminalContextMenuTarget,
+  TerminalExportContext,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
 import type {
@@ -103,6 +105,10 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     action: TerminalClipboardAction,
     target?: TerminalContextMenuTarget,
   ) => void;
+  readonly sendExportRequest?: (
+    window: Window,
+    context: TerminalExportContext,
+  ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendFind: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
@@ -148,6 +154,7 @@ export interface TerminalApplication<
     action: TerminalClipboardAction,
     target: TerminalContextMenuTarget,
   ): void;
+  exportPane(window: Window, context: TerminalExportContext): void;
   findInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
@@ -162,7 +169,6 @@ export interface TerminalApplication<
   isQuitting(): boolean;
 }
 
-// eslint-disable-next-line max-lines-per-function -- Keep window lifecycle and selected-window action routing under one owner.
 export function startTerminalApplication<Window extends NativeTerminalWindow>(
   options: TerminalApplicationOptions<Window>,
 ): TerminalApplication<Window> {
@@ -406,15 +412,6 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       const window = selectedWindow();
       if (window) options.sendClipboardAction(window, action);
     },
-    clipboardPane(window, action, target) {
-      const state = windows.get(window);
-      if (
-        window !== selectedWindow() ||
-        !state?.sessionActivity.claimContextMenuTarget?.(target)
-      )
-        return;
-      options.sendClipboardAction(window, action, target);
-    },
     findInSelectedWindow: selectedWindowAction(options.sendFind),
     toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
     toggleSelectedAuxiliaryPanel: selectedWindowAction(
@@ -485,11 +482,16 @@ function paneActions<Window extends NativeTerminalWindow>(
   | "splitSelectedPane"
   | "focusSelectedPane"
   | "equalizeSelectedPanes"
+  | "clipboardPane"
+  | "exportPane"
 > {
   const send = (command: TerminalTabCommand) => {
     const window = selectedWindow();
     if (window) options.sendTabCommand(window, command);
   };
+  const claimPopup = (window: Window, target: TerminalContextMenuTarget) =>
+    window === selectedWindow() &&
+    windows.get(window)?.sessionActivity.claimContextMenuTarget?.(target);
   const closePane = (
     window: Window | undefined,
     target?: TerminalContextMenuTarget,
@@ -528,6 +530,14 @@ function paneActions<Window extends NativeTerminalWindow>(
     return state.tabCloseRequest;
   };
   return {
+    clipboardPane(window, action, target) {
+      if (!claimPopup(window, target)) return;
+      options.sendClipboardAction(window, action, target);
+    },
+    exportPane(window, context) {
+      if (!claimPopup(window, context.target)) return;
+      options.sendExportRequest?.(window, context);
+    },
     closeSelectedPane: () => closePane(selectedWindow()),
     closePane,
     splitSelectedPane: (direction) => send({ action: "split", direction }),

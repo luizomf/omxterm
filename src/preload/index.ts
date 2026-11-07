@@ -25,6 +25,8 @@ import {
   isTerminalClipboardAction,
   isTerminalContextMenuClipboardAction,
   isTerminalContextMenuRequest,
+  isTerminalExportContext,
+  isTerminalExportSaveRequest,
   isTerminalFontZoom,
   isTerminalSessionExit,
   isTerminalSessionId,
@@ -450,6 +452,18 @@ const terminal: TerminalBridge = {
     if (!isTerminalContextMenuRequest(request))
       throw new TypeError("Invalid context menu request");
     ipcRenderer.send(terminalIpc.clipboardContextMenu, { ...request });
+  },
+  onExportRequest(listener) {
+    const handler = (_event: Electron.IpcRendererEvent, context: unknown) => {
+      if (isTerminalExportContext(context)) listener(context);
+    };
+    ipcRenderer.on(terminalIpc.exportRequest, handler);
+    return () => ipcRenderer.removeListener(terminalIpc.exportRequest, handler);
+  },
+  async saveTerminalExport(request) {
+    if (!isTerminalExportSaveRequest(request))
+      throw new TypeError("Invalid terminal export request");
+    await ipcRenderer.invoke(terminalIpc.exportSave, request);
   },
   onClipboardAction(listener) {
     const handler = (_event: Electron.IpcRendererEvent, action: unknown) => {

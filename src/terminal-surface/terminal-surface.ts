@@ -1,5 +1,5 @@
 import type {
-  TerminalContextMenuRequest,
+  TerminalExportKind,
   TerminalFontZoom,
 } from "../shared/terminal-contract";
 import type { LocalImageActivation } from "../shared/local-image";
@@ -37,6 +37,8 @@ export interface TerminalSurface {
   selectAll(): void;
   // Opens the in-memory scrollback search bar, or focuses it when open.
   find(): void;
+  // Reads selection or retained screen/history without changing interaction state.
+  exportText(kind: TerminalExportKind): string;
   dispose(): void;
 }
 
@@ -44,9 +46,13 @@ export interface TerminalClipboard {
   writeText(text: string): Promise<void>;
   readText(): Promise<string>;
   confirmPaste(text: string): Promise<boolean>;
-  // The Surface sends no request; a pane host may add one.
-  requestContextMenu(request?: TerminalContextMenuRequest): void;
+  // Local descriptor only: the pane host attaches popup/session identity.
+  requestContextMenu(request: TerminalContextMenuDescriptor): void;
 }
+
+export type TerminalContextMenuDescriptor =
+  | { readonly target: "terminal"; readonly hasSelection: boolean }
+  | { readonly target: "field" };
 
 export interface TerminalAppearance {
   readonly fontSize?: number;

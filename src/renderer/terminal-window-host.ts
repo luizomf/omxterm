@@ -17,7 +17,6 @@ import type { AboutBridge } from "../shared/about";
 import type { TerminalSessionAdapter } from "../terminal-surface/terminal-session-adapter";
 import {
   mountTerminalSurface,
-  type TerminalClipboard,
   type TerminalSurface,
   type TerminalSurfaceConfiguration,
   type TerminalSurfaceOptions,
@@ -27,7 +26,12 @@ import type { TerminalRendererConfiguration } from "../shared/user-configuration
 import type { TerminalTheme } from "../shared/terminal-theme";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
-import { createTerminalTabs, type TerminalTabs } from "./terminal-tabs";
+import {
+  createTerminalTabs,
+  type TerminalTabs,
+  type TerminalTabsOptions,
+} from "./terminal-tabs";
+import type { TerminalHostClipboard } from "./terminal-pane-context-menu";
 import type { WindowSnippetsSource } from "./snippets-host";
 import { subscribeToWindowTools } from "./window-tool-subscriptions";
 import type { SnippetPreview } from "./snippet-preview";
@@ -89,7 +93,7 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
   ) => () => void;
   readonly userFileErrorBanner?: HTMLElement;
   readonly surfaceFailureBanner?: HTMLElement;
-  readonly clipboard?: TerminalClipboard;
+  readonly clipboard?: TerminalHostClipboard;
   readonly droppedFilePathInsertion?: (files: readonly File[]) => string;
   readonly subscribeToTabTitles?: (
     listener: (sessionId: TerminalSessionId, title: string) => void,
@@ -118,6 +122,7 @@ export interface TerminalWindowPageHost {
   dispose(): void;
 }
 
+// eslint-disable-next-line complexity, max-lines-per-function -- Keep the window's overlay and subscription lifetimes together.
 export function mountTerminalWindowPage(
   elements: TerminalWindowPageElements,
   options: TerminalWindowPageOptions,
@@ -166,7 +171,7 @@ export function mountTerminalWindowPage(
     language,
     options,
   );
-  const surfaceOptions: TerminalSurfaceOptions = {
+  const surfaceOptions: TerminalTabsOptions["surfaceOptions"] = {
     ...activeSurfaceConfiguration,
     background: "host",
     focus: false,
@@ -187,13 +192,23 @@ export function mountTerminalWindowPage(
     ...pageLabels.surfaceOptions,
   };
 
+  const { clipboard: _hostClipboard, ...fieldOptions } = options;
+  const fieldClipboard = options.clipboard
+    ? {
+        ...options.clipboard,
+        requestContextMenu: (
+          request: import("../terminal-surface/terminal-surface").TerminalContextMenuDescriptor,
+        ) =>
+          tabs.fieldClipboard(options.clipboard)?.requestContextMenu(request),
+      }
+    : undefined;
   const companion = createCompanionContent(
     elements.tabsContainer,
     elements.auxiliaryPanel,
     options.hostedContent,
     {
       language,
-      clipboard: options.clipboard,
+      ...(fieldClipboard ? { clipboard: fieldClipboard } : {}),
       focusTerminal: () => tabs.focusSelected(),
       blocked: previewActive,
     },
@@ -278,7 +293,10 @@ export function mountTerminalWindowPage(
 
   const { dialogs, palette: mountedPalette } = mountWindowOverlays(
     page.document,
-    options,
+    {
+      ...fieldOptions,
+      ...(fieldClipboard ? { clipboard: fieldClipboard } : {}),
+    },
     tabs,
     language,
     () => !disposed && !previewActive(),
@@ -358,20 +376,27 @@ export function mountTerminalWindowPage(
   // Command reception must not wait for the first Surface's mount settlement.
   // Pending tabs already own cancellation; unavailable Surface actions are no-ops.
   try {
-    const tools = subscribeToWindowTools(page.document, options, {
-      tabs,
-      panel: auxiliaryPanel,
-      language,
-      blocked: previewActive,
-      semanticBlocked: companion.presentation.isInputBlocked,
-      onPreviewActivity: onOverlayActivity,
-      modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
-      focusTerminal: companion.focusTerminal,
-      sourceForeground: companion.isSourceForeground,
-      sourceSelected: companion.isSourceSelected,
-      restoreSourceFocus: companion.restoreSourceFocus,
-      togglePanelSide: companion.toggleSide,
-    });
+    const tools = subscribeToWindowTools(
+      page.document,
+      {
+        ...fieldOptions,
+        ...(fieldClipboard ? { clipboard: fieldClipboard } : {}),
+      },
+      {
+        tabs,
+        panel: auxiliaryPanel,
+        language,
+        blocked: previewActive,
+        semanticBlocked: companion.presentation.isInputBlocked,
+        onPreviewActivity: onOverlayActivity,
+        modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
+        focusTerminal: companion.focusTerminal,
+        sourceForeground: companion.isSourceForeground,
+        sourceSelected: companion.isSourceSelected,
+        restoreSourceFocus: companion.restoreSourceFocus,
+        togglePanelSide: companion.toggleSide,
+      },
+    );
     clearFilesDrop = tools.clearFileDrop;
     snippetPreview = tools.preview;
     removeToolSubscriptions = tools.unsubscribe;
@@ -405,7 +430,10 @@ function localImageSurfaceOptions(
   blocked: () => boolean,
   listeners: Set<() => void>,
   activate: (source: LocalImageActivation) => void,
-): Partial<TerminalSurfaceOptions> {
+): Pick<
+  TerminalSurfaceOptions,
+  "linkHoverAvailability" | "onLocalImageActivation"
+> {
   return load
     ? {
         linkHoverAvailability: {

@@ -107,6 +107,7 @@ async function mountHost(instrumented: boolean, builtInSnippets: boolean) {
     copy: vi.fn(),
     paste: vi.fn(),
     selectAll: vi.fn(),
+    exportText: vi.fn(() => ""),
     find: vi.fn(),
   };
   const adapter = {

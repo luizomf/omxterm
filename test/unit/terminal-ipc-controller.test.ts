@@ -148,7 +148,7 @@ describe("terminal IPC controller", () => {
     expect(secondSession.write).toHaveBeenCalledWith("second window input");
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
-    expect(ipc.handlers.size).toBe(11);
+    expect(ipc.handlers.size).toBe(12);
     expect(ipc.listeners.size).toBe(13);
   });
 
@@ -778,6 +778,11 @@ describe("terminal IPC controller", () => {
     expect(clipboard.confirmPaste).not.toHaveBeenCalled();
     expect(session.write).not.toHaveBeenCalled();
 
+    contextMenu(
+      { sender: webContents, senderFrame: mainFrame },
+      { target: "terminal", hasSelection: true },
+    );
+    expect(clipboard.showClipboardContextMenu).not.toHaveBeenCalled();
     contextMenu({ sender: webContents, senderFrame: mainFrame });
     expect(clipboard.showClipboardContextMenu).toHaveBeenCalledOnce();
   });

@@ -2004,7 +2004,7 @@ it.each(["selection", "new-popup", "window"])(
       isFocusedSession: () => focused,
       show() {},
     });
-    const target = { sessionId: "s1", menuId: 1 };
+    const target = { sessionId: "s1", menuId: 1, hasSelection: false };
     popup.show(target);
     const item = service.contextMenu(window, target.sessionId, () =>
       popup.claim(target),
@@ -2027,7 +2027,7 @@ it("consumes a valid popup once before guarded renderer admission", async () => 
     isFocusedSession: () => true,
     show() {},
   });
-  const target = { sessionId: "s1", menuId: 1 };
+  const target = { sessionId: "s1", menuId: 1, hasSelection: false };
   popup.show(target);
   const item = service.contextMenu(window, target.sessionId, () =>
     popup.claim(target),
