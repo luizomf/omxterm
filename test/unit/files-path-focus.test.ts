@@ -30,7 +30,10 @@ function fixture() {
     deliverAndReport: vi.fn(() => delivery),
     onUnavailable: () => () => {},
   };
+  const area = document.createElement("main");
+  document.body.append(area);
   const tabs = {
+    fileDropArea: () => area,
     captureSnippetTarget: () => target,
     selectionRevision: () => 7,
     selectedSessionId: () => "s1",
@@ -50,7 +53,13 @@ function fixture() {
   };
   const tools = subscribeToWindowTools(
     document,
-    { semanticInput: bridge },
+    {
+      semanticInput: bridge,
+      filesTerminalDrag: {
+        claim: () => true,
+        handoff: () => new Promise(() => {}),
+      },
+    },
     {
       tabs,
       panel: undefined,
@@ -65,13 +74,14 @@ function fixture() {
     },
   );
   cleanups.push(tools.unsubscribe, tools.preview.dispose);
-  const act = () =>
+  const act = (drop = false) =>
     command({
       kind: "request",
       id: "11111111-1111-4111-8111-111111111111",
       source: "22222222-2222-4222-8222-222222222222",
       revision: 7,
       waitForDelivery: true,
+      ...(drop ? { dropTicket: "33333333-3333-4333-8333-333333333333" } : {}),
       input: {
         operation: "terminal.semanticInput.v1",
         text: "'/file'",
@@ -82,6 +92,26 @@ function fixture() {
     });
   return {
     act,
+    startDrop() {
+      const event = new Event("drop", { bubbles: true, cancelable: true });
+      Object.defineProperty(event, "dataTransfer", {
+        value: {
+          types: [
+            "application/x-omxterm-files-entry",
+            "application/x-omxterm-files-terminal",
+          ],
+          files: [],
+          getData: (type: string) =>
+            type.endsWith("-entry")
+              ? "1"
+              : "33333333-3333-4333-8333-333333333333",
+        },
+      });
+      area.dispatchEvent(event);
+    },
+    coreFocused() {
+      foreground = false;
+    },
     finish,
     target,
     focusTerminal,
@@ -100,6 +130,38 @@ function fixture() {
     },
   };
 }
+
+it("focuses a successful still-current drop's captured input when native focus already moved from the source to core", async () => {
+  const f = fixture();
+  f.startDrop();
+  f.coreFocused();
+  f.act(true);
+  f.finish(true);
+  await vi.waitFor(() => expect(f.focusTerminal).toHaveBeenCalledOnce());
+  f.focus();
+  expect(f.target.focus).toHaveBeenCalledOnce();
+});
+
+it.each(["blocked", "source", "field", "incomplete"])(
+  "does not steal focus after a captured drop's %s change",
+  async (cause) => {
+    const f = fixture();
+    f.startDrop();
+    f.act(true);
+    if (cause === "blocked") f.blockSemantic();
+    if (cause === "source") f.switchSource();
+    if (cause === "field") {
+      const input = document.createElement("input");
+      document.body.append(input);
+      input.focus();
+    }
+    f.finish(cause !== "incomplete");
+    await Promise.resolve();
+    await Promise.resolve();
+    f.focus();
+    expect(f.target.focus).not.toHaveBeenCalled();
+  },
+);
 
 it("refuses an insertion while presentation or an overlay blocks input", async () => {
   const f = fixture();

@@ -433,7 +433,15 @@ lexical quoting and Protected Paste into the action-time captured Surface; its
 visible menu action and Shift+Enter row shortcut add no Enter. Focus returns
 only while the captured target remains selected. Incomplete or unknown delivery
 is not automatically retried. This needs a future archive and a host supporting
-`terminal.insertPath.v1`; published Files0.6/0.7 remain unchanged.
+`terminal.insertPath.v1`; published Files0.6/0.7 remain unchanged. Its composed
+terminal drop offers copy only over the selected tab's focused live terminal area,
+with a bounded localized candidate. One path-free, single-use main ticket binds
+the authenticated Files gesture to the exact drop-turn pane/Surface and selection
+revision. Shared Protected Paste stops Mirror Typing and adds no Enter; stale,
+mixed/native/tab and blocked input is refused. Source hide/retirement revokes
+unaccepted authority; dragend alone cannot revoke a claimed drop. Local notices
+and successful still-current captured-input focus use the existing owners, not
+a second PTY/focus route. Native/product/package qualification remains separate.
 Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.
@@ -467,10 +475,9 @@ see [the preview contract](docs/files-development-preview.md) for qualification 
 owned by main for one installed Files view/epoch/window, not a path or terminal
 input capability. Core claims it synchronously once before asynchronous handoff;
 dragend revokes only unclaimed tickets, while view/window/epoch loss and the
-ten-second deadline revoke both phases. The source-only increment stays
-move-only without an available protected consumer and exposes no live terminal
-copy/insert target. Final insertion must reuse the captured-pane Protected Paste
-owner; see the [transport seam](docs/files-development-preview.md#terminal-drag-transport-source-increment).
+ten-second deadline revoke both phases. Without a protected consumer the source
+stays move-only. Current source composes the shared captured-pane Protected Paste
+owner for one eligible terminal-area drop; see the [transport seam](docs/files-development-preview.md#terminal-drag-transport-source-increment).
 
 **Extension View Host** — Internal owner of lazy native packaged-content views
 and their reads in a nonpersistent epoch, retaining an immutable package-version

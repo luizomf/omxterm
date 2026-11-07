@@ -132,6 +132,7 @@ export const englishMessages = {
   "chrome.closeWindow": "Close Window",
 
   "terminal.surface": "Terminal Surface",
+  "terminal.filesDropCandidate": "Drop to insert path (not run)",
   "terminal.sshExit": "SSH exited (code {code}).",
   "layout.initializing":
     "Opening saved layout: {settled}/{total} panes; {fallbacks} folder fallbacks; {failed} unavailable panes.",

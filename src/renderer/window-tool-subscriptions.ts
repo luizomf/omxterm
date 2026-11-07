@@ -2,6 +2,8 @@ import type { ExtensionsBridge } from "../shared/extensions";
 import { openPanelDefault } from "./panel-default";
 import type { SemanticInputBridge } from "../shared/semantic-input";
 import { createSemanticInput } from "./semantic-input";
+import { createFilesTerminalDropTarget } from "./files-terminal-drop-target";
+import { installWindowFileDrops } from "./window-file-drops";
 import { subscribeNativeSemanticInput } from "./native-semantic-input";
 import type { SettingsBridge } from "../shared/settings";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
@@ -24,6 +26,8 @@ export function subscribeToWindowTools(
   document: Document,
   options: TerminalWindowActionSubscriptions & {
     semanticInput?: SemanticInputBridge;
+    filesTerminalDrag?: import("../shared/files-terminal-drag").FilesTerminalDragBridge;
+    droppedFilePathInsertion?: (files: readonly File[]) => string;
     extensions?: ExtensionsBridge;
     settings?: SettingsBridge;
     snippets?: WindowSnippetsSource;
@@ -51,16 +55,33 @@ export function subscribeToWindowTools(
   let removePanel: (() => void) | undefined;
   const semanticBlocked = () =>
     owner.blocked() || owner.semanticBlocked?.() === true;
+  const dropTarget = createFilesTerminalDropTarget(
+    document,
+    options.semanticInput ? options.filesTerminalDrag : undefined,
+    tabs,
+    owner.language,
+    semanticBlocked,
+  );
+  const removeDrops = installWindowFileDrops(
+    document,
+    owner.blocked,
+    tabs.injectText,
+    options.droppedFilePathInsertion,
+    dropTarget,
+  );
   const input = createSemanticInput(document, {
     language: owner.language,
     capture: tabs.captureSnippetTarget,
     blocked: semanticBlocked,
     focusTerminal: owner.focusTerminal ?? tabs.focusSelected,
-    focusCapturedTarget: (target, source) => {
+    focusCapturedTarget: (target, source, drop) => {
       if (
         semanticBlocked() ||
         !target.isCurrent?.() ||
-        (source && owner.sourceForeground?.(source) !== true)
+        (source &&
+          (drop
+            ? owner.sourceSelected?.(source)
+            : owner.sourceForeground?.(source)) !== true)
       )
         return;
       const focus = () => {
@@ -87,6 +108,7 @@ export function subscribeToWindowTools(
     removeSettings?.();
     removeNative?.();
     removePanel?.();
+    removeDrops();
   };
   try {
     removeActions = subscribeToGuardedActions(
@@ -144,11 +166,16 @@ export function subscribeToWindowTools(
         tabs.selectionRevision,
         owner.restoreSourceFocus ?? (() => false),
         tabs.selectedSessionId,
+        dropTarget.takeTarget,
       );
     removeSettings = options.settings?.onOpen(() => {
       if (!disposed && !owner.blocked()) tabs.openSettings();
     });
-    return { preview: input.preview, unsubscribe };
+    return {
+      preview: input.preview,
+      unsubscribe,
+      clearFileDrop: dropTarget.clear,
+    };
   } catch (error) {
     unsubscribe();
     input.preview.dispose();

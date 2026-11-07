@@ -199,7 +199,7 @@ export function startExtensionViewHost(
     ...options,
     filesDrag: options.filesTerminalDrop
       ? {
-          start: (value, context, signal) =>
+          start: (value, context, signal, report) =>
             ownerRoute.filesDrag.start(
               value,
               context,
@@ -207,6 +207,7 @@ export function startExtensionViewHost(
                 ? AbortSignal.any([signal, options.filesDragSignal])
                 : signal,
               options.filesTerminalDrop!,
+              report,
             ),
           end: ownerRoute.filesDrag.end,
           revoke: ownerRoute.filesDrag.revoke,

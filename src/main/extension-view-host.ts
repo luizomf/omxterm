@@ -102,6 +102,9 @@ export interface ExtensionViewHostOptions {
           value: unknown,
           context: ExtensionViewRequestContext,
           signal: AbortSignal,
+          report: (
+            result: import("../shared/files-terminal-drag").FilesDragResult,
+          ) => void,
         ): string | null;
         end(id: string, ticket: unknown): void;
         revoke(id?: string): void;
@@ -601,6 +604,16 @@ class NativeExtensionViewHost {
         args[0],
         this.#captureVisible(entry),
         entry.abort.signal,
+        (result) => {
+          if (
+            this.#live() &&
+            this.#currentlyVisible(entry) &&
+            !entry.closing &&
+            !entry.rendererGone &&
+            !contents.isDestroyed()
+          )
+            notify(() => contents.send(filesTerminalDragIpc.result, result));
+        },
       );
     });
     contents.ipc.on(filesTerminalDragIpc.end, (event, ...args: unknown[]) => {

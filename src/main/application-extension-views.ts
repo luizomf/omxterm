@@ -1,9 +1,8 @@
 import { isSemanticInputRequest } from "../shared/semantic-input";
 import {
-  formatFilePathInsertion,
-  isFilePathPlatform,
-} from "../shared/file-path-insertion";
-import { MAX_SNIPPET_BODY_LENGTH } from "../shared/terminal-snippets";
+  createFilesPathInsertion,
+  createFilesTerminalDropInsertion,
+} from "./files-path-insertion";
 import { ipcMain, type BrowserWindow } from "electron";
 import type { HostedContentDescriptor } from "../shared/extension-view";
 import path from "node:path";
@@ -32,6 +31,7 @@ export function applicationViews(
   currentTarget: (window: BrowserWindow) => ExtensionTarget | undefined,
 ) {
   const window = target.owner as BrowserWindow;
+  const lifetime = AbortSignal.any([epochSignal, target.signal]);
   const filesDirectory =
     target.presentation === "panel" && pin.manifest.id === "omxterm.files"
       ? createFilesTerminalDirectory({
@@ -47,13 +47,19 @@ export function applicationViews(
   const view = pin.manifest.view!;
   const viewOwner = {};
   if (target.mirrorContext)
-    options.mirrorTyping?.bind(
-      window,
-      target.mirrorContext,
-      AbortSignal.any([epochSignal, target.signal]),
-    );
+    options.mirrorTyping?.bind(window, target.mirrorContext, lifetime);
   let viewId: string | undefined;
   let descriptor: HostedContentDescriptor | undefined;
+  const pathRequest = createFilesPathInsertion(
+    (input, signal, context, dropTicket) =>
+      semanticRequest(
+        input,
+        signal,
+        context,
+        dropTicket ? { dropTicket } : true,
+      ),
+  );
+  const insertDrop = createFilesTerminalDropInsertion(pathRequest);
   const host = startExtensionViewHost({
     ipcMain,
     owner: window,
@@ -70,24 +76,24 @@ export function applicationViews(
     onKeybind: options.keybind,
     subscribeSelection: (listener) =>
       options.semanticInput?.subscribeSelection(window, listener) ?? (() => {}),
-    filesDragSignal: AbortSignal.any([epochSignal, target.signal]),
+    filesDragSignal: lifetime,
     filesTerminalDrop:
       target.presentation === "panel" &&
       pin.manifest.id === "omxterm.files" &&
-      options.filesTerminalDrop
+      (options.filesTerminalDrop ||
+        (options.semanticInput &&
+          pin.manifest.capabilities?.includes("terminal.insertPath.v1")))
         ? (input) => {
-            const signal = AbortSignal.any([
-              input.signal,
-              epochSignal,
-              target.signal,
-            ]);
+            const signal = AbortSignal.any([input.signal, lifetime]);
             if (signal.aborted || !input.source.isCurrentVisible())
               return Promise.resolve({ status: "refused" });
-            return options.filesTerminalDrop!(
-              window,
-              { ...input, signal },
-              admit,
-            );
+            if (options.filesTerminalDrop)
+              return options.filesTerminalDrop(
+                window,
+                { ...input, signal },
+                admit,
+              );
+            return insertDrop({ ...input, signal });
           }
         : undefined,
     onRequest(value, signal, context) {
@@ -152,41 +158,11 @@ export function applicationViews(
       if (state === "settled") retired();
     },
   });
-  function pathRequest(
-    value: Record<string, Value>,
-    signal: AbortSignal,
-    context: import("./extension-view-host").ExtensionViewRequestContext,
-  ) {
-    if (
-      Object.keys(value).sort().join() !== "operation,path" ||
-      !isFilePathPlatform(process.platform)
-    )
-      return Promise.resolve({ ok: false, reason: "invalid-path" });
-    const text = formatFilePathInsertion([value.path], process.platform);
-    if (!text || text.length > MAX_SNIPPET_BODY_LENGTH)
-      return Promise.resolve({ ok: false, reason: "invalid-path" });
-    // An embedded bracketed-paste terminator would escape the receiving
-    // program's paste mode. Refuse rather than change a literal path.
-    if (/\u001b\[201~|\u009b201~/u.test(text))
-      return Promise.resolve({ ok: false, reason: "unsafe-path" });
-    return semanticRequest(
-      {
-        operation: "terminal.semanticInput.v1",
-        text,
-        title: "File path",
-        intent: "insert",
-        preview: false,
-      },
-      signal,
-      context,
-      true,
-    );
-  }
   function semanticRequest(
-    value: Value,
+    value: Value | import("../shared/semantic-input").SemanticInputRequest,
     signal: AbortSignal,
     context: import("./extension-view-host").ExtensionViewRequestContext,
-    waitForDelivery = false,
+    waitForDelivery: boolean | { dropTicket: string } = false,
   ) {
     if (
       !pin.manifest.capabilities?.includes(
@@ -200,13 +176,15 @@ export function applicationViews(
     )
       return Promise.reject(new PackageError("unavailable"));
     host.claimActivation(context.id);
+    const delivery: [options?: boolean | { dropTicket: string }] =
+      waitForDelivery ? [waitForDelivery] : [];
     return options.semanticInput.request(
       window,
       value,
       context,
-      AbortSignal.any([signal, epochSignal, target.signal]),
+      AbortSignal.any([signal, lifetime]),
       admit,
-      ...(waitForDelivery ? ([true] as const) : []),
+      ...delivery,
     );
   }
   function revokeMirror() {
@@ -244,7 +222,7 @@ export function applicationViews(
       await admit(signal, () => {
         capture = options.layout.capture(
           window,
-          AbortSignal.any([signal, epochSignal, target.signal]),
+          AbortSignal.any([signal, lifetime]),
         );
       });
       return capture;

@@ -476,7 +476,7 @@ async function installSnippets() {
   return installTool("omxterm.snippets", "Snippets");
 }
 
-async function installTool(id: string, title: string) {
+async function installTool(id: string, title: string, capabilities?: string[]) {
   await writeFile(
     archive,
     packageArchive([
@@ -485,6 +485,7 @@ async function installTool(id: string, title: string) {
         data: JSON.stringify({
           ...manifest,
           id,
+          ...(capabilities?.length ? { capabilities } : {}),
           view: {
             ...manifest.view,
             action: `${id}.open`,
@@ -525,6 +526,7 @@ it.each(["omxterm.files", "omxterm.ssh"])(
       return;
     }
     const input = {
+      ticket: "00000000-0000-4000-8000-000000000001",
       entry: { path: "/synthetic/a b", kind: "file" as const, entryToken: "1" },
       source: { id: "hosted-view", isCurrentVisible: () => true },
       revision: 3,
@@ -545,6 +547,71 @@ it.each(["omxterm.files", "omxterm.ssh"])(
       status: "refused",
     });
     expect(consumer).toHaveBeenCalledOnce();
+  },
+);
+
+it.each([false, true])(
+  "composes the protected Files drop only with the declared path capability (%s)",
+  async (declared) => {
+    await installTool(
+      "omxterm.files",
+      "Files",
+      declared ? ["terminal.insertPath.v1"] : [],
+    );
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+    const host = adapters.hosts[0]!;
+    if (!declared) {
+      expect(host.options.filesTerminalDrop).toBeUndefined();
+      return;
+    }
+    const input = {
+      ticket: "00000000-0000-4000-8000-000000000001",
+      entry: { path: "/root/a 'b'", kind: "link" as const, entryToken: "1" },
+      source: {
+        id: "authenticated-native-view",
+        isCurrentVisible: vi.fn(() => true),
+      },
+      revision: 7,
+      signal: new AbortController().signal,
+    };
+    adapters.semanticRequest.mockResolvedValue({ ok: true });
+    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+      status: "accepted",
+    });
+    expect(adapters.semanticRequest).toHaveBeenCalledExactlyOnceWith(
+      window,
+      {
+        operation: "terminal.semanticInput.v1",
+        text: "'/root/a '\\''b'\\'''",
+        title: "File path",
+        intent: "insert",
+        preview: false,
+      },
+      expect.objectContaining({
+        id: input.source.id,
+        actionSelectionRevision: 7,
+      }),
+      expect.any(AbortSignal),
+      expect.any(Function),
+      { dropTicket: input.ticket },
+    );
+    expect(adapters.activate).toHaveBeenCalledOnce(); // No insertion backend/second PTY route.
+    for (const [reply, status] of [
+      [{ ok: false, reason: "terminal-busy" }, "refused"],
+      [{ ok: false, reason: "terminal-not-completed" }, "unknown"],
+    ] as const) {
+      adapters.semanticRequest.mockResolvedValue(reply);
+      expect(await host.options.filesTerminalDrop!(input)).toEqual({
+        status,
+        reason: reply.reason,
+      });
+    }
+    input.source.isCurrentVisible.mockReturnValue(false);
+    expect(await host.options.filesTerminalDrop!(input)).toEqual({
+      status: "refused",
+    });
+    expect(adapters.semanticRequest).toHaveBeenCalledTimes(3);
   },
 );
 
@@ -593,6 +660,7 @@ it("delivers each Files drop's captured owner despite another window becoming fo
   expect(first.options.owner).toBe(window);
   expect(second.options.owner).toBe(otherWindow);
   const input = {
+    ticket: "00000000-0000-4000-8000-000000000001",
     entry: { path: "/synthetic/a b", kind: "file" as const, entryToken: "1" },
     source: { id: "hosted-view", isCurrentVisible: () => true },
     revision: 3,

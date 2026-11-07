@@ -87,6 +87,19 @@ if (process.isMainFrame) {
     undefined,
     false,
   );
+  const onFilesTerminalDrop = subscription(
+    "files-terminal-drag:result",
+    (value) =>
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      ["accepted", "refused", "unknown"].includes(value.status) &&
+      Object.keys(value).every((key) => key === "status" || key === "reason") &&
+      (value.reason === undefined ||
+        (typeof value.reason === "string" && value.reason.length <= 64)),
+    undefined,
+    false,
+  );
   // These stamps stay private to the app-owned preload. Package code can
   // neither pick a terminal nor reuse a previous gesture's observation.
   let selectionRevision;
@@ -119,6 +132,7 @@ if (process.isMainFrame) {
     onActivity,
     onLanguage,
     onFocusIntent,
+    onFilesTerminalDrop,
     // Synchronous, bounded and main-owned: dragstart must finish writing its
     // opaque DataTransfer ticket before Chromium leaves the child view.
     beginFilesTerminalDrag(value) {

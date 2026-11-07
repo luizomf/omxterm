@@ -312,6 +312,7 @@ describe("hosted child preload subscriptions and requests", () => {
       "endFilesTerminalDrag",
       "onActivity",
       "onAppearance",
+      "onFilesTerminalDrop",
       "onFocusIntent",
       "onLanguage",
       "onVisibility",

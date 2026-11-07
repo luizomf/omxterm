@@ -34,6 +34,8 @@ export type SemanticInputCommand =
       revision: number;
       input: SemanticInputRequest;
       waitForDelivery?: true;
+      // Internal core capture retained synchronously by a Files drop, not a target selector.
+      dropTicket?: string;
     }
   | { kind: "revoke"; id: string };
 export type SemanticInputReply =
@@ -100,6 +102,7 @@ export function isSemanticInputCommand(
       "revision",
       "input",
       ...("waitForDelivery" in value ? ["waitForDelivery"] : []),
+      ...("dropTicket" in value ? ["dropTicket"] : []),
     ]) &&
     value.kind === "request" &&
     isLayoutToken(value.id) &&
@@ -109,7 +112,9 @@ export function isSemanticInputCommand(
     (value.waitForDelivery === undefined ||
       (value.waitForDelivery === true &&
         value.input.intent === "insert" &&
-        !value.input.preview))
+        !value.input.preview)) &&
+    (value.dropTicket === undefined ||
+      (isLayoutToken(value.dropTicket) && value.waitForDelivery === true))
   );
 }
 export function isSemanticInputReply(

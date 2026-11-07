@@ -154,11 +154,11 @@ async function fixture() {
   const child = Object.assign(new EventEmitter(), {
     id: 2,
     mainFrame: {},
-    ipc: {
+    ipc: Object.assign(new EventEmitter(), {
       handle: (_channel: string, handler: typeof invokeHandler) => {
         invokeHandler = handler;
       },
-    },
+    }),
     isDestroyed: () => false,
     isFocused: () => false,
     getOSProcessId: () => 200,

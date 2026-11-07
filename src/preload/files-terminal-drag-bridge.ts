@@ -2,6 +2,7 @@ import {
   filesTerminalDragIpc,
   isFilesDragClaim,
   isFilesDragTicket,
+  isFilesDragResult,
   type FilesTerminalDragBridge,
 } from "../shared/files-terminal-drag";
 import { isSelectionRevision } from "../shared/semantic-input";
@@ -28,14 +29,11 @@ export function createFilesTerminalDragBridge(ipc: {
           ticket,
           revision,
         );
-        if (
-          value &&
-          typeof value === "object" &&
-          Object.keys(value).join() === "status" &&
-          "status" in value &&
-          (value.status === "accepted" || value.status === "refused")
-        )
-          return { status: value.status };
+        if (isFilesDragResult(value))
+          return {
+            status: value.status,
+            ...(value.reason ? { reason: value.reason } : {}),
+          };
         return { status: "unknown" };
       } catch {
         return { status: "unknown" };

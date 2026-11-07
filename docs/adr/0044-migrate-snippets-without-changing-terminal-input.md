@@ -145,11 +145,15 @@ Surface stops remaining chunks and final Enter.
 The independent Files terminal-drag source increment does not broaden this
 semantic-input capability. It transports one main-owned captured row behind an
 opaque single-use ticket, with synchronous core claim before asynchronous work.
-No protected consumer or live terminal copy target is enabled by that slice.
-Final composition must reuse #768's path quote/Protected Paste handoff with the
-drop's synchronously captured pane/Surface and selection revision, including the
-existing focus, native gesture and Mirror Typing owners; a transport ticket is
-never raw PTY authority. See the
+The composed source consumer reuses #768's path quote/Protected Paste handoff
+with the drop's synchronously captured pane/Surface and selection revision,
+including the existing focus, native gesture and Mirror Typing owners. Core
+consumes the original retained capture rather than capturing again when the
+semantic command returns; stale or missing capture is unavailable, not permission
+to retarget. Single-target tracked delivery adds no Enter. Source hide/retirement
+revokes unaccepted work, while accepted Surface-owned input remains independent.
+A transport ticket is never raw PTY authority. This source composition does not
+qualify native input or a published host/archive pair. See the
 [Files transport seam](../files-development-preview.md#terminal-drag-transport-source-increment).
 
 ### Catalog location and transport

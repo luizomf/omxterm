@@ -518,11 +518,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   paths into only the focused Terminal Pane of the selected tab. The paths retain platform order,
   are separated by one space, and are delivered through Protected Paste without
   sending Enter. Drag navigation is prevented over the whole renderer document.
-  Internal tab dragging only reorders tabs and never inserts a path; any other
-  drop with no native files has no terminal side effect. Files entry/candidate
-  MIME payloads, including mixtures with native files or tab drags, never fall
-  through to native-file insertion. The source transport below has no active
-  terminal target until its protected handoff consumer is composed.
+  Internal tab dragging only reorders tabs and never inserts a path. Apart from
+  the authenticated Files source route below, drops without native files have
+  no terminal side effect. Files entry/candidate MIME payloads, including mixtures
+  with native files or tab drags, never fall through to native-file insertion.
 - `View -> Reload User Configuration` defaults to `Cmd+Shift+,` on macOS and
   `Ctrl+Shift+,` on Linux and Windows. It manually rereads and validates the
   complete configuration. Successful application updates font-size baseline,
@@ -704,7 +703,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Explicit focus returns to terminal input rather than a retained search query;
   a newer companion selection or pending overlay prevents focus theft.
   This source behavior requires both a compatible new host and a future Files archive; installed
-  Files0.6 bytes remain unchanged.
+  Files0.6/0.7 bytes remain unchanged.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
   core while the panel remains visible; a background result does not steal focus.
@@ -2380,18 +2379,31 @@ its installed view/epoch/window; no path enters DataTransfer. With an available
 protected handoff consumer, the row adds a distinct terminal-candidate MIME and
 uses copyMove; internal directory targets still use move and require the same
 confirmation. Without that consumer registration is unavailable and the row
-remains move-only. Core exposes no active insert/copy target in this increment.
-A tested drop seam captures the eligible target synchronously, claims the exact
-terminal ticket and matching internal token once before any asynchronous work,
-then carries the captured selection revision to main. Dragend revokes unclaimed
+remains move-only. Current source composes the protected consumer for Files
+with its declared `terminal.insertPath.v1` capability. Only the selected tab's
+focused live pane's visible terminal area offers a localized bounded “Drop to
+insert path (not run)” candidate and copy cursor; other panes, chrome, tabs,
+panels, search controls, Settings, overlays and blocked presentations are inert.
+Candidate MIME/area feedback is not authorization. Drop synchronously captures
+the exact pane/Surface, DOM focus and selection revision and claims the exact
+terminal ticket plus matching internal token before any asynchronous work. Dragend revokes unclaimed
 rows but cannot erase a claimed drop by itself. Hide, retirement, window loss,
 blur/minimize, installation revocation and timeout revoke either phase without
 hide/reveal revival. Mixed/native/tab, forged, expired or replayed claims are
-refused. Results distinguish refused, unknown and consumer-accepted handoff;
-acceptance is not evidence of shell/program consumption. No string/URI is parsed
-as a path, no filesystem lookup occurs, and no PTY/paste route is added.
-Composition must reuse #768's quote/Protected Paste owner and captured-pane focus,
-not recapture a successor; this source increment does not ship terminal insertion.
+refused. Control-bearing paths are refused without rewriting; ordinary spaces
+and quotes survive. The shared main path formatter and protected handoff retain
+the captured owner/revision. A private ticket binds the returning semantic
+request to the original renderer Surface, consumed once, never recaptured.
+Stale selection/Surface/DOM focus and blocked presentation refuse admission.
+The Surface stops Mirror Typing before ordinary single-target Protected Paste
+with no added Enter. Visible Files receives localized accepted, refused,
+incomplete or unknown notices. Successful still-current completion focuses only
+the captured pane's input through the native presentation owner; newer tool,
+field, pane or overlay intent suppresses that focus. Unknown results are never
+retried. Accepted Surface-owned work is independent of source retirement;
+Surface termination stops remaining chunks. Acceptance is not evidence of
+shell/program consumption. No string/URI parsing, filesystem lookup or second
+PTY/paste route is added. Native product qualification remains separate.
 See the [transport seam](files-development-preview.md#terminal-drag-transport-source-increment).
 
 The page follows the host's explicit en-US/pt-BR
@@ -2407,12 +2419,12 @@ moves and one-shot permanent-delete confirmation remain unchanged. See the
 [Files interaction contract](files-development-preview.md#concrete-consumer).
 
 Files archive version/compatibility is maintained separately from the host.
-Source Files0.7.0 retains preparation metadata
-`>=0.25.0-dev.10` / API `0.1.x`, the neutral ARM64 preview name and existing host
-services. It packages integrated filtering/keyboard, confirmed directory moves
-and selected-path insertion, but not Files-to-terminal drag. Insertion additionally
-requires `terminal.insertPath.v1`; an older host rejects that declaration even
-when the engine range matches. The integration maintainer must align the future
+Published Files0.7.0 uses `>=0.25.0-dev.10` / API `0.1.x`, the neutral ARM64
+preview name and existing host services for filtering/keyboard and confirmed
+directory moves, without terminal insertion/drop. Newer source retains that
+metadata but adds selected-path insertion and Files-to-terminal drop requiring
+`terminal.insertPath.v1`; an older host rejects the declaration even when the
+engine range matches. Published Files0.7 bytes must not be replaced. The integration maintainer must align the future
 archive identity and minimum host/catalog compatibility with this capability
 before publication; the retained engine floor does not establish dev.10 support.
 Older hosts are unqualified for these combined bytes; no native/package or

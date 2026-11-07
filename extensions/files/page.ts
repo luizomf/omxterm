@@ -18,6 +18,7 @@ import {
   FILES_TERMINAL_DRAG_TYPE,
   isFilesDragTicket,
   type FilesDragEntry,
+  type FilesDragResult,
 } from "../../src/shared/files-terminal-drag.js";
 
 type Label = (messages: FilesMessages) => string;
@@ -47,6 +48,9 @@ export function mountFilesPage(
     request(value: unknown): Promise<Reply>;
     beginFilesTerminalDrag?(value: FilesDragEntry): string | null;
     endFilesTerminalDrag?(ticket: string): void;
+    onFilesTerminalDrop?(
+      listener: (result: FilesDragResult) => void,
+    ): () => void;
     onVisibility?(listener: (visible: boolean) => void): () => void;
     onLanguage?(listener: (language: SupportedLanguage) => void): () => void;
     onFocusIntent?(
@@ -858,6 +862,23 @@ export function mountFilesPage(
     showDotfiles = !showDotfiles;
     render(tree.snapshot());
   }
+  function reportInsertion(reason?: string) {
+    message(
+      (m) =>
+        reason === "terminal-busy"
+          ? m.insertPathBusy
+          : reason === "terminal-unavailable"
+            ? m.insertPathUnavailable
+            : reason === "terminal-not-completed"
+              ? m.insertPathIncomplete
+              : reason === "invalid-path"
+                ? m.insertPathInvalid
+                : reason === "unsafe-path"
+                  ? m.insertPathUnsafe
+                  : m.insertPathUnknown,
+      "error",
+    );
+  }
   async function insertPath(target: Target) {
     if (disposed || !visible) return;
     if (insertionPending) {
@@ -889,21 +910,7 @@ export function mountFilesPage(
           labels.delete(notice);
         }
       } else {
-        message(
-          (m) =>
-            reply.reason === "terminal-busy"
-              ? m.insertPathBusy
-              : reply.reason === "terminal-unavailable"
-                ? m.insertPathUnavailable
-                : reply.reason === "terminal-not-completed"
-                  ? m.insertPathIncomplete
-                  : reply.reason === "invalid-path"
-                    ? m.insertPathInvalid
-                    : reply.reason === "unsafe-path"
-                      ? m.insertPathUnsafe
-                      : m.insertPathUnknown,
-          "error",
-        );
+        reportInsertion(reply.reason);
       }
     } catch {
       if (!disposed) message((m) => m.insertPathUnknown, "error");
@@ -1541,6 +1548,16 @@ export function mountFilesPage(
       tooltips.reset();
     }
   });
+  const unsubscribeDrop = bridge.onFilesTerminalDrop?.((result) => {
+    if (disposed || !visible) return;
+    if (result.status === "accepted")
+      message((m) => m.insertPathAccepted, "success");
+    else
+      reportInsertion(
+        result.reason ??
+          (result.status === "refused" ? "terminal-unavailable" : undefined),
+      );
+  });
   document.documentElement.lang = "en-US";
   const unsubscribeFocus = bridge.onFocusIntent?.((intent) => {
     if (disposed || !visible) return;
@@ -1586,6 +1603,7 @@ export function mountFilesPage(
       resetDrag();
       discardConfirmation();
       unsubscribeVisibility?.();
+      unsubscribeDrop?.();
       unsubscribeLanguage?.();
       unsubscribeFocus?.();
       tooltips.dispose();

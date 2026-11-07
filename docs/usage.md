@@ -376,7 +376,19 @@ selected when the action is requested. If the paste completes, focus returns to
 that terminal when it is still selected; changing panes does not redirect it.
 Files explains unavailable, busy or incomplete requests. If the result is
 unknown, check the terminal before trying again. This action needs a future
-Files archive and a host that understands it; it is not in published Files0.6.
+Files archive and a host that understands it; it is not in published Files0.6/0.7.
+
+Newer source also accepts one Files row dropped **only on the focused live pane's
+visible terminal area**. The copy cursor and **Drop to insert path (not run)**
+hint mark a candidate, not guaranteed acceptance. Other panes, tabs, panels,
+search controls and overlays do not accept it. The protected handoff captures
+that exact pane, never switches to a newer one, stops Mirror Typing and adds no
+Enter. Spaces and quotes are preserved; control-bearing paths and mixed/external
+payloads are refused. Files explains the outcome. Successful still-current
+completion focuses that pane's input; a failure or newer focus intent does not
+move focus. Keyboard Insert path/Shift+Enter and confirmed folder moves remain
+separate alternatives. This source composition still needs native qualification
+and a newly versioned archive; published Files0.6/0.7 remain unchanged.
 
 These source changes are not a release and do not replace published archives.
 Recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts admit unchanged Files0.6

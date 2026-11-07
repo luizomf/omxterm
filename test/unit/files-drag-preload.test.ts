@@ -30,7 +30,27 @@ it("uses the actual main-frame child preload for bounded synchronous registratio
   const bridge = exposeInMainWorld.mock.calls[0]![1] as {
     beginFilesTerminalDrag(value: unknown): string | null;
     endFilesTerminalDrag(value: unknown): void;
+    onFilesTerminalDrop(listener: (result: unknown) => void): () => void;
   };
+  const result = vi.fn();
+  const removeResult = bridge.onFilesTerminalDrop(result);
+  const publish = handlers.get("files-terminal-drag:result")!;
+  for (const value of [
+    null,
+    { status: "accepted", path: "/private" },
+    { status: "bad" },
+    { status: "refused", reason: "a".repeat(65) },
+  ])
+    publish({}, value);
+  expect(result).not.toHaveBeenCalled();
+  publish({}, { status: "refused", reason: "terminal-busy" });
+  expect(result).toHaveBeenCalledExactlyOnceWith({
+    status: "refused",
+    reason: "terminal-busy",
+  });
+  removeResult();
+  publish({}, { status: "accepted" });
+  expect(result).toHaveBeenCalledOnce();
   const entry = { path: "/synthetic", kind: "file", entryToken: "1" };
   expect(bridge.beginFilesTerminalDrag(entry)).toBeNull();
   expect(ipc.sendSync).not.toHaveBeenCalled();

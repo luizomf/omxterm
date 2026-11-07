@@ -3,7 +3,15 @@ import { createSnippetPreview } from "./snippet-preview";
 import type { SnippetTarget } from "./snippet-target";
 import type { RendererLanguage } from "./renderer-language";
 
-/** Core owns capture and delivery; callers supply intent, never a target. */
+type InputSource = string | { source: string; target: SnippetTarget };
+function focusArguments(
+  source?: InputSource,
+): [source?: string, drop?: boolean] {
+  if (typeof source === "object") return [source.source, true];
+  return source ? [source] : [];
+}
+
+/** Core owns capture and delivery; packages supply intent, never a target. */
 export function createSemanticInput(
   document: Document,
   options: {
@@ -13,6 +21,7 @@ export function createSemanticInput(
     readonly focusCapturedTarget?: (
       target: SnippetTarget,
       source?: string,
+      drop?: boolean,
     ) => void;
     readonly onPreviewActivity: () => void;
     readonly language?: RendererLanguage;
@@ -48,7 +57,7 @@ export function createSemanticInput(
       returnFocus: () => boolean = () => false,
       signal?: AbortSignal,
       waitForDelivery = false,
-      source?: string,
+      source?: InputSource,
     ): Promise<boolean> {
       if (
         disposed ||
@@ -59,9 +68,13 @@ export function createSemanticInput(
       )
         return Promise.resolve(false);
       // Capture before overlay admission; never recapture in its continuation.
-      const target = options.capture();
+      const capturedDrop =
+        typeof source === "object" ? source.target : undefined;
+      const focusSource = focusArguments(source);
+      const target = capturedDrop ?? options.capture();
       if (intent !== "preview") {
-        if (!target?.live()) return Promise.resolve(false);
+        if (!target?.live() || (capturedDrop && !target.isCurrent?.()))
+          return Promise.resolve(false);
         if (waitForDelivery) {
           if (!target.deliverAndReport) return Promise.resolve(false);
           try {
@@ -72,8 +85,7 @@ export function createSemanticInput(
                   !signal?.aborted &&
                   target.isCurrent?.()
                 ) {
-                  if (source) options.focusCapturedTarget?.(target, source);
-                  else options.focusCapturedTarget?.(target);
+                  options.focusCapturedTarget?.(target, ...focusSource);
                 }
                 return delivered === true;
               },

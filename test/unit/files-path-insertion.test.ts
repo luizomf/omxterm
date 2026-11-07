@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page";
+import type { FilesDragResult } from "../../src/shared/files-terminal-drag";
 import type { SupportedLanguage } from "../../src/shared/i18n";
 
 let dispose: (() => void) | undefined;
@@ -35,10 +36,15 @@ async function setup() {
       });
     return pending;
   });
+  let dropResult!: (result: FilesDragResult) => void;
   let visibility!: (visible: boolean) => void;
   let language!: (language: SupportedLanguage) => void;
   const page = mountFilesPage(document, {
     request,
+    onFilesTerminalDrop(listener) {
+      dropResult = listener;
+      return () => {};
+    },
     onVisibility(listener) {
       visibility = listener;
       listener(true);
@@ -62,7 +68,16 @@ async function setup() {
         (element.getAttribute("aria-label") === label ||
           element.textContent?.includes(label)),
     )!;
-  return { request, finish, reject, visibility, language, row, button };
+  return {
+    request,
+    finish,
+    reject,
+    visibility,
+    language,
+    row,
+    button,
+    dropResult,
+  };
 }
 function key(element: HTMLElement, options: KeyboardEventInit = {}) {
   const event = new KeyboardEvent("keydown", {
@@ -81,6 +96,34 @@ function pathCalls(request: ReturnType<typeof vi.fn>) {
       (value as { operation: string }).operation === "terminal.insertPath.v1",
   );
 }
+
+it.each([
+  [{ status: "accepted" }, "no Enter added"],
+  [{ status: "refused", reason: "terminal-busy" }, "already in progress"],
+  [{ status: "refused", reason: "unsafe-path" }, "control characters"],
+  [{ status: "unknown", reason: "terminal-not-completed" }, "did not complete"],
+  [{ status: "unknown" }, "outcome is unknown"],
+] as const)(
+  "reports a path-free native drop outcome %# without replay and relabels it",
+  async (result, text) => {
+    const f = await setup();
+    const count = f.request.mock.calls.length;
+    f.dropResult(result);
+    expect(document.querySelector('[role="status"]')?.textContent).toContain(
+      text,
+    );
+    f.language("pt-BR");
+    expect(
+      document.querySelector('[role="status"]')?.textContent,
+    ).not.toContain(text);
+    expect(f.request).toHaveBeenCalledTimes(count);
+    f.visibility(false);
+    f.dropResult({ status: "accepted" });
+    expect(
+      document.querySelector('[role="status"]')?.textContent,
+    ).not.toContain("no Enter added");
+  },
+);
 
 it("offers a visible, accessible menu action only for a selected row", async () => {
   const f = await setup();

@@ -6,6 +6,7 @@ export const filesTerminalDragIpc = {
   end: "files-terminal-drag:end",
   claim: "files-terminal-drag:claim",
   handoff: "files-terminal-drag:handoff",
+  result: "files-terminal-drag:result",
 } as const;
 export type FilesDragEntry = {
   path: string;
@@ -15,7 +16,18 @@ export type FilesDragEntry = {
 export type FilesDragClaim = { ticket: string; entryToken: string };
 export type FilesDragResult = {
   status: "refused" | "unknown" | "accepted";
+  reason?: string;
 };
+export function isFilesDragResult(value: unknown): value is FilesDragResult {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  return (
+    ["accepted", "refused", "unknown"].includes(input.status as string) &&
+    Object.keys(input).every((key) => key === "status" || key === "reason") &&
+    (input.reason === undefined ||
+      (typeof input.reason === "string" && input.reason.length <= 64))
+  );
+}
 export interface FilesTerminalDragBridge {
   // Must settle synchronously in the drop turn, before dragend or any await.
   claim(value: FilesDragClaim): boolean;

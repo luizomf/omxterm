@@ -7,7 +7,7 @@ import {
   type FilesTerminalDragBridge,
 } from "../shared/files-terminal-drag";
 
-/** Narrow composition seam, not installed as a live drop target in this slice.
+/** Claim the authenticated transport from an eligible core-owned drop capture.
  * The protected consumer must synchronously capture the exact selected/focused
  * live pane + Surface and selection revision from this event's visible area.
  * Its continuation must never reacquire a successor or move focus on refusal.

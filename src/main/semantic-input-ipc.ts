@@ -169,9 +169,13 @@ export function registerSemanticInputIpc(options: {
       source: ExtensionViewRequestContext,
       signal: AbortSignal,
       admit: (signal: AbortSignal, commit: () => void) => Promise<void>,
-      waitForDelivery = false,
+      waitForDelivery: boolean | { dropTicket: string } = false,
     ): Promise<{ ok: boolean; reason?: string }> {
       const owner = owners.get(window.webContents);
+      const dropTicket =
+        typeof waitForDelivery === "object"
+          ? waitForDelivery.dropTicket
+          : undefined;
       if (waitForDelivery && owner?.pending)
         return Promise.resolve({ ok: false, reason: "terminal-busy" });
       if (
@@ -264,6 +268,7 @@ export function registerSemanticInputIpc(options: {
                 revision,
                 input,
                 ...(waitForDelivery ? { waitForDelivery: true } : {}),
+                ...(dropTicket ? { dropTicket } : {}),
               });
             }),
           )

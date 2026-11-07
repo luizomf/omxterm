@@ -3,10 +3,6 @@ import type {
   TerminalLayoutBridge,
 } from "../shared/terminal-layout";
 import { createCompanionContent } from "./companion-content";
-import {
-  FILES_ENTRY_DRAG_TYPE,
-  FILES_TERMINAL_DRAG_TYPE,
-} from "../shared/files-terminal-drag";
 import type { HostedContentBridge } from "../shared/extension-view";
 import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
 import { createCommandPalette } from "./command-palette";
@@ -31,11 +27,7 @@ import type { TerminalRendererConfiguration } from "../shared/user-configuration
 import type { TerminalTheme } from "../shared/terminal-theme";
 import type { TerminalFontData } from "../shared/terminal-font-data";
 import type { ElectronTerminalAdapter } from "./electron-terminal-adapter";
-import {
-  createTerminalTabs,
-  TERMINAL_TAB_DRAG_DATA_TYPE,
-  type TerminalTabs,
-} from "./terminal-tabs";
+import { createTerminalTabs, type TerminalTabs } from "./terminal-tabs";
 import type { WindowSnippetsSource } from "./snippets-host";
 import { subscribeToWindowTools } from "./window-tool-subscriptions";
 import type { SnippetPreview } from "./snippet-preview";
@@ -69,6 +61,7 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
   readonly initialLayout?: InitialLayout;
   readonly layout?: TerminalLayoutBridge;
   readonly semanticInput?: import("../shared/semantic-input").SemanticInputBridge;
+  readonly filesTerminalDrag?: import("../shared/files-terminal-drag").FilesTerminalDragBridge;
   readonly hostedContent?: HostedContentBridge;
   readonly mirrorTyping?: import("../shared/mirror-typing").MirrorTypingBridge;
   readonly about?: AboutBridge;
@@ -143,6 +136,7 @@ export function mountTerminalWindowPage(
   let dialogsActive = false;
   let palette: ReturnType<typeof createCommandPalette> | undefined;
   let snippetPreview: SnippetPreview | undefined;
+  let clearFilesDrop = () => {};
   const modalActive = () =>
     dialogsActive ||
     (palette?.isActive() ?? false) ||
@@ -215,6 +209,7 @@ export function mountTerminalWindowPage(
       layout: options.layout,
       notifySelectionRevision: (revision) => {
         auxiliaryPanel?.cancelDefaultOpen();
+        clearFilesDrop();
         options.semanticInput?.selection(revision);
       },
       ...(options.settings ? { settings: options.settings } : {}),
@@ -259,6 +254,7 @@ export function mountTerminalWindowPage(
 
   const onOverlayActivity = () => {
     const active = previewActive();
+    clearFilesDrop();
     elements.tabStrip.inert = active;
     elements.tabsContainer.inert = active;
     chrome?.setPreviewActive(active);
@@ -295,18 +291,11 @@ export function mountTerminalWindowPage(
     },
   );
   palette = mountedPalette;
-  const removeFileDrops = installFileDrops(
-    page.document,
-    previewActive,
-    tabs.injectText,
-    options.droppedFilePathInsertion,
-  );
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     page.removeEventListener("pagehide", dispose);
     page.removeEventListener("focus", onPageFocus);
-    removeFileDrops();
     removeToolSubscriptions?.();
     removeConfigurationUpdateListener?.();
     pageLabels.dispose();
@@ -383,6 +372,7 @@ export function mountTerminalWindowPage(
       restoreSourceFocus: companion.restoreSourceFocus,
       togglePanelSide: companion.toggleSide,
     });
+    clearFilesDrop = tools.clearFileDrop;
     snippetPreview = tools.preview;
     removeToolSubscriptions = tools.unsubscribe;
   } catch (error) {
@@ -408,51 +398,6 @@ function bindPageTheme(
     apply(configuration.terminalTheme, configuration.transparency);
   }
   return apply;
-}
-
-function installFileDrops(
-  document: Document,
-  blocked: () => boolean,
-  inject: (text: string) => void,
-  format: TerminalWindowPageOptions["droppedFilePathInsertion"],
-): () => void {
-  const isInternalTabDrag = (event: DragEvent) =>
-    event.dataTransfer?.types?.includes(TERMINAL_TAB_DRAG_DATA_TYPE) ?? false;
-  const isFilesEntryDrag = (event: DragEvent) =>
-    [...(event.dataTransfer?.types ?? [])].some(
-      (type) =>
-        type === FILES_ENTRY_DRAG_TYPE || type === FILES_TERMINAL_DRAG_TYPE,
-    );
-  const onDragOver = (event: DragEvent) => {
-    event.preventDefault();
-    // No protected Files consumer is composed yet. Never advertise a copy
-    // target, or fall through to native files/tab handling for mixed payloads.
-    const filesEntry = isFilesEntryDrag(event);
-    if (filesEntry && event.dataTransfer)
-      event.dataTransfer.dropEffect = "none";
-    if (blocked() || filesEntry || !isInternalTabDrag(event))
-      event.stopPropagation();
-  };
-  const onDrop = (event: DragEvent) => {
-    // Capture before the Surface can interpret a native file URI.
-    event.preventDefault();
-    if (blocked() || isFilesEntryDrag(event)) {
-      event.stopPropagation();
-      return;
-    }
-    if (isInternalTabDrag(event)) return;
-    event.stopPropagation();
-    const files = event.dataTransfer?.files;
-    if (!files?.length || !format) return;
-    const insertion = format([...files]);
-    if (insertion.length > 0) inject(insertion);
-  };
-  document.addEventListener("dragover", onDragOver, true);
-  document.addEventListener("drop", onDrop, true);
-  return () => {
-    document.removeEventListener("dragover", onDragOver, true);
-    document.removeEventListener("drop", onDrop, true);
-  };
 }
 
 function localImageSurfaceOptions(

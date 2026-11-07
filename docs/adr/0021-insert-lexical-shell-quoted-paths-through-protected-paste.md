@@ -19,7 +19,7 @@ generation. Main validates them at receipt and commit, and core checks its own
 selection before capture; missing or stale stamps fail closed, without a
 caller-selected target or a global cross-process ordering guarantee. This source
 feature requires a future Files archive and a host that understands the
-capability; the published Files0.6 archive is unchanged. Its path-only tracked
+capability; published Files0.6/0.7 archives are unchanged. Its path-only tracked
 chunks are acknowledged by the captured live local session after passing each
 chunk to node-pty without synchronous error. This is not an OS or shell
 consumption guarantee. A lost receipt stops the path and fences subsequent
@@ -30,9 +30,15 @@ bracketed-paste terminator rather than stripping or rewriting them.
 The source-only Files drag increment adds opaque transport, not another
 insertion policy. Its main-owned ticket captures one bounded absolute path and
 kind; DataTransfer contains no path. Registration remains unavailable without a
-protected consumer, and no live terminal target is installed. Composition must
-reuse the core path handoff's quoting, captured Surface/selection revision,
-Protected Paste and no-Enter behavior. Transport refuses control-bearing source
+protected consumer. Current source composes that consumer only over the selected
+tab's focused live pane's visible terminal area. Core synchronously retains the
+exact Surface/selection revision before claim and asynchronous admission; a
+private one-shot ticket binds the returning shared semantic request to that
+capture, never a replacement. Main reuses the path action's formatter and
+installation admission; the Surface owns tracked Protected Paste, Mirror Typing
+stop and no-Enter delivery. Successful still-current completion uses the existing
+native focus owner; refusal, unknown results or newer focus intent cannot focus
+a successor. Bounded localized candidate feedback is not authorization. Transport refuses control-bearing source
 paths without rewriting them; it never parses text/URI data into paths or looks
 up a file. See the [integration seam](../files-development-preview.md#terminal-drag-transport-source-increment).
 

@@ -1,5 +1,6 @@
 import type { SemanticInputBridge } from "../shared/semantic-input";
 import type { createSemanticInput } from "./semantic-input";
+import type { SnippetTarget } from "./snippet-target";
 
 /** Bridges native admission to the same window-owned input/preview as built-in UI. */
 export function subscribeNativeSemanticInput(
@@ -8,6 +9,7 @@ export function subscribeNativeSemanticInput(
   selectionRevision: () => number,
   restoreSourceFocus: (id: string) => boolean,
   selectedSession: () => string | undefined,
+  takeDropTarget?: (ticket: string) => SnippetTarget | undefined,
 ) {
   let pending: { id: string; abort: AbortController } | undefined;
   let disposed = false;
@@ -30,6 +32,13 @@ export function subscribeNativeSemanticInput(
     }
     if (pending?.id === command.id) return;
     if (pending || command.revision !== selectionRevision()) {
+      bridge.reply({ kind: "finished", id: command.id, available: false });
+      return;
+    }
+    const dropTarget = command.dropTicket
+      ? takeDropTarget?.(command.dropTicket)
+      : undefined;
+    if (command.dropTicket && !dropTarget) {
       bridge.reply({ kind: "finished", id: command.id, available: false });
       return;
     }
@@ -57,7 +66,11 @@ export function subscribeNativeSemanticInput(
           !current.abort.signal.aborted && restoreSourceFocus(command.source),
         current.abort.signal,
         command.waitForDelivery === true,
-        command.waitForDelivery ? command.source : undefined,
+        dropTarget
+          ? { source: command.source, target: dropTarget }
+          : command.waitForDelivery
+            ? command.source
+            : undefined,
       );
       bridge.reply({ kind: "started", id: current.id });
       void outcome.then(finish, () => finish(false));

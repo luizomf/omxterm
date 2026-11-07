@@ -28,13 +28,35 @@ function fixture() {
   const consume = vi.fn(async (): Promise<FilesDragResult> => ({
     status: "accepted",
   }));
+  const report = vi.fn();
   const start = (value: unknown = entry) =>
-    transport.start(value, context, abort.signal, consume);
+    transport.start(value, context, abort.signal, consume, report);
   const claim = (ticket: unknown) =>
     transport.claim({ ticket, entryToken: "1" });
-  return { transport, window, context, abort, consume, start, claim };
+  return { transport, window, context, abort, consume, start, claim, report };
 }
 afterEach(() => vi.useRealTimers());
+it("reports bounded local refusal and completion only to the still-visible source", async () => {
+  const f = fixture();
+  expect(f.start({ ...entry, path: "/synthetic/line\nbreak" })).toBeNull();
+  expect(f.report).toHaveBeenCalledExactlyOnceWith({
+    status: "refused",
+    reason: "unsafe-path",
+  });
+  f.report.mockClear();
+  const ticket = f.start();
+  f.claim(ticket);
+  f.transport.end("view-a", ticket);
+  await f.transport.handoff(ticket, 7);
+  expect(f.report).toHaveBeenCalledExactlyOnceWith({ status: "accepted" });
+  f.report.mockClear();
+  const other = f.start();
+  f.claim(other);
+  f.context.isCurrentVisible.mockReturnValue(false);
+  await f.transport.handoff(other, 7);
+  expect(f.report).not.toHaveBeenCalled();
+});
+
 it("claims the exact gesture once before dragend, then hands its literal capture off once", async () => {
   const f = fixture();
   const ticket = f.start();

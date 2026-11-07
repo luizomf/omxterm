@@ -51,8 +51,14 @@ supplies a protected handoff consumer. Main retains one path-free ticket per
 window for ten seconds; core claims it synchronously once before asynchronous
 redemption so later child dragend cannot erase a claimed drop. Hiding, epoch or
 window loss and timeout still revoke claimed authority; no hide/reveal revival
-or renderer-selected source owner is permitted. No live terminal target or
-second input route is enabled by the transport increment. See the
+or renderer-selected source owner is permitted. The composed source consumer
+reuses the declared path handoff and captured installation admission, with the
+original drop-turn Surface retained privately in core. A missing/stale/consumed
+capture refuses rather than selecting a successor. Candidate feedback carries
+no authorization; accepted/refused/unknown notices return only to the still-visible
+source. Successful still-current delivery uses the existing core-focus
+presentation while keeping Files visible. No second input or focus owner is
+introduced, and no native qualification follows from this composition. See the
 [transport contract](../files-development-preview.md#terminal-drag-transport-source-increment).
 
 DOM selection and overlay opening await an acknowledged native hide. When that

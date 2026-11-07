@@ -35,6 +35,7 @@ const english = {
   openDirectory: "Open directory",
   insertPath: "Insert path into terminal",
   insertPathPending: "Inserting path into terminal…",
+  insertPathAccepted: "Path inserted; no Enter added.",
   insertPathBusy:
     "A terminal input request is already in progress. Try again when it finishes.",
   insertPathUnavailable:
@@ -45,7 +46,7 @@ const english = {
     "Path insertion outcome is unknown. Check the terminal before retrying.",
   insertPathInvalid: "This path cannot be inserted: it is invalid or too long.",
   insertPathUnsafe:
-    "This path contains a terminal paste delimiter and cannot be inserted safely.",
+    "This path contains control characters or a terminal paste delimiter and cannot be inserted safely.",
   rename: "Rename / move",
   moveToFolder: "Move to folder…",
   moveFolderPrompt: (path: string) =>
@@ -162,6 +163,7 @@ const portuguese: FilesMessages = {
   openDirectory: "Abrir diretório",
   insertPath: "Inserir caminho no terminal",
   insertPathPending: "Inserindo caminho no terminal…",
+  insertPathAccepted: "Caminho inserido; nenhum Enter adicionado.",
   insertPathBusy:
     "Uma solicitação de entrada no terminal já está em andamento. Tente novamente quando terminar.",
   insertPathUnavailable:
@@ -173,7 +175,7 @@ const portuguese: FilesMessages = {
   insertPathInvalid:
     "Não é possível inserir este caminho: inválido ou longo demais.",
   insertPathUnsafe:
-    "Este caminho contém um delimitador de colagem do terminal e não pode ser inserido com segurança.",
+    "Este caminho contém caracteres de controle ou um delimitador de colagem do terminal e não pode ser inserido com segurança.",
   rename: "Renomear / mover",
   moveToFolder: "Mover para pasta…",
   moveFolderPrompt: (path) =>

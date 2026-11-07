@@ -142,6 +142,7 @@ export interface TerminalTabs {
   injectText(text: string): void;
   // The selected live terminal, captured for one snippet action.
   captureSnippetTarget(): SnippetTarget | undefined;
+  fileDropArea(event: DragEvent): HTMLElement | undefined;
   selectionRevision(): number;
   selectedSessionId(): TerminalSessionId | undefined;
   captureActionTarget(): { isCurrent(): boolean };
@@ -474,6 +475,34 @@ export function createTerminalTabs(
           else focusPane(pane, options);
         },
       );
+    },
+    fileDropArea(event) {
+      const pane = interactivePane();
+      const target = event.target;
+      if (
+        !pane?.surface ||
+        pane.ended ||
+        pane.removed ||
+        options.canFocus?.() === false ||
+        !(
+          target instanceof
+          elements.container.ownerDocument.defaultView!.Element
+        ) ||
+        !pane.container.contains(target) ||
+        target.closest(
+          '[hidden], [inert], [role="search"], input, textarea, button, select, [contenteditable="true"]',
+        )
+      )
+        return undefined;
+      const bounds = pane.container.getBoundingClientRect();
+      return bounds.width > 0 &&
+        bounds.height > 0 &&
+        event.clientX >= bounds.left &&
+        event.clientX < bounds.right &&
+        event.clientY >= bounds.top &&
+        event.clientY < bounds.bottom
+        ? pane.container
+        : undefined;
     },
     selectionRevision: () => actionGeneration,
     selectedSessionId: () => {

@@ -142,6 +142,7 @@ export const brazilianPortugueseMessages: Readonly<
   "chrome.closeWindow": "Fechar Janela",
 
   "terminal.surface": "Superfície do terminal",
+  "terminal.filesDropCandidate": "Solte para inserir o caminho (sem executar)",
   "terminal.sshExit": "SSH encerrou (código {code}).",
   "layout.initializing":
     "Abrindo layout salvo: {settled}/{total} painéis; {fallbacks} pastas substituídas pela pasta pessoal; {failed} painéis indisponíveis.",

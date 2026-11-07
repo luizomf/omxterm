@@ -293,7 +293,7 @@ Paths containing a bracketed-paste terminator are refused, not rewritten. A
 successful handoff targets terminal input rather than an open search field; a
 newer companion selection or pending overlay suppresses the focus return.
 This uses the new `terminal.insertPath.v1` capability: older hosts reject it,
-and the published Files0.6 archive does not acquire this source behavior.
+and published Files0.6/0.7 archives do not acquire this source behavior.
 
 In current source, **Actions… → Show dotfiles (names starting with .)** is a
 checked menu item, off by default. On both Linux and macOS, it hides dot-prefixed
@@ -450,58 +450,61 @@ include this correction, not inherit a qualification claim from the host alone.
 
 ## Terminal drag transport source increment
 
-The #774 transport slice is an integration input, **not an enabled terminal
-insertion feature**. No protected consumer is supplied by application startup;
-Files remains move-only, and core explicitly refuses Files candidate payloads
-rather than advertising copy/insert or treating mixed native files as a fallback.
-Archive/version/catalog metadata and published Files0.6 bytes are unchanged.
+Current source composes #774's path-free transport with #768's protected path
+handoff. This is **source behavior, not native qualification or publication**.
+Published Files0.6/0.7 bytes and catalog offers remain unchanged; new source needs
+a new archive version and a host supporting `terminal.insertPath.v1`.
+
+Drag one Files row over the visible terminal area of the selected tab's focused,
+live pane. Only there, a localized, bounded **Drop to insert path (not run)**
+candidate and copy cursor appear. Chrome, tabs, other panes, panels, search
+controls, Settings, overlays and unavailable native presentations are inert.
+Candidate feedback checks MIME/area only, not authorization. Native files,
+tab/text/URI mixtures and forged, expired or replayed tickets never fall through
+to ordinary native-file insertion. The keyboard Insert path/Shift+Enter action
+remains available; confirmed internal directory moves remain separate.
 
 `createFilesTerminalDrag` owns one ten-second gesture/claim per actual window.
-The app-owned child preload registers synchronously during the real row's
-`dragstart`; the host authenticates the actual child main frame, selected visible
-view and focused owner. Only installed Files companion composition may supply
-`filesTerminalDrop`, with its captured installation admission and epoch signal.
-The application callback receives the exact BrowserWindow captured for that
-view, never a renderer-selected owner or a later focused-window lookup.
-Absent that consumer, registration returns no ticket. No backend, filesystem or
-store work runs inside synchronous IPC. The captured absolute path/kind stays in
-main; DataTransfer carries only the existing internal token and a distinct opaque
-terminal ticket. The source clears other data, offers copyMove only after
-registration, and retains move on eligible internal directory targets. Existing
-fixed-source/folder confirmation and no-clobber backend are unchanged.
+The app-owned child preload registers synchronously at row `dragstart`; main
+authenticates the actual child main frame, selected visible view, installation
+epoch and focused owner. Registration is available only for installed Files
+companion composition with the declared path capability and protected consumer.
+No backend, filesystem or store work runs inside synchronous IPC. Main retains
+the literal bounded absolute path/kind; DataTransfer contains only the internal
+move token and distinct opaque terminal ticket. The source offers copyMove after
+registration; an eligible internal directory target still selects move and
+requires the existing fixed-source/folder confirmation and no-clobber backend.
+Spaces and quotes are preserved. C0/C1 controls, including line breaks and paste
+delimiters, are refused with a localized Files notice, not rewritten.
 
-The core preload offers synchronous claim and asynchronous handoff. The
-`claimFilesTerminalDrop` renderer seam is deliberately **not installed** on a
-live target yet. Its caller must synchronously capture the exact selected,
-focused live pane, Surface and selection revision from that pane's visible
-terminal area, excluding chrome, other panes, panels, overlays and blocked native
-presentation. Main claims the exact ticket plus matching internal token once,
-before any await. Later child dragend revokes only an unclaimed gesture; hide,
+Core captures the exact pane, Surface, selection revision and current DOM focus
+synchronously at drop, then claims the ticket plus matching internal token before
+any await. Later child dragend revokes only an unclaimed gesture. Hide,
 retirement, epoch/package loss, window blur/hide/minimize/loss and timeout revoke
-both claimed and unclaimed authority. Reopening cannot revive it. Candidate MIME
-is not authorization. Native files, tab/text/URI mixtures, forged, oversized,
-expired and replayed inputs are refused; ordinary spaces/quotes are preserved,
-while source paths with C0/C1 controls are refused. No path is inferred from a
-string/URI, and no path or native error text is returned by core transport IPC.
+both phases without hide/reveal revival. The shared main path formatter and
+installation admission use the captured owner/revision; a private ticket binds
+the returning semantic request to the original renderer capture. Missing,
+consumed or stale captures cannot select a successor Surface. Changed selection,
+DOM focus, overlays or blocked presentation before admission refuse delivery.
 
-ROOT's composition with reviewed #768 remains necessary: adapt the drop's
-captured revision to its `actionSelectionRevision`, reuse the existing main
-`terminal.insertPath.v1` lexical quote/Protected Paste handoff and installation
-`admit`, and keep the original captured Surface/focus owner through final
-acceptance. The consumer must check transport source/signal and selection at
-final admission, stop Mirror Typing, preserve native held-gesture ownership,
-never append Enter or retarget, and report local Files status without stealing
-focus on failure. There is no second raw-input implementation here. The
-consumer result is refused, unknown or accepted; acceptance means transfer to
-Surface-owned input, not receiving-program consumption. A timed-out pending
-consumer is unknown and never retried; its signal/source lose authority.
+The Surface's tracked Protected Paste stops Mirror Typing before single-target
+delivery, uses current bracketed mode and adds no Enter. The same native gesture
+owner preserves keyboard Insert's held repeats/release. Accepted Surface-owned
+work may finish after source retirement; ending the Surface stops its remaining
+chunks. Files receives localized accepted/refused/incomplete/unknown notices
+while still visible. A successful still-current capture returns focus to that
+pane's terminal input through the existing native presentation owner; failure or
+a newer pane, tool, field or overlay never focuses a replacement. Acceptance
+means the captured live local session acknowledged the chunks, not OS or
+receiving-program consumption. Unknown/partial outcomes require inspection,
+never automatic replay. Transport returns no path or native error text.
 
-Headless tests cover the production page/preload/host/router/transport seams with
-fake native and consumer adapters, including claim-before-dragend, delayed
-handoff, lifecycle races and preserved internal confirmation. They do not qualify
-actual Electron native drag, complete terminal input/focus, other platforms,
-archives or packages. Earlier guest transport observations inform this design,
-not product qualification; this increment does not repeat them.
+Headless tests exercise production page/preload/host/router/consumer seams with
+fake native/PTY adapters, including synchronous capture/claim, delayed handoff,
+source and target races, protected receipts, focus and preserved directory
+confirmation. They do not qualify actual Electron native drag/input/focus,
+physical input, other platforms, archives or packages. Earlier guest transport
+observations inform the design but do not qualify this composition.
 
 ## Owned composition modules
 

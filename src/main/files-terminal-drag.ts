@@ -9,14 +9,16 @@ import {
 import { isSelectionRevision } from "../shared/semantic-input";
 import {
   isFilesDragClaim,
+  isFilesDragResult,
   isFilesEntryToken,
   type FilesDragEntry,
   type FilesDragResult,
 } from "../shared/files-terminal-drag";
 
-// Composition must supply #768's captured-target quoting/Protected Paste owner.
-// The transport does not send text, focus a pane, or expose a path to core IPC.
+// Composition supplies the shared captured-target quoting/Protected Paste owner.
+// The transport itself does not send text, focus a pane, or expose a path to core IPC.
 export type FilesTerminalDropConsumer = (input: {
+  ticket: string;
   entry: Readonly<FilesDragEntry>;
   source: ExtensionViewRequestContext;
   revision: number;
@@ -32,6 +34,7 @@ type Gesture = {
   abort: AbortController;
   phase: "dragging" | "claimed" | "handing-off";
   expires: number;
+  report(result: FilesDragResult): void;
   cleanup(): void;
 };
 /** One path, one gesture/claim, one deadline per actual owner window. */
@@ -65,6 +68,7 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
       source: ExtensionViewRequestContext,
       signal: AbortSignal,
       consume: FilesTerminalDropConsumer,
+      report: (result: FilesDragResult) => void = () => {},
     ): string | null {
       // Replace, never accumulate abandoned gestures, including claimed ones.
       revoke();
@@ -83,8 +87,18 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
         !windowLive() ||
         signal.aborted ||
         !source.isCurrentVisible()
-      )
+      ) {
+        if (windowLive() && !signal.aborted && source.isCurrentVisible())
+          report({
+            status: "refused",
+            reason:
+              typeof input.path === "string" &&
+              /[\u0000-\u001f\u007f-\u009f]/u.test(input.path)
+                ? "unsafe-path"
+                : "invalid-path",
+          });
         return null;
+      }
       const abort = new AbortController();
       const ticket = randomUUID();
       const lost = () => {
@@ -102,6 +116,7 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
         },
         source,
         consume,
+        report,
         signal: AbortSignal.any([signal, abort.signal]),
         abort,
         phase: "dragging",
@@ -166,6 +181,7 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
       try {
         const result = await Promise.race([
           gesture.consume({
+            ticket: gesture.ticket,
             entry: Object.freeze({ ...gesture.entry }),
             source,
             revision,
@@ -176,10 +192,13 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
         // Consumer acceptance means Surface-owned input; transport revocation
         // after that point is not rollback. Consumer must check source + signal
         // at its final protected admission, never after-the-fact retargeting.
-        return result?.status === "accepted" || result?.status === "refused"
-          ? { status: result.status }
+        const outcome: FilesDragResult = isFilesDragResult(result)
+          ? result
           : { status: "unknown" };
+        if (live(gesture)) gesture.report(outcome);
+        return outcome;
       } catch {
+        if (live(gesture)) gesture.report({ status: "unknown" });
         return { status: "unknown" };
       } finally {
         gesture.signal.removeEventListener("abort", stop);
