@@ -93,7 +93,7 @@ async function createInspectionArchives(
     platform === "win32" ? "worker/conoutSocketWorker.js" : "unixTerminal.js";
   const chosenMember = path.join("node_modules", "node-pty", "lib", chosenFile);
   const extensionFiles =
-    platform === "linux" || (platform === "win32" && arch === "arm64")
+    platform === "linux" || platform === "win32"
       ? [
           "dist/preload/extension-view.cjs",
           "dist/extension-runtime/bootstrap.mjs",
@@ -197,9 +197,7 @@ function inspectionCommands(
       );
       expect(options.env?.ELECTRON_RUN_AS_NODE).toBe("1");
       if (args[0] === "--input-type=module") {
-        expect(
-          platform === "linux" || (platform === "win32" && arch === "arm64"),
-        ).toBe(true);
+        expect(platform === "linux" || platform === "win32").toBe(true);
         if (platform === "win32") {
           expect(options.env?.SystemRoot).toBe("C:\\Windows");
           expect(options.env?.TEMP).toBe(root);
@@ -366,7 +364,7 @@ it.each([
           file.endsWith(path.join("extension-runtime", "extension-leases.node"))
         ) {
           const wrong = Buffer.from(pe);
-          wrong.writeUInt16LE(0x8664, 68);
+          wrong.writeUInt16LE(arch === "arm64" ? 0x8664 : 0xaa64, 68);
           return wrong;
         }
         return pe;
@@ -572,7 +570,7 @@ it.each([
         wrongExtensionArchitecture = true;
         await expect(
           verifyPackagedApplication(packagedPath, { inspectionOnly: true }),
-        ).rejects.toThrow("extension native module is not an arm64-only PE");
+        ).rejects.toThrow(`extension native module is not an ${arch}-only PE`);
         wrongExtensionArchitecture = false;
         vi.stubEnv("SystemRoot", "relative");
         await expect(

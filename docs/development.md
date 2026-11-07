@@ -112,8 +112,11 @@ Node/Electron executable, and neither downloads nor provisions an import
 library or compiler. The MSVC import library and export sidecars are build
 intermediates kept in the selected native output directory; runtime loads the
 `.node` addon, not those sidecars. Native ARM64 Node and a matching Visual C++
-runtime are required. Windows x64 does not select this ordinary-build runtime;
-the separate explicit runtime build has its own target-native prerequisites. The
+runtime are required. Windows x64 ordinary builds also select the extension runtime;
+they require an x64 MSVC/SDK environment and an architecture-matched import library
+in the same way. The hosted x64 lane pins Node 24.22.2 and its verified official
+import library. This packaging prerequisite does not admit production extensions
+or replace built-in Snippets. The
 [Windows composition fixture](windows-arm64-extension-composition.md) describes
 its additional native evidence boundary; source admission is not package or
 installer qualification.
@@ -554,11 +557,13 @@ build receipt is not native installed-host qualification; see the guide's
 
 The [internal extension backend runtime](extension-backend-runtime.md) has an
 explicit `npm run build:extension-runtime` artifact and actual native process/store
-tests. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64 `npm run build`
-includes the runtime and native lease addon; the Files move addon remains limited
+tests. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64/x64 `npm run build`
+includes the runtime and native lease addon; Windows x64 remains preparatory and
+has no production extension admission. The Files move addon remains limited
 to macOS and Linux ARM64 for the
-[Files preview](files-development-preview.md). Those targets construct application
-infrastructure without activating installed code; explicit shared actions activate it.
+[Files preview](files-development-preview.md). Admitted production targets construct
+application infrastructure without activating installed code; explicit shared actions
+activate it.
 The opt-in shared production-composition fixture has distinct
 [macOS](macos-extension-composition.md#installed-package-production-fixture) and
 [Linux x64](linux-x64-extension-composition.md#installed-package-production-fixture) and

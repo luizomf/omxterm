@@ -469,7 +469,11 @@ describe("pinned PTY packaged inventory", () => {
     for (const entry of entries)
       expect(
         inspectAsarEntries(
-          [...requiredEntries, ...entries.filter((file) => file !== entry)],
+          [
+            ...requiredEntries,
+            ...portableExtensionEntries,
+            ...entries.filter((file) => file !== entry),
+          ],
           "win32",
           "x64",
         ).missing,
@@ -609,7 +613,7 @@ describe("Windows native runtime architecture", () => {
             ...requiredEntries,
             `/node_modules/node-pty/prebuilds/win32-${arch}`,
             ...windowsEntries(arch),
-            ...(arch === "arm64" ? portableExtensionEntries : []),
+            ...portableExtensionEntries,
           ],
           "win32",
           arch,

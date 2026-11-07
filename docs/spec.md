@@ -2309,8 +2309,10 @@ and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 ### Internal extension backend runtime
 
 A separately owned backend runtime consumes Installed Packages through an
-app-owned bootstrap. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64 builds
-include its artifacts and native lease addon. Windows ARM64 source admits the
+app-owned bootstrap. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64/x64 builds
+include its artifacts and native lease addon. Windows x64 packages carry this
+preparatory runtime without enabling production extension admission or changing
+built-in Snippets, default provisioning or catalog targets. Windows ARM64 source admits the
 same explicit management and activation and now selects optional Snippets. Its
 earlier [bounded native source composition](windows-arm64-extension-composition.md#evidence-boundary)
 passed separately from an [unpacked Windows ARM64 package inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint).

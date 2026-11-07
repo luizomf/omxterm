@@ -14,27 +14,28 @@ const runtime = [
   "/node_modules/yauzl/package.json",
 ];
 
-it("requires the Windows ARM64 extension runtime without changing x64 or Files admission", () => {
-  expect(inspectAsarEntries([], "win32", "arm64").missing).toEqual(
-    expect.arrayContaining(runtime),
-  );
-  for (const entry of runtime) {
-    const result = inspectAsarEntries(
-      runtime.filter((file) => file !== entry),
-      "win32",
-      "arm64",
+it.each(["arm64", "x64"] as const)(
+  "requires the Windows %s extension runtime without Files",
+  (arch) => {
+    expect(inspectAsarEntries([], "win32", arch).missing).toEqual(
+      expect.arrayContaining(runtime),
     );
-    expect(result.missing).toContain(entry);
-    for (const present of runtime.filter((file) => file !== entry))
-      expect(result.missing).not.toContain(present);
-  }
-  const move = "/dist/extension-runtime/files-move.node";
-  expect(
-    inspectAsarEntries([...runtime, move], "win32", "arm64").forbidden,
-  ).toContain(move);
-  for (const entry of runtime)
-    expect(inspectAsarEntries([], "win32", "x64").missing).not.toContain(entry);
-});
+    for (const entry of runtime) {
+      const result = inspectAsarEntries(
+        runtime.filter((file) => file !== entry),
+        "win32",
+        arch,
+      );
+      expect(result.missing).toContain(entry);
+      for (const present of runtime.filter((file) => file !== entry))
+        expect(result.missing).not.toContain(present);
+    }
+    const move = "/dist/extension-runtime/files-move.node";
+    expect(
+      inspectAsarEntries([...runtime, move], "win32", arch).forbidden,
+    ).toContain(move);
+  },
+);
 
 it("rejects extension compiler intermediates in packaged output", () => {
   const intermediates = [

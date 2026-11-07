@@ -195,7 +195,11 @@ gh workflow run linux-x64.yml --ref <reviewed-ref>
 Each lane runs locked install, format, lint, typecheck, `npm test -- test/unit`,
 build, explicit `package-built:win:x64` or `package-built:linux:x64` (`--publish never`),
 and `npm run package:verify -- --inspection-only` as fail-preserving steps.
-No GUI suite, NSIS or Linux helper installation runs. The unchanged default
+The Windows lane pins Node 24.22.2 and verifies the official x64 `node.lib`
+against its reviewed SHA-256, discovers installed MSVC/SDK, and runs real native
+lease/store and backend tests in the initialized toolchain environment. These
+headless tests include an Electron main process without creating a window; the
+packaged probe uses Run-as-Node. No GUI suite, NSIS or Linux helper installation runs. The unchanged default
 `package:verify` and even `--windows-unpacked-only` launch the GUI: do not use
 those modes on a headless runner.
 
@@ -205,8 +209,9 @@ without FUSE, reports ELF dynamic dependencies, and exercises bounded packaged
 PTY output/exit/resize, missing-executable exec failure and successful exit 1.
 Both lanes load the packaged addon in the packaged Electron Run-as-Node runtime,
 recording actual runtime versions separately from the locked dependency.
-Windows inspects `win-unpacked`; the exact NSIS is hashed, not executed or
-proven equivalent to that tree.
+Windows inspects `win-unpacked` and records the packaged extension probe and
+prepared/packaged artifact hashes in build evidence; the exact NSIS is hashed,
+not executed or proven equivalent to that tree.
 
 Only successful jobs upload an explicit allowlist: binary, its `.sha256`,
 `build-evidence.json`, and (Linux only) the common helper/checksum pair. Names

@@ -10,8 +10,8 @@ import { pathToFileURL } from "node:url";
 const [asar, scratch, appVersion] = process.argv.slice(1);
 assert.ok(
   (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
-    (["darwin", "win32"].includes(process.platform) &&
-      process.arch === "arm64"),
+    (process.platform === "darwin" && process.arch === "arm64") ||
+    (process.platform === "win32" && ["arm64", "x64"].includes(process.arch)),
 );
 assert.ok(process.versions.electron);
 assert.equal(process.type, undefined);

@@ -121,9 +121,13 @@ it("still refuses a root POSIX packaged-extension probe", async () => {
   expect(result.stdout).toBe("");
 });
 
-it("does not admit Windows x64 to the packaged extension probe", async () => {
+it("runs the packaged lease/store/bootstrap probe on Windows x64 without a POSIX UID", async () => {
   const result = await runProbe("win32", "x64");
-  expect(result.status).not.toBe(0);
-  expect(result.stderr).toContain("AssertionError");
-  expect(result.stdout).toBe("");
+  expect(result.error).toBeUndefined();
+  expect(result.status, result.stderr).toBe(0);
+  expect(JSON.parse(result.stdout)).toMatchObject({
+    target: "win32-x64",
+    hostVersion: "1.2.3",
+    checks: ["packaged-store-and-lease", "bootstrap-missing-IPC-refusal"],
+  });
 });

@@ -48,6 +48,34 @@ describe("bounded manual x64 artifact workflows", () => {
       );
       expect(node!.with["package-manager-cache"]).toBe(false);
       expect(node!.with.architecture).toBe("x64");
+      if (platform === "windows") {
+        expect(node!.with["node-version"]).toBe("24.22.2");
+        const setup = steps.find((step) => step.id === "extension-toolchain")!;
+        expect(setup.run).toContain("vswhere.exe");
+        expect(setup.run).toContain("VC.Tools.x86.x64");
+        expect(setup.run).toContain(
+          "https://nodejs.org/dist/v24.22.2/win-x64/node.lib",
+        );
+        expect(setup.run).toContain(
+          "a0a84aa03917b578d286010b7521837e9ff1136ffb2e4a406c14316c33fd06f7",
+        );
+        expect(setup.run).toContain("Get-FileHash");
+        const native = steps.find((step) => step.id === "extension-native")!;
+        const build = steps.find((step) => step.id === "build")!;
+        for (const step of [native, build]) {
+          expect(step.run).toContain('call "%OMXTERM_VCVARS%" x64');
+          expect(step.run).toContain("process.version!=='v24.22.2'");
+          expect(step.run).toContain("process.arch!=='x64'");
+        }
+        expect(native.run).toContain(
+          "test/integration/installed-packages.test.ts",
+        );
+        expect(native.run).toContain(
+          "test/integration/extension-runtime.test.ts",
+        );
+        expect(steps.indexOf(setup)).toBeLessThan(steps.indexOf(native));
+        expect(steps.indexOf(native)).toBeLessThan(steps.indexOf(build));
+      }
       const upload = actions.find((step: { uses: string }) =>
         step.uses.startsWith("actions/upload-artifact@"),
       );

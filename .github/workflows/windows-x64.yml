@@ -37,7 +37,7 @@ jobs:
         id: node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: "24"
+          node-version: "24.22.2"
           architecture: x64
           package-manager-cache: false
 
@@ -52,8 +52,8 @@ jobs:
           const { createHash } = require('node:crypto');
           if (process.platform !== 'win32' || process.arch !== 'x64' ||
               os.machine() !== 'x86_64' || process.env.RUNNER_ARCH !== 'X64' ||
-              !process.version.startsWith('v24.')) {
-            throw new Error('Expected Windows x64 OS, runner and Node 24');
+              process.version !== 'v24.22.2') {
+            throw new Error('Expected Windows x64 OS, runner and Node 24.22.2');
           }
           const sourceSHA = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
           if (!/^[a-f0-9]{40}$/.test(sourceSHA) || sourceSHA !== process.env.GITHUB_SHA) {
@@ -132,9 +132,48 @@ jobs:
         id: unit
         run: npm.cmd test -- test/unit
 
+      - name: Prepare pinned x64 Node import library and discover MSVC
+        id: extension-toolchain
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (!(Test-Path -LiteralPath $vswhere -PathType Leaf)) { throw 'Visual Studio discovery unavailable' }
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($LASTEXITCODE -ne 0 -or -not $vs) { throw 'x64 Visual C++ tools unavailable' }
+          $vcvars = Join-Path $vs 'VC\Auxiliary\Build\vcvarsall.bat'
+          if (!(Test-Path -LiteralPath $vcvars -PathType Leaf)) { throw 'vcvarsall unavailable' }
+          $library = Join-Path $env:RUNNER_TEMP 'omxterm-node-v24.22.2-x64.lib'
+          & curl.exe --fail --location --silent --show-error --connect-timeout 20 --max-time 120 --output $library 'https://nodejs.org/dist/v24.22.2/win-x64/node.lib'
+          if ($LASTEXITCODE -ne 0) { throw 'Node import library download failed' }
+          $expected = 'a0a84aa03917b578d286010b7521837e9ff1136ffb2e4a406c14316c33fd06f7'
+          if ((Get-FileHash -Algorithm SHA256 -LiteralPath $library).Hash.ToLowerInvariant() -ne $expected) { throw 'Node import library digest mismatch' }
+          "OMXTERM_NODE_IMPORT_LIBRARY=$library" >> $env:GITHUB_ENV
+          "OMXTERM_VCVARS=$vcvars" >> $env:GITHUB_ENV
+          Write-Output "Verified Node v24.22.2 x64 import library SHA256: $expected"
+
+      - name: Run native x64 lease, store and backend tests (no windows)
+        id: extension-native
+        shell: cmd
+        run: |
+          call "%OMXTERM_VCVARS%" x64
+          if errorlevel 1 exit /b 1
+          node -e "if(process.platform!=='win32'||process.arch!=='x64'||process.version!=='v24.22.2')process.exit(1)"
+          if errorlevel 1 exit /b 1
+          call npm.cmd test -- test/integration/installed-packages.test.ts test/integration/extension-runtime.test.ts --reporter=json --outputFile=.scratch/825-native-results.json
+          if errorlevel 1 exit /b 1
+          node -e "const r=require('./.scratch/825-native-results.json'); const a=r.testResults.flatMap(x=>x.assertionResults); for(const n of ['executes native lifetime regressions through the actual adapter in a fresh owned process','runs the actual Node-IPC runtime and rejects browser-mode bootstrap before import']) { const m=a.filter(x=>x.fullName.includes(n)); if(m.length!==1||m[0].status!=='passed') process.exit(1); console.log('PASS native scenario: '+n); } console.log('Native tests passed: '+r.numPassedTests+'; skipped: '+r.numPendingTests);"
+          if errorlevel 1 exit /b 1
+
       - name: Build application
         id: build
-        run: npm.cmd run build
+        shell: cmd
+        run: |
+          call "%OMXTERM_VCVARS%" x64
+          if errorlevel 1 exit /b 1
+          node -e "if(process.platform!=='win32'||process.arch!=='x64'||process.version!=='v24.22.2')process.exit(1)"
+          if errorlevel 1 exit /b 1
+          call npm.cmd run build
+          if errorlevel 1 exit /b 1
 
       - name: Build unsigned x64 candidate (publish never)
         id: package
@@ -182,6 +221,8 @@ jobs:
             typecheck=${{ steps.typecheck.outcome }}
             panel-cancellation=${{ steps.panel-cancellation.outcome }}
             unit=${{ steps.unit.outcome }}
+            extension-toolchain=${{ steps.extension-toolchain.outcome }}
+            extension-native=${{ steps.extension-native.outcome }}
             build=${{ steps.build.outcome }}
             package=${{ steps.package.outcome }}
             inspection=${{ steps.inspect.outcome }}
@@ -198,6 +239,6 @@ jobs:
             'Phase outcomes:', '```text', $env:PHASE_OUTCOMES, '```',
             'Build-only download; no dependency cache or release publication is configured.',
             'Windows Server hosted runners are administrators. Symlink success is not ordinary-user Developer Mode evidence.',
-            'Inspection loads the packaged addon in Electron Run-as-Node; no real ConPTY, GUI or NSIS execution.',
+            'Native lease/store/backend tests and packaged Electron Run-as-Node inspection do not exercise a GUI, real ConPTY or NSIS.',
             'Desktop/GPU, Windows 11, ordinary-user integration and installer behavior remain unverified, not gates for this build-only lane.'
           ) | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY

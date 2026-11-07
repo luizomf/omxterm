@@ -93,6 +93,13 @@ const evidence = {
   electronDependencyVersion:
     JSON.parse(lock).packages["node_modules/electron"].version,
   packagedRuntime: runtime,
+  ...(platform === "win32"
+    ? {
+        packagedExtensions: JSON.parse(
+          await readFile(".scratch/extensions-package.json", "utf8"),
+        ),
+      }
+    : {}),
   nodePtyPreparation: {
     // Bind the selected outputs to their reviewed recipe, not just a version.
     inputs: Object.fromEntries(

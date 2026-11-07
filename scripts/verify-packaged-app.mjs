@@ -80,7 +80,7 @@ const extensionEntries = [
 function packagedExtensionEntries(platform, arch) {
   if (
     (platform === "linux" && arch === "x64") ||
-    (platform === "win32" && arch === "arm64")
+    (platform === "win32" && ["arm64", "x64"].includes(arch))
   )
     return extensionEntries;
   if (arch !== "arm64" || !["linux", "darwin"].includes(platform)) return [];
