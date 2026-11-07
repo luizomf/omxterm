@@ -16,6 +16,11 @@ npm run format:check         # Check formatting with Prettier
 >
 > For agent work, run browser tests and browser-based review/reproduction probes only in an assigned disposable guest, including headless Chromium or Chrome. Carry this restriction to every nested delegate. Before native clipboard-writing tests (including default-suite cases), follow the [shared-clipboard prelaunch checks](docs/development.md#shared-clipboard-before-native-tests); hold affected execution if isolation is unavailable. Temporary profiles, HOME and XDG paths do not isolate macOS Keychain or OS preferences; see the [macOS verification precautions](docs/development.md#macos-preferences-and-native-verification). They do not isolate Linux per-user services either; follow the [Linux desktop-service prerequisites](docs/development.md#linux-desktop-services-and-native-verification), including shared portal/mount baselines and preservation checks. A same-user private D-Bus/Xvfb desktop is not account/runtime isolation.
 
+Choose verification for the changed inputs and reuse suitable existing results.
+If a safety prerequisite blocks a test, record the missing coverage and continue
+independent work. The hold applies to that execution; [ADR 0019](docs/adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse)
+guides the separate release decision.
+
 ## Architecture and repository layout
 
 - `src/main/` — Electron main process: native windows, local PTY sessions, configuration and theme loading, font validation, clipboard, external link validation, bounded local-image reads, and operational logging.

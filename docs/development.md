@@ -268,6 +268,12 @@ explicitly rather than leaving an unjoined rejection assertion.
 
 ## Running native tests
 
+The prerequisites below protect test execution. If one is unavailable, record the
+affected tests as unrun and continue independent checks or product work. Safe
+execution and the release decision are separate. Under [ADR 0019](adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse),
+evidence gaps are assessed for relevance rather than treated as automatic release
+blockers. Preserve actual failures and record their disposition.
+
 > **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. Follow the shared-clipboard, Linux desktop-service or macOS preference precautions below before launch.
 
 ### Shared clipboard before native tests
@@ -517,7 +523,10 @@ separate.
 
 ### Qualification scope
 
-`npm run check:portable` is the baseline for every code change (formatting, lint, typecheck, the default Vitest suite, and an unpackaged build). Before running it:
+`npm run check:portable` is the complete source check (formatting, lint, typecheck,
+the default Vitest suite and an unpackaged build). Use [ADR 0019](adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse)
+to select focused checks for a narrow change and reuse matching results. Before
+a run that includes graphical tests:
 
 - Linux display relaunch selects `APPIMAGE` only when `APPDIR/omxterm` matches the current executable, preventing development Electron from relaunching an inherited outer AppImage; terminal environment propagation is unchanged ([ADR 0020](adr/0020-default-linux-rendering-to-x11.md)). [#609](https://github.com/luizomf/omxterm/issues/609) records the bounded Fedora/Ubuntu reproductions and corrected About/packaged-relaunch checks, not a diagnosis of every historical startup failure or all-platform qualification.
 - Known runtime limitations that tests account for are listed in the [Restty guide](restty-development.md#current-runtime-limitations).
@@ -525,8 +534,9 @@ separate.
   a selected display's logical usable work area large enough for the exact
   1920×1080 renderer viewport plus its observed native frame. Physical resolution
   alone is not the prerequisite. See the [Settings layout capacity check and
-  focused command](native-test-reference.md#settings-layout) before a full run;
-  insufficient capacity is a failure, never a qualified skip.
+  focused command](native-test-reference.md#settings-layout) before a full run.
+  If capacity is unavailable, leave those tests unrun and record the setup gap.
+  An attempted run that fails the capacity check remains failed.
 - Linux runs that include `terminal-popup-native` (including the full suite) need the explicitly provisioned [native-input lane](native-test-reference.md#native-terminal-popup-and-input-provisioning). Set `OMXTERM_TEST_PROVISIONED_NATIVE_INPUT=1` only after provisioning it. Missing prerequisites fail; they are not skipped as successful qualification.
 
 ### Focused checks
@@ -556,7 +566,8 @@ startup activation, package/fuse/signing qualification or public SDK follows fro
 building that artifact. Controlled lifecycle tests under `test/unit/extension-runtime-*`
 remain headless and do not execute the native addon.
 
-While iterating on a specific subsystem, you can run targeted test files before running the full suite. Detailed prerequisites and evidence boundaries are in the [native subsystem fixture reference](native-test-reference.md):
+Use targeted files for the affected subsystem; add broader checks when the change
+needs them. Detailed prerequisites and evidence boundaries are in the [native subsystem fixture reference](native-test-reference.md):
 
 - [Host, hover and font lifecycle](native-test-reference.md#host-hover-and-font-lifecycle)
 - [Restty host PowerShell isolation](native-test-reference.md#restty-host-powershell-isolation)
@@ -697,9 +708,9 @@ Current source also carries one exact public Snippets0.1.0 input for new package
 profiles. Normal checkout/package preparation is offline and pinned; missing or
 corrupt supported-target input fails the beforePack hook. Source build/development
 opts out of provisioning. See [Default Snippets](default-snippets.md) for
-`prepare:default-snippets`, exact target/resource checks and the still-required
-changed-startup/native/package proof. This does not reclassify existing platform
-or historical failed checkpoints.
+`prepare:default-snippets`, exact target/resource checks, ordinary-profile test
+scenarios and the published0.25.0 results/limits. Plan further checks for changed
+inputs; keep earlier failures and unrun cases visible in the release decision.
 
 For native x64 **build-only** delivery, use `npm run package:linux:x64` or
 `npm run package:win:x64`, then `npm run package:verify -- --inspection-only`.

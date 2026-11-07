@@ -1,20 +1,19 @@
 # Optional Snippets migration
 
-Published **[OMXTerm 0.24.0](https://github.com/luizomf/omxterm/releases/tag/v0.24.0)**
-uses separately installed **[Snippets 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)**
+Published **[OMXTerm 0.25.0](https://github.com/luizomf/omxterm/releases/tag/v0.25.0)**
+uses optional **[Snippets 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)**
 on Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
-`0.23.0` hosts retain built-in Snippets. Installation through the official catalog
-or a verified local/offline archive remains deliberate; it does not activate the
-tool or rewrite user data. The Windows ARM64 installed-public checkpoint remains
-unresolved under the [release-risk decision](#stable-0240-release-disposition).
+`0.23.0` hosts retain built-in Snippets. Existing users choose installation through
+the official catalog or a verified local/offline archive; user YAML and deliberate
+disabled/removed choices are preserved. Activation remains deliberate.
 
-Current source adds a [removable one-time default](default-snippets.md) only for
-positively new packaged profiles on existing optional targets: exact public0.1.0
-bytes, installed+enabled but dormant, no startup network/view/backend/YAML, no
-existing-user enrollment and no silent restore after uninstall. Developer startup
-and Windows x64 are excluded. This is not published0.24.0 behavior or qualification
-of the changed startup/package paths; historical receipts/failures and the Windows
-installed-public risk decision below retain their original scope.
+Since 0.25.0, positively new packaged profiles on those optional targets attempt a
+[removable one-time default](default-snippets.md): the unchanged public 0.1.0
+archive is bundled and installed enabled, but runs only when opened. This needs
+no startup download and creates no user YAML. There is no existing-user enrollment
+or silent restore after uninstall. Developer startup and Windows x64 are excluded.
+Read the [0.25.0 known limits](#stable-0250-release-disposition), especially before
+upgrading Windows ARM64 if you rely on built-in Snippets.
 
 Historical preview pairs retain their own exact receipts and qualification limits.
 
@@ -31,6 +30,40 @@ remains separate from its pending installed public-HTTPS checkpoint. A verified
 local archive also works offline after download. See
 the [Linux x64 public-catalog checkpoint](#linux-x64-public-catalog-checkpoint)
 and [macOS public-catalog checkpoint](#macos-arm64-catalog-delivery).
+
+## Stable 0.25.0 release disposition
+
+Stable 0.25.0 was published on **2026-11-07 at 11:39:10 UTC** as immutable Latest,
+from cut `13ea6873e6c45240a0a757156b7a4f694c2b43af`. All twelve downloads matched
+their local sizes and SHA-256 hashes, both before publication and through anonymous
+public downloads. Snippets 0.1.0 and the existing catalogs are unchanged.
+
+The maintainer chose to ship **0.25.0 only** with these known limits, lifting the
+earlier release hold. The failed and unrun checks below remain unresolved:
+
+- **Windows ARM64:** the exact installer and seven new/existing-profile scenarios
+  completed their package/profile checks, but the full graphical suite did not run.
+  Earlier public-install Snippets scenarios **failed** when the controlled terminal child
+  exited unexpectedly; one diagnostic also saw an unexpected prefix before Run
+  text. We do not yet know whether the application or test setup caused these
+  failures. This matters to new profiles too, since Snippets is now a default.
+  If you need the previous built-in tool, you can remain on
+  [0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0).
+- **Windows network silence:** the strict test **failed** on system-proxy discovery
+  and reachability traffic, including in an existing-empty profile control. No
+  Snippets catalog/archive acquisition was observed. The maintainer accepted the
+  profile behavior separately; Windows is not verified to stay network-silent.
+- **macOS ARM64:** package and ordinary-profile checks passed, as did separate
+  source graphical/Run checks. Insert, preview and public archive acquisition were
+  not tested with this exact released DMG/archive pair.
+- **Linux/Windows x64:** these are build-only downloads. Desktop/GPU, installers
+  and ordinary-user integration were not tested by those CI lanes.
+
+Linux ARM64 uses prior behavioral/Settings results for unchanged inputs plus the
+refreshed package and ordinary-profile checks. [#741](https://github.com/luizomf/omxterm/issues/741)
+stays open for the remaining work. The single-release decision does not change
+terminal-input rules or the isolation required for future native tests. See
+[release provenance and exclusions](release.md#stable-0250-publication).
 
 ## Stable 0.24.0 release disposition
 
@@ -84,11 +117,13 @@ It never installs or enables anything for you. On Windows x64, it opens the buil
 A disabled package remains disabled. Runtime unavailability is reported separately
 from a missing installation. Terminal sessions remain usable.
 
-### Empty-panel access in newer source
+<a id="empty-panel-access-in-newer-source"></a>
+
+### Empty-panel access since 0.25.0
 
 **Toggle Auxiliary Panel** preserves ordinary hide/reveal whenever any tool is
 open, including when Snippets has been removed. With a genuinely empty eligible
-panel, newer source lazily opens installed+enabled Snippets; Windows x64 retains
+panel, 0.25.0 and current source lazily open installed+enabled Snippets; Windows x64 retains
 its built-in compatibility view. If unavailable, one localized nonmodal notice
 lasts about four seconds per application-process lifetime across all its windows,
 without focus theft, timer extension or repeated notices. Later deliberate
@@ -101,12 +136,14 @@ and close semantics remain unchanged. Both actions keep their defaults and
 custom/null keybindings. It is not preinstallation, a Windows x64 optional
 migration, new platform qualification or a claim about the immutable 0.24.0
 packages. The separate [new-profile default](default-snippets.md) does not change
-this fallback's no-install behavior or qualify the changed startup/package paths.
+this fallback's no-install behavior.
 
 ## Install deliberately
 
-On the four optional-Snippets `0.24.0` targets, use the matching, actually available
-platform package and checksum described in the [installation guide](installation.md).
+On the four optional-Snippets `0.25.0` targets, existing profiles and deliberate
+reinstalls use the matching platform package and checksum described in the
+[installation guide](installation.md). If Snippets is already installed and
+enabled by the new-profile default, just open it; you do not need to reinstall.
 Windows x64 uses built-in Snippets instead. For a preview, use its exact host and
 archive pair linked above; the Windows dev.36 section has [installer and SmartScreen
 instructions](#windows-arm64-published-preview-and-catalog-candidate).

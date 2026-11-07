@@ -193,16 +193,15 @@ Insert, Run and read-only preview deliver exact text through Protected Paste to
 a captured live Surface, never a replacement target. See
 [interaction behavior](docs/spec.md#window-and-session-behavior) and
 [catalog configuration](docs/spec.md#configuration-and-local-state).
-Published stable `0.24.0` and current source use optional, separately installed
-Snippets `0.1.0` on Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64
-and unchanged `0.23.0` hosts retain built-in Snippets. Stable `0.24.0` offers
-deliberate official-catalog or verified local/offline installation. The Windows
-ARM64 installed-public checkpoint remains unresolved under the
-[release-risk decision](docs/snippets-migration.md#stable-0240-release-disposition).
-Historical preview receipts retain their exact host/archive scopes; see the
-[delivery evidence and limits](docs/snippets-migration.md). The
-[new-profile default](docs/default-snippets.md) is source-only, not published
-`0.24.0` behavior. Published artifacts and original receipts remain immutable.
+Published stable `0.25.0` and current source use optional Snippets `0.1.0` on
+Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
+`0.23.0` hosts retain built-in Snippets. Existing profiles choose official-catalog
+or verified local/offline installation; positively new packaged profiles get the
+[removable one-time default](docs/default-snippets.md), enabled but dormant.
+Windows ARM64's unrun graphical suite and unresolved public-install failures are
+accepted [for 0.25.0 only](docs/snippets-migration.md#stable-0250-release-disposition).
+The migration guide retains historical preview/0.24.0 receipts. Extension versions,
+catalogs and published bytes are unchanged.
 Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
@@ -211,11 +210,10 @@ migration guidance and compatible package publication/verification before distri
 packaged optional-target profiles, independent of configuration-kit creation.
 Early default/config/state absence and later identity matching precede a permanent,
 version-independent consumed witness. Exact pinned public bytes enter Installed
-Packages enabled+dormant with generation0, without startup network, YAML or code
-activation. Existing profiles, disabled entries and tombstones never enroll;
+Packages enabled+dormant with generation0, without provisioning acquisition, YAML
+or code activation. Existing profiles, disabled entries and tombstones never enroll;
 uninstall/collection cannot restore the default. Developer startup and Windows x64
-are excluded. This is a source behavior, not matching platform/package qualification;
-see [Default Snippets](docs/default-snippets.md).
+are excluded. Shipped in 0.25.0; see [Default Snippets](docs/default-snippets.md).
 
 ## Terminal data and interaction
 

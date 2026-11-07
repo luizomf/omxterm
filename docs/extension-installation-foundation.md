@@ -75,6 +75,9 @@ Archive admission refuses lower hosts; older hosts also reject unknown capabilit
 names rather than partially activating. Ordinary semver admits dev.20 and later
 0.25.0 dev hosts; the development bridges below do not bypass this floor.
 Preparation is not exact host/archive qualification, publication or catalog promotion.
+The published 0.25.0 host predates this capability and cannot run Files 0.8:
+its validator refuses the unknown capability even though the version range matches.
+Only later source includes the consumer.
 
 The immutable Files0.1.0 manifest's exact historical engine metadata is admitted
 on the deliberately enumerated hosts 0.24.0-dev.0, 0.24.0-dev.1,

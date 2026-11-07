@@ -19,29 +19,29 @@
 
 ## Optional tools
 
-**[OMXTerm 0.24.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.24.0).**
-Its optional tools are separately installed, not bundled features or a stable
-extension SDK. Updating OMXTerm alone does not install or update extensions.
+**[OMXTerm 0.25.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.25.0).**
+Files and SSH are installed separately. Snippets is included as a removable
+default for new profiles on the targets below. Updating an existing profile does
+not install or update tools.
 
 - **[Files 0.6.0](files-development-preview.md)** and
   **[SSH Connect 0.3.1](ssh-connect.md)** are published previews offered through
   the official catalogs on **Linux and macOS ARM64**. Follow each tool's guide
   for installation, compatible hosts and platform/qualification limits.
-- **[Snippets 0.1.0](snippets-migration.md)** is separately installed on stable
-  0.24.0 for **Linux ARM64/x64, macOS ARM64 and Windows ARM64**. Windows x64
-  retains built-in Snippets. Existing YAML catalogs are preserved; installation
-  and activation remain deliberate, with a local-archive route for offline use.
-  The **Windows ARM64 installed-public checkpoint remains unresolved** under the
-  documented [release-risk decision](snippets-migration.md#stable-0240-release-disposition),
-  not a test pass or a fixture-only explanation. Users who depend on built-in
-  Windows ARM64 Snippets may remain on 0.23.0.
+- **[Snippets 0.1.0](snippets-migration.md)** is optional on stable 0.25.0 for
+  **Linux ARM64/x64, macOS ARM64 and Windows ARM64**. New packaged profiles try to
+  install the [removable default](default-snippets.md) once; existing users choose
+  installation. Your YAML and disabled/removed choices stay intact. Windows x64
+  retains built-in Snippets. Windows ARM64 has
+  [unresolved public-install failures and testing gaps](snippets-migration.md#stable-0250-release-disposition);
+  users needing built-in Snippets may remain on 0.23.0.
 - **[Saved Layout](saved-layout.md)** and **[Mirror Typing](mirror-typing.md)**
   remain separately built source previews; their guides describe compatibility
   and evidence, not a published catalog offer.
 
-Current development source is newer than stable 0.24.0. Source-only improvements
-do not change immutable published hosts or extension archives. Compatibility and
-catalog availability do not qualify every admitted host or workflow.
+Development source also has Files 0.8 path insertion/drop and #818's revised
+palette preview. Neither is in stable 0.25.0, which cannot run Files 0.8. See each
+tool's guide for the host versions actually tested.
 
 ### Historical preview and composition evidence
 

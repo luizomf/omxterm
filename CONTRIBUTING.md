@@ -85,7 +85,9 @@ npm run format:check
 git diff --check
 ```
 
-For **code changes**, run the portable check suite:
+For **code changes**, select tests for the affected behavior and reuse matching
+results under [ADR 0019's risk-based verification](docs/adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse).
+The complete source check, run on a suitable desktop, is:
 
 ```sh
 npm run check:portable
@@ -101,7 +103,12 @@ npm run check:portable
 
 For changes that affect native packaging or installers, see [packaging verification](docs/development.md#evidence-reuse-and-packaging). Note that full Windows installer verification (`npm run check:win`) performs a real installation and requires a disposable VM with a recovery snapshot.
 
-In your PR description, list the verification commands you ran and their results (as well as any platform checks you could not run locally).
+In your PR description, list the checks you ran, reused results and any missing
+coverage. If a test cannot run safely, leave that execution unrun and continue
+independent work. Maintainers decide whether the candidate needs more evidence,
+a smaller scope or a documented release-risk decision; a test-setup limitation
+alone does not stop the repository. [ADR 0019](docs/adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse)
+already allows bounded unresolved risk to be recorded without inventing a cause.
 
 ## Commits and pull requests
 

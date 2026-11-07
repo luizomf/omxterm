@@ -18,6 +18,16 @@ Neither automatically extends to another patch or minor development family;
 review compatibility and capabilities deliberately at each transition. The stable
 suffix-removal and complete-asset procedure below remains unchanged.
 
+## Post-0.25.0 development baseline
+
+Stable 0.25.0 uses a frozen cut; main already has later features, so its next
+target is `0.26.0-dev.0`. Main stays at `0.25.0-dev.22` for now because the
+[current compatibility rules](extension-installation-foundation.md#archive-contract)
+would reject pinned Snippets and existing catalog offers on `0.26.0-dev.0` (and
+`0.25.1-dev.0`). Before changing the three root version fields, add and test a
+reviewed next-family compatibility rule. Keep the original archive bytes, engine
+ranges, API and capability floors unchanged.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

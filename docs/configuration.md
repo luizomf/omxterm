@@ -35,11 +35,12 @@ You can find them in:
 
 ## Settings
 
-Stable **0.24.0** includes font controls and a theme-file path in **Appearance**,
-plus preferences in **General**, **Terminal**, and **Window**. Use **Shortcuts**
-to record, reset, or unbind application shortcuts. The theme cards and background
-effect controls described below are newer development-source additions, not
-controls in stable 0.24.0.
+Stable **0.25.0** includes font controls, local theme cards and inline theme
+authoring, transparency and desktop blur in **Appearance**, plus preferences in
+**General**, **Terminal**, and **Window**. Use **Shortcuts** to record, reset or
+unbind application shortcuts. Stable 0.24.0 had the font controls/theme-file path
+but not these newer appearance controls. The later #818 paired palette-preview
+presentation remains development-source only, as noted below.
 
 Settings opens as one graphical tab per window, beside your terminals, with no
 shell or terminal session. Choosing **Settings…** again selects that same tab
@@ -237,10 +238,11 @@ backups and consulted when transferring individual preferences to Settings.
 
 ## Background transparency and blur
 
-In **stable 0.24.0**, use **Settings → Config File** (then **Save**) or a text
-editor (then reload) to set `window.transparency` above `0` (up to `1`) and enable
-`window.blur`. These settings let your desktop show through the terminal
-background and request native desktop blur:
+In **stable 0.25.0**, use the Appearance controls below, **Settings → Config File**
+(then **Save**) or a text editor (then reload) to set `window.transparency` above
+`0` (up to `1`) and enable `window.blur`. Stable 0.24.0 supports the JSON route,
+not the Appearance controls. These settings let your desktop show through the
+terminal background and request native desktop blur:
 
 ```json
 {
@@ -254,14 +256,13 @@ background and request native desktop blur:
 
 Both settings update live across all open windows when you reload. Text, cursor, selection, and inline images keep full opacity so your terminal stays crisp and readable.
 
-**Development source only, since 0.25.0-dev.16 (#805):** **Settings → Appearance**
-adds a **Background transparency** slider (0–100%, 1% steps) and **Blur desktop
+**Since stable 0.25.0** (introduced in 0.25.0-dev.16, #805), **Settings → Appearance**
+provides a **Background transparency** slider (0–100%, 1% steps) and **Blur desktop
 background** checkbox below themes. Arrow keys adjust the focused slider;
 Home/End select its endpoints. Each saved change updates the actual windows
 through the normal reload path, with no separate Apply step; the usual status
-line reports save/application errors. These controls are not in published stable
-0.24.0. Desktop blur is distinct from About/Command Palette's application-underlay
-softening; support depends on the platform/compositor.
+line reports save/application errors. Desktop blur is distinct from the softening
+behind About/Command Palette; support depends on the platform/compositor.
 
 | Platform | Behavior                                                                                                                                                    |
 | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -485,28 +486,21 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Published **OMXTerm 0.24.0** and current source use optional Snippets on Linux
+Published **OMXTerm 0.25.0** and current source use optional Snippets on Linux
 ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and the unchanged0.23.0
 host retain built-in Snippets. Use the official catalog or a verified local
 archive; the local route also works offline after download. See the
 [migration guide](snippets-migration.md) for matching downloads, installation,
 existing catalogs and exact qualification limits.
 
-Windows ARM64 has separate exact-stage/local-archive Snippets and FULL NSIS
-checkpoints; stable0.24.0 passed its own FULL installer check. Its additional
-installed-public HTTPS Snippets checkpoint remains unresolved under the explicit
-[release-risk decision](snippets-migration.md#stable-0240-release-disposition),
-not a PASS, demonstrated input fix or fixture-only attribution. Historical failed
-runs retain their original scope. Those release checkpoints neither convert
-catalogs nor automatically install or enable Snippets.
+Windows ARM64 still has [public-install Snippets failures and testing gaps](snippets-migration.md#stable-0250-release-disposition).
+Read those limits before upgrading if you rely on built-in Snippets.
 
-Separately, current source implements a [one-time removable default](default-snippets.md)
-for positively new packaged profiles only: exact pinned public0.1.0 bytes installed
-and enabled but dormant, with no eager backend/view, startup network or YAML.
-Existing profiles/disabled entries/tombstones and deliberate manual trust are
-preserved; a permanent consumed attempt prevents silent restore or startup retry.
-Developer startup and Windows x64 are excluded. Changed-startup and exact-package
-qualification remain separate; no published release behavior is being relabeled.
+Since 0.25.0, new packaged profiles try once to install the
+[removable default](default-snippets.md), enabled but inactive until opened.
+Existing profiles, YAML and disabled/removed choices stay intact. This uses the
+unchanged bundled 0.1.0 archive and creates no user YAML. Removing it does not
+trigger a reinstall. Developer startup and Windows x64 are excluded.
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 
@@ -534,20 +528,22 @@ snippets:
 ## Terminal themes
 
 On first launch, OMXTerm copies its default theme to `themes/omtheme.json` and
-links it in `config.json`. In **stable 0.24.0**, enter a theme file's path in
-**Settings → Appearance → Theme file**; clearing it uses the bundled default.
-Paths can be relative to the configuration directory or absolute.
+links it in `config.json`. In **stable 0.25.0**, use local theme cards or enter a
+path in **Settings → Appearance → Theme file (advanced)**; clearing it uses the
+bundled default. Paths can be relative to the configuration directory or absolute.
 
-Stable 0.24.0 selects themes but does not edit their names or colors. Development
-source additionally provides the [inline theme editor](#author-a-theme-development-source).
+Stable 0.25.0 also provides the [inline theme editor](#author-a-theme).
+Stable 0.24.0 selects themes by path but does not edit their names or colors.
 You can still edit a theme JSON file as shown below. The
 [legacy Studio workflow](#edit-visually-with-omxterm-studio) remains an option for
 browser-only basic palette drafts, not current theme/config round trips.
 
-### Local theme picker (development source)
+<a id="local-theme-picker-development-source"></a>
 
-**Since 0.25.0-dev.1**, **Settings → Appearance** additionally offers local themes
-by name and palette preview. This picker is not in stable 0.24.0. Place version-1
+### Local theme picker
+
+**Since stable 0.25.0** (introduced in 0.25.0-dev.1), **Settings → Appearance**
+offers local themes by name and palette preview. Place version-1
 JSON theme files directly in `themes/` beside the logical `config.json`, then
 choose **Refresh themes**. Both the directory and individual files may be
 symlinks. Names and paths are shown together, so themes with the same name remain
@@ -556,9 +552,11 @@ the built-in default; it is distinct from the editable `themes/omtheme.json` cop
 
 Choosing a card saves and applies it through the normal Settings path. A pending choice is marked **Saving…**; after it settles, a selected card identifies the saved configuration. If the status says it could not be applied, follow that message and reload after fixing the problem. Missing or empty folders, unreadable or invalid files and a limited list are reported. Discovery examines at most 2,048 directory entries and 128 JSON candidates, reads at most 256 KiB per theme and 4 MiB of configuration, and does not watch for changes. A configured custom path or another alias may not appear as a selected card; the **Theme file (advanced)** input remains available for relative or absolute paths. Discovery does not edit theme files.
 
-### Author a theme (development source)
+<a id="author-a-theme-development-source"></a>
 
-This editor is **development source**, not a control in published stable 0.24.0.
+### Author a theme
+
+This editor is included in **stable 0.25.0**.
 In **Settings → Appearance**, choose **New theme**, **Import theme JSON…**, or
 **Edit theme** beneath a card. Editing a card does not select it. One inline
 editor is open at a time; **Cancel** finishes that editor before you start another.
@@ -568,13 +566,13 @@ editor is open at a time; **Cancel** finishes that editor before you start anoth
   partial text stays with its role when you switch roles or categories; fix it
   before saving or exporting. The specimen shows the last valid colors.
 - The **Palette preview** shows illustrative text, selection, cursor and all
-  normal/bright ANSI colors. Each normal color stays paired with its Bright
-  variant below, even when the grid wraps. Beside each readable name, `Aa` shows
-  that color as text on the draft background; the square shows the same color as
-  a solid fill. Samples keep the real draft contrast, including hard-to-see colors;
-  names use interface colors so you can still identify them. The preview does not
-  run a shell or change your actual terminal, surrounding Settings colors,
-  transparency or desktop blur.
+  normal/bright ANSI colors. Stable 0.25.0 includes the original specimen.
+  **Development source only (#818):** each normal color stays paired with its
+  Bright variant below, even when the grid wraps. Beside each readable name, `Aa`
+  shows that color as text on the draft background; the square shows it as a
+  solid fill. Samples retain real draft contrast while names use interface colors.
+  Neither preview runs a shell or changes your actual terminal, surrounding
+  Settings colors, transparency or desktop blur.
 - **Save** updates an opened local theme using its original revision. It follows
   intentional file/directory links to the regular target and preserves the links.
   A detected external edit or retargeting refuses the save and keeps your draft;

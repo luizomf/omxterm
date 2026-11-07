@@ -4,21 +4,20 @@ Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/
 
 ## Current distribution status
 
-**[Stable OMXTerm 0.24.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.24.0).**
-It uses the separately installed, immutable Snippets `0.1.0` archive on Linux
-ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 retains built-in Snippets;
-the unchanged 0.23.0 host also retains its built-in tool. Installation and
-activation remain deliberate, with catalog and local/offline archive routes
-described in the [migration guide](../snippets-migration.md).
+**[Stable OMXTerm 0.25.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.25.0).**
+It uses the unchanged immutable Snippets `0.1.0` archive on Linux ARM64/x64,
+macOS ARM64 and Windows ARM64. Positively new packaged profiles get the removable
+one-time default described below; existing users still choose installation and
+keep their YAML and disabled/removed choices. Activation remains deliberate.
+Windows x64 and unchanged 0.23.0 hosts retain built-in Snippets. Catalog and
+local/offline archive routes remain in the [migration guide](../snippets-migration.md).
 
-The Windows ARM64 installed-public checkpoint remains **unresolved** under the
-[stable 0.24.0 release-risk decision](#stable-0240-release-risk-decision). Host
-publication is not a public-consumption PASS, demonstrated input fix or fixture-only
-attribution. Exact-stage/local-archive and separate FULL NSIS evidence retain
-their own scopes. Users who depend on built-in Windows ARM64 Snippets may remain
-on 0.23.0. Remaining platform gates and #741 stay open; no stable extension SDK
-is established. This status update changes neither the migration architecture
-nor the acceptance contract below.
+The maintainer accepted Windows ARM64's unresolved public-install failures and
+missing graphical suite [for 0.25.0 only](#stable-0250-release-risk-decision).
+Its strict network-silence test also remains failed. #741 stays open, and the
+terminal-input rules below are unchanged. Stable 0.25.0 excludes Files 0.8
+insertion/drop and #818's later palette presentation. Historical 0.24.0 evidence
+remains below.
 
 ## Historical preview checkpoints
 
@@ -321,6 +320,27 @@ See the [migration disclosure](../snippets-migration.md#stable-0240-release-disp
 No input invariant or failed observation is waived as successful; a catalog
 listing remains distinct from demonstrated public consumption. Users depending
 on the previous Windows ARM64 built-in experience may remain on 0.23.0.
+
+### Stable 0.25.0 release-risk decision
+
+On 2026-11-07 the maintainer lifted the previous hold and published the frozen
+cut as immutable Latest after verifying all twelve draft/public assets. This
+acceptance applies **only to 0.25.0**, including new-profile Snippets enrollment.
+
+Windows ARM64's installer passed FULL verification and seven packaged profile
+phases completed, but its graphical/default suite did not run. Earlier public-install
+Snippets runs lost the controlled child, and one diagnostic saw an unexpected
+prefix; application versus test cause remains unknown. The strict network-silence
+test failed on system-proxy traffic also seen in an existing-empty control.
+The maintainer accepted profile behavior separately from that failed oracle.
+
+Linux behavior/package results and macOS package/profile/source graphical results
+support the release. macOS exact-DMG/public-archive Insert, preview and acquisition
+remain untested; that limit is accepted too. x64 stays build-only. The
+[0.25.0 migration disclosure](../snippets-migration.md#stable-0250-release-disposition)
+has the user-facing details. #741 remains open. Terminal-input rules and future
+native-test isolation requirements are unchanged; the preceding 0.24.0 record
+remains historical.
 
 ## Acceptance evidence
 

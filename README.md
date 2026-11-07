@@ -72,7 +72,7 @@ agents.
 ## Platforms and downloads
 
 **Latest release:
-[0.24.0 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.24.0)**
+[0.25.0 — downloads and release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0)**
 
 Prebuilt packages target **Apple Silicon macOS, Linux ARM64 or x64, and Windows 11
 ARM64 or x64**. Both x64 packages have **build-only qualification** from native
@@ -81,12 +81,12 @@ See the release notes for actual platform coverage.
 
 | Platform                                 | Download                                                                                               | Checksum                                                                                                     |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.dmg.sha256)      |
-| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.AppImage.sha256) |
-| Linux x64 (build-only)                   | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.AppImage)   | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.AppImage.sha256)   |
-| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.24.0/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/linux_install.sh.sha256)              |
-| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-arm64.exe.sha256)      |
-| Windows x64 (build-only)                 | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.exe)       | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.24.0/OMXTerm-0.24.0-x64.exe.sha256)        |
+| Apple Silicon macOS                      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.dmg)           | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.dmg.sha256)      |
+| Linux ARM64                              | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.AppImage) | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.AppImage.sha256) |
+| Linux x64 (build-only)                   | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.AppImage)   | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.AppImage.sha256)   |
+| Linux application-menu helper (optional) | [linux_install.sh](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh)      | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh.sha256)              |
+| Windows ARM64                            | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.exe)     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.exe.sha256)      |
+| Windows x64 (build-only)                 | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.exe)       | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.exe.sha256)        |
 
 Linux ARM64 requires **glibc 2.42+** and X11/XWayland (for example Fedora 43+,
 Ubuntu 25.10+, or Arch). Linux x64 headless checks ran on Ubuntu 22.04 with
@@ -107,17 +107,16 @@ These are not release gates for the build-only lanes.
 
 ### Optional Snippets
 
-Stable **0.24.0** uses optional Snippets on Linux ARM64/x64, macOS ARM64 and
-Windows ARM64. Installation is deliberate; existing YAML is preserved.
-Windows x64 retains built-in Snippets. The Windows ARM64 installed-public
-checkpoint remains unresolved: see the [release-risk disclosure](docs/snippets-migration.md#stable-0240-release-disposition)
-before upgrading if you depend on the previous built-in experience.
+Stable **0.25.0** uses optional Snippets 0.1.0 on Linux ARM64/x64, macOS ARM64
+and Windows ARM64. New packaged profiles try to install the
+[removable default](docs/default-snippets.md) once, ready to open but inactive at
+startup. Existing profiles still choose installation; your YAML and disabled or
+removed choices stay intact. Windows x64 retains built-in Snippets.
 
-Newer source implements a [removable one-time default](docs/default-snippets.md)
-for positively new packaged optional-target profiles only: installed+enabled but
-dormant, without startup network or user YAML creation. Existing profiles, disabled
-entries and removals are preserved; developer startup and Windows x64 are excluded.
-Source implementation is not qualification or changed behavior in published0.24.0.
+**Windows ARM64:** public-install Snippets tests still have unresolved failures,
+and the full graphical suite did not run. Read the
+[known limits](docs/snippets-migration.md#stable-0250-release-disposition) before
+upgrading if you depend on the previous built-in experience.
 
 Historical previews:
 
@@ -167,8 +166,9 @@ menu bar.
 
 On first launch, stable OMXTerm creates `config.json` and `themes/omtheme.json`
 in `~/.config/omxterm`. Choose **Settings…** in the application menu to change
-fonts, preferences, and shortcuts without editing JSON. For custom colors, edit
-[a theme file](docs/configuration.md#terminal-themes). Stable 0.24.0 also creates
+fonts, preferences, and shortcuts without editing JSON. Stable 0.25.0 also lets
+you [create, import and edit themes](docs/configuration.md#author-a-theme) in
+Appearance, with live transparency and blur controls. It creates
 `snippets.yaml` on Windows x64, which retains built-in Snippets. Linux ARM64/x64
 and macOS/Windows ARM64 use optional Snippets and do not create that file; follow
 the [migration guide](docs/snippets-migration.md#install-deliberately) to create a catalog.
@@ -185,10 +185,11 @@ See
 
 ## Privacy and security
 
-OMXTerm collects no telemetry and makes no background network requests. The Linux
-ARM64 development preview fetches its official catalog only on explicit
-Browse/Refresh, and downloads extension archives only after a catalog selection
-or an explicitly supplied HTTPS link ([transport and trust policy](docs/files-development-preview.md#https-archive-installation)).
+OMXTerm collects no telemetry and does not automatically acquire or update
+extensions. Catalog Browse/Refresh and archive downloads require an explicit
+selection or HTTPS link ([transport and trust policy](docs/files-development-preview.md#https-archive-installation));
+the new-profile Snippets default uses bundled bytes. Windows verification did
+observe system-proxy traffic; see the [network-test limit](docs/snippets-migration.md#stable-0250-release-disposition).
 See the [published Files preview](docs/installation.md#optional-files-preview).
 Local diagnostic
 logs exclude your terminal output, commands, clipboard data, and settings. To

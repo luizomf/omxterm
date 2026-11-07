@@ -4,6 +4,33 @@ This guide covers native ARM64 macOS (`.dmg`) and ARM64/x64 Linux (`.AppImage` +
 
 See [versioning.md](versioning.md) for SemVer rules and [development.md](development.md#platform-prerequisites) for platform setup.
 
+## Stable 0.25.0 publication
+
+[OMXTerm 0.25.0](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) was
+published on **2026-11-07 at 11:39:10 UTC** as immutable Latest, with all twelve
+draft and anonymous public assets verified by size/SHA-256. Tag/cut:
+`13ea6873e6c45240a0a757156b7a4f694c2b43af`. Actual macOS/Linux ARM64 builds use
+`575407cc61648b8dbf598dd7e1c4d46345c31ff2`; Linux x64 uses
+`0e9102ceb29336957e5ccf659f542bf5b2bc64a0`; both Windows builds use the tag cut.
+All build SHAs are cut ancestors with only test/docs differences, identical
+shipping/version/lock inputs and one byte-identical common Linux helper pair.
+
+The maintainer lifted the earlier hold **for 0.25.0 only**, accepting Windows
+ARM64's unrun graphical suite and unresolved public-install Snippets failures
+(child loss and one unexpected-prefix diagnostic; cause unknown). The strict
+Windows network-silence test remains failed; profile behavior was accepted
+separately using the existing-empty proxy control. macOS exact-DMG/public-archive
+Insert, preview and acquisition remain untested. See the
+[release limits](snippets-migration.md#stable-0250-release-disposition). x64 stays
+build-only; terminal-input rules and future test-isolation requirements are unchanged.
+
+The release includes native theme authoring and the one-time Snippets 0.1.0 default.
+It excludes Files 0.8 insertion/drop and #818's later palette presentation. The
+frozen host cannot run Files 0.8: it lacks the required capability despite matching
+the version range. Extension archives, versions and catalogs are unchanged.
+See [development metadata](versioning.md#post-0250-development-baseline) for the
+pending next baseline. Historical release records below keep their original inputs.
+
 ## Release workflow
 
 1. Select the release version `X.Y.Z` under [versioning.md](versioning.md) and ensure `package.json` and `package-lock.json` match.
@@ -11,6 +38,21 @@ See [versioning.md](versioning.md) for SemVer rules and [development.md](develop
 3. Collect the verified installers and `.sha256` checksum files in the ignored `release/` directory.
 4. Tag `vX.Y.Z`, create a draft GitHub Release with the [qualified release assets](#publication) (twelve including both x64 platforms, with one common Linux helper pair), verify the uploaded bytes, and publish. Update download links in `README.md` and `docs/installation.md`. Published releases are immutable: finish uploading all assets before publication; never move a published tag, replace an asset, or disable immutability to add a missing platform.
 5. Bump `main` to the next `-dev.0` baseline after release.
+
+## Verification and release decisions
+
+Follow [ADR 0019's risk-based verification and reuse policy](adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse):
+assess findings and gaps for their relevance to the cut. Missing provenance
+prevents reuse, not unrelated release work; a diagnosis-supported disposition can
+record bounded unresolved risk without inventing a cause.
+
+Record the selected cut/assets, actual failures, missing coverage, supporting
+results and maintainer decision with the publication inputs. If a test cannot run
+safely, leave that execution unrun and continue independent work. This does not
+change test-isolation or data/security boundaries. The
+[0.25.0 decision](snippets-migration.md#stable-0250-release-disposition) applies to
+that release only. Version/source correspondence, uploaded-byte checks and
+immutable tags/assets still belong to the publication transaction.
 
 <a id="changed-inputs-and-build-to-tag-comparison"></a>
 
@@ -286,8 +328,8 @@ separate immutable, non-Latest Linux ARM64 prereleases:
 and [Files `ext-files-v0.7.0`](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.7.0).
 Both tags identify actual build source `0cb89accd61f1f5d5263c60773454882793e2e99`.
 All seven original assets matched draft and anonymous public size/SHA-256
-readback; Files publication/readback preceded the host. Stable0.24.0 remains
-Latest, both Files0.6 catalogs remain unchanged, and original archive receipts
+readback; Files publication/readback preceded the host. At that checkpoint,
+stable0.24.0 remained Latest; both Files0.6 catalogs remain unchanged, and original archive receipts
 retain their build-time `not-run` field.
 
 The separately reviewed [actual public Settings-link checkpoint](files-development-preview.md#files07-linux-public-link-checkpoint)
