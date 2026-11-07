@@ -272,22 +272,25 @@ explicitly rather than leaving an unjoined rejection assertion.
 
 ### Linux desktop services and native verification
 
-For Linux verification that launches Electron, a browser or a desktop harness
-(including headless probes), prefer an assigned disposable guest's **ordinary
-test user, logged-in desktop, normal user bus and actual per-user runtime directory**.
+For agent Linux verification that launches Electron, a browser or a desktop
+harness (including headless probes), use an assigned disposable guest. Reuse its
+suitable **existing ordinary user, logged-in desktop, normal user bus and actual
+per-user runtime directory** when that account's local state is explicitly
+disposable; a new dedicated account or fresh login is not a prerequisite.
 Verify the actual account/session and inherited display, authentication, bus and
-runtime before launch. A dedicated ordinary test account with its own login and
-runtime avoids the original user's per-user services; it does not isolate shared
-machine state or grant permission to alter other users' resources.
+runtime before launch. A separate ordinary account is an option when the existing
+user's state must be preserved; it does not isolate shared machine state or grant
+permission to alter other users' resources.
 
 Temporary HOME/XDG/profile directories separate application files, not per-user
 services. Changing `XDG_RUNTIME_DIR`, authenticating an Xvfb/Openbox display or
 starting `dbus-run-session` under the existing logged-in account does **not**
 establish account/runtime isolation. Auto-activated services can still share
 paths and mounts with the original desktop. Do not create a competing same-user
-private-bus portal as an isolation workaround. If using the original guest
-user's ordinary desktop/bus, explicitly own that verification session and protect
-its shared resources instead.
+private-bus portal as an isolation workaround. When reusing the guest user's
+ordinary desktop/bus, explicitly own that verification session and follow the
+shared-resource checks below. Disposable account preferences do not make shared
+services, mounts or their consumers disposable.
 
 Launch and settlement prerequisites:
 
@@ -340,18 +343,23 @@ launch the GUI, but has not been established as preference-isolated merely becau
 it is headless. Source-mode Electron fixtures can affect preferences too;
 `npm run check` includes both graphical tests and the FULL verifier.
 
-For native verification, prefer an assigned disposable macOS guest with a
-**dedicated ordinary test user** whose preferences and credentials need not be
-preserved. Log into the guest's Aqua session as that user and verify the actual
-account/console identity and [live desktop admission](#macos-console-admission)
-before launch; changing an environment variable in an existing user's session is
-not equivalent. Provision the fixture's other prerequisites and keep the desktop
-idle. A separate user avoids using the existing user's preference domains for
-that session; it does not isolate shared system
-state, other accounts, input/display settings or external resources. Those still
-need their own authorized protection and cleanup.
+For agent native verification, use an assigned disposable macOS guest and
+**reuse an existing suitable ordinary guest account** whose account state and
+preferences are explicitly disposable. It need not be a newly created or separately
+named test account. Reuse its already configured Aqua session after verifying the
+actual account/console identity and [live desktop admission](#macos-console-admission).
+Do not create another user, back up disposable preferences or repeat login/setup
+solely for preference isolation. Changing an environment variable does not switch
+users or establish readiness. Provision missing fixture prerequisites and keep the
+desktop idle.
 
-If existing guest preferences must be preserved instead, arrange a suitable
+A separate ordinary test account is an option when the existing account's state
+must be preserved, not a default requirement. Neither account choice isolates
+physical hosts, shared system state, other accounts, input/display resources,
+mounted host data or external services. Protect resources outside the explicitly
+disposable guest-local scope.
+
+**Only when existing guest preferences must be preserved**, arrange a suitable
 baseline and recovery **before** launching any relevant process:
 
 1. Identify the actual account, executable/bundle and possible application,
@@ -360,8 +368,8 @@ baseline and recovery **before** launching any relevant process:
    used `com.github.Electron`. These are starting points, not an exhaustive list.
    Identify the files and user/host scope actually used; do not assume `HOME`
    points to them. Quiesce competing writers and establish exclusive use. If the
-   affected scope cannot be identified or safely preserved, use the disposable
-   test user instead.
+   affected scope cannot be identified or safely preserved, use a suitable
+   disposable guest account instead.
 2. In an owner-only hold outside disposable test scratch, record each domain's
    prior file and daemon existence or absence, exact file bytes and restorable
    metadata (owner/group, mode, modification time, extended attributes and ACLs
@@ -408,8 +416,9 @@ Preserve the application's existing macOS Chromium sandbox. An outer sandbox and
 `NODE_OPTIONS` preload were not suitable workarounds in the #764 qualification;
 do not disable application sandboxing to compensate for the test setup. No
 repository verifier currently supplies a general preference backup/restoration
-facility; use the dedicated-user route unless a suitable scoped recovery procedure
-is available and verified.
+facility. Reuse a suitable disposable guest account when its preferences need not
+be preserved; otherwise use a verified scoped recovery procedure or another
+suitable disposable account.
 
 ### macOS console admission
 
@@ -433,11 +442,13 @@ assigned disposable guest:
 Use supported normal guest-console/login mechanisms or an input transport whose
 mapping and actual delivery have been verified. API/CLI acceptance alone proves
 neither authentication nor product input receipt; do not guess virtual keycode
-schemas or loop password attempts. Preserve a verified original-state baseline
-before reversible, owned guest-only login/display/idle setup and restore it when
-its consumers finish. This is not advice to disable security generally: do not
-relax physical-host authentication/privacy/Keychain, decode another account's
-credential or modify clean recovery media to admit a run.
+schemas or loop password attempts. Reuse suitable existing login/display/idle
+setup. For necessary guest-only changes, preserve and restore a verified baseline
+for state that must be retained; explicitly disposable account settings need no
+backup or restoration solely for testing. Protect shared resources and other
+consumers. This is not advice to disable security generally: do not relax
+physical-host authentication/privacy/Keychain, decode another account's credential
+or modify clean recovery media to admit a run.
 
 [#797](https://github.com/luizomf/omxterm/issues/797) records a local
 `autoLoginUserScreenLocked` observation and a separate later idle relock despite
@@ -594,8 +605,8 @@ ARM64 complete native checks (and optional full x64 checks) run `check:portable`
 
 For macOS, apply the [preference precautions](#macos-preferences-and-native-verification)
 to graphical tests and packaged Electron probes, including FULL and inspection-only
-`package:verify` runs. A successful verifier result does not itself establish
-preference restoration. For Linux, apply the [desktop-service prerequisites](#linux-desktop-services-and-native-verification)
+`package:verify` runs. Where preference preservation is required, a successful
+verifier result does not itself establish restoration. For Linux, apply the [desktop-service prerequisites](#linux-desktop-services-and-native-verification)
 before source/package launches; temporary profiles and headless execution do not
 establish account/runtime isolation.
 
