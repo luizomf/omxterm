@@ -53,6 +53,7 @@ function fixture() {
   const target = {
     live: vi.fn(() => true),
     deliver: vi.fn(),
+    deliverAndReport: vi.fn(async () => true),
     onUnavailable: () => () => {},
   };
   const capture = vi.fn<() => SnippetTarget | undefined>(() => target);
@@ -179,6 +180,34 @@ it("captures once, preserves exact insert text, and leaves accepted delivery Sur
     available: true,
   });
 });
+it("holds the native request until tracked Surface delivery finishes", async () => {
+  const f = fixture();
+  let finish!: (value: boolean) => void;
+  const pending = new Promise<boolean>((resolve) => {
+    finish = resolve;
+  });
+  f.target.deliverAndReport.mockImplementation(() => pending);
+  f.command({ ...request(), waitForDelivery: true });
+  expect(f.ipc.send).toHaveBeenLastCalledWith(semanticInputIpc.reply, {
+    kind: "started",
+    id,
+  });
+  f.command({ ...request(), id: other });
+  expect(f.ipc.send).toHaveBeenLastCalledWith(semanticInputIpc.reply, {
+    kind: "finished",
+    id: other,
+    available: false,
+  });
+  finish(true);
+  await vi.waitFor(() =>
+    expect(f.ipc.send).toHaveBeenLastCalledWith(semanticInputIpc.reply, {
+      kind: "finished",
+      id,
+      available: true,
+    }),
+  );
+});
+
 it("keeps preview capture through native hiding, rejects overlap, and honors final Run once", async () => {
   const f = fixture();
   f.command(request(true));

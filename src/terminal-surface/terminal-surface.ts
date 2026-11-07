@@ -24,12 +24,16 @@ export interface TerminalSurfaceGeometry {
 export interface TerminalSurface {
   geometry(): TerminalSurfaceGeometry | undefined;
   focus(): void;
+  // Explicit terminal handoffs bypass an otherwise preserved search-field focus.
+  focusInput?(): void;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   applyTheme(theme: TerminalTheme): void;
   zoom(command: TerminalFontZoom): void;
   copy(): Promise<void>;
   paste(): Promise<void>;
   inject(text: string, options?: { readonly submit?: boolean }): Promise<void>;
+  // Path-only: true requires a receipt for every chunk, not shell consumption.
+  injectTracked?(text: string): Promise<boolean>;
   selectAll(): void;
   // Opens the in-memory scrollback search bar, or focuses it when open.
   find(): void;

@@ -2,6 +2,7 @@
 import type {
   TerminalExit,
   TerminalSessionId,
+  TerminalWriteReceipt,
 } from "../shared/terminal-contract";
 import {
   isNonemptyClipboardText,
@@ -9,6 +10,7 @@ import {
   isTerminalSessionClose,
   isTerminalSessionReference,
   isTerminalSessionResize,
+  isTerminalWriteReceipt,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import { layoutIpc, type InitialLayout } from "../shared/terminal-layout";
@@ -92,6 +94,7 @@ interface RoutedTerminalIpcController
   initialLayout(payload?: unknown): InitialLayout | null;
   start(payload?: unknown): TerminalSessionId;
   input(payload?: unknown): void;
+  trackedInput(payload?: unknown): TerminalWriteReceipt;
   resize(payload?: unknown): void;
   acknowledgeOutput(payload?: unknown): void;
   close(payload?: unknown): void;
@@ -167,6 +170,18 @@ export function registerTerminalIpcRouter(
   };
   const input: IpcListener = (event, payload) =>
     route(event, (controller) => controller.input(payload));
+  const trackedInput: IpcHandler = (event, payload) => {
+    const controller = controllerFor(event);
+    if (!controller || disposed || event.sender.isDestroyed()) {
+      operationalEvents?.write({
+        name: "boundary.rejected",
+        boundary: "ipc",
+        reason: "untrusted-sender",
+      });
+      throw new Error("Rejected tracked terminal IPC from an untrusted sender");
+    }
+    return controller.trackedInput(payload);
+  };
   const resize: IpcListener = (event, payload) =>
     route(event, (controller) => controller.resize(payload));
   const acknowledgeOutput: IpcListener = (event, payload) =>
@@ -293,6 +308,7 @@ export function registerTerminalIpcRouter(
   ipcMain.handle(terminalIpc.fontData, fontData);
   ipcMain.handle(terminalIpc.snippets, snippets);
   ipcMain.on(terminalIpc.input, input);
+  ipcMain.handle(terminalIpc.trackedInput, trackedInput);
   ipcMain.on(terminalIpc.resize, resize);
   ipcMain.on(terminalIpc.outputAck, acknowledgeOutput);
   ipcMain.on(terminalIpc.close, close);
@@ -355,6 +371,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeHandler(terminalIpc.fontData);
       ipcMain.removeHandler(terminalIpc.snippets);
       ipcMain.removeListener(terminalIpc.input, input);
+      ipcMain.removeHandler(terminalIpc.trackedInput);
       ipcMain.removeListener(terminalIpc.resize, resize);
       ipcMain.removeListener(terminalIpc.outputAck, acknowledgeOutput);
       ipcMain.removeListener(terminalIpc.close, close);
@@ -664,6 +681,17 @@ function createTerminalIpcController(
     options.onUserInteraction();
     state.session.write(payload.data);
   };
+  const trackedInput = (payload?: unknown): TerminalWriteReceipt => {
+    if (!isTerminalSessionInput(payload)) {
+      reject("ipc", "invalid-payload");
+      return "rejected";
+    }
+    const state = routedSession(payload.sessionId);
+    if (!state || !state.session.writeTracked) return "rejected";
+    options.onUserInteraction();
+    const receipt = state.session.writeTracked(payload.data);
+    return isTerminalWriteReceipt(receipt) ? receipt : "unknown";
+  };
   const resize = (payload?: unknown) => {
     if (!isTerminalSessionResize(payload)) {
       reject("ipc", "invalid-payload");
@@ -758,6 +786,7 @@ function createTerminalIpcController(
     },
     start,
     input,
+    trackedInput,
     mirrorTyping,
     resize,
     acknowledgeOutput,

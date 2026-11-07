@@ -172,21 +172,26 @@ produce `dist/extensions/files-0.7.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`; Files0.7.0 declares
+`extensions/files/extension.json`. Published Files0.7.0 declares
 `>=0.25.0-dev.10` / API `0.1.x` as a conservative compatibility floor.
-It packages the already-integrated reported-directory guidance, loaded-entry
-filtering/keyboard focus, composing-Escape draft preservation and confirmed
-directory-to-directory moves. It adds no Files-to-terminal insertion/drop or
-generic shortcut capability. Existing host focus-intent, action-time
-reported-directory, no-clobber move and trash services
-remain the required seams; no new host capability is introduced here. Older
-hosts have not been qualified for this combined source, so this floor is not a
-claim that every earlier host lacks those services. Ordinary semver admits
-0.25.0-dev.10 and later dev.N in that same family, plus stable 0.25.0; the
-existing development bridges do not bypass this minimum or automatically admit
-other prerelease families. The bounded [Linux exact-package checkpoint](#files07-linux-packaged-checkpoint)
-below passed, followed by separate [Linux publication and actual public-link consumption](#files07-linux-public-link-checkpoint).
-macOS Files0.7 and broader qualification remain separate. Published Files0.6.0 retains minimum host
+It packages reported-directory guidance, loaded-entry filtering/keyboard focus,
+composing-Escape draft preservation and confirmed directory-to-directory moves,
+not Files-to-terminal insertion/drop. Its bounded
+[Linux exact-package checkpoint](#files07-linux-packaged-checkpoint) passed,
+followed by separate [Linux publication and actual public-link consumption](#files07-linux-public-link-checkpoint).
+macOS Files0.7 and broader qualification remain separate.
+
+Newer source additionally declares `terminal.insertPath.v1` for the selected-path
+insertion action below. Older hosts reject this capability even when the retained
+engine range matches. Before building/publishing new bytes, the integration
+maintainer must select a new archive version and minimum host aligned with the
+capability; the unchanged source metadata is not permission to replace Files0.7.
+The retained floor alone does not mean dev.10 supports insertion. Native/package
+qualification and publication remain pending for this new behavior. Existing
+host focus-intent, action-time reported-directory, no-clobber move and trash
+services remain required. Ordinary semver admits dev.10 and later dev.N in the
+same 0.25.0 family, plus stable0.25.0; existing development bridges do not bypass
+this minimum or admit other prerelease families. Published Files0.6.0 retains minimum host
 0.24.0-dev.21 and its original catalog entries and receipts. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
 catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives. The
@@ -265,6 +270,30 @@ on an unselected fallback row, invoking F2 or its context menu first selects
 that row as the explicit target. Host Escape ownership and retained drafts
 remain as described below. These UI changes are included in the published Linux
 ARM64 Files0.7 preview; they do not modify immutable Files0.6 or its catalog offers.
+
+Current source offers **Insert path into terminal** in the selection menu,
+with its `Shift+Enter` shortcut shown and exposed to assistive technology. The
+shortcut acts on the focused row, does not intercept editing or composition,
+and suppresses repeats. The single selected file, folder or link is sent
+immediately as a lexical path; no backend lookup or added Enter occurs. The
+app-owned child preload privately stamps its current selection observation and
+visible-admission generation when the request is invoked. Main checks those
+stamps at receipt and commit, and core independently refuses a changed selection
+before capturing the Surface. Missing or stale observations fail closed; this
+does not imply global cross-process event ordering. The host uses the same
+quoting and Protected Paste as dropped paths. The captured Surface owns accepted
+delivery even if the panel retires. Completion means every chunk was passed by
+the captured live local session to node-pty without synchronous error, not that
+the OS or receiving program consumed it. Once delivery completes, focus returns
+only if that Surface is still the current target and the request remains active.
+Unavailable, busy, invalid, incomplete and unknown outcomes are explained; a
+partial or unknown result should be inspected before retrying. An approved
+unbracketed path containing control characters can affect the receiving program.
+Paths containing a bracketed-paste terminator are refused, not rewritten. A
+successful handoff targets terminal input rather than an open search field; a
+newer companion selection or pending overlay suppresses the focus return.
+This uses the new `terminal.insertPath.v1` capability: older hosts reject it,
+and the published Files0.6 archive does not acquire this source behavior.
 
 In current source, **Actions… → Show dotfiles (names starting with .)** is a
 checked menu item, off by default. On both Linux and macOS, it hides dot-prefixed

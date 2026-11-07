@@ -370,9 +370,12 @@ export function mountTerminalWindowPage(
       panel: auxiliaryPanel,
       language,
       blocked: previewActive,
+      semanticBlocked: companion.presentation.isInputBlocked,
       onPreviewActivity: onOverlayActivity,
       modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
       focusTerminal: companion.focusTerminal,
+      sourceForeground: companion.isSourceForeground,
+      sourceSelected: companion.isSourceSelected,
       restoreSourceFocus: companion.restoreSourceFocus,
       togglePanelSide: companion.toggleSide,
     });

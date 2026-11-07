@@ -1,4 +1,9 @@
 import { isSemanticInputRequest } from "../shared/semantic-input";
+import {
+  formatFilePathInsertion,
+  isFilePathPlatform,
+} from "../shared/file-path-insertion";
+import { MAX_SNIPPET_BODY_LENGTH } from "../shared/terminal-snippets";
 import { ipcMain, type BrowserWindow } from "electron";
 import type { HostedContentDescriptor } from "../shared/extension-view";
 import path from "node:path";
@@ -63,12 +68,16 @@ export function applicationViews(
       return { x: 0, y: 34, width: width!, height: Math.max(0, height! - 34) };
     },
     onKeybind: options.keybind,
+    subscribeSelection: (listener) =>
+      options.semanticInput?.subscribeSelection(window, listener) ?? (() => {}),
     onRequest(value, signal, context) {
       if (epochSignal.aborted || target.signal.aborted || signal.aborted)
         return Promise.reject(new PackageError("unavailable"));
       if (value && typeof value === "object" && !Array.isArray(value)) {
         if (value.operation === "terminal.semanticInput.v1")
           return semanticRequest(value, signal, context);
+        if (value.operation === "terminal.insertPath.v1")
+          return pathRequest(value, signal, context);
         if (value.operation === "terminal-directory")
           return filesDirectory
             ? filesDirectory(value, context, signal)
@@ -123,13 +132,48 @@ export function applicationViews(
       if (state === "settled") retired();
     },
   });
-  function semanticRequest(
-    value: Value,
+  function pathRequest(
+    value: Record<string, Value>,
     signal: AbortSignal,
     context: import("./extension-view-host").ExtensionViewRequestContext,
   ) {
     if (
-      !pin.manifest.capabilities?.includes("terminal.semanticInput.v1") ||
+      Object.keys(value).sort().join() !== "operation,path" ||
+      !isFilePathPlatform(process.platform)
+    )
+      return Promise.resolve({ ok: false, reason: "invalid-path" });
+    const text = formatFilePathInsertion([value.path], process.platform);
+    if (!text || text.length > MAX_SNIPPET_BODY_LENGTH)
+      return Promise.resolve({ ok: false, reason: "invalid-path" });
+    // An embedded bracketed-paste terminator would escape the receiving
+    // program's paste mode. Refuse rather than change a literal path.
+    if (/\u001b\[201~|\u009b201~/u.test(text))
+      return Promise.resolve({ ok: false, reason: "unsafe-path" });
+    return semanticRequest(
+      {
+        operation: "terminal.semanticInput.v1",
+        text,
+        title: "File path",
+        intent: "insert",
+        preview: false,
+      },
+      signal,
+      context,
+      true,
+    );
+  }
+  function semanticRequest(
+    value: Value,
+    signal: AbortSignal,
+    context: import("./extension-view-host").ExtensionViewRequestContext,
+    waitForDelivery = false,
+  ) {
+    if (
+      !pin.manifest.capabilities?.includes(
+        waitForDelivery
+          ? "terminal.insertPath.v1"
+          : "terminal.semanticInput.v1",
+      ) ||
       !options.semanticInput ||
       !isSemanticInputRequest(value) ||
       !context.isCurrentVisible()
@@ -142,6 +186,7 @@ export function applicationViews(
       context,
       AbortSignal.any([signal, epochSignal, target.signal]),
       admit,
+      ...(waitForDelivery ? ([true] as const) : []),
     );
   }
   function revokeMirror() {

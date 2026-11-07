@@ -428,6 +428,12 @@ Files0.6. The host/archive build and public release tags bind source
 `0cb89accd61f1f5d5263c60773454882793e2e99`; public qualification used test/docs
 source `ed84ce729e03656018eb2e1b971dd8f458123df3`. macOS Files0.7 and broader
 qualification remain unestablished.
+Current source also inserts one selected file/folder/link path through the core's
+lexical quoting and Protected Paste into the action-time captured Surface; its
+visible menu action and Shift+Enter row shortcut add no Enter. Focus returns
+only while the captured target remains selected. Incomplete or unknown delivery
+is not automatically retried. This needs a future archive and a host supporting
+`terminal.insertPath.v1`; published Files0.6/0.7 remain unchanged.
 Its application owner composes independent
 backend/view version pins, per-invocation context for other extension requests,
 local management and bounded Quit retirement.

@@ -92,6 +92,12 @@ const adapters = vi.hoisted(() => ({
         Parameters<typeof startApplicationExtensions>[0]["semanticInput"]
       >["confirmSelection"]
     >(),
+  semanticSubscribe:
+    vi.fn<
+      NonNullable<
+        Parameters<typeof startApplicationExtensions>[0]["semanticInput"]
+      >["subscribeSelection"]
+    >(),
   retire: vi.fn(),
   hosts: [] as Host[],
 }));
@@ -305,6 +311,7 @@ beforeEach(async () => {
   adapters.retire.mockResolvedValue(null);
   adapters.consent.mockResolvedValue({ response: 1 });
   adapters.semanticConfirm.mockResolvedValue(true);
+  adapters.semanticSubscribe.mockReturnValue(() => {});
   const contents = Object.assign(new EventEmitter(), {
     mainFrame: {},
     send: vi.fn(),
@@ -352,6 +359,7 @@ async function startService(
       semanticInput: {
         request: adapters.semanticRequest,
         confirmSelection: adapters.semanticConfirm,
+        subscribeSelection: adapters.semanticSubscribe,
       },
       layout: {
         capture: vi.fn(() => Promise.reject(new Error("unavailable"))),
@@ -1655,6 +1663,90 @@ it.each([true, false])(
     await expect(
       host.options.onRequest!(input, signal, context),
     ).rejects.toThrow("unavailable");
+  },
+);
+
+it.each([false, true])(
+  "admits lexical path insertion only from a declared visible view (%s)",
+  async (declared) => {
+    await writeFile(
+      archive,
+      packageArchive([
+        {
+          name: "extension.json",
+          data: JSON.stringify({
+            ...manifest,
+            ...(declared ? { capabilities: ["terminal.insertPath.v1"] } : {}),
+          }),
+        },
+        { name: "backend.mjs", data: "" },
+        { name: "index.html", data: "<h1>Input</h1>" },
+      ]),
+    );
+    await request({ operation: "install" });
+    service.actions()[0]!.invoke();
+    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+    const host = adapters.hosts[0]!;
+    const visible = vi.fn(() => true);
+    const context = {
+      id: "authenticated-native-view",
+      actionSelectionRevision: 7,
+      isCurrentVisible: visible,
+    };
+    const listener = vi.fn();
+    host.options.subscribeSelection!(listener);
+    expect(adapters.semanticSubscribe).toHaveBeenCalledExactlyOnceWith(
+      window,
+      listener,
+    );
+    const signal = new AbortController().signal;
+    const value = {
+      operation: "terminal.insertPath.v1",
+      path: "/root/a 'b'\nname",
+    };
+    adapters.semanticRequest.mockResolvedValue({ ok: true });
+    if (!declared) {
+      await expect(
+        host.options.onRequest!(value, signal, context),
+      ).rejects.toThrow("unavailable");
+      expect(adapters.semanticRequest).not.toHaveBeenCalled();
+      return;
+    }
+    visible.mockReturnValue(false);
+    await expect(
+      host.options.onRequest!(value, signal, context),
+    ).rejects.toThrow("unavailable");
+    visible.mockReturnValue(true);
+    await expect(
+      host.options.onRequest!(value, signal, context),
+    ).resolves.toEqual({ ok: true });
+    expect(adapters.semanticRequest).toHaveBeenCalledExactlyOnceWith(
+      window,
+      {
+        operation: "terminal.semanticInput.v1",
+        text: "'/root/a '\\''b'\\''\nname'",
+        title: "File path",
+        intent: "insert",
+        preview: false,
+      },
+      context,
+      expect.any(AbortSignal),
+      expect.any(Function),
+      true,
+    );
+    expect(host.claimActivation).toHaveBeenCalledExactlyOnceWith(context.id);
+    for (const path of ["relative", "/root/\0bad", "/" + "'".repeat(20_000)])
+      await expect(
+        host.options.onRequest!({ ...value, path }, signal, context),
+      ).resolves.toEqual({ ok: false, reason: "invalid-path" });
+    for (const path of ["/root/\u001b[201~bad", "/root/\u009b201~bad"])
+      await expect(
+        host.options.onRequest!({ ...value, path }, signal, context),
+      ).resolves.toEqual({ ok: false, reason: "unsafe-path" });
+    await expect(
+      host.options.onRequest!({ ...value, target: "s1" }, signal, context),
+    ).resolves.toEqual({ ok: false, reason: "invalid-path" });
+    expect(adapters.semanticRequest).toHaveBeenCalledOnce();
   },
 );
 

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep the semantic request and delivery lifetime matrix with its shared fixture. */
 import { EventEmitter } from "node:events";
 import type { BrowserWindow } from "electron";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -266,6 +267,35 @@ it.each(["hidden", "aborted", "quitting", "unregistered", "invalid"] as const)(
   },
 );
 
+it("replays only trusted increasing owner selection and cleans up subscribers", () => {
+  const test = fixture();
+  const owner = test.owner();
+  const other = test.owner();
+  owner.selection(7);
+  const updates = vi.fn();
+  const otherUpdates = vi.fn();
+  const off = test.service.subscribeSelection(owner.window, updates);
+  test.service.subscribeSelection(other.window, otherUpdates);
+  expect(updates).toHaveBeenCalledExactlyOnceWith(7);
+  expect(otherUpdates).not.toHaveBeenCalled();
+  owner.selection(7);
+  owner.selection(6);
+  test.ipc.listeners.get(semanticInputIpc.selection)!(
+    { ...owner.event, senderFrame: {} },
+    9,
+  );
+  owner.selection(8);
+  other.selection(3);
+  expect(updates.mock.calls).toEqual([[7], [8]]);
+  expect(otherUpdates.mock.calls).toEqual([[3]]);
+  off();
+  owner.selection(9);
+  other.native.emit("closed");
+  other.selection(4);
+  expect(updates.mock.calls).toEqual([[7], [8]]);
+  expect(otherUpdates.mock.calls).toEqual([[3]]);
+});
+
 it("allows one pending request per window, independently of another window", async () => {
   const test = fixture();
   const first = test.owner();
@@ -286,6 +316,124 @@ it("allows one pending request per window, independently of another window", asy
   await Promise.resolve();
   first.reply({ kind: "finished", id: first.command().id, available: true });
   await expect(next).resolves.toEqual({ ok: true });
+});
+
+it("refuses a path action captured at revision 7 when main already observed revision 8", async () => {
+  const test = fixture();
+  const owner = test.owner();
+  const pathInput = { ...input, intent: "insert" as const, preview: false };
+  const source = { ...owner.source, actionSelectionRevision: 7 };
+  owner.selection(8);
+  const pending = test.service.request(
+    owner.window,
+    pathInput,
+    source,
+    owner.abort.signal,
+    owner.admit,
+    true,
+  );
+  void pending.catch(() => {});
+  await Promise.resolve();
+  expect(owner.admit).not.toHaveBeenCalled();
+  expect(owner.contents.send).not.toHaveBeenCalled();
+  await expect(pending).resolves.toEqual({
+    ok: false,
+    reason: "terminal-unavailable",
+  });
+});
+
+it.each([undefined, -1, 6, 8])(
+  "refuses missing, malformed or mismatched action selection %s",
+  async (actionSelectionRevision) => {
+    const test = fixture();
+    const owner = test.owner();
+    owner.selection(7);
+    await expect(
+      test.service.request(
+        owner.window,
+        { ...input, intent: "insert", preview: false },
+        {
+          ...owner.source,
+          ...(actionSelectionRevision === undefined
+            ? {}
+            : { actionSelectionRevision }),
+        },
+        owner.abort.signal,
+        owner.admit,
+        true,
+      ),
+    ).resolves.toEqual({ ok: false, reason: "terminal-unavailable" });
+    expect(owner.admit).not.toHaveBeenCalled();
+    expect(owner.contents.send).not.toHaveBeenCalled();
+  },
+);
+
+it("checks the stamped path selection again when admission commits", async () => {
+  const test = fixture();
+  const owner = test.owner();
+  owner.selection(7);
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const pending = test.service.request(
+    owner.window,
+    { ...input, intent: "insert", preview: false },
+    { ...owner.source, actionSelectionRevision: 7 },
+    owner.abort.signal,
+    async (_signal, commit) => {
+      await gate;
+      commit();
+    },
+    true,
+  );
+  const refused = expect(pending).resolves.toEqual({
+    ok: false,
+    reason: "terminal-unavailable",
+  });
+  await Promise.resolve();
+  owner.selection(8);
+  release();
+  await refused;
+  expect(owner.contents.send).not.toHaveBeenCalled();
+});
+
+it("serializes tracked path delivery and reports busy or unavailable without retargeting", async () => {
+  const test = fixture();
+  const owner = test.owner();
+  const pathInput = { ...input, intent: "insert" as const, preview: false };
+  const tracked = () =>
+    test.service.request(
+      owner.window,
+      pathInput,
+      { ...owner.source, actionSelectionRevision: 7 },
+      owner.abort.signal,
+      owner.admit,
+      true,
+    );
+  await expect(tracked()).resolves.toEqual({
+    ok: false,
+    reason: "terminal-unavailable",
+  });
+  owner.selection(7);
+  const first = tracked();
+  await expect(tracked()).resolves.toEqual({
+    ok: false,
+    reason: "terminal-busy",
+  });
+  await Promise.resolve();
+  const command = owner.command();
+  expect(command.revision).toBe(7);
+  expect(command.waitForDelivery).toBe(true);
+  expect(isSemanticInputCommand(command)).toBe(true);
+  owner.selection(8);
+  owner.reply({ kind: "started", id: command.id });
+  owner.reply({ kind: "finished", id: command.id, available: false });
+  await expect(first).resolves.toEqual({
+    ok: false,
+    reason: "terminal-not-completed",
+  });
+  expect(owner.contents.send).toHaveBeenCalledOnce();
 });
 
 it("ignores foreign, untrusted, malformed, unknown and stale replies", async () => {
@@ -581,6 +729,13 @@ it("validates selection and exact request/revoke/started/finished envelopes", ()
     { ...command, source: "" },
     { ...command, id: "" },
     { ...command, input: { ...input, intent: "write" } },
+    { ...command, waitForDelivery: true },
+    { ...command, waitForDelivery: false },
+    {
+      ...command,
+      waitForDelivery: true,
+      input: { ...input, preview: false, intent: "run" },
+    },
     { kind: "revoke", id: token, input },
   ])
     expect(isSemanticInputCommand(value)).toBe(false);

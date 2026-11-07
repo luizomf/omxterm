@@ -157,6 +157,9 @@ export function paneSessionAdapter(
       onStarted();
     },
     write: (data) => adapter.write(data),
+    ...(adapter.writeTracked
+      ? { writeTracked: (data: string) => adapter.writeTracked!(data) }
+      : {}),
     resize: (size) => {
       pane.size = size;
       adapter.resize(size);

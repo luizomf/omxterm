@@ -49,6 +49,25 @@ it.each(["signal", "rendering", "close", "dispose"] as const)(
   },
 );
 
+it("focuses only the captured still-current pane, including a delayed handoff", async () => {
+  const f = createTabsHarness();
+  cleanups.push(f.tabs.dispose);
+  await f.tabs.ready;
+  const target = f.tabs.captureSnippetTarget()!;
+  expect(target.isCurrent?.()).toBe(true);
+  f.surfaces[0]!.focus.mockClear();
+  target.focus?.();
+  expect(f.surfaces[0]!.focus).toHaveBeenCalledOnce();
+  f.tabs.handleCommand({ action: "new" });
+  await vi.waitFor(() => expect(f.surfaces[1]?.focus).toHaveBeenCalled());
+  f.surfaces[0]!.focus.mockClear();
+  f.surfaces[1]!.focus.mockClear();
+  expect(target.isCurrent?.()).toBe(false);
+  target.focus?.();
+  expect(f.surfaces[0]!.focus).not.toHaveBeenCalled();
+  expect(f.surfaces[1]!.focus).not.toHaveBeenCalled();
+});
+
 it("keeps a live captured target when selection changes and never follows a replacement", async () => {
   const f = createTabsHarness();
   cleanups.push(f.tabs.dispose);

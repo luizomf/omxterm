@@ -131,6 +131,7 @@ export function mountFilesPage(
   let restoringTreeFocus = false;
   let showDotfiles = false;
   let mutationPending = false;
+  let insertionPending = false;
   let confirmation: string | undefined;
   let moveConfirmation: string | undefined;
   let preparingDelete: number | undefined;
@@ -476,9 +477,26 @@ export function mountFilesPage(
       event.metaKey ||
       event.altKey ||
       event.getModifierState("AltGraph") ||
-      (event.shiftKey && event.key !== "F10")
+      (event.shiftKey && event.key !== "F10" && event.key !== "Enter")
     )
       return;
+    if (event.key === "Enter" && event.shiftKey) {
+      if (
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        event.isComposing ||
+        composing
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!event.repeat && editor.hidden && visible && !disposed) {
+        select(item);
+        void insertPath(item);
+      }
+      return;
+    }
     const index = state.rows.findIndex((row) => row.path === item.path);
     let next: FilesTreeRow | undefined;
     switch (event.key) {
@@ -813,6 +831,59 @@ export function mountFilesPage(
     showDotfiles = !showDotfiles;
     render(tree.snapshot());
   }
+  async function insertPath(target: Target) {
+    if (disposed || !visible) return;
+    if (insertionPending) {
+      message((m) => m.insertPathBusy, "warning");
+      return;
+    }
+    if (
+      selected?.path !== target.path ||
+      !state.rows.some((row) => row.path === target.path)
+    ) {
+      message((m) => m.insertPathUnavailable, "warning");
+      return;
+    }
+    insertionPending = true;
+    message((m) => m.insertPathPending);
+    try {
+      // Send immediately so the app-owned preload stamps the action before admission.
+      const reply = await bridge.request({
+        operation: "terminal.insertPath.v1",
+        path: target.path,
+      });
+      if (disposed) return;
+      if (reply.ok) {
+        if (
+          notice.textContent === messages.insertPathPending ||
+          notice.textContent === messages.insertPathBusy
+        ) {
+          notice.hidden = true;
+          labels.delete(notice);
+        }
+      } else {
+        message(
+          (m) =>
+            reply.reason === "terminal-busy"
+              ? m.insertPathBusy
+              : reply.reason === "terminal-unavailable"
+                ? m.insertPathUnavailable
+                : reply.reason === "terminal-not-completed"
+                  ? m.insertPathIncomplete
+                  : reply.reason === "invalid-path"
+                    ? m.insertPathInvalid
+                    : reply.reason === "unsafe-path"
+                      ? m.insertPathUnsafe
+                      : m.insertPathUnknown,
+          "error",
+        );
+      }
+    } catch {
+      if (!disposed) message((m) => m.insertPathUnknown, "error");
+    } finally {
+      insertionPending = false;
+    }
+  }
   function actions(target?: Target): Action[] {
     const busy = mutationPending || preparingMove !== undefined;
     const directory = target
@@ -821,6 +892,14 @@ export function mountFilesPage(
         : parent(target.path)
       : state.root;
     return [
+      {
+        label: (m) => m.insertPath,
+        shortcut: { display: "Shift+Enter", keys: "Shift+Enter" },
+        disabled: !target,
+        run: () => {
+          if (target) void insertPath(target);
+        },
+      },
       ...(target?.kind === "directory"
         ? [
             {
@@ -979,6 +1058,20 @@ export function mountFilesPage(
         item.setAttribute("aria-describedby", hint.id);
         item.replaceChildren(caption, hint);
       }
+      if (action.shortcut && action.checked === undefined) {
+        const caption = document.createElement("span");
+        const shortcut = document.createElement("span");
+        shortcut.className = "menu-shortcut";
+        shortcut.id = `files-menu-shortcut-${menu.childElementCount}`;
+        labels.delete(item);
+        item.classList.add("menu-with-shortcut");
+        label(item, action.label, "aria-label");
+        label(caption, action.label);
+        label(shortcut, (m) => m.shortcut(action.shortcut!.display));
+        item.setAttribute("aria-describedby", shortcut.id);
+        item.setAttribute("aria-keyshortcuts", action.shortcut.keys);
+        item.replaceChildren(caption, shortcut);
+      }
       item.setAttribute(
         "role",
         action.checked === undefined ? "menuitem" : "menuitemcheckbox",
@@ -1005,19 +1098,6 @@ export function mountFilesPage(
           item.setAttribute("aria-keyshortcuts", action.shortcut.keys);
           item.append(shortcut);
         }
-      }
-      if (action.shortcut && action.checked === undefined) {
-        const caption = document.createElement("span");
-        const shortcut = document.createElement("span");
-        shortcut.className = "menu-shortcut";
-        shortcut.id = `files-menu-shortcut-${menu.childElementCount}`;
-        labels.delete(item);
-        label(item, action.label, "aria-label");
-        label(caption, action.label);
-        label(shortcut, (m) => m.shortcut(action.shortcut!.display));
-        item.setAttribute("aria-describedby", shortcut.id);
-        item.setAttribute("aria-keyshortcuts", action.shortcut.keys);
-        item.replaceChildren(caption, shortcut);
       }
       item.disabled = !!action.disabled;
       item.tabIndex = -1;

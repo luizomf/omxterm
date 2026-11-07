@@ -10,7 +10,22 @@ follows the receiving Surface's lifetime under
 reuse the Surface's injection seam, keeping it free of Electron, filesystem and
 platform shell policy; the renderer
 gains only the narrow preload capability that maps a dropped `File` to its
-path (`webUtils.getPathForFile`).
+path (`webUtils.getPathForFile`). Current Files source also offers one selected
+path through a declared own-view capability. Main applies this same formatter,
+then routes the result to the captured Surface through the existing semantic
+input owner. At invocation, the app-owned child preload privately stamps the
+latest observed core-selection revision and main-issued visible-admission
+generation. Main validates them at receipt and commit, and core checks its own
+selection before capture; missing or stale stamps fail closed, without a
+caller-selected target or a global cross-process ordering guarantee. This source
+feature requires a future Files archive and a host that understands the
+capability; the published Files0.6 archive is unchanged. Its path-only tracked
+chunks are acknowledged by the captured live local session after passing each
+chunk to node-pty without synchronous error. This is not an OS or shell
+consumption guarantee. A lost receipt stops the path and fences subsequent
+Surface-queued semantic input until a definitive late receipt, if one arrives;
+there is no automatic replay. This Files action refuses paths containing a
+bracketed-paste terminator rather than stripping or rewriting them.
 
 Paths are lexical only: OMXTerm never reads, resolves, normalizes, or stats a
 target. Probing the filesystem from drop or clipboard data would turn

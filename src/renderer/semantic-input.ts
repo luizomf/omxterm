@@ -10,6 +10,10 @@ export function createSemanticInput(
     readonly capture: () => SnippetTarget | undefined;
     readonly blocked: () => boolean;
     readonly focusTerminal: () => void;
+    readonly focusCapturedTarget?: (
+      target: SnippetTarget,
+      source?: string,
+    ) => void;
     readonly onPreviewActivity: () => void;
     readonly language?: RendererLanguage;
     readonly openOverlay?: (open: () => void, refused?: () => void) => void;
@@ -43,6 +47,8 @@ export function createSemanticInput(
       intent: "insert" | "run" | "preview",
       returnFocus: () => boolean = () => false,
       signal?: AbortSignal,
+      waitForDelivery = false,
+      source?: string,
     ): Promise<boolean> {
       if (
         disposed ||
@@ -56,7 +62,28 @@ export function createSemanticInput(
       const target = options.capture();
       if (intent !== "preview") {
         if (!target?.live()) return Promise.resolve(false);
-        target.deliver(snippet.body, intent === "run");
+        if (waitForDelivery) {
+          if (!target.deliverAndReport) return Promise.resolve(false);
+          try {
+            return target.deliverAndReport(snippet.body).then(
+              (delivered) => {
+                if (
+                  delivered === true &&
+                  !signal?.aborted &&
+                  target.isCurrent?.()
+                ) {
+                  if (source) options.focusCapturedTarget?.(target, source);
+                  else options.focusCapturedTarget?.(target);
+                }
+                return delivered === true;
+              },
+              () => false,
+            );
+          } catch {
+            return Promise.resolve(false);
+          }
+        }
+        void target.deliver(snippet.body, intent === "run");
         options.focusTerminal();
         return Promise.resolve(true);
       }

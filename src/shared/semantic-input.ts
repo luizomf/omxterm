@@ -33,6 +33,7 @@ export type SemanticInputCommand =
       source: string;
       revision: number;
       input: SemanticInputRequest;
+      waitForDelivery?: true;
     }
   | { kind: "revoke"; id: string };
 export type SemanticInputReply =
@@ -79,6 +80,7 @@ export function isSemanticInputRequest(
 export function isSemanticInputCommand(
   value: unknown,
 ): value is SemanticInputCommand {
+  if (!value || typeof value !== "object") return false;
   if (exactLayoutKeys(value, ["kind", "id"]) && value.kind === "revoke")
     return isLayoutToken(value.id);
   if (
@@ -91,12 +93,23 @@ export function isSemanticInputCommand(
       isTerminalSessionId(value.sessionId)
     );
   return (
-    exactLayoutKeys(value, ["kind", "id", "source", "revision", "input"]) &&
+    exactLayoutKeys(value, [
+      "kind",
+      "id",
+      "source",
+      "revision",
+      "input",
+      ...("waitForDelivery" in value ? ["waitForDelivery"] : []),
+    ]) &&
     value.kind === "request" &&
     isLayoutToken(value.id) &&
     isLayoutToken(value.source) &&
     isSelectionRevision(value.revision) &&
-    isSemanticInputRequest(value.input)
+    isSemanticInputRequest(value.input) &&
+    (value.waitForDelivery === undefined ||
+      (value.waitForDelivery === true &&
+        value.input.intent === "insert" &&
+        !value.input.preview))
   );
 }
 export function isSemanticInputReply(

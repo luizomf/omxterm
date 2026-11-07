@@ -227,12 +227,16 @@ export function createHostedContentPresentation(
           !disposed &&
           !blocked &&
           !pendingOverlay &&
+          !transitioning &&
+          !failed &&
           current === generation
         )
           activate();
       });
     },
     isBlocked: () => blocked || pendingOverlay,
+    isInputBlocked: () =>
+      disposed || blocked || pendingOverlay || transitioning || failed,
     ownsFocus: (id?: string) =>
       !disposed &&
       !blocked &&

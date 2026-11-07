@@ -34,9 +34,12 @@ export function subscribeToWindowTools(
     panel: AuxiliaryPanel | undefined;
     language: RendererLanguage;
     blocked(): boolean;
+    semanticBlocked?(): boolean;
     onPreviewActivity(): void;
     modalClipboard(action: TerminalClipboardAction): boolean;
-    focusTerminal?(): void;
+    focusTerminal?(focus?: () => void): void;
+    sourceForeground?(id: string): boolean;
+    sourceSelected?(id: string): boolean;
     restoreSourceFocus?(id: string): boolean;
     togglePanelSide?(): void;
   },
@@ -46,11 +49,31 @@ export function subscribeToWindowTools(
   let removeSettings: (() => void) | undefined;
   let removeNative: (() => void) | undefined;
   let removePanel: (() => void) | undefined;
+  const semanticBlocked = () =>
+    owner.blocked() || owner.semanticBlocked?.() === true;
   const input = createSemanticInput(document, {
     language: owner.language,
     capture: tabs.captureSnippetTarget,
-    blocked: owner.blocked,
+    blocked: semanticBlocked,
     focusTerminal: owner.focusTerminal ?? tabs.focusSelected,
+    focusCapturedTarget: (target, source) => {
+      if (
+        semanticBlocked() ||
+        !target.isCurrent?.() ||
+        (source && owner.sourceForeground?.(source) !== true)
+      )
+        return;
+      const focus = () => {
+        if (
+          !semanticBlocked() &&
+          target.isCurrent?.() &&
+          (!source || owner.sourceSelected?.(source) === true)
+        )
+          target.focus?.();
+      };
+      if (owner.focusTerminal) owner.focusTerminal(focus);
+      else focus();
+    },
     onPreviewActivity: owner.onPreviewActivity,
     openOverlay: tabs.openOverlay,
   });

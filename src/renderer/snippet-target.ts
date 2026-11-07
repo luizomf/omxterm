@@ -7,6 +7,9 @@ export interface SnippetTarget {
   // Fires once (immediately if already unavailable); closing a preview unsubscribes.
   onUnavailable(listener: () => void): () => void;
   deliver(body: string, submit: boolean): void;
+  deliverAndReport?(body: string): Promise<boolean>;
+  isCurrent?(): boolean;
+  focus?(): void;
 }
 
 export function snippetTarget(
@@ -18,9 +21,12 @@ export function snippetTarget(
         readonly surface?: TerminalSurface | undefined;
       }
     | undefined,
+  current?: () => boolean,
+  focus?: () => void,
 ): SnippetTarget | undefined {
   if (!tab?.surface || tab.removed || tab.ended) return undefined;
-  const live = () => !tab.removed && !tab.ended && tab.surface !== undefined;
+  const surface = tab.surface;
+  const live = () => !tab.removed && !tab.ended && tab.surface === surface;
   return {
     live,
     onUnavailable(listener) {
@@ -31,7 +37,14 @@ export function snippetTarget(
       };
     },
     deliver(body, submit) {
-      if (live()) void tab.surface?.inject(body, { submit });
+      if (live()) void surface.inject(body, { submit });
+    },
+    async deliverAndReport(body) {
+      return live() && (await surface.injectTracked?.(body)) === true;
+    },
+    isCurrent: () => live() && current?.() === true,
+    focus: () => {
+      if (live() && current?.()) focus?.();
     },
   };
 }

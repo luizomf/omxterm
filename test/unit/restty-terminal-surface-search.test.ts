@@ -56,6 +56,9 @@ describe("Restty Scrollback Search", () => {
     expect(restty.focus).not.toHaveBeenCalled();
     expect(document.activeElement).toBe(input);
 
+    surface.focusInput?.();
+    expect(restty.focus).toHaveBeenCalledOnce();
+    restty.focus.mockClear();
     restty.isSearchOpen.mockReturnValue(false);
     surface.focus();
     expect(restty.focus).toHaveBeenCalledOnce();

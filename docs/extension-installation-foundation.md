@@ -50,9 +50,9 @@ Unknown fields are rejected. ID is bounded lowercase ASCII namespace/name; versi
 
 The preview now admits the exact capability names `terminal.openSsh.v1`,
 `terminal.captureLayout.v1`, `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`,
-`terminal.semanticInput.v1` and `state.v1` in an
+`terminal.semanticInput.v1`, `terminal.insertPath.v1` and `state.v1` in an
 optional nonempty unique `capabilities` array. Unknown names refuse. The first
-five are own-view host operations; state is declaration-gated backend bootstrap
+six are own-view host operations; state is declaration-gated backend bootstrap
 support, not browser filesystem access. Optional `view.context: "window"`
 selects original-window lifetime without a captured source-session directory;
 omission retains existing session context. The Files companion's explicit
@@ -69,6 +69,11 @@ authenticated view before admitting exact text to a captured core Surface. It
 shares core Protected Paste and the read-only choice preview; it grants no PTY,
 terminal-output or key-injection handle. See [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
 Its availability does not install Snippets or remove the built-in feature.
+Path insertion requires a host that recognizes `terminal.insertPath.v1`; older
+hosts reject the declaration even if an unchanged development engine range
+would otherwise match. The integration maintainer must align future archive
+metadata and catalog compatibility with the selected release and minimum host
+before publication.
 
 The immutable Files0.1.0 manifest's exact historical engine metadata is admitted
 on the deliberately enumerated hosts 0.24.0-dev.0, 0.24.0-dev.1,

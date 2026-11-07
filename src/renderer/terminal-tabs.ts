@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- The window-owned tab lifecycle shares its selection and focus state here. */
 import { createMirrorTyping } from "./mirror-typing";
 import type { MirrorTypingBridge } from "../shared/mirror-typing";
 import { createTerminalTabsLayout } from "./terminal-tabs-layout";
@@ -459,7 +460,21 @@ export function createTerminalTabs(
     },
     find: () => interactivePane()?.surface?.find(),
     injectText: (text) => void interactivePane()?.surface?.inject(text),
-    captureSnippetTarget: () => snippetTarget(interactivePane()),
+    captureSnippetTarget: () => {
+      const pane = interactivePane(),
+        revision = actionGeneration;
+      return snippetTarget(
+        pane,
+        () =>
+          revision === actionGeneration &&
+          interactivePane() === pane &&
+          options.canFocus?.() !== false,
+        () => {
+          if (pane?.surface?.focusInput) pane.surface.focusInput();
+          else focusPane(pane, options);
+        },
+      );
+    },
     selectionRevision: () => actionGeneration,
     selectedSessionId: () => {
       const pane = interactivePane();
