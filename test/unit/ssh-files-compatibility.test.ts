@@ -85,6 +85,7 @@ it.each([
         "0.24.0-dev.31",
         "0.24.0-dev.32",
         "0.25.0-dev.0",
+        "0.26.0-dev.0",
       ])
         expect(packageCompatible(manifest, { ...runtime, appVersion })).toBe(
           false,
@@ -144,7 +145,6 @@ it.each(["files", "ssh"])(
             "0.25.0-dev.11",
             "0.25.0-dev.19",
             "0.25.1-dev.0",
-            "0.26.0-dev.0",
           ]
         : []),
     ];
@@ -158,9 +158,9 @@ it.each(["files", "ssh"])(
     const host = JSON.parse(await readFile("package.json", "utf8")) as {
       version: string;
     };
-    const compatibleHosts =
+    const ordinaryHosts =
       name === "files"
-        ? ["0.25.0-dev.20", "0.25.0-dev.21", "0.25.0", host.version]
+        ? ["0.25.0-dev.20", "0.25.0-dev.21", "0.25.0"]
         : [
             "0.24.0-dev.8",
             "0.24.0-dev.11",
@@ -169,15 +169,25 @@ it.each(["files", "ssh"])(
             "0.24.0-dev.32",
             "0.24.0",
           ];
+    const bridgeHosts =
+      name === "files" ? ["0.26.0-dev.0", "0.26.0-dev.1", "0.26.0-dev.37"] : [];
+    if (name === "files") {
+      for (const appVersion of ordinaryHosts)
+        expect(satisfies(appVersion, manifest.engines.omxterm)).toBe(true);
+      for (const appVersion of bridgeHosts)
+        expect(satisfies(appVersion, manifest.engines.omxterm)).toBe(false);
+    }
+    const compatibleHosts = [
+      ...ordinaryHosts,
+      ...bridgeHosts,
+      ...(name === "files" ? [host.version] : []),
+    ];
     for (const appVersion of compatibleHosts) {
       const runtime = { appVersion, apiVersion: "0.1.0" };
       expect(() => checkCompatibility(manifest, runtime)).not.toThrow();
       expect(catalogCompatible(release, runtime, "linux-arm64")).toBe(true);
       for (const apiVersion of ["0.1.0", "0.1.9"]) {
         const admitted = { ...runtime, apiVersion };
-        if (name === "files")
-          // Ordinary semver admission, not a new development bridge.
-          expect(satisfies(appVersion, manifest.engines.omxterm)).toBe(true);
         expect(() => checkCompatibility(manifest, admitted)).not.toThrow();
         expect(catalogCompatible(release, admitted, "linux-arm64")).toBe(true);
       }

@@ -2,6 +2,7 @@ import { readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import descriptor from "../../assets/default-snippets.json";
+import { version as appVersion } from "../../package.json";
 import { claimDefaultSnippets } from "../../src/main/default-snippets";
 import {
   defaultSnippetsFixture,
@@ -9,6 +10,22 @@ import {
 } from "../fixtures/default-snippets";
 
 describe("fixed default Snippets installed-package publication", () => {
+  it("installs the pinned default through the current host admission", async () => {
+    const f = await defaultSnippetsFixture();
+    const claim = await f.claim();
+    await f.bundle();
+    const store = await f.openStore(appVersion);
+    expect(await claim.seed!.install(store)).toBeUndefined();
+    expect(await store.snapshot()).toEqual([
+      expect.objectContaining({
+        id: descriptor.id,
+        digest: descriptor.sha256,
+        enabled: true,
+        generation: 1,
+      }),
+    ]);
+  });
+
   it("installs actual public bytes enabled at generation1 without YAML/code activation; restart/uninstall never restores", async () => {
     const f = await defaultSnippetsFixture();
     const captured = f.capture();

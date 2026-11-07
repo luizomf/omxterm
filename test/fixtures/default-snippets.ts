@@ -94,10 +94,10 @@ export async function defaultSnippetsFixture() {
       return claimDefaultSnippets(profile, () => userData, resources);
     },
     bundle: () => copyDefaultSnippetsResources(resources, "linux-arm64"),
-    openStore: () =>
+    openStore: (appVersion = "0.25.0-dev.8") =>
       InstalledPackages.open({
         root: path.join(userData, "extensions"),
-        runtime: { appVersion: "0.25.0-dev.8", apiVersion: "0.1.0" },
+        runtime: { appVersion, apiVersion: "0.1.0" },
         leases: leases(),
       }),
   };

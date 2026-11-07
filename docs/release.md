@@ -29,14 +29,14 @@ It excludes Files 0.8 insertion/drop and #818's later palette presentation. The
 frozen host cannot run Files 0.8: it lacks the required capability despite matching
 the version range. Extension archives, versions and catalogs are unchanged.
 See [development metadata](versioning.md#post-0250-development-baseline) for the
-pending next baseline. Historical release records below keep their original inputs.
+next development baseline. Historical release records below keep their original inputs.
 
 ## Release workflow
 
 1. Select application version `X.Y.Z` under [versioning.md](versioning.md), remove the development suffix and review one frozen source cut. Record its full commit SHA. All targets for that application version use this cut; they need not ship together.
 2. Build and verify a ready target using the relevant procedure below. Retain the actual build SHA, checksums and evidence; prove any build-to-cut differences are non-artifact changes. Collect its files in the ignored `release/` directory.
 3. Create its target tag and draft, upload its complete [asset set](#publication), read back sizes and hashes, publish, and verify public downloads. Update that target's exact links and notes in the README download index. A target that is not ready does not block another.
-4. Advance the development baseline once for the selected application cut, not for each later target. Follow the [current compatibility hold](versioning.md#post-0250-development-baseline) where applicable.
+4. Advance the development baseline once for the selected application cut, not for each later target. Review [extension compatibility](versioning.md#post-0250-development-baseline) for the selected family.
 
 For example, Linux ARM64 can ship `linux-arm64-v0.26.0` first; macOS ARM64 can later ship `macos-arm64-v0.26.0` from the same frozen cut without an artificial version bump or rebuilding Linux. If product code, dependencies or build inputs need correction after a target ships, select a new application version and cut for the correction. Do not change a sealed release, move its tag, or create a later roll-up release.
 

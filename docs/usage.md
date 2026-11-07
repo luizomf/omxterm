@@ -389,8 +389,8 @@ separate alternatives. This source composition still needs native qualification
 and a newly versioned archive; published Files0.6/0.7 remain unchanged.
 
 These source changes are not a release and do not replace published archives.
-Recognized `0.24.1-dev.N` and `0.25.0-dev.N` hosts admit unchanged Files0.6
-through the narrow [development bridges](extension-installation-foundation.md#archive-contract).
+Recognized `0.24.1-dev.N`, `0.25.0-dev.N` and `0.26.0-dev.N` hosts admit unchanged
+Files0.6 through the narrow [development bridges](extension-installation-foundation.md#archive-contract).
 
 Closing the opening terminal leaves the tool available; disabling or removing
 the extension retires its view. In current Files source, **Actions… → Show dotfiles (names

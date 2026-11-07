@@ -11,23 +11,21 @@ version and publish as **non-Latest prereleases**, following the Files/SSH lanes
 in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
-`0.24.1-dev.N` maintenance bridge and separately assigned `0.25.0-dev.N`
-minor-development bridge have distinct endpoint requirements in the
+`0.24.1-dev.N`, `0.25.0-dev.N` and `0.26.0-dev.N` bridges have distinct
+endpoint requirements in the
 [compatibility contract](extension-installation-foundation.md#archive-contract).
-Neither automatically extends to another patch or minor development family;
+None automatically extends to another patch or minor development family;
 review compatibility and capabilities deliberately at each transition. The stable
 suffix-removal rule still applies to stable cuts; stable assets now ship per target.
 
 ## Post-0.25.0 development baseline
 
-Stable 0.25.0 uses a frozen cut; main already has later features, so its next
-target is `0.26.0-dev.0`. Main stays at `0.25.0-dev.22` for now because the
-[current compatibility rules](extension-installation-foundation.md#archive-contract)
-would reject pinned Snippets and existing catalog offers on `0.26.0-dev.0` (and
-`0.25.1-dev.0`). [#823](https://github.com/luizomf/omxterm/issues/823) tracks
-adding and testing a reviewed next-family compatibility rule before changing the
-three root version fields. Keep the original archive bytes, engine ranges, API
-and capability floors unchanged.
+Stable 0.25.0 uses a frozen cut; the next development baseline is
+`0.26.0-dev.0`. Its explicit [compatibility bridge](extension-installation-foundation.md#archive-contract)
+admits the pinned Snippets and current Files/SSH catalog ranges without changing
+archive bytes, engine ranges, API or capability validation. It preserves upper
+bounds, including Saved Layout's `<0.26.0`; admission is not native qualification.
+The unrelated `0.25.1-dev.N` family is not bridged.
 
 ## Public contract
 
@@ -58,7 +56,7 @@ Contribution PRs and forks leave application-version metadata unchanged unless a
 
 `MAJOR.MINOR.PATCH` identifies the intended release; `-dev.N` distinguishes application-changing integrations before publication.
 
-- After selecting and shipping a cut `X.Y.Z`, `main` advances once to `X.Y.(Z+1)-dev.0`, subject to the compatibility hold above. A later target from the same cut does not advance it again.
+- After selecting and shipping a cut `X.Y.Z`, `main` advances once to `X.Y.(Z+1)-dev.0`, after reviewing compatibility for that family. A later target from the same cut does not advance it again.
 - The first new user-facing feature or intentional `0.x` contract change in that release cycle advances the target to `X.(Y+1).0-dev.0`, relative to the latest selected application cut. Further features in the same cycle do not repeatedly advance the minor number.
 - When the target version stays the same, each integration that changes the application or its packages increments `N` once. This includes fixes, features, runtime dependencies, bundled assets, and packaging changes. A new target version starts at `dev.0` instead of also incrementing `N`.
 - Test-only, documentation-only, and CI-only changes that do not change the application or its packages leave the development version unchanged. Local builds and package commands do not increment it automatically.

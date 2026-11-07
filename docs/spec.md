@@ -677,8 +677,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   hint, tooltip and dynamically localized host-coded notices are included in the
   published Linux ARM64 Files0.7 preview, not Files0.6.
   The narrow [development bridges](extension-installation-foundation.md#archive-contract)
-  admit unchanged Files0.6 on recognized 0.24.1-dev.N and 0.25.0-dev.N hosts; admission alone
-  does not qualify native behavior or packages.
+  admit unchanged Files0.6 on recognized 0.24.1-dev.N, 0.25.0-dev.N and
+  0.26.0-dev.N hosts; admission alone does not qualify native behavior or packages.
   Current Files source also offers **Insert path into terminal** in Actions and
   on a focused row with Shift+Enter. It captures one visible selected file,
   folder or link, requests insertion immediately and never sends an added Enter.
@@ -2044,8 +2044,9 @@ distinguish target from host/API incompatibility, including when both apply.
 Manual local/link archive admission checks host/API, not catalog targets. Host
 compatibility uses ordinary semver
 first, with explicit bridges for canonical `0.24.1-dev.N` when the original
-range admits stable `0.24.0` and `0.24.1`, and canonical `0.25.0-dev.N` when
-it admits stable `0.24.0` and `0.25.0`, plus the separate historical Files
+range admits stable `0.24.0` and `0.24.1`, canonical `0.25.0-dev.N` when
+it admits stable `0.24.0` and `0.25.0`, and canonical `0.26.0-dev.N` when
+it admits stable `0.25.0` and `0.26.0`, plus the separate historical Files
 exception. API, capability, target, archive identity and trust checks remain
 unchanged; this admission does not qualify the archive or platform. See the
 [compatibility contract](extension-installation-foundation.md#archive-contract).
@@ -2438,8 +2439,9 @@ directory moves, without terminal insertion/drop. Current Files0.8.0 prepares
 selected-path insertion and Files-to-terminal drop with `terminal.insertPath.v1`,
 minimum host `>=0.25.0-dev.20` and API `0.1.x`, matching the integrated host
 consumer. Production archive admission refuses lower hosts; ordinary semver
-admits dev.20 and later dev.N in the same 0.25.0 family, not unrelated development
-families or incompatible APIs. No new compatibility bridge is added.
+admits dev.20 and later dev.N in the same 0.25.0 family. The explicit 0.26.0
+bridge also admits this range; unrelated development families and incompatible
+APIs remain refused unless ordinary semver admits them.
 Published Files0.6/0.7 bytes and both catalogs remain unchanged. Preparation is
 not exact shipping-pair qualification or publication. Prior Linux native UI used
 production modules with inert session/backend/package dependencies, not a real

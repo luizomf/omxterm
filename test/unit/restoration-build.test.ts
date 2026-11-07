@@ -31,7 +31,7 @@ it("declares window-scoped state and layout capabilities without changing saved 
   });
 });
 
-it("admits the built source on the current host through real archive validation", async () => {
+it("preserves the source manifest's bounded host admission", async () => {
   const manifest = parseManifest(
     JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
   );
@@ -45,13 +45,21 @@ it("admits the built source on the current host through real archive validation"
     "0.24.1-dev.0",
     "0.24.1",
     "0.25.0-dev.0",
-    host.version,
+    "0.25.0-dev.22",
     "0.25.0",
     "0.25.1",
   ])
     expect(() =>
       checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
     ).not.toThrow();
+
+  // The current host exceeds this manifest's upper bound; the bridge cannot waive it.
+  expect(() =>
+    checkCompatibility(manifest, {
+      appVersion: host.version,
+      apiVersion: "0.1.0",
+    }),
+  ).toThrow("incompatible");
 
   // Historical archive metadata stays refused on this host, not globally waived.
   const historical = parseManifest({
@@ -128,11 +136,8 @@ it.skipIf(process.env.OMXTERM_RESTORATION_BUILD !== "1")(
       );
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
-      const host = JSON.parse(await readFile("package.json", "utf8")) as {
-        version: string;
-      };
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: host.version,
+        appVersion: "0.25.0",
         apiVersion: "0.1.0",
       });
       expect(validated.manifest).toEqual(receipt.manifest);

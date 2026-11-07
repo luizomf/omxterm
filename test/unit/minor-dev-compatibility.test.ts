@@ -58,7 +58,7 @@ it.each([
   ["0.25.0-rc.0", false],
   ["0.24.2-dev.0", false],
   ["0.25.1-dev.0", false],
-  ["0.26.0-dev.0", false],
+  ["0.26.0-dev.0", true],
   ["invalid", false],
   [`0.25.0-dev.${"9".repeat(300)}`, false],
 ])("limits the additional bridge to canonical host %j", (host, expected) => {
