@@ -2,11 +2,11 @@
 
 You can run the OMXTerm AppImage directly, or use `linux_install.sh` to install it into your user folder and add OMXTerm to your desktop application menu.
 
-Get the AppImage, `linux_install.sh`, and their `.sha256` files from the [latest release](../README.md#platforms-and-downloads). For system requirements, see the [Linux installation guide](installation.md#linux).
+Get the AppImage, `linux_install.sh`, and their `.sha256` files from your architecture's row in the [download index](../README.md#platforms-and-downloads). For system requirements, see the [Linux installation guide](installation.md#linux).
 
 ## Install to your application menu
 
-Download the files from the same release, replace `VERSION` with your downloaded version, and use `x64` instead of `arm64` on Intel/AMD. The helper is shared; x64 helper installation remains unverified ([coverage](installation.md#linux)). Run as your normal user (no `sudo` needed):
+Download the files from the same target row, replace `VERSION` with your downloaded version, and use `x64` instead of `arm64` on Intel/AMD. Same-cut Linux helpers are identical; x64 helper installation remains unverified ([coverage](installation.md#linux)). Run as your normal user (no `sudo` needed):
 
 ```sh
 appimage=./OMXTerm-VERSION-arm64.AppImage

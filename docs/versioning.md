@@ -1,6 +1,6 @@
 # Versioning policy
 
-OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/). Published releases are formatted as `MAJOR.MINOR.PATCH` and tagged `vMAJOR.MINOR.PATCH`.
+OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/). Stable application versions are `MAJOR.MINOR.PATCH`. New stable target releases use `<os>-<arch>-vMAJOR.MINOR.PATCH` tags; the target prefix is not part of the application version. The legacy complete release `v0.25.0` remains unchanged.
 
 - `package.json` and `package-lock.json` define the application version.
 - Versions ending in `-dev.N` (for example `0.20.3-dev.0`) mark the development baseline on `main` between releases.
@@ -16,7 +16,7 @@ minor-development bridge have distinct endpoint requirements in the
 [compatibility contract](extension-installation-foundation.md#archive-contract).
 Neither automatically extends to another patch or minor development family;
 review compatibility and capabilities deliberately at each transition. The stable
-suffix-removal and complete-asset procedure below remains unchanged.
+suffix-removal rule still applies to stable cuts; stable assets now ship per target.
 
 ## Post-0.25.0 development baseline
 
@@ -24,9 +24,10 @@ Stable 0.25.0 uses a frozen cut; main already has later features, so its next
 target is `0.26.0-dev.0`. Main stays at `0.25.0-dev.22` for now because the
 [current compatibility rules](extension-installation-foundation.md#archive-contract)
 would reject pinned Snippets and existing catalog offers on `0.26.0-dev.0` (and
-`0.25.1-dev.0`). Before changing the three root version fields, add and test a
-reviewed next-family compatibility rule. Keep the original archive bytes, engine
-ranges, API and capability floors unchanged.
+`0.25.1-dev.0`). [#823](https://github.com/luizomf/omxterm/issues/823) tracks
+adding and testing a reviewed next-family compatibility rule before changing the
+three root version fields. Keep the original archive bytes, engine ranges, API
+and capability floors unchanged.
 
 ## Public contract
 
@@ -57,11 +58,13 @@ Contribution PRs and forks leave application-version metadata unchanged unless a
 
 `MAJOR.MINOR.PATCH` identifies the intended release; `-dev.N` distinguishes application-changing integrations before publication.
 
-- After publishing `X.Y.Z`, `main` advances to `X.Y.(Z+1)-dev.0`.
-- The first new user-facing feature or intentional `0.x` contract change in that release cycle advances the target to `X.(Y+1).0-dev.0`, relative to the latest published release. Further features in the same cycle do not repeatedly advance the minor number.
+- After selecting and shipping a cut `X.Y.Z`, `main` advances once to `X.Y.(Z+1)-dev.0`, subject to the compatibility hold above. A later target from the same cut does not advance it again.
+- The first new user-facing feature or intentional `0.x` contract change in that release cycle advances the target to `X.(Y+1).0-dev.0`, relative to the latest selected application cut. Further features in the same cycle do not repeatedly advance the minor number.
 - When the target version stays the same, each integration that changes the application or its packages increments `N` once. This includes fixes, features, runtime dependencies, bundled assets, and packaging changes. A new target version starts at `dev.0` instead of also incrementing `N`.
 - Test-only, documentation-only, and CI-only changes that do not change the application or its packages leave the development version unchanged. Local builds and package commands do not increment it automatically.
-- At release time, remove the `-dev.N` suffix so `package.json`, `package-lock.json`, `TERM_PROGRAM_VERSION`, `linux_install.sh --version`, the Git tag `vX.Y.Z`, and all installer filenames match `X.Y.Z`.
+- At cut time, remove the `-dev.N` suffix so `package.json`, `package-lock.json`, `TERM_PROGRAM_VERSION`, `linux_install.sh --version`, and installer filenames match `X.Y.Z`. Target tags contain that same version after their OS/architecture prefix.
+
+One application version identifies one reviewed frozen cut across targets. Later unchanged targets can ship that cut without a version bump or rebuilding already shipped targets. Code, dependency or build-input corrections after a target ships require a new application version and cut; retain the original actual build SHA and proven non-artifact differences as described in [release.md](release.md#reusing-test-and-build-results).
 
 For example, after `0.22.0`:
 

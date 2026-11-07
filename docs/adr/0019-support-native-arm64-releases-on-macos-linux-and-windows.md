@@ -23,6 +23,14 @@ supersedes x64 qualification gates with owner-approved native build-only CI
 checks. Desktop and installer behavior remain unverified, not release gates for
 those lanes. Intel macOS and other package formats remain outside support.
 
+Stable targets may ship independently from one reviewed frozen application cut,
+with immutable target tags and separate asset verification. The README is the
+per-target download index; GitHub global Latest is the legacy complete bundle,
+not that index. A later target does not require a version bump or rebuild of an
+unchanged shipped target. Corrections to product, dependency or build inputs
+after shipment require a new application version and cut. This changes cadence,
+not test-execution safety or the target's verification scope.
+
 ## Verification and evidence reuse
 
 Validation is automation-first and risk-based. Behavioral tests, native package

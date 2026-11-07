@@ -1,12 +1,8 @@
 # Install OMXTerm
 
-[OMXTerm 0.25.0](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) is the
-latest stable release for Apple Silicon Macs, Linux ARM64/x64 and Windows 11
-ARM64/x64. The x64 downloads are **build-only**: their desktop, GPU and installer
-behavior has not been tested. Windows ARM64 also has
-[unresolved public-install Snippets failures and an unrun graphical suite](snippets-migration.md#stable-0250-release-disposition).
+Choose your OS and architecture in the [platform download index](../README.md#platforms-and-downloads). Each row links its available application version, exact downloads, checksums and release notes; targets may ship at different times. GitHub's global Latest is not this index. The x64 downloads are **build-only**: their desktop, GPU and installer behavior has not been tested. Windows ARM64 0.25.0 also has [unresolved public-install Snippets failures and an unrun graphical suite](snippets-migration.md#stable-0250-release-disposition).
 
-The examples below use the published `0.25.0` naming: a macOS ARM64 DMG, Linux ARM64/x64 AppImages and Windows ARM64/x64 installers, each with a `.sha256` file, plus the common Linux `linux_install.sh` helper and its checksum. All twelve release assets were checked by size and SHA-256 before and after publication.
+The examples below use the published `0.25.0` filenames; substitute the version in your target's index row when different. The legacy [0.25.0 complete bundle](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) has all twelve assets, checked by size and SHA-256 before and after publication.
 
 **[macOS](#macos)** · **[Linux](#linux)** · **[Windows](#windows)** · **[Update or uninstall](#updating-or-uninstalling)**
 
@@ -141,9 +137,7 @@ A valid file prints `OK`.
 
 Use `-arm64.AppImage` on `aarch64` (ARM64), or `-x64.AppImage` on `x86_64`
 (Intel/AMD). The examples below use ARM64; substitute `x64` in both the AppImage
-and checksum filenames on Intel/AMD. The common `linux_install.sh` helper accepts
-either architecture and rejects mismatched host/ELF architectures before
-execution.
+and checksum filenames on Intel/AMD, and the version from your target's row if different. Download the optional `linux_install.sh` and checksum from that same row, matching the AppImage version. The helper accepts either architecture and rejects mismatched host/ELF architectures before execution.
 
 Linux x64 is a **build-only** target for native hosted CI. Desktop/GPU, FUSE
 launch, helper installation and ordinary-user integration are not established
@@ -189,7 +183,7 @@ If you get a FUSE error, run it this way instead:
 
 ### Add it to your application menu (optional)
 
-Download `linux_install.sh` next to the AppImage and run:
+Download the matching `linux_install.sh` and its checksum from the same target row as the AppImage. Verify the helper with `sha256sum --check linux_install.sh.sha256`, place it next to the AppImage, and run:
 
 ```sh
 chmod +x linux_install.sh

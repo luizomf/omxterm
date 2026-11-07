@@ -17,8 +17,9 @@ and attempt. This is artifact delivery, not automatic release assembly.
 
 Linux x64 rebuilds the pinned source-digest-guarded node-pty correction using
 locked Node-API headers. Patch identity, literal argv and native exec-status
-semantics are unchanged. ARM64 and x64 share one byte-identical versioned Linux
-helper; it checks host/ELF architecture before executing any supplied image.
+semantics are unchanged. Each Linux target release carries its matching versioned
+helper and checksum; the ARM64 and x64 pairs for the same cut are byte-identical.
+The helper checks host/ELF architecture before executing any supplied image.
 
 Explicit `--inspection-only` reuses package content, version, license, icon and
 architecture checks without GUI startup, Linux helper provisioning or NSIS
@@ -43,7 +44,8 @@ upload success; source review or local ARM64 checks cannot establish either.
 
 Default full verification remains unchanged, including the Windows disposable-VM
 consent boundary and Linux helper installation/startup checks. Inspection never
-reports FULL. Release assembly stays manual: retrieve before expiry, verify
-checksums/provenance, reconcile the common Linux helper pair, compare build SHA
-to tag inputs, upload all assets to a draft, download/verify again, then publish.
-See [release procedures](../release.md).
+reports FULL. Release assembly stays manual per ready target: retrieve before
+expiry, verify checksums/provenance, reconcile same-cut Linux helper pairs when
+both are available, compare the actual build SHA to the frozen cut, and upload
+that target's assets to its draft. Verify draft and published downloads. Other
+targets need not be ready. See [release procedures](../release.md).

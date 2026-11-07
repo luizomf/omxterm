@@ -33,11 +33,12 @@ pending next baseline. Historical release records below keep their original inpu
 
 ## Release workflow
 
-1. Select the release version `X.Y.Z` under [versioning.md](versioning.md) and ensure `package.json` and `package-lock.json` match.
-2. Build and verify ARM64 packages on each target platform; collect native Linux/Windows x64 build-only artifacts using the manual lanes below.
-3. Collect the verified installers and `.sha256` checksum files in the ignored `release/` directory.
-4. Tag `vX.Y.Z`, create a draft GitHub Release with the [qualified release assets](#publication) (twelve including both x64 platforms, with one common Linux helper pair), verify the uploaded bytes, and publish. Update download links in `README.md` and `docs/installation.md`. Published releases are immutable: finish uploading all assets before publication; never move a published tag, replace an asset, or disable immutability to add a missing platform.
-5. Bump `main` to the next `-dev.0` baseline after release.
+1. Select application version `X.Y.Z` under [versioning.md](versioning.md), remove the development suffix and review one frozen source cut. Record its full commit SHA. All targets for that application version use this cut; they need not ship together.
+2. Build and verify a ready target using the relevant procedure below. Retain the actual build SHA, checksums and evidence; prove any build-to-cut differences are non-artifact changes. Collect its files in the ignored `release/` directory.
+3. Create its target tag and draft, upload its complete [asset set](#publication), read back sizes and hashes, publish, and verify public downloads. Update that target's exact links and notes in the README download index. A target that is not ready does not block another.
+4. Advance the development baseline once for the selected application cut, not for each later target. Follow the [current compatibility hold](versioning.md#post-0250-development-baseline) where applicable.
+
+For example, Linux ARM64 can ship `linux-arm64-v0.26.0` first; macOS ARM64 can later ship `macos-arm64-v0.26.0` from the same frozen cut without an artificial version bump or rebuilding Linux. If product code, dependencies or build inputs need correction after a target ships, select a new application version and cut for the correction. Do not change a sealed release, move its tag, or create a later roll-up release.
 
 ## Verification and release decisions
 
@@ -65,12 +66,15 @@ When preparing a release across multiple machines or VMs, you only need to rerun
 - **Version-only bumps** require rebuilding packages and running `package:verify` (x64 build-only lanes use `--inspection-only`), without needing to rerun the full behavioral test suite if the code is otherwise identical.
 - **Code, asset, dependency, or build-script changes** require running tests, building new packages, and verifying the resulting artifacts.
 
-To compare a package build commit against the final release tag commit:
+To compare a package build commit against the frozen cut (replace the placeholders with full SHAs):
 
 ```sh
-git merge-base --is-ancestor <build-sha> <tag-sha>
-git diff --stat <build-sha> <tag-sha>
+git merge-base --is-ancestor <build-sha> <cut-sha>
+git diff --stat <build-sha> <cut-sha>
+git diff <build-sha> <cut-sha>
 ```
+
+Review the actual differences and build inputs, not just the summary, to establish that they cannot affect artifacts. The target tag points to the cut.
 
 ## Version consistency
 
@@ -79,7 +83,7 @@ Before tagging a release, verify that the final `X.Y.Z` version (with no `-dev` 
 - `package.json` and `package-lock.json`
 - The packaged app version and `TERM_PROGRAM_VERSION`
 - `linux_install.sh --version`
-- Git tag `vX.Y.Z` and all release asset filenames
+- The `X.Y.Z` portion of the target tag and all release asset filenames
 
 ## Build and automated verification
 
@@ -249,8 +253,8 @@ Get-Content "$name.sha256"
 
 ## Files preview preparation
 
-A Linux ARM64 Files preview is a separate preparation lane, not the complete
-stable-release asset set below and not an announcement that a preview is published.
+A Linux ARM64 Files preview is a separate preparation lane, not a
+[stable target release](#publication) or an announcement that a preview is published.
 Use an ordinary-user disposable Linux ARM64 guest and an exact committed source:
 
 ```sh
@@ -316,7 +320,7 @@ keep Files as a separately downloadable versioned artifact, and disclose missing
 platform/SDK/catalog qualification. Do not mutate an already published release to
 add it. Public readback/checksums and a compatible public host are needed before
 claiming distribution; neither a branch, local artifact nor CI upload is shipment.
-The normal stable-release procedure and its complete asset set remain unchanged.
+Stable targets follow the separate [publication procedure](#publication).
 
 <a id="files07-linux-link-first-preview-preparation"></a>
 
@@ -390,7 +394,7 @@ not an instruction to recreate sealed releases or replay executed fixtures.
    release. Stable Latest remains unchanged.
 3. Verify all five draft assets by exact byte size/SHA-256; publish and verify
    anonymous public downloads again. Make Files available before advertising the
-   host/archive pair. This is a partial macOS preview, not the stable asset set.
+   host/archive pair. This is a macOS preview, not a stable release.
 4. Run the separately assigned [public-link checkpoint](../test/fixtures/files-dmg.md#public-link-mode)
    using that publicly downloaded pair and the actual versioned archive URL.
    It exercises Settings **Install from link**, captured-byte trust, dormant
@@ -514,7 +518,7 @@ qualification limits. The version-specific sequence below records that initial
 publication, not outstanding work or permission to recreate its sealed releases.
 Future previews require new identities and matching review/qualification.
 
-This partial preview is separate from the complete stable release below. The
+This partial preview is separate from the later [0.25.0 complete stable bundle](#stable-0250-publication). The
 integration maintainer owns publication after full candidate review/corrections and
 exact packaged qualification. Keep source review SHA, final SHA, host package and
 Files archive identities distinct; a reused archive retains its original source
@@ -593,7 +597,7 @@ Never retrofit sealed notes with later evidence.
 ### Historical SSH 0.1.0 procedure
 
 The initial SSH milestone followed the partial Linux ARM64 preview topology,
-not the twelve-asset stable release below. The following sequence records host
+not the later [0.25.0 complete stable bundle](#stable-0250-publication). The following sequence records host
 `v0.24.0-dev.0` and separate `ext-ssh-v0.1.0` publication as non-Latest prereleases;
 it is not permission to recreate those sealed releases. Do not remove the development
 suffix or bump main for catalog/docs/test-only changes: unchanged Files0.1.0 is
@@ -652,8 +656,8 @@ was replaced.
 
 The Linux-oriented procedure below applies to future preview pairs, not permission
 to recreate any sealed release; source transition alone does not establish
-distributed migration. Prepare a partial prerelease, not the complete stable asset
-set. The separately published Windows ARM64 dev.36 [partial preview](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+distributed migration. Prepare a partial prerelease, not a
+[stable target release](#publication). The separately published Windows ARM64 dev.36 [partial preview](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
 uses its exact retained NSIS/checksum and optional Snippets; earlier Windows hosts
 and Windows x64 are unchanged. Its installed public-HTTPS checkpoint remains
 separate and pending. Source transition alone does not satisfy platform distribution gates. Source-native qualification does
@@ -753,20 +757,37 @@ qualification, other-platform cutover, stable SDK or full #741 completion follow
 
 ## Publication
 
-Create tag `vX.Y.Z` and a draft GitHub Release in `luizomf/omxterm`. Upload every applicable file (twelve with both x64 platforms), download and verify the complete set against local byte counts and SHA-256 records, then publish to seal the immutable release:
+For application version `X.Y.Z`, create a separate stable, non-prerelease release for each ready target. The exact tags are `linux-arm64-vX.Y.Z`, `linux-x64-vX.Y.Z`, `macos-arm64-vX.Y.Z`, `windows-arm64-vX.Y.Z`, and `windows-x64-vX.Y.Z`. Each tag points to the same reviewed frozen cut for that application version. Filenames and embedded application versions remain `X.Y.Z`, without the target prefix.
 
-- `OMXTerm-<version>-arm64.dmg` and `OMXTerm-<version>-arm64.dmg.sha256`
-- `OMXTerm-<version>-arm64.AppImage` and `OMXTerm-<version>-arm64.AppImage.sha256`
-- `OMXTerm-<version>-x64.AppImage` and `OMXTerm-<version>-x64.AppImage.sha256` (Linux x64, build-only)
-- `linux_install.sh` and `linux_install.sh.sha256` (one common pair: compare ARM64/x64 generated bytes before upload)
-- `OMXTerm-<version>-arm64.exe` and `OMXTerm-<version>-arm64.exe.sha256`
-- `OMXTerm-<version>-x64.exe` and `OMXTerm-<version>-x64.exe.sha256` (Windows x64)
+Each draft contains only its target's complete assets:
 
-Before draft assembly, compare each full CI build SHA against the tag inputs using
-the build-to-tag procedure above; explain every non-artifact difference. Upload
-the common helper pair only once. Preserve platform build-evidence JSON with the
-release preparation records (it is not one of the twelve public assets). Include
-explicit x64 build-only coverage and unverified boundaries in release notes.
+| Target                   | Assets (each with its `.sha256`)                   |
+| ------------------------ | -------------------------------------------------- |
+| macOS ARM64              | `OMXTerm-X.Y.Z-arm64.dmg`                          |
+| Linux ARM64              | `OMXTerm-X.Y.Z-arm64.AppImage`, `linux_install.sh` |
+| Linux x64 (build-only)   | `OMXTerm-X.Y.Z-x64.AppImage`, `linux_install.sh`   |
+| Windows ARM64            | `OMXTerm-X.Y.Z-arm64.exe`                          |
+| Windows x64 (build-only) | `OMXTerm-X.Y.Z-x64.exe`                            |
+
+Each Linux release carries its own matching helper and checksum. When the second Linux target is prepared for the same cut, compare both helper and checksum bytes with the first target's retained or downloaded pair; they must agree. Preserve platform build-evidence JSON in the preparation records, not as a required public asset. Before draft assembly, compare each actual full build SHA against the frozen cut with the [build-to-tag procedure](#changed-inputs-and-build-to-tag-comparison); explain and prove every non-artifact difference.
+
+Create the target draft in `luizomf/omxterm` at the frozen full SHA with `--latest=false`, without `--prerelease`. Ensure the target tag does not already exist at another commit; `--target` does not retarget an existing tag. For example, with `VERSION`, `CUT` (the full frozen SHA), and `NOTES` (a prepared notes-file path) set for a Linux ARM64 cut:
+
+```sh
+tag="linux-arm64-v$VERSION"
+gh release create "$tag" --target "$CUT" --draft --latest=false --title "OMXTerm $VERSION — Linux ARM64" --notes-file "$NOTES"
+gh release upload "$tag" "release/OMXTerm-$VERSION-arm64.AppImage" "release/OMXTerm-$VERSION-arm64.AppImage.sha256" release/linux_install.sh release/linux_install.sh.sha256
+```
+
+Download the draft assets and compare every byte count and SHA-256 with the local records before publication. Publish explicitly as non-Latest, then anonymously download each public asset and repeat the size/hash comparison:
+
+```sh
+gh release edit "$tag" --draft=false --latest=false
+```
+
+Verify the release is stable, non-Latest and points to the frozen cut. Never move a published tag, replace assets, disable immutability, or add platforms to a sealed release. When it is the newest application version for its target, update that row in the [README index](../README.md#platforms-and-downloads), using exact tag URLs for its version, download, checksum and release notes; Linux rows also link their own helper and checksum. An older backfill does not replace a newer indexed version. Leave other rows at their latest available versions, and update installation guidance if its examples or coverage need it. GitHub's global Latest remains the legacy complete `v0.25.0` bundle, not the per-platform index; do not use `/latest/download` for target links. No later complete-bundle roll-up is created.
+
+Include the frozen cut SHA, actual build SHA and any proven non-artifact differences in the release records; identify the cut and target coverage in the notes. Include explicit x64 build-only coverage and unverified boundaries in each applicable release's notes.
 
 Include release notes covering new features, bug fixes, any configuration changes, SHA-256 checksums, and first-launch Gatekeeper/SmartScreen notes:
 

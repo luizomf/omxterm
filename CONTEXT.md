@@ -17,6 +17,15 @@ qualification: native CI and headless integrity checks, with desktop, GPU,
 installer and ordinary-user integration unverified and not release gates
 ([ADR 0036](docs/adr/0036-distribute-build-only-x64-ci-artifacts.md)).
 
+**Application Cut** — One reviewed frozen source commit and application version
+shared by independently published target releases. Actual build SHAs can differ
+only with proven non-artifact differences; product or build-input corrections
+after shipment require a new application version and cut.
+
+**Target Release** — A stable release for one Supported Platform, identified by
+an immutable OS/architecture-prefixed tag and its own verified assets. Its
+availability is indexed in the README independently of GitHub's global Latest.
+
 **Terminal Surface** — The portable DOM module that renders and operates the
 terminal using Restty and its Ghostty core. It receives a session Adapter rather
 than importing Electron or `node-pty`.

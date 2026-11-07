@@ -2494,9 +2494,18 @@ the exact packaged addon in Electron Run-as-Node mode. Linux additionally checks
 real PTY output/exit/resize and exec-failure versus successful exit 1. Windows
 unpacked inspection does not verify NSIS contents. Exact binary checksums and
 provenance accompany 7-day Actions artifacts; publication remains manual.
-Installer safety requirements for full verification are unchanged. Linux also provides
+Installer safety requirements for full verification are unchanged. Each Linux target also provides
 `linux_install.sh` and `linux_install.sh.sha256`; the helper's embedded version
-matches the release.
+matches the application version, and same-cut Linux helper pairs have identical bytes.
+
+Stable targets ship independently under immutable OS/architecture-prefixed tags,
+with one reviewed frozen cut per application version. Actual build SHAs and proven
+non-artifact differences are retained. Corrections to product, dependency or build
+inputs after shipment require a new application version; unchanged later targets
+need no artificial bump or rebuild of shipped targets. The [README download index](../README.md#platforms-and-downloads)
+links each target's available version, exact assets, checksums and notes. GitHub's
+global Latest remains the legacy complete 0.25.0 bundle, not that index; no later
+roll-up release or moved tag is used.
 
 Artifacts include SHA-256 checksums but no verified publisher identity. The
 macOS app has an ad-hoc integrity seal, not Developer ID signing or
