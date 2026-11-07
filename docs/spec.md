@@ -553,7 +553,9 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   on Linux and Windows, remappable through `keybinds`) opens, reveals or closes the
   selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
   below full-width title/tab chrome. Published stable `0.25.0` and current source
-  use optional Snippets `0.1.0` on Linux ARM64/x64, macOS ARM64 and Windows ARM64.
+  support optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64.
+  The bundled default and official catalog remain `0.1.0`; published `0.1.1` is
+  available for deliberate local installation or update, not automatically.
   Windows x64 and unchanged `0.23.0` hosts retain the built-in view. Existing users
   choose installation through the official catalog or a verified local/offline
   archive. Windows ARM64's graphical suite did not run and public-install Snippets
@@ -1659,10 +1661,11 @@ unintentionally. Creating new actions, system-global shortcuts, chords or
 sequences, and per-platform alternate maps are unsupported.
 
 An optional user-owned `snippets.yaml` next to `config.json` defines the
-Snippets Sidebar contents. Corrected unpublished Snippets `0.1.1` source uses
-the account-home fallback; installed and bundled-default `0.1.0` can instead
-resolve a different catalog when XDG is unset or empty and the environment home
-is overridden. See the [migration guide](snippets-migration.md#existing-catalogs-and-shortcuts)
+Snippets Sidebar contents. Published Snippets `0.1.1` uses the account-home
+fallback; installed and bundled-default `0.1.0` can instead resolve a different
+catalog when XDG is unset or empty and the environment home is overridden. A
+local update is deliberate; the default and catalog remain `0.1.0`. See the
+[migration guide](snippets-migration.md#existing-catalogs-and-shortcuts)
 for the delivery boundary. The file is one UTF-8 YAML 1.2 core document parsed
 with `yaml` v2, containing exactly `version: 1` and a `snippets` array of at
 most 512 entries; each entry has a non-empty `name` (the searchable label, at most 128 UTF-16 code units), a

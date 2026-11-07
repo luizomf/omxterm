@@ -131,11 +131,18 @@ See the [device chooser](#choose-your-device) and follow the
 
 ### Optional Snippets
 
-Stable **0.25.0** uses optional Snippets 0.1.0 on Linux ARM64/x64, macOS ARM64
-and Windows ARM64. New packaged profiles try to install the
+Stable **0.25.0** supports optional Snippets on Linux ARM64/x64, macOS ARM64
+and Windows ARM64. Its bundled default and official catalog offer Snippets 0.1.0.
+New packaged profiles try to install the
 [removable default](docs/default-snippets.md) once, ready to open but inactive at
 startup. Existing profiles still choose installation; your YAML and disabled or
 removed choices stay intact. Windows x64 retains built-in Snippets.
+
+[Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
+is a separate non-Latest patch that fixes catalog home resolution. To install or
+update deliberately, download and verify its archive and checksum, then use local
+installation and approve its trust prompt; see the [steps and limits](docs/snippets-migration.md#install-deliberately).
+The catalog and bundled default remain 0.1.0; there is no automatic update.
 
 **Windows ARM64:** public-install Snippets tests still have unresolved failures,
 and the full graphical suite did not run. Read the

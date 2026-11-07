@@ -202,17 +202,17 @@ Insert, Run and read-only preview deliver exact text through Protected Paste to
 a captured live Surface, never a replacement target. See
 [interaction behavior](docs/spec.md#window-and-session-behavior) and
 [catalog configuration](docs/spec.md#configuration-and-local-state).
-Published stable `0.25.0` and current source use optional Snippets `0.1.0` on
+Published stable `0.25.0` and current source support optional Snippets on
 Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
 `0.23.0` hosts retain built-in Snippets. Existing profiles choose official-catalog
 or verified local/offline installation; positively new packaged profiles get the
 [removable one-time default](docs/default-snippets.md), enabled but dormant.
 Windows ARM64's unrun graphical suite and unresolved public-install failures are
 accepted [for 0.25.0 only](docs/snippets-migration.md#stable-0250-release-disposition).
-The migration guide retains historical preview/0.24.0 receipts. Corrected
-Snippets `0.1.1` source is unpublished; installed and bundled-default `0.1.0`
-retains its [home override limitation](docs/snippets-migration.md#existing-catalogs-and-shortcuts).
-Catalogs and published bytes are unchanged.
+The migration guide retains historical preview/0.24.0 receipts. Published Snippets
+`0.1.1` fixes the [home override limitation](docs/snippets-migration.md#existing-catalogs-and-shortcuts)
+through a deliberate local update; the official catalog and bundled default remain
+`0.1.0`, and existing installations are not automatically updated.
 Each remaining cutover requires matching host/package qualification,
 migration guidance and compatible package publication/verification before distributed removal
 ([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).

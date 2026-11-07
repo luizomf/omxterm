@@ -288,8 +288,10 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 ### Insert, run or preview a snippet
 
-Published **OMXTerm 0.25.0** uses optional **Snippets 0.1.0** on Linux ARM64/x64,
-macOS ARM64 and Windows ARM64. Windows x64 and unchanged
+Published **OMXTerm 0.25.0** supports optional Snippets on Linux ARM64/x64,
+macOS ARM64 and Windows ARM64. Its default and official catalog offer 0.1.0;
+[Snippets 0.1.1](snippets-migration.md#install-deliberately) is a deliberate local
+patch installation or update. Windows x64 and unchanged
 **0.23.0** hosts retain the built-in tool. If Snippets is not installed, use
 **Settings → Extensions → Browse official extensions** or a verified local archive;
 the local route works offline after download. Existing YAML and shortcuts stay

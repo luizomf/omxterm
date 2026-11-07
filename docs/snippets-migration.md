@@ -1,8 +1,9 @@
 # Optional Snippets migration
 
 Published **[OMXTerm 0.25.0](https://github.com/luizomf/omxterm/releases/tag/v0.25.0)**
-uses optional **[Snippets 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)**
-on Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
+supports optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64.
+Its bundled default and official catalog offer **[Snippets 0.1.0](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.0)**.
+Windows x64 and unchanged
 `0.23.0` hosts retain built-in Snippets. Existing users choose installation through
 the official catalog or a verified local/offline archive; user YAML and deliberate
 disabled/removed choices are preserved. Activation remains deliberate.
@@ -14,6 +15,14 @@ no startup download and creates no user YAML. There is no existing-user enrollme
 or silent restore after uninstall. Developer startup and Windows x64 are excluded.
 Read the [0.25.0 known limits](#stable-0250-release-disposition), especially before
 upgrading Windows ARM64 if you rely on built-in Snippets.
+
+**Manual patch:** [Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
+fixes catalog home resolution. Download and verify its archive and checksum, then
+[install or update locally](#install-deliberately) with explicit trust. The
+catalog and bundled default remain 0.1.0; existing installations do not update
+automatically. A Fedora extracted-AppImage check exercised 0.1.1 on the exact
+0.25.0 host with synthetic input and controlled consent. Native update, public
+acquisition and other platforms were not qualified; see the release notes.
 
 Historical preview pairs retain their own exact receipts and qualification limits.
 
@@ -107,10 +116,10 @@ Paste remain the same. There is no conversion or second Commands catalog.
 uses the environment-sensitive home when `XDG_CONFIG_HOME` is unset or empty.
 If `HOME` (or `USERPROFILE` on Windows) differs from the OS account home, it can
 read a different catalog from the one beside `config.json`. A nonempty
-`XDG_CONFIG_HOME` takes precedence for both. Corrected Snippets `0.1.1` source
-uses the account home, but is unpublished; changing host source or updating the
-app does not update an installed or default `0.1.0` copy. A separate extension
-publication and update would be needed. This is not portable-data relocation.
+`XDG_CONFIG_HOME` takes precedence for both. Published Snippets `0.1.1` uses
+the account home. Updating the app does not update an installed or default `0.1.0`
+copy; deliberately install the verified 0.1.1 archive to update it. This is not
+portable-data relocation.
 
 **View → Toggle Snippets**, its Command Palette entry and existing shortcut
 (`Ctrl+Shift+S` on Linux/Windows, `Cmd+Shift+S` on macOS, including custom remaps or
@@ -156,40 +165,44 @@ enabled by the new-profile default, just open it; you do not need to reinstall.
 Windows x64 uses built-in Snippets instead. For a preview, use its exact host and
 archive pair linked above; the Windows dev.36 section has [installer and SmartScreen
 instructions](#windows-arm64-published-preview-and-catalog-candidate).
-For local installation, download `snippets-0.1.0.omxext` and its checksum
-from the Snippets release into the same folder, then verify before installation:
+For the 0.1.1 patch, download `snippets-0.1.1.omxext` and its checksum from the
+[Snippets 0.1.1 release](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
+into the same folder, then verify before installation:
 
 ```sh
 # macOS
-shasum -a 256 -c snippets-0.1.0.omxext.sha256
+shasum -a 256 -c snippets-0.1.1.omxext.sha256
 # Linux
-sha256sum --check snippets-0.1.0.omxext.sha256
+sha256sum --check snippets-0.1.1.omxext.sha256
 ```
 
 On Windows, compare the PowerShell result with the hash in the matching sidecar:
 
 ```powershell
-Get-FileHash .\snippets-0.1.0.omxext -Algorithm SHA256
-Get-Content .\snippets-0.1.0.omxext.sha256
+Get-FileHash .\snippets-0.1.1.omxext -Algorithm SHA256
+Get-Content .\snippets-0.1.1.omxext.sha256
 ```
 
-The checksum identifies bytes, not a verified publisher. No source build is required. Older hosts are not qualified for this package, and
-existing Files/SSH packages were not newly qualified on these previews. The official
-catalog uses the same Snippets bytes for all admitted targets; its Windows ARM64
-promotion changes no archive or manifest range. Separate bounded public-HTTPS
+The checksum identifies bytes, not a verified publisher. No source build is required.
+The 0.1.1 archive SHA-256 is
+`e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b`.
+For historical preview evidence, use its recorded 0.1.0 archive and checksum;
+the 0.1.1 update has not been natively qualified on those hosts. Existing Files/SSH
+packages were not newly qualified. The official catalog still offers 0.1.0 on its
+admitted targets; its Windows ARM64 promotion changed no archive or manifest range. Separate bounded public-HTTPS
 checkpoints passed on the three Linux/macOS pairs; Windows public consumption
 remains pending at this revision. See
 [Linux x64](#linux-x64-public-catalog-checkpoint), [macOS](#macos-arm64-catalog-delivery)
 and [Linux ARM64](#preview-coverage-and-remaining-platforms).
 
-1. Open **Settings → Extensions**, choose **Browse official extensions**, select
-   the Snippets preview and install it. Alternatively, choose
-   **Install local .omxext…**; a downloaded local archive works offline. Browse/Refresh is explicit;
-   reopening Settings does not fetch the catalog. Both routes use the same
-   captured-byte trust and installation flow.
+1. Open **Settings → Extensions** and choose **Install local .omxext…** to install
+   or update to the verified 0.1.1 archive; it works offline after download. For
+   0.1.0 instead, choose **Browse official extensions** and select Snippets.
+   Browse/Refresh is explicit; reopening Settings does not fetch the catalog.
+   Both routes use the same captured-byte trust and installation flow.
 2. Inspect the captured package identity and trust information before approving.
    Extension code is trusted code, not a sandboxed command catalog.
-3. If the installation is disabled, enable it explicitly. Installation does not
+3. Approving installation or update enables the selected package but does not
    start its backend: **Toggle Snippets** is the deliberate activation step.
 4. Keep your existing catalog where it is. For a new catalog, copy/adapt the
    package's `snippets.example.yaml` using the [documented YAML format](configuration.md#snippets).

@@ -31,6 +31,16 @@ the version range. Extension archives, versions and catalogs are unchanged.
 See [development metadata](versioning.md#post-0250-development-baseline) for the
 next development baseline. Historical release records below keep their original inputs.
 
+## Snippets 0.1.1 publication
+
+[Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
+is an immutable non-Latest prerelease from `12c54a09060364982de4e9833d112167a4e21d26`.
+Its 82,635-byte archive SHA-256 is
+`e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b`;
+the original receipt remains `not-run`. See the release notes for exact evidence
+and limits. Catalog and bundled-default Snippets remain 0.1.0; installation or
+update to 0.1.1 is deliberate. Application Latest remains 0.25.0.
+
 ## Release workflow
 
 1. Select application version `X.Y.Z` under [versioning.md](versioning.md), remove the development suffix and review one frozen source cut. Record its full commit SHA. All targets for that application version use this cut; they need not ship together.
