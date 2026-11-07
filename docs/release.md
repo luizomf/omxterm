@@ -678,8 +678,10 @@ not substitute for the exact packaged host/archive pair.
    then `node scripts/build-snippets-extension.mjs /absolute/new/snippets.omxext`
    (append the verified full source commit for an exported checkout). Preserve
    archive/checksum/receipt identities; do not overwrite an earlier candidate or
-   change the build receipt's `qualification.status: not-run` field. A rebuild,
-   including changed embedded documentation/locales, is a new artifact identity.
+   change the build receipt's `qualification.status: not-run` field. Inspect the
+   archive for generated checkout/host path disclosure as described in [Files
+   preview preparation](#files-preview-preparation). A rebuild, including changed
+   embedded documentation/locales, is a new artifact identity.
 2. Package and verify the Linux ARM64 host with the normal release tools. Run the
    [exact Snippets AppImage fixture](../test/fixtures/snippets-packaged.md#exact-appimage-adapter)
    against those exact bytes and the chosen archive. Keep its synthetic-input,
