@@ -3,9 +3,10 @@
 Files is a separately installed Linux and macOS ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
-The source catalogs select Files0.6.0 for Linux ARM64 (host `>=0.24.0-dev.21`)
+The official catalogs select Files0.6.0 for Linux ARM64 (host `>=0.24.0-dev.21`)
 and Files0.7.0 for macOS ARM64 (host `>=0.25.0-dev.10`), both API `0.1.x`.
-The macOS catalog change is a candidate, not public catalog consumption. The bounded
+The bounded [Files0.7 macOS public-catalog checkpoint](#files07-macos-public-catalog-checkpoint)
+passed separately from its local filesystem checkpoint. The earlier bounded
 [Linux](#files-060-linux-public-catalog-checkpoint) and
 [macOS](#files-060-macos-public-catalog-checkpoint) public-catalog checkpoints
 passed with locally built hosts; they do not establish public stable-host download.
@@ -212,8 +213,8 @@ services remain required. Published Files0.6.0 retains minimum host
 0.24.0-dev.21 and its original archive and receipts. Historical0.4.0 requires
 `0.24.0-dev.8` or later for the hosted-language subscription. Earlier public
 catalog checkpoints used the original Linux0.4.0 and macOS0.5.0 archives.
-The Linux Files0.6 catalog entry binds its immutable bytes; the macOS source
-catalog candidate selects the separately published Files0.7 bytes. Building source alone does not update the public catalog.
+The Linux Files0.6 catalog entry binds its immutable bytes; the macOS catalog
+selects the separately published Files0.7 bytes. Building source alone does not update the public catalog.
 Current source removes the Files page's redundant visible identity in favor of
 the host's panel header, while retaining a named child region. Published
 Files0.4.0/0.5.0 archives keep their original heading, including on a newer host.
@@ -742,8 +743,57 @@ its cause, a new regression or an accumulating leak.
 Synthetic Chromium input and controlled consent do not qualify physical input,
 Finder/Gatekeeper, default GPU, compositor behavior, all filesystems, public
 Settings-link/catalog consumption or surviving-browser main-death exclusion.
-The macOS catalog update in source is a candidate; publication and an actual
-public-catalog consumer are separate maintainer actions.
+The later public-catalog checkpoint below is separate; it does not relabel this
+local observation.
+
+## Files0.7 macOS public-catalog checkpoint
+
+On 2026-11-07 an ordinary-user macOS27.0.1 ARM64 disposable guest ran the
+committed controller `c5e7c436ec67e27c5ef155e22cfbcea1f640452c` against the
+same published stable0.25.0 DMG and Files0.7 archive identities above. The app
+was copied from the read-only DMG; the independently downloaded archive was
+only the controller-side digest oracle, not a chooser or app input. An independent
+preflight readback of the fixed macOS catalog had SHA-256
+`2771ab9af0972b9438927b9e34c683ffb64c946dfda6009e2731472827e40751`.
+The production Settings flow then used actual Browse and the Files0.7 Install
+card, public HTTPS and one controlled Official consent asserting the exact
+manifest ID/version/digest and generation 0. Installation remained dormant;
+explicit activation opened a real hosted Files view and backend. The backend was
+observed active before `app.quit()`, then exited 0 and closed; main exit, streams
+and supervisor settlement joined without cleanup assistance. The recorded
+endpoint and Install action are fixture receipts, **not a passive network trace**;
+the separately read-back catalog digest is not a direct capture of the app's
+response bytes. No catalog/archive interceptor, fixture CA, local chooser or
+link fallback supplied the installation.
+
+The actual catalog WebContents capture was inspected: it shows the Files0.7
+macOS ARM64 offer and Install control. It is not a Files-view or compositor
+capture. Source export file bytes and link targets (1,511 entries), input hashes
+and copied bundle identity matched before/after; source comparison is not a full
+metadata or untracked-file inventory. The transient bundled driver was built
+from that source but its executed output was not separately retained or hashed.
+A later snapshot found all 15 recorded controller/supervisor process identities
+absent, not arbitrary escaped descendants. The profile and copied application
+remain retained for review.
+Stderr retained the same 11-listener BrowserWindow warning covered by closed
+[#742](https://github.com/luizomf/omxterm/issues/742); its cause is unestablished.
+The DMG helper also emitted hdiutil deprecation warnings.
+
+This short public checkpoint did not repeat filtering, directory moves, other
+management operations or the filesystem matrix; the earlier exact-pair local
+result remains separate. There was no terminal input, terminal-directory request,
+insertion or drag. Synthetic input and controlled consent do not establish
+physical input/dialogs or Quit-menu interaction, Finder installation, Gatekeeper/notarization, default GPU,
+compositor, every filesystem, full portable checks or surviving-browser main-death
+exclusion. The original Files0.7 Linux-targeted build receipt remains `not-run`.
+The initial four failed temporary-adapter controls remain failed. A later broad
+unit run timed out at 240 seconds after reporting two failures: the Snippets
+catalog test's obsolete macOS Files compatibility expectation and the 0.7
+consumer test's missing `filesOnly` binding. Those mechanisms are reconstructed
+from the intermediate and corrected sources; the original final stacks were not
+retained. Both #745 installer-related unit files reported passes in that run,
+but there was no final suite summary or established timeout cause. Focused
+corrected checks passed; neither failed/incomplete run becomes a full-unit pass.
 
 ## Files 0.6.0 Linux public-catalog checkpoint
 
@@ -831,10 +881,10 @@ remain usable. en-US/pt-BR controls relabel without repeating requests.
 Main owns the fixed project HTTPS endpoints and captured release selections.
 Current source chooses the complete `official-extensions-darwin-arm64-v1.json`
 for macOS ARM64; every other target retains `official-extensions-v1.json`.
-Only one endpoint is fetched, with no merge or fallback. The source catalogs
-select Files0.6 on Linux ARM64 and candidate Files0.7 on macOS ARM64, keeping
-SSH/Snippets identical between them. This source change is not a public readback
-or public-catalog consumption checkpoint. Published dev.21 still embeds the legacy URL; its Linux-only Files entry
+Only one endpoint is fetched, with no merge or fallback. The catalogs select
+Files0.6 on Linux ARM64 and Files0.7 on macOS ARM64, keeping SSH/Snippets
+identical between them. The separate bounded [Files0.7 public checkpoint](#files07-macos-public-catalog-checkpoint)
+passed. Published dev.21 still embeds the legacy URL; its Linux-only Files entry
 does not offer macOS discovery. The earlier dev.26/Files0.5
 [public-catalog checkpoint](#macos-catalog-distribution) establishes that exact
 historical route; it does not qualify Files0.6. Before
@@ -848,7 +898,7 @@ Installation/replacement remains dormant. Cancel or owner loss before approval
 revokes consent; publication already dispatched cannot be recalled or retried
 implicitly. Refresh cannot retarget a captured installation.
 
-Linux Files0.6 requires at least dev.21. The macOS Files0.7 candidate requires
+Linux Files0.6 requires at least dev.21. The macOS Files0.7 offer requires
 `>=0.25.0-dev.10`; macOS 0.24.0 and earlier compatible hosts lose the prior catalog
 offer and can deliberately install the unchanged Files0.6 archive by local file or
 HTTPS link, or upgrade. Compatibility is separate from endpoint and qualification.

@@ -82,8 +82,8 @@ settlement separately; neither DOM predicates nor a copied app prove compositor
 or Finder behavior.
 
 The [actual prior run](../../docs/files-development-preview.md#files07-macos-stable-local-checkpoint)
-used a temporary adapted controller; this durable mode has not itself been run
-natively. The mapping is:
+used a temporary adapted controller; this durable mode's local filesystem form
+has not itself been run natively. The mapping is:
 
 - The executed Files consumer used the existing 0.7 filtering/move code, added
   the cancellation check, and ended after the completed-move capture. The durable
@@ -97,28 +97,30 @@ natively. The mapping is:
   an explicit mode guard. The durable DMG wrapper adds exact host identity
   admission and retains the existing supervisor and read-only mount/copy paths.
   These are guards/composition changes, not a new host or archive build.
-- The new short public-catalog branch is additional, unrun behavior; it cannot
-  be inferred from the local run. Existing local, public-link and public-catalog
-  fixture results remain distinct.
+- The short public-catalog branch is additional behavior, not inferred from the
+  local run. It later passed its own [public checkpoint](../../docs/files-development-preview.md#files07-macos-public-catalog-checkpoint)
+  with committed controller `c5e7c436ec67e27c5ef155e22cfbcea1f640452c`.
+  Existing local, public-link and public-catalog results remain distinct.
 
-### Later public-catalog consumption
+### Public-catalog consumption
 
-After the maintainer publishes the candidate endpoint and verifies its exact
-public readback, the same exact-pair inputs above may additionally set:
+After verifying the public endpoint's exact readback, the same exact-pair inputs
+above may additionally set:
 
 ```sh
 OMXTERM_FILES_DMG_PUBLIC_CATALOG=https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json
 ```
 
-This separate **unrun** short mode uses real Settings Browse and the exact
+This separate short mode uses real Settings Browse and the exact
 Files0.7 card, production HTTPS, one catalog-bound captured-byte consent at
 generation 0, dormant installation, explicit activation and active-backend
 normal Quit. The separately downloaded archive is only a controller digest
 oracle; no local chooser or direct-link fallback is permitted. It does not repeat
 the filesystem/filter matrix; reuse the prior local exact-pair result only for
 matching inputs. The recorded endpoint and install action are not a passive
-network trace. Publication, fresh public endpoint readback and the actual native
-public-catalog outcome are separate maintainer actions.
+network trace. The [bounded actual public result](../../docs/files-development-preview.md#files07-macos-public-catalog-checkpoint)
+records the separate endpoint readback, executed controller and limits; later
+runs require their own fresh input/endpoint verification and native outcome.
 
 ## Public-link mode
 
@@ -173,7 +175,7 @@ did not modify the v1 Linux0.4 catalog or any immutable asset.
 The following Files0.5 recipe records the **historical** six-check checkpoint
 that passed on published dev.26 on 2026-10-31; see [actual evidence and limits](../../docs/files-development-preview.md#macos-catalog-distribution).
 After the historical Files0.6 promotion, the old Files0.5 card was no longer
-available there. The current source candidate selects Files0.7; the earlier
+available there. The current catalog selects Files0.7; the earlier
 [Files0.6 checkpoint](#prepared-files06-public-catalog-checkpoint) remains historical. Published dev.21 still selects the legacy Linux Files offer; its existing
 local/link qualification cannot prove macOS catalog discovery.
 
@@ -233,7 +235,7 @@ Files0.5 nor teaches already published dev.21 a new endpoint.
 The [bounded Files0.6 public-catalog checkpoint](../../docs/files-development-preview.md#files-060-macos-public-catalog-checkpoint)
 passed on 2026-11-02 using a retained locally built host DMG, not a downloaded
 public stable host. A separate run requires verification that the selected public endpoint still
-offers those exact bytes; the current source candidate selects Files0.7 instead. Keep the original Files0.5 instructions, receipts and captures
+offers those exact bytes; the current catalog selects Files0.7 instead. Keep the original Files0.5 instructions, receipts and captures
 as historical separate evidence; do not overwrite or relabel them.
 
 Use the exact independently downloaded Files0.6 archive as `ARCHIVE` and set:

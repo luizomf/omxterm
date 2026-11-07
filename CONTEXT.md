@@ -357,10 +357,10 @@ only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
 and manifest identity must match before ordinary one-shot trust. Its in-memory
 last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
-endpoint offered Linux Files0.4; the source catalogs now select Linux Files0.6
-and candidate macOS Files0.7, plus the same SSH0.3.1 archive for both ARM64
-targets. The earlier macOS Files0.6 public-consumption checkpoint passed; the
-Files0.7 source catalog candidate has not yet had public-catalog consumption.
+endpoint offered Linux Files0.4; the published catalogs now select Linux Files0.6
+and macOS Files0.7, plus the same SSH0.3.1 archive for both ARM64 targets. The
+[Files0.7 macOS public-consumption checkpoint](docs/files-development-preview.md#files07-macos-public-catalog-checkpoint)
+passed separately from the earlier Files0.6 checkpoint.
 Common SSH/Snippets entries match; no merging or fallback occurs. Cards show the
 selected offer's platforms and distinguish target from host/API incompatibility.
 Target and shared host/API compatibility govern catalog selection, while local/link
@@ -426,8 +426,8 @@ source UI changes are included in the published Files0.7 Linux ARM64 link-first
 preview with host dev.19. Its bounded [actual public Settings-link checkpoint](docs/files-development-preview.md#files07-linux-public-link-checkpoint)
 passed using fresh anonymous downloads. A separate macOS stable0.25.0 / Files0.7
 [local checkpoint](docs/files-development-preview.md#files07-macos-stable-local-checkpoint)
-passed filtering and confirmed directory movement; broader macOS qualification
-and public-catalog consumption remain separate. Hide/reveal retains the dotfile choice;
+passed filtering and confirmed directory movement; a separate public-catalog
+checkpoint passed. Broader macOS qualification remains separate. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
 updates relabel retained controls and notices without changing drafts, captured
 paths or pending operations. In current host source, the explicit Use terminal
@@ -486,8 +486,8 @@ is not relabeled.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
 display metadata, not a manifest platform fence or blanket native qualification.
 The earlier Linux catalog selected Files0.4.0; the later promotion selected
-Files0.6.0 on both ARM64 endpoints. The current macOS source catalog candidate
-selects Files0.7; Linux retains Files0.6.
+Files0.6.0 on both ARM64 endpoints. The current macOS catalog selects Files0.7;
+Linux retains Files0.6.
 A separate [macOS public-catalog checkpoint](docs/files-development-preview.md#files-060-macos-public-catalog-checkpoint)
 passed with a retained locally built 0.24.0 DMG, not a downloaded-public host.
 The host's optional `toggleFiles` shortcut is unbound

@@ -14,9 +14,10 @@ Main selects one fixed schema1 endpoint from the host target:
 Each is a complete catalog with unique package IDs. There is no multi-endpoint
 merge, schema negotiation or fallback to the legacy endpoint after failure.
 The original target split kept the legacy document unchanged, preserving Linux's
-Files0.4 offer at that checkpoint. The source catalogs select Files0.6 for
-Linux ARM64 and candidate Files0.7 for macOS ARM64. The macOS change is not yet
-a public endpoint or consumption checkpoint. Common SSH/Snippets
+Files0.4 offer at that checkpoint. The published catalogs select Files0.6 for
+Linux ARM64 and Files0.7 for macOS ARM64. A separate bounded
+[macOS Files0.7 public-catalog checkpoint](files-development-preview.md#files07-macos-public-catalog-checkpoint)
+passed with the published stable0.25.0 host. Common SSH/Snippets
 entries are identical in both documents; promotions must update both together.
 The published SSH0.3.1 offer includes Linux and macOS ARM64 for the same original
 archive. After source integration and public endpoint readback, a separate bounded
@@ -126,16 +127,16 @@ catalog offer for Linux dev.11–dev.20. Those users can upgrade their host or i
 the unchanged Files0.4 archive locally or by its direct HTTPS link. Files0.1 does
 not admit stable host0.24.0. Existing releases and installed packages remain unchanged.
 
-### macOS Files0.7 source catalog candidate
+### macOS Files0.7 catalog offer
 
-The macOS source catalog now binds the published Files0.7.0 archive (23,285
+The published macOS catalog binds the published Files0.7.0 archive (23,285
 bytes, SHA-256 `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`,
 source `0cb89accd61f1f5d5263c60773454882793e2e99`) to `darwin-arm64`, host
 `>=0.25.0-dev.10` and API `0.1.x`. The unchanged Linux catalog still offers
 Files0.6; SSH and Snippets remain identical. The original Files0.7 build receipt
 remains Linux-targeted and `not-run`. A separate [macOS local exact-pair checkpoint](files-development-preview.md#files07-macos-stable-local-checkpoint)
-passed; public endpoint publication/readback and actual public catalog consumption
-are separate. The one-release-per-ID schema removes the Files0.6 offer from macOS
+passed; a separate public endpoint readback and bounded public catalog consumer
+also passed, without repeating that filesystem matrix. The one-release-per-ID schema removes the Files0.6 offer from macOS
 0.24.0 and earlier otherwise-compatible hosts. They can install the unchanged
 Files0.6 archive locally or from its HTTPS link, or upgrade; no existing install
 is automatically updated.
