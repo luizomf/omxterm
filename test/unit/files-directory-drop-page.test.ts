@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page.js";
+import type { BrowserWindow } from "electron";
+import { createFilesTerminalDrag } from "../../src/main/files-terminal-drag";
 import type { SupportedLanguage } from "../../src/shared/i18n.js";
 type Reply = Awaited<
   ReturnType<Parameters<typeof mountFilesPage>[1]["request"]>
@@ -23,6 +25,7 @@ async function setup(
     Parameters<typeof mountFilesPage>[1],
     "beginFilesTerminalDrag" | "endFilesTerminalDrag"
   > = {},
+  root = "/root",
 ) {
   let handler:
     ((value: Record<string, string>) => Promise<Reply> | undefined) | undefined;
@@ -30,7 +33,7 @@ async function setup(
     const input = value as Record<string, string>;
     const result = handler?.(input);
     if (result) return result;
-    if (input.operation === "home") return { ok: true, directory: "/root" };
+    if (input.operation === "home") return { ok: true, directory: root };
     if (input.operation === "list")
       return {
         ok: true,
@@ -203,6 +206,42 @@ it.each([false, true])(
     });
   },
 );
+it("keeps the original ticket for a completed native copy whose core claim is queued after child dragend", async () => {
+  const root = process.platform === "win32" ? "C:/synthetic" : "/root";
+  const transport = createFilesTerminalDrag({
+    webContents: { isDestroyed: () => false },
+    isDestroyed: () => false,
+    isVisible: () => true,
+    isMinimized: () => false,
+    isFocused: () => true,
+  } as unknown as BrowserWindow);
+  const source = { id: "visible-files", isCurrentVisible: () => true };
+  const consume = vi.fn(async () => ({ status: "accepted" as const }));
+  const end = vi.fn((ticket: string) => transport.end(source.id, ticket));
+  await setup(
+    {
+      beginFilesTerminalDrag: (entry) =>
+        transport.start(entry, source, new AbortController().signal, consume),
+      endFilesTerminalDrag: end,
+    },
+    root,
+  );
+  const data = transfer();
+  dragEvent(row(`${root}/alpha`), "dragstart", data);
+  const ticket = data.getData("application/x-omxterm-files-terminal");
+  data.dropEffect = "copy";
+  dragEvent(row(`${root}/alpha`), "dragend", data);
+  expect(transport.claim({ ticket, entryToken: "1" })).toBe(true);
+  expect(end).not.toHaveBeenCalled();
+  expect(await transport.handoff(ticket, 1)).toEqual({ status: "accepted" });
+  expect(consume).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      entry: { path: `${root}/alpha`, kind: "file", entryToken: "1" },
+    }),
+  );
+  expect(transport.claim({ ticket, entryToken: "1" })).toBe(false);
+  expect(await transport.handoff(ticket, 1)).toEqual({ status: "refused" });
+});
 it.each([null, "forged"])(
   "keeps move-only semantics when terminal registration returns %s",
   async (ticket) => {

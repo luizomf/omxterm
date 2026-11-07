@@ -474,8 +474,10 @@ see [the preview contract](docs/files-development-preview.md) for qualification 
 **Files Terminal Drag Ticket** — A path-free, single-gesture transport identity
 owned by main for one installed Files view/epoch/window, not a path or terminal
 input capability. Core claims it synchronously once before asynchronous handoff;
-dragend revokes only unclaimed tickets, while view/window/epoch loss and the
-ten-second deadline revoke both phases. Without a protected consumer the source
+canceled/internal-move dragend revokes only unclaimed tickets. A completed native
+copy retains its original deadline while awaiting the core claim, which can reach
+main after child dragend; completion alone grants no input. View/window/epoch
+loss and the ten-second deadline revoke both phases. Without a protected consumer the source
 stays move-only. Current source composes the shared captured-pane Protected Paste
 owner for one eligible terminal-area drop; see the [transport seam](docs/files-development-preview.md#terminal-drag-transport-source-increment).
 

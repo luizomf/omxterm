@@ -479,7 +479,10 @@ delimiters, are refused with a localized Files notice, not rewritten.
 
 Core captures the exact pane, Surface, selection revision and current DOM focus
 synchronously at drop, then claims the ticket plus matching internal token before
-any await. Later child dragend revokes only an unclaimed gesture. Hide,
+any await. Canceled/internal-move dragend revokes only an unclaimed gesture.
+A completed native copy leaves the original ticket within its existing deadline
+for the core claim, because that message can reach main after child dragend.
+It never extends the deadline or authorizes input by itself. Hide,
 retirement, epoch/package loss, window blur/hide/minimize/loss and timeout revoke
 both phases without hide/reveal revival. The shared main path formatter and
 installation admission use the captured owner/revision; a private ticket binds

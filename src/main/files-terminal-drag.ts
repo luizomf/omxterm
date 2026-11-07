@@ -143,8 +143,9 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
       return gesture.ticket;
     },
     end(id: string, ticket: unknown) {
-      // Cross-WebContents drop claims before dragend. Only an unclaimed source
-      // gesture ends here; later visibility/epoch/timeout loss still revokes all.
+      // The source cancels unclaimed abandoned/internal gestures. A completed
+      // native copy awaits core's queued claim under the original deadline;
+      // visibility/epoch/timeout loss still revokes either phase.
       if (
         current?.source.id === id &&
         current.ticket === ticket &&

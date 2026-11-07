@@ -2386,8 +2386,12 @@ insert path (not run)” candidate and copy cursor; other panes, chrome, tabs,
 panels, search controls, Settings, overlays and blocked presentations are inert.
 Candidate MIME/area feedback is not authorization. Drop synchronously captures
 the exact pane/Surface, DOM focus and selection revision and claims the exact
-terminal ticket plus matching internal token before any asynchronous work. Dragend revokes unclaimed
-rows but cannot erase a claimed drop by itself. Hide, retirement, window loss,
+terminal ticket plus matching internal token before any asynchronous work. Canceled
+or internal-move dragend revokes unclaimed rows but cannot erase a claimed drop.
+A completed native copy retains only its original bounded ticket for the core
+claim, which can reach main after child dragend; cross-WebContents messages are
+not globally ordered. This neither extends the deadline nor grants input by itself.
+Hide, retirement, window loss,
 blur/minimize, installation revocation and timeout revoke either phase without
 hide/reveal revival. Mixed/native/tab, forged, expired or replayed claims are
 refused. Control-bearing paths are refused without rewriting; ordinary spaces

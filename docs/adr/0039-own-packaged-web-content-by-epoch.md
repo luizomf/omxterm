@@ -49,7 +49,11 @@ main-frame/view/epoch/window ownership. Its synchronous preload registration is
 bounded in-memory work only, available solely when installed Files composition
 supplies a protected handoff consumer. Main retains one path-free ticket per
 window for ten seconds; core claims it synchronously once before asynchronous
-redemption so later child dragend cannot erase a claimed drop. Hiding, epoch or
+redemption so later child dragend cannot erase a claimed drop. Cross-WebContents
+messages have no total order: a completed native copy may report child dragend
+before main receives core's claim. That completion leaves only the original
+bounded ticket available for the claim, without extending its deadline or granting
+input. Canceled/internal-move dragend still ends an unclaimed ticket. Hiding, epoch or
 window loss and timeout still revoke claimed authority; no hide/reveal revival
 or renderer-selected source owner is permitted. The composed source consumer
 reuses the declared path handoff and captured installation admission, with the

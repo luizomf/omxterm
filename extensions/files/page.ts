@@ -1262,10 +1262,12 @@ export function mountFilesPage(
     for (const row of entries.querySelectorAll<HTMLElement>("[data-drop]"))
       delete row.dataset.drop;
   }
-  function resetDrag() {
+  function resetDrag(completedCopy = false) {
     const ticket = drag?.terminalTicket;
     drag = undefined;
-    if (ticket) {
+    // A completed native copy can reach child dragend before main receives the
+    // core's claim. Keep only that original bounded ticket, never extend it.
+    if (ticket && !completedCopy) {
       try {
         bridge.endFilesTerminalDrag?.(ticket);
       } catch {
@@ -1351,7 +1353,9 @@ export function mountFilesPage(
     if (valid && source && target) void prepareMove(source, target.path, true);
     else message((m) => (internal ? m.dropInvalid : m.dropExternal), "warning");
   });
-  document.addEventListener("dragend", resetDrag);
+  const sourceDragEnded = (event: DragEvent) =>
+    resetDrag(event.dataTransfer?.dropEffect === "copy");
+  document.addEventListener("dragend", sourceDragEnded);
   entries.addEventListener("contextmenu", (event) => {
     event.preventDefault();
     openMenu(undefined, event.clientX, event.clientY, entries);
@@ -1632,7 +1636,7 @@ export function mountFilesPage(
       document.defaultView?.removeEventListener("blur", recordFocusChange);
       document.removeEventListener("compositionstart", startComposition);
       document.removeEventListener("compositionend", endComposition);
-      document.removeEventListener("dragend", resetDrag);
+      document.removeEventListener("dragend", sourceDragEnded);
     },
   };
 }
