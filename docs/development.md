@@ -268,7 +268,62 @@ explicitly rather than leaving an unjoined rejection assertion.
 
 ## Running native tests
 
-> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. Follow the Linux desktop-service or macOS preference precautions below before launch.
+> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. Follow the shared-clipboard, Linux desktop-service or macOS preference precautions below before launch.
+
+### Shared clipboard before native tests
+
+Disposable guest accounts and temporary HOME/XDG/Electron profiles do **not**
+isolate a host/shared clipboard. Before launching a real-clipboard writer, use
+an assigned disposable guest and protect that boundary, including any hypervisor
+sharing, remote-desktop clipboard redirection or other active synchronization.
+The [fixture clipboard map](native-test-reference.md#fixture-clipboard-boundaries)
+identifies default writers and distinguishes injected stubs; `npm test`, default
+integration and `check:portable` can include real writers without an opt-in.
+
+A concrete Parallels Desktop path, run on the managing host **only for the
+currently assigned guest**, is:
+
+1. Inspect installed `prlctl set misc_sharing --help`, `prlctl list --help` and
+   `man prlctl` for the selected version/guest's support. The documented
+   `--shared-clipboard` modes are `on` (bidirectional), `host-to-guest`,
+   `guest-to-host` and `off` (disabled). Require **off**, not a one-way mode.
+2. Resolve `ASSIGNED_VM_ID` from the current assignment. Inspect
+   `prlctl list -i "$ASSIGNED_VM_ID"`; if sharing is already off, leave it off.
+   Otherwise, within the assignment's configuration authority, disable it with
+   `prlctl set "$ASSIGNED_VM_ID" --shared-clipboard off`. Re-read
+   `prlctl list -i "$ASSIGNED_VM_ID"` immediately before launch and require an
+   explicit disabled clipboard mode for that guest. Satisfy any documented
+   apply-state/restart requirement; a pending stored setting is not effective
+   isolation. Command acceptance alone is not that check. Exclude other active
+   clipboard bridges using their supported connection/session controls; a
+   Parallels setting covers only its own bridge.
+3. If the control is unsupported for that guest, the mode cannot be read or
+   confirmed disabled, another bridge cannot be excluded, or a required
+   configuration/power change is outside the assignment, **hold the affected
+   execution before launch**. Report the unavailable prerequisite and arrange
+   supported isolation with the environment owner. This also holds a full suite
+   containing the writer; it is not a passing skip or permission to probe the
+   physical host's clipboard. Other VM/remote-desktop tools need their own
+   documented disable/check path, not guessed equivalent flags.
+4. Keep sharing disabled through execution and process settlement. Recheck after
+   connection/configuration changes and after the run; an unexplained change
+   leaves shared-resource protection unresolved and blocks further launches.
+   Do not re-enable sharing or restore clipboard contents as routine cleanup.
+
+Retain private **control metadata only**: tool/version and supported control,
+selected guest attribution, observation times, disabled-mode checks, other bridge
+coverage and any limitation. Public evidence should summarize the boundary and
+synthetic-only fixture scope, not private guest identifiers or full configuration
+output. Never collect clipboard contents, formats, screenshots or hashes as
+preservation evidence; do not add a clipboard read/write/cross-boundary sentinel
+probe or a backup/restoration framework. Fixture assertions may consume their own
+synthetic values only after isolation is established. Exit0 and process/display
+cleanup do not establish clipboard preservation.
+
+The historical [#820](https://github.com/luizomf/omxterm/issues/820) run established
+guest clipboard writes with sharing enabled. Host propagation and loss of prior
+contents remain unknown; no new check, guessed restoration or replay can prove
+retroactive preservation or repair the missing history.
 
 ### Linux desktop services and native verification
 
@@ -785,7 +840,7 @@ Linux packaged-wrapper controls: [fixture reference](native-test-reference.md#li
 
 ### Graphical fixture supervision
 
-Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They inherit the caller's desktop/bus/runtime; neither these helpers nor the Linux packaged-process helper provision or validate per-user service isolation. The launching owner must satisfy the [Linux shared-resource prerequisites and preservation checks](#linux-desktop-services-and-native-verification).
+Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They inherit the caller's desktop/bus/runtime; neither these helpers nor the Linux packaged-process helper provision or validate per-user service isolation. The launching owner must satisfy the [shared-clipboard prelaunch checks](#shared-clipboard-before-native-tests) and [Linux shared-resource prerequisites and preservation checks](#linux-desktop-services-and-native-verification).
 
 Within the fixture process/profile scope:
 

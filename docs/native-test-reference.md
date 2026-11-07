@@ -26,10 +26,35 @@ rerun. Do not weaken assertions, suppress diagnostics or rerun a consumed
 just to obtain green results. Later scoped positives retain their own limits,
 not retroactive qualification of failed runs.
 
+## Fixture clipboard boundaries
+
+Apply the [shared-clipboard prelaunch checks](development.md#shared-clipboard-before-native-tests)
+before native real-clipboard cases. A real window/PTY or a test name containing
+"clipboard" does not by itself identify an OS clipboard writer. Current source
+paths distinguish these cases:
+
+| Fixture / entry point                                                                            | Clipboard boundary                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default Linux/macOS [`extension-view-native`](../test/integration/extension-view-native.test.ts) | [`extension-view-scenario`](../test/fixtures/extension-view-scenario.ts) imports Electron's real `clipboard`, writes synthetic paste text and a sentinel, then invokes native hosted-field Copy and checks the clipboard. [`window-chrome-build`](../test/fixtures/window-chrome-build.ts) externalizes Electron; the terminal clipboard stub does not intercept native hosted-field editing. |
+| Default Linux [`terminal-popup-native`](../test/integration/terminal-popup-native.test.ts)       | [`terminal-popup-native-exercise`](../test/fixtures/terminal-popup-native-exercise.ts) writes synthetic paste/sentinel text and invokes Copy. Its [main](../test/fixtures/terminal-popup-native-main.ts) wires terminal clipboard I/O to real Electron `clipboard`. The existing native-input provisioning declaration is an additional prerequisite, not clipboard isolation.                |
+| [`auxiliary-panel`](../test/integration/auxiliary-panel.test.ts)                                 | [`window-chrome-main`](../test/fixtures/window-chrome-main.ts) injects `panelClipboard.text`/`writes`/`reads`; these terminal/search-field checks do not write the OS clipboard. This does not cover the separate hosted-view path above.                                                                                                                                                     |
+| Restty host integration/oracles/output                                                           | [`restty-host-main`](../test/fixtures/restty-host-main.ts) injects clipboard counters, synthetic reads and a selection observer, not Electron clipboard I/O. Its [PowerShell Ctrl+V isolation](#restty-host-powershell-isolation) is shell-local, not a host/guest clipboard-sharing control.                                                                                                 |
+
+The two real writers above are part of default discovery on their listed
+platforms, not opt-in suites. The opt-in [Mirror Typing](../test/fixtures/mirror-native.md)
+[fixture](../test/fixtures/mirror-production-main.ts) and
+[SSH fixture](../test/fixtures/ssh-packaged.cjs) also mutate the real clipboard;
+apply the same boundary before those separately authorized runs. Reinspect the
+selected fixture/composition when its wiring changes rather than assuming this
+map covers future or custom entry points. Use synthetic fixture inputs only and
+retain control metadata/test outcomes, never clipboard-content evidence.
+
 ## Hosted extension view composition
 
-On an assigned idle, unlocked Linux or macOS desktop, run the existing hosted-view
-composition and native installed-version pin fixtures together:
+On an assigned idle, unlocked Linux or macOS desktop, after the
+[shared-clipboard prelaunch checks](development.md#shared-clipboard-before-native-tests),
+run the existing hosted-view composition and native installed-version pin
+fixtures together:
 
 ```sh
 OMXTERM_EXTENSION_VIEW_EVIDENCE_DIR=/absolute/evidence/directory npm test -- test/integration/extension-view-native.test.ts test/integration/extension-view-package-pin.test.ts
@@ -341,6 +366,10 @@ policy before Electron readiness, including Linux's SwiftShader permission
 backend or bypassing the GPU blocklist. macOS and Windows keep Chromium's defaults;
 actual WebGL2 availability remains a prerequisite. Headless emitted-entrypoint
 ordering coverage: `npm test -- test/unit/terminal-popup-gpu-policy.test.ts`.
+
+**Clipboard prerequisite:** this default Linux suite writes the real clipboard;
+complete the [shared-clipboard prelaunch checks](development.md#shared-clipboard-before-native-tests)
+before launch, independently of native-input admission.
 
 **Native-input prerequisite:** use an idle, explicitly provisioned input-capable
 X11/XWayland desktop with the standard X11/evdev F5=71 and F6=72 keycode
