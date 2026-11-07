@@ -71,6 +71,27 @@ agents.
 
 ## Platforms and downloads
 
+### Choose your device
+
+- **Mac with an M-series chip:** choose **Apple Silicon macOS**. Open the DMG,
+  drag OMXTerm to Applications, and launch it. To check, choose Apple menu →
+  **About This Mac** and look for an Apple M-series chip. There is no Intel Mac build.
+- **Windows PC:** choose **Windows ARM64** for an ARM-based PC (such as one
+  with Snapdragon), or **Windows x64** for an Intel/AMD PC. If unsure, check
+  **Settings → System → About → System type** for an ARM-based or x64-based
+  processor; a Surface can be either. Run the installer, then open OMXTerm
+  from the Start menu.
+- **Linux PC:** choose **Linux ARM64** for ARM or **Linux x64** for Intel/AMD.
+  If unsure, open a terminal and run `uname -m`: `aarch64` means ARM64 and
+  `x86_64` means x64. Other results have no matching download here. Make the
+  AppImage executable and run it; see the [Linux steps](docs/installation.md#linux).
+
+In the table, the DMG, installer, or AppImage is the application download.
+The Linux helper is optional: it adds the app to your menu, but is not the app.
+The `.sha256` files are for verifying downloads, not programs to run. See the
+[installation guide](docs/installation.md) for requirements, verification and
+first-launch security warnings.
+
 This index lists the latest available stable application version for each target;
 platforms can ship at different times. GitHub's global Latest is the legacy
 [0.25.0 complete bundle](https://github.com/luizomf/omxterm/releases/tag/v0.25.0),
@@ -103,6 +124,11 @@ ConPTY. Desktop/GPU, installer and ordinary-user integration remain unverified;
 Linux FUSE/helper installation and Windows 11/SmartScreen/UAC are also unverified.
 These are not release gates for the build-only lanes.
 
+## Installation
+
+See the [device chooser](#choose-your-device) and follow the
+[installation guide](docs/installation.md) for requirements and detailed steps.
+
 ### Optional Snippets
 
 Stable **0.25.0** uses optional Snippets 0.1.0 on Linux ARM64/x64, macOS ARM64
@@ -132,17 +158,6 @@ qualification limits.
 OMXTerm is tested on Apple Silicon macOS, Windows 11 ARM64, and Linux ARM64
 desktops including Fedora (GNOME and KDE Plasma), Ubuntu GNOME, Debian, and
 Omarchy/Hyprland.
-
-## Installation
-
-Download the package for your system and follow the quick steps:
-
-- **[macOS](docs/installation.md#macos):** open the DMG, drag OMXTerm to
-  Applications, and launch.
-- **[Linux](docs/installation.md#linux):** make the AppImage executable and run
-  it, or use `linux_install.sh` to add it to your application menu.
-- **[Windows](docs/installation.md#windows):** run the installer and launch
-  OMXTerm from the Start menu.
 
 ## First session
 
