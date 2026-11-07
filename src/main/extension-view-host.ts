@@ -590,7 +590,6 @@ class NativeExtensionViewHost {
     // sendSync is deliberately limited to bounded in-memory registration. No
     // backend, store, filesystem or asynchronous admission belongs in this turn.
     contents.ipc.on(filesTerminalDragIpc.start, (event, ...args: unknown[]) => {
-      event.returnValue = null;
       if (
         event.sender !== contents ||
         event.senderFrame !== contents.mainFrame ||
@@ -598,8 +597,11 @@ class NativeExtensionViewHost {
         this.focusedId() !== entry.descriptor.id ||
         entry.loading ||
         !this.options.filesDrag
-      )
+      ) {
+        event.returnValue = null;
         return;
+      }
+      // Assign only the final reply: Electron sends each returnValue immediately.
       event.returnValue = this.options.filesDrag.start(
         args[0],
         this.#captureVisible(entry),

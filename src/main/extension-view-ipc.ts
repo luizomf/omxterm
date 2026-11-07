@@ -163,15 +163,14 @@ export function startExtensionViewHost(
     };
     registry.set(contents, route);
     contents.ipc.on(filesTerminalDragIpc.claim, (event, ...args: unknown[]) => {
-      event.returnValue = false;
-      if (
+      // One assignment is one synchronous reply, including refusal.
+      event.returnValue =
         event.sender === contents &&
         event.senderFrame === contents.mainFrame &&
         !contents.isDestroyed() &&
         args.length === 1
-      )
-        event.returnValue =
-          registry.get(contents)?.filesDrag.claim(args[0]) ?? false;
+          ? (registry.get(contents)?.filesDrag.claim(args[0]) ?? false)
+          : false;
     });
     contents.once("destroyed", () => {
       registry.get(contents)?.filesDrag.revoke();

@@ -1057,7 +1057,22 @@ function deferred<T = void>() {
   });
   return { promise, resolve, reject };
 }
-it("authenticates actual child/core main frames and preserves a claimed Files drop through dragend", async () => {
+function syncReplyEvent(sender: Contents) {
+  const replies: unknown[] = [];
+  return {
+    sender,
+    senderFrame: sender.mainFrame,
+    replies,
+    // Electron submits each assignment immediately; sendSync receives the first.
+    get returnValue() {
+      return replies[0];
+    },
+    set returnValue(value: unknown) {
+      replies.push(value);
+    },
+  };
+}
+it("replies once to authenticated Files registration/claim and preserves the claimed drop through dragend", async () => {
   const f = await fixture(false);
   const ipc = { handle: vi.fn(), removeHandler: vi.fn() } as unknown as IpcMain;
   const consume = vi.fn(async () => ({ status: "accepted" as const }));
@@ -1077,11 +1092,7 @@ it("authenticates actual child/core main frames and preserves a claimed Files dr
   const core = f.owner.webContents;
   const child = f.views[0]!.webContents;
   const coreEvent = { sender: core, senderFrame: core.mainFrame };
-  const sourceEvent = () => ({
-    sender: child,
-    senderFrame: child.mainFrame,
-    returnValue: undefined as unknown,
-  });
+  const sourceEvent = () => syncReplyEvent(child);
   const input = {
     path:
       process.platform === "win32"
@@ -1097,25 +1108,29 @@ it("authenticates actual child/core main frames and preserves a claimed Files dr
   };
   expect(start()).toBeNull(); // Not presented.
   await presentation(coreEvent, present(opened.id));
-  const foreignFrame = { ...sourceEvent(), senderFrame: {} };
+  const foreignFrame = sourceEvent();
+  foreignFrame.senderFrame = {};
   child.ipc.emit(filesTerminalDragIpc.start, foreignFrame, input);
   expect(foreignFrame.returnValue).toBeNull();
-  const foreignSender = { ...sourceEvent(), sender: core };
+  const foreignSender = sourceEvent();
+  foreignSender.sender = core;
   child.ipc.emit(filesTerminalDragIpc.start, foreignSender, input);
   expect(foreignSender.returnValue).toBeNull();
-  const ticket = start();
+  const registered = sourceEvent();
+  child.ipc.emit(filesTerminalDragIpc.start, registered, input);
+  const ticket = registered.returnValue;
   expect(ticket).toEqual(expect.any(String));
+  expect(registered.replies).toEqual([ticket]);
+  expect(foreignFrame.replies).toEqual([null]);
+  expect(foreignSender.replies).toEqual([null]);
   const claim = { ticket, entryToken: "1" };
-  const wrong = {
-    sender: child,
-    senderFrame: child.mainFrame,
-    returnValue: undefined as unknown,
-  };
+  const wrong = syncReplyEvent(child);
   core.ipc.emit(filesTerminalDragIpc.claim, wrong, claim);
-  expect(wrong.returnValue).toBe(false);
-  const admitted = { ...coreEvent, returnValue: undefined as unknown };
+  expect(wrong.replies).toEqual([false]);
+  const admitted = syncReplyEvent(core);
   core.ipc.emit(filesTerminalDragIpc.claim, admitted, claim);
   expect(admitted.returnValue).toBe(true);
+  expect(admitted.replies).toEqual([true]);
   await presentation(coreEvent, { ...present(opened.id, 2), focus: false });
   child.ipc.emit(filesTerminalDragIpc.end, sourceEvent(), ticket);
   expect(await handoff(coreEvent, ticket, 4)).toEqual({ status: "accepted" });
