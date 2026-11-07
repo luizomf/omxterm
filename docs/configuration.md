@@ -13,10 +13,17 @@ omxterm/
     └── omtheme.json
 ```
 
-You can find them in:
+On every supported OS, a nonempty `XDG_CONFIG_HOME` selects its `omxterm`
+subdirectory. Otherwise, OMXTerm uses `.config/omxterm` under the OS account
+home, independently of overridden home environment variables. In ordinary setups,
+where the environment home matches the account home, you can find the files in:
 
 - **macOS and Linux:** `~/.config/omxterm` (or `$XDG_CONFIG_HOME/omxterm`)
-- **Windows:** `%USERPROFILE%\.config\omxterm`
+- **Windows:** `%USERPROFILE%\.config\omxterm` (or `%XDG_CONFIG_HOME%\omxterm`)
+
+If XDG is unset or empty and your home environment is overridden, use the actual
+account configuration path instead. See the [optional Snippets 0.1.0 limitation](snippets-migration.md#existing-catalogs-and-shortcuts)
+when locating its catalog.
 
 **In the app:** [Settings](#settings) validates, saves, and applies control changes for you. **Config File** also lets you edit `config.json` with an explicit **Save**.
 
@@ -177,7 +184,12 @@ Every setting except `"version": 1` is optional. Anything you leave out uses the
 
 ### Create the configuration directory
 
-OMXTerm creates this folder on first launch. If you deleted it or want to find it from your terminal:
+OMXTerm creates this folder on first launch. If you deleted it or want to find
+it from your terminal, these examples use `XDG_CONFIG_HOME` when nonempty and
+otherwise assume the shell's home (`$HOME` on both systems) matches the OS account
+home. If XDG is unset or empty and the shell's home is overridden, use the actual
+account configuration path instead. Use the same XDG setting OMXTerm receives at
+launch.
 
 **macOS and Linux:**
 

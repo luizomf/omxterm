@@ -27,7 +27,7 @@ it("prepares the real Snippets source as a locally trusted enabled package", asy
     const preview = await trust.prepare(owner, archive);
     expect(preview.manifest).toMatchObject({
       id: "omxterm.snippets",
-      version: "0.1.0",
+      version: "0.1.1",
       backend: "backend.mjs",
       capabilities: ["terminal.semanticInput.v1"],
       view: { entry: "index.html", action: "omxterm.snippets.open" },
