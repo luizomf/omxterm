@@ -14,16 +14,17 @@ Production intentionally omits the package's duplicate action: the existing
 Toggle Snippets menu, palette and shortcut command opens or closes the single
 installed companion. Absent/disabled packages open Extensions guidance instead.
 The host's [new-profile default](../../docs/default-snippets.md) uses the pinned
-`0.1.0` archive, not this corrected source. Building this source does not publish,
-install or enable it, or change a catalog listing.
+`0.1.0` archive, not this package. Building this source does not publish, install
+or enable it, or change a catalog listing. Updating an installed copy requires a
+deliberate update and ordinary package trust; it is not automatic.
 
-The corrected, unpublished Snippets `0.1.1` source reads `snippets.yaml` beside
+Snippets `0.1.1` reads `snippets.yaml` beside
 the host's `config.json`: a nonempty `XDG_CONFIG_HOME` takes precedence; otherwise
 it uses the OS account home, independent of `HOME` or `USERPROFILE`. The existing
 published and bundled-default `0.1.0` instead uses the environment-sensitive home
-when XDG is unset or empty, so it can read a different catalog. This source change
-does not update installed or default copies; a separate extension publication and
-update would be needed. A missing catalog is an empty state. To create
+when XDG is unset or empty, so it can read a different catalog. Installing or
+updating this package does not change the host's bundled default. A missing catalog
+is an empty state. To create
 a catalog deliberately, use `snippets.example.yaml` as an example; do not replace
 an existing file. Literal block bodies preserve their exact text. `execute:
 false` adds no final Enter, but embedded line breaks/control characters can still
