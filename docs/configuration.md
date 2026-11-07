@@ -568,8 +568,13 @@ editor is open at a time; **Cancel** finishes that editor before you start anoth
   partial text stays with its role when you switch roles or categories; fix it
   before saving or exporting. The specimen shows the last valid colors.
 - The **Palette preview** shows illustrative text, selection, cursor and all
-  normal/bright ANSI colors. It does not run a shell or change your actual
-  terminal, surrounding Settings colors, transparency or desktop blur.
+  normal/bright ANSI colors. Each normal color stays paired with its Bright
+  variant below, even when the grid wraps. Beside each readable name, `Aa` shows
+  that color as text on the draft background; the square shows the same color as
+  a solid fill. Samples keep the real draft contrast, including hard-to-see colors;
+  names use interface colors so you can still identify them. The preview does not
+  run a shell or change your actual terminal, surrounding Settings colors,
+  transparency or desktop blur.
 - **Save** updates an opened local theme using its original revision. It follows
   intentional file/directory links to the regular target and preserves the links.
   A detected external edit or retargeting refuses the save and keeps your draft;

@@ -122,19 +122,33 @@ function buildThemeEditorView(
   const cursor = document.createElement("span");
   cursor.className = "settings-theme-cursor";
   cursor.textContent = " ";
-  const samples = document.createElement("div");
+  const samplesHint = document.createElement("p");
+  samplesHint.className = "settings-hint";
+  const samples = document.createElement("ul");
   samples.className = "settings-theme-ansi";
-  const ansi = TERMINAL_THEME_COLOR_KEYS.slice(5).map((key) => {
-    const sample = document.createElement("span");
-    const text = document.createElement("span");
-    const background = document.createElement("span");
-    background.textContent = " Aa ";
-    background.style.fontWeight = "700";
-    sample.append(text, background);
-    samples.append(sample);
-    return { key, text, background };
-  });
-  specimen.append(line, selection, cursor, samples);
+  const ansi = TERMINAL_THEME_COLOR_KEYS.slice(5, 13).flatMap(
+    (normal, index) => {
+      const pair = document.createElement("li");
+      pair.className = "settings-theme-ansi-pair";
+      samples.append(pair);
+      return [normal, TERMINAL_THEME_COLOR_KEYS[13 + index]!].map((key) => {
+        const sample = document.createElement("div");
+        sample.className = "settings-theme-ansi-sample";
+        const label = document.createElement("span");
+        const text = document.createElement("span");
+        text.className = "settings-theme-ansi-text";
+        text.textContent = "Aa";
+        text.setAttribute("aria-hidden", "true");
+        const swatch = document.createElement("span");
+        swatch.className = "settings-theme-ansi-swatch";
+        swatch.setAttribute("aria-hidden", "true");
+        sample.append(label, text, swatch);
+        pair.append(sample);
+        return { key, label, text, swatch };
+      });
+    },
+  );
+  specimen.append(line, selection, cursor);
   const previewHint = document.createElement("p");
   previewHint.className = "settings-hint";
   const filename = document.createElement("input");
@@ -179,6 +193,8 @@ function buildThemeEditorView(
     invalid,
     previewTitle,
     specimen,
+    samplesHint,
+    samples,
     previewHint,
     appearance,
     copyFields,
@@ -215,6 +231,7 @@ function buildThemeEditorView(
     invalid,
     previewTitle,
     previewHint,
+    samplesHint,
     specimen,
     selection,
     cursor,
@@ -242,6 +259,7 @@ function paintSpecimen(
 ) {
   view.previewTitle.textContent = t("settings.author.preview");
   view.previewHint.textContent = t("settings.author.previewHint");
+  view.samplesHint.textContent = t("settings.author.samplesHint");
   view.selection.textContent = t("settings.author.selection");
   view.cursor.setAttribute("aria-label", t("settings.author.cursor"));
   view.specimen.style.backgroundColor = theme.colors.background;
@@ -252,11 +270,12 @@ function paintSpecimen(
   view.signals.forEach(({ key, span }) => {
     span.style.color = theme.colors[key];
   });
-  view.ansi.forEach(({ key, text, background }) => {
-    text.textContent = t(`settings.author.color.${key}`);
+  view.ansi.forEach(({ key, label, text, swatch }) => {
+    // Names stay in interface colors; only the samples show draft contrast.
+    label.textContent = t(`settings.author.color.${key}`);
     text.style.color = theme.colors[key];
-    background.style.backgroundColor = theme.colors[key];
-    background.style.color = theme.colors.foreground;
+    text.style.backgroundColor = theme.colors.background;
+    swatch.style.backgroundColor = theme.colors[key];
   });
 }
 

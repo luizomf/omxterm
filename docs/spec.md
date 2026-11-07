@@ -1757,9 +1757,15 @@ The labelled name, 21-role selector, native color well and hex field edit the
 complete memory draft. Invalid input remains associated with its role across
 selection and category/tab changes. Save/copy/export are disabled until every
 visible or retained name/color input is valid; the specimen uses last-valid colors.
-The compact DOM specimen includes all ANSI roles, cursor and both selection
-colors, not a live Surface/PTY or desktop-effects simulation. Draft paint is
-scoped to the specimen, never document-root appearance or live configuration.
+The compact DOM preview includes foreground/background text context, cursor and
+both selection colors, not a live Surface/PTY or desktop-effects simulation.
+All eight normal/Bright ANSI pairs stay together as the grid reflows, with the
+normal color above its Bright counterpart. Each row has a readable interface-color
+name, an `Aa` sample in the ANSI color on the draft background, and a separate
+solid swatch of that same ANSI color. A translated hint explains those samples;
+only sample paint reflects draft contrast, even when a color becomes invisible
+against the background. Draft paint is scoped to the preview, never document-root
+appearance or live configuration.
 Optional appearance omission, empty object, hex/null values and untouched color
 spellings survive all theme-document operations even without dedicated controls.
 

@@ -28,7 +28,7 @@ interface ThemeEditorOptions {
 }
 
 // One complete in-memory document, never reconstructed from a palette card.
-// Draft paint is scoped to the specimen; configuration remains the sole live
+// Draft paint is scoped to the preview; configuration remains the sole live
 // appearance authority. No Surface, Adapter, PTY or browser draft storage.
 class SettingsThemeEditor {
   private t = englishLanguage.t;

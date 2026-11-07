@@ -151,7 +151,8 @@ keyboard-focus feedback or resizing. The bundled default is `omtheme`. Settings
 can discover and select validated local themes beside the logical configuration
 directory; the advanced custom path remains available. Development-source
 Settings also authors complete themes in one inline Appearance editor: a
-memory-only palette specimen, guarded local Save, new-file Save copy/import/export,
+memory-only palette preview with readable names and grouped normal/Bright text
+samples and swatches, guarded local Save, new-file Save copy/import/export,
 and explicit Use saved theme through configuration reload. Optional appearance
 values are preserved even without controls; draft preview never changes sessions.
 Theme-file saving and configuration/application outcomes are separate.

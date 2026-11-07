@@ -272,18 +272,42 @@ body.tabs-visible .settings-tab {
 }
 .settings-theme-ansi {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 136px), 1fr));
-  gap: 6px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-.settings-theme-ansi > span {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 4px;
+.settings-theme-ansi-pair {
+  display: grid;
+  grid-template-rows: repeat(2, 1fr);
+  gap: 8px;
   min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius);
 }
-.settings-theme-ansi > span > :last-child {
-  flex: none;
+.settings-theme-ansi-sample {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 40px 20px;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.settings-theme-ansi-text {
+  padding: 4px;
+  border-radius: 2px;
+  text-align: center;
+  font:
+    bold 14px/1.5 ui-monospace,
+    monospace;
+}
+.settings-theme-ansi-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  outline: 1px solid var(--ui-decoration);
 }
 .settings-theme-use {
   align-items: flex-start;
