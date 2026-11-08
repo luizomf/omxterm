@@ -46,11 +46,27 @@ While the major version is `0`:
 - **MINOR (`0.Y.0`):** new user-facing features or intentional contract changes. Any breaking changes or manual configuration updates are highlighted in the release notes.
 - **`1.0.0`:** marks a stable public contract. Thereafter, breaking changes bump `MAJOR`, backward-compatible features bump `MINOR`, and bug fixes bump `PATCH`.
 
-## Development-version ownership
+## Development-version ownership and release authority
 
-The maintainer or agent assigned to integrate into `luizomf/omxterm` owns development-version maintenance as part of that integration, without needing separate permission for the bump. This does not authorize an otherwise unassigned integration, release, tag, or publication.
+The upstream integration maintainer and the assigned integrating agent share
+development-version maintenance and release decisions for this repository.
+Development-version bumps happen as part of integrating into `luizomf/omxterm`,
+without needing separate approval.
 
-Contribution PRs and forks leave application-version metadata unchanged unless a maintainer explicitly assigns versioning work. The integrator selects the version against current upstream `main`, updates `package.json` and both root version fields in `package-lock.json` together, and records the resulting version with the delivered changes in the integration commit or PR. A coordinated batch receives one bump, not one per contributor commit; concurrent integrations must reconcile against the version that landed first.
+The same authority decides when accumulated, verified user-facing change justifies a
+release, and carries out the cut, tag and publication. Publication follows
+[release.md](release.md); recorded gaps are assessed there for their relevance to the
+application cut, as described in
+[ADR 0019](adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse).
+
+Contribution PRs, forks and unassigned parties never publish, tag or choose the
+application version. Contribution PRs and forks leave application-version metadata
+unchanged unless the maintainer explicitly assigns versioning work. The integrator
+selects the version against current upstream `main`, updates `package.json` and both
+root version fields in `package-lock.json` together, and records the resulting version
+with the delivered changes in the integration commit or PR. A coordinated batch
+receives one bump, not one per contributor commit; concurrent integrations must
+reconcile against the version that landed first.
 
 ## Development baseline between releases
 
