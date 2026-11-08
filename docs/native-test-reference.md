@@ -2,7 +2,7 @@
 
 This reference details focused native subsystem fixtures, their prerequisites, and evidence boundaries. Start with the [native development prerequisites](development.md#platform-prerequisites) and [focused commands](development.md#focused-checks). Follow the [graphical test precautions](development.md#running-native-tests): use an unlocked, logged-in desktop with WebGL2 support, leave the mouse and keyboard idle, do not resize or switch windows, and run only one graphical suite at a time per desktop. On macOS, also follow the [preference precautions](development.md#macos-preferences-and-native-verification) for source-mode Electron fixtures.
 
-For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls), [supervised PTY acquisition](#supervised-pty-acquisition), and [Windows cleanup diagnostics](#windows-cleanup-diagnostics). The [graphical fixture supervision overview](development.md#graphical-fixture-supervision) and its headless entry recipe remain in the development guide.
+For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls), [supervised PTY acquisition](#supervised-pty-acquisition), [Windows cleanup diagnostics](#windows-cleanup-diagnostics), and [Windows supervision cost](#windows-supervision-cost-and-cleanup-bound). The [graphical fixture supervision overview](development.md#graphical-fixture-supervision) and its headless entry recipe remain in the development guide.
 
 ## Admission, input and invocation outcomes
 
@@ -846,3 +846,70 @@ bounds, ownership blocking, profile retention and supervisor joining are unchang
 Headless emitted-supervisor/schema controls:
 `npm test -- test/unit/native-fixture-cleanup-failure.test.ts test/unit/native-fixture-cleanup-outcome.test.ts test/unit/run-native-fixture-windows.test.ts`.
 They do not replace actual Windows execution.
+
+## Windows supervision cost and cleanup bound
+
+Every Windows process inventory starts a new `powershell.exe` that enumerates
+`Win32_Process`, and the POSIX path starts a new `ps` per call. The
+supervisor-creation launch in the table below is not an inventory: it runs
+`Invoke-CimMethod` with `Win32_Process Create` and enumerates nothing. The supervisor takes
+one `inspect()` and then one per 500 ms interval
+([`native-fixture-supervisor`](../test/fixtures/native-fixture-supervisor.ts)), so
+the number of helpers a fixture starts follows its lifetime rather than the
+product work inside it.
+
+The fixed observations follow from the code, and no duration is derived from
+them. For a three-PTY `production-shutdown` case on Windows:
+
+| Observation                                                  | Count                             |
+| ------------------------------------------------------------ | --------------------------------- |
+| Supervisor creation (`Win32_Process Create`)                 | 1                                 |
+| Launcher inventories (parent and child identity)             | 2                                 |
+| PTY registration (two inventories per `spawnFixtureProcess`) | 6                                 |
+| Supervisor sampling (`inspect()`)                            | 1, then one per 500 ms            |
+| Cleanup callsites                                            | 5, two repeated per survival pass |
+
+One measurement is stated in full because its provenance fits on the page: 25
+`fixtureProcesses()` calls at revision `ec7d9409` took 262–303 ms (minimum to
+maximum, median 269 ms) on an idle Windows 11 ARM64 guest with 8 logical
+processors and real-time protection enabled, where each enumeration returned about
+160 rows, and 25 calls on one macOS ARM64 host took a 17 ms median with a 19 ms
+maximum. The row count matters: the cost scales with what the enumeration returns,
+so a busier guest is not comparable without it. Both runs drove
+[`native-fixture-processes`](../test/fixtures/native-fixture-processes.ts)
+unmodified, bundled with the repository's esbuild, from a scratch harness outside
+the repository; no repository test produced them, and the temporary tracing used
+elsewhere in this investigation has been removed and is not their source.
+
+`cleanupFailure` exists only where a cleanup command runs with a failure context,
+which is the five cleanup callsites. The supervisor creation, launcher and
+PTY-registration observations call `fixtureProcesses()` without one, and a
+sampling failure during supervision is published as `reason: "inspection-error"`
+with the original error text in `cleanupErrors` and no `cleanupFailure`. A
+timeout in most of those observations therefore arrives as the bare message
+rather than as metadata with a `callsite`.
+
+Where the field is present, `timeout` means one synchronous command did not
+finish. `command-failed` is the only category that proves the helper ran and
+exited nonzero; `unknown` also covers a helper that never started (an `ENOENT` or
+`EACCES` spawn failure) and buffer failures, so check the PowerShell start path
+before assuming a command defect.
+
+The `timeout: 5_000` applies per command, so a recorded `timeout` says that one
+command stalled, not how long cleanup took. The survival loop has its own
+five-second post-termination deadline, which a slow command sequence can also
+exceed, ending in `Fixture processes survived cleanup`. What stalls a command is
+not established by any receipt: the PowerShell start path, WMI, real-time
+scanning and the hypervisor remain candidates, and "an OS-level stall" is an
+inference rather than a cause. The one measurement above characterises this
+instrumentation on that guest: it is not a per-release qualification, and it is not a
+bound for slower hardware.
+
+Do not delete or weaken Windows coverage to make a suite green, and do not weaken
+ownership proof to shorten a wait. Changing a bound is a policy decision that
+needs the affected guest's measured per-command cost; it changes no identity
+comparison, descendant scan, kill sequencing or `callsite`, and nothing here
+proposes one. Preserve the receipt, the retained profile and any `cleanupFailure`
+before clearing a block. The retention steps are above; the block itself and its
+automatic pre-bootstrap exception are described in
+[fixture ownership and cleanup](development.md#fixture-ownership-and-cleanup).

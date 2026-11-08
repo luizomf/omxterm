@@ -881,6 +881,7 @@ Host/oracle phase receipts: [fixture reference](native-test-reference.md#hostora
 - [Graphical fixture supervision](#graphical-fixture-supervision)
 - [Supervised PTY acquisition](native-test-reference.md#supervised-pty-acquisition)
 - [Windows cleanup diagnostics](native-test-reference.md#windows-cleanup-diagnostics)
+- [Windows supervision cost and cleanup bound](native-test-reference.md#windows-supervision-cost-and-cleanup-bound)
 
 <a id="linux-packaged-wrapper-controls"></a>
 
