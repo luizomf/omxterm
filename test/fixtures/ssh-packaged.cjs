@@ -135,9 +135,16 @@ async function until(check, label, timeout = 15000) {
 }
 // Executed in the real core renderer; retained references fence replacement
 // between frame readiness, capture and the eventual action.
-function prepareCatalogCapture(title, label, token, deadline, requireOfficial) {
+function prepareCatalogCapture(
+  title,
+  label,
+  token,
+  deadline,
+  requireOfficial,
+  lane,
+) {
   const fail = () => {
-    throw Error("SSH catalog capture target unavailable or changed");
+    throw Error(`${lane} catalog capture target unavailable or changed`);
   };
   const dialog = document.querySelector(".settings-dialog");
   const tab = document.querySelector("#settings-tab-extensions");
@@ -209,7 +216,7 @@ function prepareCatalogCapture(title, label, token, deadline, requireOfficial) {
   let geometry;
   const check = (measure = true) => {
     if (Date.now() >= deadline)
-      throw Error("SSH catalog capture deadline exceeded");
+      throw Error(`${lane} catalog capture deadline exceeded`);
     if (
       document.visibilityState !== "visible" ||
       document.querySelector(".settings-dialog") !== dialog ||
@@ -272,7 +279,7 @@ function prepareCatalogCapture(title, label, token, deadline, requireOfficial) {
     },
     dispose: () => {
       cancelAnimationFrame(frame);
-      rejectFrame?.(Error("SSH catalog capture cancelled"));
+      rejectFrame?.(Error(`${lane} catalog capture cancelled`));
       delete window.__sshCatalogCapture;
     },
   };
@@ -298,14 +305,15 @@ async function catalogInstall(
   label,
   saveImage,
   requireOfficial = false,
+  lane = "SSH",
 ) {
   const deadline = Date.now() + 3000;
   const token = ++catalogCaptureSequence;
   const assertLive = () => {
     if (Date.now() >= deadline)
-      throw Error("SSH catalog capture deadline exceeded");
+      throw Error(`${lane} catalog capture deadline exceeded`);
     if (core.isDestroyed())
-      throw Error("SSH catalog capture renderer destroyed");
+      throw Error(`${lane} catalog capture renderer destroyed`);
   };
   const bounded = async (operation) => {
     assertLive();
@@ -315,7 +323,7 @@ async function catalogInstall(
         operation(),
         new Promise((_, reject) => {
           timer = setTimeout(
-            () => reject(Error("SSH catalog capture deadline exceeded")),
+            () => reject(Error(`${lane} catalog capture deadline exceeded`)),
             deadline - Date.now(),
           );
         }),
@@ -326,15 +334,16 @@ async function catalogInstall(
       clearTimeout(timer);
     }
   };
-  const state = `(() => { const state = window.__sshCatalogCapture; if (state?.token !== ${token}) throw Error('SSH catalog capture identity lost'); return state; })()`;
+  const identityLost = JSON.stringify(`${lane} catalog capture identity lost`);
+  const state = `(() => { const state = window.__sshCatalogCapture; if (state?.token !== ${token}) throw Error(${identityLost}); return state; })()`;
   try {
     await bounded(() =>
       core.executeJavaScript(
-        `(${prepareCatalogCapture.toString()})(${JSON.stringify(extensionTitle)}, ${JSON.stringify(label)}, ${token}, ${deadline}, ${requireOfficial})`,
+        `(${prepareCatalogCapture.toString()})(${JSON.stringify(extensionTitle)}, ${JSON.stringify(label)}, ${token}, ${deadline}, ${requireOfficial}, ${JSON.stringify(lane)})`,
       ),
     );
     const image = await bounded(() => core.capturePage());
-    if (image.isEmpty()) throw Error("SSH catalog capture image empty");
+    if (image.isEmpty()) throw Error(`${lane} catalog capture image empty`);
     await bounded(() => core.executeJavaScript(`${state}.check()`));
     // Persist this exact checked image, never a second unverified capture.
     assertLive();

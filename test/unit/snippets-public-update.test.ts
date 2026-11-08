@@ -14,6 +14,7 @@ const {
   namedButton,
   managementState,
   selectedScenarioCanvas,
+  captureIsUniform,
 } = require("../fixtures/snippets-public-update.cjs") as {
   runUpdateSteps(steps: Record<string, () => Promise<void>>): Promise<string[]>;
   selectedScenarioCanvas(
@@ -32,6 +33,10 @@ const {
     generation: number,
     local: string,
   ): boolean;
+  captureIsUniform(image: {
+    getSize(): { width: number; height: number };
+    toBitmap(): Buffer;
+  }): boolean;
 };
 const { verifySnippetsTrust } =
   require("../fixtures/snippets-observer.cjs") as {
@@ -387,14 +392,16 @@ describe("update driver controls", () => {
     textarea.focus();
     const retained = selectedScenarioCanvas(document);
     expect(retained.canvas.id).toBe("scenario");
-    expect(document.querySelector("#baseline")).not.toBe(retained.canvas);
+    const baseline = document.querySelector("#baseline");
+    expect(baseline).toBeTruthy();
+    expect(baseline).not.toBe(retained.canvas);
     const oldScenario = document.querySelector("#scenario")!;
     const replacement = oldScenario.cloneNode() as HTMLCanvasElement;
     Object.defineProperty(replacement, "getBoundingClientRect", {
       value: () => ({ width: 300, height: 200 }),
     });
     oldScenario.replaceWith(replacement);
-    expect(document.querySelector("#baseline")).toBeTruthy();
+    expect(document.querySelector("#baseline")).toBe(baseline);
     expect(selectedScenarioCanvas(document).canvas).toBe(replacement);
     expect(() => selectedScenarioCanvas(document, retained)).toThrow(/changed/);
   });
@@ -446,12 +453,47 @@ describe("update driver controls", () => {
     expect(managementState(doc, "0.1.0", 2, "active")).toBe(false);
     const heading = doc.querySelector<HTMLElement>("h4")!;
     heading.style.display = "none";
-    expect(() => selectUpdate(doc)).toThrow();
+    expect(() => selectUpdate(doc)).toThrow(/hidden/);
     heading.style.display = "";
     button.style.visibility = "hidden";
     expect(() => selectUpdate(doc)).toThrow(/hidden/);
     button.style.visibility = "visible";
     button.textContent = "Install";
-    expect(() => selectUpdate(doc)).toThrow();
+    expect(() => selectUpdate(doc)).toThrow(/Snippets Update unavailable/);
+  });
+});
+
+describe("captureIsUniform", () => {
+  const image = (width: number, height: number, paint?: [number, number]) => {
+    const bitmap = Buffer.alloc(width * height * 4);
+    bitmap.fill(0xff);
+    if (paint) {
+      const [x, y] = paint;
+      bitmap.writeUInt32BE(0x10203040, (y * width + x) * 4);
+    }
+    return { getSize: () => ({ width, height }), toBitmap: () => bitmap };
+  };
+
+  it("rejects a capture that never painted", () => {
+    expect(captureIsUniform(image(960, 640))).toBe(true);
+  });
+
+  it("rejects a missing or degenerate surface", () => {
+    expect(captureIsUniform(image(0, 0))).toBe(true);
+  });
+
+  it("accepts a capture with any varied pixel", () => {
+    expect(captureIsUniform(image(960, 640, [10, 10]))).toBe(false);
+    expect(captureIsUniform(image(960, 640, [400, 320]))).toBe(false);
+    expect(captureIsUniform(image(960, 640, [958, 638]))).toBe(false);
+  });
+
+  it("fails closed on an incomplete frame", () => {
+    expect(
+      captureIsUniform({
+        getSize: () => ({ width: 4, height: 4 }),
+        toBitmap: () => Buffer.alloc(8),
+      }),
+    ).toBe(true);
   });
 });

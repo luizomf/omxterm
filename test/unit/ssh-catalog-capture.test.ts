@@ -33,6 +33,7 @@ type Install = (
   action: string,
   save: (image: Image) => void,
   requireOfficial?: boolean,
+  lane?: string,
 ) => Promise<void>;
 const drain = async () => {
   for (let i = 0; i < 30; i++) await Promise.resolve();

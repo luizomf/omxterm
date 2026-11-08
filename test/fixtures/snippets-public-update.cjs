@@ -5,6 +5,21 @@ const { writeFileSync } = require("node:fs");
 const path = require("node:path");
 const { identity, alive } = require("./snippets-process-identity.cjs");
 
+// A frame that never painted still yields a non-empty WebContents image, so a
+// uniform capture must fail closed instead of being retained as the checked card.
+function captureIsUniform(image) {
+  const { width, height } = image.getSize();
+  if (!width || !height) return true;
+  const bytes = width * height * 4;
+  const bitmap = image.toBitmap();
+  // An incomplete frame cannot prove paint, so it fails closed with the blank one.
+  if (bitmap.length < bytes) return true;
+  const first = bitmap.readUInt32BE(0);
+  for (let offset = 4; offset < bytes; offset += 4)
+    if (bitmap.readUInt32BE(offset) !== first) return false;
+  return true;
+}
+
 // The focused Surface is the selected terminal whose PTY is exercised below.
 function selectedScenarioCanvas(document, expected) {
   const surface = document.activeElement?.closest(".terminal-surface");
@@ -310,13 +325,17 @@ async function runPublicUpdate({
         core,
         "Snippets — Linux, macOS and Windows ARM64 preview · 0.1.1",
         "Update",
-        (image) =>
+        (image) => {
+          if (captureIsUniform(image))
+            throw Error("Snippets catalog card capture is blank");
           writeFileSync(
             path.join(fixture.evidence, "public-update-card.png"),
             image.toPNG(),
             { flag: "wx" },
-          ),
+          );
+        },
         true,
+        "Snippets",
       );
       await until(
         () => state("0.1.1", 2, "dormant"),
@@ -376,6 +395,7 @@ module.exports = {
   selectedScenarioCanvas,
   namedButton,
   managementState,
+  captureIsUniform,
   runUpdateSteps,
   runPublicUpdate,
 };

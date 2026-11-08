@@ -8,6 +8,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -57,6 +58,16 @@ function observerFiles(values: Inputs) {
         "ssh-packaged.cjs",
       ]
     : [];
+}
+// Bind the retained card to this run: a missing, empty or trivial capture is a
+// claim without evidence, not a pass.
+async function assertRetainedCard(values: Inputs, receipts: string) {
+  if (!values.publicUpdate) return;
+  const card = await stat(path.join(receipts, "public-update-card.png")).catch(
+    () => undefined,
+  );
+  assert.ok(card, "public update card capture missing");
+  assert.ok(card.size > 1024, "public update card capture is trivial");
 }
 function assertScenario(values: Inputs, scenario: unknown) {
   if (values.publicUpdate) {
@@ -273,6 +284,7 @@ it.skipIf(!values)(
       );
       await json("scenario.json", scenario);
       assertScenario(values, scenario);
+      await assertRetainedCard(values, receipts);
       await owner.verifyMain();
       await client.evaluate(`${observer}.quit(); true`, 5000);
       await until(
