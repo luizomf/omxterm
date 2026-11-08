@@ -72,8 +72,55 @@ export function appImageInputs(env = process.env) {
     ),
     "Prepared guest needs a POSIX sh/bash account shell",
   );
+  const publicUpdate = env[prefix + "PUBLIC_UPDATE"];
+  assert.ok(
+    publicUpdate === undefined || publicUpdate === "1",
+    "PUBLIC_UPDATE must be 1 or absent",
+  );
+  if (publicUpdate) {
+    assert.equal(process.arch, "arm64", "public update requires Linux ARM64");
+    assert.equal(values.VERSION, "0.25.0");
+    assert.equal(
+      values.APPIMAGE_SHA256,
+      "78ba5335d2f10dda7777d8e0e65a09bdaff355a69978aac8582499130c3b9ccd",
+    );
+    assert.equal(
+      values.ARCHIVE_SHA256,
+      "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",
+    );
+    const target = env[prefix + "TARGET_ARCHIVE"];
+    const catalogSha256 = env[prefix + "CATALOG_SHA256"];
+    assert.ok(
+      target && path.isAbsolute(target),
+      "TARGET_ARCHIVE must be absolute",
+    );
+    assert.match(
+      catalogSha256 ?? "",
+      /^[a-f0-9]{64}$/,
+      "CATALOG_SHA256 required",
+    );
+    return {
+      ...values,
+      publicUpdate: true as const,
+      targetArchive: target,
+      catalogSha256: catalogSha256!,
+      input:
+        "synthetic Chromium/X11; controlled consent; production Linux ARM64 public update",
+    };
+  }
+  assert.equal(
+    env[prefix + "TARGET_ARCHIVE"],
+    undefined,
+    "target archive requires PUBLIC_UPDATE",
+  );
+  assert.equal(
+    env[prefix + "CATALOG_SHA256"],
+    undefined,
+    "catalog digest requires PUBLIC_UPDATE",
+  );
   return {
     ...values,
+    publicUpdate: false as const,
     input: `synthetic Chromium/X11; controlled native consent; production Linux ${process.arch === "arm64" ? "ARM64" : "x64"} composition`,
   };
 }

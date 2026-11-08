@@ -46,7 +46,11 @@ async function run(options) {
   const action = find(Menu.getApplicationMenu().items);
   assert.ok(action);
   action.click(action, window, {});
-  const result = await runScenario({
+  const result = await (
+    options.publicUpdate
+      ? require("./snippets-public-update.cjs").runPublicUpdate
+      : runScenario
+  )({
     window,
     fixture: options,
     ...observer,
@@ -60,6 +64,7 @@ async function run(options) {
   assert.notEqual(observer.ptys[0].pid, baseline.pid);
   assert.ok(alive(baseline), "baseline PTY preserved through scenario");
   requestQuit = () => {
+    if (options.publicUpdate) observer.beginPublicQuit();
     app.once("will-quit", () => {
       const baselineExited = !alive(baseline);
       const joined =
@@ -68,11 +73,18 @@ async function run(options) {
         observer.children.every(
           (c) => c.closed && c.exit?.code === 0 && c.exit?.signal === null,
         );
+      let observerError;
+      try {
+        observer.restore({ allowRemoved: options.publicUpdate === true });
+      } catch (error) {
+        observerError = String(error);
+      }
       fs.writeFileSync(
         path.join(options.evidence, "quit.json"),
         JSON.stringify(
           {
-            joined,
+            joined: joined && !observerError,
+            observerError,
             baselineExited,
             baseline,
             ptys: observer.ptys.map(({ pid, exited }) => ({ pid, exited })),
@@ -82,7 +94,6 @@ async function run(options) {
           2,
         ),
       );
-      observer.restore();
     });
     app.quit();
   };
@@ -103,7 +114,20 @@ async function diagnose() {
   return { ptys: observer?.ptys, children: observer?.children, views };
 }
 function abort() {
-  app.once("will-quit", () => observer?.restore());
+  let quitPrepared = false;
+  try {
+    observer?.beginPublicQuit();
+    quitPrepared = true;
+  } catch (error) {
+    console.error("Snippets observer abort preparation failed", error);
+  }
+  app.once("will-quit", () => {
+    try {
+      observer?.restore({ allowRemoved: quitPrepared });
+    } catch (error) {
+      console.error("Snippets observer abort cleanup failed", error);
+    }
+  });
   app.quit();
 }
 module.exports = {

@@ -6,6 +6,29 @@ const childProcess = require("node:child_process");
 const { syncBuiltinESMExports } = require("node:module");
 const path = require("node:path");
 const OUTPUT_LIMIT_CODE_UNITS = 65536;
+const BASELINE_SHA256 =
+  "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
+const UPDATE_SHA256 =
+  "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b";
+
+function verifySnippetsTrust(prompt, version, digest, generation, official) {
+  assert.equal(prompt.type, "warning");
+  assert.equal(prompt.title, "Trust extension code?");
+  assert.equal(prompt.message, `Install Snippets ${version}?`);
+  assert.equal(
+    prompt.detail,
+    `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.snippets\nSHA-256: ${digest}\nCurrent generation: ${generation}` +
+      (official
+        ? "\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions."
+        : ""),
+  );
+  assert.ok(Array.isArray(prompt.buttons));
+  assert.equal(prompt.buttons.length, 2);
+  assert.equal(prompt.buttons[0], "Cancel");
+  assert.equal(prompt.buttons[1], "Trust and install");
+  assert.equal(prompt.defaultId, 0);
+  assert.equal(prompt.cancelId, 0);
+}
 
 function observe(options, packageRequire) {
   const { Terminal } = packageRequire("node-pty/lib/terminal.js");
@@ -19,6 +42,9 @@ function observe(options, packageRequire) {
   const ptys = [];
   const children = [];
   let approvals = 0;
+  let publicObservation;
+  let publicBinding;
+  let baselineSelections = 0;
   let readinessTraceFailures = 0;
   const subscriptions = [];
   Terminal.prototype._forwardEvents = function (...args) {
@@ -126,6 +152,15 @@ function observe(options, packageRequire) {
   };
   syncBuiltinESMExports();
   dialog.showOpenDialog = async () => {
+    if (options.publicUpdate) {
+      assert.equal(
+        publicObservation,
+        undefined,
+        "public update forbids local fallback",
+      );
+      assert.equal(baselineSelections++, 0, "one baseline selection");
+      assert.equal(options.archiveSha256, BASELINE_SHA256);
+    }
     assert.notEqual(
       options.publicCatalog,
       true,
@@ -135,7 +170,15 @@ function observe(options, packageRequire) {
   };
   dialog.showMessageBox = async (_owner, prompt) => {
     assert.equal(prompt.title, "Trust extension code?");
-    if (options.publicCatalog === true) {
+    if (options.publicUpdate) {
+      if (publicObservation) {
+        publicObservation.verifyTrust(prompt);
+      } else {
+        assert.equal(baselineSelections, 1, "baseline chooser required");
+        assert.equal(approvals, 0, "one baseline approval");
+        verifySnippetsTrust(prompt, "0.1.0", BASELINE_SHA256, 0, false);
+      }
+    } else if (options.publicCatalog === true) {
       const digest =
         "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
       assert.equal(options.archiveSha256, digest);
@@ -161,14 +204,55 @@ function observe(options, packageRequire) {
     children,
     approvalCount: () => approvals,
     readinessTraceFailures: () => readinessTraceFailures,
-    restore() {
-      Terminal.prototype._forwardEvents = original.forward;
-      childProcess.fork = original.fork;
-      syncBuiltinESMExports();
-      dialog.showOpenDialog = original.open;
-      dialog.showMessageBox = original.message;
-      for (const dispose of subscriptions.splice(0)) dispose();
+    beginPublicUpdate(catalogSha256) {
+      assert.equal(options.publicUpdate, true);
+      assert.equal(approvals, 1, "baseline approval required");
+      assert.equal(publicObservation, undefined, "one public observer");
+      const { ipcMain } = require("electron");
+      publicObservation =
+        require("./public-catalog-observer.cjs").startSnippetsUpdateObservation(
+          {
+            ipcMain,
+            diagnostics: require("node:diagnostics_channel"),
+            catalogSha256,
+            archiveSha256: UPDATE_SHA256,
+            verifyTrust: (prompt, digest, index, generation) => {
+              assert.equal(index, 0);
+              verifySnippetsTrust(prompt, "0.1.1", digest, generation, true);
+            },
+          },
+        );
+    },
+    publicSummary() {
+      assert.ok(publicObservation, "public observation required");
+      publicBinding = publicObservation.summary();
+      return publicBinding;
+    },
+    beginPublicQuit() {
+      if (publicObservation) publicObservation.beginQuit();
+    },
+    restore({ allowRemoved = false } = {}) {
+      try {
+        if (publicObservation && allowRemoved) {
+          if (!publicBinding) {
+            publicObservation.stop({ allowRemoved: true });
+            throw Error("public binding required before Quit");
+          }
+          require("./public-catalog-observer.cjs").sealPublicObservation(
+            publicObservation,
+            publicBinding,
+            () => {},
+          );
+        } else publicObservation?.stop({ allowRemoved: false });
+      } finally {
+        Terminal.prototype._forwardEvents = original.forward;
+        childProcess.fork = original.fork;
+        syncBuiltinESMExports();
+        dialog.showOpenDialog = original.open;
+        dialog.showMessageBox = original.message;
+        for (const dispose of subscriptions.splice(0)) dispose();
+      }
     },
   };
 }
-module.exports = { observe };
+module.exports = { observe, verifySnippetsTrust };

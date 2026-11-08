@@ -41,8 +41,8 @@ vi.mock("../../src/main/extension-download", async (original) => ({
 
 // Exercise the actual current source host version; do not spoof admission.
 const runtime = { appVersion, apiVersion: "0.1.0" };
-// Verbatim extension.json bytes extracted from the immutable public archives in
-// #781. The independent hashes identify those manifests and their source ZIPs.
+// Verbatim extension.json bytes extracted from immutable public archives.
+// The independent hashes identify those manifests and their source ZIPs.
 const releases = [
   {
     name: "Files 0.6.0",
@@ -67,14 +67,14 @@ const releases = [
     unsupported: "win32-arm64",
   },
   {
-    name: "Snippets 0.1.0",
+    name: "Snippets 0.1.1",
     id: "omxterm.snippets",
-    archiveEnv: "OMXTERM_781_SNIPPETS_ARCHIVE",
+    archiveEnv: "OMXTERM_741_SNIPPETS_011_ARCHIVE",
     archiveHash:
-      "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",
+      "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b",
     manifestHash:
-      "6fd870f4afca75ad079e3a67ac16cd6a36aaa210eaab094a61321599c10ecd7d",
-    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.0","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
+      "bc7b873785add9bdb9f0bb50e4987375d181d3f6764fd0f12528382e76d7dda1",
+    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.1","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
     unsupported: "win32-x64",
   },
 ] as const;

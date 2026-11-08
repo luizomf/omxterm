@@ -65,6 +65,16 @@ function harness(initialPid = 123, nativePath: typeof path = path) {
     showMessageBox: vi.fn(),
   };
   const sync = vi.fn();
+  const publicObserver = {
+    verifyTrust: vi.fn(),
+    summary: vi.fn(() => ({ selection: "captured" })),
+    beginQuit: vi.fn(),
+    stop: vi.fn(),
+  };
+  const publicModule = {
+    startSnippetsUpdateObservation: vi.fn(() => publicObserver),
+    sealPublicObservation: vi.fn(),
+  };
   type Observation = {
     ptys: {
       pid: number;
@@ -83,7 +93,10 @@ function harness(initialPid = 123, nativePath: typeof path = path) {
     }[];
     approvalCount(): number;
     readinessTraceFailures(): number;
-    restore(): void;
+    beginPublicUpdate(catalogSha256: string): void;
+    publicSummary(): unknown;
+    beginPublicQuit(): void;
+    restore(options?: { allowRemoved?: boolean }): void;
   };
   const exports = {} as {
     observe(options: object, load: (name: string) => unknown): Observation;
@@ -98,6 +111,8 @@ function harness(initialPid = 123, nativePath: typeof path = path) {
         "node:child_process": childProcess,
         "node:module": { syncBuiltinESMExports: sync },
         "node:path": nativePath,
+        "node:diagnostics_channel": {},
+        "./public-catalog-observer.cjs": publicModule,
         "./snippets-windows-cpr.cjs":
           require("../fixtures/snippets-windows-cpr.cjs") as unknown,
       };
@@ -128,6 +143,8 @@ function harness(initialPid = 123, nativePath: typeof path = path) {
     child,
     dialog,
     sync,
+    publicObserver,
+    publicModule,
     observe,
   };
 }
@@ -181,6 +198,43 @@ it("refuses local selection and binds both public approvals to the exact Officia
     expect(observation.approvalCount()).toBe(2);
   } finally {
     observation.restore();
+  }
+});
+
+it("allows exactly one trusted baseline before the bound public update and forbids later local fallback", async () => {
+  const h = harness();
+  const baseline =
+    "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
+  const observed = h.observe({ publicUpdate: true, archiveSha256: baseline });
+  const detail = `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.snippets\nSHA-256: ${baseline}\nCurrent generation: 0`;
+  const prompt = {
+    title: "Trust extension code?",
+    type: "warning",
+    message: "Install Snippets 0.1.0?",
+    detail,
+    buttons: ["Cancel", "Trust and install"],
+    defaultId: 0,
+    cancelId: 0,
+  };
+  try {
+    expect(() => observed.beginPublicUpdate("a".repeat(64))).toThrow(
+      /baseline/,
+    );
+    await h.dialog.showOpenDialog();
+    const bad = { ...prompt, detail: "wrong generation" };
+    await expect(h.dialog.showMessageBox(null, bad)).rejects.toThrow();
+    await h.dialog.showMessageBox(null, prompt);
+    observed.beginPublicUpdate("a".repeat(64));
+    await expect(h.dialog.showOpenDialog()).rejects.toThrow(/fallback/);
+    await h.dialog.showMessageBox(null, { title: "Trust extension code?" });
+    expect(h.publicObserver.verifyTrust).toHaveBeenCalledOnce();
+    expect(observed.publicSummary()).toEqual({ selection: "captured" });
+    observed.beginPublicQuit();
+    observed.restore({ allowRemoved: true });
+    expect(h.publicModule.sealPublicObservation).toHaveBeenCalledOnce();
+  } finally {
+    if (!h.publicModule.sealPublicObservation.mock.calls.length)
+      observed.restore();
   }
 });
 

@@ -617,24 +617,48 @@ GUI, and this staged campaign does not replace it.
 
 ## Snippets 0.1.1 public-catalog follow-up
 
-The existing Linux AppImage adapter exercises a local archive, not public catalog
-acquisition or an older-to-newer update. The Windows public adapter below is pinned
-to the historical 0.1.0 scenario and cannot qualify 0.1.1. Neither should be
-relabeled as the missing check.
+The opt-in `PUBLIC_UPDATE` mode of `test/integration/snippets-appimage.test.ts`
+is a bounded 0.1.0 → 0.1.1 checkpoint, **not a native or public PASS**. It uses
+the unchanged published Linux ARM64 0.25.0 AppImage and an ordinary local chooser
+and trust prompt to install the exact 0.1.0 baseline as generation 1. It opens the
+old backend, then uses production Browse/Refresh and Update over HTTPS; a separate
+passive Node HTTPS/IPC observer binds the captured catalog selection, streamed
+archive digest and Official trust to generation 1. It requires old-backend exit,
+enabled dormant generation 2, a fresh activation, unchanged synthetic YAML, the
+same usable Surface/PTY and natural joined Quit. The independently downloaded
+0.1.1 archive is an identity oracle, never a chooser or download fallback.
 
-Before a new public-consumption run, prepare and independently review a bounded
-adapter using the existing packaged-process, Snippets scenario and passive
-`public-catalog-observer.cjs` seams. On an assigned disposable Linux ARM64 guest,
-bind the unchanged public 0.25.0 AppImage and both catalog/0.1.1 archive digests;
-start with the exact 0.1.0 installed generation and unchanged synthetic YAML.
-Observe an explicit Browse/Refresh and Update through production HTTPS, the
-0.1.0-to-0.1.1 card and digest/generation-bound Official trust, dormant new
-generation, retirement of any old backend, explicit activation, retained YAML and
-usable terminal, then natural joined Quit. An independently downloaded archive is
-an identity reference, never an installation fallback. Retain all failures and
-process/stream and shared-service preservation evidence. Do not claim this flow
-is implemented or passed until that adapter and its tests exist and are reviewed.
-The existing Windows failures and all other target limitations stay separate.
+First integrate and review the candidate, then compare both public catalog
+endpoints byte-for-byte with integrated source. Record the SHA-256 of the actual
+legacy endpoint bytes for this invocation; a stored endpoint receipt alone is not
+a passive network trace or public-consumption result. The observer checks the
+actual production request stream separately. Use only an assigned disposable
+Linux ARM64 guest after the desktop, shared-clipboard and Linux service
+prerequisites in [development](../../docs/development.md#running-native-tests).
+Follow the existing AppImage adapter's settlement and preservation requirements;
+retain failures and scoped evidence. No automatic replay or test-oracle relaxation.
+
+Set the following to absolute, independently verified files in the guest. The
+adapter refuses a non-ARM64 host, different 0.25.0 AppImage or 0.1.0 baseline,
+and checks the target oracle's size and hash independently:
+
+```sh
+export OMXTERM_SNIPPETS_APPIMAGE_PUBLIC_UPDATE=1
+export OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE=/absolute/path/OMXTerm-0.25.0-arm64.AppImage
+export OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE_SHA256=78ba5335d2f10dda7777d8e0e65a09bdaff355a69978aac8582499130c3b9ccd
+export OMXTERM_SNIPPETS_APPIMAGE_ARCHIVE=/absolute/path/snippets-0.1.0.omxext
+export OMXTERM_SNIPPETS_APPIMAGE_ARCHIVE_SHA256=6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7
+export OMXTERM_SNIPPETS_APPIMAGE_TARGET_ARCHIVE=/absolute/path/snippets-0.1.1.omxext
+export OMXTERM_SNIPPETS_APPIMAGE_CATALOG_SHA256="$(sha256sum /absolute/path/verified-public-catalog.json | cut -d ' ' -f1)"
+export OMXTERM_SNIPPETS_APPIMAGE_VERSION=0.25.0
+export OMXTERM_SNIPPETS_APPIMAGE_EVIDENCE=/absolute/path/new-evidence-directory
+npm test -- test/integration/snippets-appimage.test.ts
+```
+
+The existing local-archive mode and historical Windows public adapter remain
+separate. This checkpoint does not repeat the ten-group functional matrix, prove
+physical input/FUSE/helper behavior, resolve Windows failures or qualify other
+targets.
 
 ## Windows ARM64 installed public-catalog adapter
 

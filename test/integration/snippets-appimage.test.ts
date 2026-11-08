@@ -26,8 +26,66 @@ const values = appImageInputs();
 const execute = promisify(execFile);
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
-const scope =
-  "unchanged extracted AppImage; synthetic Chromium/X11; ANGLE SwiftShader; controlled consent; no FUSE/helper installation or public acquisition";
+const scope = values?.publicUpdate
+  ? "unchanged extracted stable AppImage; production public catalog update; synthetic Chromium/X11; ANGLE SwiftShader; controlled consent; no FUSE/helper installation"
+  : "unchanged extracted AppImage; synthetic Chromium/X11; ANGLE SwiftShader; controlled consent; no FUSE/helper installation or public acquisition";
+
+type Inputs = NonNullable<ReturnType<typeof appImageInputs>>;
+const targetDigest =
+  "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b";
+async function publicTargetIdentity(
+  values: Inputs,
+  app: Buffer,
+  baseline: Buffer,
+) {
+  if (!values.publicUpdate) return undefined;
+  assert.equal(app.length, 128279456);
+  assert.equal(baseline.length, 76653);
+  const target = await readFile(values.targetArchive);
+  assert.equal(target.length, 82635);
+  assert.equal(digest(target), targetDigest);
+  return { sha256: digest(target), bytes: target.length };
+}
+function scenarioTimeout(values: Inputs) {
+  return values.publicUpdate ? 240000 : 120000;
+}
+function observerFiles(values: Inputs) {
+  return values.publicUpdate
+    ? ["snippets-public-update.cjs", "public-catalog-observer.cjs"]
+    : [];
+}
+function assertScenario(values: Inputs, scenario: unknown) {
+  if (values.publicUpdate) {
+    assert.deepEqual(scenario, {
+      checks: [
+        "local-baseline-generation-1",
+        "baseline-activated",
+        "public-update-retired-dormant-generation-2",
+        "fresh-activation-same-terminal-yaml",
+      ],
+      approvals: 2,
+      input: values.input,
+    });
+  } else {
+    assert.deepEqual(scenario, {
+      checks: [
+        "absent-package-management-no-activation",
+        "selected-visible-toggle-and-header-close-destroy-fresh-view-same-backend-catalog-PTY",
+        "ordinary-archive-trust-enabled-activation",
+        "explicit-hide-independent-panel-toggle-retains-exact-view-query",
+        "exact-insert-run-native-enter-repeat-release",
+        "preview-overrides-both-intents-cancel-restores-focus",
+        "retained-search-hide-reactivate",
+        "live-en-US-pt-BR-retained-query",
+        "disabled-package-management-no-enable",
+        "disable-uninstall-unchanged-catalog-live-surface-pty",
+      ],
+      archiveSha256: values.ARCHIVE_SHA256,
+      approvals: 1,
+      input: values.input,
+    });
+  }
+}
 
 // Opt-in on the assigned disposable Linux ARM64/x64 desktop only. The shared
 // scenario observes the untouched package, not a replacement application entry.
@@ -61,9 +119,15 @@ it.skipIf(!values)(
       const archiveBytes = await readFile(values.ARCHIVE);
       assert.equal(digest(appBytes), values.APPIMAGE_SHA256);
       assert.equal(digest(archiveBytes), values.ARCHIVE_SHA256);
+      const targetIdentity = await publicTargetIdentity(
+        values,
+        appBytes,
+        archiveBytes,
+      );
       await json("artifacts.json", {
         appImage: { sha256: values.APPIMAGE_SHA256, bytes: appBytes.length },
         archive: { sha256: values.ARCHIVE_SHA256, bytes: archiveBytes.length },
+        targetIdentity,
         version: values.VERSION,
       });
       await execute(values.APPIMAGE, ["--appimage-extract"], {
@@ -129,6 +193,7 @@ it.skipIf(!values)(
         "snippets-scenario.cjs",
         "snippets-observer.cjs",
         "snippets-process-identity.cjs",
+        ...observerFiles(values),
       ])
         await cp(path.join("test/fixtures", name), path.join(root, name));
       const env = appImageEnvironment(root);
@@ -187,6 +252,9 @@ it.skipIf(!values)(
         version: values.VERSION,
         readiness,
         controlledPlainShell: true,
+        ...(values.publicUpdate
+          ? { publicUpdate: true, catalogSha256: values.catalogSha256 }
+          : {}),
       };
       await json(
         "attachment.json",
@@ -197,26 +265,10 @@ it.skipIf(!values)(
       );
       const scenario = await client.evaluate(
         `${observer}.run(${JSON.stringify(options)})`,
-        120000,
+        scenarioTimeout(values),
       );
       await json("scenario.json", scenario);
-      assert.deepEqual(scenario, {
-        checks: [
-          "absent-package-management-no-activation",
-          "selected-visible-toggle-and-header-close-destroy-fresh-view-same-backend-catalog-PTY",
-          "ordinary-archive-trust-enabled-activation",
-          "explicit-hide-independent-panel-toggle-retains-exact-view-query",
-          "exact-insert-run-native-enter-repeat-release",
-          "preview-overrides-both-intents-cancel-restores-focus",
-          "retained-search-hide-reactivate",
-          "live-en-US-pt-BR-retained-query",
-          "disabled-package-management-no-enable",
-          "disable-uninstall-unchanged-catalog-live-surface-pty",
-        ],
-        archiveSha256: values.ARCHIVE_SHA256,
-        approvals: 1,
-        input: values.input,
-      });
+      assertScenario(values, scenario);
       await owner.verifyMain();
       await client.evaluate(`${observer}.quit(); true`, 5000);
       await until(
@@ -275,6 +327,9 @@ it.skipIf(!values)(
         [asar, asarBefore],
         [values.APPIMAGE, values.APPIMAGE_SHA256],
         [values.ARCHIVE, values.ARCHIVE_SHA256],
+        ...(values.publicUpdate
+          ? [[values.targetArchive, targetDigest] as const]
+          : []),
       ] as const) {
         if (!expected) continue;
         try {

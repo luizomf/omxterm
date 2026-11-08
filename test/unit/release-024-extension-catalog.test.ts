@@ -130,12 +130,12 @@ describe("0.24.0 first-party catalog candidate", () => {
       expect(byId(linux, id)).toEqual(byId(macos, id));
     const snippets = byId(linux, "omxterm.snippets");
     expect(snippets).toMatchObject({
-      version: "0.1.0",
-      sourceCommit: "805e95dbc77552dc137707578b18b48ad6d047e9",
+      version: "0.1.1",
+      sourceCommit: "12c54a09060364982de4e9833d112167a4e21d26",
       archive: {
-        bytes: 76653,
+        bytes: 82635,
         sha256:
-          "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",
+          "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b",
       },
     });
     expect(snippets.targets).toEqual(

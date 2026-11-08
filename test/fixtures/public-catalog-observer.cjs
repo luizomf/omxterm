@@ -54,6 +54,32 @@ function startFilesPublicObservation(options) {
   });
 }
 
+function startSnippetsUpdateObservation(options) {
+  assert.equal(
+    options.archiveSha256,
+    "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b",
+    "published Snippets 0.1.1 digest",
+  );
+  assert.equal(typeof options.verifyTrust, "function");
+  return startPublicCatalogObservation({
+    ...options,
+    release: {
+      id: "omxterm.snippets",
+      name: "Snippets — Linux, macOS and Windows ARM64 preview",
+      version: "0.1.1",
+      initialVersion: "0.1.0",
+      targets: ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
+      archiveUrl:
+        "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.1/snippets-0.1.1.omxext",
+      archiveBytes: 82635,
+      label: "Snippets",
+      generations: [1],
+      forbidFallback: true,
+      verifyTrust: options.verifyTrust,
+    },
+  });
+}
+
 function startPublicCatalogObservation({
   ipcMain,
   diagnostics,
@@ -108,6 +134,7 @@ function startPublicCatalogObservation({
   }
 
   const onRequest = ({ request }) => {
+    if (stopped) return;
     // Diagnostic callbacks must not throw into the production event loop.
     try {
       const operation = active;
@@ -126,6 +153,7 @@ function startPublicCatalogObservation({
     }
   };
   const onResponse = ({ request, response }) => {
+    if (stopped) return;
     try {
       const found = pending.get(request);
       pending.delete(request);
@@ -141,6 +169,7 @@ function startPublicCatalogObservation({
         response.socket?.authorized === true;
       const emit = response.emit;
       response.emit = function (event, ...args) {
+        if (stopped) return emit.call(this, event, ...args);
         try {
           if (event === "data") {
             const chunk = Buffer.from(args[0]);
@@ -217,10 +246,17 @@ function startPublicCatalogObservation({
     assert.equal(card.name, offer.name);
     assert.equal(card.version, offer.version);
     assert.equal(card.compatible, true, "selected Linux ARM64 target");
-    assert.equal(card.action, expectedInstalled ? "reinstall" : "install");
+    assert.equal(
+      card.action,
+      expectedInstalled
+        ? "reinstall"
+        : release.initialVersion
+          ? "update"
+          : "install",
+    );
     assert.equal(
       card.installedVersion,
-      expectedInstalled ? offer.version : null,
+      expectedInstalled ? offer.version : (release.initialVersion ?? null),
     );
     assert.match(card.selection, /^[a-f0-9-]{36}$/);
     if (selection)
@@ -259,6 +295,7 @@ function startPublicCatalogObservation({
     active = operation;
     try {
       const result = await originalHandler(event, ...args);
+      if (stopped) return result;
       if (isCatalog) {
         const response = checkedResponse(operation, endpoint);
         assert.equal(
@@ -333,7 +370,10 @@ function startPublicCatalogObservation({
     try {
       return await handle(event, ...args);
     } catch (error) {
-      if (["catalog-refresh", "catalog-install"].includes(args[0]?.operation))
+      if (
+        !stopped &&
+        ["catalog-refresh", "catalog-install"].includes(args[0]?.operation)
+      )
         unexpected.push({ error: "catalog operation observation failed" });
       throw error;
     }
@@ -354,6 +394,7 @@ function startPublicCatalogObservation({
   }
   return {
     verifyTrust(prompt) {
+      assert.equal(stopped, false, "observation stopped");
       assert.equal(
         active?.kind,
         "archive",
@@ -434,6 +475,7 @@ function startPublicCatalogObservation({
     stop({ allowRemoved = false } = {}) {
       if (stopped) return;
       stopped = true;
+      pending.clear();
       const ownsHandler = ipcMain._invokeHandlers.get(channel) === handler;
       const validQuitRemoval =
         allowRemoved &&
@@ -534,6 +576,7 @@ module.exports = {
   startPublicCatalogObservation,
   startSshPublicObservation,
   startFilesPublicObservation,
+  startSnippetsUpdateObservation,
   sealPublicObservation,
   sshPublicManagementState,
 };

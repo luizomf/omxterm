@@ -115,10 +115,51 @@ describe("exact AppImage admission and independent expected receipt", () => {
         ARCHIVE_SHA256: "b".repeat(64),
         VERSION: "0.24.0-dev.30",
         EVIDENCE: "/evidence",
+        publicUpdate: false,
         input: `synthetic Chromium/X11; controlled native consent; production Linux ${label} composition`,
       });
     },
   );
+  it("requires the exact stable ARM64 and baseline pins for public update", () => {
+    const env = {
+      ...inputs(),
+      OMXTERM_SNIPPETS_APPIMAGE_PUBLIC_UPDATE: "1",
+      OMXTERM_SNIPPETS_APPIMAGE_VERSION: "0.25.0",
+      OMXTERM_SNIPPETS_APPIMAGE_APPIMAGE_SHA256:
+        "78ba5335d2f10dda7777d8e0e65a09bdaff355a69978aac8582499130c3b9ccd",
+      OMXTERM_SNIPPETS_APPIMAGE_ARCHIVE_SHA256:
+        "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7",
+      OMXTERM_SNIPPETS_APPIMAGE_TARGET_ARCHIVE: "/target.omxext",
+      OMXTERM_SNIPPETS_APPIMAGE_CATALOG_SHA256: "c".repeat(64),
+    };
+    expect(appImageInputs(env)).toMatchObject({
+      publicUpdate: true,
+      targetArchive: "/target.omxext",
+      catalogSha256: "c".repeat(64),
+    });
+    for (const key of [
+      "VERSION",
+      "APPIMAGE_SHA256",
+      "ARCHIVE_SHA256",
+      "TARGET_ARCHIVE",
+      "CATALOG_SHA256",
+    ]) {
+      expect(() =>
+        appImageInputs({
+          ...env,
+          ["OMXTERM_SNIPPETS_APPIMAGE_" + key]: "wrong",
+        }),
+      ).toThrow();
+    }
+    Object.defineProperty(process, "arch", { value: "x64" });
+    expect(() => appImageInputs(env)).toThrow("ARM64");
+    expect(() =>
+      appImageInputs({
+        ...inputs(),
+        OMXTERM_SNIPPETS_APPIMAGE_TARGET_ARCHIVE: "/target",
+      }),
+    ).toThrow("PUBLIC_UPDATE");
+  });
   it("skips only absent configuration and rejects each missing or empty input", () => {
     expect(appImageInputs({})).toBeUndefined();
     expect(

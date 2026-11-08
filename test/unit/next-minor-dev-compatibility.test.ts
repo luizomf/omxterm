@@ -108,7 +108,7 @@ it("retains capability validation on the new family", () => {
     );
 });
 
-it("admits the actual pinned default Snippets archive and matches its catalog offer", async () => {
+it("admits the pinned default and the distinct compatible Snippets catalog offer", async () => {
   const root = await mkdtemp(path.join(tmpdir(), "omxterm-next-family-"));
   try {
     const host = JSON.parse(await readFile("package.json", "utf8")) as {
@@ -137,7 +137,11 @@ it("admits the actual pinned default Snippets archive and matches its catalog of
         (entry) => entry.id === "omxterm.snippets",
       )!;
       expect(snippets.engines).toEqual(extracted.manifest.engines);
-      expect(snippets.archive.sha256).toBe(extracted.digest);
+      expect(snippets.version).toBe("0.1.1");
+      expect(snippets.archive.sha256).toBe(
+        "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b",
+      );
+      expect(snippets.archive.sha256).not.toBe(extracted.digest);
       for (const target of snippets.targets)
         expect(catalogCompatible(snippets, runtime(host.version), target)).toBe(
           true,
