@@ -200,6 +200,32 @@ Windows public kill/resize still
 defer until first output; controlled callback-order units are not native timing
 qualification or proof of containment of later native resize exceptions.
 
+## Dependency maintenance traps
+
+`@electron/asar` is used both directly and by `app-builder-lib`, which packages
+`app.asar`. Two advisories currently report on those trees and neither justifies a
+dependency change; see [#756](https://github.com/luizomf/omxterm/issues/756#issuecomment-6722552087)
+and [#763](https://github.com/luizomf/omxterm/issues/763#issuecomment-6722547699) for
+the full evidence.
+
+Do **not** force `minimatch@11` under `@electron/asar@3.4.1`. That asar version calls
+the CommonJS default import (`minimatch_1.default(...)`), and `minimatch@11` has no
+default export, so the value is `undefined` and `listPackage()` returns `[]` with no
+error thrown. `electron-builder` then reports success and ships an **empty
+`app.asar`**. An `npm audit` result of zero findings is not worth that trade.
+
+Check packaging, not just the audit, whenever a tooling dependency in the asar or
+electron-builder tree changes:
+
+```sh
+# Shipped runtime is unaffected by these dev-only entries.
+npm audit --omit=dev
+
+# An empty archive is the failure mode the audit cannot see. Pass a real
+# packaged archive, for example the one electron-builder just produced.
+node -e "const {listPackage}=require('@electron/asar');const files=listPackage(process.argv[1]);if(files.length===0)throw Error('empty asar');console.log(files.length+' entries')" path/to/resources/app.asar
+```
+
 ## Test discovery
 
 Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/integration/`. Support code lives in `test/fixtures/`.
