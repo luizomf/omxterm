@@ -46,7 +46,12 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-async function fixture(action = "Install") {
+async function fixture(action = "Install", snippets = false) {
+  const packageName = snippets
+    ? "Snippets — Linux, macOS and Windows ARM64 preview"
+    : "SSH Connect";
+  const version = snippets ? "0.1.1" : "0.3.0";
+  const packageTitle = snippets ? `${packageName} · ${version}` : title;
   vi.useFakeTimers();
   vi.setSystemTime(0);
   const exports = { exports: {} as { catalogInstall: Install } };
@@ -73,16 +78,26 @@ async function fixture(action = "Install") {
             stale: false,
             entries: [
               {
-                id: "omxterm.ssh",
-                name: "SSH Connect",
-                version: "0.3.0",
-                description: "Synthetic SSH",
-                installedVersion: action === "Reinstall" ? "0.3.0" : null,
+                id: snippets ? "omxterm.snippets" : "omxterm.ssh",
+                name: packageName,
+                version,
+                description: "Synthetic catalog entry",
+                installedVersion:
+                  action === "Update"
+                    ? "0.1.0"
+                    : action === "Reinstall"
+                      ? version
+                      : null,
                 selection: "a".repeat(36),
                 targets: ["linux-arm64"],
                 incompatibility: null,
                 compatible: true,
-                action: action === "Install" ? "install" : "reinstall",
+                action:
+                  action === "Install"
+                    ? "install"
+                    : action === "Update"
+                      ? "update"
+                      : "reinstall",
               },
               {
                 id: "omxterm.files",
@@ -186,7 +201,7 @@ async function fixture(action = "Install") {
     start: (requireOfficial = false) =>
       exports.exports.catalogInstall(
         core,
-        title,
+        packageTitle,
         action,
         save,
         requireOfficial,
@@ -385,6 +400,70 @@ it.each([
   }
   await expect(f.start()).rejects.toThrow(/unavailable or changed/);
   expect(f.core.capturePage).not.toHaveBeenCalled();
+  expect(f.save).not.toHaveBeenCalled();
+  expect(f.order).not.toContain("click");
+});
+
+it("captures the visible Snippets Update before clicking the captured selection", async () => {
+  const f = await fixture("Update", true);
+  const running = f.start(true);
+  await drain();
+  await f.frame();
+  await f.frame();
+  await running;
+  expect(f.order).toEqual(["scroll", "capture", "save", "click"]);
+  expect(
+    f.requests.filter((request) => request.operation === "catalog-install"),
+  ).toMatchObject([{ selection: "a".repeat(36) }]);
+  expect(f.save).toHaveBeenCalledExactlyOnceWith(f.image);
+});
+
+it.each([
+  "hidden heading",
+  "offscreen button",
+  "clipped heading",
+  "stale page",
+  "stale card",
+  "stale heading",
+  "stale button",
+] as const)("refuses Snippets Update with %s", async (fault) => {
+  const f = await fixture("Update", true);
+  if (fault === "hidden heading") f.heading.style.display = "none";
+  if (fault === "offscreen button") {
+    const rect = f.button.getBoundingClientRect();
+    Object.defineProperty(f.button, "getBoundingClientRect", {
+      value: () => ({ ...rect, right: 961 }),
+    });
+  }
+  if (fault === "clipped heading") {
+    const parent = f.panel.parentElement!;
+    const rect = parent.getBoundingClientRect();
+    Object.defineProperty(parent, "getBoundingClientRect", {
+      value: () => ({ ...rect, left: 300, x: 300, width: 660 }),
+    });
+  }
+  if (fault.startsWith("stale")) {
+    f.core.capturePage.mockImplementation(async () => {
+      const target =
+        fault === "stale page"
+          ? document.querySelector(".settings-dialog")!
+          : fault === "stale card"
+            ? f.card
+            : fault === "stale heading"
+              ? f.heading
+              : f.button;
+      target.replaceWith(target.cloneNode(true));
+      return f.image;
+    });
+  }
+  const result = f.start(true).then(
+    () => "accepted",
+    (error: Error) => error.message,
+  );
+  await drain();
+  await f.frame();
+  await f.frame();
+  expect(await result).toMatch(/unavailable or changed/);
   expect(f.save).not.toHaveBeenCalled();
   expect(f.order).not.toContain("click");
 });

@@ -625,8 +625,10 @@ old backend, then uses production Browse/Refresh and Update over HTTPS; a separa
 passive Node HTTPS/IPC observer binds the captured catalog selection, streamed
 archive digest and Official trust to generation 1. It requires old-backend exit,
 enabled dormant generation 2, a fresh activation, unchanged synthetic YAML, the
-same usable Surface/PTY and natural joined Quit. The independently downloaded
-0.1.1 archive is an identity oracle, never a chooser or download fallback.
+same focused Surface/canvas and usable PTY, and natural joined Quit. The checked
+visible catalog card is retained as `public-update-card.png` before Update. The
+independently downloaded 0.1.1 archive is an identity oracle, never a chooser or
+download fallback.
 
 First integrate and review the candidate, then compare both public catalog
 endpoints byte-for-byte with integrated source. Record the SHA-256 of the actual

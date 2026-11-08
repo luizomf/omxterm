@@ -51,7 +51,11 @@ function scenarioTimeout(values: Inputs) {
 }
 function observerFiles(values: Inputs) {
   return values.publicUpdate
-    ? ["snippets-public-update.cjs", "public-catalog-observer.cjs"]
+    ? [
+        "snippets-public-update.cjs",
+        "public-catalog-observer.cjs",
+        "ssh-packaged.cjs",
+      ]
     : [];
 }
 function assertScenario(values: Inputs, scenario: unknown) {

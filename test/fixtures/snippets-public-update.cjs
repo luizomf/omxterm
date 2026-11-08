@@ -1,8 +1,38 @@
 // Bounded production UI update on the exact stable Linux ARM64 host.
 const assert = require("node:assert/strict");
 const { readFile, writeFile } = require("node:fs/promises");
+const { writeFileSync } = require("node:fs");
 const path = require("node:path");
 const { identity, alive } = require("./snippets-process-identity.cjs");
+
+// The focused Surface is the selected terminal whose PTY is exercised below.
+function selectedScenarioCanvas(document, expected) {
+  const surface = document.activeElement?.closest(".terminal-surface");
+  if (!surface || !surface.isConnected || surface.closest("[hidden], [inert]"))
+    throw Error("focused scenario Surface unavailable");
+  const visible = (node) => {
+    for (let current = node; current; current = current.parentElement) {
+      const style = document.defaultView.getComputedStyle(current);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse" ||
+        style.opacity === "0"
+      )
+        return false;
+    }
+    const rect = node.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  const canvases = [...surface.querySelectorAll("canvas")].filter(visible);
+  if (
+    canvases.length !== 1 ||
+    (expected &&
+      (surface !== expected.surface || canvases[0] !== expected.canvas))
+  )
+    throw Error("focused scenario Surface or canvas changed");
+  return { surface, canvas: canvases[0] };
+}
 
 // Serialized into the core renderer. Refuse ambiguous, hidden or disabled cards.
 function selectUpdate(document) {
@@ -23,15 +53,17 @@ function selectUpdate(document) {
     !buttons[0].getClientRects().length
   )
     throw Error("Snippets Update unavailable");
-  for (let node = buttons[0]; node; node = node.parentElement) {
-    const style = document.defaultView.getComputedStyle(node);
-    if (
-      style.display === "none" ||
-      style.visibility === "hidden" ||
-      style.visibility === "collapse" ||
-      style.opacity === "0"
-    )
-      throw Error("hidden Snippets Update");
+  for (const element of [cards[0].querySelector("h4"), buttons[0]]) {
+    for (let node = element; node; node = node.parentElement) {
+      const style = document.defaultView.getComputedStyle(node);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.visibility === "collapse" ||
+        style.opacity === "0"
+      )
+        throw Error("hidden Snippets Update");
+    }
   }
   return buttons[0];
 }
@@ -103,7 +135,6 @@ async function runPublicUpdate({
   );
   const core = window.webContents;
   const js = (code) => core.executeJavaScript(code);
-  const canvas = "document.querySelector('.terminal-surface canvas')";
   const until = async (check, label, timeout = 15000) => {
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
@@ -192,7 +223,6 @@ async function runPublicUpdate({
     return view;
   };
   window.focus();
-  await until(() => js(`!!(${canvas})`), "terminal canvas");
   await until(
     () => ptys.length === 1 && ptys[0].output.length > 0,
     "scenario PTY",
@@ -201,7 +231,9 @@ async function runPublicUpdate({
   const ptyIdentity = identity(session.pid);
   assert.ok(ptyIdentity && alive(ptyIdentity));
   await focusTerminal();
-  await js(`window.__snippetsUpdateCanvas = ${canvas}`);
+  await js(
+    `window.__snippetsUpdateSurface = (${selectedScenarioCanvas.toString()})(document); true`,
+  );
   const checkShell = async (name) => {
     const marker = path.join(fixture.root, name);
     const quoted = "'" + marker.replaceAll("'", "'\\''") + "'";
@@ -272,13 +304,20 @@ async function runPublicUpdate({
           ),
         "Update control",
       );
-      await js(
-        `(() => { const b = ${selector}; b.scrollIntoView({block:'center'}); })()`,
+      // Reuse the bounded capture seam: it retains the dialog, selected page,
+      // card, heading and action through scroll, frames, screenshot and click.
+      await require("./ssh-packaged.cjs").catalogInstall(
+        core,
+        "Snippets — Linux, macOS and Windows ARM64 preview · 0.1.1",
+        "Update",
+        (image) =>
+          writeFileSync(
+            path.join(fixture.evidence, "public-update-card.png"),
+            image.toPNG(),
+            { flag: "wx" },
+          ),
+        true,
       );
-      await js(
-        "new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))",
-      );
-      await js(`(${selector}).click()`);
       await until(
         () => state("0.1.1", 2, "dormant"),
         "updated generation 2 dormant",
@@ -314,9 +353,8 @@ async function runPublicUpdate({
       // Hide via the independent panel toggle, then prove the same shell accepts input.
       menu("Toggle Auxiliary Panel");
       await focusTerminal();
-      assert.equal(
-        await js(`window.__snippetsUpdateCanvas === (${canvas})`),
-        true,
+      await js(
+        `(() => { if (!window.__snippetsUpdateSurface) throw Error('scenario Surface capture missing'); (${selectedScenarioCanvas.toString()})(document, window.__snippetsUpdateSurface); })()`,
       );
       assert.equal(ptys.length, 1);
       assert.equal(session.exited, false);
@@ -335,6 +373,7 @@ async function runPublicUpdate({
 }
 module.exports = {
   selectUpdate,
+  selectedScenarioCanvas,
   namedButton,
   managementState,
   runUpdateSteps,

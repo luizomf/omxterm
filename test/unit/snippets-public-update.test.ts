@@ -8,24 +8,31 @@ import { translatorFor } from "../../src/shared/i18n";
 
 vi.mock("electron", () => ({}));
 const require = createRequire(import.meta.url);
-const { runUpdateSteps, selectUpdate, namedButton, managementState } =
-  require("../fixtures/snippets-public-update.cjs") as {
-    runUpdateSteps(
-      steps: Record<string, () => Promise<void>>,
-    ): Promise<string[]>;
-    selectUpdate(document: Document): HTMLButtonElement;
-    namedButton(
-      document: Document,
-      selector: string,
-      labels: string[],
-    ): HTMLButtonElement | null;
-    managementState(
-      document: Document,
-      version: string,
-      generation: number,
-      local: string,
-    ): boolean;
-  };
+const {
+  runUpdateSteps,
+  selectUpdate,
+  namedButton,
+  managementState,
+  selectedScenarioCanvas,
+} = require("../fixtures/snippets-public-update.cjs") as {
+  runUpdateSteps(steps: Record<string, () => Promise<void>>): Promise<string[]>;
+  selectedScenarioCanvas(
+    document: Document,
+    expected?: { surface: Element; canvas: Element },
+  ): { surface: Element; canvas: Element };
+  selectUpdate(document: Document): HTMLButtonElement;
+  namedButton(
+    document: Document,
+    selector: string,
+    labels: string[],
+  ): HTMLButtonElement | null;
+  managementState(
+    document: Document,
+    version: string,
+    generation: number,
+    local: string,
+  ): boolean;
+};
 const { verifySnippetsTrust } =
   require("../fixtures/snippets-observer.cjs") as {
     verifySnippetsTrust(
@@ -367,6 +374,30 @@ describe("bounded public update observer", () => {
 });
 
 describe("update driver controls", () => {
+  it("binds the focused scenario Surface and rejects replacing only its canvas", () => {
+    document.body.innerHTML = `<div class="terminal-surface" hidden><canvas id="baseline"></canvas></div><div class="terminal-surface"><textarea></textarea><canvas id="scenario"></canvas></div>`;
+    const textarea = document.querySelector("textarea")!;
+    const canvas = document.querySelector<HTMLCanvasElement>("#scenario")!;
+    Object.defineProperty(canvas, "getBoundingClientRect", {
+      value: () => ({ width: 300, height: 200 }),
+    });
+    expect(document.querySelector(".terminal-surface canvas")?.id).toBe(
+      "baseline",
+    );
+    textarea.focus();
+    const retained = selectedScenarioCanvas(document);
+    expect(retained.canvas.id).toBe("scenario");
+    expect(document.querySelector("#baseline")).not.toBe(retained.canvas);
+    const oldScenario = document.querySelector("#scenario")!;
+    const replacement = oldScenario.cloneNode() as HTMLCanvasElement;
+    Object.defineProperty(replacement, "getBoundingClientRect", {
+      value: () => ({ width: 300, height: 200 }),
+    });
+    oldScenario.replaceWith(replacement);
+    expect(document.querySelector("#baseline")).toBeTruthy();
+    expect(selectedScenarioCanvas(document).canvas).toBe(replacement);
+    expect(() => selectedScenarioCanvas(document, retained)).toThrow(/changed/);
+  });
   it("executes the four owned phases in order and stops on failure", async () => {
     const calls: string[] = [];
     const steps = Object.fromEntries(
@@ -413,6 +444,10 @@ describe("update driver controls", () => {
     button.disabled = false;
     expect(managementState(doc, "0.1.0", 1, "active")).toBe(true);
     expect(managementState(doc, "0.1.0", 2, "active")).toBe(false);
+    const heading = doc.querySelector<HTMLElement>("h4")!;
+    heading.style.display = "none";
+    expect(() => selectUpdate(doc)).toThrow();
+    heading.style.display = "";
     button.style.visibility = "hidden";
     expect(() => selectUpdate(doc)).toThrow(/hidden/);
     button.style.visibility = "visible";
