@@ -882,12 +882,13 @@ the repository; no repository test produced them, and the temporary tracing used
 elsewhere in this investigation has been removed and is not their source.
 
 `cleanupFailure` exists only where a cleanup command runs with a failure context,
-which is the five cleanup callsites. The supervisor creation, launcher and
-PTY-registration observations call `fixtureProcesses()` without one, and a
-sampling failure during supervision is published as `reason: "inspection-error"`
-with the original error text in `cleanupErrors` and no `cleanupFailure`. A
-timeout in most of those observations therefore arrives as the bare message
-rather than as metadata with a `callsite`.
+which is the five cleanup callsites. Supervisor creation is separate from
+inventory; launcher, PTY-registration and supervision sampling inventories call
+`fixtureProcesses()` without a failure context. Failures in those operations do
+not themselves attach `cleanupFailure`. A supervision sampling failure sets
+`reason: "inspection-error"` and retains the original error text in
+`cleanupErrors`; a later cleanup command failure can attach `cleanupFailure` to
+the same receipt, for example at `final-sample`.
 
 Where the field is present, `timeout` means one synchronous command did not
 finish. `command-failed` is the only category that proves the helper ran and

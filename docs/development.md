@@ -204,15 +204,17 @@ qualification or proof of containment of later native resize exceptions.
 
 `@electron/asar` is used both directly and by `app-builder-lib`, which packages
 `app.asar`. Two advisories currently report on those trees and neither justifies a
-dependency change; see [#756](https://github.com/luizomf/omxterm/issues/756#issuecomment-6722552087)
+dependency change; see [#756](https://github.com/luizomf/omxterm/issues/756)
 and [#763](https://github.com/luizomf/omxterm/issues/763#issuecomment-6722547699) for
-the full evidence.
+the advisory dispositions.
 
-Do **not** force `minimatch@11` under `@electron/asar@3.4.1`. That asar version calls
-the CommonJS default import (`minimatch_1.default(...)`), and `minimatch@11` has no
-default export, so the value is `undefined` and `listPackage()` returns `[]` with no
-error thrown. `electron-builder` then reports success and ships an **empty
-`app.asar`**. An `npm audit` result of zero findings is not worth that trade.
+Do **not** force `minimatch@11` under `@electron/asar@3.4.1`. Its
+`createPackageFromFiles()` unpack-pattern path calls the CommonJS default import
+(`minimatch_1.default(...)`), but `minimatch@11` has no default export, so that
+call fails if reached. The locked `electron-builder` instead uses
+`createPackageFromStreams()`, which does not make that call. `listPackage()`
+reads an existing archive; the reported successful-empty `app.asar` cause is not
+established.
 
 Check packaging, not just the audit, whenever a tooling dependency in the asar or
 electron-builder tree changes:
@@ -221,8 +223,8 @@ electron-builder tree changes:
 # Shipped runtime is unaffected by these dev-only entries.
 npm audit --omit=dev
 
-# An empty archive is the failure mode the audit cannot see. Pass a real
-# packaged archive, for example the one electron-builder just produced.
+# Check a real packaged archive, for example the one electron-builder just
+# produced. A nonempty list alone does not verify its full contents.
 node -e "const {listPackage}=require('@electron/asar');const files=listPackage(process.argv[1]);if(files.length===0)throw Error('empty asar');console.log(files.length+' entries')" path/to/resources/app.asar
 ```
 
@@ -667,13 +669,192 @@ Fixture ordering and failure controls: [fixture reference](native-test-reference
 
 Several specialized integration suites are skipped by default and enabled via environment variables:
 
-| Suite                        | Command                                                                                                                                | Notes                                                                                         |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| macOS fullscreen blur        | `OMXTERM_TEST_MACOS_FULLSCREEN=1 npx vitest run test/integration/macos-window-blur.test.ts`                                            | Exercises native macOS fullscreen transitions for direct blur and HUD fallback.               |
-| AltGr layout boundary        | `OMXTERM_TEST_ALTGR_NATIVE=1 npx vitest run test/integration/altgr-native.test.ts`                                                     | Requires an active US International AltGr layout (and `/dev/uinput` on Linux).                |
-| Font stroke evidence         | `OMXTERM_FONT_STYLES_EVIDENCE_PATH="$PWD/.scratch/font-obs.json" npx vitest run test/integration/restty-font-styles-rendering.test.ts` | Saves comparison JSON and synthetic glyph PNG captures alongside the test run.                |
-| Local-image preview capacity | `OMXTERM_TEST_IMAGE_CAPACITY=1 npx vitest run test/integration/local-image-capacity-native.test.ts`                                    | Measures repeated 64 MiB preview open/close cycles into `.scratch/local-image-capacity.json`. |
-| `tmux` host comparison       | `OMXTERM_TEST_IMAGE_TMUX=1 npx vitest run test/integration/restty-host-integration.test.ts`                                            | Requires `tmux` installed on a POSIX desktop.                                                 |
+| Suite                        | Command                                                                                                                                | Notes                                                                                                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS fullscreen blur        | `OMXTERM_TEST_MACOS_FULLSCREEN=1 npx vitest run test/integration/macos-window-blur.test.ts`                                            | Exercises native macOS fullscreen transitions for direct blur and HUD fallback.                                                                                                     |
+| AltGr layout boundary        | `OMXTERM_TEST_ALTGR_NATIVE=1 npx vitest run test/integration/altgr-native.test.ts`                                                     | Requires an active US International AltGr layout (and `/dev/uinput` on Linux).                                                                                                      |
+| Font stroke evidence         | `OMXTERM_FONT_STYLES_EVIDENCE_PATH="$PWD/.scratch/font-obs.json" npx vitest run test/integration/restty-font-styles-rendering.test.ts` | Saves comparison JSON and synthetic glyph PNG captures alongside the test run.                                                                                                      |
+| Local-image preview capacity | `OMXTERM_TEST_IMAGE_CAPACITY=1 npx vitest run test/integration/local-image-capacity-native.test.ts`                                    | Measures repeated 64 MiB preview open/close cycles into `.scratch/local-image-capacity.json`.                                                                                       |
+| `tmux` host comparison       | `OMXTERM_TEST_IMAGE_TMUX=1 npx vitest run test/integration/restty-host-integration.test.ts`                                            | Requires `tmux` installed on a POSIX desktop.                                                                                                                                       |
+| Performance benchmark        | `npm run perf:benchmark`                                                                                                               | Slow; real windows; reports numbers, does not gate regressions; part of the native lanes with `--fail-on-invalid`; see [the benchmark contract](#performance-regression-benchmark). |
+
+<a id="performance-regression-benchmark"></a>
+
+#### Performance benchmark
+
+`npm run perf:benchmark` measures the built application through a fixed sequence
+and writes `report.json` (machine-readable), `summary.md` (human summary) and
+`raw-observations.json` (private per-repetition samples and supervisor receipts)
+to `.scratch/performance-benchmark/run-*/artifacts/`. The raw file can contain
+machine details and process identifiers; review or redact it before sharing. **It reports numbers; it does
+not decide whether they are acceptable.** There is no threshold, no pass and no
+fail: the run prints this run's measurements, prints the matching periods of the
+recorded baseline beside them when the profile has one, and does not reject
+numeric performance changes. Numeric regression calibration is separate work.
+Operational errors (such as a missing build, unreadable baseline, fixture or
+supervisor failure, or refused recording) still exit non-zero in either mode.
+
+`--fail-on-invalid` additionally makes **data-integrity** findings exit non-zero: a missing metric, a stream repetition that did not complete,
+an arrival below the declared payload, a failed keystroke observation, an
+unverified idle window, an unapplied setting, an unstable grid, a missing
+extension-runtime window, or an unexpected skip when a baseline exists. A short
+sample is a lie whether or not anything is compared, so the native lanes
+(`npm run check`, `npm run check:linux`) call
+`npm run perf:benchmark -- --fail-on-invalid`. On Windows the benchmark is not
+part of `check:win` (installer lane), so the Windows claim rests on code and unit
+tests, not a native lane. Run it on one unlocked, idle desktop at a time.
+
+```sh
+npm run build                # the benchmark measures the built application
+npm run perf:benchmark       # report + summary; never writes a baseline
+npm run perf:benchmark -- --fail-on-invalid   # also reject invalid observations
+```
+
+What runs:
+
+- `dist/main/index.js` (production main, copied as fixture `main/index.mjs`), `dist/preload/index.cjs`,
+  `dist/extension-runtime/*` and `dist/renderer/index.html` are copied from the
+  build. The renderer entry is a fixture entry that calls the production
+  `startTerminalWindow` composition and adds observation only, so
+  `dist/renderer/index.js` is rebuilt from `src/` rather than copied. The
+  consumed main, preload, renderer HTML/CSS/bundle and extension-runtime
+  entry, package, bootstrap and native lease artifacts are hashed as provenance.
+  The separately measured runtime records hashes from its own profile. Build
+  hashes are not compared: different builds can use the same workload and machine.
+- The fixture drives the production menu actions and the production input
+  channel into the production Default Shell. Each tab replaces its shell with a
+  fixed `sh` program that emits deterministic bytes; every tab, including the
+  first, runs the same 10,000-line workload.
+- The extension runtime is a separate application-owned instance measured by its
+  own supervised fixture (production `ExtensionRuntime`, a real locally
+  installed package, activated once). Its number is a single reference
+  observation: production spawns no runtime until an extension activates.
+- Sequence: 1, 3 and 6 tabs (each tab pays exactly one fixed workload), an idle
+  window, four idle-CPU windows (cursor blink on/off × focused/unfocused), three
+  sequential stream runs (plain ASCII, the same byte volume with glyph and colour
+  variety, then ASCII again with deep history), a post-history quiet window and
+  seven synthetic keystrokes.
+  Each variant is measured in three fresh repetitions and **every repetition is
+  printed individually** next to the others; the report medians only say
+  "median of N repetitions" where a median is printed.
+
+Measurement rules:
+
+- Memory is a per-process proportional/exclusive metric, never resident set
+  size: PSS from `/proc/<pid>/smaps_rollup` on Linux, `phys_footprint` from
+  `footprint --json` on macOS, `PrivateMemorySize64` on Windows. Electron's
+  `memory.workingSetSize` and `process.getProcessMemoryInfo` are recorded as
+  reference data only.
+- Main, renderer, GPU, utility, the extension runtime and fixture PTY shells are
+  separate rows. Totals contain the application roles only; fixture shells are
+  never part of a total. Non-additive metrics also cannot combine multiple
+  processes within one role: those role aggregates are unavailable and invalidate
+  the observation rather than summing shared memory.
+- Steady values are the retained floor (the minimum) of five samples taken after
+  a memory settle that starts from an explicit renderer collection
+  (`--js-flags=--expose-gc`, reported as `rendererGcAvailable`). Peak values are
+  the maximum over the stream samples and the post-stream read, printed per
+  repetition; they are observed maxima at the metric's sampling cadence (15 ms on
+  Linux, slower where one reading costs a process launch), not kernel high-water
+  marks.
+- Idle and post-history growth are endpoint deltas over the interval the samples
+  span, and the quiescence probe brackets that same interval (silent PTY output,
+  unchanged grid and unchanged output bytes; draws are recorded, not required to
+  be zero). Settled samples must be chronological over at least four sampling
+  intervals; idle and CPU windows must span at least their configured durations.
+  Stream-group endpoints must be chronological, bracketed by the pre-stream and
+  post-stream samples. Step settles are labelled "before sampling" and idle
+  windows "across the sampled window".
+- Idle CPU is sampled only after that verification, reported per window and as
+  the median across the four windows, for every measured application process
+  (main, renderer, GPU). The renderer fixture installs no permanent
+  animation-frame loop, so the observer cannot keep the surface working during
+  idle windows; per-read observation cost is measured and reported. Active-output
+  CPU is sampled while a fixed byte stream is arriving. The two axes are never
+  merged. Focused/unfocused names are admitted only when the observed focus and
+  visible-document state match; the summary prints those observations.
+- Streams carry unique end tokens, so a marker retained by an earlier stream
+  cannot satisfy a later wait. All three repetitions of a payload must complete
+  and their arrival is checked against the declared bytes; each repetition's
+  bytes and rate are printed. Throughput is "bytes delivered to the renderer and
+  parsed into the grid", timed on the renderer clock from command write to marker
+  observation. Renderer scheduling, PTY transport and observer cost remain in
+  the interval; it is not paint timing. Per-stream observer costs are retained,
+  and CPU and peak/retained memory cover the full three-stream group. The
+  draw-counter advance during the stream is recorded, not claimed as presentation. The input axis is synthetic keydown to observed grid change
+  (parse); the next draw after the change is a repaint counter, recorded as
+  evidence and not called latency.
+- The scrollback pair runs the same sequence with `scrollback.lines` at 10,000
+  and 0 and prints the per-process delta at six tabs for each repetition.
+
+Platform profiles: the memory metric and the baseline file are per platform, in
+`PERFORMANCE_BENCHMARK_PROFILES`
+(`test/fixtures/performance-benchmark-report.ts`); this section names the
+profiles rather than restating their values.
+
+| Profile        | Metric           | Baseline file                                | Comparison                                |
+| -------------- | ---------------- | -------------------------------------------- | ----------------------------------------- |
+| `linux-arm64`  | PSS              | `test/performance/baseline.linux-arm64.json` | recorded; printed beside a comparable run |
+| `linux-x64`    | PSS              | none                                         | no measured machine class recorded        |
+| `darwin-arm64` | `phys_footprint` | none                                         | no measured machine class recorded        |
+| `win32-arm64`  | private bytes    | none                                         | no measured machine class recorded        |
+| `win32-x64`    | private bytes    | none                                         | no measured machine class recorded        |
+
+A comparison is printed only when the protocol, memory metric, machine class and identity,
+content size, pixel ratio, renderer grid, settings file and renderer collection
+availability all match the baseline; otherwise the summary prints the reasons
+and no numbers side by side. A machine identity that does not match is never
+compared. Unregistered platform combinations use a fallback profile with no
+qualified baseline; recording a file there does not qualify that platform.
+
+Recording a baseline:
+
+```sh
+npm run build
+npm run perf:baseline                                   # first baseline
+npm run perf:baseline -- --replace                      # same-machine replacement
+```
+
+Recording requires a clean tracked tree and a run with no blocking integrity
+issue, and replacing an existing baseline requires `--replace`. The file stores
+**per-repetition values for every measured family** (step steady and peak per
+role, totals, both per-tab marginals, idle growth and CPU, each named CPU window
+and the post-history window, every stream's arrival and rate, latency, the
+scrollback pair, the extension runtime). Named windows are shown individually in
+the run summary and retained in the baseline, but have no individual comparison
+rows; the table compares retained aggregates. It also stores the
+protocol, metric, machine identity, versions, build hashes, grid, applied font,
+content size, pixel ratio and source commit. It carries no tolerance and no
+acceptance status: a future gate can be calibrated from the data, which is where
+that work belongs. Summary, repeat and integrity runs for the delivered benchmark
+are retained under `docs/evidence/performance-830/`.
+
+**What this does not prove.** The report lists each of these and a reader should
+be able to predict a miss from them:
+
+- Run-to-run variation and cold versus warm streams limit interpretation; the
+  printed repetitions are descriptive, not an uncertainty bound.
+- A uniform per-tab leak is not identified as a leak by this report; no
+  allocation-shape verdict is computed.
+- The idle window is about 12 s; slower growth may not be observable in it.
+- Input latency is synthetic keydown to renderer grid observation; presentation
+  latency (what a person sees) is not measured, and the grid-change-to-draw
+  figure is a repaint counter.
+- The extension-runtime window is a single observation.
+- Only `linux-arm64` has a recorded baseline; every other platform reports and
+  compares nothing.
+- The workload is fixed. Regressions outside its exercises, other GPUs, shells,
+  extensions or user configurations are outside what this run measures.
+- Memory values are the platform metric named at the top; PSS, `phys_footprint`
+  and private bytes are not interchangeable and absolute values are
+  machine-specific.
+
+Run this only on an assigned disposable guest or held desktop, and follow the
+[Linux desktop-service prerequisites](#linux-desktop-services-and-native-verification)
+and [macOS preference precautions](#macos-preferences-and-native-verification):
+the fixture opens, focuses and blurs real windows repeatedly, and temporary
+HOME/XDG paths do not isolate OS-managed state. Leave the mouse and keyboard
+idle and run one graphical suite at a time.
 
 <a id="interruption-regressions"></a>
 

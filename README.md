@@ -67,9 +67,11 @@ launch needs your explicit permission; step 4 shows where.
 2. Open it and drag **OMXTerm.app** to **Applications**.
 3. Open OMXTerm. macOS refuses to open it because Apple has not verified this
    app.
-4. Allow it in **System Settings → Privacy & Security**, scroll to **Security**,
-   and click **Open Anyway** next to the OMXTerm message. On macOS 12, use
-   **System Preferences → Security & Privacy → General**.
+4. Verify the download using the checksum steps in the [installation
+   guide](docs/installation.md#first-launch-on-macos), then allow it in **System
+   Settings → Privacy & Security**: scroll to **Security** and click **Open
+   Anyway** next to the OMXTerm message. On macOS 12, use **System Preferences
+   → Security & Privacy → General**.
 5. Open OMXTerm again. You only do this once.
 
 ### Linux PC
@@ -178,9 +180,12 @@ replace it; on macOS, drag the new **OMXTerm.app** into
 
 OMXTerm collects no telemetry and does not download or update extensions on its
 own. On most systems, a new installation tries to install the bundled Snippets
-0.1.0 once at startup, from bytes in the app. Logs exclude terminal output,
-commands, clipboard, and settings. Report vulnerabilities through
-[SECURITY.md](SECURITY.md).
+0.1.0 once at startup, from bytes in the app. A Windows network-silence test
+observed system-proxy discovery and reachability traffic, including in an existing
+empty-profile control, but no Snippets catalog or archive acquisition; Windows is
+[not verified to stay network-silent](docs/snippets-migration.md#stable-0250-release-disposition).
+Logs exclude terminal output, commands, clipboard, and settings. Report
+vulnerabilities through [SECURITY.md](SECURITY.md).
 
 ## Contributing
 

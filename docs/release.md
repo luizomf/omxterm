@@ -136,7 +136,15 @@ npm ci
 npm run check
 ```
 
-`npm run check` verifies the staged app (`release/mac-arm64/OMXTerm.app`). Afterwards, mount and verify the final `.dmg` image:
+`npm run check` runs `check:portable`, the performance benchmark with
+`--fail-on-invalid`, builds the staged app (`release/mac-arm64/OMXTerm.app`) and
+verifies it. The benchmark reports measurements and does not gate regressions;
+`--fail-on-invalid` only rejects a run that is not a valid observation (a missing
+metric, a short stream, an unverified idle window, an unexpected skip). No macOS
+baseline is committed today, so on this lane the benchmark prints this run's
+numbers and states that there is nothing to compare; recording a macOS baseline
+is possible once a suitable desktop records one. Afterwards, mount and verify the
+final `.dmg` image:
 
 ```sh
 (

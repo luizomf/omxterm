@@ -36,10 +36,11 @@ The first launch is blocked because the project has no Apple Developer ID, so
 Apple has not verified this app. You must allow OMXTerm once.
 
 1. Open OMXTerm. macOS refuses to open it and shows a warning.
-2. Allow it: open **System Settings → Privacy & Security**, scroll down to
-   **Security**, and click **Open Anyway** next to the OMXTerm message. On macOS
-   12 Monterey, open **System Preferences → Security & Privacy → General** and
-   click **Open Anyway** there. See
+2. Verify the download using the checksum steps below, then allow it: open
+   **System Settings → Privacy & Security**, scroll down to **Security**, and
+   click **Open Anyway** next to the OMXTerm message. On macOS 12 Monterey, open
+   **System Preferences → Security & Privacy → General** and click **Open
+   Anyway** there. See
    [Apple's instructions](https://support.apple.com/en-us/102445) or the
    [Monterey instructions](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/12.0/mac).
 3. Open OMXTerm again. A window opens with your shell.
@@ -111,11 +112,11 @@ sudo dnf install fontconfig file xorg-x11-server-Xwayland
 
 1. Download the AppImage for your architecture from the
    [download table](../README.md#platforms-and-downloads).
-2. Optional: download the matching `.sha256` file into the same folder, then run
+2. In the terminal, go to the folder with the download (for example,
+   `cd ~/Downloads`).
+3. Optional: download the matching `.sha256` file into the same folder, then run
    `sha256sum --check OMXTerm-0.25.0-arm64.AppImage.sha256`. A valid file prints
    `OK`.
-3. In the terminal, go to the folder with the download (for example,
-   `cd ~/Downloads`).
 4. Make the file executable (allow it to run) with
    `chmod +x OMXTerm-0.25.0-arm64.AppImage`.
 5. Start OMXTerm with `./OMXTerm-0.25.0-arm64.AppImage`.
@@ -131,7 +132,8 @@ that lets a single downloaded file run like an installed app.
 ### Add it to your application menu (optional)
 
 Download the AppImage, `linux_install.sh`, and both matching `.sha256` files from
-the same target row. Put them in one folder.
+the same target row. Put them in one folder and run the commands below from that
+folder (for example, `cd ~/Downloads`).
 
 1. Verify both downloads:
 
@@ -220,7 +222,7 @@ Each guide says which OMXTerm versions and systems it works with.
   terminal. On OMXTerm 0.24.0, install the
   [Files 0.6 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.6.0).
   [Files guide](files-development-preview.md)
-- **SSH Connect** keeps SSH sessions in a panel. Linux and macOS ARM64 only;
-  Windows is untested. [SSH Connect guide](ssh-connect.md)
-- **Snippets** stores reusable text; updates are manual. Windows ARM64 has known
-  install failures. [Snippets guide](snippets-migration.md)
+- **SSH Connect** lists targets and opens SSH connections in normal terminal tabs.
+  Linux and macOS ARM64 only; Windows is untested. [SSH Connect guide](ssh-connect.md)
+- **Snippets** stores reusable text; updates are manual. Windows ARM64 public-install
+  Snippets scenarios have unresolved failures of unknown cause. [Known limits](snippets-migration.md#stable-0250-release-disposition)

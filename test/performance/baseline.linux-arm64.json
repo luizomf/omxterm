@@ -1,0 +1,2452 @@
+{
+  "schema": 5,
+  "profileKey": "linux-arm64",
+  "protocol": "application-tabs-scrollback-idle-input-attribution:6359733f8ead",
+  "recordedAtUtc": "2026-11-09T12:19:38.128Z",
+  "sourceCommit": "573eb96de4a620b2106ad1eb00d98aa163682b6e",
+  "metric": {
+    "name": "pss",
+    "source": "linux /proc/<pid>/smaps_rollup Pss",
+    "addable": true,
+    "qualification": "PSS is measured on Linux ARM64 by this lane and is the metric this report compares",
+    "sampleIntervalMs": 15
+  },
+  "machine": {
+    "platform": "linux",
+    "arch": "arm64",
+    "logicalCpus": 4,
+    "gpuClass": "virtualized",
+    "gpuApi": "angle",
+    "class": "linux-arm64-4cpu-virtualized",
+    "identityHash": "9d4c154fdc0caa15"
+  },
+  "versions": {
+    "electron": "43.8.1",
+    "chrome": "150.0.7871.250",
+    "node": "24.22.0"
+  },
+  "identity": {
+    "contentSize": {
+      "width": 960,
+      "height": 640
+    },
+    "requestedContentSize": {
+      "width": 960,
+      "height": 640
+    },
+    "devicePixelRatio": 1,
+    "grid": {
+      "tab-0": {
+        "columns": 118,
+        "rows": 37,
+        "cellWidth": 8,
+        "cellHeight": 16
+      },
+      "tab-1": {
+        "columns": 118,
+        "rows": 35,
+        "cellWidth": 8,
+        "cellHeight": 16.011484098939928
+      },
+      "tab-2": {
+        "columns": 118,
+        "rows": 35,
+        "cellWidth": 8,
+        "cellHeight": 16.011484098939928
+      },
+      "tab-3": {
+        "columns": 118,
+        "rows": 35,
+        "cellWidth": 8,
+        "cellHeight": 16.011484098939928
+      },
+      "tab-4": {
+        "columns": 118,
+        "rows": 35,
+        "cellWidth": 8,
+        "cellHeight": 16.011484098939928
+      },
+      "tab-5": {
+        "columns": 118,
+        "rows": 35,
+        "cellWidth": 8,
+        "cellHeight": 16.011484098939928
+      }
+    },
+    "settingsSha256": "da58202e19b33e3ec91c3c12a14bb95a79b8aadf6185267f97a120f53875d9ad",
+    "settingsLines": 10000,
+    "applied": {
+      "fontSize": 16,
+      "fontLineHeight": 1,
+      "fontLigatures": false,
+      "fontFamily": null,
+      "scrollbackLines": 10000,
+      "terminalPadding": {
+        "top": 0,
+        "right": 8,
+        "bottom": 8,
+        "left": 8
+      }
+    },
+    "build": {
+      "main": "353be67b3c668f6d4bd0fe6b16da2c1b4f6cd603855e6ecee33588352e9e41d6",
+      "preload": "13897f4da9366a4c57fdee31fd61f9d6b64209f6e27e1a25b59bdea523515530",
+      "rendererHtml": "dbf9e99cdbda32308e3c94a01559c2f80979d0aa1eef8f1882514df22e996e42",
+      "rendererCss": "01d066ac729604ad1854f2dfe34a79677a588955d1a16e18b533e9645adea575",
+      "rendererBundle": "df7c7ddc16405307a4a52abd37430c81c578cf95e5b79cb6dd3b77bd81e9284c",
+      "extensionIndex": "3a028677fbbe0f9875a38b220b9446cc031166c1ceaba84f8b437ebb920342fe",
+      "extensionPackages": "95f0b1705f7a013a541cde669823fbaa1d2dcd6a76397cac39df35899d84a226",
+      "extensionBootstrap": "9bfc2021f88fc8fe2b9f51b469c0442c64a625e146bf9e292ec742aa339d81b0",
+      "extensionLeases": "fe5239919c41aada2bcce52ce6e707c416ff1777401feb38434f4946729132c5"
+    }
+  },
+  "measurementControl": {
+    "rendererGcAvailable": true
+  },
+  "repetitionsRequested": 3,
+  "variants": {
+    "0": {
+      "scrollbackLines": 0,
+      "repetitions": [
+        {
+          "index": 1,
+          "steps": {
+            "one": {
+              "tabs": 1,
+              "roles": {
+                "main": {
+                  "steadyBytes": 108692480,
+                  "peakBytes": 108788736
+                },
+                "renderer": {
+                  "steadyBytes": 222237696,
+                  "peakBytes": 228483072
+                },
+                "gpu": {
+                  "steadyBytes": 57445376,
+                  "peakBytes": 57500672
+                },
+                "utility": {
+                  "steadyBytes": 25830400,
+                  "peakBytes": 25878528
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 5814272,
+                  "peakBytes": 5918720
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 414368768
+            },
+            "three": {
+              "tabs": 3,
+              "roles": {
+                "main": {
+                  "steadyBytes": 109966336,
+                  "peakBytes": 110056448
+                },
+                "renderer": {
+                  "steadyBytes": 234006528,
+                  "peakBytes": 235937792
+                },
+                "gpu": {
+                  "steadyBytes": 58278912,
+                  "peakBytes": 58303488
+                },
+                "utility": {
+                  "steadyBytes": 25865216,
+                  "peakBytes": 25880576
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 12408832,
+                  "peakBytes": 12476416
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 428242944
+            },
+            "six": {
+              "tabs": 6,
+              "roles": {
+                "main": {
+                  "steadyBytes": 106988544,
+                  "peakBytes": 107000832
+                },
+                "renderer": {
+                  "steadyBytes": 237711360,
+                  "peakBytes": 238649344
+                },
+                "gpu": {
+                  "steadyBytes": 59836416,
+                  "peakBytes": 59849728
+                },
+                "utility": {
+                  "steadyBytes": 25868288,
+                  "peakBytes": 25879552
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 28641280,
+                  "peakBytes": 28684288
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 430433280
+            }
+          },
+          "marginal": {
+            "oneToThree": {
+              "perTab": {
+                "main": 636928,
+                "renderer": 5884416,
+                "gpu": 416768
+              },
+              "total": 6937088
+            },
+            "threeToSix": {
+              "perTab": {
+                "main": -992597.3333333334,
+                "renderer": 1234944,
+                "gpu": 519168
+              },
+              "total": 730112
+            }
+          },
+          "idle": {
+            "windowMs": 12209.451256,
+            "growthBytes": {
+              "main": -2736128,
+              "renderer": 413696,
+              "gpu": 16384,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -2306048,
+            "cpuPercentOneCore": {
+              "main": 1.7199790195059048,
+              "renderer": 6.552301026689155,
+              "gpu": 2.129497833673976,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            }
+          },
+          "idleCpuWindows": [
+            {
+              "name": "blink-off-focused",
+              "windowMs": 4050.5244600000005,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -114688,
+                "renderer": -90112,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": -200704,
+              "cpuPercentOneCore": {
+                "main": 0.7406448299783882,
+                "renderer": 7.406448299783871,
+                "gpu": 2.221934489935162,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 10.369027619697423,
+              "draws": 54,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 4.557748999999603,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-off-unfocused",
+              "windowMs": 4074.8469609999956,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": 2048,
+                "renderer": 434176,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 440320,
+              "cpuPercentOneCore": {
+                "main": 1.7178559261234525,
+                "renderer": 7.362239683386237,
+                "gpu": 2.4540798944620827,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 11.53417550397175,
+              "draws": 54,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 5.870667000002868,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-focused",
+              "windowMs": 4068.2758350000004,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -143360,
+                "renderer": 466944,
+                "gpu": 8192,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 331776,
+              "cpuPercentOneCore": {
+                "main": 1.7206306268070453,
+                "renderer": 6.390913756711871,
+                "gpu": 2.212239377323338,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 10.323783760842238,
+              "draws": 37,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 1.1407919999983278,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-unfocused",
+              "windowMs": 4063.6724190000023,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -57344,
+                "renderer": 1171456,
+                "gpu": 2048,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 1116160,
+              "cpuPercentOneCore": {
+                "main": 1.4764969666222503,
+                "renderer": 6.39815352202974,
+                "gpu": 2.214745449933375,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 10.08939593858537,
+              "draws": 48,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 5.951165999998921,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            }
+          ],
+          "quiet": {
+            "name": "sitting-still-after-history",
+            "windowMs": 4091.1980440000043,
+            "sampleTimesValid": true,
+            "applicationMemoryComplete": true,
+            "growthBytes": {
+              "main": -225280,
+              "renderer": 3145728,
+              "gpu": 4096,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": 2924544,
+            "cpuPercentOneCore": {
+              "main": 1.9554174385990686,
+              "renderer": 8.554951293870909,
+              "gpu": 2.6886989780737136,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalCpuPercentOneCore": 13.199067710543723,
+            "draws": 51,
+            "quiescenceVerified": true,
+            "quiescenceScope": "sampled-window",
+            "observerCostMs": 3.6594590000022436,
+            "documentHasFocus": true,
+            "visibilityState": "visible"
+          },
+          "idleCpuMedianPercent": {
+            "main": 1.5971764463728513,
+            "renderer": 6.880196602707988,
+            "gpu": 2.2183399699342683,
+            "utility": 0,
+            "extension-runtime": null,
+            "shell": 0,
+            "other": null
+          },
+          "idleCpuTotalMedianPercent": 10.34640569026983,
+          "streams": [
+            {
+              "name": "ascii",
+              "expectedBytes": 328000,
+              "rates": [
+                11632695.034231627, 12764280.154161848, 12194869.892529018
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 106683392,
+                "renderer": 242383872,
+                "gpu": 60084224
+              },
+              "retained": {
+                "main": -1626112,
+                "renderer": -16384,
+                "gpu": -377856
+              },
+              "cpuPercentOneCore": 98.19155699896972
+            },
+            {
+              "name": "variety",
+              "expectedBytes": 328000,
+              "rates": [
+                2570893.416747762, 21440915.036856137, 14201125.535629094
+              ],
+              "bytes": [328046, 328046, 328046],
+              "peaks": {
+                "main": 115745792,
+                "renderer": 259445760,
+                "gpu": 59704320
+              },
+              "retained": {
+                "main": 9959424,
+                "renderer": 36132864,
+                "gpu": -16384
+              },
+              "cpuPercentOneCore": 154.77480201468745
+            },
+            {
+              "name": "deep-history",
+              "expectedBytes": 328000,
+              "rates": [26888688.51802176, 17925792.352646064, 20502625],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 115991552,
+                "renderer": 282326016,
+                "gpu": 59692032
+              },
+              "retained": {
+                "main": -959488,
+                "renderer": 1885184,
+                "gpu": -11264
+              },
+              "cpuPercentOneCore": 148.2085870610246
+            }
+          ],
+          "latency": {
+            "medianMs": 13.200000002980232,
+            "medianCorrectedMs": 13.200000002980232,
+            "failures": 0,
+            "medianGridToDrawMs": 506
+          }
+        },
+        {
+          "index": 2,
+          "steps": {
+            "one": {
+              "tabs": 1,
+              "roles": {
+                "main": {
+                  "steadyBytes": 108940288,
+                  "peakBytes": 108989440
+                },
+                "renderer": {
+                  "steadyBytes": 217055232,
+                  "peakBytes": 217259008
+                },
+                "gpu": {
+                  "steadyBytes": 57040896,
+                  "peakBytes": 57067520
+                },
+                "utility": {
+                  "steadyBytes": 25931776,
+                  "peakBytes": 25979904
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 2914304,
+                  "peakBytes": 3018752
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 409042944
+            },
+            "three": {
+              "tabs": 3,
+              "roles": {
+                "main": {
+                  "steadyBytes": 110396416,
+                  "peakBytes": 110572544
+                },
+                "renderer": {
+                  "steadyBytes": 223912960,
+                  "peakBytes": 224568320
+                },
+                "gpu": {
+                  "steadyBytes": 58442752,
+                  "peakBytes": 58458112
+                },
+                "utility": {
+                  "steadyBytes": 25965568,
+                  "peakBytes": 25981952
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 11024384,
+                  "peakBytes": 11091968
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 418917376
+            },
+            "six": {
+              "tabs": 6,
+              "roles": {
+                "main": {
+                  "steadyBytes": 107119616,
+                  "peakBytes": 107193344
+                },
+                "renderer": {
+                  "steadyBytes": 227974144,
+                  "peakBytes": 228443136
+                },
+                "gpu": {
+                  "steadyBytes": 60150784,
+                  "peakBytes": 60166144
+                },
+                "utility": {
+                  "steadyBytes": 25969664,
+                  "peakBytes": 25980928
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 23406592,
+                  "peakBytes": 23449600
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 421310464
+            }
+          },
+          "marginal": {
+            "oneToThree": {
+              "perTab": {
+                "main": 728064,
+                "renderer": 3428864,
+                "gpu": 700928
+              },
+              "total": 4937216
+            },
+            "threeToSix": {
+              "perTab": {
+                "main": -1092266.6666666667,
+                "renderer": 1353728,
+                "gpu": 569344
+              },
+              "total": 797696
+            }
+          },
+          "idle": {
+            "windowMs": 12124.320921999999,
+            "growthBytes": {
+              "main": -2666496,
+              "renderer": 1857536,
+              "gpu": 18432,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -790528,
+            "cpuPercentOneCore": {
+              "main": 1.3196615384015002,
+              "renderer": 5.773519230506556,
+              "gpu": 2.556844230652905,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            }
+          },
+          "idleCpuWindows": [
+            {
+              "name": "blink-off-focused",
+              "windowMs": 4071.044584999996,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -57344,
+                "renderer": 694272,
+                "gpu": 6144,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 643072,
+              "cpuPercentOneCore": {
+                "main": 1.4738232104132094,
+                "renderer": 7.6147532538015765,
+                "gpu": 3.1932836225619483,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 12.281860086776733,
+              "draws": 54,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 1.1737500000017462,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-off-unfocused",
+              "windowMs": 4050.2392929999987,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": 0,
+                "renderer": -47104,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": -43008,
+              "cpuPercentOneCore": {
+                "main": 0.9875959691846298,
+                "renderer": 8.394565738069353,
+                "gpu": 3.950383876738519,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 13.332545583992513,
+              "draws": 51,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 0.9538749999992433,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-focused",
+              "windowMs": 4114.475627,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -118784,
+                "renderer": 393216,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 278528,
+              "cpuPercentOneCore": {
+                "main": 2.187399031103802,
+                "renderer": 9.23568479799382,
+                "gpu": 3.4026207150503587,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 14.825704544147985,
+              "draws": 42,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 1.1745829999999842,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-unfocused",
+              "windowMs": 4053.1222519999938,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": 12288,
+                "renderer": 200704,
+                "gpu": 2048,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 215040,
+              "cpuPercentOneCore": {
+                "main": 1.2336168733950121,
+                "renderer": 6.908254491012077,
+                "gpu": 2.4672337467900296,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 10.60910511119709,
+              "draws": 38,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 1.0125830000033602,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            }
+          ],
+          "quiet": {
+            "name": "sitting-still-after-history",
+            "windowMs": 4025.4540860000125,
+            "sampleTimesValid": true,
+            "applicationMemoryComplete": true,
+            "growthBytes": {
+              "main": -208896,
+              "renderer": 1558528,
+              "gpu": 6144,
+              "utility": 1024,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": 1356800,
+            "cpuPercentOneCore": {
+              "main": 0.7452575376362077,
+              "renderer": 7.452575376362121,
+              "gpu": 2.7326109713327873,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalCpuPercentOneCore": 10.930443885331107,
+            "draws": 51,
+            "quiescenceVerified": true,
+            "quiescenceScope": "sampled-window",
+            "observerCostMs": 0.9070409999840194,
+            "documentHasFocus": true,
+            "visibilityState": "visible"
+          },
+          "idleCpuMedianPercent": {
+            "main": 1.3537200419041109,
+            "renderer": 8.004659495935465,
+            "gpu": 3.2979521688061535,
+            "utility": 0,
+            "extension-runtime": null,
+            "shell": 0,
+            "other": null
+          },
+          "idleCpuTotalMedianPercent": 12.807202835384622,
+          "streams": [
+            {
+              "name": "ascii",
+              "expectedBytes": 328000,
+              "rates": [
+                12016190.470943438, 15401032.866004633, 22016241.62394903
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 107248640,
+                "renderer": 235462656,
+                "gpu": 60253184
+              },
+              "retained": {
+                "main": 146432,
+                "renderer": 7999488,
+                "gpu": -586752
+              },
+              "cpuPercentOneCore": 93.51155676961181
+            },
+            {
+              "name": "variety",
+              "expectedBytes": 328000,
+              "rates": [
+                2609753.38131353, 10187763.978926945, 10093723.076923078
+              ],
+              "bytes": [328046, 328046, 328046],
+              "peaks": {
+                "main": 116577280,
+                "renderer": 262832128,
+                "gpu": 59666432
+              },
+              "retained": {
+                "main": 8411136,
+                "renderer": 36321280,
+                "gpu": -10240
+              },
+              "cpuPercentOneCore": 171.98791191970005
+            },
+            {
+              "name": "deep-history",
+              "expectedBytes": 328000,
+              "rates": [
+                21440653.59894759, 15401032.866004633, 16320497.505178278
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 116289536,
+                "renderer": 284944384,
+                "gpu": 59660288
+              },
+              "retained": {
+                "main": -634880,
+                "renderer": 20955136,
+                "gpu": -12288
+              },
+              "cpuPercentOneCore": 96.3087208346829
+            }
+          ],
+          "latency": {
+            "medianMs": 13.700000002980232,
+            "medianCorrectedMs": 13.700000002980232,
+            "failures": 0,
+            "medianGridToDrawMs": 512.6000000089407
+          }
+        },
+        {
+          "index": 3,
+          "steps": {
+            "one": {
+              "tabs": 1,
+              "roles": {
+                "main": {
+                  "steadyBytes": 108635136,
+                  "peakBytes": 108797952
+                },
+                "renderer": {
+                  "steadyBytes": 226128896,
+                  "peakBytes": 227341312
+                },
+                "gpu": {
+                  "steadyBytes": 57328640,
+                  "peakBytes": 57383936
+                },
+                "utility": {
+                  "steadyBytes": 25857024,
+                  "peakBytes": 25905152
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 4249600,
+                  "peakBytes": 4354048
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 418125824
+            },
+            "three": {
+              "tabs": 3,
+              "roles": {
+                "main": {
+                  "steadyBytes": 110901248,
+                  "peakBytes": 110953472
+                },
+                "renderer": {
+                  "steadyBytes": 232980480,
+                  "peakBytes": 233338880
+                },
+                "gpu": {
+                  "steadyBytes": 58172416,
+                  "peakBytes": 58179584
+                },
+                "utility": {
+                  "steadyBytes": 25893888,
+                  "peakBytes": 25909248
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 11909120,
+                  "peakBytes": 11976704
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 427996160
+            },
+            "six": {
+              "tabs": 6,
+              "roles": {
+                "main": {
+                  "steadyBytes": 107117568,
+                  "peakBytes": 107128832
+                },
+                "renderer": {
+                  "steadyBytes": 243621888,
+                  "peakBytes": 243914752
+                },
+                "gpu": {
+                  "steadyBytes": 60059648,
+                  "peakBytes": 60209152
+                },
+                "utility": {
+                  "steadyBytes": 25890816,
+                  "peakBytes": 25901056
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 23713792,
+                  "peakBytes": 23756800
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 436849664
+            }
+          },
+          "marginal": {
+            "oneToThree": {
+              "perTab": {
+                "main": 1133056,
+                "renderer": 3425792,
+                "gpu": 421888
+              },
+              "total": 4935168
+            },
+            "threeToSix": {
+              "perTab": {
+                "main": -1261226.6666666667,
+                "renderer": 3547136,
+                "gpu": 629077.3333333334
+              },
+              "total": 2951168
+            }
+          },
+          "idle": {
+            "windowMs": 12230.942672999998,
+            "growthBytes": {
+              "main": -2496512,
+              "renderer": -3985408,
+              "gpu": -51200,
+              "utility": -3072,
+              "extension-runtime": null,
+              "shell": -43008,
+              "other": null
+            },
+            "totalGrowthBytes": -6536192,
+            "cpuPercentOneCore": {
+              "main": 2.0439961717086534,
+              "renderer": 7.521905911887845,
+              "gpu": 2.8615946403921146,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            }
+          },
+          "idleCpuWindows": [
+            {
+              "name": "blink-off-focused",
+              "windowMs": 4120.505084999997,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -65536,
+                "renderer": 735232,
+                "gpu": 6144,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 675840,
+              "cpuPercentOneCore": {
+                "main": 1.4561321673505494,
+                "renderer": 8.979481698661704,
+                "gpu": 4.125707807493218,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 14.561321673505494,
+              "draws": 54,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 0.9312089999948512,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-off-unfocused",
+              "windowMs": 4034.277627000003,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": 5120,
+                "renderer": 333824,
+                "gpu": 6144,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 345088,
+              "cpuPercentOneCore": {
+                "main": 0.4957517020183996,
+                "renderer": 15.12042691156116,
+                "gpu": 5.45326872220239,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 21.069447335781977,
+              "draws": 51,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 6.072458999995433,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-focused",
+              "windowMs": 4052.5124189999988,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -110592,
+                "renderer": 225280,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 118784,
+              "cpuPercentOneCore": {
+                "main": 1.2338025113896596,
+                "renderer": 11.844504109340763,
+                "gpu": 4.194928538724856,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 17.27323515945528,
+              "draws": 37,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 0.9504999999990105,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-unfocused",
+              "windowMs": 4051.4243769999957,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": 4096,
+                "renderer": -1224704,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": -1216512,
+              "cpuPercentOneCore": {
+                "main": 0.7404803152765366,
+                "renderer": 9.873070870353821,
+                "gpu": 2.4682677175884553,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 13.081818903218785,
+              "draws": 48,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 1.1309590000018943,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            }
+          ],
+          "quiet": {
+            "name": "sitting-still-after-history",
+            "windowMs": 4080.877376999997,
+            "sampleTimesValid": true,
+            "applicationMemoryComplete": true,
+            "growthBytes": {
+              "main": -229376,
+              "renderer": -673792,
+              "gpu": 6144,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -897024,
+            "cpuPercentOneCore": {
+              "main": 1.9603627506889467,
+              "renderer": 8.0864963465919,
+              "gpu": 3.185589469869533,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalCpuPercentOneCore": 13.232448567150357,
+            "draws": 51,
+            "quiescenceVerified": true,
+            "quiescenceScope": "sampled-window",
+            "observerCostMs": 1.1308339999959571,
+            "documentHasFocus": true,
+            "visibilityState": "visible"
+          },
+          "idleCpuMedianPercent": {
+            "main": 0.987141413333098,
+            "renderer": 10.858787489847291,
+            "gpu": 4.160318173109037,
+            "utility": 0,
+            "extension-runtime": null,
+            "shell": 0,
+            "other": null
+          },
+          "idleCpuTotalMedianPercent": 15.917278416480386,
+          "streams": [
+            {
+              "name": "ascii",
+              "expectedBytes": 328000,
+              "rates": [
+                14451189.42541551, 18429325.84578223, 19643233.546956025
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 106913792,
+                "renderer": 240247808,
+                "gpu": 60240896
+              },
+              "retained": {
+                "main": 475136,
+                "renderer": 731136,
+                "gpu": -689152
+              },
+              "cpuPercentOneCore": 89.2313833943625
+            },
+            {
+              "name": "variety",
+              "expectedBytes": 328000,
+              "rates": [
+                2413877.851520101, 18853218.400492005, 10414158.73015873
+              ],
+              "bytes": [328046, 328046, 328046],
+              "peaks": {
+                "main": 116859904,
+                "renderer": 258324480,
+                "gpu": 59551744
+              },
+              "retained": {
+                "main": 8071168,
+                "renderer": 38051840,
+                "gpu": -8192
+              },
+              "cpuPercentOneCore": 150.8603640150201
+            },
+            {
+              "name": "deep-history",
+              "expectedBytes": 328000,
+              "rates": [
+                13611701.248179754, 13841434.597415581, 12966086.958049089
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 116271104,
+                "renderer": 281150464,
+                "gpu": 59551744
+              },
+              "retained": {
+                "main": -716800,
+                "renderer": 4188160,
+                "gpu": -10240
+              },
+              "cpuPercentOneCore": 93.32672422507022
+            }
+          ],
+          "latency": {
+            "medianMs": 22.099999994039536,
+            "medianCorrectedMs": 22,
+            "failures": 0,
+            "medianGridToDrawMs": 482.30000001192093
+          }
+        }
+      ]
+    },
+    "10000": {
+      "scrollbackLines": 10000,
+      "repetitions": [
+        {
+          "index": 1,
+          "steps": {
+            "one": {
+              "tabs": 1,
+              "roles": {
+                "main": {
+                  "steadyBytes": 108765184,
+                  "peakBytes": 108858368
+                },
+                "renderer": {
+                  "steadyBytes": 239269888,
+                  "peakBytes": 240280576
+                },
+                "gpu": {
+                  "steadyBytes": 57504768,
+                  "peakBytes": 57575424
+                },
+                "utility": {
+                  "steadyBytes": 25893888,
+                  "peakBytes": 25942016
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 3848192,
+                  "peakBytes": 3952640
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 431495168
+            },
+            "three": {
+              "tabs": 3,
+              "roles": {
+                "main": {
+                  "steadyBytes": 110617600,
+                  "peakBytes": 110755840
+                },
+                "renderer": {
+                  "steadyBytes": 263190528,
+                  "peakBytes": 265314304
+                },
+                "gpu": {
+                  "steadyBytes": 58713088,
+                  "peakBytes": 58720256
+                },
+                "utility": {
+                  "steadyBytes": 25927680,
+                  "peakBytes": 25938944
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 12249088,
+                  "peakBytes": 12316672
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 458571776
+            },
+            "six": {
+              "tabs": 6,
+              "roles": {
+                "main": {
+                  "steadyBytes": 107171840,
+                  "peakBytes": 107188224
+                },
+                "renderer": {
+                  "steadyBytes": 296116224,
+                  "peakBytes": 296997888
+                },
+                "gpu": {
+                  "steadyBytes": 60265472,
+                  "peakBytes": 60274688
+                },
+                "utility": {
+                  "steadyBytes": 25926656,
+                  "peakBytes": 25938944
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 24557568,
+                  "peakBytes": 24600576
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 489481216
+            }
+          },
+          "marginal": {
+            "oneToThree": {
+              "perTab": {
+                "main": 926208,
+                "renderer": 11960320,
+                "gpu": 604160
+              },
+              "total": 13538304
+            },
+            "threeToSix": {
+              "perTab": {
+                "main": -1148586.6666666667,
+                "renderer": 10975232,
+                "gpu": 517461.3333333333
+              },
+              "total": 10303146.666666666
+            }
+          },
+          "idle": {
+            "windowMs": 12163.717713999999,
+            "growthBytes": {
+              "main": -2985984,
+              "renderer": 1576960,
+              "gpu": 4096,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -1404928,
+            "cpuPercentOneCore": {
+              "main": 1.8908692671754321,
+              "renderer": 6.165878045137279,
+              "gpu": 2.055292681712426,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            }
+          },
+          "idleCpuWindows": [
+            {
+              "name": "blink-off-focused",
+              "windowMs": 4071.81121,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -40960,
+                "renderer": 802816,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 765952,
+              "cpuPercentOneCore": {
+                "main": 1.473545724630982,
+                "renderer": 6.630955760839413,
+                "gpu": 2.21031858694647,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 10.314820072416863,
+              "draws": 51,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 19.98229100000026,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-off-unfocused",
+              "windowMs": 4056.628585999999,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -38912,
+                "renderer": -18432,
+                "gpu": 6144,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": -51200,
+              "cpuPercentOneCore": {
+                "main": 1.2325506005789424,
+                "renderer": 6.40926312301049,
+                "gpu": 1.972080960926308,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 9.613894684515735,
+              "draws": 51,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 19.10362599999644,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-focused",
+              "windowMs": 4057.1064599999954,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -53248,
+                "renderer": 276480,
+                "gpu": 2048,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 225280,
+              "cpuPercentOneCore": {
+                "main": 0.9859243378099593,
+                "renderer": 6.654989280217208,
+                "gpu": 1.971848675619913,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 9.612762293647087,
+              "draws": 38,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 16.155541999993147,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-unfocused",
+              "windowMs": 4064.1774179999993,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": 0,
+                "renderer": -190464,
+                "gpu": 6144,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": -184320,
+              "cpuPercentOneCore": {
+                "main": 1.230261252339847,
+                "renderer": 7.627619764507035,
+                "gpu": 2.2144702542117245,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 11.072351271058595,
+              "draws": 50,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 18.57170799999585,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            }
+          ],
+          "quiet": {
+            "name": "sitting-still-after-history",
+            "windowMs": 4070.8635020000074,
+            "sampleTimesValid": true,
+            "applicationMemoryComplete": true,
+            "growthBytes": {
+              "main": -225280,
+              "renderer": -610304,
+              "gpu": 4096,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -831488,
+            "cpuPercentOneCore": {
+              "main": 1.4738887700489631,
+              "renderer": 7.123795721903317,
+              "gpu": 2.2108331550734395,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalCpuPercentOneCore": 10.808517647025752,
+            "draws": 51,
+            "quiescenceVerified": true,
+            "quiescenceScope": "sampled-window",
+            "observerCostMs": 18.71333300000697,
+            "documentHasFocus": true,
+            "visibilityState": "visible"
+          },
+          "idleCpuMedianPercent": {
+            "main": 1.2314059264593946,
+            "renderer": 6.6429725205283106,
+            "gpu": 2.0911997739363892,
+            "utility": 0,
+            "extension-runtime": null,
+            "shell": 0,
+            "other": null
+          },
+          "idleCpuTotalMedianPercent": 9.9643573784663,
+          "streams": [
+            {
+              "name": "ascii",
+              "expectedBytes": 328000,
+              "rates": [
+                6935348.837646279, 13069402.39354182, 18024285.711334255
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 106906624,
+                "renderer": 306672640,
+                "gpu": 60350464
+              },
+              "retained": {
+                "main": -482304,
+                "renderer": -1155072,
+                "gpu": -586752
+              },
+              "cpuPercentOneCore": 89.42671156535745
+            },
+            {
+              "name": "variety",
+              "expectedBytes": 328000,
+              "rates": [
+                2686699.4268305814, 10062760.733436562, 9620117.303734321
+              ],
+              "bytes": [328046, 328046, 328046],
+              "peaks": {
+                "main": 115985408,
+                "renderer": 320117760,
+                "gpu": 59761664
+              },
+              "retained": {
+                "main": 9074688,
+                "renderer": 35736576,
+                "gpu": -29696
+              },
+              "cpuPercentOneCore": 158.96358553377692
+            },
+            {
+              "name": "deep-history",
+              "expectedBytes": 328000,
+              "rates": [
+                10790855.266331505, 22468630.146159142, 16736836.727059236
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 116386816,
+                "renderer": 344175616,
+                "gpu": 59739136
+              },
+              "retained": {
+                "main": -883712,
+                "renderer": 9108480,
+                "gpu": -1024
+              },
+              "cpuPercentOneCore": 144.6778989866313
+            }
+          ],
+          "latency": {
+            "medianMs": 26.400000005960464,
+            "medianCorrectedMs": 16,
+            "failures": 0,
+            "medianGridToDrawMs": 485.59999999403954
+          }
+        },
+        {
+          "index": 2,
+          "steps": {
+            "one": {
+              "tabs": 1,
+              "roles": {
+                "main": {
+                  "steadyBytes": 108846080,
+                  "peakBytes": 108984320
+                },
+                "renderer": {
+                  "steadyBytes": 241746944,
+                  "peakBytes": 243647488
+                },
+                "gpu": {
+                  "steadyBytes": 57320448,
+                  "peakBytes": 57375744
+                },
+                "utility": {
+                  "steadyBytes": 25920512,
+                  "peakBytes": 25968640
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 4597760,
+                  "peakBytes": 4702208
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 434038784
+            },
+            "three": {
+              "tabs": 3,
+              "roles": {
+                "main": {
+                  "steadyBytes": 111139840,
+                  "peakBytes": 111197184
+                },
+                "renderer": {
+                  "steadyBytes": 266375168,
+                  "peakBytes": 266575872
+                },
+                "gpu": {
+                  "steadyBytes": 58123264,
+                  "peakBytes": 58271744
+                },
+                "utility": {
+                  "steadyBytes": 25956352,
+                  "peakBytes": 25967616
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 10360832,
+                  "peakBytes": 10428416
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 461717504
+            },
+            "six": {
+              "tabs": 6,
+              "roles": {
+                "main": {
+                  "steadyBytes": 107088896,
+                  "peakBytes": 107243520
+                },
+                "renderer": {
+                  "steadyBytes": 299042816,
+                  "peakBytes": 301303808
+                },
+                "gpu": {
+                  "steadyBytes": 60000256,
+                  "peakBytes": 60006400
+                },
+                "utility": {
+                  "steadyBytes": 25956352,
+                  "peakBytes": 25967616
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 20736000,
+                  "peakBytes": 20779008
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 492258304
+            }
+          },
+          "marginal": {
+            "oneToThree": {
+              "perTab": {
+                "main": 1146880,
+                "renderer": 12314112,
+                "gpu": 401408
+              },
+              "total": 13839360
+            },
+            "threeToSix": {
+              "perTab": {
+                "main": -1350314.6666666667,
+                "renderer": 10889216,
+                "gpu": 625664
+              },
+              "total": 10180266.666666666
+            }
+          },
+          "idle": {
+            "windowMs": 12143.753422999998,
+            "growthBytes": {
+              "main": -2813952,
+              "renderer": 262144,
+              "gpu": 14336,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -2537472,
+            "cpuPercentOneCore": {
+              "main": 1.5645903978925013,
+              "renderer": 5.764280413288167,
+              "gpu": 2.0586715761743446,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            }
+          },
+          "idleCpuWindows": [
+            {
+              "name": "blink-off-focused",
+              "windowMs": 4079.2195859999993,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -188416,
+                "renderer": 518144,
+                "gpu": 10240,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 339968,
+              "cpuPercentOneCore": {
+                "main": 1.470869580199159,
+                "renderer": 6.61891311089621,
+                "gpu": 2.206304370298738,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 10.296087061394102,
+              "draws": 51,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 19.76037499999802,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-off-unfocused",
+              "windowMs": 4044.410376,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -72704,
+                "renderer": -63488,
+                "gpu": 7168,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": -129024,
+              "cpuPercentOneCore": {
+                "main": 0.7417644900236455,
+                "renderer": 5.43960626017343,
+                "gpu": 1.9780386400630694,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 8.159409390260155,
+              "draws": 51,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 15.294041000001016,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-focused",
+              "windowMs": 4078.2338769999988,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -155648,
+                "renderer": 483328,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 331776,
+              "cpuPercentOneCore": {
+                "main": 1.4712250893305026,
+                "renderer": 6.130104538877089,
+                "gpu": 1.9616334524406647,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 9.562963080648252,
+              "draws": 40,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 20.27595900000597,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-unfocused",
+              "windowMs": 4068.7936680000057,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -36864,
+                "renderer": -40960,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": -73728,
+              "cpuPercentOneCore": {
+                "main": 1.4746385512709652,
+                "renderer": 7.373192756354816,
+                "gpu": 2.2119578269064477,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 11.059789134532233,
+              "draws": 50,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 19.360124999999243,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            }
+          ],
+          "quiet": {
+            "name": "sitting-still-after-history",
+            "windowMs": 4053.612043000001,
+            "sampleTimesValid": true,
+            "applicationMemoryComplete": true,
+            "growthBytes": {
+              "main": -229376,
+              "renderer": -819200,
+              "gpu": 12288,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -1036288,
+            "cpuPercentOneCore": {
+              "main": 0.9867742540649449,
+              "renderer": 8.14088759603579,
+              "gpu": 1.9735485081298898,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalCpuPercentOneCore": 11.101210358230603,
+            "draws": 54,
+            "quiescenceVerified": true,
+            "quiescenceScope": "sampled-window",
+            "observerCostMs": 21.70691700000316,
+            "documentHasFocus": true,
+            "visibilityState": "visible"
+          },
+          "idleCpuMedianPercent": {
+            "main": 1.4710473347648307,
+            "renderer": 6.374508824886649,
+            "gpu": 2.092171505180904,
+            "utility": 0,
+            "extension-runtime": null,
+            "shell": 0,
+            "other": null
+          },
+          "idleCpuTotalMedianPercent": 9.929525071021178,
+          "streams": [
+            {
+              "name": "ascii",
+              "expectedBytes": 328000,
+              "rates": [
+                12568658.999525955, 13499670.78354865, 13499670.78354865
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 106843136,
+                "renderer": 304031744,
+                "gpu": 60105728
+              },
+              "retained": {
+                "main": -152576,
+                "renderer": -2209792,
+                "gpu": -600064
+              },
+              "cpuPercentOneCore": 92.18314335879869
+            },
+            {
+              "name": "variety",
+              "expectedBytes": 328000,
+              "rates": [
+                2647667.473960226, 11008255.034657957, 11082635.13178762
+              ],
+              "bytes": [328046, 328046, 328046],
+              "peaks": {
+                "main": 116627456,
+                "renderer": 326127616,
+                "gpu": 59500544
+              },
+              "retained": {
+                "main": 8566784,
+                "renderer": 37916672,
+                "gpu": -10240
+              },
+              "cpuPercentOneCore": 168.70206323158277
+            },
+            {
+              "name": "deep-history",
+              "expectedBytes": 328000,
+              "rates": [18533446.324563053, 17732000, 21028333.32128154],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 116267008,
+                "renderer": 346789888,
+                "gpu": 59492352
+              },
+              "retained": {
+                "main": -655360,
+                "renderer": 6383616,
+                "gpu": 10240
+              },
+              "cpuPercentOneCore": 130.49089168970553
+            }
+          ],
+          "latency": {
+            "medianMs": 29.899999991059303,
+            "medianCorrectedMs": 17.799999997019768,
+            "failures": 0,
+            "medianGridToDrawMs": 481.40000000596046
+          }
+        },
+        {
+          "index": 3,
+          "steps": {
+            "one": {
+              "tabs": 1,
+              "roles": {
+                "main": {
+                  "steadyBytes": 108912640,
+                  "peakBytes": 109026304
+                },
+                "renderer": {
+                  "steadyBytes": 242905088,
+                  "peakBytes": 243224576
+                },
+                "gpu": {
+                  "steadyBytes": 57003008,
+                  "peakBytes": 57046016
+                },
+                "utility": {
+                  "steadyBytes": 25909248,
+                  "peakBytes": 25957376
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 2889728,
+                  "peakBytes": 2994176
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 434881536
+            },
+            "three": {
+              "tabs": 3,
+              "roles": {
+                "main": {
+                  "steadyBytes": 111048704,
+                  "peakBytes": 111121408
+                },
+                "renderer": {
+                  "steadyBytes": 266839040,
+                  "peakBytes": 267095040
+                },
+                "gpu": {
+                  "steadyBytes": 58689536,
+                  "peakBytes": 58696704
+                },
+                "utility": {
+                  "steadyBytes": 25944064,
+                  "peakBytes": 25959424
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 10545152,
+                  "peakBytes": 10612736
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 462582784
+            },
+            "six": {
+              "tabs": 6,
+              "roles": {
+                "main": {
+                  "steadyBytes": 107013120,
+                  "peakBytes": 107024384
+                },
+                "renderer": {
+                  "steadyBytes": 298247168,
+                  "peakBytes": 299816960
+                },
+                "gpu": {
+                  "steadyBytes": 60014592,
+                  "peakBytes": 60027904
+                },
+                "utility": {
+                  "steadyBytes": 25947136,
+                  "peakBytes": 25958400
+                },
+                "extension-runtime": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                },
+                "shell": {
+                  "steadyBytes": 20613120,
+                  "peakBytes": 20656128
+                },
+                "other": {
+                  "steadyBytes": null,
+                  "peakBytes": null
+                }
+              },
+              "totalBytes": 491231232
+            }
+          },
+          "marginal": {
+            "oneToThree": {
+              "perTab": {
+                "main": 1068032,
+                "renderer": 11966976,
+                "gpu": 843264
+              },
+              "total": 13850624
+            },
+            "threeToSix": {
+              "perTab": {
+                "main": -1345194.6666666667,
+                "renderer": 10469376,
+                "gpu": 441685.3333333333
+              },
+              "total": 9549482.666666666
+            }
+          },
+          "idle": {
+            "windowMs": 12158.751756000001,
+            "growthBytes": {
+              "main": -3072000,
+              "renderer": -606208,
+              "gpu": 12288,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -3665920,
+            "cpuPercentOneCore": {
+              "main": 1.3981698402231935,
+              "renderer": 5.83941521504981,
+              "gpu": 1.8916415485372624,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            }
+          },
+          "idleCpuWindows": [
+            {
+              "name": "blink-off-focused",
+              "windowMs": 4048.9928770000042,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -32768,
+                "renderer": 192512,
+                "gpu": 8192,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 167936,
+              "cpuPercentOneCore": {
+                "main": 0.9878999843940697,
+                "renderer": 6.668324894659964,
+                "gpu": 2.2227749648866566,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 9.878999843940697,
+              "draws": 48,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 21.452708999997412,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-off-unfocused",
+              "windowMs": 4037.1913360000035,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -37888,
+                "renderer": 541696,
+                "gpu": 26624,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 530432,
+              "cpuPercentOneCore": {
+                "main": 0.9907878193266785,
+                "renderer": 6.687817780455074,
+                "gpu": 2.2292725934850264,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 9.907878193266786,
+              "draws": 51,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 16.688999999998487,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-focused",
+              "windowMs": 4082.0986269999994,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -221184,
+                "renderer": 372736,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 155648,
+              "cpuPercentOneCore": {
+                "main": 1.469832198642761,
+                "renderer": 7.349160993213794,
+                "gpu": 2.204748297964136,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 11.02374148982068,
+              "draws": 38,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 17.276126000004297,
+              "documentHasFocus": true,
+              "visibilityState": "visible"
+            },
+            {
+              "name": "blink-on-unfocused",
+              "windowMs": 4066.428209999998,
+              "sampleTimesValid": true,
+              "applicationMemoryComplete": true,
+              "growthBytes": {
+                "main": -57344,
+                "renderer": 253952,
+                "gpu": 4096,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalGrowthBytes": 200704,
+              "cpuPercentOneCore": {
+                "main": 1.22958029548,
+                "renderer": 6.639733595592005,
+                "gpu": 2.2132445318639995,
+                "utility": 0,
+                "extension-runtime": null,
+                "shell": 0,
+                "other": null
+              },
+              "totalCpuPercentOneCore": 10.082558422935993,
+              "draws": 50,
+              "quiescenceVerified": true,
+              "quiescenceScope": "sampled-window",
+              "observerCostMs": 22.066500000000815,
+              "documentHasFocus": false,
+              "visibilityState": "visible"
+            }
+          ],
+          "quiet": {
+            "name": "sitting-still-after-history",
+            "windowMs": 4065.729918000012,
+            "sampleTimesValid": true,
+            "applicationMemoryComplete": true,
+            "growthBytes": {
+              "main": -249856,
+              "renderer": -4796416,
+              "gpu": 4096,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalGrowthBytes": -5042176,
+            "cpuPercentOneCore": {
+              "main": 1.2297914767687153,
+              "renderer": 8.36258204202729,
+              "gpu": 2.213624658183697,
+              "utility": 0,
+              "extension-runtime": null,
+              "shell": 0,
+              "other": null
+            },
+            "totalCpuPercentOneCore": 11.805998176979719,
+            "draws": 48,
+            "quiescenceVerified": true,
+            "quiescenceScope": "sampled-window",
+            "observerCostMs": 18.26908299999195,
+            "documentHasFocus": true,
+            "visibilityState": "visible"
+          },
+          "idleCpuMedianPercent": {
+            "main": 1.1101840574033393,
+            "renderer": 6.678071337557519,
+            "gpu": 2.2180097483753283,
+            "utility": 0,
+            "extension-runtime": null,
+            "shell": 0,
+            "other": null
+          },
+          "idleCpuTotalMedianPercent": 9.99521830810139,
+          "streams": [
+            {
+              "name": "ascii",
+              "expectedBytes": 328000,
+              "rates": [10187639.750609891, 21301428.563184, 18961965.32118561],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 106246144,
+                "renderer": 299851776,
+                "gpu": 60210176
+              },
+              "retained": {
+                "main": -68608,
+                "renderer": -1224704,
+                "gpu": -702464
+              },
+              "cpuPercentOneCore": 113.21872634412371
+            },
+            {
+              "name": "variety",
+              "expectedBytes": 328000,
+              "rates": [
+                3151258.405108795, 15695980.867958516, 17732216.216216218
+              ],
+              "bytes": [328046, 328046, 328046],
+              "peaks": {
+                "main": 116245504,
+                "renderer": 312521728,
+                "gpu": 59505664
+              },
+              "retained": {
+                "main": 9037824,
+                "renderer": 39047168,
+                "gpu": -18432
+              },
+              "cpuPercentOneCore": 157.675694291722
+            },
+            {
+              "name": "deep-history",
+              "expectedBytes": 328000,
+              "rates": [
+                10156099.067459129, 11045185.18407686, 7541195.40229885
+              ],
+              "bytes": [328042, 328042, 328042],
+              "peaks": {
+                "main": 116212736,
+                "renderer": 350436352,
+                "gpu": 59509760
+              },
+              "retained": {
+                "main": -1134592,
+                "renderer": 7256064,
+                "gpu": 2048
+              },
+              "cpuPercentOneCore": 116.09487233163487
+            }
+          ],
+          "latency": {
+            "medianMs": 20.799999997019768,
+            "medianCorrectedMs": 14.099999994039536,
+            "failures": 0,
+            "medianGridToDrawMs": 491.59999999403954
+          }
+        }
+      ]
+    }
+  },
+  "scrollbackPair": {
+    "emptyLines": 0,
+    "fullLines": 10000,
+    "deltas": [
+      {
+        "main": 183296,
+        "renderer": 58404864,
+        "gpu": 429056
+      },
+      {
+        "main": -30720,
+        "renderer": 71068672,
+        "gpu": -150528
+      },
+      {
+        "main": -104448,
+        "renderer": 54625280,
+        "gpu": -45056
+      }
+    ]
+  },
+  "extensionRuntime": {
+    "build": {
+      "runtimeIndex": "3a028677fbbe0f9875a38b220b9446cc031166c1ceaba84f8b437ebb920342fe",
+      "runtimePackages": "95f0b1705f7a013a541cde669823fbaa1d2dcd6a76397cac39df35899d84a226",
+      "runtimeBootstrap": "9bfc2021f88fc8fe2b9f51b469c0442c64a625e146bf9e292ec742aa339d81b0",
+      "runtimeLeases": "fe5239919c41aada2bcce52ce6e707c416ff1777401feb38434f4946729132c5"
+    },
+    "windowMs": 5783.116628,
+    "processCount": 1,
+    "steadyBytes": 48999424,
+    "growthBytes": -32768,
+    "cpuPercentOneCore": 0,
+    "settled": true
+  }
+}

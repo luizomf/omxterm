@@ -41,6 +41,24 @@
   },
   "overrides": [
     {
+      "files": [
+        "test/fixtures/performance-benchmark-report.ts",
+        "test/fixtures/performance-benchmark-baseline.ts",
+        "test/fixtures/performance-benchmark-main.ts"
+      ],
+      "rules": {
+        // Three cohesive contracts: the measurement report (raw receipt to
+        // per-repetition summary), the baseline/comparison projection of that
+        // report, and the supervised native sequence that produces the receipt.
+        // Each is reviewed as one artifact; splitting a statistic from the
+        // record it is projected into is what allowed claim/mechanism drift.
+        "max-lines": [
+          "error",
+          { "max": 1200, "skipBlankLines": true, "skipComments": true }
+        ]
+      }
+    },
+    {
       "files": ["test/**/*.test.ts"],
       "rules": {
         // Test files and describe callbacks are cohesive executable specifications.
