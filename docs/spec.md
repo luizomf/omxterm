@@ -916,8 +916,8 @@ startup, shell exit, tab close and renderer-loss cleanup.
   and a working WebGL2 backend are ready.
 - On Linux, main permits Chromium's SwiftShader WebGL fallback when available.
   It does not force software rendering or change the GPU blocklist or driver
-  selection, and it does not guarantee that a backend initializes
-  ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
+  selection. It does not guarantee backend availability or successful
+  initialization ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
 - Initialization failure releases partial resources and starts no shell.
 - Closing an initializing Surface is cancellation, not a failure. Late font,
   runtime and session-start callbacks are inert and start no session; an
@@ -974,17 +974,18 @@ startup, shell exit, tab close and renderer-loss cleanup.
   Responses carry bounded bytes and face metadata, not paths. There is no broad
   filesystem API, remote fallback or persistent byte cache. Known limitation: a
   failed on-demand read after validation can put a native font path in the IPC
-  rejection. It grants no filesystem access.
-- A Surface fixes its font family and line height at creation; a restart applies
-  a change everywhere. Theme, font size, programming ligatures and padding
-  update live and refit the same PTY. Started font reads survive reload for
+  rejection. It does not grant arbitrary filesystem access.
+- A Surface applies its font family and line height when it is created. After
+  User Configuration Reload, existing Surfaces keep theirs and new Surfaces use
+  the latest values, so a restart applies them everywhere. Theme, font size,
+  programming ligatures and padding update live and refit the same PTY. Started font reads survive reload for
   existing consumers, subject to the admission and queued-read limits under
   [configuration and local state](#configuration-and-local-state).
 - Toggling programming ligatures keeps text, selection, copy results, cells,
   cursor positions and the same Surface, font generation, Live Terminal Session
   and PTY.
-- Ghostty's grapheme-cluster mode is on, so emoji-presentation and ZWJ clusters
-  take one two-column cell for rendering and selection.
+- Ghostty's grapheme-cluster mode is on by default, so emoji-presentation and
+  ZWJ clusters take one two-column cell for rendering and selection.
 - Bar cursors stay visible inside their cell at the first column, regardless of
   padding or font family. Block and underline cursors and focus/blink behavior
   are not affected.
@@ -1044,8 +1045,8 @@ Titles are display-only
   A native read in progress can overshoot the pause threshold by up to its own
   size.
 - Renderer loss, send failure, tab disposal and window disposal terminate only
-  the affected session, resuming a paused stream first so no paused process
-  outlives its owner.
+  the affected session, resuming a paused stream first so it cannot stay a
+  paused process or send into a dead owner.
 - On Unix, the pinned node-pty close guard waits while the stream is paused, so
   a final readable tail is not discarded. ConPTY is not affected.
 
@@ -1089,8 +1090,9 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
   order with later DA1, DA2 and cell-size replies.
 - `CSI 16 t` gets the cell size from the Surface metrics once the Surface opens.
 - Not every xterm extension is guaranteed. OMXTerm installs no custom terminfo,
-  does not touch shell startup files, and does not impersonate another terminal
-  or set application-specific capability variables.
+  does not touch shell startup files. Inline-image support does not
+  impersonate another terminal or inject application-specific capability
+  variables.
 
 ### Inline Terminal Images
 
@@ -1175,7 +1177,7 @@ authority; OMXTerm adds no second parser.
   rows; OMXTerm never estimates bytes per line.
 - Zero disables history: retained history is dropped at once and none builds
   up through output or resize. A later positive reload keeps only new output.
-- Live changes keep the same Surface, core, Live Terminal Session and PTY, and
+- Valid live changes keep the same Surface, core, Live Terminal Session and PTY, and
   keep reflow, alternate-screen, selection and viewport state coherent. Each
   Surface is independent.
 - Resize keeps pending soft-wrap positions, and selection and copy distinguish
@@ -1263,8 +1265,8 @@ paths open a Local Image Preview
   on permission, format or decode failure. Exact native sources, picker
   selections and file URLs have no suffix interpretation.
 - Main checks platform locality before reads. UNC/device, drive-relative and
-  Windows root-relative paths are rejected, even from the native picker;
-  Windows paths must include a drive.
+  Windows root-relative paths are rejected. Windows paths must include a drive,
+  and UNC/device paths are rejected even from the native picker.
 - Relative activation opens a native directory picker at the local user's home;
   only the explicit selection supplies the base. Cancellation is inert. Every
   activation asks again; no base preference or cwd is kept. Normal `..`
@@ -1296,7 +1298,8 @@ paths open a Local Image Preview
   window resizing, without clipping or stretching.
 - Failed reads, PNG/JPEG validation failures (including APNG) and decode
   failures show a fixed load error without the path. Unrecognized formats such
-  as WebP show a separate fixed format message, whatever the extension.
+  as WebP show a separate fixed format message, regardless of extension or
+  successful path recognition.
 - OMXTerm never infers a relative base, performs shell expansion, consults the
   shell or agent cwd, fetches or transfers a remote image, treats OSC 8
   metadata as a local source, logs image paths or payload, writes or downloads
@@ -1308,9 +1311,9 @@ paths open a Local Image Preview
   alternate screens. Shift keeps the selection override. Explicit copy and
   valid modified-link gestures (web or local image) produce no duplicate PTY
   mouse input.
-- `terminal.contextMenuEnabled` is a boolean, default true. True allows the
-  native menu even when Restty has cancelled the canvas context event for
-  application mouse reporting.
+- `terminal.contextMenuEnabled` accepts only a boolean and defaults to true.
+  Omission or true preserves eligibility for the native menu, even when Restty
+  has cancelled the canvas context event for application mouse reporting.
 - False suppresses the popup over terminal content and padding for every
   modifier, mouse mode and origin, keyboard included. The DOM default is still
   cancelled; mouse input, clipboard actions and OSC 52 are not affected. There
@@ -1362,9 +1365,10 @@ paths open a Local Image Preview
   selection.
 - The one-shot popup belongs to its exact pane and Surface. Pane or tab changes,
   pane end or removal, a field or newer popup, and owner disposal invalidate it.
-  A blocked or wrong-kind callback consumes only its own claim without reading;
-  a stale callback cannot consume a newer one. A valid callback snapshots the
-  text once, before the dialog opens, so later focus changes do not change it.
+  A matching blocked or wrong-kind callback consumes its own claim without
+  reading; a stale callback cannot consume a newer one. A valid callback
+  snapshots the text once, before the dialog opens, so later focus changes do
+  not change it.
 - The limit is 16 MiB of UTF-8 (inclusive), measured in bytes and checked
   independently at preload and main. Retained terminal content can exceed it.
   Over-limit text is neither truncated nor sent; main says nothing was saved and
@@ -1376,7 +1380,7 @@ paths open a Local Image Preview
   trimmed, with exactly one final line break. New files are owner-only on macOS
   and Linux.
 - Setup (including a failed text read), chooser and write failures show a
-  fixed, actionable notice without private details, and are not retried. A
+  fixed, actionable notice without private details. Notices are not retried. A
   failed selection read still opens the menu with content export.
 - Owner loss before the chooser resolves means no write and no orphan notice; a
   write already started may finish.
