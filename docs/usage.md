@@ -74,8 +74,6 @@ Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the focused pan
 
 ### Exporting terminal text
 
-These export actions are available in development source, not stable 0.25.0.
-
 Right-click the terminal and choose **Export Selection…** when text is selected, or **Export Terminal Content…** to save the pane's recent terminal history and current screen. A full-screen program such as Vim may temporarily replace the terminal history with its own screen; in that case, only that screen is exported. Choose a destination in the save dialog. Export is user initiated and saves plain UTF-8 text; it does not record terminal output automatically.
 
 ### Protected Paste

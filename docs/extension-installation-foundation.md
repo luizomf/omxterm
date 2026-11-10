@@ -1,31 +1,83 @@
-# Internal installed-package foundation
+# Extension installation
 
-Status: internal foundation from [#715](https://github.com/luizomf/omxterm/issues/715), under [#712](https://github.com/luizomf/omxterm/issues/712). The [Linux ARM64 Files preview](files-development-preview.md) now consumes this module through production Settings and a composed application owner. This module itself defines neither execution nor UI, catalog/network acquisition or a stable SDK. See [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
+The installed-packages module owns everything about getting an extension archive
+onto disk safely: archive validation and extraction, the registry of what is
+installed, version pinning while code is in use, and cleanup. It does not run
+extension code, show UI, fetch from the network or define a stable SDK. See
+[ADR 0038](adr/0038-pin-immutable-installed-packages.md) for the decision.
 
-## Interface and ownership
+Settings consumes it for local-file and HTTPS installs, and the
+[backend runtime](extension-backend-runtime.md) consumes it to run installed
+backends. [Extension distribution](extension-distribution.md) covers how
+catalog installs reach it.
 
-`src/installed-packages/installed-packages.ts` is the caller/test interface. The module owns archive admission/extraction, registry validation/publication, generations, writer exclusion, immutable version paths, independent use leases and garbage collection. Callers do not manipulate lock files, staging paths or registry bytes.
+## Interface
 
-- `InstalledPackages.open({root, runtime, leases})` opens a dedicated absolute, user-owned local store. `runtime` supplies valid application/API semver versions. `createNativeLeaseAdapter(absoluteAddonPath)` is the real adapter; a controlled adapter can hold acquisition/release boundaries in tests while retaining real kernel locks.
-- `snapshot()` returns installation metadata, including disabled entries and tombstones. It does not observe global process/runtime state.
-- `install(localArchive, {expectedGeneration, enabled})` validates and stages a complete local package before the bounded writer transaction. The internal caller may supply a bounded Buffer instead of a filename; bytes and options are copied synchronously before asynchronous admission so a consent service can install exactly its captured archive rather than reopen a mutable source. Generation `0` means never installed; updates and reinstalls must name the observed generation, including tombstones. The explicit `enabled` choice is metadata only, never code execution. Ordinary manual installation retains explicit trust; the sole host-owned [new-profile default](default-snippets.md) instead authorizes one fixed public Snippets input through its early-identity-bound permanent grant, never arbitrary bytes or upgrade consent. The resulting entry includes its digest and new generation.
-- `setEnabled(id, expectedGeneration, enabled)` and `uninstall(id, expectedGeneration)` publish a new generation. Uninstall publishes a tombstone, not a claim all processes stopped or bytes disappeared. Disable retains its installed version as referenced. A tombstone retains generation indefinitely to prevent identical-byte reinstall from reviving stale permits.
-- `openVersion(id, expectedSelection?)` returns a separately acquired shared pin, captured generation/digest, immutable directory, manifest, `revalidate()` and idempotent async `release()`. A second process can use the captured selection to acquire its **own** pin. Hold each pin until its actual file-reading lifetime ends; never pass a borrowed descriptor as an independent pin. `revalidate()` returns false after release, disable, update or tombstone/reinstall. It is a point-in-time admission check, not a revocable lock on future side effects.
-- `collect()` performs bounded eligible detachment/deletion and returns `removed` and `pending` identities. No collection timer/daemon is installed. Management/runtime consumers call it at their owned lifecycle points. Pending cleanup is not whole-root failure. Collection inventories at most 10,000 namespace entries outside writer exclusion and examines at most 32 candidates per writer transaction, including pinned/referenced candidates and registry temporary files. `more` indicates an unexamined remainder of that snapshot; the same instance advances its cursor on the next deliberate call. Concurrent mutations can change that snapshot, so this is not global cleanup completion. Sidecar files remain permanent, including garbage/staging sidecars.
+`src/installed-packages/installed-packages.ts` is the interface. Callers never
+touch lock files, staging paths or registry bytes.
 
-The separate [internal backend runtime](extension-backend-runtime.md) acquires its independent pin before extension import, obtains live main authority after generation revalidation and retains the child pin until actual process exit. That IPC/activation protocol belongs to the runtime consumer, **not** this installation module. New main authority must not adopt orphan ports or replay mutations after response loss. A retained native lease protects only managed version bytes, not arbitrary descendants or external writes.
+- `InstalledPackages.open({root, runtime, leases})` opens a dedicated, absolute,
+  user-owned store. `runtime` supplies the application and API versions.
+  `createNativeLeaseAdapter(absoluteAddonPath)` is the real lease adapter.
+- `snapshot()` returns installation metadata, including disabled entries and
+  removed ones (tombstones).
+- `install(archive, {expectedGeneration, enabled})` validates and stages the
+  whole archive, then publishes it in a short writer transaction. The archive
+  can be a filename or a bounded buffer, so a consent flow installs exactly the
+  bytes the user approved rather than reopening a file that may have changed.
+  `enabled` is metadata only and never runs code.
+- `setEnabled(id, expectedGeneration, enabled)` and
+  `uninstall(id, expectedGeneration)` publish a new generation. Uninstall
+  leaves a tombstone; it does not promise running processes stopped or bytes
+  vanished.
+- `openVersion(id, expectedSelection?)` returns an independently acquired shared
+  pin on one immutable version: its generation, digest, directory and manifest,
+  plus `revalidate()` and `release()`. Hold the pin for as long as files are
+  being read. `revalidate()` turns false after release, disable, update or
+  uninstall, but it is a point-in-time check, not a lock on future side effects.
+- `collect()` removes versions nothing references any more and reports what was
+  removed or is still pending. Nothing runs it on a timer; the consumers call it
+  at their own lifecycle points.
 
-A store admits at most 32 pending operations per instance, native addon at most 128 pending/live/retiring leases. Contended registry acquisition is nonblocking and returns `busy`; it does not wait for another process or replay an operation. Native capacity failure is distinct from lock contention. Caller-controlled runtime/lease objects are infrastructure, not untrusted manifest data.
+### Generations
+
+Every ID has a generation number that changes on each publication. Installs,
+updates and reinstalls must name the generation they observed (`0` means never
+installed), so a stale decision cannot overwrite a newer one. Tombstones keep
+their generation forever, which stops reinstalling identical bytes from reviving
+an old approval.
+
+### Trust service
+
+`createExtensionPackageTrust` (main process) inspects a captured archive without
+importing it, reports its identity, digest and the observed generation, and holds
+one one-shot approval per owner. Approving installs exactly the retained bytes
+at the observed generation. Cancelling, disposing the owner or replacing the
+candidate revokes consent, and a conflict or unknown outcome consumes it without
+any retry. Neither the service nor the module activates code.
 
 ## Archive contract
 
-`.omxext` is a ZIP archive, read once into a bounded immutable snapshot for both SHA-256 identity and extraction. The digest identifies the archive bytes, not a publisher signature or equivalent normalized file tree. ZIP metadata and decompression use pinned maintained `yauzl` as a direct runtime dependency; `semver` is also directly declared. Neither dependency is reached from a renderer.
+An `.omxext` file is a ZIP read once into a bounded immutable snapshot, used for
+both the SHA-256 identity and extraction. The digest identifies those bytes; it
+is not a publisher signature. Nothing runs during installation: no install
+hooks, no npm, no shell, no module imports.
 
-Limits: 64 MiB compressed input, 256 MiB expanded bytes, 10,000 entries, 64 KiB `extension.json`; names at most 1,024 characters, components at most 255. Actual decompressed byte counts, reported sizes and CRC32 must agree. Entries are processed sequentially into exclusive-created files. No package install hooks, npm install, remote resolution, shell commands or module imports occur.
+Limits: 64 MiB compressed, 256 MiB expanded, 10,000 entries, 64 KiB
+`extension.json`, names up to 1,024 characters with components up to 255.
+Decompressed sizes and CRC32 must match what the archive reports. CRC checks
+integrity, not authenticity.
 
-Reject absolute/drive/UNC/backslash/traversal paths, empty/dot components, controls, portable reserved names, alternate streams, trailing-dot/space aliases, non-NFC names, conservative NFKC/uppercase/lowercase collision keys (including non-ASCII aliases), duplicate entries, file/directory collisions, symlinks, special nodes and link-bearing Unix extra fields. Parent directory entries may be implicit; all implied/explicit namespace nodes share the 10,000-node bound. Explicit directories must be stored empty entries with zero compressed/uncompressed sizes and CRC, not compressed streams. The manifest must be an exact regular `extension.json` entry independently of host case sensitivity. Executable file bits are preserved as owner-only executable permission, never setuid/group/world access. The reserved `.omxterm-install.json` marker cannot come from the archive. ZIP CRC is integrity checking, not authentication.
+Rejected: absolute, drive, UNC, backslash and traversal paths; empty or dot
+components; control characters; reserved names; alternate streams; trailing dots
+or spaces; non-NFC names; names that collide after case or Unicode folding;
+duplicates; file/directory collisions; symlinks, special files and link-bearing
+extra fields. Executable bits become owner-only executable. The
+`.omxterm-install.json` marker name is reserved.
 
-The first internal manifest is strict and deliberately small:
+### Manifest
+
+The manifest is strict and small:
 
 ```json
 {
@@ -33,107 +85,133 @@ The first internal manifest is strict and deliberately small:
   "id": "example.files",
   "version": "1.0.0",
   "name": "Example files",
-  "engines": { "omxterm": ">=0.23.0-0 <0.24.0", "api": "0.1.x" },
+  "engines": { "omxterm": ">=0.26.0", "api": "0.1.x" },
   "backend": "backend/index.mjs"
 }
 ```
 
-The main-owned `createExtensionPackageTrust` service validates captured chooser
-bytes (or a synchronously copied, bounded main-owned download Buffer) by extracting without importing, returns identity/digest and the observed
-installation generation, and retains one one-shot approval per infrastructure
-owner. Cancellation, owner disposal and replacement revoke that consent. Approval
-installs the retained bytes with the observed generation; conflicts or unknown
-publication consume the approval and never authorize an automatic retry. This
-service is consumed by the production Settings local/HTTPS install dialog; it never activates code. HTTPS acquisition is a separate main-owned caller, not part of Installed Packages.
+- Unknown fields are rejected. The ID is a bounded lowercase ASCII
+  `namespace.name`; the version is semver.
+- `engines.omxterm` and `engines.api` must be valid ranges that admit the
+  running host and API. The API check is always ordinary semver.
+- `backend` names an exact regular archive entry. It is validated, never
+  imported at install time.
+- An optional `view` declares one application-tab page:
+  `{ "entry": "view/index.html", "action": "example.files.open", "title": "Files" }`.
+  The entry must be a regular `.html` member with a simple ASCII path. The
+  action is the package ID plus exactly one more dot-separated name, so packages
+  cannot claim each other's namespaces. A view grants no startup activation or
+  shortcut. `view.context: "window"` ties the view to its original window
+  instead of a source session's directory.
+- An optional, nonempty, unique `capabilities` array may use only the names the
+  host knows: `terminal.openSsh.v1`, `terminal.captureLayout.v1`,
+  `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`,
+  `terminal.semanticInput.v1`, `terminal.insertPath.v1` and `state.v1`. Unknown
+  names are refused, so an older host rejects a package that needs a newer
+  capability instead of half-activating it. The first six are host operations
+  on the extension's own view; `state.v1` is backend bootstrap support, not
+  browser filesystem access. A capability grants nothing beyond its contract:
+  for example, `terminal.semanticInput.v1` sends text through Protected Paste
+  and never exposes the PTY or key injection
+  ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+- Other contribution fields, platform declarations and publisher metadata are
+  rejected. This schema is internal, not a stable author API.
 
-Unknown fields are rejected. ID is bounded lowercase ASCII namespace/name; version is semver; application and API ranges must parse and pass compatibility against the explicitly supplied runtime. Host compatibility uses ordinary semver first, with the explicit exceptions below; API compatibility always uses ordinary semver against the actual API version. Backend must name an exact regular archive entry. It is validated but never imported. An optional exact `view` object declares one concrete application-tab entry and shared action: `{ "entry": "view/index.html", "action": "example.files.open", "title": "Files" }`. The entry must be an exact regular `.html` archive member admitted by the hosted resource grammar: at most 512 characters, slash-separated ASCII components starting with a letter, digit, underscore or hyphen, containing only letters, digits, underscores, hyphens and dots, with no trailing dot. The action is the exact package ID plus one dot-separated leaf (no further dots), preventing nested package namespaces from claiming the same action; the title is bounded nonblank display text. It grants no startup activation or shortcut. Other contribution fields, platform declarations and publisher/source trust metadata remain rejected, not permissive placeholders. This internal schema is not a stable extension author API or an assignment of an application release number.
+### Host compatibility
 
-The preview now admits the exact capability names `terminal.openSsh.v1`,
-`terminal.captureLayout.v1`, `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`,
-`terminal.semanticInput.v1`, `terminal.insertPath.v1` and `state.v1` in an
-optional nonempty unique `capabilities` array. Unknown names refuse. The first
-six are own-view host operations; state is declaration-gated backend bootstrap
-support, not browser filesystem access. Optional `view.context: "window"`
-selects original-window lifetime without a captured source-session directory;
-omission retains existing session context. The Files companion's explicit
-`terminal-directory` request is a narrow host-owned exception: it captures the
-visible focused window's current selected live pane rather than retargeting the
-view's other invocation context; see the [Files contract](files-development-preview.md).
-Layout/state declarations require a
-compatible newer host; older hosts reject them rather than partially activating.
-Mirror Typing requires host 0.24.0-dev.2 or newer within its declared 0.24.x
-range. Its own-view describe/start/stop capability grants no extension-authored
-keyboard payload route; see [the capability contract](mirror-typing-development.md#capability-and-lifetime).
-Semantic input requires host 0.24.0-dev.7 or newer and validates a currently visible,
-authenticated view before admitting exact text to a captured core Surface. It
-shares core Protected Paste and the read-only choice preview; it grants no PTY,
-terminal-output or key-injection handle. See [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md).
-Its availability does not install Snippets or remove the built-in feature.
-Files0.8 path insertion declares `terminal.insertPath.v1` and requires host
-`>=0.26.0` / API `0.1.x`, the first published host with the protected consumer.
-Archive admission refuses lower hosts; older hosts also reject unknown capability
-names rather than partially activating. The 0.26.1 development bridge below
-admits it; earlier development families are refused.
-The `>=0.26.0` floor keeps the catalog from offering Files 0.8 to the published
-0.25.0 host, whose validator would refuse the unknown capability.
+Host admission uses ordinary semver, with two additions for development builds.
+Authors should declare ranges against stable versions; these rules exist so
+development hosts keep accepting the same archives.
 
-The immutable Files0.1.0 manifest's exact historical engine metadata is admitted
-on the deliberately enumerated hosts 0.24.0-dev.0, 0.24.0-dev.1,
-0.24.0-dev.2, 0.24.0-dev.3, 0.24.0-dev.4 and 0.24.0-dev.5, in both store
-and catalog compatibility. This is not an open-ended prerelease exception or a
-mutation of published bytes.
+- Development bridges. A host version of the form `X.Y.Z-dev.N` (canonical, `N`
+  a plain nonnegative integer, no extra suffix or build metadata) also admits an
+  archive whose range accepts **both** the previous stable line and the next one.
+  The bridges are `0.24.1-dev.N` (needs `0.24.0` and `0.24.1`), `0.25.0-dev.N`
+  (`0.24.0` and `0.25.0`), `0.26.0-dev.N` (`0.25.0` and `0.26.0`) and
+  `0.26.1-dev.N` (`0.26.0` and `0.26.1`). They do not rewrite the range, and a
+  range with an upper bound that excludes the required stable versions gains
+  nothing. Other development families need ordinary admission or a reviewed
+  decision.
+- A historical exception: the published Files 0.1.0 manifest is admitted on the
+  enumerated hosts `0.24.0-dev.0` through `0.24.0-dev.5`.
 
-For canonical `0.24.1-dev.N` hosts, where `N` is a nonnegative semver numeric
-identifier with no extra suffix or build metadata, host compatibility also
-accepts an original range only if ordinary semver admits **both** `0.24.0` and
-`0.24.1`. This is a deliberate departure from ordinary prerelease matching, not
-a claim that the range explicitly admits that prerelease or every intervening
-version.
+Bridges never change the host version OMXTerm reports, and admission is not
+runtime or platform qualification. Capability checks, catalog targets, archive
+identity and trust are unaffected. Within these rules, an extension whose range
+does not include the running host will not install; no setting overrides that.
 
-For canonical `0.25.0-dev.N` hosts under the same identifier rules, a separate
-minor-development bridge accepts an original range only if ordinary semver
-admits **both** `0.24.0` and `0.25.0`. For canonical `0.26.0-dev.N`, a
-separate bridge requires ordinary semver to admit **both** `0.25.0` and
-`0.26.0`. For canonical `0.26.1-dev.N`, a maintenance bridge requires ordinary
-semver to admit **both** `0.26.0` and `0.26.1`. These bridges do not rewrite the original range or imply it admits
-every intervening version. The historical Files0.1.0 range excludes the required
-endpoints and gains no admission; Saved Layout's `<0.26.0` upper bound also
-excludes both later bridges. Other development families require ordinary range
-admission or a separate reviewed decision. Actual API, capability validation, catalog target, archive identity
-and trust checks remain unchanged. Admission does not establish runtime,
-package or platform qualification and never changes the reported host version.
+## Store layout and transactions
 
-## Shared store transactions
+The store root holds a permanent `initialized` marker, `registry.json`,
+permanent `locks/`, `versions/<sha256>/`, unique `staging/` and detached
+`garbage/`.
 
-The canonical root contains a permanent `initialized` witness, `registry.json`, permanent `locks/`, `versions/<sha256>/`, unique `staging/` and detached `garbage/`. All cooperating writers use one short exclusive writer lease. Under it, re-read bounded aggregate metadata, compare the captured generation, then publish a complete JSON replacement. Distinct IDs cannot overwrite one another's latest changes. Downloads/extraction, bootstrap/import waiting, process retirement and recursive deletion are outside writer exclusion. Registry limits are 2 MiB and 1,000 IDs including tombstones. First initialization is permitted only in an otherwise empty managed namespace and records its witness before registry publication. An interrupted initialization or subsequently missing/corrupt registry is a targeted error, never automatic generation reset, including after all versions have been collected.
+- Writers take a short exclusive lease, re-read the registry, compare the
+  captured generation and publish a complete replacement. Downloads, extraction,
+  waiting for processes and recursive deletion all happen outside that lease.
+  The registry holds up to 2 MiB and 1,000 IDs including tombstones.
+- Readers (`snapshot()`, `openVersion()`, `revalidate()`) take a shared lease and
+  can overlap with each other. `openVersion()` acquires its version pin before
+  releasing the registry, so collection cannot remove the selected bytes in
+  between.
+- Contention never waits or retries. The caller gets `busy`. At most 32 pending
+  operations per store and 128 native leases are admitted.
+- Completed versions are never overwritten. Reusing a digest requires matching
+  stored identity and manifest.
+- Collection removes only unreferenced versions it can exclusively own, moves
+  them to a unique garbage name and deletes outside the writer lease. It never
+  guesses from process IDs or ages, and never deletes a contended path. It
+  examines a bounded number of candidates per call, so cleanup is not a
+  completion guarantee. Pending cleanup is not a store failure.
 
-Read-only `snapshot()`, `openVersion()` and pin `revalidate()` take shared ownership of the same registry sidecar. Independent main/backend admissions may overlap without refusing each other; initialization, publication and collection still require exclusive ownership. `openVersion()` acquires its independent version pin before releasing registry exclusion, so collection cannot detach the selected bytes in between. Contention against an actual writer still refuses admission without waiting or retrying.
+### Failures
 
-Staging holds a use lease from before directory creation through commit/abandonment. Completed versions are never overlaid; existing digest reuse requires matching app-written identity/manifest metadata. Managed publishers and collectors use the same writer exclusion for no-overlay publication. This is **not** a general filesystem no-replace move primitive; the Files operation remains separate.
+A known rejection before publication leaves the old registry in place. If
+publication may have happened but the outcome is unknown (replace or flush
+uncertainty, or lost transport after a mutating request), the result is
+`outcome-unknown`. Inspect the current metadata before trying again; do not
+retry, downgrade or assume a rollback. Cleanup failures are reported alongside
+the primary result instead of hiding it. A missing or corrupt registry is a
+targeted error, never an automatic reset or guessed repair.
 
-Collection checks registry nonreference, then tries exclusive version ownership without waiting. It detaches an eligible directory to a unique garbage name and deletes outside writer exclusion while holding that garbage path's own lease. Other collectors skip active staging/garbage. A fresh installation of the same digest cannot be removed by an older garbage continuation. Unreferenced complete versions, abandoned staging and detached garbage become eligible after actual handle release/process death; never infer this from PID/age or delete a contended sidecar. Directory scans reject excessive/invalid namespace contents rather than blindly delete arbitrary paths.
+The store expects one user's local filesystem. Symlinked subdirectories and lock
+files are rejected, but the store does not defend against malicious same-user
+code replacing ancestors or installed bytes. Network filesystems, power-loss
+guarantees and Windows directory durability are outside what has been verified.
+Nothing logs package contents or file paths, and the module manages no
+application config, themes, SSH files or files an extension creates itself.
 
-Known prepublication rejection leaves the old registry. Replacement/flush uncertainty or cleanup failure after publication was attempted returns `outcome-unknown`; `cleanupFailed` records failed cleanup without losing a primary rejection or unknown outcome, and all retained cleanup steps are attempted. Any transport loss after a mutating request also remains unknown regardless of local error type. Inspect current metadata/files before a new deliberate operation; do not automatically retry, downgrade or assume rollback. Atomic replacement and file sync are not universal power-loss proof. POSIX package directories and publication parent are synced; Windows directory durability and storage/antivirus/filesystem behavior remain qualification limits. Missing/corrupt metadata produces an error, never a boot quarantine or guessed repair. No application/user configuration, themes, SSH files or external extension-created files are managed.
+## Native leases
 
-Managed namespace must remain stable and under one user's control. Canonical aliases resolve to the same root; managed subdirectory symlinks and lock-file symlinks/reparse/nonregular nodes are rejected. This is not protection against malicious same-user code replacing ancestors, mounts or already installed bytes concurrently. Network/unqualified filesystem locking and power-loss guarantees are outside the supported local-filesystem evidence. Do not copy/move the store while readers exist. No file paths or package contents are logged by the module; future UI may show user-selected context but must not log native error text wholesale.
+Pins rely on kernel file locks held by the native `extension-leases.node`
+addon (Node-API 8). POSIX uses independent `flock` descriptors; Windows uses
+independent `LockFileEx` handles on extended-length paths. When a process
+exits, the kernel releases its locks; there is no PID sentinel, daemon or
+supervisor. A lease protects managed version bytes only, not descendant
+processes or writes made elsewhere.
 
-## Native implementation and builds
-
-Node-API 8 `extension-leases.node` performs open/stat/try-lock/unlock/close off the JavaScript thread through bounded async work. POSIX uses independent noninherited `flock` descriptors; Windows uses independent noninherited fixed-range `LockFileEx` handles. Absolute Windows sidecar paths are converted to extended-length names before native open, rather than assuming Node's filesystem normalization also applies to direct `CreateFileW`. An owned JS lease retains its native token; pending work and environment teardown retain cleanup ownership. GC closes abandoned tokens asynchronously, not retained live pins. Actual process exit releases kernel ownership; it does not establish arbitrary descendant exit. No PID sentinel, daemon, process scanner or custom supervisor.
-
-Build the isolated internal artifact explicitly:
+## Build and test
 
 ```sh
 npm run build:installed-packages
 npm test -- test/integration/installed-packages.test.ts
 ```
 
-The explicit build produces `dist/installed-packages/index.mjs` and the addon. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64/x64 `npm run build` includes the runtime and native lease addon; Windows x64 packaging is preparatory and does not enable extension admission or change built-in Snippets; only macOS and Linux ARM64 build the separate Files move addon. The macOS move primitive and optional Foundation trash service are not full Files qualification. Files0.8.0 uses `>=0.26.0` / API `0.1.x` and `terminal.insertPath.v1` for the integrated protected path insertion/drop consumer; it is published and offered in both ARM64 catalogs. Published Files0.7.0 retains `>=0.25.0-dev.10` / API `0.1.x` and its original bytes without insertion/drop. See the [compatibility rationale](files-development-preview.md#package). Published Files0.6.0 retains minimum host dev.21 and corrected raw-path forwarding. The separate Files0.5.0 [controlled exact-pair consumer qualification](files-development-preview.md) passed; historical published0.4.0/0.5.0 archives remain unchanged. Production source admission includes Linux ARM64/x64, [macOS ARM64 composition](macos-extension-composition.md) and [Windows ARM64 source composition](windows-arm64-extension-composition.md). The bounded Windows ARM64 source-composition checkpoint passed; a separate [unpacked-package inspection](windows-arm64-extension-composition.md#packaging-and-verification) checked packaged store/lease loading without GUI activation or an installer. A subsequent [packaged-GUI checkpoint](windows-arm64-extension-composition.md#packaging-and-verification) exercised a minimal local extension on the retained inspected package; it did not qualify an installer. A later separate [exact-NSIS checkpoint](windows-arm64-extension-composition.md#packaging-and-verification) passed on a new installer built from an independent copy. Windows ARM64 source and the published dev.36 preview select optional Snippets; Windows x64 retains the built-in tool. The [Windows ARM64 transition](snippets-migration.md#which-hosts-use-the-extension) has separate source, exact-package and public-consumption boundaries; the earlier failed default baseline remains recorded. The qualified [Snippets source transition](snippets-migration.md#which-hosts-use-the-extension) reuses that composition; its nine-scenario native campaign is separate from package inspection and does not publish a macOS host. The runtime consumes independent leases in main and its app-owned bootstrap.
-macOS and Linux ARM64 package verification checks required resources and actual bundled
-Node-mode store/native loading; that is not GUI or backend activation. macOS also
-requires explicit native unpacking and checks the complete ad-hoc seal; no
-Developer ID/notarization, Files or other-platform qualification follows. `yauzl`/`semver` remain external direct dependencies of this Node bundle. Generated native binaries do not enter Git. The separately reviewed pinned public Snippets archive is a fixed distribution input, not a generated native addon; see [its resource contract](default-snippets.md).
+The explicit build produces `dist/installed-packages/index.mjs` and the addon.
+`npm run build` includes both on macOS ARM64, Linux ARM64/x64 and Windows
+ARM64/x64. Extension admission is enabled on Linux ARM64/x64, macOS ARM64 and
+Windows ARM64; see [macOS composition](macos-extension-composition.md) and
+[Windows ARM64 composition](windows-arm64-extension-composition.md). Native
+binaries never enter Git. `yauzl` and `semver` are external runtime
+dependencies of this bundle.
 
-macOS needs Xcode Command Line Tools; Linux needs a C++17 compiler; pinned `node-api-headers` supplies Node-API declarations without downloading runtime headers. Windows needs a target-native MSVC developer shell, matching Windows SDK/Visual C++ runtime, and an absolute `OMXTERM_NODE_IMPORT_LIBRARY` pointing to an architecture-matched `node.exe` import library exposing Node-API 8. The delay-load helper binds only that library to the current Node/Electron executable. Build performs no toolchain provisioning/download. Native ARM64 results do not qualify x64, deployment floors or signed packages.
+Native builds need Xcode Command Line Tools (macOS), a C++17 compiler (Linux),
+or a target-native MSVC shell with a matching Windows SDK and an absolute
+`OMXTERM_NODE_IMPORT_LIBRARY` pointing at an architecture-matched `node.exe`
+import library that exposes Node-API 8 (Windows). Nothing downloads toolchains.
 
-The integration suite is headless but **native**, builds in a unique scratch directory, uses real archive/store/native adapters and actual owned child exits, and invokes focused lifetime/GC/worker teardown controls. Run native checks on a machine you aren't actively using (a VM is safest). On Windows the loaded addon remains mapped until the Vitest worker exits, so its unique `.scratch/` build is retained during in-process teardown and must be removed by the outer qualification owner after actual test-process exit. It is a build artifact, not a live version lease or process. Browser/PTY/UI/installer scenarios are not part of this suite. Prior feasibility prototypes retain their own identities and are not these production regressions.
+The integration suite is headless but native: it builds in a unique scratch
+directory, uses the real archive, store and lease code, and spawns real child
+processes. Run it on a machine you are not using. On Windows the loaded addon
+stays mapped until the test worker exits, so the scratch build must be deleted
+after the process ends.

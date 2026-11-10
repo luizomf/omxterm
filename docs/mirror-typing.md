@@ -4,7 +4,8 @@ Mirror Typing exists as preview code for **Linux computers with 64-bit ARM
 processors (ARM64)** in the OMXTerm repository.
 It is not included with the app and has no published download or official
 catalog offer, so there is no end-user installation path. Its latest preview
-was built for OMXTerm 0.24.x and isn't kept current with newer releases.
+targets OMXTerm 0.24.x hosts only (its manifest admits `>=0.24.0-dev.2 <0.25.0`),
+so it does not install on current releases.
 
 The preview can copy typing from one terminal pane to selected panes in the same
 tab. Because input is sent to several running programs, it requires matching

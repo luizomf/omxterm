@@ -3,7 +3,9 @@
 Saved Layout exists as preview code for **Linux computers with 64-bit ARM
 processors (ARM64)** in the OMXTerm repository.
 It is not included with the app and has no published download or official
-catalog offer, so there is no end-user installation path.
+catalog offer, so there is no end-user installation path. Its latest preview targets older
+OMXTerm hosts only (its manifest admits `>=0.24.0-dev.1 <0.26.0`), so it does
+not install on current releases.
 
 The preview saves one window's terminal tabs and pane arrangement, then opens
 fresh shells in a new window. It does not restore commands, running processes or
