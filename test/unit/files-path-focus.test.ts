@@ -163,23 +163,18 @@ it.each(["blocked", "source", "field", "incomplete"])(
   },
 );
 
-it("refuses an insertion while presentation or an overlay blocks input", async () => {
-  const f = fixture();
-  f.block();
-  f.act();
-  await Promise.resolve();
-  expect(f.target.deliverAndReport).not.toHaveBeenCalled();
-  expect(f.focusTerminal).not.toHaveBeenCalled();
-});
-
-it("refuses semantic input during a pending native handoff", async () => {
-  const f = fixture();
-  f.blockSemantic();
-  f.act();
-  await Promise.resolve();
-  expect(f.target.deliverAndReport).not.toHaveBeenCalled();
-  expect(f.focusTerminal).not.toHaveBeenCalled();
-});
+it.each(["presentation", "semantic"])(
+  "refuses an insertion while %s input is blocked",
+  async (cause) => {
+    const f = fixture();
+    if (cause === "presentation") f.block();
+    else f.blockSemantic();
+    f.act();
+    await Promise.resolve();
+    expect(f.target.deliverAndReport).not.toHaveBeenCalled();
+    expect(f.focusTerminal).not.toHaveBeenCalled();
+  },
+);
 
 it("does not hand focus away from a newer companion when delivery finishes", async () => {
   const f = fixture();

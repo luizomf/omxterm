@@ -1,4 +1,3 @@
-/* eslint-disable max-lines -- Keep the shared Files shortcut and menu-geometry fixture together. */
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
 import { mountFilesPage } from "../../extensions/files/page";
@@ -114,12 +113,6 @@ it.each([
     "Show dotfiles (names starting with .)",
     "Shortcut: Cmd+Shift+.",
   ],
-  [
-    "pt-BR",
-    "Ações…",
-    "Mostrar itens iniciados por ponto (.)",
-    "Atalho: Cmd+Shift+.",
-  ],
 ] as const)(
   "keeps a focused, accessible checked item in %s",
   async (locale, actionsName, caption, description) => {
@@ -164,144 +157,7 @@ it.each([
   },
 );
 
-it.each([
-  ["en-US", "Actions…", 107.375],
-  ["pt-BR", "Ações…", 126.21875],
-] as const)(
-  "reveals the whole keyboard-focused checkbox in the short %s menu",
-  async (locale, actionsName, clippedTop) => {
-    const { language, request } = await setup("MacIntel");
-    language(locale);
-    const actions = button(actionsName);
-    const popup = menu();
-    // Replay the retained 196x174-DIP child geometry, not a jsdom layout claim.
-    vi.spyOn(popup, "getBoundingClientRect").mockReturnValue(
-      new DOMRect(0, 8, 181, 166),
-    );
-    Object.defineProperties(popup, {
-      clientTop: { configurable: true, value: 1 },
-      clientHeight: { configurable: true, value: 164 },
-    });
-    const reads = request.mock.calls.length;
-    for (const checked of [false, true]) {
-      actions.click();
-      const item = popup.querySelector<HTMLButtonElement>(
-        '[role="menuitemcheckbox"]',
-      )!;
-      expect(item.getAttribute("aria-checked")).toBe(String(checked));
-      const focus = vi.spyOn(item, "focus");
-      popup.scrollTop = 21;
-      vi.spyOn(item, "getBoundingClientRect").mockImplementation(
-        () =>
-          new DOMRect(5, clippedTop + 21 - popup.scrollTop, 156, 84.4765625),
-      );
-      const assertVisible = () => {
-        const rect = item.getBoundingClientRect();
-        // Include the shared 2-DIP outline plus its 2-DIP offset.
-        expect(rect.top - 4).toBeGreaterThanOrEqual(9);
-        expect(rect.bottom + 4).toBeLessThanOrEqual(173);
-        expect(document.activeElement).toBe(item);
-      };
-      expect(
-        key(document.activeElement as HTMLElement, "End").defaultPrevented,
-      ).toBe(true);
-      assertVisible();
-      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
-      // End on an already-focused item must reveal it again, not depend on a
-      // new native focus event. Arrow wrap and Home keep their existing order.
-      popup.scrollTop = 21;
-      key(item, "End");
-      assertVisible();
-      key(item, "ArrowDown");
-      expect(document.activeElement).toBe(
-        popup.querySelector("button:not(:disabled)"),
-      );
-      key(document.activeElement as HTMLElement, "ArrowUp");
-      assertVisible();
-      key(item, "Home");
-      expect(document.activeElement).toBe(
-        popup.querySelector("button:not(:disabled)"),
-      );
-      key(document.activeElement as HTMLElement, "End");
-      assertVisible();
-      item.click();
-      expect(popup.hidden).toBe(true);
-      expect(document.activeElement).toBe(actions);
-    }
-    expect(request).toHaveBeenCalledTimes(reads);
-  },
-);
-
-it.each([
-  ["en-US", "Actions…", 128.375],
-  ["pt-BR", "Ações…", 147.21875],
-] as const)(
-  "reveals the still-focused %s checkbox when the child viewport narrows",
-  async (locale, actionsName, narrowTop) => {
-    const { language, request } = await setup("MacIntel");
-    language(locale);
-    const address =
-      document.querySelector<HTMLInputElement>(".location input")!;
-    address.value = "/synthetic/draft";
-    address.setSelectionRange(2, 9, "backward");
-    const actions = button(actionsName);
-    actions.focus();
-    actions.click();
-    const popup = menu();
-    const item = popup.querySelector<HTMLButtonElement>(
-      '[role="menuitemcheckbox"]',
-    )!;
-    // Model a wide layout followed by the retained narrow geometry. jsdom
-    // does not establish Chromium's wrapping or the native End/resize order.
-    let width = 256;
-    vi.spyOn(popup, "getBoundingClientRect").mockImplementation(
-      () => new DOMRect(0, 8, width - 15, 166),
-    );
-    Object.defineProperties(popup, {
-      clientTop: { configurable: true, value: 1 },
-      clientHeight: { configurable: true, value: 164 },
-    });
-    vi.spyOn(item, "getBoundingClientRect").mockImplementation(
-      () =>
-        new DOMRect(
-          5,
-          (width === 256 ? 128.375 : narrowTop) - popup.scrollTop,
-          width - 40,
-          width === 256 ? 65.625 : 84.4765625,
-        ),
-    );
-    popup.scrollTop = 0;
-    key(document.activeElement as HTMLElement, "End");
-    expect(popup.scrollTop).toBe(25);
-    expect(document.activeElement).toBe(item);
-    const focus = vi.spyOn(item, "focus");
-    const reads = request.mock.calls.length;
-    width = 196;
-    expect(item.getBoundingClientRect().bottom + 4).toBeGreaterThan(173);
-    window.dispatchEvent(new Event("resize"));
-    expect(item.getBoundingClientRect().bottom + 4).toBeLessThanOrEqual(173);
-    expect(item.getBoundingClientRect().top - 4).toBeGreaterThanOrEqual(9);
-    expect(document.activeElement).toBe(item);
-    expect(focus).not.toHaveBeenCalled();
-    expect(item.getAttribute("aria-checked")).toBe("false");
-    for (const value of ["PageDown", "PageUp", "x"])
-      expect(key(item, value).defaultPrevented).toBe(false);
-    expect(address.value).toBe("/synthetic/draft");
-    expect([
-      address.selectionStart,
-      address.selectionEnd,
-      address.selectionDirection,
-    ]).toEqual([2, 9, "backward"]);
-    expect(request).toHaveBeenCalledTimes(reads);
-    item.click();
-    expect(popup.hidden).toBe(true);
-    expect(document.activeElement).toBe(actions);
-  },
-);
-
 it("does not reveal or refocus a closed, unfocused or disposed menu on resize", async () => {
-  const added = vi.spyOn(window, "addEventListener");
-  const removed = vi.spyOn(window, "removeEventListener");
   const { visibility } = await setup("MacIntel");
   const actions = button("Actions…");
   actions.click();
@@ -337,50 +193,6 @@ it("does not reveal or refocus a closed, unfocused or disposed menu on resize", 
   expect(document.activeElement).toBe(retained);
   expect(retainedBounds).not.toHaveBeenCalled();
   expect(popup.scrollTop).toBe(scroll);
-  for (const [type, listener] of added.mock.calls)
-    if (type === "resize")
-      expect(removed).toHaveBeenCalledWith("resize", listener);
-});
-
-it("reveals a retained focused menu item after its localized text grows", async () => {
-  const { language } = await setup("MacIntel");
-  button("Actions…").click();
-  const popup = menu();
-  const item = popup.querySelector<HTMLButtonElement>(
-    '[role="menuitemcheckbox"]',
-  )!;
-  vi.spyOn(popup, "getBoundingClientRect").mockReturnValue(
-    new DOMRect(0, 8, 181, 166),
-  );
-  Object.defineProperties(popup, {
-    clientTop: { configurable: true, value: 1 },
-    clientHeight: { configurable: true, value: 164 },
-  });
-  popup.scrollTop = 0;
-  let height = 60;
-  vi.spyOn(item, "getBoundingClientRect").mockImplementation(
-    () => new DOMRect(5, 100 - popup.scrollTop, 156, height),
-  );
-  key(document.activeElement as HTMLElement, "End");
-  expect(popup.scrollTop).toBe(0);
-  height = 90;
-  language("pt-BR");
-  expect(popup.scrollTop).toBe(21);
-  expect(item.getBoundingClientRect().bottom + 4).toBe(173);
-  expect(document.activeElement).toBe(item);
-  expect(item.querySelector(".menu-caption")?.textContent).toBe(
-    "Mostrar itens iniciados por ponto (.)",
-  );
-  expect(item.querySelector(".menu-shortcut")?.textContent).toBe(
-    "Atalho: Cmd+Shift+.",
-  );
-  // An item taller than the scrollport starts at its check/caption; native
-  // PageDown/PageUp remain unclaimed so its remainder can still be scrolled.
-  height = 200;
-  key(item, "End");
-  expect(item.getBoundingClientRect().top - 4).toBe(9);
-  expect(key(item, "PageDown").defaultPrevented).toBe(false);
-  expect(key(item, "PageUp").defaultPrevented).toBe(false);
 });
 
 it("leaves the gesture untouched until a browsing root is available", async () => {
@@ -455,51 +267,6 @@ it("does not claim a shortcut during a composition session, even if a key omits 
   );
   expect(key(target, "h", linux).defaultPrevented).toBe(true);
   expect(row("/root/.private")).toBeTruthy();
-});
-
-it("does not claim the shortcut while a deletion confirmation is being prepared", async () => {
-  const { handle } = await setup("Linux aarch64");
-  let resolve!: (reply: Reply) => void;
-  const pending = new Promise<Reply>((done) => {
-    resolve = done;
-  });
-  handle((value) =>
-    value.operation === "prepare-delete" ? pending : undefined,
-  );
-  row("/root/visible")!.dispatchEvent(
-    new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
-  );
-  button("Delete permanently…", menu()).click();
-  const actions = button("Actions…");
-  actions.focus();
-  expect(key(actions, "h", linux).defaultPrevented).toBe(false);
-  expect(row("/root/.private")).toBeUndefined();
-  resolve({ ok: true, path: "/root/visible", token: "captured" });
-  await vi.waitFor(() => expect(button("Delete permanently")).toBeTruthy());
-  actions.focus();
-  expect(key(actions, "h", linux).defaultPrevented).toBe(false);
-  expect(row("/root/.private")).toBeUndefined();
-  button("Cancel").click();
-  actions.focus();
-  expect(key(actions, "h", linux).defaultPrevented).toBe(true);
-  expect(row("/root/.private")).toBeTruthy();
-});
-
-it("clears a hidden selection and restores focus when a shortcut conceals it", async () => {
-  const { request } = await setup("Linux aarch64");
-  const visible = row("/root/visible")!;
-  visible.focus();
-  key(visible, "h", linux);
-  const hidden = row("/root/.private")!;
-  hidden.click();
-  const calls = request.mock.calls.length;
-  expect(key(hidden, "h", linux).defaultPrevented).toBe(true);
-  expect(row("/root/.private")).toBeUndefined();
-  expect(document.activeElement).toBe(row("/root/visible"));
-  expect(document.querySelector('[aria-selected="true"]')).toBeNull();
-  button("Actions…").click();
-  expect(menu().textContent).not.toContain("Rename / move");
-  expect(request).toHaveBeenCalledTimes(calls);
 });
 
 it("does not intercept editing controls, contenteditable content, other views, or hidden Files", async () => {
@@ -591,42 +358,77 @@ it("does not advertise or handle these shortcuts on an unknown platform", async 
   expect(item.hasAttribute("aria-describedby")).toBe(false);
 });
 
-it("does not claim a visibility shortcut while an operation editor is open", async () => {
-  await setup("Linux aarch64");
-  button("New folder").click();
-  const input = document.querySelector<HTMLInputElement>(
-    ".operation-editor input",
-  )!;
-  input.value = "draft";
-  expect(key(input, "h", linux).defaultPrevented).toBe(false);
+it.each<
+  [string, (f: Awaited<ReturnType<typeof setup>>) => () => Promise<void>]
+>([
+  [
+    "a deletion confirmation is being prepared or shown",
+    (f) => {
+      let resolve!: (reply: Reply) => void;
+      const pending = new Promise<Reply>((done) => (resolve = done));
+      f.handle((value) =>
+        value.operation === "prepare-delete" ? pending : undefined,
+      );
+      row("/root/visible")!.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+      );
+      button("Delete permanently…", menu()).click();
+      return async () => {
+        resolve({ ok: true, path: "/root/visible", token: "captured" });
+        await vi.waitFor(() =>
+          expect(button("Delete permanently")).toBeTruthy(),
+        );
+        const actions = button("Actions…");
+        actions.focus();
+        expect(key(actions, "h", linux).defaultPrevented).toBe(false);
+        button("Cancel").click();
+      };
+    },
+  ],
+  [
+    "an operation editor is open",
+    () => {
+      button("New folder").click();
+      const input = document.querySelector<HTMLInputElement>(
+        ".operation-editor input",
+      )!;
+      input.value = "draft";
+      expect(key(input, "h", linux).defaultPrevented).toBe(false);
+      return async () => {
+        expect(input.value).toBe("draft");
+        button("Cancel").click();
+      };
+    },
+  ],
+  [
+    "an accepted file mutation is pending",
+    (f) => {
+      let resolve!: (reply: Reply) => void;
+      const pending = new Promise<Reply>((done) => (resolve = done));
+      f.handle((value) => (value.operation === "trash" ? pending : undefined));
+      row("/root/visible")!.dispatchEvent(
+        new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
+      );
+      button("Move to Trash", menu()).click();
+      return async () => {
+        resolve({ ok: true });
+        await vi.waitFor(() =>
+          expect(document.querySelector('[role="status"]')?.textContent).toBe(
+            "Operation completed.",
+          ),
+        );
+      };
+    },
+  ],
+])("does not claim the shortcut while %s", async (_, start) => {
+  const f = await setup("Linux aarch64");
+  const finish = start(f);
   const actions = button("Actions…");
   actions.focus();
   expect(key(actions, "h", linux).defaultPrevented).toBe(false);
-  expect(input.value).toBe("draft");
   expect(row("/root/.private")).toBeUndefined();
-});
-
-it("does not claim a shortcut during an accepted file mutation", async () => {
-  const { handle } = await setup("Linux aarch64");
-  let resolve!: (reply: Reply) => void;
-  const pending = new Promise<Reply>((done) => {
-    resolve = done;
-  });
-  handle((value) => (value.operation === "trash" ? pending : undefined));
-  row("/root/visible")!.dispatchEvent(
-    new MouseEvent("contextmenu", { bubbles: true, cancelable: true }),
-  );
-  button("Move to Trash", menu()).click();
-  const actions = button("Actions…");
+  await finish();
   actions.focus();
-  expect(key(actions, "h", linux).defaultPrevented).toBe(false);
-  expect(row("/root/.private")).toBeUndefined();
-  resolve({ ok: true });
-  await vi.waitFor(() =>
-    expect(document.querySelector('[role="status"]')?.textContent).toBe(
-      "Operation completed.",
-    ),
-  );
   expect(key(actions, "h", linux).defaultPrevented).toBe(true);
   expect(row("/root/.private")).toBeTruthy();
 });

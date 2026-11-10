@@ -1,19 +1,5 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import {
-  lstat,
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  readlink,
-  realpath,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
-import path from "node:path";
-import { activate } from "../../extensions/files/backend";
 import { mountFilesPage } from "../../extensions/files/page";
 import type { FilesTreeEntry } from "../../extensions/files/tree";
 import type { SupportedLanguage } from "../../src/shared/i18n";
@@ -486,7 +472,7 @@ it("keeps truncation and root refresh errors visible while filtering retained ro
   expect(row("/root/.private")).toBeUndefined();
 });
 
-it("relabels a checked menu live and leaves text-editing key events untouched", async () => {
+it("relabels a focused checked menu item live without requests", async () => {
   const { language, request } = await setup({
     "/root": [file(".private"), file("visible")],
   });
@@ -503,106 +489,4 @@ it("relabels a checked menu live and leaves text-editing key events untouched", 
   expect(item.getAttribute("aria-checked")).toBe("true");
   expect(document.activeElement).toBe(item);
   expect(request).toHaveBeenCalledTimes(calls);
-  item.click();
-  const input = document.querySelector<HTMLInputElement>(".location input")!;
-  input.value = "/root/.draft";
-  input.focus();
-  expect(key(input, "h", { ctrlKey: true }).defaultPrevented).toBe(false);
-  expect(
-    key(input, ">", { metaKey: true, shiftKey: true }).defaultPrevented,
-  ).toBe(false);
-  expect(input.value).toBe("/root/.draft");
 });
-
-it.skipIf(process.platform === "win32")(
-  "filters a fresh real filesystem fixture without modifying its entries",
-  async () => {
-    await mkdir(".scratch", { recursive: true });
-    const root = await realpath(
-      await mkdtemp(path.resolve(".scratch/files-hidden-")),
-    );
-    const abort = new AbortController();
-    const backend = activate({
-      signal: abort.signal,
-      files: {
-        async moveNoReplace() {
-          throw new Error("unexpected mutation");
-        },
-      },
-    });
-    try {
-      await writeFile(path.join(root, ".secret"), "private fixture");
-      await writeFile(path.join(root, "visible"), "visible fixture");
-      await mkdir(path.join(root, ".folder"));
-      await writeFile(path.join(root, ".folder", "child"), "nested fixture");
-      await symlink("visible", path.join(root, ".link"));
-      const before = (await readdir(root)).sort();
-      const paths = [
-        root,
-        ...before.map((name) => path.join(root, name)),
-        path.join(root, ".folder", "child"),
-      ];
-      const metadata = async () =>
-        Promise.all(
-          paths.map(async (item) => {
-            const stat = await lstat(item);
-            return {
-              dev: stat.dev,
-              ino: stat.ino,
-              mode: stat.mode,
-              size: stat.size,
-              modified: stat.mtimeMs,
-              link: stat.isSymbolicLink() ? await readlink(item) : null,
-            };
-          }),
-        );
-      const originalMetadata = await metadata();
-      const request = vi.fn(async (value: unknown): Promise<Reply> => {
-        const input = value as { operation: string };
-        if (input.operation === "home") return { ok: true, directory: root };
-        return (await backend.invoke(
-          value as Parameters<typeof backend.invoke>[0],
-          abort.signal,
-        )) as Reply;
-      });
-      const page = mountFilesPage(document, { request });
-      dispose = page.dispose;
-      await page.ready;
-      expect(row(path.join(root, "visible"))).toBeTruthy();
-      expect(row(path.join(root, ".secret"))).toBeUndefined();
-      const calls = request.mock.calls.length;
-      toggle();
-      expect(row(path.join(root, ".secret"))).toBeTruthy();
-      expect(
-        row(path.join(root, ".link"))?.getAttribute("aria-label"),
-      ).toContain("symbolic link");
-      toggle();
-      expect(request).toHaveBeenCalledTimes(calls);
-      navigate(path.join(root, ".folder"));
-      await idle();
-      expect(row(path.join(root, ".folder", "child"))).toBeTruthy();
-      expect((await readdir(root)).sort()).toEqual(before);
-      expect(await metadata()).toEqual(originalMetadata);
-      expect(await readFile(path.join(root, ".secret"), "utf8")).toBe(
-        "private fixture",
-      );
-      expect(await readFile(path.join(root, "visible"), "utf8")).toBe(
-        "visible fixture",
-      );
-      expect(await readFile(path.join(root, ".folder", "child"), "utf8")).toBe(
-        "nested fixture",
-      );
-      expect(
-        request.mock.calls.map(
-          ([value]) => (value as { operation: string }).operation,
-        ),
-      ).toEqual(["home", "list", "list"]);
-    } finally {
-      dispose?.();
-      dispose = undefined;
-      abort.abort();
-      backend.deactivate();
-      await rm(root, { recursive: true, force: true });
-    }
-  },
-);

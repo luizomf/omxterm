@@ -252,6 +252,24 @@ describe("separately installed Files backend", () => {
       ).ok,
     ).toBe(false);
   });
+  it("revokes outstanding delete confirmations on deactivation", async () => {
+    const files = backend();
+    const target = path.join(root, "kept");
+    await writeFile(target, "safe");
+    const confirmation = object(
+      await files.invoke({ operation: "prepare-delete", path: target }, signal),
+    );
+    files.deactivate();
+    expect(
+      object(
+        await files.invoke(
+          { operation: "delete", token: confirmation.token! },
+          signal,
+        ),
+      ).ok,
+    ).toBe(false);
+    expect(await readFile(target, "utf8")).toBe("safe");
+  });
   it("refuses aborted requests without dispatching mutations", async () => {
     const files = backend();
     const cancelled = AbortSignal.abort();
