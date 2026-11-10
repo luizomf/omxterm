@@ -990,8 +990,8 @@ Both routes below share these rules:
 The separately installed Linux ARM64
 [Saved Layout extension](saved-layout-development.md) explicitly saves and
 reopens one window's terminal layout
-([ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md)). Its manifest
-declares the hosts it admits.
+([ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md)). Its preview
+targets older hosts and does not install on current releases.
 
 - The page offers Save/Replace, Open, Forget, and Refresh (for cross-instance
   conflicts or unknown outcomes).
@@ -1029,9 +1029,8 @@ declares the hosts it admits.
 The separately installed Linux ARM64
 [Mirror Typing extension](mirror-typing-development.md) copies typing to a fixed
 set of panes in one tab
-([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)). Its manifest
-declares the hosts it admits; the preview is not kept current with newer
-releases.
+([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)). Its preview
+targets older hosts and does not install on current releases.
 
 - An explicit action captures one terminal tab and its live, mounted focused
   pane before setup opens. An ineligible original focus refuses, even with live

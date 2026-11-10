@@ -1,224 +1,118 @@
-# Explicit official extension distribution
+# Extension distribution
 
-The Linux, macOS ARM64 and Windows ARM64 previews use small static project catalogs, not a marketplace,
-second installation store or public SDK. Settings uses the existing page controls;
-main reuses HTTPS acquisition and the captured-byte trust/management owner.
+OMXTerm distributes official extensions through two small static catalogs. This
+is not a marketplace, a second installation store or a public SDK. Settings uses
+its existing extension controls, and main reuses the HTTPS acquisition and
+captured-byte trust flow described in the
+[installation contract](extension-installation-foundation.md).
 
-## Authority and limits
+## Catalogs
 
-Main selects one fixed schema1 endpoint from the host target:
+Main picks one fixed endpoint from the host target:
 
-- `darwin-arm64`: `https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-darwin-arm64-v1.json`.
-- All other targets retain `https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json`.
+- `darwin-arm64`: `distribution/official-extensions-darwin-arm64-v1.json`
+- every other target: `distribution/official-extensions-v1.json`
 
-Each is a complete catalog with unique package IDs. There is no multi-endpoint
-merge, schema negotiation or fallback to the legacy endpoint after failure.
-The original target split kept the legacy document unchanged, preserving Linux's
-Files0.4 offer at that checkpoint. The published catalogs select Files0.6 for
-Linux ARM64 and Files0.7 for macOS ARM64. A separate bounded
-[macOS Files0.7 public-catalog checkpoint](files-development-preview.md)
-passed with the published stable0.25.0 host. Common SSH/Snippets
-entries are identical in both documents; promotions must update both together.
-The published SSH0.3.1 offer includes Linux and macOS ARM64 for the same original
-archive. After source integration and public endpoint readback, a separate bounded
-[macOS public-catalog checkpoint](ssh-connect-development.md)
-passed on the exact stable0.24.0 host with controlled input and a synthetic client.
-Only explicit Browse/Refresh requests the selected endpoint. No startup, reopen, polling or automatic
-update traffic is added. Responses use the existing 60-second HTTPS/redirect policy
-with a smaller 256 KiB declared/actual body bound. JSON must be valid UTF-8,
-schemaVersion1, at most100 entries, unique IDs and strict known fields. Names,
-versions, descriptions and engine ranges have bounded lengths; text is never HTML.
+Both are served from `raw.githubusercontent.com/luizomf/omxterm/main/`. Each is
+a complete schema 1 catalog with unique extension IDs. There is no merging of
+endpoints, schema negotiation or fallback to the other endpoint after a failure.
 
-Each entry contains `id`, `name`, `description`, `version`, `engines` (omxterm/api),
-`targets`, `archive` (url/sha256/bytes), `sourceCommit` and `releaseUrl`. Initial
-assets are versioned project GitHub extension releases, not latest/download or
-expiring Actions artifacts. The release page and archive must name the same tag.
-Main issues opaque selection identities; renderer-provided URLs, hashes or Official
-claims cannot authorize catalog installation. Refresh invalidates future use of old
-selections, but cannot change a descriptor already captured by an installation.
+The catalogs differ only where a target needs a different offer (today, the Files
+entry's `targets`). Entries shared by both, such as SSH Connect and Snippets,
+must stay identical, so a promotion updates both files together.
 
-Main enforces target and shared host/API compatibility for catalog selection.
-Cards show the selected offer's targets, not an exhaustive platform-support list,
-and distinguish target from host/API incompatibility. Local/link archive admission
-checks host/API, not catalog targets. Manager-unavailable errors are distinct from
-an offline catalog failure and do not promise local installation will work.
-Host admission uses ordinary semver first plus the explicitly bounded [development-family and
-historical exceptions](extension-installation-foundation.md#archive-contract);
-API admission remains ordinary semver. Exact byte length, SHA-256 and parsed
-manifest ID/version/engine strings must match the captured release **before trust**.
-One-shot owner-bound approval retains bytes and observed installed generation;
-conflict/uncertain publication never triggers automatic retry. Acquisition/consent
-is revoked by cancellation, renderer loss/navigation, window loss or shutdown.
-Already dispatched publication cannot be recalled. Neither browse nor install
-imports extension code; explicit later activation remains required.
+Schema 1 allows one release per extension ID. When a new entry's host range or
+capabilities exclude older hosts, those hosts lose the catalog offer. They can
+still install the older archive from its release link or a local file.
 
-Official means maintained by this project, not harmless or sandboxed. HTTPS and
-catalog digests bind bytes to the selected project-controlled snapshot, not an
-independent publisher signature. A compromised catalog authority can replace both
-metadata and hashes. A stale snapshot is not proof of newest release or revocation.
-The UI does not add persistent installed Official badges or a second trust ledger.
+## Entry format
 
-## Fixed host default is not catalog acquisition
+Each entry has `id`, `name`, `description`, `version`, `engines` (`omxterm` and
+`api` ranges), `targets`, `archive` (`url`, `sha256`, `bytes`), `sourceCommit`
+and `releaseUrl`. The archive is an asset of a versioned project GitHub release
+(`ext-<name>-vX.Y.Z`), never a `latest/download` link or an expiring Actions
+artifact. The release page and the archive must name the same tag.
 
-Current source has one narrow [new-profile Snippets default](default-snippets.md):
-a packaged host can consume a permanent, early-absence-bound one-time grant to
-install exact bundled public0.1.0 bytes enabled+dormant. It never fetches this
-catalog or substitutes its mutable offer for the pin. Existing profiles and
-manual install/reinstall/replacement keep their explicit trust; disabled entries
-and tombstones win. This does not modify any catalog, published receipt or
-platform/package qualification status.
+Catalog responses are bounded: valid UTF-8 JSON, schema version 1, at most 100
+entries, unique IDs, strict known fields, bounded text lengths, and at most
+256 KiB. Text is never rendered as HTML.
 
-## Offline and replacement behavior
+## Browsing and selection
 
-Only the last successful snapshot is retained, in memory. Failed refresh visibly
-marks it stale; cold offline failure is unavailable rather than a successful empty
-catalog. Catalog acquisition does not block local/installed management. Snapshot
-inspection and Settings reopen never request the network. Newer compatible releases
-offer Update; identical installed ID/version/digest offers Reinstall. Older versions
-or same-version different bytes require an explicit replacement warning, including
-in native trust. All installs/replacements remain dormant.
+- Only an explicit **Browse** or **Refresh** requests the catalog. There is no
+  startup, polling or automatic update traffic.
+- Main issues opaque selection identities. A renderer-supplied URL, hash or
+  "Official" claim cannot authorize an installation. Refreshing invalidates old
+  selections but does not change a descriptor an installation already captured.
+- Main checks the entry's `targets` and the shared host/API compatibility.
+  Cards show the offer's targets and tell target incompatibility apart from
+  host/API incompatibility. Local and link installs check host/API only, not
+  catalog targets.
+- Host admission follows the
+  [archive contract](extension-installation-foundation.md#archive-contract);
+  API admission is ordinary semver.
+- The downloaded archive's byte length, SHA-256 and parsed manifest ID, version
+  and engine ranges must match the catalog entry before trust is asked.
+- Installing needs a one-shot, owner-bound approval. Cancelling, losing the
+  renderer or window, navigating away or shutting down revokes it. A conflict or
+  an uncertain publication never triggers an automatic retry.
+- Browsing and installing never import extension code. Everything installs
+  dormant, and enabling is a separate explicit step.
 
-## Publication boundary
+## Offline behavior and updates
 
-`extensions/files/extension.json` remains the sole Files metadata input. The builder
-emits archive/checksum/receipt. `scripts/create-files-catalog.mjs ARCHIVE OUTPUT`
-checks actual archive bytes, checksum, receipt and embedded manifest against that
-input and refuses output replacement. It preserves the artifact's original source
-commit and does not infer qualification or rebuild identical-version bytes.
+Only the last successful snapshot is kept, in memory. A failed refresh marks it
+stale; a cold offline failure shows the catalog as unavailable, not as an empty
+list. Catalog problems never block managing installed or local extensions, and
+reopening Settings does not hit the network.
 
-Changed published bytes require a new Files version and release. A separate Linux
-ARM64 host prerelease and separate Files release are both **not Latest**. Assets
-must be published and downloaded/hash-verified before promoting the generated
-entry. Empty source catalog integration is useful implementation, not completed
-public distribution. Public-endpoint packaged consumption is a separate required
-milestone; follow the [Files publication procedure](release.md#catalog-promotion).
-The generator emits only Files with a Linux ARM64 target: merge its entry into
-the appropriate complete catalog rather than replacing SSH or Snippets. It is
-not a macOS entry generator. Never replace the complete catalog with its output.
+A newer compatible release offers Update. The same ID, version and digest offers
+Reinstall. An older version, or the same version with different bytes, asks for
+an explicit replacement warning, including in the native trust prompt.
 
-<a id="files06-and-ssh031-candidate"></a>
+## Trust
 
-### Files0.6 and SSH0.3.1 promotion
+"Official" means maintained by this project. It does not mean harmless or
+sandboxed. HTTPS plus the catalog digest binds the bytes to what the project
+published at that moment; it is not an independent publisher signature. Whoever
+controls the catalog can replace both metadata and hashes, and a stale snapshot
+is not proof of the newest release or of revocation. The UI adds no persistent
+"Official" badge and no second trust ledger.
 
-At that historical promotion both catalogs bound Files0.6.0 to archive `files-0.6.0.omxext`, 17,331
-bytes, SHA-256 `50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`,
-and source `cfc9073010df586eec321641ba5013862734f8fe`. The Linux entry targets
-`linux-arm64`; the macOS entry targets `darwin-arm64`. Both require host
-`>=0.24.0-dev.21` and API `0.1.x`. SSH0.3.1 targets `linux-arm64` and
-`darwin-arm64` in the published catalogs. It requires
-host `>=0.24.0-dev.8` / API `0.1.x`, and binds `ssh-0.3.1.omxext`, 11,606 bytes,
-SHA-256 `be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`,
-and source `8717d47327eeab14f522b1b2a448216860d0923d`. Original build receipts
-remain `not-run`; qualification evidence is separate.
+Catalog admission also does not qualify every version in an engine range on every
+platform.
 
-These entries do not prove that every advertised pair has been qualified. The
-original archive, checksum and receipt for each extension were separately published
-and anonymously byte-verified; their receipts remain `not-run`. The macOS SSH
-promotion integrated as `24dbf2e0dc2f9ecb5c3233d9f72f8b92f07dc423`. Afterward,
-the fixed endpoints were read back: legacy SHA-256
-`8233d2a6fd3e1b41034acccd7e4b6e13afddd81f0f1c8393e7b9b05329e28d5f`, macOS
-`9f75bf9b0c9a58e75e48a903f8518c0deeded767bacf532a1548e22441d7bd4c`. The
-separate [macOS Files0.6 public-catalog checkpoint](files-development-preview.md)
-and [SSH0.3.1 public-catalog checkpoint](ssh-connect-development.md)
-used the retained locally built 0.24.0 DMG, not a freshly downloaded public host.
-Other public-HTTPS checkpoints remain separate. Preserve newer supported
-Snippets targets when reconciling promotions. Schema1 has one release per ID: promoting Files0.6 removes a compatible
-catalog offer for Linux dev.11–dev.20. Those users can upgrade their host or install
-the unchanged Files0.4 archive locally or by its direct HTTPS link. Files0.1 does
-not admit stable host0.24.0. Existing releases and installed packages remain unchanged.
+## Bundled default
 
-### Files0.8 catalog offer
+New profiles can get the Snippets extension without the catalog: a packaged
+host installs exact bundled bytes, enabled but dormant, under a one-time grant.
+It never fetches the catalog or substitutes the catalog's mutable offer. Existing
+profiles, disabled entries and removed extensions keep their explicit choices.
+See [default Snippets](default-snippets.md).
 
-Both ARM64 catalogs bind the published Files0.8.0 archive (24,682 bytes,
-SHA-256 `88f3deb79e3b574a6ae4aa71d56ff74eb17fdd6c25b6123b30a519a4cc827563`,
-source `bf2f0678b748043baa19d514889159bc3c632223`) with host `>=0.26.0` and API
-`0.1.x`. The one-release-per-ID schema removes the Files offer from 0.25.0 and
-earlier hosts; they keep installing Files0.7 or 0.6 by link or local file.
+## Publishing and promoting
 
-### macOS Files0.7 catalog offer (historical)
+Publishing an archive and promoting it into a catalog are separate steps, and
+the archive must be public and hash-verified before promotion. The procedures
+live in [release.md](release.md#publishing-an-extension-archive) and
+[catalog promotion](release.md#catalog-promotion).
 
-The published macOS catalog binds the published Files0.7.0 archive (23,285
-bytes, SHA-256 `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`,
-source `0cb89accd61f1f5d5263c60773454882793e2e99`) to `darwin-arm64`, host
-`>=0.25.0-dev.10` and API `0.1.x`. The unchanged Linux catalog still offers
-Files0.6; SSH and Snippets remain identical. The original Files0.7 build receipt
-remains Linux-targeted and `not-run`. A separate [macOS local exact-pair checkpoint](files-development-preview.md)
-passed; a separate public endpoint readback and bounded public catalog consumer
-also passed, without repeating that filesystem matrix. The one-release-per-ID schema removes the Files0.6 offer from macOS
-0.24.0 and earlier otherwise-compatible hosts. They can install the unchanged
-Files0.6 archive locally or from its HTTPS link, or upgrade; no existing install
-is automatically updated.
+`scripts/create-files-catalog.mjs ARCHIVE OUTPUT` builds a Files entry from the
+published archive. It checks the real bytes, checksum, build receipt and embedded
+manifest against `extensions/files/extension.json`, keeps the archive's original
+source commit and refuses to overwrite its output. It only emits a Linux ARM64
+entry, so merge its output into the right catalog by hand. Never replace a whole
+catalog with it, and edit the SSH, Snippets and macOS entries by hand.
 
-### Earlier published checkpoints
+A changed archive needs a new extension version and release. Published
+same-version bytes are never rebuilt or replaced.
 
-At the earlier Linux checkpoint the legacy Files entry selected the immutable `ext-files-v0.4.0` release,
-`omxterm-files-language-b6044d6.omxext` (13,188 bytes, SHA-256
-`384de7da4cc2fafe7e42cd4ccf19a455a2e634036069160c75e15b7371d2eb6e`), from original
-source `b6044d65d14345adb8d7ae59340fbca978512107`. It requires host
-`>=0.24.0-dev.8`, API `0.1.x`, and target `linux-arm64`. All three original assets
-passed draft and anonymous public readback; the original receipt remains
-`not-run` with intended host dev.12. Separate controlled qualification passed on
-the already-public dev.11 ARM64 AppImage. A separate actual public-HTTPS native
-consumption checkpoint also passed after reviewed catalog integration; see
-[exact evidence and limits](files-development-preview.md#platform-limits).
-The promotion preserves SSH/Snippets metadata and all historical releases.
-Stable0.23.0 users need the historical Files0.1.0 local/link archive rather than
-the newer catalog entry; no host or archive rebuild was part of that promotion.
+## Current offers
 
-At the earlier macOS checkpoint the endpoint selected immutable Files0.5.0, archive
-`files-0.5.0-a343704c0794.omxext` (13,200 bytes, SHA-256
-`82bd4bfe6f5a3ae7c22642741718dea94543f92b636a50b357c13d3c4be6aa18`),
-source `a343704c0794cb913fba9ad312e90e5f6daa4bb1`, host `>=0.24.0-dev.21`
-and API `0.1.x`, target `darwin-arm64` only. Original assets and receipts remain
-unchanged. Existing dev.21 hosts still fetch the legacy URL: their qualified
-[local/link route](files-development-preview.md#https-archive-installation)
-remains valid, but catalog discovery requires a new host containing this URL
-selection. New-host packaging, publication and actual public-catalog consumption
-remain separate from source implementation and earlier link qualification.
-This split is not a historical compatible-release resolver; revisit a separate
-versioned multi-release format if same-target host generations need different offers.
-
-The separately published SSH Connect0.3.0 used the same catalog/installation owner, with target Linux ARM64
-and host minimum0.24.0-dev.8. The immutable `ext-ssh-v0.3.0` release provides
-`ssh-0.3.0-77937fc.omxext` (11,572 bytes, SHA-256
-`13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf`), bound to source
-`77937fcf87ae71a68709111df7ace7359fb3f0b6` and its original checksum/receipt.
-Draft and anonymous public asset readback passed; catalog promotion preserves
-Files and Snippets metadata. Fixed-endpoint readback and bounded public packaged
-consumption passed; [the SSH guide](ssh-connect-development.md)
-records the exact catalog digest, lifecycle results and capture limitations. The exact native-qualified pair reuses public
-Linux ARM64 host0.24.0-dev.11; the original receipt's build-time `not-run` and
-intended dev.19 fields remain unchanged. Historical SSH0.1.0
-`ssh-6d939f0.omxext` and its original sidecars remain immutable. Installing0.3.0
-is a deliberate extension update, not a side effect of upgrading the host.
-The Files generator above must not be used for SSH or to erase other entries.
-Follow the [SSH preview procedure](release.md#publishing-an-extension-archive) for the
-extension-only publication and bounded public-consumption gate.
-Catalog admission is not qualification of every version in an engine range.
-
-The original Linux ARM64 catalog promotion listed Snippets0.1.0, bound to the
-published archive, original receipt and checksum. Its host range was
-`>=0.24.0-dev.8` with API `0.1.x`; the qualified published pair was host
-`0.24.0-dev.11`, not every admitted host. That promotion left Files/SSH entries unchanged.
-At that promotion the fixed endpoint was read back byte-for-byte and the separate
-[packaged public-HTTPS checkpoint](snippets-migration.md#publish-and-install)
-passed on that exact 0.1.0 pair. The current catalog offers Snippets0.1.1 on the
-same declared targets; see the [migration guide](snippets-migration.md) for its
-distinct evidence and limits. The [promotion procedure](release.md#catalog-promotion)
-retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#publish-and-install),
-and explicit trust/enablement remain unchanged. Older Windows releases retain
-built-in Snippets; the separate Windows ARM64 dev.36 preview is described below.
-
-The Linux x64 `0.24.0-dev.30` host originally offered the same 0.1.0 archive
-through the official catalog or local installation. That promotion added `linux-x64` to the common
-Snippets entry without altering Files/SSH or archive identity. The host selects the
-legacy endpoint listed above; its public readback and a separate bounded packaged
-public-HTTPS checkpoint passed. See the [Linux x64 checkpoint](snippets-migration.md#publish-and-install)
-for the exact pair and limits.
-
-The earlier common Snippets promotion added `win32-arm64` for the immutable public
-Windows ARM64 dev.36 host. At that checkpoint both complete catalogs retained
-every other entry and the same Snippets archive, source, engine ranges and URLs. That exact host passed
-the staged ten-check scenario plus separate FULL NSIS; anonymous public host and
-archive byte readback passed. The installed public-HTTPS checkpoint remains
-separate from catalog integration; source/headless tests are not that result. See the [Windows boundary and local installation](snippets-migration.md#known-limits).
+Check `distribution/` for the exact entries. At the time of writing, both
+catalogs offer Files, SSH Connect and Snippets. Files requires host `>=0.26.0`,
+so hosts before 0.26.0 install the older Files archive by link or local file.
+Evidence for specific extension and host pairs lives in each extension's
+development record, for example
+[Files](files-development-preview.md), [SSH Connect](ssh-connect-development.md)
+and [Snippets](snippets-migration.md#publish-and-install).

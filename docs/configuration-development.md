@@ -107,9 +107,6 @@ read.
 - On Linux and Windows, binding a bare `Ctrl+<key>` that terminal programs use
   (like `Ctrl+C`) is accepted with a warning.
 - `+` is written as `Plus`; other punctuation is literal.
-- `focusPaneLeft`, `focusPaneRight`, `focusPaneUp` and `focusPaneDown` default to
-  `CommandOrControl+Alt+<Arrow>` on macOS and `Alt+Shift+<Arrow>` on Linux and
-  Windows. The user guide's table leaves them out.
 
 ### Panel shortcuts
 
