@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
+import { skipWithoutHostFixtureFonts } from "../fixtures/native-fixture-fonts";
 import { applyChromiumSandboxPolicy } from "../../src/main/chromium-sandbox-policy";
 import { buildFixture } from "../fixtures/font-read-reload-build";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
@@ -10,6 +11,8 @@ import {
   assertOldPostReadRejection,
   fontReadReloadResultPrefix as prefix,
 } from "../fixtures/font-read-reload-checks";
+
+skipWithoutHostFixtureFonts();
 
 const executable = createRequire(import.meta.url)("electron") as string;
 it
