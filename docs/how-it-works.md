@@ -1,6 +1,6 @@
 # How OMXTerm works
 
-OMXTerm is the desktop window around your command-line tools. It provides tabs, GPU-accelerated text rendering, copy/paste, themes, and image previews, while your shell and the programs you run do the actual work.
+OMXTerm is a desktop app for your command-line programs. It adds tabs, split panes, copy and paste, themes, and image previews around the shell already on your computer. It uses your graphics processor to draw terminal text and images.
 
 To get started right away, head to [Installation](installation.md) or [Everyday use](usage.md).
 
@@ -8,21 +8,21 @@ To get started right away, head to [Installation](installation.md) or [Everyday 
 
 Three layers work together whenever you type a command:
 
-| Layer                    | What it does                                             | Examples                    |
-| ------------------------ | -------------------------------------------------------- | --------------------------- |
-| **OMXTerm (Terminal)**   | Displays text/graphics and sends your keystrokes         | Tabs, selection, font zoom  |
-| **Shell**                | Reads your commands, expands arguments, and starts tools | Zsh, Bash, PowerShell       |
-| **Command-line program** | Runs the task you asked for                              | Git, Neovim, SSH, AI agents |
+| Layer                  | What it does                         | Examples                   |
+| ---------------------- | ------------------------------------ | -------------------------- |
+| **OMXTerm (terminal)** | Shows text and sends your keystrokes | Tabs, selection, font zoom |
+| **Shell**              | Reads commands and starts programs   | Zsh, Bash, PowerShell      |
+| **Program**            | Does the task you asked for          | Git, Neovim, SSH           |
 
-When you type `pwd` and press Enter, OMXTerm sends those characters to your shell, the shell runs the command, and OMXTerm draws the output on screen. Your custom prompt, aliases, and command history belong to your shell configuration (like `.zshrc` or `.bashrc`), while your font, window colors, and app shortcuts belong to OMXTerm.
+When you type `pwd` and press Enter, OMXTerm sends those characters to your shell, the shell runs the command, and OMXTerm draws the output on screen. Your shell's prompt, aliases (short command names), and command history come from its settings files, such as `.zshrc` or `.bashrc`. Your font, window colors, and app shortcuts belong to OMXTerm.
 
 ## What happens when you open OMXTerm
 
 1. **Preferences load.** OMXTerm reads `~/.config/omxterm/config.json` and your selected theme. On your very first launch, it creates editable starter files for you.
-2. **A window and tab open.** Each tab gets its own terminal surface powered by Restty and Ghostty's terminal core over WebGL2.
-3. **A local PTY session starts.** Once the display is ready, OMXTerm connects the tab to an operating-system pseudo-terminal (**PTY**) and starts your shell in your home directory:
-   - **macOS and Linux:** your user account's default shell, started as an interactive login shell.
-   - **Windows:** Windows PowerShell by default, or the shell configured via `windowsShell` (such as PowerShell 7 or Git Bash).
+2. **A window and tab open.** Each tab starts with one shell; you can split a tab into panes, each with its own shell.
+3. **Your shell starts.** OMXTerm connects the tab to your shell through a system text connection called a pseudo-terminal (**PTY**) and starts it in your home directory:
+   - **macOS and Linux:** the default shell for your account.
+   - **Windows:** PowerShell, unless you have configured another shell.
 
 OMXTerm never modifies your shell startup files or injects custom shell scripts. If your prompt or aliases look different in Bash, see [shell startup preferences](usage.md#shell-preferences-do-not-load).
 
@@ -33,8 +33,8 @@ Keyboard ─▶ OMXTerm ─▶ PTY ─▶ Shell / program
 Screen   ◀─ OMXTerm ◀─ PTY ◀─ Shell / program
 ```
 
-- **OMXTerm** turns the program's output (text, colors, cursor movement, full-screen apps, and inline images) into pixels using your GPU.
-- **The PTY** (pseudo-terminal) is the operating system's pipe between OMXTerm and your shell.
+- **OMXTerm** turns the program's output (text, colors, cursor movement, full-screen apps, and inline images) into pixels on your screen.
+- **The PTY** (pseudo-terminal) carries keystrokes from OMXTerm to your shell and returns the shell's output to the window.
 - **Resizing:** when you resize the window or zoom, OMXTerm tells the PTY the new number of rows and columns, so apps like Vim or `btop` redraw to fit.
 
 ## Tabs and sessions
