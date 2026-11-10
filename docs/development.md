@@ -807,7 +807,7 @@ public-catalog mode requires a new exact DMG containing that selection and its
 own FULL/package/public-consumption evidence. It reuses the short distribution
 scope, not the local eleven-check Trash/state campaign. The original dev.21
 binary remains link-only for Files0.5; see the
-[publication boundary](release.md#files-macos-catalog-publication).
+[publication boundary](release.md#catalog-promotion).
 
 See [release procedures](release.md#resume-and-version-only-commands) for standalone `package:*` and `package-built:*` commands.
 

@@ -2544,7 +2544,7 @@ lifecycle. Native extension addons must be explicitly unpacked; macOS also
 requires the complete ad-hoc application seal. Only the ARM64 targets include and
 exercise the Files no-clobber move/conflict primitive. The macOS
 probe also checks the trash export/root refusal without executing a trash mutation; see
-[preview preparation](release.md#files-preview-preparation).
+[preview preparation](release.md#building-an-extension-archive).
 Trusted children retain ordinary Node capabilities. Production/native/visual and
 main-death qualification remain explicit obligations, not consequences of wiring.
 

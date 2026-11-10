@@ -420,7 +420,7 @@ ARM64 verifier checks required runtime/preload/dependency resources, compares
 built resource bytes and exercises actual packaged Node-mode store/lease/move
 loading plus bootstrap missing-IPC refusal. This headless check does not activate
 Files or establish its GUI/lifecycle behavior. See the
-[preview preparation procedure](release.md#files-preview-preparation).
+[preview preparation procedure](release.md#building-an-extension-archive).
 
 The backend lists directories using `opendir` and sequential `lstat`, with a
 5,000-entry visit limit and explicit truncation. Replies contain at most100 rows,
@@ -917,7 +917,7 @@ install the unchanged [Files0.4.0 archive](https://github.com/luizomf/omxterm/re
 from a downloaded local file or its direct HTTPS archive link, or upgrade the host.
 Existing installed packages and historical release bytes remain unchanged.
 See [distribution](extension-distribution.md) and the
-[publication procedure](release.md#files-catalog-publication). An empty source
+[publication procedure](release.md#catalog-promotion). An empty source
 catalog does not mean a usable public preview has shipped.
 
 ## Files 0.4.0 distribution and controlled qualification

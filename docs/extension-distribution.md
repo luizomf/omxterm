@@ -91,7 +91,7 @@ ARM64 host prerelease and separate Files release are both **not Latest**. Assets
 must be published and downloaded/hash-verified before promoting the generated
 entry. Empty source catalog integration is useful implementation, not completed
 public distribution. Public-endpoint packaged consumption is a separate required
-milestone; follow the [Files publication procedure](release.md#files-catalog-publication).
+milestone; follow the [Files publication procedure](release.md#catalog-promotion).
 The generator emits only Files with a Linux ARM64 target: merge its entry into
 the appropriate complete catalog rather than replacing SSH or Snippets. It is
 not a macOS entry generator. Never replace the complete catalog with its output.
@@ -184,7 +184,7 @@ intended dev.19 fields remain unchanged. Historical SSH0.1.0
 `ssh-6d939f0.omxext` and its original sidecars remain immutable. Installing0.3.0
 is a deliberate extension update, not a side effect of upgrading the host.
 The Files generator above must not be used for SSH or to erase other entries.
-Follow the [SSH preview procedure](release.md#ssh-preview-publication) for the
+Follow the [SSH preview procedure](release.md#publishing-an-extension-archive) for the
 extension-only publication and bounded public-consumption gate.
 Catalog admission is not qualification of every version in an engine range.
 
@@ -196,7 +196,7 @@ At that promotion the fixed endpoint was read back byte-for-byte and the separat
 [packaged public-HTTPS checkpoint](snippets-migration.md#preview-coverage-and-remaining-platforms)
 passed on that exact 0.1.0 pair. The current catalog offers Snippets0.1.1 on the
 same declared targets; see the [migration guide](snippets-migration.md) for its
-distinct evidence and limits. The [promotion procedure](release.md#snippets-catalog-promotion)
+distinct evidence and limits. The [promotion procedure](release.md#catalog-promotion)
 retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),
 and explicit trust/enablement remain unchanged. Older Windows releases retain
 built-in Snippets; the separate Windows ARM64 dev.36 preview is described below.

@@ -1,70 +1,30 @@
 # Native release procedures
 
-This guide covers native ARM64 macOS (`.dmg`) and ARM64/x64 Linux (`.AppImage` + `linux_install.sh`) and Windows (`.exe` NSIS) releases. Linux and Windows x64 packages use owner-approved **build-only qualification**: native CI and enumerated headless checks, with desktop, GPU, installer and ordinary-user integration unverified and not release gates ([ADR 0036](adr/0036-distribute-build-only-x64-ci-artifacts.md)). ARM64 checks and full-verifier safety boundaries are unchanged.
+This guide covers native ARM64 macOS (`.dmg`) and ARM64/x64 Linux (`.AppImage` + `linux_install.sh`) and Windows (`.exe` NSIS) releases, plus separately published extension archives. Linux and Windows x64 packages use owner-approved **build-only qualification**: native CI and enumerated headless checks, with desktop, GPU, installer and ordinary-user integration unverified and not release gates ([ADR 0036](adr/0036-distribute-build-only-x64-ci-artifacts.md)).
 
-See [versioning.md](versioning.md) for SemVer rules and [development.md](development.md#platform-prerequisites) for platform setup.
-
-## Stable 0.25.0 publication
-
-[OMXTerm 0.25.0](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) was
-published on **2026-11-07 at 11:39:10 UTC** as immutable Latest, with all twelve
-draft and anonymous public assets verified by size/SHA-256. Tag/cut:
-`13ea6873e6c45240a0a757156b7a4f694c2b43af`. Actual macOS/Linux ARM64 builds use
-`575407cc61648b8dbf598dd7e1c4d46345c31ff2`; Linux x64 uses
-`0e9102ceb29336957e5ccf659f542bf5b2bc64a0`; both Windows builds use the tag cut.
-All build SHAs are cut ancestors with only test/docs differences, identical
-shipping/version/lock inputs and one byte-identical common Linux helper pair.
-
-The maintainer lifted the earlier hold **for 0.25.0 only**, accepting Windows
-ARM64's unrun graphical suite and unresolved public-install Snippets failures
-(child loss and one unexpected-prefix diagnostic; cause unknown). The strict
-Windows network-silence test remains failed; profile behavior was accepted
-separately using the existing-empty proxy control. macOS exact-DMG/public-archive
-Insert, preview and acquisition remain untested. See the
-[release limits](snippets-migration.md#stable-0250-release-disposition). x64 stays
-build-only; terminal-input rules and future test-isolation requirements are unchanged.
-
-The release includes native theme authoring and the one-time Snippets 0.1.0 default.
-It excludes Files 0.8 insertion/drop and #818's later palette presentation. The
-frozen host cannot run Files 0.8: it lacks the required capability despite matching
-the version range. At publication, extension archives, versions and catalogs were unchanged.
-See [development metadata](versioning.md#post-0250-development-baseline) for the
-next development baseline. Historical release records below keep their original inputs.
-
-## Snippets 0.1.1 publication
-
-[Snippets 0.1.1](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1)
-is an immutable non-Latest prerelease from `12c54a09060364982de4e9833d112167a4e21d26`.
-Its 82,635-byte archive SHA-256 is
-`e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b`;
-the original receipt remains `not-run`. See the release notes for exact evidence
-and limits. The original publication did not change the catalog or bundled default.
-The catalog now offers 0.1.1; the bundled default remains 0.1.0. Installation or
-update is deliberate. Application Latest remains 0.25.0.
+See [versioning.md](versioning.md) for SemVer rules and [development.md](development.md#platform-prerequisites) for platform setup. Per-release evidence, decisions and limits belong in each GitHub release's notes, not in this guide.
 
 ## Release workflow
 
 1. Select application version `X.Y.Z` under [versioning.md](versioning.md), remove the development suffix and review one frozen source cut. Record its full commit SHA. All targets for that application version use this cut; they need not ship together.
 2. Build and verify a ready target using the relevant procedure below. Retain the actual build SHA, checksums and evidence; prove any build-to-cut differences are non-artifact changes. Collect its files in the ignored `release/` directory.
-3. Create its target tag and draft, upload its complete [asset set](#publication), read back sizes and hashes, publish, and verify public downloads. Update that target's exact links and notes in the README download index. A target that is not ready does not block another.
-4. Advance the development baseline once for the selected application cut, not for each later target. Review [extension compatibility](versioning.md#post-0250-development-baseline) for the selected family.
+3. Create its target tag and draft, upload its complete [asset set](#publication), read back sizes and hashes, publish, and verify public downloads. Update that target's exact links in the README download index. A target that is not ready does not block another.
+4. Advance the development baseline once for the selected application cut, not for each later target, after reviewing [extension compatibility](versioning.md#development-baseline-between-releases) for the new family.
 
 For example, Linux ARM64 can ship `linux-arm64-v0.26.0` first; macOS ARM64 can later ship `macos-arm64-v0.26.0` from the same frozen cut without an artificial version bump or rebuilding Linux. If product code, dependencies or build inputs need correction after a target ships, select a new application version and cut for the correction. Do not change a sealed release, move its tag, or create a later roll-up release.
 
 ## Verification and release decisions
 
 Follow [ADR 0019's risk-based verification and reuse policy](adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse):
-assess findings and gaps for their relevance to the cut. Missing provenance
-prevents reuse, not unrelated release work; a diagnosis-supported disposition can
-record bounded unresolved risk without inventing a cause.
+assess failures and gaps for their relevance to the cut. A real product
+regression blocks the affected target. An environment-specific or flaky test
+failure can be accepted with a recorded reason. If a test cannot run safely,
+leave it unrun and continue independent work.
 
-Record the selected cut/assets, actual failures, missing coverage, supporting
-results and maintainer decision with the publication inputs. If a test cannot run
-safely, leave that execution unrun and continue independent work. This does not
-change test-isolation or data/security boundaries. The
-[0.25.0 decision](snippets-migration.md#stable-0250-release-disposition) applies to
-that release only. Version/source correspondence, uploaded-byte checks and
-immutable tags/assets still belong to the publication transaction.
+Record the selected cut, assets, actual failures, missing coverage and the
+release decision in the release notes. Version/source correspondence,
+uploaded-byte checks and immutable tags/assets still belong to the publication
+transaction.
 
 <a id="changed-inputs-and-build-to-tag-comparison"></a>
 
@@ -135,15 +95,9 @@ npm ci
 npm run check
 ```
 
-`npm run check` runs `check:portable`, the performance benchmark with
-`--fail-on-invalid`, builds the staged app (`release/mac-arm64/OMXTerm.app`) and
-verifies it. The benchmark reports measurements and does not gate regressions;
-`--fail-on-invalid` only rejects a run that is not a valid observation (a missing
-metric, a short stream, an unverified idle window, an unexpected skip). No macOS
-baseline is committed today, so on this lane the benchmark prints this run's
-numbers and states that there is nothing to compare; recording a macOS baseline
-is possible once a suitable desktop records one. Afterwards, mount and verify the
-final `.dmg` image:
+`npm run check` runs `check:portable`, builds the staged app
+(`release/mac-arm64/OMXTerm.app`) and verifies it. Afterwards, mount and verify
+the final `.dmg` image:
 
 ```sh
 (
@@ -212,44 +166,20 @@ gh workflow run linux-x64.yml --ref <reviewed-ref>
 
 Each lane runs locked install, format, lint, typecheck, `npm test -- test/unit`,
 build, explicit `package-built:win:x64` or `package-built:linux:x64` (`--publish never`),
-and `npm run package:verify -- --inspection-only` as fail-preserving steps.
-The Windows lane pins Node 24.22.2 and verifies the official x64 `node.lib`
-against its reviewed SHA-256, discovers installed MSVC/SDK, and runs real native
-lease/store and backend tests in the initialized toolchain environment. These
-headless tests include an Electron main process without creating a window; the
-packaged probe uses Run-as-Node. No GUI suite, NSIS or Linux helper installation runs. The unchanged default
-`package:verify` and even `--windows-unpacked-only` launch the GUI: do not use
-those modes on a headless runner.
+and `npm run package:verify -- --inspection-only`. No GUI suite, NSIS or Linux
+helper installation runs. The default `package:verify` and even
+`--windows-unpacked-only` launch the GUI: do not use those modes on a headless runner.
 
-Inspection checks architecture, ASAR contents, version, icons and licenses.
-Linux verifies exact AppImage/helper checksums, reviewed AppRun bytes, extracts
-without FUSE, reports ELF dynamic dependencies, and exercises bounded packaged
-PTY output/exit/resize, missing-executable exec failure and successful exit 1.
-Both lanes load the packaged addon in the packaged Electron Run-as-Node runtime,
-recording actual runtime versions separately from the locked dependency.
-Windows inspects `win-unpacked` and records the packaged extension probe and
-prepared/packaged artifact hashes in build evidence; the exact NSIS is hashed,
-not executed or proven equivalent to that tree.
-
-Only successful jobs upload an explicit allowlist: binary, its `.sha256`,
-`build-evidence.json`, and (Linux only) the common helper/checksum pair. Names
-contain platform, full source SHA, run ID and attempt; summaries link the upload.
-Retention is **7 days**, no dependency caches or automatic publication. The JSON
-records source/lock, runner image/OS/glibc, Node/npm, actual checks/runtime and
-file basenames/byte counts/digests, plus unverified boundaries. Download before
-expiry, keep each platform's evidence separately, and verify every file against
-those records. The artifact ZIP digest is not the binary checksum. On Linux,
-restore executable bits with `chmod +x <AppImage> linux_install.sh` after checking
-contents; Actions ZIPs do not preserve modes.
+Only successful jobs upload the binary, its `.sha256`, `build-evidence.json`
+and (Linux only) the common helper/checksum pair, retained for **7 days**.
+Download before expiry and verify every file against `build-evidence.json`;
+the artifact ZIP digest is not the binary checksum. On Linux, restore executable
+bits with `chmod +x <AppImage> linux_install.sh` after checking contents; Actions
+ZIPs do not preserve modes.
 
 Desktop/GPU, ordinary-user OS integration, FUSE launch, actual helper/NSIS
 installation, Windows 11 and SmartScreen/UAC remain unverified and are **not
-release gates** for these lanes. Windows Server administrators do not establish
-ordinary-user Developer Mode. Linux's runner/glibc baseline does not establish
-broad distro compatibility; the static AppImage runtime does not make Electron
-or the addon static. First native runs must establish downloaded AppImage tool
-execution and upload success. Do not call #223/#224 fully qualified; #627's
-broader automation and #680's shortcuts work remain separate.
+release gates** for these lanes. Say so in the release notes.
 
 ### Checksums
 
@@ -274,499 +204,6 @@ $name = "OMXTerm-<version>-arm64.exe"   # or OMXTerm-<version>-x64.exe
 Get-Content "$name.sha256"
 ```
 
-## Files preview preparation
-
-A Linux ARM64 Files preview is a separate preparation lane, not a
-[stable target release](#publication) or an announcement that a preview is published.
-Use an ordinary-user disposable Linux ARM64 guest and an exact committed source:
-
-```sh
-npm ci
-npm run build
-node scripts/build-files-extension.mjs
-npm run package-built:linux
-npm run package:verify -- --inspection-only
-OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
-```
-
-Build Files **after** `npm run build` (which clears `dist`) and **before** packaging
-so exclusion is actually checked. The Files archive and its `.sha256`/`.json`
-sidecars live in `dist/extensions`, outside the host package. Current source builds
-Files `0.8.0` with minimum host `0.25.0-dev.20` / API `0.1.x` and declared
-`terminal.insertPath.v1`; see the [source compatibility rationale](files-development-preview.md#concrete-consumer).
-This packages the already-integrated shared protected path-insertion/terminal-drop
-consumer alongside filtering/keyboard and confirmed directory movement; it does
-not redesign them. Lower hosts are refused through archive admission. Node-only
-archive preparation may use a private output path instead of `dist/extensions`;
-it needs no browser/Electron launch or host package build. Keep generated archives
-and original sidecars outside Git. Before publication, inspect generated archive
-members for checkout or host path disclosure: a linked dependency outside the
-checkout can put its local path into bundled code. Use checkout-local bundled
-inputs and verify the resulting bytes; do not edit generated bytes to hide paths.
-No host version bump, catalog promotion, exact-pair qualification or publication
-follows from building the separate archive.
-Published Files `0.6.0` retains minimum host `0.24.0-dev.21` and its original
-bytes. The Linux catalog retains 0.6; the published macOS catalog selects 0.7.
-Files0.7's separate Linux package/public-link checkpoints and publication passed
-as recorded below. The [macOS local checkpoint](files-development-preview.md#files07-macos-stable-local-checkpoint)
-and later [public-catalog checkpoint](files-development-preview.md#files07-macos-public-catalog-checkpoint)
-are separate and do not establish broader qualification.
-The original Files `0.4.0` archive
-(minimum host `0.24.0-dev.8`) is published separately as `ext-files-v0.4.0`
-(see below). The historical published Files
-`0.1.0` archive retains its historical minimum host `0.23.0-dev.8`; none of these
-archives supports `v0.22.0`. When building an exported source
-archive, pass `OUTPUT.omxext FULL_SOURCE_COMMIT` to the Files builder and verify
-the export's source correspondence. The receipt distinguishes supplied source
-identity from a clean local Git HEAD.
-
-Inspection-only now includes packaged Linux ARM64 extension store/native loading
-and bootstrap module resolution. It is **not** Files activation, GUI or normal
-Quit qualification. Before publication, qualify the exact packaged host with the
-separate archive: captured-byte trust, dormant install, explicit Files activation,
-real filesystem mutation/conflict, deliberate replacement/management, the same
-live PTY and joined Quit. Preserve source/lock/tool/runtime identities, package
-and archive hashes, actual tested host/target, outcomes and limitations alongside
-the build receipt; never turn its `not-run` field into an inferred pass.
-
-The historical Files0.7 [exact Linux packaged consumer](files-development-preview.md#exact-linux-arm64-files07-packaged-consumer)
-remains pinned to its published pair; do not relabel it as Files0.8 evidence.
-Files0.8 needs separately selected exact-host/archive qualification through the
-existing consumer seams before any publication decision, including production
-package admission, protected insertion/drop and real PTY behavior. Prior native
-UI used inert session/backend/package dependencies; its receipt timeout was not
-the transport deadline. No native replay or broader campaign is selected by
-archive preparation. At that checkpoint both Files0.6 catalogs and published0.7 bytes were preserved. Historical built-host checks are
-not package qualification, and old private inputs may no longer exist. Reuse a
-retained host only after checking actual bytes, source/version provenance and
-security relevance; otherwise build a compatible committed host. A missing
-archive needs a fresh build receipt, not a reconstructed historical receipt,
-even when the new digest equals historical bytes.
-
-Root/maintainers decide publication after review and qualification. If publishing
-a partial Linux ARM64 preview, label it explicitly as a prerelease and not Latest,
-keep Files as a separately downloadable versioned artifact, and disclose missing
-platform/SDK/catalog qualification. Do not mutate an already published release to
-add it. Public readback/checksums and a compatible public host are needed before
-claiming distribution; neither a branch, local artifact nor CI upload is shipment.
-Stable targets follow the separate [publication procedure](#publication).
-
-<a id="files07-linux-link-first-preview-preparation"></a>
-
-## Files0.7 Linux link-first distribution
-
-On 2026-11-06, the qualified dev.19 host and Files0.7 archive were published as
-separate immutable, non-Latest Linux ARM64 prereleases:
-[host `v0.25.0-dev.19`](https://github.com/luizomf/omxterm/releases/tag/v0.25.0-dev.19)
-and [Files `ext-files-v0.7.0`](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.7.0).
-Both tags identify actual build source `0cb89accd61f1f5d5263c60773454882793e2e99`.
-All seven original assets matched draft and anonymous public size/SHA-256
-readback; Files publication/readback preceded the host. At that checkpoint,
-stable0.24.0 remained Latest; both Files0.6 catalogs were unchanged, and original archive receipts
-retain their build-time `not-run` field.
-
-The separately reviewed [actual public Settings-link checkpoint](files-development-preview.md#files07-linux-public-link-checkpoint)
-then passed seven bounded scenario groups using fresh anonymous downloads and
-qualification fixture `ed84ce729e03656018eb2e1b971dd8f458123df3`, not the
-build/tag commit. Later test/docs-only source does not rebuild or relabel the
-published pair. Three exact captured-byte consents and dormant installs,
-filtering/keyboard, confirmed directory conflict/move, management/reinstall,
-the retained terminal and active-backend normal Quit passed. All three backend
-exit/close outcomes and shell/main settlement joined. Actual Files/terminal
-captures were inspected and Linux shared-service preservation was verified again
-after owned-scratch cleanup. No controlled transport, fixture CA or local
-archive substitution supplied the application.
-
-The prior [local checkpoint](files-development-preview.md#files07-linux-packaged-checkpoint)
-and unchanged FULL AppImage verification retain their separate scopes; no
-primitive/platform matrix or host/archive build was repeated for public
-consumption. Synthetic input/consent, extracted-AppImage/WebContents capture and
-native diagnostic limits remain explicit in the preview guide. That Linux checkpoint is not
-macOS/Windows/x64 Files0.7 or a stable SDK/all-platform release claim.
-
-The linked fixture instructions remain available for an explicitly assigned
-future check, including verified downloads followed by `chmod u+x` before direct
-extraction. Do not recreate sealed releases, modify their assets/receipts, promote
-catalogs or infer new consumption results from this completed checkpoint.
-
-## Files macOS link-first preview preparation
-
-The link-first preview was published on 2026-10-31 using the retained dev.21
-macOS ARM64 DMG and original Files0.5 archive from the
-[controlled checkpoint](files-development-preview.md#files-050-macos-controlled-qualification).
-Both immutable non-Latest releases passed all five draft/public asset checks;
-Files publication and anonymous verification preceded host publication. The
-separate six-check public Settings-link checkpoint and read-only audit passed.
-See [actual evidence and capture limits](files-development-preview.md#macos-link-first-distribution).
-Later development metadata does not rebuild or relabel that dev.21 host.
-At that link-first checkpoint, the complete v1 catalog remained unchanged:
-Linux0.4/dev.11, SSH and Snippets retained their then-current offers. Its strict
-one-release-per-ID schema cannot offer distinct Linux0.4 and macOS0.5 releases;
-duplicate IDs or schema changes break old clients.
-
-The completed sequence below records the separate publication boundaries; it is
-not an instruction to recreate sealed releases or replay executed fixtures.
-
-1. Revalidate retained source/artifact identities and image integrity. Obtain the
-   ordinary **FULL** package-verifier result on the exact DMG-derived app with a
-   matching dev.21 source context, without `--inspection-only`. Existing staged
-   and copied-app inspections, native primitives and local Files lifecycle evidence
-   remain reusable for unchanged inputs but do not claim that FULL result.
-   The selected dev.21 pair subsequently passed this separate image/FULL check;
-   [the preview evidence](files-development-preview.md#macos-link-first-distribution)
-   records exact-copy equality, startup/PTY/privacy and independent audit limits.
-2. After review/qualification, check tag/release absence and prepare separate
-   non-Latest draft prereleases: host `v0.24.0-dev.21` with DMG/checksum, and
-   `ext-files-v0.5.0` with the original archive/checksum/JSON. Preserve original
-   filenames, source identities and build-time `not-run` qualification field.
-   Compare build/tag inputs; never tag dev.21 bytes as dev.22 or replace a sealed
-   release. Stable Latest remains unchanged.
-3. Verify all five draft assets by exact byte size/SHA-256; publish and verify
-   anonymous public downloads again. Make Files available before advertising the
-   host/archive pair. This is a macOS preview, not a stable release.
-
-The published macOS pair uses Settings → Extensions → **HTTPS archive link** →
-**Install from link**, comparing the captured digest to the release checksum;
-local downloaded `.omxext` installation remains available offline. Browse will
-still show the Linux-targeted Files entry as incompatible on macOS. Document this
-honestly rather than calling link delivery macOS catalog discovery. No application-version bump
-is needed for fixture/docs-only work; catalog evolution is a separate host change.
-
-## Files macOS catalog publication
-
-Host dev.26 was published on 2026-10-31 as an immutable non-Latest preview;
-both draft/public assets, both raw endpoints, the new exact-DMG FULL verification
-and the separate six-check public-catalog checkpoint passed. See
-[actual identities, outcomes and limits](files-development-preview.md#macos-catalog-distribution).
-The sequence below records that historical Files0.5/dev.26 promotion, not a
-procedure for later catalog updates. For the later Files0.6 and SSH0.3.1 promotion,
-see [Files catalog publication](#files06--ssh031-source-candidate).
-
-Current source selects a separate complete schema1 endpoint,
-`distribution/official-extensions-darwin-arm64-v1.json`, only for macOS ARM64.
-This is an application change requiring a new host build, not a metadata update
-to published dev.21. Its local/link route remains available. The historical
-promotion used the following sequence:
-
-1. Bind the macOS entry to the original published Files0.5 archive, embedded
-   manifest, checksum and receipt. Do not rebuild it or change its minimum dev.21.
-   Preserve the legacy catalog byte-for-byte and copy SSH/Snippets entries
-   unchanged; future common-entry promotions update both complete documents.
-   The Files generator currently emits Linux-only metadata, not this macOS entry.
-2. Independently review the complete host/catalog/fixture/docs candidate. Build
-   and verify a new exact macOS DMG, including ordinary FULL startup/PTY/privacy,
-   image integrity, packaged resources and complete ad-hoc seal. Reuse unchanged
-   primitive and Files0.5 lifecycle evidence with explicit input identity, not
-   the old host's FULL result for new bytes.
-3. Promote the reviewed endpoint after original asset verification. Read back
-   both raw endpoints: new bytes must match source, legacy bytes must remain
-   unchanged. Do not redirect legacy clients or add duplicate IDs/schema changes.
-4. Publish the new host as a separate non-Latest preview only after applicable
-   package verification; verify original draft and anonymous public DMG/checksum
-   bytes. Preserve stable Latest and all sealed releases. Record exact build/tag
-   identities rather than relabeling dev.21.
-
-Source implementation, public endpoint readback, host publication and actual
-packaged consumption are distinct outcomes; pending steps are not qualified.
-See [catalog semantics](extension-distribution.md).
-
-## Files catalog publication
-
-<a id="files06--ssh031-source-candidate"></a>
-
-### Files0.6 / SSH0.3.1 promotion
-
-At that historical promotion, both catalogs bound the separately built Files0.6.0 and SSH0.3.1 archive
-trios to their original receipts and immutable versioned URLs; see
-[distribution](extension-distribution.md#files06-and-ssh031-candidate). They are
-not bundled into the stable host. The selected local host/archive pair checks
-passed, and the original three assets for each extension were published and
-anonymously byte-verified; the original receipts remain `not-run`. Do not replay
-publication or replace those assets. ROOT integrated the reviewed catalogs,
-preserving the newer common Snippets entry, and verified both public endpoint
-bytes. A separate [macOS Files0.6 public-HTTPS checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
-passed with a retained locally built DMG; it is not a downloaded-public stable
-host. Other public-HTTPS checkpoints require their own authorization and outcome.
-Do not infer them from local qualification or asset readback. Preserve historical release bytes and receipts. Files0.6 replaces the Linux0.4 catalog offer; dev.11–dev.20 users retain
-the older archive by explicit local/link installation or can upgrade the host.
-
-### Historical Files 0.4.0 promotion
-
-`ext-files-v0.4.0` was published on 2026-10-30 as an immutable non-Latest
-prerelease at original archive source `b6044d65d14345adb8d7ae59340fbca978512107`.
-All three original assets passed draft and anonymous public byte readback.
-Retain the basename `omxterm-files-language-b6044d6.omxext` and its original
-checksum/receipt, including `not-run` and intended dev.12 fields. The
-[preview guide](files-development-preview.md#files-040-distribution-and-controlled-qualification)
-records exact hashes and separate controlled qualification with the already-public
-host0.24.0-dev.11 ARM64 AppImage. No new host build/version is needed for this
-catalog/docs/test-only promotion; neither declared dev.20 compatibility nor
-source currency is dev.20 execution qualification.
-
-Generate from the retained original set with
-`node scripts/create-files-catalog.mjs PATH/omxterm-files-language-b6044d6.omxext CANDIDATE.json`.
-The generator emits a **Files-only** catalog. Merge only that entry into the full
-`distribution/official-extensions-v1.json`, preserving SSH and Snippets metadata.
-Keep historical0.1.0 exception test fixtures independent of the current catalog;
-do not change compatibility code or sealed historical releases.
-
-Reviewed catalog integration at `fd7691a972f8e364bd3b3b2ba9ec1d90fcccf8b5`
-preserved SSH/Snippets; fixed raw-endpoint readback matched SHA-256
-`315c7208328b401a31944c97f8c259d8b449ab6c7185a1ded00c691d997c26f9`.
-The separate exact-pair packaged `OMXTERM_FILES_PACKAGED_CATALOG=public`
-checkpoint then passed with fresh evidence, no fixture CA/interceptor or
-controlled catalog file. See the [public checkpoint](files-development-preview.md#public-files-040-checkpoint)
-for seven checks, two consents, normal joined Quit and qualification limits.
-Controlled qualification, asset upload, anonymous byte readback and actual
-packaged public consumption remain distinct milestones. Future promotions must
-repeat the relevant publication sequence with new identities, not mutate sealed
-releases or replay already-settled qualification without changed inputs.
-
-### Historical Files 0.1.0 publication
-
-The initial Files catalog preview was published and
-[#728](https://github.com/luizomf/omxterm/issues/728) is closed. See the
-[Files preview guide](files-development-preview.md) for distributed versions and
-qualification limits. The version-specific sequence below records that initial
-publication, not outstanding work or permission to recreate its sealed releases.
-Future previews require new identities and matching review/qualification.
-
-This partial preview is separate from the later [0.25.0 complete stable bundle](#stable-0250-publication). The
-integration maintainer owns publication after full candidate review/corrections and
-exact packaged qualification. Keep source review SHA, final SHA, host package and
-Files archive identities distinct; a reused archive retains its original source
-receipt. Historical Files0.1.0 minimum 0.23.0-dev.8 remains valid for local/link
-installation; 0.23.0-dev.9 adds catalog browsing. Do not rebuild or replace published same-version bytes.
-
-1. Qualify the final Linux ARM64 host AppImage with the separate Files archive:
-   catalog → exact-byte trust → dormant install → Files operation/conflict →
-   replacement/management → same live PTY → joined Quit. Record whether transport
-   is controlled or actual public HTTPS, plus synthetic-input/dialog limitations.
-2. Create separate draft prereleases at exact source commits: host
-   `v0.23.0-dev.9` and Files `ext-files-v0.1.0`. Use `--prerelease --latest=false`
-   with `gh release create`; neither becomes Latest. Host gets the qualified
-   AppImage/checksum (and helper/checksum if included, with helper qualification
-   limitations). Files gets its `.omxext`, `.omxext.sha256`, `.omxext.json`.
-   Preserve MIT/provenance and explicitly state Linux ARM64 preview/SDK limits.
-3. Download draft assets and compare exact sizes/SHA-256 against retained receipts;
-   then publish/seal each release. Download public URLs again and verify the same
-   bytes, including archive checksum and receipt. Never clobber an existing release.
-4. Generate the candidate from those verified archive/receipt/checksum files:
-   `node scripts/create-files-catalog.mjs PATH/files-0.1.0.omxext CANDIDATE.json`.
-   Inspect its original source commit, immutable release URLs, target, engine range,
-   byte count and digest. Promote the reviewed Files entry into
-   `distribution/official-extensions-v1.json` only after public availability,
-   preserving all other entries.
-5. Read back the exact fixed raw catalog endpoint; run one bounded actual packaged
-   public-endpoint installation and retained-terminal/management/Quit smoke. Verify
-   downloaded bytes against the published release receipt. A localhost transport
-   fixture or successful upload does not qualify this boundary.
-
-Record publication URLs, exact readback hashes and actual outcomes. Source
-integration or a valid empty catalog is not product distribution: the initial
-#728 delivery required both a compatible public host and verified public Files
-consumption. No signing infrastructure, stable SDK or broader platform campaign
-is implied.
-
-## SSH preview publication
-
-### Historical SSH 0.3.0 publication
-
-For the current SSH 0.3.1 selection, see
-[Files0.6 / SSH0.3.1 promotion](#files06--ssh031-promotion).
-
-SSH `ext-ssh-v0.3.0` was published on 2026-10-30 at 20:07:34 UTC as an immutable,
-non-Latest prerelease. Its tag identifies original build source
-`77937fcf87ae71a68709111df7ace7359fb3f0b6`; final candidate
-`ad505f6c96992c4d76a07bf97143b430308760c6` adds only a compatibility-test correction,
-and integrated `a2948618fb58c1fcbf3107bacf58909f8a74bc02` has the same final tree.
-The original `ssh-0.3.0-77937fc.omxext` is 11,572 bytes, SHA-256
-`13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf`.
-Draft and anonymous public downloads of all three original assets (archive,
-checksum, receipt) matched byte-for-byte. Release notes and the build receipt
-remain unchanged: `not-run` and intended host dev.19 are build-time fields,
-not a description of subsequent exact-pair qualification.
-
-The new pair reuses already public Linux ARM64 host `v0.24.0-dev.11`, AppImage
-SHA-256 `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`.
-Its exact SSH0.3 appearance/language and synthetic Connect qualification is
-recorded in the [SSH guide](ssh-connect-development.md#installing-the-distributed-preview).
-No host rebuild/release is required; stable `v0.23.0` remains Latest. Historical
-SSH0.1 assets, tags, notes and receipts remain immutable.
-
-The independently reviewed catalog/docs/test promotion replaced only SSH metadata,
-preserving Files and Snippets, and was integrated at
-`6f4355d6573b0fb4e3f8591655d7db789106a8a7`. Fixed raw catalog readback matched SHA-256
-`0a446b1a3c53960508f0d0b16a951e5f889d9998230832624d8f1edddef6dd15`.
-The bounded [public SSH checkpoint](ssh-connect-development.md#public-distribution-checkpoint)
-then passed on exact publicdev.11/SSH0.3 with fresh public downloads, without
-appearance mode. Its results and initial fixture failure are separate from
-prepublication qualification. Catalog/docs/test-only promotion needed no
-application-version bump or rebuild. Future promotions must bind actual manifest,
-source, target and archive identities after public byte verification, complete
-independent review, then verify fixed-endpoint readback and packaged consumption.
-Never retrofit sealed notes with later evidence.
-
-### Historical SSH 0.1.0 procedure
-
-The initial SSH milestone followed the partial Linux ARM64 preview topology,
-not the later [0.25.0 complete stable bundle](#stable-0250-publication). The following sequence records host
-`v0.24.0-dev.0` and separate `ext-ssh-v0.1.0` publication as non-Latest prereleases;
-it is not permission to recreate those sealed releases. Do not remove the development
-suffix or bump main for catalog/docs/test-only changes: unchanged Files0.1.0 is
-explicitly compatible with this exact host version only. A different host version
-requires deliberate compatibility reconciliation and rebuilt/verified host bytes.
-Stable0.23.0, dev.9 and Files0.1.0 remain immutable.
-
-1. Reuse the qualified AppImage/helper and checksums built at
-   `a8a309fe4bd87675d01da193fa7318701e68a460`; host tag target is integrated
-   `a09d8530541399f85469c099ed20ac4b102647f8` (only two test files differ).
-   Preserve SSH `ssh-6d939f0.omxext` plus original `.sha256`/`.json`, built/tagged
-   at `6d939f0e837dba90728e6e892010a4a1889fe0c9`. Its extension inputs are unchanged
-   through final host source. Do not rebuild, rename or relabel published-version
-   bytes or change the receipt's build-time `not-run` qualification field.
-2. After checking proposed tags/releases are absent, create and verify exact tag
-   refs, then use `gh release create --verify-tag --draft --prerelease --latest=false`
-   with the four host assets and three SSH assets in their respective releases.
-   Draft metadata alone does not establish the existence of a tag ref. Download
-   and verify all seven filenames, sizes and hashes before publishing host, then
-   SSH. Recheck both immutable public releases and anonymously download/hash all
-   seven versioned asset URLs. Stable0.23.0 remains Latest.
-3. Only after public bytes verify, promote the SSH catalog entry alongside the
-   unchanged Files entry. Bind the embedded manifest's ID/version/engine strings,
-   original source commit, Linux ARM64 target and exact archive size/digest to the
-   immutable release URLs. `create-files-catalog.mjs` is Files-specific, not an SSH
-   generator; do not replace the complete catalog with a Files-only output.
-4. Read back the exact fixed raw catalog endpoint and compare its bytes to the
-   promoted source. Run the bounded [public SSH checkpoint](ssh-connect-development.md#public-distribution-checkpoint)
-   on the exact publicly downloaded host/archive. It uses production HTTPS and
-   verifies catalog install/reinstall, dormant activation, management, retained
-   local terminal and actual-exit Quit without rerunning the synthetic SSH matrix.
-   Record actual receipt hashes/outcomes separately from pre-publication evidence.
-
-The retained host FULL verifier, synthetic SSH campaign and immutable Files
-lifecycle may be reused while relevant inputs remain unchanged. None establishes
-real SSH authentication/connectivity, other-platform extension support, a stable
-SDK or public acquisition before the separate checkpoint. Do not mutate sealed
-release notes/assets to retroactively claim later verification.
-
-## Snippets preview preparation and publication
-
-The Linux ARM64 host `0.24.0-dev.11`, macOS ARM64 host `0.24.0-dev.16` and
-Linux x64 host `0.24.0-dev.30` Snippets previews are published, each using the
-unchanged Snippets `0.1.0` archive. The Linux x64 preview's publication, catalog
-promotion and bounded public-HTTPS checkpoint are recorded in the [migration guide](snippets-migration.md#linux-x64-public-catalog-checkpoint).
-The macOS release was sealed on 2026-10-30 at 16:25:11 UTC as an immutable,
-non-Latest prerelease with only the DMG/checksum. The existing public archive was
-verified before host publication; public host/checksum downloads subsequently
-verified the exact qualified DMG. Stable `0.23.0` remains Latest. See the
-[migration guide](snippets-migration.md#macos-arm64-published-preview) for exact
-source/artifact identities, local/offline installation and separate native
-nine-scenario/FULL package evidence. Public byte verification is not native macOS
-public-HTTPS installation. The separate macOS catalog promotion and bounded
-public-HTTPS checkpoint below subsequently passed; no archive or original receipt
-was replaced.
-
-The Linux-oriented procedure below applies to future preview pairs, not permission
-to recreate any sealed release; source transition alone does not establish
-distributed migration. Prepare a partial prerelease, not a
-[stable target release](#publication). The separately published Windows ARM64 dev.36 [partial preview](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
-uses its exact retained NSIS/checksum and optional Snippets; earlier Windows hosts
-and Windows x64 are unchanged. Its installed public-HTTPS checkpoint remains
-separate and pending. Source transition alone does not satisfy platform distribution gates. Source-native qualification does
-not substitute for the exact packaged host/archive pair.
-
-1. Select exact committed host and Snippets source identities. Reuse an already
-   published compatible archive when its exact bytes and receipt match the selected
-   qualification; do not rebuild or replace it. For a new archive, build the host,
-   then `node scripts/build-snippets-extension.mjs /absolute/new/snippets.omxext`
-   (append the verified full source commit for an exported checkout). Preserve
-   archive/checksum/receipt identities; do not overwrite an earlier candidate or
-   change the build receipt's `qualification.status: not-run` field. Inspect the
-   archive for generated checkout/host path disclosure as described in [Files
-   preview preparation](#files-preview-preparation). A rebuild, including changed
-   embedded documentation/locales, is a new artifact identity.
-2. Package and verify the Linux ARM64 host with the normal release tools. Record full Linux
-   verifier evidence separately: extraction-only execution does not qualify FUSE
-   launch or helper installation. Include the [migration guide](snippets-migration.md).
-3. After complete source review/corrections and matching qualification, check
-   that the proposed host tag and release are absent. Check extension tag/release
-   absence only when creating a new extension release; never recreate an existing
-   one. Create verified exact-source tags and draft prereleases with `--verify-tag
---draft --prerelease --latest=false`. A new Snippets release gets its archive,
-   checksum and original receipt; the host gets its qualified AppImage/helper and
-   checksum pairs. Bind release notes to actual hashes, versions, source identities
-   and limitations, not a generic claim that every compatible host is qualified.
-4. Download draft assets and compare exact sizes/SHA-256. **Publish Snippets
-   first, or reuse its existing published release, and verify anonymous public
-   downloads before publishing a host that removes built-in access.** Then
-   publish/download/verify the compatible host.
-   Keep stable Latest unchanged. Never replace published same-version bytes,
-   move a sealed tag or retrofit assets into an immutable release.
-5. Ordinary local-archive installation remains available offline. Catalog
-   discovery is a separate optional promotion: publish and verify assets first,
-   preserve existing Files/SSH entries, bind the new entry to actual manifest,
-   receipt, size/digest and immutable URLs, then verify fixed-endpoint readback
-   and actual packaged public acquisition. Do not use the Files-specific generator
-   to erase other entries or claim Snippets public consumption from a local test.
-
-Record actual readback/consumption results separately from pre-publication
-qualification. A Linux preview does not close #741's other-platform work, create
-a stable SDK or imply automatic installation/enablement. Existing user catalogs
-remain untouched.
-
-### Snippets catalog promotion
-
-Snippets `0.1.0` is listed for Linux ARM64, macOS ARM64 and Linux x64 alongside
-unchanged Files/SSH entries. Catalog integration and exact public endpoint readback
-were followed by separate bounded packaged public-HTTPS checkpoints on Linux dev.11,
-macOS dev.16 and Linux x64 dev.30. The macOS promotion source was
-`dbbc1a9814606f72bcaea226ab68564da4a345fb`; its recorded catalog SHA-256 was
-`c86ea2ee6f4f27eb17718e5832ce29a8e862aca99fb91afe358c9572ca844ead`. The later
-Linux x64 promotion source is `0164f768b060e4ac3a1fc7afa20b30d4426e6fc8` and its
-legacy endpoint readback SHA-256 is
-`b1383fe0690b3320433cd9419d9863b6ac8a7b2bcb48b9d2205d3e7248e45d97`.
-See [Linux x64 delivery](snippets-migration.md#linux-x64-public-catalog-checkpoint),
-[macOS delivery](snippets-migration.md#macos-arm64-catalog-delivery) and
-[Linux ARM64 coverage](snippets-migration.md#preview-coverage-and-remaining-platforms)
-for exact outcomes and limits. No application-version bump or rebuild was needed;
-published releases, tags, assets and original receipts remain unchanged. The
-sequence below records completed promotion requirements, not outstanding work or
-permission to repeat qualification.
-
-1. Independently download the immutable `ext-snippets-v0.1.0` archive and its
-   original `.sha256`/`.json`. Bind 76,653 bytes and SHA-256
-   `6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7`
-   to receipt source `805e95dbc77552dc137707578b18b48ad6d047e9` and the
-   embedded manifest: `omxterm.snippets`, `0.1.0`, host `>=0.24.0-dev.8`,
-   API `0.1.x`. Preserve the receipt's build-time `not-run` field and original
-   Linux build target. The macOS promotion retained `linux-arm64` and added
-   `darwin-arm64`; the later Linux x64 promotion added `linux-x64`. The archive
-   has no manifest platform restriction. Do not raise
-   its engine minimum or rewrite its receipt to describe later qualification.
-   The archive and release-page URLs must name the same sealed tag.
-2. Review/integrate the complete candidate without changing Files/SSH metadata.
-   Read back the fixed raw catalog endpoint and compare with promoted source.
-3. Run a separate bounded packaged public-HTTPS checkpoint on the published
-   host for each newly promoted target. Linux dev.11 AppImage (SHA-256
-   `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`)
-   passed. The macOS checkpoint also passed using the freshly downloaded public
-   dev.16 DMG (SHA-256
-   `52b8a6b60dce7380b1157755e5ba3dcda0dfdc8e4c54ed2a71b723b160ef061f`).
-   Linux x64 also passed on the public dev.30 AppImage (SHA-256
-   `8a1e73d16833a97819273c23d566cc2d46af6b6dddf3a475c616d1109a3a2a95`).
-   Earlier exact-package campaigns and separate FULL verifier passes were not
-   rerun and remain distinct from public-HTTPS consumption evidence.
-   Verify actual catalog acquisition, exact-byte trust, dormant install/reinstall,
-   deliberate enablement/Toggle Snippets, retained YAML and terminal usability,
-   management and joined normal Quit. Record actual archive/host hashes, outcomes
-   and input/rendering limits; local download or headless parser tests are not
-   this checkpoint. Do not rewrite sealed release notes to claim later evidence.
-
-Maintainer integration/publication and the native checkpoint are distinct
-evidence boundaries. Keep explicit local/offline installation available; no new Files/SSH
-qualification, other-platform cutover, stable SDK or full #741 completion follows.
-
 ## Publication
 
 For application version `X.Y.Z`, create a separate stable, non-prerelease release for each ready target. The exact tags are `linux-arm64-vX.Y.Z`, `linux-x64-vX.Y.Z`, `macos-arm64-vX.Y.Z`, `windows-arm64-vX.Y.Z`, and `windows-x64-vX.Y.Z`. Each tag points to the same reviewed frozen cut for that application version. Filenames and embedded application versions remain `X.Y.Z`, without the target prefix.
@@ -781,7 +218,7 @@ Each draft contains only its target's complete assets:
 | Windows ARM64            | `OMXTerm-X.Y.Z-arm64.exe`                          |
 | Windows x64 (build-only) | `OMXTerm-X.Y.Z-x64.exe`                            |
 
-Each Linux release carries its own matching helper and checksum. When the second Linux target is prepared for the same cut, compare both helper and checksum bytes with the first target's retained or downloaded pair; they must agree. Preserve platform build-evidence JSON in the preparation records, not as a required public asset. Before draft assembly, compare each actual full build SHA against the frozen cut with the [build-to-tag procedure](#changed-inputs-and-build-to-tag-comparison); explain and prove every non-artifact difference.
+Each Linux release carries its own matching helper and checksum. When the second Linux target is prepared for the same cut, compare both helper and checksum bytes with the first target's retained or downloaded pair; they must agree. Keep platform build-evidence JSON in the preparation records, not as a required public asset. Before draft assembly, compare each actual full build SHA against the frozen cut with the [build-to-tag procedure](#changed-inputs-and-build-to-tag-comparison).
 
 Create the target draft in `luizomf/omxterm` at the frozen full SHA with `--latest=false`, without `--prerelease`. Ensure the target tag does not already exist at another commit; `--target` does not retarget an existing tag. For example, with `VERSION`, `CUT` (the full frozen SHA), and `NOTES` (a prepared notes-file path) set for a Linux ARM64 cut:
 
@@ -797,11 +234,82 @@ Download the draft assets and compare every byte count and SHA-256 with the loca
 gh release edit "$tag" --draft=false --latest=false
 ```
 
-Verify the release is stable, non-Latest and points to the frozen cut. Never move a published tag, replace assets, disable immutability, or add platforms to a sealed release. When it is the newest application version for its target, update that row in the [README index](../README.md#platforms-and-downloads), using exact tag URLs for its version, download, checksum and release notes; Linux rows also link their own helper and checksum. An older backfill does not replace a newer indexed version. Leave other rows at their latest available versions, and update installation guidance if its examples or coverage need it. GitHub's global Latest remains the legacy complete `v0.25.0` bundle, not the per-platform index; do not use `/latest/download` for target links. No later complete-bundle roll-up is created.
+Verify the release is stable, non-Latest and points to the frozen cut. Never move a published tag, replace assets, disable immutability, or add platforms to a sealed release. When it is the newest application version for its target, update that row in the [README index](../README.md#platforms-and-downloads), using exact tag URLs for its version, download, checksum and release notes; Linux rows also link their own helper and checksum. An older backfill does not replace a newer indexed version. Leave other rows at their latest available versions. GitHub's global Latest remains the legacy complete `v0.25.0` bundle, not the per-platform index; do not use `/latest/download` for target links.
 
-Include the frozen cut SHA, actual build SHA and any proven non-artifact differences in the release records; identify the cut and target coverage in the notes. Include explicit x64 build-only coverage and unverified boundaries in each applicable release's notes.
-
-Include release notes covering new features, bug fixes, any configuration changes, SHA-256 checksums, and first-launch Gatekeeper/SmartScreen notes:
+Write release notes in plain words for people who use the terminal: new features, fixes, configuration changes, SHA-256 checksums, the frozen cut SHA, and first-launch notes:
 
 - **macOS Gatekeeper:** OMXTerm uses an ad-hoc signature without Apple Developer ID signing or notarization. Verify the SHA-256 checksum and use **System Settings → Privacy & Security → Open Anyway** on first launch.
 - **Windows SmartScreen:** OMXTerm for Windows ARM64 and x64 is unsigned. Verify the SHA-256 checksum and choose **More info → Run anyway** on first launch.
+
+Mark x64 releases as build-only and untested on a desktop. Record accepted test failures and missing coverage with a short reason.
+
+## Extension archives
+
+Files, SSH Connect and Snippets ship as separate `.omxext` archives with their
+own non-Latest prereleases (`ext-<name>-vX.Y.Z`), not inside a host target
+release. See [extension distribution](extension-distribution.md) for catalog
+semantics.
+
+### Building an extension archive
+
+On an exact, clean committed source (the builder refuses a dirty checkout):
+
+```sh
+npm ci
+npm run build
+node scripts/build-files-extension.mjs   # or build-ssh-extension.mjs / build-snippets-extension.mjs
+OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
+```
+
+Build after `npm run build` (which clears `dist`) and before packaging a host, so
+host exclusion is checked. The archive and its `.sha256`/`.json` sidecars land in
+`dist/extensions`; the builders also accept `OUTPUT [FULL_SOURCE_COMMIT]` for a
+private path or an exported source tree. Version, host range, API and
+capabilities come from `extensions/<name>/extension.json`. An existing
+destination is never overwritten. Keep archives and sidecars outside Git, and
+inspect archive members for checkout or host path disclosure before publication;
+fix the inputs rather than editing generated bytes. The `.json` receipt's
+`qualification.status: not-run` is a build-time field; never rewrite it.
+
+Before publishing, install the exact archive on an exact packaged host of the
+target platform and check: captured-byte trust, dormant install, explicit
+activation, the extension's main behavior, management (Disable/Uninstall,
+reinstall), a live terminal staying usable and a normal Quit. The Linux ARM64
+packaged lifecycle fixture is documented in the
+[Files preview guide](files-development-preview.md#exact-linux-arm64-files07-packaged-consumer).
+
+### Publishing an extension archive
+
+1. Check that the `ext-<name>-vX.Y.Z` tag and release do not exist. Never replace
+   or rebuild a published same-version archive; a changed archive needs a new
+   version.
+2. Create a draft prerelease at the archive's exact source commit with
+   `gh release create "$tag" --target "$SOURCE" --draft --prerelease --latest=false`,
+   and upload the archive, `.sha256` and `.json` receipt.
+3. Download the draft assets and compare sizes and SHA-256 with the local files.
+   Publish (`gh release edit "$tag" --draft=false --prerelease --latest=false`),
+   then anonymously download and compare again.
+4. Publish an extension before a host release that depends on it (for example, a
+   host that stops bundling a built-in feature).
+
+Release notes name the required host range, the HTTPS archive link for
+**Settings → Extensions → HTTPS archive link → Install from link**, the archive
+size/SHA-256, the source commit and the qualified platforms.
+
+### Catalog promotion
+
+Catalog discovery is optional and separate from archive publication. Promote
+only a publicly verified archive:
+
+1. Bind the entry to the published archive URL, size, SHA-256, embedded manifest
+   (ID, version, host range, API), source commit and release URL.
+   `node scripts/create-files-catalog.mjs ARCHIVE CANDIDATE.json` emits a
+   Files-only Linux ARM64 entry; there is no generator for SSH, Snippets or the
+   macOS catalog, so edit those entries by hand.
+2. Update `distribution/official-extensions-v1.json` (Linux ARM64, Linux x64)
+   and `distribution/official-extensions-darwin-arm64-v1.json` (macOS ARM64)
+   without changing other entries. The schema allows one release per extension
+   ID per catalog: hosts that the new entry's range or capabilities exclude lose
+   the catalog offer and keep local/link installation.
+3. After merge, read back the fixed raw endpoint and compare it with the source
+   bytes, then install from the public catalog on a published host once.
