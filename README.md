@@ -137,7 +137,7 @@ build from source as a development path.
 ## First session
 
 OMXTerm opens with your shell in your home folder and a prompt ending in `%`,
-`$`, or `>`. Type this and press Enter:
+`$`, or `>`. Type this and press Enter (in Command Prompt, use `cd` instead):
 
 ```sh
 pwd
