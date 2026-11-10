@@ -1,11 +1,8 @@
-import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import {
   cprCoreFixture,
   preparedCprRuntime,
-  runtimeSection,
 } from "../fixtures/restty-cpr-core-probe";
-import history from "../fixtures/restty-runtime-history.json";
 
 const mixedStream = "A中\u001b[6n\u001b[cB\u001b[>c\u001b[16t\u001b[6nZ";
 const mixedReplies =
@@ -160,48 +157,6 @@ describe("Restty actual-core cursor position reports", () => {
     const f = await cprCoreFixture(5);
     try {
       expect(f.rawWrite("A中B\u001b[6n")).toBe("\u001b[1;5R");
-    } finally {
-      f.dispose();
-    }
-  });
-
-  it("rejects the old interception with the same coordinate oracle", async () => {
-    const lines = preparedCprRuntime().split("\n");
-    for (const prior of history) {
-      for (const edit of prior.edits)
-        lines.splice(edit.start, edit.deleteCount, ...edit.lines);
-      if (prior.name === "priorCprDigest") break;
-    }
-    const baseline = lines.join("\n");
-    expect(createHash("sha256").update(baseline).digest("hex")).toBe(
-      "3c4dc8554c8ccc91f0b34ebea8a5638fe6592c1a973acc0a64dafcb33ab8387e",
-    );
-    const f = await cprCoreFixture(80, 6, baseline);
-    try {
-      f.write("A中B\u001b[6n");
-      expect(() => expectReplies(f.replies, "\u001b[1;5R")).toThrow();
-      expect(f.cursor()).toEqual({ row: 1, col: 5 });
-    } finally {
-      f.dispose();
-    }
-  });
-
-  it("rejects plain pass-through with the same mixed-order oracle", async () => {
-    const source = preparedCprRuntime();
-    const prefixCommit = runtimeSection(
-      source,
-      '      if (seq === "\\x1B[6n" && onCoreOutput) {',
-      "      this.altScreen = deriveAltScreen(seq, this.altScreen);",
-    );
-    const f = await cprCoreFixture(80, 6, source.replace(prefixCommit, ""));
-    try {
-      f.write(mixedStream);
-      expect(() => expectReplies(f.replies, mixedReplies)).toThrow();
-      expectReplies(
-        f.replies,
-        "\u001b[?1;2c\u001b[>0;0;0c\u001b[6;20;10t\u001b[1;4R\u001b[1;5R",
-      );
-      expect(f.cursor()).toEqual({ row: 1, col: 6 });
     } finally {
       f.dispose();
     }

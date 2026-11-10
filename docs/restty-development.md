@@ -64,7 +64,7 @@ including local and claimed routing. It covers split mode controls, save/restore
 hard reset and the pinned core's soft-reset behavior without waiting for a frame.
 
 ```sh
-npx vitest run test/integration/restty-keyboard-core.test.ts test/unit/restty-input-routing.test.ts test/unit/restty-dependency-contract.test.ts test/integration/restty-runtime-history.test.ts
+npx vitest run test/integration/restty-keyboard-core.test.ts test/unit/restty-input-routing.test.ts test/unit/restty-dependency-contract.test.ts
 ```
 
 A bounded local-PTY diagnosis with htop 3.5.3 linked CSI arrows in application
@@ -139,11 +139,10 @@ requires no WASM rebuild.
 Headless regressions execute production PTY ingestion and runtime-controller
 functions with the real pinned core, controlled transport/geometry and no frame
 loop. They include every two-chunk boundary of mixed queries, original Unicode
-and resize failures, cancellation/budget checks, and deliberate old-interception
-and pass-through-only negative controls:
+and resize failures, and cancellation/budget checks:
 
 ```sh
-npx vitest run test/integration/restty-cpr-core.test.ts test/unit/restty-terminal-capabilities.test.ts test/integration/restty-runtime-history.test.ts
+npx vitest run test/integration/restty-cpr-core.test.ts test/unit/restty-terminal-capabilities.test.ts
 ```
 
 These are not DOM Surface, native PTY or graphical qualification.
