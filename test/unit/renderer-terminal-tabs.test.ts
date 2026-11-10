@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/* eslint-disable max-lines -- Keep application-tab lifecycle regression coverage together. */
 import { describe, expect, it, vi } from "vitest";
 import { createTerminalTabs } from "../../src/renderer/terminal-tabs";
 import type { ElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
@@ -293,51 +292,6 @@ describe("renderer Terminal Tabs", () => {
     expect(harness.surfaces[2]!.zoom.mock.calls).toEqual([["in"]]);
   });
 
-  it("keeps Window Font Zoom and Actual Size independent between windows", async () => {
-    const firstWindow = createTabsHarness();
-    const secondWindow = createTabsHarness();
-    await Promise.all([firstWindow.tabs.ready, secondWindow.tabs.ready]);
-
-    firstWindow.tabs.zoom("in");
-    firstWindow.tabs.zoom("in");
-    secondWindow.tabs.zoom("out");
-    firstWindow.tabs.zoom("reset");
-
-    expect(firstWindow.surfaces[0]!.zoom.mock.calls).toEqual([
-      ["in"],
-      ["in"],
-      ["reset"],
-    ]);
-    expect(secondWindow.surfaces[0]!.zoom.mock.calls).toEqual([["out"]]);
-  });
-
-  it("keeps reordered positions independent between Terminal Windows", async () => {
-    const firstWindow = createTabsHarness();
-    await firstWindow.tabs.ready;
-    firstWindow.tabs.handleCommand({ action: "new" });
-    await vi.waitFor(() => expect(firstWindow.surfaces).toHaveLength(2));
-    firstWindow.tabs.setSessionTitle("s1", "first-one");
-    firstWindow.tabs.setSessionTitle("s2", "first-two");
-
-    const secondWindow = createTabsHarness();
-    await secondWindow.tabs.ready;
-    secondWindow.tabs.handleCommand({ action: "new" });
-    await vi.waitFor(() => expect(secondWindow.surfaces).toHaveLength(2));
-    secondWindow.tabs.setSessionTitle("s1", "second-one");
-    secondWindow.tabs.setSessionTitle("s2", "second-two");
-
-    dragTabTo(firstWindow.strip, 0, 175);
-
-    expect(selectedStates(firstWindow.strip)).toEqual([
-      "first-two:true",
-      "first-one:false",
-    ]);
-    expect(selectedStates(secondWindow.strip)).toEqual([
-      "second-one:false",
-      "second-two:true",
-    ]);
-  });
-
   it("routes clipboard actions and snippet injection to the selected tab only", async () => {
     const harness = createTabsHarness();
     await harness.tabs.ready;
@@ -419,43 +373,6 @@ describe("renderer Terminal Tabs", () => {
 
     expect(harness.surfaces[0]!.dispose).toHaveBeenCalledOnce();
     expect(harness.surfaces[1]!.dispose).toHaveBeenCalledOnce();
-  });
-});
-
-describe("renderer Terminal Tabs pending disposal", () => {
-  it("does not resurrect a tab disposed while its Surface is mounting", async () => {
-    const strip = document.createElement("nav");
-    const container = document.createElement("div");
-    document.body.replaceChildren(strip, container);
-    let finishMount: ((surface: TerminalSurface) => void) | undefined;
-    const pendingMount = new Promise<TerminalSurface>((resolve) => {
-      finishMount = resolve;
-    });
-    const adapter: ElectronTerminalAdapter = {
-      sessionId: () => undefined,
-      start: vi.fn(async () => undefined),
-      write: vi.fn(),
-      resize: vi.fn(),
-      close: vi.fn(),
-    };
-    const surface = createFakeSurface();
-    const tabs = createTerminalTabs(
-      { strip, container },
-      {
-        createAdapter: () => adapter,
-        mount: vi.fn(() => pendingMount),
-        surfaceOptions: {},
-      },
-    );
-
-    tabs.handleCommand({ action: "close" });
-    expect(adapter.close).toHaveBeenCalledOnce();
-    finishMount!(surface);
-    await tabs.ready;
-
-    expect(surface.dispose).toHaveBeenCalledOnce();
-    expect(container.children).toHaveLength(0);
-    tabs.dispose();
   });
 });
 

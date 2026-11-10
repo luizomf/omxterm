@@ -11,12 +11,11 @@ import {
 import type { TerminalTabCommand } from "../../src/shared/terminal-contract";
 
 describe("cancelled later-tab initialization through the production host and Adapter", () => {
+  // fonts and runtime-rejection run as first-tab cases in restty-terminal-surface.
   it.each([
-    "fonts",
     "runtime",
-    "startup",
     "fonts-rejection",
-    "runtime-rejection",
+    "startup",
     "startup-rejection",
   ] as const)("keeps A usable after closing B at %s", async (boundary) => {
     harness.instances.length = 0;

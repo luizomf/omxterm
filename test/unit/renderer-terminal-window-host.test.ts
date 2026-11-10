@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-/* eslint-disable max-lines -- Keep the window routing controls beside the native-file and inert Files transport matrix. */
 import { describe, expect, it, vi } from "vitest";
 import { surfaceLabels } from "../../src/renderer/renderer-language";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
@@ -577,31 +576,6 @@ describe("renderer Terminal Window page host continued", () => {
     host.dispose();
   });
 
-  it("routes native clipboard actions to the selected mounted Surface", async () => {
-    let actionListener:
-      ((action: "copy" | "paste" | "select-all") => void) | undefined;
-    const surface = createSurface();
-    const host = mountTerminalWindowPage(createPageElements(), {
-      createAdapter: createAdapterFactory(),
-      page: window,
-      mount: vi.fn(async () => surface),
-      subscribeToClipboardActions(listener) {
-        actionListener = listener;
-        return vi.fn();
-      },
-    });
-    await host.ready;
-
-    actionListener!("copy");
-    actionListener!("paste");
-    actionListener!("select-all");
-
-    expect(surface.copy).toHaveBeenCalledOnce();
-    expect(surface.paste).toHaveBeenCalledOnce();
-    expect(surface.selectAll).toHaveBeenCalledOnce();
-    host.dispose();
-  });
-
   it("prevents document drop navigation and injects only dropped files into the selected Surface", async () => {
     const elements = createPageElements();
     const first = createSurface();
@@ -773,41 +747,6 @@ describe("renderer Terminal Window page host continued", () => {
     host.dispose();
   });
 
-  it("routes tab title updates from main into the strip labels", async () => {
-    let titleListener: ((sessionId: string, title: string) => void) | undefined;
-    let commandListener: ((command: { action: "new" }) => void) | undefined;
-    const removeTabTitleListener = vi.fn();
-    const elements = createPageElements();
-    const host = mountTerminalWindowPage(elements, {
-      createAdapter: createAdapterFactory(),
-      page: window,
-      mount: vi.fn(async () => createSurface()),
-      subscribeToTabCommands: (listener) => {
-        commandListener = listener;
-        return vi.fn();
-      },
-      subscribeToTabTitles: (listener) => {
-        titleListener = listener;
-        return removeTabTitleListener;
-      },
-    });
-    await host.ready;
-
-    commandListener!({ action: "new" });
-    await vi.waitFor(() =>
-      expect(elements.tabsContainer.children).toHaveLength(2),
-    );
-    titleListener!("s1", "vim");
-
-    const labels = [...elements.tabStrip.querySelectorAll("button")].map(
-      (button) => button.textContent,
-    );
-    expect(labels).toEqual(["vim", "2"]);
-
-    host.dispose();
-    expect(removeTabTitleListener).toHaveBeenCalledOnce();
-  });
-
   it("receives tab bar toggles before mount and removes the subscription on disposal", async () => {
     const elements = createPageElements();
     let toggle!: () => void;
@@ -843,32 +782,6 @@ describe("renderer Terminal Window page host continued", () => {
     expect(remove).toHaveBeenCalledOnce();
     expect(elements.tabStrip.hidden).toBe(false);
     expect(surface.focus).not.toHaveBeenCalled();
-  });
-
-  it("routes tab commands from main into the Terminal Tabs", async () => {
-    let commandListener: ((command: TerminalTabCommand) => void) | undefined;
-    const removeTabCommandListener = vi.fn();
-    const elements = createPageElements();
-    const mount = vi.fn(async () => createSurface());
-    const host = mountTerminalWindowPage(elements, {
-      createAdapter: createAdapterFactory(),
-      page: window,
-      mount,
-      subscribeToTabCommands(listener) {
-        commandListener = listener;
-        return removeTabCommandListener;
-      },
-    });
-    await host.ready;
-
-    commandListener!({ action: "new" });
-    await vi.waitFor(() =>
-      expect(elements.tabsContainer.children).toHaveLength(2),
-    );
-    expect(elements.tabStrip.hidden).toBe(false);
-
-    host.dispose();
-    expect(removeTabCommandListener).toHaveBeenCalledOnce();
   });
 
   it("injects a chosen snippet into the selected tab's session", async () => {

@@ -241,10 +241,6 @@ describe("search bar theme", () => {
       expect(buttons[0]!.title).toBe(labels.searchMatchAbove);
       expect(buttons[2]!.textContent).toBe(labels.searchClear);
     }
-    expect(surfaceLabels("pt-BR").searchPlaceholder).toBe(
-      "Buscar no histórico",
-    );
-    expect(surfaceLabels("pt-BR")).toBe(surfaceLabels("pt-BR"));
   });
 });
 

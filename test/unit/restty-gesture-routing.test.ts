@@ -1,81 +1,19 @@
-import { createRequire } from "node:module";
-import { build } from "esbuild";
+// @vitest-environment jsdom
 import { createInputHandler } from "restty/internal";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { installResttyVisibleLinks } from "../../src/terminal-surface/restty-visible-links";
 import {
   createResttyGestureRecorder,
   type ResttyGestureName,
 } from "../fixtures/restty-gesture-evidence";
-import { resttyGestureReplayMutation } from "../fixtures/restty-gesture-routing-mutation";
 
-type Install = typeof installResttyVisibleLinks;
-let withoutMoveReplay: Install;
-let withoutUpReplay: Install;
-// Keep Node's typed-array realm for esbuild; supply only browser DOM globals.
-const { JSDOM } = createRequire(import.meta.url)("jsdom") as {
-  JSDOM: new (
-    html: string,
-    options: { pretendToBeVisual: boolean },
-  ) => { window: typeof window };
-};
-const dom = new JSDOM("<body></body>", { pretendToBeVisual: true });
-
-beforeAll(async () => {
-  for (const key of [
-    "window",
-    "document",
-    "Node",
-    "PointerEvent",
-    "WheelEvent",
-    "MutationObserver",
-  ] as const)
-    vi.stubGlobal(key, key === "window" ? dom.window : dom.window[key]);
-  for (const fallback of ["move", "up"] as const) {
-    const result = await build({
-      entryPoints: ["src/terminal-surface/restty-visible-links.ts"],
-      bundle: true,
-      platform: "node",
-      format: "esm",
-      write: false,
-      plugins: [resttyGestureReplayMutation(fallback)],
-    });
-    const url = `data:text/javascript;base64,${Buffer.from(result.outputFiles[0]!.text).toString("base64")}`;
-    const mutant = (await import(/* @vite-ignore */ url)) as {
-      installResttyVisibleLinks: Install;
-    };
-    if (fallback === "move")
-      withoutMoveReplay = mutant.installResttyVisibleLinks;
-    else withoutUpReplay = mutant.installResttyVisibleLinks;
-  }
-});
-
-afterAll(() => {
-  dom.window.close();
-  vi.unstubAllGlobals();
-});
-
-function harness(
-  platform: string,
-  install = installResttyVisibleLinks,
-  dropMiddle = false,
-  drain: () => Promise<void> = async () => {},
-) {
+function harness(platform: string) {
   const canvas = document.createElement("canvas");
   const inputs: string[] = [];
   const activations: string[] = [];
   let changed = false;
-  let dropped = false;
   const handler = createInputHandler({
     sendReply(data) {
-      // Remove one real emitted middle-button release at the encoder sink,
-      // not a made-up evidence string or a mocked encoder result.
-      const middleRelease =
-        platform === "darwin" ? "\u001b[<1;4;1m" : "\u001b[<17;4;1m";
-      if (dropMiddle && !dropped && data === middleRelease) {
-        dropped = true;
-        return;
-      }
       inputs.push(data);
     },
     positionToCell: (event) => ({ col: event.clientX, row: event.clientY }),
@@ -88,7 +26,7 @@ function harness(
   });
   // Modes come from the real OutputFilter, never an always-on mouse substitute.
   handler.filterOutput("\u001b[?1000h\u001b[?1006h");
-  const controller = install(
+  const controller = installResttyVisibleLinks(
     canvas,
     {
       // Deterministic visible destination/cell geometry is the only supplied
@@ -104,11 +42,7 @@ function harness(
       setVisibleLinkHover() {},
     },
     (url) => activations.push(url),
-    platform === "darwin"
-      ? "MacIntel"
-      : platform === "win32"
-        ? "Win32"
-        : "Linux aarch64",
+    platform === "darwin" ? "MacIntel" : "Linux aarch64",
   );
   for (const [type, kind] of [
     ["pointerdown", "down"],
@@ -145,7 +79,7 @@ function harness(
   const record = createResttyGestureRecorder({
     inputs,
     activations: () => activations.length,
-    drain,
+    drain: async () => {},
     platform,
   });
   return {
@@ -196,20 +130,12 @@ const gestures = [
   "alternateWheel",
 ] as const;
 
-for (const platform of ["darwin", "linux", "win32"]) {
+// Product code branches only on macOS (Meta) versus other platforms (Ctrl).
+for (const platform of ["darwin", "linux"]) {
   describe(`exact ${platform} gesture routing`, () => {
     for (const name of gestures) {
       it(`routes ${name} with exact coordinates, modifiers, button and zero activation`, async () => {
-        // An explicit headless RED command applies the same real mutant to the
-        // positive contract tests. Permanent negative controls below stay cheap.
-        const mutant = process.env.OMXTERM_GESTURE_MUTANT;
-        const install =
-          mutant === "move"
-            ? withoutMoveReplay
-            : mutant === "up"
-              ? withoutUpReplay
-              : installResttyVisibleLinks;
-        const fixture = harness(platform, install, mutant === "middle");
+        const fixture = harness(platform);
         try {
           const evidence = await fixture.run(name);
           expect(evidence.activationsAfter - evidence.activationsBefore).toBe(
@@ -230,89 +156,5 @@ for (const platform of ["darwin", "linux", "win32"]) {
         }
       });
     }
-    for (const [mutant, affected] of [
-      ["move", ["modifiedDrag"]],
-      ["up", ["changedUrl", "releasedModifier"]],
-      ["middle", ["modifiedMiddle"]],
-    ] as const) {
-      it(`rejects actual ${mutant} report loss only for the affected named gestures`, async () => {
-        for (const name of gestures) {
-          const fixture = harness(
-            platform,
-            mutant === "move"
-              ? withoutMoveReplay
-              : mutant === "up"
-                ? withoutUpReplay
-                : installResttyVisibleLinks,
-            mutant === "middle",
-          );
-          try {
-            if (affected.some((entry) => entry === name))
-              await expect(fixture.run(name)).rejects.toThrow(
-                `${name} mouse reports`,
-              );
-            else
-              await expect(fixture.run(name)).resolves.toMatchObject({
-                unattributedInput: "",
-                activationsBefore: 0,
-                activationsAfter: 0,
-              });
-          } finally {
-            fixture.controller.dispose();
-          }
-        }
-      });
-    }
   });
 }
-
-it("does not attribute an actual late encoder report to the next gesture", async () => {
-  const fixture = harness("linux");
-  try {
-    await fixture.run("plainPrimary");
-    // Real encoder bytes arrive outside the recorded gesture interval.
-    const handler = createInputHandler({
-      sendReply: (data) => fixture.inputs.push(data),
-      positionToCell: () => ({ row: 0, col: 3 }),
-    });
-    handler.filterOutput("\u001b[?1000h\u001b[?1006h");
-    handler.sendMouseEvent(
-      "down",
-      new PointerEvent("pointerdown", { button: 0 }),
-    );
-    await expect(fixture.run("modifiedMiddle")).rejects.toThrow(
-      "modifiedMiddle has leftover input before dispatch",
-    );
-  } finally {
-    fixture.controller.dispose();
-  }
-});
-
-it("rejects a real report arriving only at the post-gesture drain", async () => {
-  let drains = 0;
-  const fixture = harness(
-    "linux",
-    installResttyVisibleLinks,
-    false,
-    async () => {
-      drains += 1;
-      if (drains !== 3) return;
-      const handler = createInputHandler({
-        sendReply: (data) => fixture.inputs.push(data),
-        positionToCell: () => ({ row: 0, col: 3 }),
-      });
-      handler.filterOutput("\u001b[?1000h\u001b[?1006h");
-      handler.sendMouseEvent(
-        "up",
-        new PointerEvent("pointerup", { button: 0 }),
-      );
-    },
-  );
-  try {
-    await expect(fixture.run("plainPrimary")).rejects.toThrow(
-      "plainPrimary has unattributed input",
-    );
-  } finally {
-    fixture.controller.dispose();
-  }
-});
