@@ -246,10 +246,7 @@ OMXTERM_TOOLBAR_CHROMIUM=/absolute/path/to/headless-chromium npm test -- test/in
 ```
 
 It checks real browser hit-testing, scrolling and layout without Electron or a
-desktop. Headless browser processes may still access OS services. For agent
-verification, run browser tests and browser-based review/reproduction probes in
-an assigned disposable guest, never on a physical host; this also applies to
-headless runs and every nested delegate. Set `OMXTERM_TOOLBAR_EVIDENCE` to a
+desktop. Set `OMXTERM_TOOLBAR_EVIDENCE` to a
 private output directory to retain synthetic screenshots. This is not native or
 packaged-app qualification.
 
@@ -273,15 +270,10 @@ cache destinations, multiple workers, inherited nested projects, dependency
 optimization and a symlinked working-directory alias; it does not qualify native
 or browser behavior.
 
-Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`. Confirm that the report belongs to the current invocation, and preserve it with the command, selected scope/configuration, exit status, and terminal output before another run overwrites it. A nonzero exit remains a failure regardless of JSON counters.
-
-In pinned Vitest 4.1.12:
-
-- `num*TestSuites` includes nested suites, not just files, and is not an executed-file count. Entries in `testResults` identify reported files, not proof that they ran.
-- During fail-fast, unreached files can appear as `passed` with empty `assertionResults`. An empty array alone does not distinguish an unreached file from an empty or collection-failed file. Preserve file-level failures and messages, including collection errors.
-- Nonempty `assertionResults` represents collected test cases, not proof that all their bodies ran. Count entry statuses (`passed`, `failed`, `pending`, `skipped`, `todo`) separately; aggregate `numPendingTests` can differ from the number of `pending` entries. Pending is not an intentional skip or a pass.
-
-Do not infer full-suite execution coverage from aggregate counters or empty passed entries.
+Test runs write Vitest's raw JSON to `.scratch/vitest-results.json`, and the
+next run overwrites it. Trust the exit status: a nonzero exit is a failure
+whatever the JSON counters say, and the counters don't prove which test bodies
+actually ran.
 
 Theme discovery's count/scan limits use controlled filesystem streams in
 `test/unit/settings-theme-limits.test.ts`: exact/full and overflowing inputs
@@ -299,256 +291,34 @@ explicitly rather than leaving an unjoined rejection assertion.
 
 ## Running native tests
 
-The prerequisites below protect test execution. If one is unavailable, record the
-affected tests as unrun and continue independent checks or product work. Safe
-execution and the release decision are separate. Under [ADR 0019](adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse),
-evidence gaps are assessed for relevance rather than treated as automatic release
-blockers. Preserve actual failures and record their disposition.
+> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop.
 
-> **Warning:** Graphical integration tests open and focus real Electron windows. Run them on an unlocked, logged-in desktop with WebGL2 support. Leave the mouse and keyboard idle during the run, do not resize or switch windows, and run only one graphical test suite at a time per desktop. Follow the shared-clipboard, Linux desktop-service or macOS preference precautions below before launch.
+If a test can't run on your machine, report it as unrun and keep going.
+Missing coverage is weighed case by case, not treated as an automatic release
+blocker ([ADR 0019](adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse)).
 
-### Shared clipboard before native tests
+<a id="shared-clipboard-before-native-tests"></a>
+<a id="linux-desktop-services-and-native-verification"></a>
+<a id="macos-preferences-and-native-verification"></a>
+<a id="macos-console-admission"></a>
 
-Disposable guest accounts and temporary HOME/XDG/Electron profiles do **not**
-isolate a host/shared clipboard. Before launching a real-clipboard writer, use
-an assigned disposable guest and protect that boundary, including any hypervisor
-sharing, remote-desktop clipboard redirection or other active synchronization.
-The [fixture clipboard map](native-test-reference.md#fixture-clipboard-boundaries)
-identifies default writers and distinguishes injected stubs; `npm test`, default
-integration and `check:portable` can include real writers without an opt-in.
+### Side effects on your desktop
 
-A concrete Parallels Desktop path, run on the managing host **only for the
-currently assigned guest**, is:
+Native tests run the real app against your real user session. A temporary
+`HOME`, XDG, or Electron profile directory separates app files, but not these:
 
-1. Inspect installed `prlctl set misc_sharing --help`, `prlctl list --help` and
-   `man prlctl` for the selected version/guest's support. The documented
-   `--shared-clipboard` modes are `on` (bidirectional), `host-to-guest`,
-   `guest-to-host` and `off` (disabled). Require **off**, not a one-way mode.
-2. Resolve `ASSIGNED_VM_ID` from the current assignment. Inspect
-   `prlctl list -i "$ASSIGNED_VM_ID"`; if sharing is already off, leave it off.
-   Otherwise, within the assignment's configuration authority, disable it with
-   `prlctl set "$ASSIGNED_VM_ID" --shared-clipboard off`. Re-read
-   `prlctl list -i "$ASSIGNED_VM_ID"` immediately before launch and require an
-   explicit disabled clipboard mode for that guest. Satisfy any documented
-   apply-state/restart requirement; a pending stored setting is not effective
-   isolation. Command acceptance alone is not that check. Exclude other active
-   clipboard bridges using their supported connection/session controls; a
-   Parallels setting covers only its own bridge.
-3. If the control is unsupported for that guest, the mode cannot be read or
-   confirmed disabled, another bridge cannot be excluded, or a required
-   configuration/power change is outside the assignment, **hold the affected
-   execution before launch**. Report the unavailable prerequisite and arrange
-   supported isolation with the environment owner. This also holds a full suite
-   containing the writer; it is not a passing skip or permission to probe the
-   physical host's clipboard. Other VM/remote-desktop tools need their own
-   documented disable/check path, not guessed equivalent flags.
-4. Keep sharing disabled through execution and process settlement. Recheck after
-   connection/configuration changes and after the run; an unexplained change
-   leaves shared-resource protection unresolved and blocks further launches.
-   Do not re-enable sharing or restore clipboard contents as routine cleanup.
+- **Clipboard:** some default tests write to the system clipboard (see the
+  [fixture clipboard map](native-test-reference.md#fixture-clipboard-boundaries)).
+  If you run tests inside a VM with clipboard sharing on, the writes reach the
+  host too.
+- **macOS preferences and Keychain:** source and packaged runs can write the
+  `com.github.Electron` and `com.otaviomiranda.omxterm` preference domains, and
+  Chromium may show Keychain prompts.
+- **Linux desktop services:** Electron can start or reuse per-user services such
+  as the document portal on your session bus.
 
-Retain private **control metadata only**: tool/version and supported control,
-selected guest attribution, observation times, disabled-mode checks, other bridge
-coverage and any limitation. Public evidence should summarize the boundary and
-synthetic-only fixture scope, not private guest identifiers or full configuration
-output. Never collect clipboard contents, formats, screenshots or hashes as
-preservation evidence; do not add a clipboard read/write/cross-boundary sentinel
-probe or a backup/restoration framework. Fixture assertions may consume their own
-synthetic values only after isolation is established. Exit0 and process/display
-cleanup do not establish clipboard preservation.
-
-The historical [#820](https://github.com/luizomf/omxterm/issues/820) run established
-guest clipboard writes with sharing enabled. Host propagation and loss of prior
-contents remain unknown; no new check, guessed restoration or replay can prove
-retroactive preservation or repair the missing history.
-
-### Linux desktop services and native verification
-
-For agent Linux verification that launches Electron, a browser or a desktop
-harness (including headless probes), use an assigned disposable guest. Reuse its
-suitable **existing ordinary user, logged-in desktop, normal user bus and actual
-per-user runtime directory** when that account's local state is explicitly
-disposable; a new dedicated account or fresh login is not a prerequisite.
-Verify the actual account/session and inherited display, authentication, bus and
-runtime before launch. A separate ordinary account is an option when the existing
-user's state must be preserved; it does not isolate shared machine state or grant
-permission to alter other users' resources.
-
-Temporary HOME/XDG/profile directories separate application files, not per-user
-services. Changing `XDG_RUNTIME_DIR`, authenticating an Xvfb/Openbox display or
-starting `dbus-run-session` under the existing logged-in account does **not**
-establish account/runtime isolation. Auto-activated services can still share
-paths and mounts with the original desktop. Do not create a competing same-user
-private-bus portal as an isolation workaround. When reusing the guest user's
-ordinary desktop/bus, explicitly own that verification session and follow the
-shared-resource checks below. Disposable account preferences do not make shared
-services, mounts or their consumers disposable.
-
-Launch and settlement prerequisites:
-
-1. Before launch, record a private baseline on the intended ordinary bus
-   **without activating absent services**: original document-portal service/helper
-   creation identities and bus owner (or established absence), mount namespace and document-path
-   mount mapping/device/type and portal FUSE connection when observable, current
-   consumers, and basic API/FUSE functionality when already active. Identify
-   consumers of the document mount, including open files and process working
-   directories, without reading exported document contents. Preserve the selected
-   original configuration/state and unrelated
-   evidence holds. Distinguish observed absence from unavailable inspection;
-   if the scope cannot be observed and protected, stop and arrange a suitable
-   user/session before launch. Do not interrupt original consumers to make a
-   lane available.
-2. After the run, join owned process outcomes and streams and release injected
-   input. Compare the same original portal/helper/bus identities, mount mapping
-   and API/FUSE scope, and original consumer state. Record unexplained consumer
-   changes or inspection errors rather than assuming no impact. Repeat
-   preservation checks after retiring only owned scratch, before releasing the
-   guest. Record these results separately from fixture assertions and process
-   settlement: exit0, no remaining task actors or a successful cleanup receipt
-   alone does not prove shared-service preservation.
-3. On unexplained changes or unavailable checks, retain evidence and report the
-   unresolved shared-resource state; stop further launches. Do not unmount,
-   kill or restart original services, delete their runtime/store, or reset the
-   guest as routine cleanup. Recovery requires separately authorized scope and
-   consumer assessment, not a generic retry or an assumed restoration baseline.
-
-[#793](https://github.com/luizomf/omxterm/issues/793) records a same-user/private-bus
-portal owning the visible document mount while the original portal retained a
-different FUSE connection. Scoped functional recovery is complete, but the full
-initial displacement sequence and any rendering-failure causality remain
-unproven. Preservation checks are point-in-time observations, not a guarantee
-against later changes or reconstruction of a missing historical baseline.
-
-### macOS preferences and native verification
-
-Temporary `HOME`, XDG, Electron user-data and session-data paths separate some
-application files; they do **not** isolate macOS per-bundle preferences or
-Keychain from the actual user and GUI session. Temporary browser profiles do not
-establish Keychain isolation either, including for headless Chrome. Setting
-`HOME` does not switch users. The observed Chrome key-storage dialog and its
-unattributed trigger are recorded in [#784](https://github.com/luizomf/omxterm/issues/784). The FULL
-[`package:verify`](../scripts/verify-packaged-app.mjs) GUI startup uses a temporary
-HOME, XDG config/state and Electron user-data directory, but does not capture or
-restore OS preferences. FULL and inspection-only also execute packaged Electron
-Node-mode probes, some with the inherited environment. Inspection-only does not
-launch the GUI, but has not been established as preference-isolated merely because
-it is headless. Source-mode Electron fixtures can affect preferences too;
-`npm run check` includes both graphical tests and the FULL verifier.
-
-For agent native verification, use an assigned disposable macOS guest and
-**reuse an existing suitable ordinary guest account** whose account state and
-preferences are explicitly disposable. It need not be a newly created or separately
-named test account. Reuse its already configured Aqua session after verifying the
-actual account/console identity and [live desktop admission](#macos-console-admission).
-Do not create another user, back up disposable preferences or repeat login/setup
-solely for preference isolation. Changing an environment variable does not switch
-users or establish readiness. Provision missing fixture prerequisites and keep the
-desktop idle.
-
-A separate ordinary test account is an option when the existing account's state
-must be preserved, not a default requirement. Neither account choice isolates
-physical hosts, shared system state, other accounts, input/display resources,
-mounted host data or external services. Protect resources outside the explicitly
-disposable guest-local scope.
-
-**Only when existing guest preferences must be preserved**, arrange a suitable
-baseline and recovery **before** launching any relevant process:
-
-1. Identify the actual account, executable/bundle and possible application,
-   Electron, Chromium and helper preference domains for the selected test. The
-   packaged app currently uses `com.otaviomiranda.omxterm`; source Electron has
-   used `com.github.Electron`. These are starting points, not an exhaustive list.
-   Identify the files and user/host scope actually used; do not assume `HOME`
-   points to them. Quiesce competing writers and establish exclusive use. If the
-   affected scope cannot be identified or safely preserved, use a suitable
-   disposable guest account instead.
-2. In an owner-only hold outside disposable test scratch, record each domain's
-   prior file and daemon existence or absence, exact file bytes and restorable
-   metadata (owner/group, mode, modification time, extended attributes and ACLs
-   when present), plus daemon-visible semantic values. Verify the backup and
-   compare disk with daemon state before launch. Distinguish an absent or empty
-   domain from a read/export error; treat errors, unexpected file types or
-   ownership, and disk/daemon disagreement as blockers. Preserve the hold and
-   keep preference values and private paths out of public evidence.
-3. After the run, settle the owned processes and streams, then compare the same
-   scope and investigate newly observed domains. Do not overwrite concurrent or
-   unrecognized changes. Restore only identified, authorized domains from a
-   verified baseline, including both the user preference daemon's semantic state
-   and the original file bytes and metadata; handle a previously absent domain
-   only when its absence and ownership are established. A raw plist copy or a
-   `defaults` operation alone is not proof of both states. Do not guess missing
-   values, delete unrelated domains, or restart/kill the preference daemon as a
-   shortcut. If safe restoration is unclear, retain the hold and report the
-   unresolved state rather than claiming cleanup.
-4. Compare bytes, metadata, existence and daemon-visible values immediately
-   after restoration and again after owned-scratch cleanup, before retiring the
-   hold. Record the selected scope, process settlement, checks and any remaining
-   limitations separately from the test result. Matches are point-in-time
-   observations, not guarantees against later writes or evidence about
-   unobserved domains.
-
-Bounded guest evidence illustrates the distinction: the #764 FULL package
-verification observed an application-domain plist metadata change without a
-pre-run byte backup, so its earlier contents cannot be reconstructed. A #769
-source-mode run changed Electron-domain bytes and daemon-visible values while the
-application domain stayed unchanged. A separate Files0.6 packaged run changed the
-application domain's bytes and daemon-visible values. In the latter two runs,
-the changed existing domains were restored and their file bytes and daemon-visible
-values matched the recorded baselines at subsequent checks. A later #766
-source-view run also required restoration. In a #765 packaged run, its guard
-reported matching selected domains without restoration.
-The #769, #766 and #765 private guards treated failed daemon exports as absent or
-empty for domains whose files were absent. Their reported matches therefore do
-not establish daemon absence for those domains. These observations do not identify
-the writer or key, prove a general cause, cover all domains, or guarantee future
-restoration. See [#779](https://github.com/luizomf/omxterm/issues/779)
-and the [Files checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint).
-
-Preserve the application's existing macOS Chromium sandbox. An outer sandbox and
-`NODE_OPTIONS` preload were not suitable workarounds in the #764 qualification;
-do not disable application sandboxing to compensate for the test setup. No
-repository verifier currently supplies a general preference backup/restoration
-facility. Reuse a suitable disposable guest account when its preferences need not
-be preserved; otherwise use a verified scoped recovery procedure or another
-suitable disposable account.
-
-### macOS console admission
-
-Before source graphical tests, packaged GUI checks or native input probes in the
-assigned disposable guest:
-
-1. Verify that the intended **ordinary test user** actually owns the console and
-   Aqua session, is on-console and is **unlocked**. SSH access, a running Aqua
-   session, configured automatic login, accepted credentials and a stock
-   `screenLock is off` result do not establish unlocked desktop admission.
-2. Check for held keys/buttons **and Command/Shift/Control/Option modifier flags**.
-   Release only input injected by the current owner; do not clear another user's
-   state. Verify the selected display's current logical usable work area and
-   [required viewport plus native frame](native-test-reference.md#settings-layout),
-   not just its physical resolution.
-3. Recheck immediately before launch and after restart, session/display changes
-   or idle locking. Earlier readiness and a user-active assertion do not guarantee
-   continued unlock. If the desktop is locked or changing, stop before launching
-   the native run rather than treating the setup hold as a product failure.
-
-Use supported normal guest-console/login mechanisms or an input transport whose
-mapping and actual delivery have been verified. API/CLI acceptance alone proves
-neither authentication nor product input receipt; do not guess virtual keycode
-schemas or loop password attempts. Reuse suitable existing login/display/idle
-setup. For necessary guest-only changes, preserve and restore a verified baseline
-for state that must be retained; explicitly disposable account settings need no
-backup or restoration solely for testing. Protect shared resources and other
-consumers. This is not advice to disable security generally: do not relax
-physical-host authentication/privacy/Keychain, decode another account's credential
-or modify clean recovery media to admit a run.
-
-[#797](https://github.com/luizomf/omxterm/issues/797) records a local
-`autoLoginUserScreenLocked` observation and a separate later idle relock despite
-lock-policy status. That local Boolean is **not a documented stable Apple MDM
-interface or a permanent unlock recipe**; its initial writer is unknown. Setup
-recovery does not qualify the product. Keep admission, actual input receipts and
-[invocation outcomes](native-test-reference.md#admission-input-and-invocation-outcomes)
-separate.
+If you care about that state, run native tests in a VM or a spare user account.
+Keep the Chromium sandbox enabled; don't disable it to make a test setup work.
 
 <a id="qualification-scope"></a>
 
