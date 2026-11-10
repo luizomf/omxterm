@@ -1,5 +1,24 @@
 import { satisfies, valid } from "semver";
 
+// Each canonical development family admits a range only when ordinary semver
+// admits both stable endpoints; this deliberately bridges prerelease rules.
+const developmentBridges: readonly [RegExp, string, string][] = [
+  [/^0\.24\.1-dev\.(?:0|[1-9]\d*)$/u, "0.24.0", "0.24.1"],
+  [/^0\.25\.0-dev\.(?:0|[1-9]\d*)$/u, "0.24.0", "0.25.0"],
+  [/^0\.26\.0-dev\.(?:0|[1-9]\d*)$/u, "0.25.0", "0.26.0"],
+  [/^0\.26\.1-dev\.(?:0|[1-9]\d*)$/u, "0.26.0", "0.26.1"],
+];
+
+function bridgedDevelopmentHost(appVersion: string, range: string): boolean {
+  return developmentBridges.some(
+    ([family, from, to]) =>
+      family.test(appVersion) &&
+      valid(appVersion) === appVersion &&
+      satisfies(from, range) &&
+      satisfies(to, range),
+  );
+}
+
 /** Shared host and API admission with narrowly bounded host exceptions. */
 export function packageCompatible(
   manifest: {
@@ -24,21 +43,7 @@ export function packageCompatible(
   return (
     (satisfies(runtime.appVersion, range) ||
       unchangedFilesPreview ||
-      // This maintenance family deliberately bridges ordinary prerelease rules.
-      (/^0\.24\.1-dev\.(?:0|[1-9]\d*)$/u.test(runtime.appVersion) &&
-        valid(runtime.appVersion) === runtime.appVersion &&
-        satisfies("0.24.0", range) &&
-        satisfies("0.24.1", range)) ||
-      // The next minor family is a separate, explicitly bounded decision.
-      (/^0\.25\.0-dev\.(?:0|[1-9]\d*)$/u.test(runtime.appVersion) &&
-        valid(runtime.appVersion) === runtime.appVersion &&
-        satisfies("0.24.0", range) &&
-        satisfies("0.25.0", range)) ||
-      // The 0.26.0 development family has its own stable endpoint bounds.
-      (/^0\.26\.0-dev\.(?:0|[1-9]\d*)$/u.test(runtime.appVersion) &&
-        valid(runtime.appVersion) === runtime.appVersion &&
-        satisfies("0.25.0", range) &&
-        satisfies("0.26.0", range))) &&
+      bridgedDevelopmentHost(runtime.appVersion, range)) &&
     satisfies(runtime.apiVersion, manifest.engines.api)
   );
 }
