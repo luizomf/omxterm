@@ -196,7 +196,14 @@ describe("performance benchmark report", () => {
       ...stream,
       pollCostMs: index + 1,
     }));
-    const endpoint = first.streamEnds!.at(-1)!;
+    const stableEndpoints = first.streamEnds!.map((endpoint, index) => ({
+      ...endpoint,
+      readings: endpoint.readings.map((reading) => ({
+        ...reading,
+        cpuSeconds: reading.cpuSeconds === null ? null : index === 2 ? 1.1 : 1,
+      })),
+    }));
+    const endpoint = stableEndpoints.at(-1)!;
     const final = {
       ...endpoint,
       atMs: 1000,
@@ -212,7 +219,7 @@ describe("performance benchmark report", () => {
           {
             ...first,
             streams,
-            streamEnds: [first.streamEnds![0]!, first.streamEnds![1]!, final],
+            streamEnds: [stableEndpoints[0]!, stableEndpoints[1]!, final],
           },
           ...run.attribution.slice(1),
         ],
