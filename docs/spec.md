@@ -1,10 +1,13 @@
 # OMXTerm product contract
 
 This document describes OMXTerm's behavior, architecture, and known limitations.
-The [user guides](README.md) explain setup and everyday use.
+It states current rules; the [ADRs](adr/README.md) explain why, and Git history
+keeps past evidence. The [user guides](README.md) explain setup and everyday use.
 
 - [Product and scope](#product)
 - [Windows and sessions](#window-and-session-behavior)
+- [Saved Layout](#saved-layout)
+- [Mirror Typing](#mirror-typing)
 - [Terminal behavior](#terminal-behavior)
 - [Clipboard](#clipboard)
 - [Configuration and local state](#configuration-and-local-state)
@@ -19,887 +22,1053 @@ shell in a native window with a hideable title area and gives the Terminal
 Surface all remaining content space. SSH brokering, AI assistance, persistent
 session management, and IDE features are outside the product scope.
 
-The Supported Platforms are macOS arm64, Linux arm64/x64, and Windows arm64/x64.
-Linux and Windows x64 packages have build-only qualification (ADR 0036): native
-CI builds and enumerated headless checks, not verified desktop or installer behavior. Linux
-rendering defaults to X11 and requires XWayland when the desktop session is
-Wayland; native Wayland rendering is not currently claimed. An explicit Electron
-`--ozone-platform` or `--ozone-platform-hint` switch supplied before a Launch
-Request's `-e`, or a defined `ELECTRON_OZONE_PLATFORM_HINT` environment
-variable, takes precedence over the Linux default for diagnosis. The environment
-variable counts as an override even when its value is empty. Linux deliberately
-uses `--no-sandbox` as an unconditional launch policy for ordinary-user runtime,
-direct AppImage, extraction, desktop entry and X11 relaunch. The development
-launcher (`npm run dev`) supplies it before Electron bootstrap, not only after
-application main starts. This is a fixed launch policy, not a fallback or
-configurable mode. OMXTerm leaves host security policy unchanged and installs no
-privileged sandbox helper. Sandboxed Linux support is outside the current
-maintenance scope (ADR 0024). Intel macOS and other operating systems are unsupported.
+### Supported Platforms
 
-When Linux display startup needs an X11 relaunch, it selects the persistent
-`APPIMAGE` only when both `APPIMAGE` and `APPDIR` are nonempty absolute paths
-and `APPDIR/omxterm` matches `process.execPath`, the packaged AppRun layout.
-Otherwise it relaunches `process.execPath`; inherited AppImage variables from
-another application do not select the replacement executable. The X11 switch
-is inserted before a Launch Request's `-e`, preserving its literal argv. This
-selection does not remove variables from the inherited environment (ADR 0020).
+- macOS arm64, Linux arm64/x64, and Windows arm64/x64. Intel macOS and other
+  operating systems are unsupported.
+- Linux and Windows x64 packages have build-only qualification: native CI builds
+  and enumerated headless checks, not verified desktop or installer behavior
+  ([ADR 0036](adr/0036-distribute-build-only-x64-ci-artifacts.md)).
+
+### Linux display and sandbox
+
+- Rendering defaults to X11 and needs XWayland in a Wayland session. Native
+  Wayland rendering is not claimed
+  ([ADR 0020](adr/0020-default-linux-rendering-to-x11.md)).
+- For diagnosis, an explicit Electron `--ozone-platform` or
+  `--ozone-platform-hint` switch placed before a Launch Request's `-e`, or a
+  defined `ELECTRON_OZONE_PLATFORM_HINT` environment variable (even an empty
+  one), takes precedence over the X11 default.
+- When display startup needs an X11 relaunch, it relaunches the persistent
+  `APPIMAGE` only when `APPIMAGE` and `APPDIR` are both nonempty absolute paths
+  and `APPDIR/omxterm` matches `process.execPath` (the packaged AppRun layout).
+  Otherwise it relaunches `process.execPath`, so AppImage variables inherited
+  from another application never pick the executable. The X11 switch goes before
+  a Launch Request's `-e`, keeping its literal argv. The inherited environment
+  is not modified.
+- `--no-sandbox` is a fixed, unconditional launch policy for the ordinary-user
+  runtime, direct AppImage, extraction, desktop entry, and X11 relaunch. It is
+  not a fallback or a setting. `npm run dev` passes it before Electron
+  bootstrap. OMXTerm leaves host security policy unchanged and installs no
+  privileged sandbox helper; sandboxed Linux is outside the maintenance scope
+  ([ADR 0024](adr/0024-disable-the-chromium-sandbox-on-linux.md)).
 
 ## Product scope
 
 OMXTerm:
 
-- opens the Default Shell in the user's home directory (except a split pane's
-  usable OSC 7 directory inheritance or explicit Saved Layout opening described below): on macOS and Linux the
-  operating-system-configured shell as an interactive login shell; on Windows,
-  which has no login-shell concept, a configured `windowsShell` executable when
-  present, otherwise Windows PowerShell — falling back to the ComSpec command
-  processor — started interactively without a login flag; or, when startup
-  includes `-e <program> [arguments...]`, runs that executable and literal
-  argument vector directly in the first Terminal Tab without an implicit shell;
-- provides a terminal targeting ordinary shells, SSH started by the user, tmux,
-  TUIs, REPLs, alternate-screen applications, Unicode, and bracketed paste, with
-  the protocol limitations documented below; it renders emoji-presentation and
-  ZWJ grapheme clusters as single two-column cells that do not overlap
-  neighboring cells;
-- uses one independent shell session per Terminal Pane, with one or more panes
+- opens the Default Shell in the user's home directory, except for a split
+  pane's OSC 7 directory inheritance and explicit Saved Layout opening
+  (described below):
+  - on macOS and Linux, the operating-system-configured shell as an interactive
+    login shell;
+  - on Windows, which has no login-shell concept, a configured `windowsShell`
+    executable when present, otherwise Windows PowerShell, falling back to the
+    ComSpec command processor, started interactively without a login flag;
+  - when startup includes `-e <program> [arguments...]`, that executable and
+    literal argument vector run directly in the first Terminal Tab, with no
+    implicit shell;
+- targets ordinary shells, SSH started by the user, tmux, TUIs, REPLs,
+  alternate-screen applications, Unicode, and bracketed paste, with the protocol
+  limits under [Terminal behavior](#terminal-behavior). Emoji-presentation and
+  ZWJ grapheme clusters render as single two-column cells that do not overlap
+  their neighbors;
+- runs one independent shell session per Terminal Pane, with one or more panes
   per Terminal Tab and one or more Application Tabs per native Terminal Window,
   including an optional graphical Settings tab;
 - provides native new-window, new-tab, close, copy, paste, select-all,
   scrollback search, explicit text export, zoom, fullscreen, always-on-top,
   bounded local-image preview, and quit actions without an in-window toolbar;
-- renders the bundled [`omtheme`](omtheme.json) palette by default, allows one
-  explicitly configured external Terminal Theme, keeps SGR bold text on its
-  requested ANSI `0–7` color without remapping it to bright `8–15` (applications
-  may request bright colors explicitly), and uses bundled regular and bold
-  FiraCode Nerd Font Mono as the default, followed by bundled regular and bold
-  DejaVu Sans Mono, JetBrainsMono Nerd Font Mono, representative
-  operating-system emoji/CJK/symbol faces, and bundled Noto Sans Symbols 2 for
-  missing-glyph coverage;
+- renders the bundled [`omtheme`](omtheme.json) palette by default and allows
+  one explicitly configured external Terminal Theme. SGR bold text keeps its
+  requested ANSI `0–7` color instead of being remapped to bright `8–15`
+  (applications can request bright colors explicitly);
+- uses bundled regular and bold FiraCode Nerd Font Mono by default, followed by
+  bundled regular and bold DejaVu Sans Mono, JetBrainsMono Nerd Font Mono,
+  representative operating-system emoji/CJK/symbol faces, and bundled Noto Sans
+  Symbols 2 for missing glyphs;
 - uses the black-and-blue OMXTerm application icon in development and on the
   packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
 - reads strict, versioned JSON configuration, including an explicit en-US or
   pt-BR Interface Language, and writes bounded local JSONL operational logs;
-- packages ready-to-run artifacts from an accepted version: ARM64 DMG for macOS,
-  ARM64/x64 AppImage for Linux, and ARM64/x64 NSIS for Windows. Linux releases additionally provide
-  an optional versioned per-user AppImage desktop installer and its checksum;
-  running the AppImage directly remains supported.
+- packages ready-to-run artifacts: an ARM64 DMG for macOS, ARM64/x64 AppImages
+  for Linux, and ARM64/x64 NSIS installers for Windows. Linux releases also
+  provide an optional versioned per-user AppImage desktop installer and its
+  checksum; running the AppImage directly remains supported.
 
-AI assistance, unrestricted broadcast input, saved or reconnectable running sessions, shell integration,
-profiles, a remote theme marketplace, automatic configuration reload, automatic
-updates, and remote terminal features beyond the optional
-[Linux/macOS ARM64 SSH Connect preview](ssh-connect-development.md) are outside the current product
-contract. SSH Connect is separately installed: its incomplete read-only alias
-index and distinct quick-connect page request a typed, main-owned literal
-system-ssh launch, without brokering authentication or adding reconnect. The optional
-[Saved Layout preview](saved-layout-development.md) explicitly saves one window's terminal
-layout and local-directory provenance, opening fresh Default Shells in a new
-window without changing current work. It never saves/restores running sessions,
-commands or output; no startup restore or autosave is added. The optional
-[Mirror Typing preview](mirror-typing-development.md) is a narrow same-tab keyboard-byte
-exception, not unrestricted broadcast or multi-pane paste.
+Outside the current product contract: AI assistance, unrestricted broadcast
+input, saved or reconnectable running sessions, shell integration, profiles, a
+remote theme marketplace, automatic configuration reload, automatic updates, and
+remote terminal features beyond the optional SSH Connect preview.
 
-Restty 0.3.0 and its pinned Ghostty core provide the sole Terminal Surface in
-ordinary development and every packaged application. OMXTerm has no renderer
-selector or fallback Surface. A shell starts only after rendering initialization
-succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
+Optional, separately installed previews:
+
+- [SSH Connect](ssh-connect.md) (Linux and macOS ARM64): an incomplete read-only
+  alias index and a quick-connect page request a typed, main-owned literal
+  system `ssh` launch. It does not broker authentication or add reconnect.
+- [Saved Layout](#saved-layout) saves one window's layout and reopens it with
+  fresh Default Shells. It never restores running sessions, commands, or output,
+  and there is no startup restore or autosave.
+- [Mirror Typing](#mirror-typing): a narrow same-tab keyboard-byte exception, not
+  unrestricted broadcast or multi-pane paste.
+
+Restty 0.3.0 and its pinned Ghostty core are the only Terminal Surface, in
+development and in every package. There is no renderer selector or fallback
+Surface. A shell starts only after rendering initialization succeeds
+([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 
 ## Window and session behavior
 
-- Launching OMXTerm creates a Terminal Window with one Terminal Tab. New Window
-  and New Tab default to `Cmd+N` and `Cmd+T` on macOS, and `Ctrl+Shift+N` and
-  `Ctrl+Shift+T` on Linux and Windows. Each Terminal Tab starts with one Terminal Pane,
-  and each pane owns its own independent Live Terminal Session.
-- Settings is one lazy graphical Application Tab per native window, appended
-  on first open and reused without reread, reorder or state reset. It has no
-  Terminal Pane, Surface, Adapter, shell or PTY. One ordered collection owns
-  all kinds' selection, reordering and literal/next/previous navigation, including
-  general hosted Application Tabs. Separately installed Files and SSH Connect
-  open in the companion Auxiliary Panel instead and do not enter tab ordering. The
-  existing strip flag and two-tab threshold include Settings; opening it never
-  reveals a disabled strip. Switching preserves its DOM, category, drafts,
-  revisions, scroll and pending save results; it cancels shortcut recording and
-  invalidates pending clipboard interaction. Close disposes that editor without
-  implicit raw Save or a new unsaved-change prompt. Reopen reads through the
-  existing serialized service. Escape does not close the ordinary tab; the
-  explicit Close action is in the page header and uses ordinary tab removal,
-  retaining its closing Enter
-  gesture through repeats/release. The internal shared application-page shell
-  provides bounded content/navigation scrolling, explicit control variants and
-  consistent error/warning/result notices. Raw and graphical results retain their
-  severity; Settings follows valid configuration links and reports broken links,
-  unsuitable targets and conflicts. Settings keeps its retained layout and uses the window's theme tint
-  rather than adding an opaque page background; controls and focus remain visible. Settings survives last-terminal exit,
-  cancellation or first-mount failure without inventing a shell or reporting
-  false renderer emptiness. First-mount readiness still reports the actual
-  terminal outcome. Final Application Tab removal commits the existing empty
-  owner/failure-acknowledgement path; Settings adds no Busy Session/native drain.
-  Main accepts only a fixed validated graphical selection identity, not an
-  arbitrary renderer title. Settings supplies a localized native title;
-  background OSC/BEL still update terminal tabs without stealing that title or
-  marking an unseen terminal bell visited.
+Closing a tab or window ends its sessions. Persistent and reconnectable sessions
+are the job of a session manager such as tmux.
+
+### Windows and tabs
+
+- Launching OMXTerm creates a Terminal Window with one Terminal Tab. Each
+  Terminal Tab starts with one Terminal Pane, and each pane owns its own Live
+  Terminal Session.
+- Default shortcuts (macOS / Linux and Windows):
+  - New Window: `Cmd+N` / `Ctrl+Shift+N`.
+  - New Tab: `Cmd+T` / `Ctrl+Shift+T`.
+  - Close Tab: `Cmd+W` / `Ctrl+Shift+W`.
+  - Close Window: `Cmd+Shift+W` / `Ctrl+Shift+Q`.
+  - Quit: `Cmd+Q` / `Ctrl+Alt+Shift+Q`.
+  - Window Font Zoom: `Cmd++`, `Cmd+-`, `Cmd+0` / `Ctrl++`, `Ctrl+-`, `Ctrl+0`.
+- A window with a single tab shows no tab strip. Each window owns in-memory
+  title-bar and tab-bar visibility choices, initialized from
+  `window.showTitleBar` and `window.showTabBar` (both default to true).
+- The OMXTerm-drawn tab strip appears only when its flag is on and the window has
+  two or more tabs. It takes its own full-width row above the Terminal Surface and
+  Snippets Sidebar row: below the 30 px native title inset on macOS (when the
+  title area is visible and the window is not fullscreen), or below the visible
+  34 px app-drawn title row on Linux and Windows. A hidden title area or
+  fullscreen leaves no title row or duplicate inset.
+- Clicking a tab selects it; the selected grid refits and gets terminal focus.
+  Dragging a tab horizontally within the strip reorders that window's tabs.
+  The new order immediately drives visible order, next/previous cycling, and
+  positional selection. The selected tab and every Live Terminal Session and
+  Terminal Surface stay unchanged. Tab order is ephemeral and per window;
+  explicit Saved Layout saving can capture terminal order for a fresh window.
+- Closing or ordinarily exiting an unselected tab preserves the selected tab,
+  its Surface, and its session, even when its position changes; keyboard, Paste,
+  and Snippet input stays with it. Removing the selected tab selects its right
+  neighbor, or the left neighbor when it was last. Removing the only tab follows
+  the last-tab window lifecycle.
+- Each window starts at the configured font size. Window Font Zoom affects only
+  that window, applies to every tab in it, and is not persisted.
+- `Window -> Always on Top` toggles only the selected window at the ordinary
+  native floating level. New windows use the configured default.
+
+### Settings tab
+
+- Settings is one lazy graphical Application Tab per window. It is appended on
+  first open and then reused without reread, reorder, or state reset. It has no
+  Terminal Pane, Surface, Adapter, shell, or PTY.
+- One ordered collection owns selection, reordering, and positional/next/previous
+  navigation for every Application Tab kind, including general hosted tabs.
+  Separately installed Files and SSH Connect open in the Auxiliary Panel instead
+  and never enter tab ordering.
+- Settings counts toward the strip flag and two-tab threshold. Opening it never
+  reveals a disabled strip.
+- Switching away preserves its DOM, category, drafts, revisions, scroll, and
+  pending save results. It cancels shortcut recording and invalidates pending
+  clipboard interaction.
+- Close disposes the editor without an implicit raw Save or a new unsaved-change
+  prompt; reopening reads through the existing serialized service. Escape does
+  not close it. The explicit Close action in the page header uses ordinary tab
+  removal and owns its closing Enter gesture through repeats and release.
+- The shared application-page shell provides bounded content/navigation
+  scrolling, explicit control variants, and consistent error/warning/result
+  notices. Raw and graphical results keep their severity. Settings follows valid
+  configuration links and reports broken links, unsuitable targets, and
+  conflicts.
+- Settings keeps its retained layout and uses the window's theme tint instead of
+  an opaque page background; controls and focus stay visible.
+- Settings survives last-terminal exit, cancellation, or first-mount failure
+  without inventing a shell or reporting false renderer emptiness. First-mount
+  readiness still reports the real terminal outcome. Removing the final
+  Application Tab commits the existing empty-owner/failure-acknowledgement path;
+  Settings adds no Busy Session or native drain.
+- Main accepts only a fixed, validated graphical selection identity, not an
+  arbitrary renderer title. Settings supplies a localized native title.
+  Background OSC/BEL still update terminal tabs without taking that title or
+  marking an unseen terminal bell as visited.
+
+### Terminal panes
+
 - `View -> Pane` splits the selected tab's focused pane right or down
   (`splitRight`, `splitDown`), moves pane focus (`focusNextPane`,
   `focusPreviousPane`, `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`,
   `focusPaneDown`), resets the shares of the focused pane's split
-  (`equalizePanes`) and closes the focused pane (`closePane`); every shortcut
-  is remappable and nullable. A split needs room for two usable grids of at least
-  20 columns by 5 rows, using the source Surface's current cell geometry as the
-  new pane's admission reference. The prospective layout accounts for each
-  existing Surface's own metrics, padding/other non-grid space and every divider,
-  including same-direction sibling allocation. Unknown geometry refuses a split,
-  and a tab holds at most 16 panes; otherwise it starts nothing. Splitting in the same
-  direction adds a sibling; pane containers move without recreating Surfaces or
-  sessions. Dividers drag with the pointer and move with arrow keys as
-  `role="separator"` controls, limited by the same minimum; a later resize or
-  zoom that cannot fit every minimum keeps every session and the layout; an
-  impossible divider move retains the existing proportions. Dividers paint a
-  1 px line within the existing 4 px resize target/allocation; hover and drag
-  share a neutral highlight by default, independently overridable through theme
-  appearance. Keyboard-visible focus always paints the line in theme foreground
-  rather than outlining the target, including during drag and with decorative
-  paint disabled.
-  Exactly one pane per tab is focused: it receives keyboard input and every
-  terminal-directed action and supplies the tab and window title. Explicit
-  [Mirror Typing](#mirror-typing) additionally routes genuine keyboard bytes to
-  its inspected fixed members; other input remains single-target. In a split tab,
-  its only focus marker is a 1 px top line inset horizontally by that Surface's
-  left/right padding, with no side/bottom ring or dimming of other panes. It is
-  a non-intercepting overlay above terminal canvas contents, including opaque
-  first-row backgrounds at zero top padding, locally stacked below app overlays.
-  By default the marker uses the theme's cyan; if its contrast against the
-  configured opaque background is below 3:1, the theme foreground replaces it only
-  when that improves contrast. An explicit `appearance.activePaneHighlight` hex
-  color is used exactly, without that substitution; null hides the marker. This
-  is not a universal accessibility guarantee: a custom palette can leave both colors below 3:1, transparency/blur changes the visible
-  background, and the marker remains only 1 px high. Clicking a pane focuses it, and
-  switching tabs restores each tab's focused pane. A new pane starts the Default
-  Shell in its source pane's last OSC 7-reported local directory when the shell
-  emitted one and it still exists, otherwise in the home directory; main reads
-  the report from PTY output, rejects non-local host names and UNC/device paths,
-  and never logs the directory. Persistence occurs only through explicit optional
-  Saved Layout saving. An empty or local host name emitted
-  by a remote shell is indistinguishable from a local report; program output can
-  also emit it. Either can only select an existing local directory, never execute
-  shell text. Known SSH Connect sessions are excluded from local OSC7 tracking
-  regardless of hostname; their splits/new tabs use the Default Shell at home.
-  This exclusion does not detect ssh typed manually inside a normal shell.
-  Ordinary exit removes only that pane
-  and gives its space and focus to the nearest sibling; an unexpected signal
-  keeps the pane until its failure dialog is acknowledged; the last pane closes
-  its tab. Close Pane confirms only a Busy focused pane, Close Tab counts every
-  pane of the tab, and Close Window and Quit count every pane. Right-clicking a
-  pane focuses it, including its padding, even with the terminal context menu
-  disabled. With `terminal.contextMenuEnabled` omitted or true, the native menu
-  opens and its Copy, Paste and
-  Select All act on that pane; in a split tab the menu also offers Close Pane,
-  showing the current `closePane` keybind and following the same confirmation.
-  Each terminal popup captures its source window, pane and live Surface, not
-  a later selection. Pane exit, pane/tab removal, changed pane/tab selection,
-  a newer popup or owner disposal makes its retained actions inert; activation
-  in another selected window is ignored. An accepted Busy close decision keeps
-  the original pane even if selection changes while its dialog is pending.
-  A single pane and the Snippets field do not offer Close Pane. Hidden tabs hide
-  their pane Surfaces and keep their layout.
+  (`equalizePanes`), and closes the focused pane (`closePane`). Every shortcut
+  can be remapped or set to null.
+- A split needs room for two usable grids of at least 20 columns by 5 rows,
+  using the source Surface's current cell geometry for the new pane. The
+  prospective layout accounts for each Surface's own metrics, padding and other
+  non-grid space, every divider, and same-direction sibling allocation. Unknown
+  geometry refuses the split, and a tab holds at most 16 panes; a refused split
+  starts nothing.
+- Splitting in the same direction adds a sibling. Pane containers move without
+  recreating Surfaces or sessions.
+- Dividers are `role="separator"` controls that drag with the pointer and move
+  with arrow keys, limited by the same minimum. A later resize or zoom that
+  cannot fit every minimum keeps every session and the layout; an impossible
+  divider move keeps the existing proportions.
+- Dividers paint a 1 px line inside their 4 px resize target. Hover and drag
+  share a neutral highlight by default, overridable through theme appearance.
+  Keyboard-visible focus always paints the line in the theme foreground (no
+  outline), including during drag and with decorative paint disabled.
+- Exactly one pane per tab is focused. It receives keyboard input and every
+  terminal-directed action, and supplies the tab and window title. Explicit
+  [Mirror Typing](#mirror-typing) also routes genuine keyboard bytes to its fixed
+  members; all other input stays single-target.
+- In a split tab, the only focus marker is a 1 px top line inset by the Surface's
+  left/right padding, with no side/bottom ring and no dimming of other panes. It
+  is a non-intercepting overlay above the terminal canvas (including opaque
+  first-row backgrounds at zero top padding) and below app overlays.
+- The marker uses the theme's cyan. If that contrasts below 3:1 with the
+  configured opaque background, the theme foreground replaces it only when that
+  improves contrast. An explicit `appearance.activePaneHighlight` hex color is
+  used exactly, without substitution; null hides the marker. This is not an
+  accessibility guarantee: a custom palette can leave both colors below 3:1,
+  transparency/blur changes the visible background, and the marker is 1 px high.
+- Clicking a pane focuses it. Switching tabs restores each tab's focused pane.
+  Hidden tabs hide their pane Surfaces and keep their layout.
+- A new pane starts the Default Shell in its source pane's last OSC 7-reported
+  local directory when one was reported and still exists, otherwise in the home
+  directory. Main reads the report from PTY output, rejects non-local host names
+  and UNC/device paths, and never logs the directory. It is persisted only
+  through explicit Saved Layout saving.
+- OSC 7 is not authenticated or current-process inspection. An empty or local
+  host name from a remote shell looks the same as a local report, any program
+  can emit one, and reports may be stale. Either can
+  only select an existing local directory, never execute shell text. Known SSH
+  Connect sessions are excluded from OSC 7 tracking regardless of host name;
+  their splits and new tabs use the Default Shell at home. `ssh` typed manually
+  in a normal shell is not detected.
+- An ordinary exit removes only that pane and gives its space and focus to the
+  nearest sibling. An unexpected signal keeps the pane until its failure dialog
+  is acknowledged. The last pane closes its tab.
+- Right-clicking a pane (including its padding) focuses it, even with the
+  terminal context menu disabled. With `terminal.contextMenuEnabled` omitted or
+  true, the native menu opens; its Copy, Paste, and Select All act on that pane.
+  In a split tab the menu also offers Close Pane, showing the current
+  `closePane` binding and using the same confirmation. A single pane and the
+  Snippets field do not offer Close Pane.
+- Each terminal popup captures its source window, pane, and live Surface. Pane
+  exit, pane/tab removal, changed pane/tab selection, a newer popup, or owner
+  disposal makes its actions inert; activation in another selected window is
+  ignored.
+
+### Launch Requests
+
 - A startup Launch Request uses `-e <program> [arguments...]`. The value after
-  the first `-e` is required as the executable, and every remaining value —
-  including another `-e` or an option-looking value — is literal argv. OMXTerm
-  passes the executable and argv directly to the PTY without constructing a
-  command string, rewriting arguments, or inserting a shell. A user may
-  explicitly choose a shell and pass literal arguments such as `-lc`. The
-  request is consumed only by the first Terminal Tab of the first Terminal
-  Window in that application process; all later tabs and windows use the Default
-  Shell. A trailing `-e` with no program is an actionable startup failure and
-  never falls back to the Default Shell.
+  the first `-e` is the required executable; every remaining value, including
+  another `-e` or an option-looking value, is literal argv.
+- OMXTerm passes the executable and argv directly to the PTY without building a
+  command string, rewriting arguments, or inserting a shell. Users can choose a
+  shell explicitly and pass literal arguments such as `-lc`.
+- Only the first Terminal Tab of the first Terminal Window in that process
+  consumes the request; later tabs and windows use the Default Shell.
+- A trailing `-e` with no program is an actionable startup failure and never
+  falls back to the Default Shell.
 - An explicit command starts in the user's home directory, inherits the normal
   process environment, and receives the Terminal Capability Identity. It is a
-  Busy Session for its complete live lifetime. Its clean exit, unexpected
-  signal, spawn failure, requested close, tab and window closure, and
-  last-window quit use the existing Live Terminal Session lifecycle.
-- After its Terminal Surface mounts, an active Terminal Window gives terminal
-  input DOM focus unless the user moved focus to panel or overlay controls while
-  initialization was pending. Surface construction does not implicitly focus a
-  window-owned pane. Deliberate tab creation/selection retains its focus contract
-  when no competing control took focus during mounting. Returning from another
-  application or OMXTerm window preserves focused panel/overlay controls;
-  otherwise only the active Terminal Window restores selected Surface focus
-  (including its focused search field). Focus restoration does not activate,
-  raise, or show OMXTerm by itself.
-- Every Terminal Window can be repositioned through its visible title area, or
-  its small hover-revealed handle when that area is hidden. Native dragging is
-  confined to these areas; the rest of the Terminal Surface remains interactive.
-- A window with a single tab shows no tab strip. Each window owns independent
-  in-memory title-bar and tab-bar visibility choices, initialized from
-  `window.showTitleBar` and `window.showTabBar`, both defaulting to true. The
-  OMXTerm-drawn tab strip is visible only when its flag is enabled and there are
-  two or more tabs; it occupies its own full-width row above the Terminal
-  Surface and Snippets Sidebar row. On macOS it sits below the app-controlled 30
-  px native title inset when the title area is visible and the window is not
-  fullscreen. On Linux and Windows it sits below the visible app-drawn 34 px
-  title row. A hidden title area or fullscreen leaves no title row or duplicate
-  inset. Clicking a tab selects it; the selected tab's grid refits and receives
-  terminal focus. Dragging a tab horizontally within that strip reorders the
-  existing tabs in that window. The reordered positions immediately drive
-  visible order, next/previous cycling, and literal positional selection while
-  the selected tab and every Live Terminal Session and Terminal Surface remain
-  unchanged. Ordinary tab order is ephemeral and not shared between windows;
-  explicit Saved Layout saving can capture terminal order for a fresh window.
-- Close Tab defaults to `Cmd+W` on macOS and `Ctrl+Shift+W` on Linux and
-  Windows, and terminates every session in the selected tab. A pending
-  confirmation retains its original tab: approval never retargets a later
-  selection, and does nothing if that tab has already ended. Repeated requests
-  during that confirmation share the same decision, even if its sessions
-  become idle. Selection reports the tab's session set even when the focused
-  pane is still mounting or retained after native exit. A pending or dead focused
-  pane never borrows another tab's Busy decision; Close Pane considers only its
-  captured focused pane. Closing a window's last tab closes that window. The
-  renderer subscribes to tab commands, clipboard, Find, zoom, tab-bar and snippets
-  actions during host setup, without waiting for the first Surface to mount.
-  Close Tab cancels a pending first tab through the normal empty-window lifecycle;
-  queued New Tab cannot revive that owner. Host-owned zoom and tab-bar state and
-  the Snippets panel are available during mounting. Actions requiring an unavailable
-  Surface (such as terminal clipboard or Find) do nothing and are not replayed
-  after mount; no command buffer is added. Existing modal guards still apply.
-  Host readiness remains first-mount settlement, not command registration.
-  Close Window and Quit use separate main-owned paths and also cancel
-  initialization. Close Window defaults to `Cmd+Shift+W` on macOS and
-  `Ctrl+Shift+Q` on Linux and Windows and closes all of the selected window's
-  tabs. Closing the last window quits OMXTerm.
-- Quit defaults to `Cmd+Q` on macOS and `Ctrl+Alt+Shift+Q` on Linux and Windows.
-  It requests one confirmation for all open windows when confirmation is enabled
-  and at least one Live Terminal Session is Busy.
+  Busy Session for its whole live lifetime and uses the normal Live Terminal
+  Session lifecycle for clean exit, unexpected signal, spawn failure, requested
+  close, tab and window closure, and last-window quit.
+
+### Terminal focus
+
+- After its Terminal Surface mounts, an active Terminal Window focuses terminal
+  input unless the user moved focus to panel or overlay controls while
+  initialization was pending. Surface construction never implicitly focuses a
+  window-owned pane. Deliberate tab creation or selection keeps its focus
+  behavior when no other control took focus during mounting.
+- Returning from another application or OMXTerm window keeps focused
+  panel/overlay controls. Otherwise only the active Terminal Window restores
+  selected Surface focus, including its focused search field. Focus restoration
+  never activates, raises, or shows OMXTerm by itself.
+
+### Closing and quitting
+
+- Close Tab terminates every session in the selected tab. Closing a window's last
+  tab closes the window. Close Window closes all of the selected window's tabs;
+  closing the last window quits OMXTerm.
+- `confirmClose` defaults to `true` and guards pane close, tab close, window
+  close, and Quit. OMXTerm asks only when the action affects a Busy Session: a
+  Live Terminal Session whose PTY foreground process differs from the idle
+  Default Shell. Closing only idle sessions proceeds immediately.
+- Each action asks at most once: closing a window with several tabs asks once
+  for the whole window, and Quit asks once for all windows. Close Pane considers
+  only its captured focused pane, Close Tab every pane of the tab, and Close
+  Window and Quit every pane.
+- The foreground process name is read only for this in-memory decision and is
+  never logged, displayed, or sent. An unreadable name counts as Busy, including
+  unavailable Linux native foreground lookups; the spawned shell is not a
+  substitute. On Windows, ConPTY exposes a static console title instead of the
+  foreground process name, so every live Windows session counts as Busy.
+- A pending confirmation keeps its original target. Approval never retargets a
+  later selection and does nothing if that tab has already ended. Repeated
+  requests during the confirmation share its decision, even if the sessions
+  become idle. An accepted Busy close keeps the original pane even if selection
+  changes while its dialog is pending.
+- Selection reports the tab's session set even while the focused pane is still
+  mounting or is retained after native exit. A pending or dead focused pane never
+  borrows another tab's Busy decision.
+- The renderer subscribes to tab commands, clipboard, Find, zoom, tab-bar, and
+  snippets actions during host setup, without waiting for the first Surface.
+  Host-owned zoom, tab-bar state, and the Snippets panel work during mounting.
+  Actions that need an unavailable Surface (such as terminal clipboard or Find)
+  do nothing and are not replayed after mount; there is no command buffer.
+  Existing modal guards still apply. Host readiness remains first-mount
+  settlement, not command registration.
+- Close Tab cancels a pending first tab through the normal empty-window
+  lifecycle. Queued New Tab commands cannot revive an emptied owner. Close
+  Window and Quit use separate main-owned paths and also cancel pending
+  initialization.
 - An accepted Quit, including automatic last-window quit, stops new session
-  starts and waits for every owned native PTY to report exit before completing
-  normal application quit. This includes sessions whose tabs or windows already
-  closed. Window/controller disposal and a native kill request are not
-  completion signals. Repeated quit requests share one shutdown; pending or
-  denied Busy Session confirmation does not start it. Completion is owned by
-  main independently of disposed renderer/controller callbacks (ADR 0028). After
-  actual exit, the window controller delivers immutable end context and releases
-  the session object. Pending failure acknowledgements retain only their
-  separate ownership metadata; retired identities cannot route input, resize,
-  title, bell or ACKs.
-- `confirmClose` defaults to `true` and guards pane close, tab close, window close, and
-  quit. Each action can produce at most one confirmation, so closing a window
-  with several tabs asks once for the whole window. OMXTerm asks only when the
-  action affects a Busy Session, defined as a Live Terminal Session whose PTY
-  foreground process differs from the idle Default Shell. Closing only idle
-  sessions proceeds immediately. OMXTerm reads the foreground process name
-  solely for this in-memory decision and never logs, displays, or transmits it.
-  An unreadable name counts as Busy, including unavailable Linux native
-  foreground lookups; the spawned shell is not a substitute for that result.
-  ConPTY on Windows exposes a static console title in place of the foreground
-  process name, so every live Windows session counts as Busy and asks while
-  confirmation is enabled.
-- Closing or ordinarily exiting an unselected tab preserves the selected tab,
-  its Terminal Surface and Live Terminal Session, even when its position
-  changes. Subsequent keyboard, Paste and Snippet input stays with that selected
-  session. Removing the selected tab chooses its right neighbor, or the left
-  neighbor when it was last; removing the only tab retains the last-tab window
-  lifecycle.
-- After the Default Shell starts successfully, an ordinary shell exit closes its
-  pane — and its tab/window only when it was their last pane/tab — without
-  confirmation or a failure dialog, regardless of its numeric exit code. A pane
-  whose fonts or rendering are still initializing retains its tab and window
-  even before its PTY starts: another session's ordinary exit cannot close that
-  window. The pending pane may finish and start one session, or be cancelled
-  without starting one. Cancelling the final pending pane of the final tab
-  closes the window; final pre-start rendering
-  failure retains a native failure dialog until acknowledgement. Last-tab
-  closure is committed by the renderer's tab owner, not inferred from a zero
-  native-PTY count. Queued New Tab commands cannot revive an emptied owner;
-  explicit window closure and Quit still cancel pending initialization.
-- SSH Connect's core-transferred terminals are independent of extension lifetime.
-  Exit0 closes normally; an ordinary nonzero exit retains readable/copyable/searchable
-  output and an explicit exit-code notice/Close. The ended Surface keeps rendering
-  and fonts for local refit/zoom until removal, but no native input, resize or
-  protocol replies, including exit replay before start resolves. Native records
-  still retire on actual exit, and ended content is not Busy. Startup/signal
-  acknowledgement and authorized removal retain precedence. See
-  [the capability/admission contract](ssh-connect-development.md#capability-and-admission).
-- Native executable-start failure is distinct from a successfully executed
-  program returning nonzero. Unix reports exec failure through a private native
-  status channel. Windows' pinned dependency explicitly marks its asynchronous
-  agent connection/worker failure through the same boolean forwarding, while
-  missing-file rejection remains synchronous. Neither platform infers startup
-  failure from an exit code, error text or Terminal Payload (ADR 0032). This applies to explicit commands and the Default Shell, with no
-  fallback shell. Safe Operational Events classify it as `spawn-failure`.
-- A spawn failure or unexpected signal remains visible in a native error dialog
-  and local log until acknowledged; the failed pane then closes. Each pending
-  failure acknowledgement retains its window even if a sibling exits ordinarily
-  or another failure is acknowledged first. Acknowledgement removes only its
-  failed pane, closing its tab only when no panes remain; automatic window
-  closure waits for both an empty renderer tab
-  owner and every pending failure acknowledgement. Explicit authorized window
-  closure and Quit remain separate, and late dialog results cannot act on
-  disposed owners. Native shutdown completion is recorded independently of
-  renderer notification.
-- Each window starts at configured font size. Window Font Zoom defaults to
-  `Cmd++`, `Cmd+-`, and `Cmd+0` on macOS and `Ctrl++`, `Ctrl+-`, and `Ctrl+0` on
-  Linux and Windows; it affects only that window, applies to every tab in it,
-  and is not persisted.
-- Native resize failure is contained by the owning Live Terminal Session. The
-  pinned Unix closed-descriptor race is quiet teardown metadata at debug level;
-  other failures record a fixed `native-failure` category at error level,
-  without native error text. The failed request is discarded; later valid
-  resizes may retry. Neither failure closes a tab, terminates siblings, or
-  replaces the actual native exit notification used for session completion.
-- The Terminal Surface and Live Terminal Session grid refit in both directions
-  after Terminal Window width or height changes, after Window Font Zoom, and
-  after tab selection. With sufficient content space, the grid fits inside the
-  visible content area with its bottom row visible. Hiding a Terminal Tab
-  preserves its last real grid; a hidden layout box or hidden font change does
-  not resize the Surface or PTY using concealed geometry. Hidden Terminal
-  Surfaces, including mounts completing while hidden, perform no frame clears,
-  draws or render uploads. They continue synchronous ordered output ingestion,
-  Adapter ACKs, protocol replies, parsed events and Scrollback Buffer retention.
-  Selection refits and redraws current content and cursor before the first
-  visible presentation, without a background render-budget delay or replacing
-  the Surface, core or Live Terminal Session.
-- An unchanged Terminal Surface stops requesting display frames. It draws at
-  blink phases only while something on screen blinks (a blinking cursor, or SGR
-  5 text while cursor blink is on), so a steady, hidden or unfocused cursor over
-  plain text draws nothing. It rechecks state that changes without a render
-  request (such as a reveal without refit) at most every 250 ms. Output, input,
-  resize, focus, theme and configuration changes present on the next display
-  frame.
-- Native windows have minimum dimensions of 320 px wide by 200 px high. At
-  startup and after a valid reload, main grows those bounds using configured
-  font metrics, line height, padding, a scrollbar allowance, and title space.
-  The calculation reserves two columns and one row but does not include the
-  auxiliary panel or tab-strip space, creation-time fonts retained by older
-  Surfaces, or ephemeral Window Font Zoom. It therefore does not guarantee a
-  visible grid at the native minimum in every layout. The panel's 180 px terminal
-  layout allowance is not a column-count or extreme-padding guarantee. Widen the
-  window, reduce padding, or hide the panel to recover terminal space.
-- On macOS, visible Window Chrome preserves the blended `hiddenInset`
-  appearance, with native traffic-light controls on the left and a 30 px
-  title/drag inset above configured top padding. The Terminal Theme background
-  continues behind the controls; no separately colored title strip is added.
-  Hiding removes the controls and that inset without recreating the native
-  window.
-- Linux and Windows use a frameless native window with a hideable, app-drawn 34
-  px title/drag row. The sanitized selected Terminal Title, with the existing
-  fallback, appears at the left; minimize, maximize/restore, and close controls
-  appear at the right. Colors follow the active Terminal Theme. Controls invoke
-  native actions in main; Close uses the existing guarded Close Window
-  lifecycle. Native resize, maximize/restore, and operating-system edge/corner
-  snapping remain window-manager behavior rather than app-drawn substitutes.
-- `View -> Toggle Title Bar` defaults to `Cmd+Shift+D` on macOS and
-  `Ctrl+Shift+D` on Linux and Windows, remappable as `toggleTitleBar`. It
-  changes only the selected window's title-bar choice, without rewriting
-  configuration or recreating its window, renderer, Terminal Surfaces, or Live
-  Terminal Sessions. A layout change refits the selected existing Surface and
-  PTY and preserves focused auxiliary-panel controls, otherwise restoring terminal
-  focus; hidden Surfaces retain valid geometry. Local
-  Image Preview choosing/loading/showing suppresses the toggle without changing
-  state or focus.
-- When the title area is hidden outside fullscreen, hovering anywhere in the top
-  150 logical px of content reveals three dots at the top center. Only their 90
-  by 14 logical-pixel rectangle is a native drag target. Reveal/hide changes no
-  layout or PTY size; the remaining hover region does not intercept selection,
-  tab interaction, or terminal mouse input. Local Image Preview suppresses this
-  handle while active. No cursor positions or terminal contents become logs.
-- Native fullscreen suppresses app-controlled title chrome and the hover handle
-  without changing the window's chosen visibility. Leaving fullscreen restores
-  that choice. Configured padding and macOS system safe area remain unchanged;
-  transient system chrome may overlay content without hover-driven padding or
-  PTY resizing. Entry and exit refit the selected existing Surface and PTY,
-  while other windows and hidden Surfaces remain unchanged.
-- In Linux and Windows Terminal Windows, pressing and releasing Alt alone opens
-  the current native application menu as a popup. It retains the installed
-  menu's hierarchy, actions and effective shortcuts, including after
-  configuration reload. Its top-left anchor is 8 logical px from the content's
-  left edge and 8 px below the visible 34 px title row (`x=8, y=42`), or
-  `x=8, y=8` with the title hidden or in fullscreen. The native OS menu owns
-  styling, keyboard navigation and dismissal; no DOM menu or native menu bar is
-  added to the frameless window. Opening or dismissing it preserves the selected
-  tab, window, Surface and PTY. Alt combinations, AltGr, repeats, intervening
-  input and focus loss do not open it. Local Image Preview suppresses opening
-  without stealing focus. This is fixed Window Chrome behavior, not a
-  configurable shortcut; macOS's native menu and Option input are unchanged. The
-  selected Terminal Theme fills app-controlled content, including title chrome
-  and configured padding, not the native popup.
-- `Window -> Always on Top` toggles only the selected window at the ordinary
-  native floating level. New windows use the configured default.
-- The application menu's `About OMXTerm` entry opens one compact in-window
-  dialog on every Supported Platform. It shows the application icon, name,
-  running version and MIT license, and links to the project, contributors,
-  issue tracker and MIT license. Developer lists live in the repository's
-  `CONTRIBUTORS.md`, not in the dialog; no individual copyright is spotlighted
-  in the presentation, and legal notices remain in the distribution. About and
-  Command Palette share theme-derived surfaces, subtle decorative hairlines,
-  controls and typography. Their background tint follows effective window
-  transparency without fading text or keyboard focus; no opaque scrim overrides
-  the preference. Overlay tint can composite over application content; it does
-  not establish native desktop blur, which remains main-owned and best effort.
-  While About or Command Palette is modal, a shared fixed 12 px CSS filter
-  softens existing non-dialog
-  body-child application underlays, including terminal/Settings content and
-  chrome outside the dialog bounds. This modal focus treatment automatically
-  covers inserted underlays and ends on dismissal or disposal. It leaves
-  body/html, the body tint, modal foreground and transparent backdrops
-  unfiltered, does not change tint alpha, and is independent of the separate
-  `window.blur` native desktop preference.
-  Main supplies runtime metadata and opens only fixed named destinations after
+  starts and waits for every owned native PTY to report exit before finishing,
+  including sessions whose tabs or windows already closed. Window/controller
+  disposal and a native kill request do not count as completion. Repeated quit
+  requests share one shutdown; a pending or denied Busy confirmation does not
+  start it. Main owns completion independently of disposed renderer callbacks
+  ([ADR 0028](adr/0028-wait-for-native-sessions-before-application-quit.md)).
+- After actual exit, the window controller delivers immutable end context and
+  releases the session object. Pending failure acknowledgements keep only their
+  ownership metadata; retired identities cannot route input, resize, title,
+  bell, or ACKs.
+
+### Session exit and failures
+
+- After the Default Shell starts, an ordinary shell exit closes its pane (and its
+  tab or window only when it was the last one) without confirmation or a failure
+  dialog, whatever its exit code.
+- A pane whose fonts or rendering are still initializing keeps its tab and
+  window, even before its PTY starts; another session's ordinary exit cannot
+  close that window. The pending pane either finishes and starts one session or
+  is cancelled without starting one. Cancelling the final pending pane of the
+  final tab closes the window; a final pre-start rendering failure keeps a native
+  failure dialog until acknowledged.
+- The renderer's tab owner commits last-tab closure; it is not inferred from a
+  zero native-PTY count.
+- Native executable-start failure is distinct from a program that ran and
+  returned nonzero. Unix reports exec failure through a private native status
+  channel. On Windows the pinned dependency marks its asynchronous agent
+  connection/worker failure through the same boolean forwarding, while
+  missing-file rejection stays synchronous. Neither platform infers startup
+  failure from an exit code, error text, or Terminal Payload
+  ([ADR 0032](adr/0032-report-native-exec-failures-outside-terminal-payload.md)).
+  This applies to explicit commands and the Default Shell, with no fallback
+  shell. Safe Operational Events classify it as `spawn-failure`.
+- A spawn failure or unexpected signal stays visible in a native error dialog and
+  the local log until acknowledged; then the failed pane closes, and its tab
+  closes only when no panes remain. Each pending acknowledgement keeps its window
+  even if a sibling exits or another failure is acknowledged first. Automatic
+  window closure waits for both an empty renderer tab owner and every pending
+  acknowledgement. Explicit window closure and Quit stay separate, and late
+  dialog results cannot act on disposed owners. Native shutdown completion is
+  recorded independently of renderer notification.
+- SSH Connect's core-transferred terminals do not depend on the extension's
+  lifetime. Exit 0 closes normally. An ordinary nonzero exit keeps readable,
+  copyable, searchable output with an explicit exit-code notice and Close. The
+  ended Surface keeps rendering and fonts for local refit/zoom until removal, but
+  gets no native input, resize, or protocol replies, including exit replay before
+  start resolves. Native records still retire on actual exit, and ended content
+  is not Busy. Startup/signal acknowledgement and authorized removal take
+  precedence ([ADR 0041](adr/0041-transfer-ssh-launches-to-core.md)).
+- The owning Live Terminal Session contains native resize failures. The pinned
+  Unix closed-descriptor race is quiet teardown metadata at debug level; other
+  failures record a fixed `native-failure` category at error level, without
+  native error text. The failed request is dropped and later valid resizes may
+  retry. A resize failure never closes a tab, terminates siblings, or replaces
+  the native exit notification used for session completion
+  ([ADR 0033](adr/0033-contain-native-resize-failures-without-completing-sessions.md)).
+
+### Grid, rendering, and minimum size
+
+- The Terminal Surface and session grid refit in both directions after window
+  width or height changes, Window Font Zoom, and tab selection. With enough
+  content space, the grid fits inside the visible area with its bottom row
+  visible.
+- A hidden Terminal Tab keeps its last real grid; a hidden layout box or hidden
+  font change never resizes the Surface or PTY from concealed geometry.
+- Hidden Surfaces, including mounts that complete while hidden, do no frame
+  clears, draws, or render uploads. They keep synchronous ordered output
+  ingestion, Adapter ACKs, protocol replies, parsed events, and Scrollback Buffer
+  retention. Selecting the tab refits and redraws current content and cursor
+  before the first visible frame, without a background render-budget delay or
+  replacing the Surface, core, or session.
+- An unchanged Surface stops requesting display frames. It draws at blink phases
+  only while something on screen blinks (a blinking cursor, or SGR 5 text while
+  cursor blink is on); a steady, hidden, or unfocused cursor over plain text
+  draws nothing. It rechecks state that changes without a render request (such
+  as a reveal without refit) at most every 250 ms. Output, input, resize, focus,
+  theme, and configuration changes appear on the next display frame.
+- Native windows have a minimum size of 320 by 200 px. At startup and after a
+  valid reload, main grows it using configured font metrics, line height,
+  padding, a scrollbar allowance, and title space, reserving two columns and one
+  row. It ignores auxiliary-panel and tab-strip space, creation-time fonts kept
+  by older Surfaces, and Window Font Zoom, so a visible grid at the native
+  minimum is not guaranteed in every layout. The panel's 180 px terminal layout
+  allowance is not a column-count or extreme-padding guarantee. Widen the
+  window, reduce padding, or hide the panel to get terminal space back.
+
+### Window Chrome
+
+- Every window can be moved by its visible title area, or by its small
+  hover-revealed handle when that area is hidden. Native dragging is limited to
+  these areas; the rest of the Surface stays interactive.
+- macOS: visible chrome keeps the blended `hiddenInset` appearance, with native
+  traffic lights on the left and a 30 px title/drag inset above configured top
+  padding. The Terminal Theme background continues behind the controls, with no
+  separately colored title strip. Hiding removes the controls and inset without
+  recreating the native window.
+- Linux and Windows: a frameless native window with a hideable, app-drawn 34 px
+  title/drag row. The sanitized selected Terminal Title (with the existing
+  fallback) sits at the left; minimize, maximize/restore, and close sit at the
+  right. Colors follow the active Terminal Theme. Controls invoke native actions
+  in main; Close uses the guarded Close Window lifecycle. Native resize,
+  maximize/restore, and edge/corner snapping stay window-manager behavior.
+- `View -> Toggle Title Bar` (`toggleTitleBar`, default `Cmd+Shift+D` on macOS
+  and `Ctrl+Shift+D` on Linux and Windows) changes only the selected window's
+  title-bar choice. It never rewrites configuration or recreates the window,
+  renderer, Surfaces, or sessions. The layout change refits the selected Surface
+  and PTY and keeps focused auxiliary-panel controls, otherwise restoring
+  terminal focus; hidden Surfaces keep valid geometry.
+- With the title area hidden outside fullscreen, hovering in the top 150 logical
+  px of content reveals three dots at the top center. Only their 90 by 14
+  logical-px rectangle is a native drag target. Reveal/hide changes no layout or
+  PTY size, and the rest of the hover region does not intercept selection, tab
+  interaction, or terminal mouse input. No cursor positions or terminal contents
+  are logged.
+- Native fullscreen suppresses app title chrome and the hover handle without
+  changing the window's chosen visibility; leaving fullscreen restores it.
+  Configured padding and the macOS safe area stay unchanged; transient system
+  chrome may overlay content without hover-driven padding or PTY resizing.
+  Entry and exit refit the selected Surface and PTY only.
+- On Linux and Windows, pressing and releasing Alt alone opens the current native
+  application menu as a popup, with the installed menu's hierarchy, actions, and
+  effective shortcuts (including after reload). Its top-left anchor is
+  `x=8, y=42` (8 logical px below the 34 px title row), or `x=8, y=8` with the
+  title hidden or in fullscreen. The native menu owns styling, keyboard
+  navigation, and dismissal; no DOM menu or menu bar is added. Opening or
+  dismissing it keeps the selected tab, window, Surface, and PTY. Alt
+  combinations, AltGr, repeats, intervening input, and focus loss do not open
+  it. This is fixed chrome behavior, not a configurable shortcut; macOS's menu
+  and Option input are unchanged.
+- The selected Terminal Theme fills app-controlled content, including title
+  chrome and configured padding, but not native popups.
+- Hiding chrome never replaces sessions
+  ([ADR 0027](adr/0027-hide-window-chrome-without-replacing-sessions.md)).
+
+### Tab bar toggle
+
+- `View -> Toggle Tab Bar` (`toggleTabBar`, default `Cmd+Shift+B` on macOS and
+  `Ctrl+Shift+B` on Linux and Windows) changes only the selected window's tab-bar
+  flag, even with one tab; with no selected window it does nothing.
+- Disabling removes the whole strip row, refits the selected Surface and PTY,
+  and keeps focused auxiliary-panel controls, otherwise restoring terminal focus.
+  Hidden Surfaces keep valid geometry and keep ingesting output.
+- Toggling keeps tab identities, order, selection, titles, and sessions. Keyboard
+  and native Window menu navigation work while hidden. Title/BEL updates and tab
+  creation, selection, and closure never reveal a disabled strip. Enabling shows
+  the same live tabs when at least two remain.
+- The flag survives configuration reload but is never persisted or shared: new
+  windows and restarts use `window.showTabBar` (default enabled). Title-bar
+  visibility and fullscreen are independent.
+
+### About dialog
+
+- `About OMXTerm` in the application menu opens one compact in-window dialog on
+  every Supported Platform. It shows the application icon, name, running
+  version, and MIT license, and links to the project, contributors, issue
+  tracker, and license. Developer lists live in `CONTRIBUTORS.md`, not the
+  dialog; no individual copyright is spotlighted, and legal notices stay in the
+  distribution.
+- Main supplies runtime metadata and opens only fixed named destinations after
   validating the owning renderer's main frame. Opening About makes no network
-  request. Existing Linux/Windows native metadata setup and macOS bundle metadata
-  remain intact; the displayed icon is the same canonical asset bundled locally
-  for both development and packaged rendering.
-- About can be opened using native menu keyboard navigation. Close or Escape
-  dismisses it and focuses the live selected Application Tab. A closing Escape or
-  Enter-on-Close gesture remains owned by About through held repeats and release,
+  request. The displayed icon is the same locally bundled asset in development
+  and packages.
+- Native menu keyboard navigation can open About. Close or Escape dismisses it
+  and focuses the live selected Application Tab. A closing Escape or
+  Enter-on-Close gesture stays owned by About through held repeats and release,
   including Kitty event reporting; the next fresh terminal press is not consumed.
   Window blur and owner disposal clear outstanding gesture ownership. Space keeps
-  the button's native release-time activation. Repeated opening,
-  including during metadata loading, focuses the same dialog. Returning from
-  the browser does not steal its focus. Owner disposal removes it without
-  restoring terminal focus; late metadata and link errors cannot reopen it.
-  About, Local Image Preview and a Snippets preview do not stack:
-  opening one while another is choosing/loading/showing is ignored. Settings is
-  nonmodal application content; About and menu-triggered image preview may open
-  above it. Modal activation makes Settings inert, cancels recording and
-  invalidates clipboard interaction. Dismissal restores selected-content focus,
-  including a surviving Settings field; already submitted writes may settle. While a
-  modal owns input, terminal clipboard, file-drop, zoom, snippet, tab/title-bar,
-  tab-navigation/new-tab and pane split/focus/equalize actions are suppressed;
-  output, configuration updates and approved pane/tab/session/
-  window closure or Quit remain active. About does not add a configurable
-  shortcut, settings service or persistent state.
+  the button's native release-time activation.
+- Opening again, including during metadata loading, focuses the same dialog.
+  Returning from the browser does not steal its focus. Owner disposal removes it
+  without restoring terminal focus; late metadata and link errors cannot reopen
+  it. About has no configurable shortcut, settings service, or persistent state.
+
+### Command Palette
+
 - `View -> Command Palette…` opens a temporary searchable dialog for core
-  application actions. `commandPalette` is remappable through Settings on every
-  Supported Platform and defaults to `CommandOrControl+Shift+P` on macOS and
-  `Control+Shift+P` on Linux/Windows. Explicit remaps and `null` remain effective;
-  an existing custom binding on that combination produces the standard actionable
-  collision error, not an automatic rewrite or silent reassignment.
-  The palette shows localized labels and effective shortcuts from the internal
-  Action Catalog used by the native menu and main key matcher. It uses
-  case-insensitive substring matching in en-US or pt-BR, not fuzzy matching,
-  aliases, ranking or command history. Up/Down selects a result; Enter or a
-  pointer click invokes it after dismissal. Escape or the backdrop cancels.
-  Enter/Escape repeats and release stay owned by the closing dialog; keyboard
-  invocation waits for the owned Enter release, and blur or a lost release
-  cancels that pending invocation.
-  Copy, Paste, Select All, Find, positional tab selection and Command Palette
-  itself are excluded from results. Find is deliberately omitted because
-  targeting the formerly focused Surface after palette input has not been
-  established. Existing Edit actions and shortcuts remain available outside the
-  palette; while its query owns input, clipboard actions edit that query rather
-  than the terminal. Native role-only Minimize is not a catalog result.
-  The palette captures the selected Application Tab and focused pane before
+  application actions. `commandPalette` is remappable on every Supported Platform
+  and defaults to `CommandOrControl+Shift+P` on macOS and `Control+Shift+P` on
+  Linux/Windows. Explicit remaps and `null` stay effective; an existing custom
+  binding on that combination gets the standard collision error, never an
+  automatic rewrite or reassignment.
+- It shows localized labels and effective shortcuts from the internal Action
+  Catalog shared with the native menu and main key matcher. Matching is
+  case-insensitive substring in en-US or pt-BR, with no fuzzy matching, aliases,
+  ranking, or history.
+- Up/Down selects a result; Enter or a click invokes it after dismissal. Escape
+  or the backdrop cancels. Enter/Escape repeats and release stay owned by the
+  closing dialog; keyboard invocation waits for the owned Enter release, and
+  blur or a lost release cancels it.
+- Copy, Paste, Select All, Find, positional tab selection, Command Palette
+  itself, and native role-only Minimize are not results. Edit actions and
+  shortcuts still work outside the palette; while its query owns input,
+  clipboard actions edit the query, not the terminal.
+- The palette captures the selected Application Tab and focused pane before
   reading its catalog snapshot. Changed selection (including away and back),
-  removed/ended targets or owner disposal prevent dispatch to a replacement.
+  removed or ended targets, or owner disposal prevent dispatch to a replacement.
   Main validates the selected trusted main frame and a one-shot catalog token;
-  window blur, renderer loss/reload, selection/session lifecycle changes and
+  window blur, renderer loss/reload, selection/session lifecycle changes, and
   catalog replacement invalidate pending authorization. Renderer-bound dispatch
-  rechecks the captured target before entering existing action handlers.
-  Existing Busy Session confirmation and action guards remain authoritative.
-  Settings remains retained nonmodal application content beneath the palette:
-  its controls become inert and shortcut recording cancels, without discarding
-  drafts or pending saves. Dismissal restores a surviving interactive prior
-  control when the captured target is still current. The palette does not stack
-  with About, image preview or snippet preview. It adds no persistent toolbar,
-  configuration migration, public action registration or Extension SDK.
-  Labels and bindings are a per-opening snapshot; after changing language or
-  bindings, dismiss and reopen the palette to obtain the current catalog.
+  rechecks the captured target before running the action handler. Busy Session
+  confirmation and action guards still apply.
+- Settings stays retained nonmodal content beneath the palette: its controls
+  become inert and shortcut recording cancels, without discarding drafts or
+  pending saves. Dismissal restores a surviving interactive prior control when
+  the captured target is still current.
+- Labels and bindings are a per-opening snapshot; after changing language or
+  bindings, reopen the palette. It adds no persistent toolbar, configuration
+  migration, public action registration, or Extension SDK.
+
+### Modal overlay rules
+
+About, Command Palette, Local Image Preview, and the Snippets preview are modal
+overlays.
+
+- They never stack: opening one while another is choosing, loading, or showing
+  is ignored. Settings is nonmodal application content; About and menu-triggered
+  image preview can open above it. Modal activation makes Settings inert,
+  cancels shortcut recording, and invalidates clipboard interaction. Dismissal
+  restores selected-content focus, including a surviving Settings field; writes
+  already submitted may settle.
+- While a modal owns input, terminal clipboard, file drop, zoom, snippet,
+  tab-bar/title-bar toggles, tab navigation, new tab, and pane
+  split/focus/equalize actions are suppressed and not queued, without changing
+  their state or stealing focus. Local Image Preview also suppresses the hover
+  drag handle and the Linux/Windows Alt menu. Pane dividers and
+  passive mount/rebuild focus consult the same modal owner. Output,
+  configuration updates, approved pane/tab/session/window closure, failure
+  acknowledgement, and Quit stay active. Already accepted terminal input is not
+  rolled back.
+- About and Command Palette share theme-derived surfaces, subtle hairlines,
+  controls, and typography. Their background tint follows effective window
+  transparency without fading text or keyboard focus; no opaque scrim overrides
+  that preference. The tint composites over application content but is not
+  native desktop blur, which stays main-owned and best effort.
+- While About or Command Palette is open, a shared fixed 12 px CSS filter
+  softens the non-dialog body-child underlays (terminal, Settings, chrome),
+  including underlays inserted later, and ends on dismissal or disposal. It does
+  not filter body/html, the body tint, the modal foreground, or transparent
+  backdrops, does not change tint alpha, and is independent of the
+  `window.blur` preference.
+
+### Developer Tools, Local Image Preview, and file drops
+
 - `View -> Toggle Developer Tools` is a menu/palette diagnostic action for the
-  selected Terminal Window in development and packaged applications. It opens or
-  closes Electron's local Developer Tools without enabling remote debugging;
-  Developer Tools never open automatically. The tools can expose private
-  Terminal Payload and runtime state, so diagnostic output, screenshots, traces,
-  and profiles require review and redaction before sharing.
-- `File -> Open Local Image…` is a menu/palette action for the selected Terminal
-  Window. It opens a native picker and previews one validated local static PNG
-  or JPEG in a temporary overlay without writing the file or changing User
-  Configuration. Escape, the close button, or the backdrop dismisses the
-  overlay, releases its renderer Blob source synchronously, and returns focus to
-  the live selected Application Tab. Picker cancellation returns selected-content focus
-  without an error. The picker and visible local-image sources share the bounded
-  read and overlay contract below. While choosing, loading, or displaying a
-  preview, terminal clipboard actions, file drops, font zoom, tab bar toggles,
-  snippet toggles, title-bar toggles, snippet injection, tab navigation/new-tab
-  and pane split/focus/equalize actions are ignored; page
-  activation does not steal preview focus. The hover drag handle is suppressed.
-  Dismissal restores ordinary routing. Already accepted terminal input is not
-  rolled back, and confirmed tab/session/window closure remains active.
-- Dropping one or more native file-manager files or folders anywhere in a
-  Terminal Window without an active Local Image Preview inserts their absolute
-  paths into only the focused Terminal Pane of the selected tab. The paths retain platform order,
-  are separated by one space, and are delivered through Protected Paste without
-  sending Enter. Drag navigation is prevented over the whole renderer document.
-  Internal tab dragging only reorders tabs and never inserts a path. Apart from
-  the authenticated Files source route below, drops without native files have
-  no terminal side effect. Files entry/candidate MIME payloads, including mixtures
-  with native files or tab drags, never fall through to native-file insertion.
-- `View -> Reload User Configuration` defaults to `Cmd+Shift+,` on macOS and
-  `Ctrl+Shift+,` on Linux and Windows. It manually rereads and validates the
-  complete configuration. Successful application updates font-size baseline,
-  padding, terminal context-menu eligibility, scrollback, ligatures, Option Key Mode, theme, transparency, blur and shared Auxiliary Panel side
-  in place, plus close confirmation, logging, menu and keybind delivery. It
-  updates Always-on-Top, title-bar and tab-bar defaults for new windows and, on
-  Windows, shell selection for new Default Shell sessions. Existing windows keep
-  their visibility choices, Always-on-Top state and Window Font Zoom delta;
-  Actual Size returns to the latest baseline. Font family and line height remain
-  creation-time settings. Reload is not transactional across consumers; failure
-  and font-acquisition limits are described under
+  selected window, in development and packages. It opens or closes Electron's
+  local Developer Tools without enabling remote debugging, and never opens them
+  automatically. They can expose private Terminal Payload and runtime state, so
+  review and redact diagnostic output, screenshots, traces, and profiles before
+  sharing.
+- `File -> Open Local Image…` is a menu/palette action for the selected window.
+  A native picker chooses one local static PNG or JPEG, previewed in a temporary
+  overlay without writing the file or changing User Configuration
+  ([ADR 0026](adr/0026-preview-explicitly-activated-local-images.md)). The
+  picker and visible local-image sources share the bounded read and overlay
+  rules under [Terminal behavior](#terminal-behavior).
+- Escape, the close button, or the backdrop dismisses the overlay, releases its
+  renderer Blob source synchronously, and returns focus to the live selected
+  Application Tab. Picker cancellation returns focus without an error. Page
+  activation does not steal preview focus. Dismissal restores ordinary routing.
+- Dropping native file-manager files or folders anywhere in a window (without an
+  active Local Image Preview) inserts their absolute paths into the focused pane
+  of the selected tab only. Paths keep platform order, are separated by one
+  space, and go through Protected Paste without Enter.
+- Drag navigation is prevented over the whole renderer document. Internal tab
+  dragging only reorders tabs. Apart from the [Files drag route](#files-panel), drops
+  without native files have no terminal effect, and Files entry/candidate MIME
+  payloads (even mixed with native files or tab drags) never fall through to
+  native-file insertion.
+
+### Configuration reload
+
+- `View -> Reload User Configuration` (default `Cmd+Shift+,` on macOS and
+  `Ctrl+Shift+,` on Linux and Windows) rereads and validates the complete
+  configuration.
+- A successful reload updates, in place: font-size baseline, padding, terminal
+  context-menu eligibility, scrollback, ligatures, Option Key Mode, theme,
+  transparency, blur, the shared Auxiliary Panel side, close confirmation,
+  logging, menu, and keybind delivery.
+- It updates the Always-on-Top, title-bar, and tab-bar defaults for new windows
+  and, on Windows, shell selection for new Default Shell sessions. Existing
+  windows keep their visibility choices, Always-on-Top state, and Window Font
+  Zoom delta; Actual Size returns to the new baseline.
+- Font family and line height are creation-time settings. Reload is not
+  transactional across consumers; failure and font-acquisition limits are under
   [configuration and local state](#configuration-and-local-state).
-- `View -> Toggle Tab Bar` (default `Cmd+Shift+B` on macOS and `Ctrl+Shift+B` on
-  Linux and Windows, remappable as `toggleTabBar`) changes only the selected
-  window's tab bar enabled flag, even with one tab; without a selected window it
-  does nothing. Disabling removes the entire strip row, refits the selected
-  existing Surface and PTY, and preserves focused auxiliary-panel controls,
-  otherwise restoring terminal focus. Hidden Surfaces retain
-  their valid geometry and continue ingesting output. Toggling preserves tab
-  identities, order, selection, titles and sessions; keyboard and native Window
-  menu navigation remain available while hidden. Title/BEL updates, tab
-  creation, selection and closure never reveal a disabled strip. Enabling
-  reveals the same live tabs when at least two remain. The flag survives
-  configuration reload but is never persisted or shared: new windows and
-  application restarts use `window.showTabBar`, whose default is enabled. Local
-  Image Preview choosing/loading/showing suppresses the action without changing
-  the flag or focus. Title-bar visibility and fullscreen remain independent.
+
+### Auxiliary Panel
+
+The Auxiliary Panel is one nonmodal side panel per window, below the full-width
+title and tab chrome. Built-in Snippets, installed Snippets, Files, and SSH
+Connect share it; no per-tool placement or second panel exists.
+
+**Opening tools**
+
 - `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
-  on Linux and Windows, remappable through `keybinds`) opens, reveals or closes the
-  selected window's Snippets view in one nonmodal Auxiliary Panel (right by default)
-  below full-width title/tab chrome. Published stable `0.25.0` and current source
-  support optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64.
-  The bundled default remains `0.1.0`; the official catalog offers `0.1.1` for
-  deliberate installation or update, not automatically.
-  Windows x64 and unchanged `0.23.0` hosts retain the built-in view. Existing users
-  choose installation through the official catalog or a verified local/offline
-  archive. Windows ARM64's graphical suite did not run and public-install Snippets
-  failures remain unresolved, accepted [for 0.25.0 only](snippets-migration.md#stable-0250-release-disposition).
-  The [migration guide](snippets-migration.md) keeps historical preview/0.24.0 results.
-  Since 0.25.0, a [removable default](default-snippets.md) is enabled but dormant
-  only for positively new packaged profiles, not existing-user enrollment. Existing YAML, bindings and
-  disabled/removed choices remain preserved. The existing
-  command remains the sole menu/palette entry, including remapped/null bindings.
-  Without an enabled installation, it opens Extensions management with an
-  optional-tool explanation and the actual installation/runtime status, without
-  installing, enabling or executing code. Settings and modal owners remain no-op
-  targets. Runtime failure never restores a competing built-in implementation. Installed Files and SSH Connect share this
-  panel after explicit activation through their existing actions. With one open
-  tool the header shows its name; with multiple tools the labeled, wrapping
-  switcher occupies that same header and identifies the selected tool without a
-  second host title. One view is visible at a time. The host retains its panel
-  accessible name and does not inspect or strip extension content. The Files and
-  SSH Connect source pages leave visible tool identity to the host, retaining
-  named child regions and meaningful content sections. Installed older archives
-  retain their own headings even with a newer host; source changes do not update
-  immutable packages. Each tool's ordinary entry point closes it when selected
-  and visible; otherwise it opens or reveals that tool. Switcher buttons select
-  without closing.
-  Header Close closes only the selected tool and hides the panel; other open
-  tools remain retained. Built-in Snippets disposes its view but keeps its lazy
-  factory available. Native tool close retires its view through the existing
-  acknowledged host lifecycle, not extension disable or backend retirement.
-  Reopening after retirement creates fresh view state and invocation context.
-  Repeated closes coalesce; pending close does not queue an automatic reopen.
-  Header Hide and Escape instead preserve all opened tools and their state.
-  `View -> Toggle Auxiliary Panel` (`keybinds.toggleAuxiliaryPanel`, default
-  `null`) independently hides or reveals the container. Reveal restores the
-  remembered open tool or the first remaining open tool. In an eligible terminal
-  selection with no opened tools, it instead lazily opens/reveals installed and
-  enabled Snippets (the built-in view on Windows x64). It never installs, enables,
-  fetches a catalog, opens Settings or shows a native error modal. If unavailable,
-  one localized, noninteractive panel status says “No tools are open. Open an
-  extension to use the panel.” for about four seconds, without moving focus.
-  Further failed attempts do not repeat or extend it. This budget belongs to one
-  main application-process lifetime across its windows, not a terminal session;
-  later manual installation/enablement can still make a future attempt succeed.
-  Tab/pane selection, another tool, modal ownership, native window blur, close
-  and disposal revoke pending empty-panel intent; delayed native publication
-  cannot reveal or focus that stale view. Main rechecks the pending intent after
-  awaited manager work before returning its open result; cancelled or superseded
-  intent does not receive a successful result at that boundary. Native window blur revokes main intent
-  and notifies core even when publication is already in transit. Core DOM blur
-  from creating/focusing an owned child is not native window focus loss and
-  must not cancel its legitimate initial publication. Blocked/suspended targets and pending
-  tool retirement do not trigger fallback. Close still disposes state, while
-  Hide/Escape retains it. Existing action identities, defaults and custom/null
-  bindings remain unchanged. This is access fallback, not default installation.
-  Hiding does not retain active semantic-input authority.
+  on Linux and Windows, remappable through `keybinds`) opens, reveals, or closes
+  the selected window's Snippets view. It is the only menu/palette entry for
+  Snippets, including with remapped or null bindings.
+- Snippets is an optional installed extension on Linux ARM64/x64, macOS ARM64,
+  and Windows ARM64. Those packages bundle Snippets `0.1.0` as a
+  [removable default](default-snippets.md), enabled but dormant only for
+  positively new packaged profiles; existing users are never enrolled and
+  install it through the official catalog (which offers `0.1.1`) or a verified
+  local/offline archive. Updates are never automatic. Windows x64 keeps the
+  built-in view and is not a default-provisioning or catalog target. Existing YAML, bindings, and
+  disabled/removed choices are preserved
+  ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md);
+  [migration guide](snippets-migration.md)).
+- Without an enabled installation, Toggle Snippets opens Extensions management
+  with an optional-tool explanation and the actual installation/runtime status,
+  without installing, enabling, or running code. Settings and modal owners stay
+  no-op targets. A runtime failure never brings back a competing built-in view.
+- Installed Files and SSH Connect join the panel through their own actions.
+  Each tool's entry point closes it when it is selected and visible; otherwise it
+  opens or reveals it. Views are created lazily.
 
-  `View -> Move Auxiliary Panel to Other Side` (`keybinds.moveAuxiliaryPanel`,
-  default `CommandOrControl+Shift+Alt+P` on macOS and
-  `Control+Shift+Alt+P` on Linux/Windows) changes only the focused window's
-  side. The command is accepted from a terminal, Settings, or a nonmodal hosted
-  tab and does not reveal a suspended panel. A modal or other presentation
-  owner still suppresses it. One physical press moves the panel once; that
-  press owns its repeats and release across core and child focus, including a
-  modified Escape binding that would otherwise dismiss a focused companion.
-  Plain Escape dismissal and companion-tool shortcuts keep their existing
-  ownership. The override lasts for that window and is cleared when the
-  configured `window.auxiliaryPanelSide` changes; it never writes configuration.
+**Header and switching**
 
-  Window composition creates the shared panel independently of Snippets wiring;
-  Built-in Snippets contributes its lazy view definition; installed Snippets
-  uses the native companion presenter. Core owns semantic preview in either
-  mode. Views are created lazily.
-  The host owns exclusive visibility, header/Close, resize, focus and lifecycle; the view
-  owns its query, scroll and catalog. Activation reveals loading/search and
-  focuses search immediately, rereading `snippets.yaml` each time without file
-  watching. Old rows cannot act during loading. Results replace the catalog,
-  including empty/error results, without refocusing. Late results from a hidden,
-  superseded or disposed activation are inert. Query and scroll survive hiding
-  in memory; scroll clamps after shorter results. Deactivation stops active-only
-  work and disposal releases all created views and listeners once. Native extension
-  views retain their page state while hidden. Closing discards view drafts and
-  revokes view requests, but accepted filesystem work may still finish with an
-  unknown outcome; close is not rollback, and reopening never replays it.
-  Backend scratch state may survive view close. Core-owned SSH launches and
-  accepted Surface-owned paste remain independent of view lifetime.
-  Terminal-tab changes preserve the selected companion view. Settings and general
-  hosted tabs suspend the panel and restore its selected view on terminal return.
-  Panel tools are window-owned, independently of the opening terminal's lifetime;
-  backend/window loss and disable/update/uninstall still retire their views.
-  In current source, Files initially opens Home and an explicit host focus intent
-  focuses its loaded-entry filter, unless an open operation editor needs focus.
-  Restore intent preserves an eligible focused control. The filter projects only
-  already-loaded rows in expanded folders, retains matching ancestors and visible
-  loading/error/truncation rows, and never searches collapsed folders or issues
-  filesystem requests. Dotfile visibility applies first. Filtering away a selection
-  clears it; Tab reaches the tree, including when empty. If rows arrive while the
-  empty tree has focus, Up/Down enters the rows explicitly. Focusing a row selects
-  it; F2 and the context menu explicitly select a previously unselected fallback
-  row before acting. Unsubmitted address drafts survive listing updates. Row
-  actions leave composing and other modified gestures untouched (apart from
-  Shift+F10). Cancel returns to the initiating row/control where available,
-  otherwise Actions; a late
-  permanent-delete confirmation does not steal focus after the user moves away.
-  These changes are included in published Files0.7; immutable Files0.6 remains
-  unchanged. Both ARM64 catalogs now select Files0.8.
-  Its explicit reported-directory action captures the selected live pane's latest
-  local OSC7 report at action time. Main asks the core renderer to confirm the captured session and selection
-  revision, rejecting reordered or changed selection rather than retargeting.
-  No report, a known SSH Connect pane or an incomplete recognized OSC7, remote
-  or invalid report produces an explanation without changing the browsing location.
-  Only the visible Files panel in its focused window can make this request; main
-  chooses the window and pane, never a caller-supplied target. It is not continuous
-  following and does not retarget an already-started request or filesystem
-  operation. Other extension invocation contexts stay captured at invocation.
-  OSC7 is not authenticated or current-process inspection: an arbitrary program
-  can report it, ordinary shell-launched SSH may be indistinguishable and reports
-  may be stale. The explicit action opens the fixed path locally without a modal;
-  current Files source labels it as the last reported path and exposes those
-  limitations in an inline hint, tooltip and accessible description. Compatible installed Files
-  archives use the host behavior without modified package bytes, but retain their
-  earlier label and lack the new inline hint and tooltip. The renamed action,
-  hint, tooltip and dynamically localized host-coded notices are included in the
-  published Linux ARM64 Files0.7 preview, not Files0.6.
-  The narrow [development bridges](extension-installation-foundation.md#archive-contract)
-  admit unchanged Files0.6 on recognized 0.24.1-dev.N, 0.25.0-dev.N,
-  0.26.0-dev.N and 0.26.1-dev.N hosts; admission alone does not qualify native behavior or packages.
-  Current Files source also offers **Insert path into terminal** in Actions and
-  on a focused row with Shift+Enter. It captures one visible selected file,
-  folder or link, requests insertion immediately and never sends an added Enter.
-  At request invocation, the app-owned child preload privately stamps its latest
-  observed core-selection revision and visible-admission generation. Main checks
-  both at receipt and commit; core independently refuses a changed selection
-  before capturing the Surface. Missing or stale observations fail closed rather
-  than retargeting. This does not imply a global ordering across processes. The
-  original Surface owns accepted Protected Paste, including confirmation and
-  remaining chunks. After successful Surface delivery, focus returns to that
-  target only if it is still the current live selection and the request remains
-  active; a later selection is never focused as a substitute. Missing, closed,
-  busy, invalid and incomplete or unknown outcomes are explained without
-  automatic replay. Completion means every chunk was accepted by the captured
-  live local session and passed to node-pty without a synchronous error; it does
-  not establish OS or shell consumption. A control character or newline in the
-  path can still act on a receiving program, even though no Enter is appended.
-  A path containing a bracketed-paste terminator is refused rather than rewritten.
-  Explicit focus returns to terminal input rather than a retained search query;
-  a newer companion selection or pending overlay prevents focus theft.
-  Files0.8.0 packages this behavior with `terminal.insertPath.v1`, minimum host
-  `>=0.26.0` and API `0.1.x`; installed Files0.6/0.7 bytes are unchanged.
-  SSH Connect creates a new Terminal Tab, preserving previous sessions and the
-  visible panel. Its foreground handoff acknowledges native focus returning to
-  core while the panel remains visible; a background result does not steal focus.
-  One window-native presentation owner orders panel and tab geometry, focus,
-  acknowledged hiding before DOM overlays, and stale continuation rejection.
+- With one open tool the header shows its name. With several, a labeled,
+  wrapping switcher fills the same header and identifies the selected tool,
+  without a second host title. One view is visible at a time; switcher buttons
+  select without closing.
+- The host keeps the panel's accessible name and does not inspect or strip
+  extension content. Files and SSH Connect pages leave tool identity to the host
+  and keep named child regions and content sections; installed older archives
+  keep their own headings (packages are immutable).
+- Switching views deactivates the old view and focuses the new one directly,
+  with no intermediate terminal focus.
 
-- Close (including a selected-visible tool toggle) disposes the selected tool;
-  Hide or Escape originating inside the panel only hides/deactivates it.
-  Both return focus to the live selected terminal after native acknowledgement,
-  unless a newer selection or modal owns focus. Neither closes terminal sessions.
-  In the native hosted-view Escape fallback, only a fresh non-composing Escape
-  starts dismissal. A composing Escape and an unowned repeat stay with the
-  focused control. An already-owned dismissal still consumes its repeats and
-  release during composition. This does not establish that a particular OS or
-  IME emits a composing Escape. Current Files source likewise leaves a composing
-  Escape, and an unowned Escape repeat, with an operation editor or menu, so
-  the unsubmitted draft stays. This handling is included in the
-  [published Linux ARM64 Files0.7 preview](files-development-preview.md#files07-linux-public-link-checkpoint),
-  not immutable Files0.6. Source inclusion and the bounded Linux checkpoint do
-  not establish physical-keyboard or native IME delivery, or broad macOS/Windows/x64
-  Files0.7 qualification.
-  In the built-in panel, only a fresh non-composing Escape starts dismissal;
-  composing Escape and unowned repeats remain with the focused control. An
-  already-owned dismissal retains its repeats and release even during composition.
-  This DOM event policy does not establish native OS/IME event delivery.
-  An Escape or Enter-on-Close/Hide gesture owns its repeats and release, including
-  Kitty event reporting. Escape in the terminal remains terminal input. Switching
-  internal views deactivates the old view and focuses the new one directly, with
-  no intermediate terminal focus. There is no backdrop, focus trap or global
-  Escape interception. Returning to the page preserves focused panel controls;
-  deliberate terminal/tab actions still focus the terminal. Each row shows its
-  default action before activation: **Insert** (`execute` false or omitted) or
-  **Run · adds Enter** (`execute: true`). Clicking a current row captures the
-  focused pane's live Surface at that moment, injects its exact body with that intent
-  through the existing Protected Paste path and returns focus immediately. A
-  separate **Preview** control opens a temporary read-only dialog that shows the
-  stored body exactly, without trimming or normalization, and captures the
-  focused pane's live Surface before anything else happens; with no live Surface it
-  does not open. Its final **Insert — no added Enter** or **Run — adds Enter**
-  choice is authoritative regardless of `execute`, is accepted once, closes the
-  preview and returns focus to the terminal. Cancel or Escape sends nothing and
-  restores the Preview control when it is still connected, enabled and
-  interactive in the visible view, otherwise panel search, otherwise the live
-  selected terminal; it never reopens a hidden panel. If the captured Surface
-  ends or fails while the preview is open, its actions are disabled even when
-  its pane remains visible for failure acknowledgement. Removal, tab closure
-  and host disposal also end that target exactly once, before forwarding exit
-  or fatal failure. Nothing is sent to a sibling or replacement pane, and that
-  unavailable Surface cannot be captured for a new preview.
-  Language switching relabels current row/preview controls and the unavailable
-  notice without replacing their DOM, changing focus, rereading YAML, recapturing
-  the target, mutating user text or re-enabling a dead target's actions.
-  Insert only omits the added Enter: embedded line breaks or control characters
-  can still execute, and Protected Paste may still ask for
-  confirmation after acceptance. The preview, About and Local Image
-  Preview never stack; while any is choosing/loading/showing, terminal-directed
-  actions, tab navigation/new tabs and pane split/focus/equalize are suppressed.
-  Pane dividers and passive mount/rebuild focus consult that same modal owner;
-  approved captured closure and failure acknowledgement remain deliverable. Enter activation
-  of a row retains that gesture's held repeats and release, so they cannot append
-  terminal Enter independently of the snippet's `execute` choice. A fresh
-  terminal key remains ordinary input. Hiding does not
-  cancel already accepted Surface-owned delivery; closing that Surface stops
-  remaining chunks/Enter without rollback.
+**Close, Hide, and Escape**
+
+- Header Close (or a selected-visible tool's toggle) closes only the selected
+  tool and hides the panel; other open tools stay retained. Built-in Snippets
+  disposes its view but keeps its lazy factory. Native tool close retires the
+  view through the acknowledged host lifecycle, not extension disable or backend
+  retirement. Reopening creates fresh view state and invocation context.
+  Repeated closes coalesce; a pending close never queues an automatic reopen.
+- Header Hide and Escape (from inside the panel) keep every opened tool and its
+  state.
+- Close and Hide return focus to the live selected terminal after native
+  acknowledgement, unless a newer selection or modal owns focus. Neither closes
+  terminal sessions. Escape in the terminal stays terminal input. An Escape or
+  Enter-on-Close/Hide gesture owns its repeats and release, including Kitty event
+  reporting.
+- Only a fresh non-composing Escape starts dismissal, both in the built-in panel
+  and in the native hosted-view fallback. A composing Escape and an unowned
+  repeat stay with the focused control; an already-owned dismissal still consumes
+  its repeats and release during composition. This DOM policy does not establish
+  what a particular OS or IME delivers.
+- There is no backdrop, focus trap, or global Escape interception. Returning to
+  the page keeps focused panel controls; deliberate terminal/tab actions still
+  focus the terminal.
+
+**Toggle Auxiliary Panel**
+
+- `View -> Toggle Auxiliary Panel` (`keybinds.toggleAuxiliaryPanel`, default
+  `null`) hides or reveals the container. Reveal restores the remembered open
+  tool, or the first remaining one. Hiding does not keep active semantic-input
+  authority.
+- In an eligible terminal selection with no open tools, it lazily opens or
+  reveals installed and enabled Snippets (the built-in view on Windows x64). It
+  never installs, enables, fetches a catalog, opens Settings, or shows a native
+  error dialog.
+- If nothing can open, a localized, noninteractive status says “No tools are
+  open. Open an extension to use the panel.” for about four seconds without
+  moving focus. Further failed attempts do not repeat or extend it; this budget
+  covers one main-process lifetime across its windows. Later manual installation
+  or enablement can make a future attempt succeed.
+- Tab/pane selection, another tool, modal ownership, native window blur, close,
+  and disposal revoke a pending empty-panel open; delayed native publication
+  cannot reveal or focus that stale view. Main rechecks the intent after awaited
+  manager work, and cancelled or superseded intent never gets a success result.
+  Native window blur revokes main intent and notifies core even when
+  publication is already in transit, but core DOM blur caused by creating or
+  focusing an owned child does not.
+  Blocked/suspended targets and pending tool retirement do not trigger the
+  fallback. Existing action identities, defaults, and custom/null bindings are
+  unchanged. This is access fallback, not default installation.
+
+**Panel side and width**
+
 - **Settings → Window → Auxiliary panel side** persists
-  `window.auxiliaryPanelSide` (`left` or `right`, default `right`) in User
-  Configuration and applies live to all windows. The same side hosts built-in
-  Snippets and every companion tool; no per-tool placement or additional panel
-  is created. A side change ends active resizing and preserves preferred width,
-  visibility, selection, drafts, focus and view/Surface/session identities. It
-  does not activate, hide, reopen or reload a tool. Native position-only changes
-  explicitly refresh the existing coalesced presentation path without focus
-  intent; overlay, selection and retirement guards remain authoritative.
-- Panel preferred border-box width starts at 280 CSS px per window. Bounds are
-  220–560 px, with a separate 6 px terminal-facing separator and 180 px terminal layout
-  allowance. Actual content-row width determines the effective maximum:
-  `min(560, contentWidth - 186)`. Automatic clamping preserves preferred width.
-  Below 406 px, hide/deactivate without automatic reopening when space returns;
-  a too-narrow open reports “Widen the window to open Snippets”. Primary-pointer
-  dragging captures the pointer, grows the right panel when moving left or the
-  left panel when moving right, and coalesces painting per animation frame. Up, cancel, lost capture, hide, switch,
-  overlay activity and disposal end dragging at the last valid width. The
-  separator paints a 1 px line with the same default hover/drag and independent
-  keyboard-focus states as pane dividers, while keeping its 6 px target/allocation.
-  Its decorative color/null choice is separate from pane dividers; the panel
-  never gains an active-pane highlight. The
-  focusable vertical separator exposes current/min/max pixels and readable value
-  text. Left/Right move the separator physically by 10 px (Left grows a right
-  panel, Right grows a left panel); Home/End choose current limits. Resize
-  keys are consumed only on the separator. Width preference survives hiding,
-  view switching, reload/theme and chrome changes in that window's memory only;
-  new windows/restarts reset width and visibility. Only the side preference is
-  persisted; tool state and width remain memory-only. Layout changes retain Surface/core/Adapter/session identities,
-  refit the selected grid and preserve hidden-tab geometry/output.
-- Native Copy/Paste/Select All (menu and default/remapped shortcuts) edit the
-  focused panel text field, never the PTY. Paste inserts at its selection with
-  line breaks replaced by spaces; async completion rechecks focus and active,
-  unblocked lifetime. Unsupported panel controls or unavailable clipboard edits
-  suppress terminal delivery; focus the search field or use its ordinary native
-  text editing instead. Terminal-focused actions retain existing routing. About
-  and Local Image Preview choosing/loading/showing keep panel layout/state but
-  make controls/separator inert, cancel drag and ignore competing actions rather
-  than queue them. Valid visible reads may settle without taking focus. Each
-  overlay keeps its existing dismissal, tab/closure and file-drop policies.
-  The fixed header/Close and independently scrolling results contain long content
-  and retain light/dark theme, background-opacity and hidden-chrome composition.
-- BEL is silent. A bell prepends a marker to the ringing session's title —
-  visible on its tab and, while that tab is selected, in the window title — and
-  an unfocused window requests native platform attention once until the user
-  focuses or interacts with it: an informational Dock bounce on macOS, or
-  per-window attention on Linux and Windows. Focus, terminal interaction, or
-  window disposal cancels the outstanding native request. Native desktop policy
-  determines how attention is presented; BEL remains silent.
+  `window.auxiliaryPanelSide` (`left` or `right`, default `right`) and applies
+  live to all windows. A side change ends active resizing and keeps preferred
+  width, visibility, selection, drafts, focus, and view/Surface/session
+  identities. It does not activate, hide, reopen, or reload a tool.
+  Position-only native changes refresh the coalesced presentation path without
+  focus intent; overlay, selection, and retirement guards still apply.
+- `View -> Move Auxiliary Panel to Other Side` (`keybinds.moveAuxiliaryPanel`,
+  default `CommandOrControl+Shift+Alt+P` on macOS and `Control+Shift+Alt+P` on
+  Linux/Windows) changes only the focused window's side and never writes
+  configuration. It works from a terminal, Settings, or a nonmodal hosted tab,
+  does not reveal a suspended panel, and is suppressed by a modal or other
+  presentation owner. One physical press moves the panel once and owns its
+  repeats and release across core and child focus, including a modified Escape
+  binding that would otherwise dismiss a focused companion. Plain Escape and
+  companion-tool shortcuts keep their ownership. The override lasts for that
+  window and clears when `window.auxiliaryPanelSide` changes.
+- Preferred border-box width starts at 280 CSS px per window, bounded to
+  220–560 px, plus a separate 6 px terminal-facing separator and a 180 px
+  terminal layout allowance. The effective maximum is
+  `min(560, contentWidth - 186)`. Automatic clamping keeps the preferred width.
+  Below 406 px of content width the panel hides and deactivates and does not
+  reopen automatically when space returns; opening it then reports “Widen the
+  window to open Snippets”.
+- Primary-pointer dragging captures the pointer, grows a right panel when moving
+  left (a left panel when moving right), and paints at most once per animation
+  frame. Pointer up, cancel, lost capture, hide, switch, overlay activity, and
+  disposal end dragging at the last valid width.
+- The separator is a focusable vertical separator exposing current/min/max
+  pixels and readable value text. Left/Right move it physically by 10 px (Left
+  grows a right panel, Right grows a left panel);
+  Home/End choose the current limits. Resize keys are consumed only on the
+  separator. It paints a 1 px line inside its 6 px target with the same default
+  hover/drag and keyboard-focus states as pane dividers, but its decorative
+  color/null choice is separate, and the panel never gets an active-pane
+  highlight.
+- The preferred width survives hiding, view switching, reload, theme, and chrome
+  changes in that window's memory only; new windows and restarts reset width and
+  visibility.
+  Only the side preference is persisted. Layout changes keep Surface, core,
+  Adapter, and session identities, refit the selected grid, and keep hidden-tab
+  geometry and output.
 
-Closing a tab or window ends its sessions. Persistent and reconnectable sessions
-remain the responsibility of a session manager such as tmux.
+**View lifecycle**
+
+- Window composition creates the shared panel independently of Snippets wiring.
+  Built-in Snippets contributes its lazy view definition; installed tools use
+  the native companion presenter. Core owns semantic preview in both modes.
+- The host owns exclusive visibility, header/Close, resize, focus, and lifecycle;
+  the view owns its query, scroll, and catalog.
+- Snippets activation shows loading/search and focuses search immediately,
+  rereading `snippets.yaml` each time without file watching. Old rows cannot act
+  during loading. Results, including empty/error results, replace the catalog
+  without refocusing. Late results from a hidden, superseded, or disposed
+  activation are inert. Query and scroll survive hiding in memory; scroll clamps
+  after shorter results.
+- Deactivation stops active-only work; disposal releases every created view and
+  listener once. Native extension views keep their page state while hidden.
+  Closing discards view drafts and revokes view requests, but accepted filesystem
+  work may still finish with an unknown outcome: close is not rollback, and
+  reopening never replays it. Backend scratch state may survive view close.
+  Core-owned SSH launches and accepted Surface-owned paste do not depend on view
+  lifetime.
+- Terminal-tab changes keep the selected companion view. Settings and general
+  hosted tabs suspend the panel and restore its selected view on terminal
+  return.
+- Panel tools are owned by the window, not the terminal that opened them.
+  Backend or window loss and disable/update/uninstall still retire their views.
+- One window-native presentation owner orders panel and tab geometry, focus,
+  acknowledged hiding before DOM overlays, and stale-continuation rejection.
+
+**Clipboard and overlays in the panel**
+
+- Native Copy, Paste, and Select All (menu and default or remapped shortcuts)
+  edit the focused panel text field, never the PTY. Paste inserts at the
+  selection with line breaks replaced by spaces; asynchronous completion
+  rechecks focus and an active, unblocked lifetime. Unsupported panel controls
+  or unavailable clipboard edits suppress terminal delivery. Terminal-focused
+  actions keep their routing.
+- About and Local Image Preview keep panel layout and state but make controls and
+  the separator inert, cancel dragging, and ignore competing actions instead of
+  queueing them. Valid visible reads may settle without taking focus. Each
+  overlay keeps its own dismissal, tab/closure, and file-drop policies.
+- The fixed header/Close and independently scrolling results contain long
+  content and keep light/dark theme, background-opacity, and hidden-chrome
+  composition.
+
+### Snippets panel
+
+- Each row shows its default action before activation: **Insert** (`execute`
+  false or omitted) or **Run · adds Enter** (`execute: true`). Clicking a current
+  row captures the focused pane's live Surface at that moment, injects the exact
+  body with that intent through Protected Paste, and returns focus immediately.
+- Enter on a row owns that gesture's held repeats and release, so they cannot
+  add a terminal Enter outside the snippet's `execute` choice. A fresh terminal
+  key is ordinary input.
+- A separate **Preview** control opens a temporary read-only dialog that shows
+  the stored body exactly, without trimming or normalization. It captures the
+  focused pane's live Surface first; with no live Surface it does not open. Its
+  final **Insert — no added Enter** or **Run — adds Enter** choice wins over
+  `execute`, is accepted once, closes the preview, and returns focus to the
+  terminal.
+- Cancel or Escape sends nothing and restores focus to the Preview control (when
+  still connected, enabled, and interactive in the visible view), otherwise
+  panel search, otherwise the live selected terminal. It never reopens a hidden
+  panel.
+- If the captured Surface ends or fails while the preview is open, its actions
+  are disabled even if the pane stays visible for failure acknowledgement.
+  Removal, tab closure, and host disposal also end that target exactly once,
+  before exit or fatal failure is forwarded. Nothing goes to a sibling or
+  replacement pane, and an unavailable Surface cannot be captured for a new
+  preview.
+- Language switching relabels row/preview controls and the unavailable notice
+  without replacing DOM, moving focus, rereading YAML, recapturing the target,
+  changing user text, or re-enabling a dead target's actions.
+- Insert only omits the added Enter: embedded line breaks or control characters
+  can still execute, and Protected Paste may still ask for confirmation. Hiding
+  does not cancel accepted Surface-owned delivery; closing that Surface stops
+  remaining chunks and Enter without rollback.
+
+### Files panel
+
+Files is a separately installed ARM64 preview
+([availability](files-availability.md)). Its archive version and host range are
+maintained separately; see [Architecture boundaries](#architecture-boundaries).
+
+- Files opens at Home. An explicit host focus intent focuses its loaded-entry
+  filter unless an open operation editor needs focus; restore intent keeps an
+  eligible focused control.
+- The tree is an expandable local folder tree with keyboard navigation,
+  discoverable Actions, and item/background context menus. Links are not
+  expanded implicitly.
+- The filter only narrows already-loaded rows in expanded folders. It keeps
+  matching ancestors and visible loading/error/truncation rows, never searches
+  collapsed folders, and makes no filesystem requests. Dotfile visibility applies
+  first. Filtering away the selection clears it.
+- Tab reaches the tree, even when empty. If rows arrive while the empty tree has
+  focus, Up/Down enters them explicitly. Focusing a row selects it; F2 and the
+  context menu select a previously unselected fallback row before acting. The
+  Rename / move menu item advertises F2.
+- Unsubmitted address drafts survive listing updates. Row actions ignore
+  composing and other modified gestures (except Shift+F10). Cancel returns to the
+  initiating row or control when possible, otherwise Actions. A late
+  permanent-delete confirmation does not steal focus after the user moves away.
+  A composing Escape, or an unowned Escape repeat, stays with an operation editor
+  or menu, keeping the draft.
+- The navigation toolbar uses quiet icon buttons with localized accessible names
+  and visible explanations on hover or focus; Go means Enter in the address
+  field, not a global shortcut. Explanations follow notice and language changes,
+  hide while their anchor is offscreen, and do not intercept other interactive
+  targets; their unobstructed areas stay hoverable. Controls that need a root are disabled until one exists. Up is
+  disabled but focusable at the filesystem root; New folder is disabled while a
+  mutation is pending; Refresh stays available during listing. Menu and
+  destructive confirmation labels stay explicit, and operation editors keep
+  their captured targets.
+- Moving: a single internal entry can be dragged onto a directory row (with
+  valid/invalid feedback), or moved with the keyboard-accessible Move to folder
+  action. External payloads never become internal moves. Both require
+  confirming the captured source and destination; identities are rechecked
+  before the no-replace move. Same-directory, self/descendant, and final-symlink
+  destinations are refused; symlink sources move as links. Conflicts never
+  overwrite, cross-volume moves never fall back to copy/delete, and unknown
+  outcomes are not retried. These checks are not a hostile filesystem race
+  sandbox.
+- The page follows the host's en-US/pt-BR language, relabelling retained
+  controls, accessible names, menus, confirmations, and notices without
+  rereading listings, replaying operations, or resetting focus, caret, drafts,
+  selection, or deletion tokens. Names, paths, and technical error codes stay
+  literal.
+- Successful mutations refresh the current root and surviving expanded folders
+  without navigating back. Failures and unknown outcomes never trigger a retry.
+  Manual refresh handles external changes; there are no watchers or polling.
+  Listings stay bounded, moves never clobber, and permanent delete needs a
+  one-shot confirmation.
+
+**Reported directory**
+
+- The explicit reported-directory action captures the selected live pane's
+  latest local OSC 7 report at action time. Main asks the core renderer to
+  confirm the captured session and selection revision, and refuses a reordered
+  or changed selection instead of retargeting.
+- No report, a known SSH Connect pane, or an incomplete, remote, or invalid
+  report produces an explanation without changing location. Only the visible
+  Files panel in its focused window can ask; main chooses the window and pane,
+  never a caller-supplied target. It is not continuous following and does not
+  retarget a started request or filesystem operation. Other extension
+  invocation contexts stay captured at invocation.
+- The [OSC 7 limits](#terminal-panes) apply. The action opens the fixed path
+  locally without a modal and is labeled as the last reported path, with those
+  limits in an inline hint, tooltip, and accessible description. Older
+  compatible archives keep their earlier label, without the hint or tooltip.
+
+**Inserting paths into the terminal**
+
+Both routes below share these rules:
+
+- The original Surface owns accepted Protected Paste, including confirmation and
+  remaining chunks, and never adds Enter. Accepted work continues after Files
+  retires; Surface termination stops remaining chunks.
+- Completion means every chunk was accepted by the captured live local session
+  and passed to node-pty without a synchronous error, not that the OS, shell, or
+  program consumed it. Unknown outcomes are explained and never replayed.
+- After successful delivery, focus returns to the captured pane's terminal input
+  (not a retained search query) only if it is still the live selection and no
+  newer tool, field, pane, companion selection, or overlay intent exists. A
+  later selection is never focused instead.
+- Paths are refused, never rewritten. Ordinary spaces and quotes survive. There
+  is no string/URI parsing, filesystem lookup, or second PTY/paste route.
+
+**Insert path into terminal**
+
+- **Insert path into terminal** (in Actions, or Shift+Enter on a focused row)
+  captures one visible selected file, folder, or link and requests insertion
+  immediately.
+- At invocation, the app-owned child preload privately stamps its latest observed
+  core-selection revision and visible-admission generation. Main checks both at
+  receipt and commit; core independently refuses a changed selection before
+  capturing the Surface. Missing or stale observations fail closed instead of
+  retargeting. There is no global ordering across processes.
+- Missing, closed, busy, invalid, and incomplete outcomes are explained without
+  automatic replay.
+- Only NUL and a bracketed-paste terminator are refused. Any other control
+  character or newline in the path can still act on the receiving program.
+
+**Drag to terminal**
+
+- A Files row drag carries one opaque gesture per owner window, valid for at
+  most ten seconds including claim and handoff. Registration in the child main
+  frame captures the literal bounded absolute path and kind against its
+  installed view, epoch, and window; no path enters DataTransfer.
+- When the protected handoff consumer is available (Files declares
+  `terminal.insertPath.v1`), the row adds a terminal-candidate MIME and uses
+  copyMove; directory rows inside Files still move with confirmation. Without
+  the consumer the row is move-only.
+- Only the visible terminal area of the selected tab's focused live pane shows
+  the localized “Drop to insert path (not run)” candidate and copy cursor. Other
+  panes, chrome, tabs, panels, search controls, Settings, overlays, and blocked
+  presentations are inert. Candidate feedback is not authorization.
+- A drop synchronously captures the pane, Surface, DOM focus, and selection
+  revision, and claims the terminal ticket plus the matching internal token
+  before any asynchronous work. A canceled or internal-move dragend revokes
+  unclaimed rows but not a claimed drop. A completed native copy keeps only its
+  original ticket, which may reach main after the child's dragend without
+  extending the deadline or granting input.
+- Hide, retirement, window loss, blur/minimize, installation revocation, and
+  timeout revoke either phase, with no revival on reveal. Mixed, native, tab,
+  forged, expired, or replayed claims are refused. An eligible drop whose claim
+  fails (another window's Files, or past the deadline) shows a localized “Path
+  not inserted” notice there. Main settles every claimed drop.
+- Paths containing any C0 or C1 control character, overlong paths, and otherwise
+  invalid paths still register, and are refused only when dropped on a terminal,
+  never at drag start. A private one-shot ticket binds the request to the
+  original renderer Surface, never recaptured. Stale selection, Surface, or DOM
+  focus and blocked presentation refuse admission.
+- The Surface stops Mirror Typing before delivery. Visible Files shows localized
+  accepted, refused, incomplete, or unknown notices. A claimed timeout revokes
+  input authority and sends one unknown notice, only to the original
+  still-live, visible source; late settlement sends nothing more. Successful
+  focus return goes through the native presentation owner.
+
+### SSH Connect in the panel
+
+- SSH Connect opens a new Terminal Tab, keeping earlier sessions and the visible
+  panel. Its foreground handoff acknowledges native focus returning to core
+  while the panel stays visible; a background result does not steal focus.
+
+### Terminal bell
+
+- BEL is silent. A bell prepends a marker to the ringing session's title, visible
+  on its tab and, while that tab is selected, in the window title.
+- An unfocused window requests native attention once until the user focuses or
+  interacts with it: an informational Dock bounce on macOS, or per-window
+  attention on Linux and Windows. Focus, terminal interaction, or window
+  disposal cancels the outstanding request. Native desktop policy decides how
+  attention is shown.
 
 ## Saved Layout
 
-The separately installed Linux ARM64 [Saved Layout extension](saved-layout-development.md)
-offers Save/Replace/Open/Forget, with Refresh for cross-instance conflicts or
-unknown outcomes. It captures only the original window's terminal tabs, weighted
-flat pane trees, focus/selection and reported-local/launch-local/home provenance.
-Graphical tabs are excluded and counted. Bounds are 16 tabs, 16 panes/tab, 32
-panes total and 256 KiB, rejecting whole requests rather than truncating.
+The separately installed Linux ARM64
+[Saved Layout extension](saved-layout-development.md) explicitly saves and
+reopens one window's terminal layout
+([ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md)). Its manifest
+declares the hosts it admits.
 
-Opening transfers a fully validated plan to one new core window with no dummy
-shell. Every pane starts through normal Surface initialization, explicitly using
-Default Shell and never consuming a pending `-e`. Original work is untouched;
-partial failures retain healthy panes. Core owns tokens, status, cancellation
-and actual native shutdown independently of extension retirement. Keyboard Open
-waits for Enter release; delayed presentation respects newer focus intent.
-
-Explicit saving uses an extension-scoped native-lease/CAS state adapter outside
-configuration and immutable packages. Opaque revisions and Forget tombstones
-prevent stale destructive writes. Data survives disable/update/uninstall. Forget
-removes the active snapshot, not possible interrupted-write temp copies; the
-guide supplies deliberate local cleanup instructions, not an erasure guarantee.
-Malformed/unreadable state is not repaired. A possibly committed write followed
-by transport loss requires Refresh, never automatic retry. No terminal payload,
-command, environment, title, process or SSH target is stored.
-
-Directory provenance is not current-process inspection or authenticated OSC7.
-Invalid/remote/overlong reports revoke launch fallback. Known SSH, explicit
-commands, ended and pending panes use home slots. Asynchronous directory checks
-fall back to home on missing/unavailable paths without creating folders or
-retrying a failed PTY launch. OS-mounted folders and ordinary shell startup may
-access networks. See [ADR0042](adr/0042-save-layouts-without-restoring-sessions.md).
+- The page offers Save/Replace, Open, Forget, and Refresh (for cross-instance
+  conflicts or unknown outcomes).
+- Saving captures only the original window's terminal tabs, weighted flat pane
+  trees, focus and selection, and reported-local/launch-local/home directory
+  provenance. Graphical tabs are excluded and counted.
+- Limits are 16 tabs, 16 panes per tab, 32 panes in total, and 256 KiB. Larger
+  requests are refused whole, never truncated.
+- Opening transfers a fully validated plan to one new core window with no dummy
+  shell. Every pane starts through normal Surface initialization using the
+  Default Shell, never consuming a pending `-e`. Current work is untouched;
+  partial failures keep healthy panes.
+- Core owns tokens, status, cancellation, and native shutdown independently of
+  extension retirement. Keyboard Open waits for the Enter release; delayed
+  presentation respects newer focus intent.
+- Saving uses an extension-scoped native-lease/CAS state adapter outside
+  configuration and immutable packages. Opaque revisions and Forget tombstones
+  prevent stale destructive writes. Data survives disable, update, and
+  uninstall.
+- Forget removes the active snapshot but not possible interrupted-write temp
+  copies; the guide gives manual cleanup steps, not an erasure guarantee.
+  Malformed or unreadable state is not repaired. A possibly committed write
+  followed by transport loss needs Refresh, never an automatic retry.
+- No terminal payload, command, environment, title, process, or SSH target is
+  stored.
+- Directory provenance has the same [OSC 7 limits](#terminal-panes) as split
+  panes. Invalid, remote, or overlong reports revoke launch fallback. Known SSH,
+  explicit-command, ended, and pending panes use home slots.
+- Directory checks are asynchronous and fall back to home on missing or
+  unavailable paths, without creating folders or retrying a failed PTY launch.
+  OS-mounted folders and ordinary shell startup may access the network.
 
 ## Mirror Typing
 
-The separately installed Linux ARM64 [Mirror Typing extension](mirror-typing-development.md)
-requires host 0.24.0-dev.2 and API 0.1.x. These are implementation contracts, not
-claims of native qualification or catalog/release publication.
+The separately installed Linux ARM64
+[Mirror Typing extension](mirror-typing-development.md) copies typing to a fixed
+set of panes in one tab
+([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)). Its manifest
+declares the hosts it admits; the preview is not kept current with newer
+releases.
 
-- An explicit action captures one terminal tab and its live mounted focused pane
-  before setup opens. An ineligible original focus refuses even with live siblings.
-  Inspect a fixed subset of 2–16 live panes, always including that original focus.
-  Start consumes fresh setup authority and returns only to that exact tab/source
-  after acknowledged native setup hide and focus/lifetime revalidation.
-- Core mirrors final genuine keyboard bytes in source mode, exactly once per
-  member. Any selected member may become source; additions never join. Mouse,
-  pointer-origin prompt reports, focus/program/parser replies and graphical fields
-  remain local. Extension code receives no keyboard payloads.
-- Paste, snippet Insert/Run and drops synchronously Stop before ordinary captured
-  original-target delivery, including empty/unsupported terminal paste and before
-  clipboard reads or Protected Paste confirmation. Cancelled paste stays stopped;
-  delayed local approval cannot fan out or reactivate mirroring.
+- An explicit action captures one terminal tab and its live, mounted focused
+  pane before setup opens. An ineligible original focus refuses, even with live
+  siblings.
+- Setup inspects a fixed subset of 2–16 live panes that always includes the
+  original focus. Start consumes fresh setup authority and returns only to that
+  exact tab and source, after acknowledged native setup hide and focus/lifetime
+  revalidation.
+- In source mode, core mirrors final genuine keyboard bytes exactly once per
+  member. Any selected member can become the source; new panes never join.
+  Mouse, pointer-origin prompt reports, focus/program/parser replies, and
+  graphical fields stay local. Extension code never receives keyboard payloads.
+- Paste, snippet Insert/Run, and drops synchronously Stop mirroring before
+  ordinary delivery to the captured original target, including empty or
+  unsupported terminal paste, and before clipboard reads or Protected Paste
+  confirmation. Cancelled paste stays stopped; delayed local approval cannot fan
+  out or restart mirroring.
 - A persistent core content row and source/member marks expose Stop even with
-  hidden chrome, independent of extension responsiveness. Preparing is input-inert
-  and cancellable; Start/Stop key releases cannot leak into terminal input.
-- Unselected-pane/tab selection, modal entry, member loss, view/backend loss,
-  local disable/update/uninstall, renderer/window teardown and hide/minimize revoke
-  the whole group. Active-window blur blocks input but retains the group; pending
-  Start cancels on blur. Healthy resize/reorder/theme/language/chrome changes do not
-  silently restart or end it.
-- One settled-replacement setup per extension/window prevents accumulating obsolete
-  views. Returning to setup stops the group; another Start needs fresh authority.
-  Main/native and renderer generation fences reject stale starts and input. Backend
-  lifetime loss revokes views before settlement; cleanup is not input authority.
-  Membership, tokens and leases are memory-only, excluded from Saved Layout,
-  startup, configuration and extension state.
-
-Use matching terminal programs/modes: source-mode bytes are not semantic
-per-recipient keys or synchronized shell state. Stop cannot undo input or synthesize
-key releases. Native writes are best-effort sequential, not atomic, with no replay
-or rollback. There is no instantaneous cross-instance revocation guarantee.
-[ADR0043](adr/0043-revoke-visible-mirror-typing-routes.md) explains ownership and
-tradeoffs; the guide covers installation, recovery and separate archive builds.
+  hidden chrome, whether or not the extension responds. Preparing is
+  input-inert and cancellable; Start/Stop key releases cannot leak into terminal
+  input.
+- Selecting an unselected pane or tab, modal entry, member loss, view/backend
+  loss, local disable/update/uninstall, renderer/window teardown, and
+  hide/minimize revoke the whole group. Active-window blur blocks input but keeps
+  the group; a pending Start cancels on blur. Healthy resize, reorder, theme,
+  language, and chrome changes neither restart nor end it.
+- One settled-replacement setup per extension and window prevents piling up
+  obsolete views. Returning to setup stops the group; another Start needs fresh
+  authority. Main/native and renderer generation fences reject stale starts and
+  input. Backend lifetime loss revokes views before settlement; cleanup is not
+  input authority.
+- Membership, tokens, and leases are memory-only and excluded from Saved Layout,
+  startup, configuration, and extension state.
+- Limits: source-mode bytes are not per-recipient semantic keys or synchronized
+  shell state, so use matching programs and modes. Stop cannot undo input or
+  synthesize key releases. Native writes are best-effort sequential, not atomic,
+  with no replay or rollback. Cross-instance revocation is not instantaneous.
 
 ## Terminal behavior
 
@@ -2263,337 +2432,212 @@ User guide: [Linux desktop installer](linux-installer.md). Rationale:
 
 ## Architecture boundaries
 
-Electron main owns native windows, PTYs, filesystem access, configuration, logs,
-clipboard capabilities, external-link opening, and bounded Local Image Preview
-reads. The renderer runs with context isolation and without Node integration.
-Main validates IPC request senders and payloads; preload validates response and
-event payloads exposed by its minimal typed bridge. The font route accepts no
-path; requests must name the active validated configured family. A started read
-may return that captured family's bounded bytes across reload, together with
-fixed local fallback candidates. Font paths, family names, and bytes
-are excluded from Operational Events, but native read-error text is not
-consistently redacted from font IPC rejections, as noted above. Chromium
-sandboxing remains enabled on macOS and Windows and is disabled on Linux.
-Context isolation and the narrow bridge still limit renderer authority on Linux,
-though they do not provide protection equivalent to the Chromium sandbox.
+The package is organized by runtime responsibility: main, preload, renderer, and
+the portable Terminal Surface.
+
+### Process boundaries
+
+- Electron main owns native windows, PTY creation, filesystem access,
+  configuration, logs, clipboard capabilities, external-link opening, and
+  bounded Local Image Preview reads
+  ([ADR 0006](adr/0006-isolate-the-renderer-from-local-capabilities.md)).
+- The renderer runs with context isolation and without Node integration. Main
+  validates IPC request senders and payloads; the preload validates response and
+  event payloads exposed by its minimal typed bridge.
+- The font route accepts no path; a request must name the active validated
+  configured family. A started read may return that captured family's bounded
+  bytes across a reload, together with fixed local fallback candidates. Font
+  paths, family names, and bytes stay out of Operational Events, but native
+  read-error text is not consistently redacted from font IPC rejections.
+- Chromium sandboxing is enabled on macOS and Windows and disabled on Linux.
+  Context isolation and the narrow bridge still limit renderer authority on
+  Linux, but they do not equal the Chromium sandbox.
+
+### Terminal Surface
 
 The framework-independent DOM Terminal Surface hides Restty setup, Ghostty
 parsing, text and Kitty image rendering, input, resize, theme, fonts, clipboard,
 zoom, and cleanup behind a small interface. It receives the local IPC/PTY
-Adapter rather than importing Electron or `node-pty`. Restty is the sole
-implementation; there is no renderer selector or registry.
-
-The package is organized by runtime responsibility: main, preload, renderer, and
-the portable Terminal Surface. Native window management and PTY creation remain
-in main.
+Adapter instead of importing Electron or `node-pty`. Restty is the only
+implementation; there is no renderer selector or registry
+([ADR 0008](adr/0008-make-the-terminal-surface-the-portable-module.md),
+[ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
 
 ### Internal installed-package foundation
 
-The internal Installed Packages module implements local archive
-validation/installation, compatibility, immutable version pins, generation-based
-admission, disable/tombstones and deferred physical cleanup. Linux ARM64/x64,
-macOS ARM64 and Windows ARM64 source consume it through production Settings
-with captured-byte trust. The bounded [Windows ARM64 source-composition checkpoint](windows-arm64-extension-composition.md#evidence-boundary)
-is separate from packaged qualification. This foundation itself owns neither extension execution nor catalog/network
-acquisition or a public SDK. Main owns HTTPS acquisition separately; terminal ownership is unchanged. Its implemented interface and
-limits are governed by the [foundation contract](extension-installation-foundation.md)
-and [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
+- The internal Installed Packages module owns local archive validation and
+  installation, compatibility, immutable version pins, generation-based
+  admission, disable/tombstones, and deferred physical cleanup.
+- Linux ARM64/x64, macOS ARM64, and Windows ARM64 use it through production
+  Settings with captured-byte trust. Windows x64 does not admit production
+  extensions.
+- It owns neither extension execution, catalog/network acquisition, nor a public
+  SDK. Main owns HTTPS acquisition separately; terminal ownership is unchanged.
+- Its interface and limits are in the
+  [foundation contract](extension-installation-foundation.md) and
+  [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 
 ### Internal extension backend runtime
 
-A separately owned backend runtime consumes Installed Packages through an
-app-owned bootstrap. Normal macOS ARM64, Linux ARM64/x64 and Windows ARM64/x64 builds
-include its artifacts and native lease addon. Windows x64 packages carry this
-preparatory runtime without enabling production extension admission or changing
-built-in Snippets, default provisioning or catalog targets. Windows ARM64 source admits the
-same explicit management and activation and now selects optional Snippets. Its
-earlier [bounded native source composition](windows-arm64-extension-composition.md#evidence-boundary)
-passed separately from an [unpacked Windows ARM64 package inspection](windows-arm64-extension-composition.md#packaged-runtime-checkpoint).
-That inspection checked runtime bytes, lease-addon unpacking and packaged
-Node-mode store/lease/bootstrap loading, not packaged GUI activation or an
-installer. A later [packaged-GUI checkpoint](windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
-exercised a minimal local extension on that retained directory. A later separate
-[exact-NSIS checkpoint](windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
-passed on a new installer built from an independent copy. The later Windows
-Snippets [ordinary source checkpoint](snippets-migration.md#windows-arm64-source-transition)
-passed on exact dev.33 source, with synthetic-input and capture limits. Its full
-portable, exact-package and public-consumption gates remain separate. Linux x64 now admits explicit extension
-installation and activation through the existing production owners; its
-[composition qualification](linux-x64-extension-composition.md) remains distinct
-from earlier module, hosted-view and package checks. That historical composition
-checkpoint left built-in Snippets and its starter kit unchanged; the later optional
-Snippets transition and catalog promotion are described below.
-The separate Files move
-addon remains limited to macOS and Linux ARM64 and uses Linux
-`renameat2(RENAME_NOREPLACE)` or macOS `renameatx_np(RENAME_EXCL)` through the
-same bounded asynchronous interface, refusing unsupported filesystems and
-cross-device moves without an overwrite-capable fallback. This primitive does
-not establish full macOS Files support. Host source also supplies optional macOS
-ARM64 trash through Foundation `NSFileManager` in the same native addon/owned
-Node child, sharing its bounded asynchronous admission. Root, trailing separators
-and empty/dot path components are refused rather than resolving a final symlink.
-Already-aborted calls refuse before dispatch; dispatched work retains its actual
-completion, with the existing request deadline and child retirement and no
-cancellation/rollback guarantee. Native errors and missing results stay fixed and
-path-free; no permanent-delete fallback, automatic retry, Finder automation or new
-main RPC is added. Linux retains its literal gio trash command. Bounded
-exact-package macOS ARM64 trash evidence covers final symlinks, recoverable
-identity and local/distinct APFS volumes; the
-[preview evidence](files-development-preview.md#build-and-evidence-boundary)
-retains its limits. Full Files lifecycle and distribution remain separate.
-macOS ARM64 production composition admits installation and explicit activation
-through the same management/runtime/view owners as Linux ARM64. macOS ARM64 source
-selects optional Snippets and omits its starter example from new configuration kits;
-the package's duplicate Snippets action stays withheld. The [bounded source
-qualification](snippets-migration.md#macos-arm64-source-transition) does not qualify
-macOS Files or itself establish host publication. The separately
-[published macOS ARM64 `0.24.0-dev.16` preview](snippets-migration.md#macos-arm64-published-preview)
-uses optional Snippets, originally qualified with `0.1.0`; the official catalog
-now offers `0.1.1`. The published Linux x64 `0.24.0-dev.30` preview also offers
-the optional tool through the catalog or a local archive; its bounded public-HTTPS
-checkpoint passed separately. The published Windows ARM64 dev.36 preview uses
-optional Snippets after its exact-stage and separate FULL NSIS gates; its
-[public boundary](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
-still distinguishes pending installed public consumption. Published stable
-`0.25.0` uses optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64,
-including its one-time new-profile default; Windows x64 and unchanged `0.23.0`
-hosts retain built-in Snippets. Historical preview/0.24.0 receipts remain bound
-to their recorded host/archive pairs. The [0.25.0 risk decision](snippets-migration.md#stable-0250-release-disposition)
-accepts the remaining Windows/macOS limits for that release; terminal-input rules
-in [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md) are unchanged.
-Isolated foundation/runtime builds remain available.
-Explicit activation through the application manager lazily forks one
-standard Node ChildProcess per active extension/application runtime using bundled
-Electron Run-as-Node and Node IPC. Independent captured-version pins, fresh
-parent/child admission checks and bounded epoch authority precede ESM import.
-No store writer spans spawn, import or retirement. Cancellation revokes owned
-infrastructure, not already admitted trusted Node effects.
+**Platforms**
 
-Retirement allows two seconds of cooperation, then at most one owned forced kill;
-actual exit and stream closure remain distinct from logical disposal or kill
-acceptance. Unknown outcomes are not automatically retried. No custom supervisor,
-PID reaper, sandbox or descendant-containment promise is introduced. This replaces
-the proposed utility backend after observed macOS main-thread blocking, without
-changing the separately owned web-content host.
+- macOS ARM64, Linux ARM64/x64, and Windows ARM64/x64 builds include the runtime
+  and its native lease addon.
+- Linux ARM64/x64, macOS ARM64, and Windows ARM64 admit explicit extension
+  installation and activation through the same management, runtime, and view
+  owners. Their new configuration kits omit the Snippets starter example.
+- Windows x64 carries the runtime without enabling production extension
+  admission (see [Auxiliary Panel](#auxiliary-panel) for Snippets).
 
-The [runtime contract](extension-backend-runtime.md) and
-[ADR 0040](adr/0040-run-backends-in-owned-node-children.md) govern its internal
-interfaces, limits and qualification boundary. The [Files development preview](files-development-preview.md)
-connects Settings local/HTTPS archive installation, shared namespaced actions, independently
-pinned application views and bounded normal Quit retirement on Linux ARM64.
-Startup constructs infrastructure but never activates installed code; explicit
-shared action invocation does. The explicit
-official catalog reuses the same installation owner/store; there is no public
-SDK or extension shortcut configuration. An empty source catalog is valid but
-does not constitute public distribution.
-Files provides an expandable local folder tree with keyboard
-navigation, discoverable Actions and item/background context menus. Its current
-source includes the loaded-entry filter and focus/selection behavior described
-above; the Rename / move menu item advertises F2. Its source
-navigation toolbar uses quiet icon buttons with localized accessible names and
-visible explanations on hover or focus; Go identifies Enter in the address field,
-not a global shortcut. Explanations follow notice and language changes, hide while
-their anchor is offscreen, and do not intercept other interactive targets. Their
-unobstructed areas remain hoverable. Controls needing a root are disabled until
-one exists. Up is disabled but remains focusable at the filesystem root, and New
-folder is disabled while a mutation is pending. Refresh remains available during
-listing. Existing menu and destructive confirmation labels remain explicit.
-Operation editors retain captured targets. Current source permits a single
-internal Files entry to be dragged onto a directory row, with valid/invalid
-feedback, and offers the keyboard-accessible Move to folder action. External
-payloads do not become internal moves. Both paths require confirmation of the
-captured source and destination; source and destination identities are rechecked
-before the existing no-replace move. Same-directory, self/descendant and final
-symlink destinations are refused; symlink sources move as links. Conflicts never
-overwrite, cross-volume moves never fall back to copy/delete, and unknown outcomes
-are not retried. These checks are not a hostile filesystem race sandbox. The
-separate Files-to-terminal drag remains outside this workflow.
+**Activation and retirement**
 
-A source-only Files terminal transport retains one opaque gesture per owner
-window for at most ten seconds, including claim and pending handoff. Actual child
-main-frame registration captures the literal bounded absolute path/kind against
-its installed view/epoch/window; no path enters DataTransfer. With an available
-protected handoff consumer, the row adds a distinct terminal-candidate MIME and
-uses copyMove; internal directory targets still use move and require the same
-confirmation. Without that consumer registration is unavailable and the row
-remains move-only. Current source composes the protected consumer for Files
-with its declared `terminal.insertPath.v1` capability. Only the selected tab's
-focused live pane's visible terminal area offers a localized bounded “Drop to
-insert path (not run)” candidate and copy cursor; other panes, chrome, tabs,
-panels, search controls, Settings, overlays and blocked presentations are inert.
-Candidate MIME/area feedback is not authorization. Drop synchronously captures
-the exact pane/Surface, DOM focus and selection revision and claims the exact
-terminal ticket plus matching internal token before any asynchronous work. Canceled
-or internal-move dragend revokes unclaimed rows but cannot erase a claimed drop.
-A completed native copy retains only its original bounded ticket for the core
-claim, which can reach main after child dragend; cross-WebContents messages are
-not globally ordered. This neither extends the deadline nor grants input by itself.
-Hide, retirement, window loss,
-blur/minimize, installation revocation and timeout revoke either phase without
-hide/reveal revival. Mixed/native/tab, forged, expired or replayed claims are
-refused; an eligible drop whose claim fails (another window's Files, or after
-the deadline) shows a localized "Path not inserted" notice in that terminal
-area. Every claimed drop is handed off so main settles it. Control-bearing
-or invalid paths still register and are refused without rewriting only when
-dropped on a terminal, never at drag start; ordinary spaces and quotes survive.
-The shared main path formatter and protected handoff retain the captured
-owner/revision. A private ticket binds the returning semantic request to the
-original renderer Surface, consumed once, never recaptured.
-Stale selection/Surface/DOM focus and blocked presentation refuse admission.
-The Surface stops Mirror Typing before ordinary single-target Protected Paste
-with no added Enter. Visible Files receives localized accepted, refused,
-incomplete or unknown notices. A claimed timeout revokes input authority and sends
-one unknown notice only to its original still-live, visible source; hidden,
-retired or replaced sources remain silent, and late settlement sends no second
-notice. Successful still-current completion focuses only
-the captured pane's input through the native presentation owner; newer tool,
-field, pane or overlay intent suppresses that focus. Unknown results are never
-retried. Accepted Surface-owned work is independent of source retirement;
-Surface termination stops remaining chunks. Acceptance is not evidence of
-shell/program consumption. No string/URI parsing, filesystem lookup or second
-PTY/paste route is added. Native product qualification remains separate.
-See the [transport seam](files-development-preview.md#terminal-drag-transport-source-increment).
+- Startup builds infrastructure but never activates installed code; explicit
+  shared action invocation does. The official catalog reuses the same
+  installation owner and store. There is no public SDK or extension shortcut
+  configuration. An empty catalog is valid but is not public distribution.
+- Activation lazily forks one standard Node ChildProcess per active
+  extension/application runtime, using bundled Electron Run-as-Node and Node IPC.
+  Independent captured-version pins, fresh parent/child admission checks, and
+  bounded epoch authority come before ESM import. No store writer spans spawn,
+  import, or retirement. Cancellation revokes owned infrastructure, not trusted
+  Node effects already admitted. Trusted children keep ordinary Node
+  capabilities.
+- Retirement allows two seconds of cooperation, then at most one owned forced
+  kill. Actual exit and stream closure are distinct from logical disposal or kill
+  acceptance. Unknown outcomes are not retried automatically. There is no custom
+  supervisor, PID reaper, sandbox, or descendant-containment promise. Normal Quit
+  retirement is bounded. The web-content host is owned separately
+  ([ADR 0039](adr/0039-own-packaged-web-content-by-epoch.md)).
+- The [runtime contract](extension-backend-runtime.md) and
+  [ADR 0040](adr/0040-run-backends-in-owned-node-children.md) cover its internal
+  interfaces and limits.
 
-The page follows the host's explicit en-US/pt-BR
-language and relabels retained controls, accessible names, menus, confirmations and
-notices without rereading listings, replaying operations or resetting focus/caret,
-drafts, selection or deletion tokens. Names, paths and technical error codes remain
-literal. Successful filesystem mutations refresh the
-current root and surviving expanded folders automatically without navigating
-back to a previous root; failures and unknown outcomes never trigger mutation
-retry. Manual refresh handles external changes without watchers or polling.
-Links are not implicitly expanded, and existing bounded listings, no-clobber
-moves and one-shot permanent-delete confirmation remain unchanged. See the
-[Files interaction contract](files-development-preview.md#concrete-consumer).
+**Files native primitives**
 
-Files archive version/compatibility is maintained separately from the host.
-Published Files0.7.0 uses `>=0.25.0-dev.10` / API `0.1.x`, the neutral ARM64
-preview name and existing host services for filtering/keyboard and confirmed
-directory moves, without terminal insertion/drop. Published Files0.8.0 adds
-selected-path insertion and Files-to-terminal drop with `terminal.insertPath.v1`,
-minimum host `>=0.26.0` and API `0.1.x`, the first published host with the
-consumer. Production archive admission and the catalog refuse lower hosts; the
-explicit 0.26.1 development bridge admits this range, and unrelated development
-families and incompatible APIs remain refused.
-Published Files0.6/0.7 bytes remain unchanged. Preparation is
-not exact shipping-pair qualification or publication. Prior Linux native UI used
-production modules with inert session/backend/package dependencies, not a real
-PTY or shipping pair. Its observed Surface receipt timeout does not qualify the
-ten-second transport deadline, which is covered headlessly. The
-[preparation rationale](files-development-preview.md#concrete-consumer)
-retains these separate evidence boundaries. Published
-Files0.6.0 and Files0.5.0 retain minimum host `>=0.24.0-dev.21` and corrected
-raw-path forwarding for macOS trash. The published Files0.5.0 archive's
-[controlled exact-DMG consumer checkpoint](files-development-preview.md#files-050-macos-controlled-qualification)
-passed real operations/recoverable trash, retained companion state, management
-and active-backend normal Quit. The separate immutable dev.21/Files0.5 releases
-and actual public Settings-link checkpoint are delivered; see
-[link-first evidence](files-development-preview.md#macos-link-first-distribution).
-That published dev.21 host still uses the legacy catalog URL. Published dev.26
-passed a separate Files0.5 [public-catalog checkpoint](files-development-preview.md#macos-catalog-distribution)
-with three Official consents, retained PTY and normal joined Quit. The source
-catalog binds Files0.7 for macOS ARM64 while Linux retains Files0.6.
-A [macOS Files0.7 local checkpoint](files-development-preview.md#files07-macos-stable-local-checkpoint)
-and a separate [public-catalog checkpoint](files-development-preview.md#files07-macos-public-catalog-checkpoint)
-passed with published stable0.25.0 and the unchanged archive. macOS0.24.0 and other hosts below the Files0.7 floor may install
-Files0.6 locally/by link or upgrade. The earlier [macOS public-catalog checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
-passed with a retained locally built 0.24.0 DMG, not a downloaded-public stable host.
-The earlier Linux Files0.4
-[distribution checkpoint](files-development-preview.md#files-040-distribution-and-controlled-qualification)
-remains evidence for its own dev.11 pair, not for Files0.6. Linux dev.11–dev.20
-lost a compatible Files catalog offer after promotion but retain the historical
-Files0.4 local/link route. Files0.1 does not admit stable0.24.0. Compatibility
-alone does not qualify every host.
-Archives and build receipts are excluded from application packages. Build receipts
-bind final archive bytes to source/tool metadata without claiming qualification.
-macOS ARM64 and Linux ARM64/x64 package inspection exercises packaged
-store/lease/bootstrap resolution, not backend activation or the user-facing Files
-lifecycle. Native extension addons must be explicitly unpacked; macOS also
-requires the complete ad-hoc application seal. Only the ARM64 targets include and
-exercise the Files no-clobber move/conflict primitive. The macOS
-probe also checks the trash export/root refusal without executing a trash mutation; see
-[preview preparation](release.md#building-an-extension-archive).
-Trusted children retain ordinary Node capabilities. Production/native/visual and
-main-death qualification remain explicit obligations, not consequences of wiring.
+- The Files move addon exists only on macOS and Linux ARM64. It uses Linux
+  `renameat2(RENAME_NOREPLACE)` or macOS `renameatx_np(RENAME_EXCL)` behind one
+  bounded asynchronous interface, and refuses unsupported filesystems and
+  cross-device moves with no overwrite-capable fallback.
+- macOS ARM64 trash uses Foundation `NSFileManager` in the same native addon and
+  owned Node child, sharing its bounded asynchronous admission. Root, trailing
+  separators, and empty or dot path components are refused instead of resolving
+  a final symlink. Already-aborted calls refuse before dispatch; dispatched work
+  keeps its actual completion, with the existing request deadline and child
+  retirement and no cancellation or rollback guarantee. Native errors and
+  missing results stay fixed and path-free. There is no permanent-delete
+  fallback, automatic retry, Finder automation, or new main RPC.
+- Linux trash runs the literal `gio` trash command.
+
+**Files archive compatibility**
+
+- Files archive versions and compatibility are maintained separately from the
+  host. Files `0.8.0` declares `terminal.insertPath.v1`, minimum host `>=0.26.0`,
+  and API `0.1.x`; both ARM64 catalogs offer it. Production admission and the
+  catalog refuse lower hosts.
+- Published archives are immutable; older Files releases keep their own host
+  ranges and labels. Each catalog offers one release per extension ID, so hosts
+  below an entry's range keep local or link installation of an older archive
+  ([extension distribution](extension-distribution.md)).
+- Narrow [development bridges](extension-installation-foundation.md#archive-contract)
+  let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, or
+  `0.26.1-dev.N` host admit a range only when ordinary semver admits both stable
+  endpoints of that family. Other development families and incompatible APIs
+  are refused. Admission alone does not qualify native behavior or packages.
+
+**Packaging**
+
+- Archives and build receipts are not included in application packages. A build
+  receipt binds the final archive bytes to source/tool metadata without claiming
+  qualification.
+- macOS ARM64 and Linux ARM64/x64 package inspection exercises packaged
+  store/lease/bootstrap resolution, not backend activation or the Files
+  lifecycle. Native extension addons must be explicitly unpacked; macOS also
+  needs the complete ad-hoc application seal. Only the ARM64 targets include and
+  exercise the Files no-clobber move primitive; the macOS probe also checks the
+  trash export and root refusal without running a trash mutation
+  ([building an extension archive](release.md#building-an-extension-archive)).
 
 ## Release contract
 
-OMXTerm uses the MIT License and follows the [versioning policy](versioning.md).
-Packages are built natively on ARM64 macOS, Linux and Windows, and on x64 Linux/Windows, using native
-filesystems rather than VM shared folders. The formats are DMG, AppImage and
-NSIS respectively. An explicit maintainer-approved Windows x64 release may use
-x64 emulation on Windows ARM64 while native hardware is unavailable (ADR 0034);
-release evidence must identify that exception and pending native qualification.
-For the owner-approved native x64 CI lanes, downloadable packages have build-only
-qualification. Desktop, GPU, installer and ordinary-user OS integration remain
-unverified and are not release gates. Inspection-only never launches the GUI,
-executes NSIS or installs the Linux helper; it checks package contents and loads
-the exact packaged addon in Electron Run-as-Node mode. Linux additionally checks
-real PTY output/exit/resize and exec-failure versus successful exit 1. Windows
-unpacked inspection does not verify NSIS contents. Exact binary checksums and
-provenance accompany 7-day Actions artifacts; publication remains manual.
-Installer safety requirements for full verification are unchanged. Each Linux target also provides
-`linux_install.sh` and `linux_install.sh.sha256`; the helper's embedded version
-matches the application version, and same-cut Linux helper pairs have identical bytes.
+The [release procedure](release.md) owns preparation, verification, tagging,
+uploads, and download checks. This section states only the contract it follows.
 
-Stable targets ship independently under immutable OS/architecture-prefixed tags,
-with one reviewed frozen cut per application version. Actual build SHAs and proven
-non-artifact differences are retained. Corrections to product, dependency or build
-inputs after shipment require a new application version; unchanged later targets
-need no artificial bump or rebuild of shipped targets. The [README download index](../README.md#platforms-and-downloads)
-links each target's available version, exact assets, checksums and notes. GitHub's
-global Latest remains the legacy complete 0.25.0 bundle, not that index; no later
-roll-up release or moved tag is used.
-
-Artifacts include SHA-256 checksums but no verified publisher identity. The
-macOS app has an ad-hoc integrity seal, not Developer ID signing or
-notarization; Windows NSIS is unsigned. Installation guidance explains
-Gatekeeper and SmartScreen without recommending disabling system-wide
-protections.
-
-The [release procedure](release.md) owns preparation, native verification,
-artifact identity, tagging, uploads and download checks. An owner-requested
-release covers those steps without additional per-step approval. Manual testing
-is optional: macOS daily use supplies feedback, while Linux and Windows rely on
-native automation and user reports. Unobserved visual or desktop boundaries are
-recorded as unverified rather than implied passes.
+- OMXTerm uses the MIT License and follows the
+  [versioning policy](versioning.md).
+- Packages are built natively on their own architecture, on native filesystems
+  rather than VM shared folders: DMG for macOS ARM64, AppImage for Linux
+  ARM64/x64, and NSIS for Windows ARM64/x64.
+- A maintainer-approved Windows x64 release may use x64 emulation on Windows
+  ARM64 while native hardware is unavailable; its release evidence must
+  identify that exception and the pending native qualification
+  ([ADR 0034](adr/0034-support-native-windows-x64-packages.md)).
+- Linux and Windows x64 packages from the owner-approved native CI lanes have
+  build-only qualification. Desktop, GPU, installer, and ordinary-user OS
+  integration are unverified and are not release gates. Inspection-only never
+  launches the GUI, runs NSIS, or installs the Linux helper: it checks package
+  contents and loads the exact packaged addon in Electron Run-as-Node mode.
+  Linux also checks real PTY output, exit, and resize, and tells exec failure
+  apart from a successful exit 1. Windows unpacked inspection does not verify
+  NSIS contents. Exact checksums and provenance accompany the 7-day Actions
+  artifacts; publication stays manual ([ADR 0036](adr/0036-distribute-build-only-x64-ci-artifacts.md)).
+- Each Linux target also ships `linux_install.sh` and `linux_install.sh.sha256`.
+  The helper's embedded version matches the application version, and the Linux
+  helper pairs for the same cut are byte-identical.
+- Each target ships independently under an immutable OS/architecture-prefixed
+  tag, from one reviewed frozen cut per application version. Changing product,
+  dependency, or build inputs after a target ships needs a new application
+  version; later targets of an unchanged cut need no artificial bump or rebuild.
+  Actual build SHAs and proven non-artifact differences are retained. Tags never
+  move and there is no roll-up release.
+- The [README download index](../README.md#platforms-and-downloads) links each
+  target's version, assets, checksums, and notes. GitHub's global Latest stays
+  the legacy complete 0.25.0 bundle, not that index.
+- Artifacts include SHA-256 checksums but no verified publisher identity. The
+  macOS app has an ad-hoc integrity seal, not Developer ID signing or
+  notarization; Windows NSIS is unsigned. Installation guidance explains
+  Gatekeeper and SmartScreen without recommending disabling system-wide
+  protections.
+- An owner-requested release covers the procedure's steps without per-step
+  approval. Manual testing is optional: macOS daily use supplies feedback, and
+  Linux and Windows rely on native automation and user reports. Unobserved
+  visual or desktop behavior is recorded as unverified, never as a pass.
 
 ## Acceptance boundary
 
-Tests cover configuration, tabs and window lifecycle, PTY startup/resize/output
-flow, Unicode, scrollback, Kitty images, local-image reads and overlay cleanup,
-link gestures, clipboard policy, title sanitization, logging, IPC boundaries and
-packaged startup. Chromium tests retain the production CSP, context isolation,
-disabled Node integration and platform sandbox policy. macOS native verification's
-temporary HOME/XDG/profile paths do not isolate per-bundle OS preferences (see
-[side effects on your desktop](development.md#side-effects-on-your-desktop)). Linux package
-verification checks AppRun bytes and available installed launch modes against
-the fixed no-sandbox policy. It installs the exact helper but removes the
-fixture home rather than invoking that helper's `uninstall`; separate helper
-tests exercise uninstall behavior.
-
-Windows exact-installer verification requires an explicitly authorized
-disposable VM and literal CLI opt-in. `/D=` changes the destination without
-isolating old-version removal, registration, shortcuts or processes.
-Verification refuses unsafe or unknown installation state. Only its newly created
-transaction directory is bound to a native long path with matching object identity
-before NSIS arguments are constructed; both path spellings retain the original
-reparse/process/cache inspections ([ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)).
-This does not normalize foreign registration or command ownership.
-Ownership-checked cleanup preserves user data and is part of full verification; unpacked-only
-diagnostics are partial.
-
-Release verification separates behavioral tests, native builds, exact-artifact
-checks and publication. Each artifact needs verification against its own
-identity and checksum: native by default, the explicitly approved Windows x64
-emulation exception in ADR 0034, or the owner-approved build-only x64 lanes in
-ADR 0036, with limits recorded. Build-only checks never claim full verification. Recorded results are
-reusable only with known equivalent relevant inputs. Version-only changes need new packages and package/version
-checks, not wholesale behavioral reruns; changed product, dependency or build
-inputs invalidate affected results. Build-to-tag differences retain the full
-build SHA and digest and require a verified non-artifact explanation. Applicable
-failures need diagnosis-supported disposition, not an inferred pass from a later
-rerun. The [release procedure](release.md) records checks, limitations and reuse
-rationale; this specification is not an execution record.
+- Tests cover configuration, tabs and window lifecycle, PTY startup, resize and
+  output flow, Unicode, scrollback, Kitty images, local-image reads and overlay
+  cleanup, link gestures, clipboard policy, title sanitization, logging, IPC
+  boundaries, and packaged startup.
+- Chromium tests keep the production CSP, context isolation, disabled Node
+  integration, and platform sandbox policy.
+- macOS native verification uses temporary HOME/XDG/profile paths, which do not
+  isolate per-bundle OS preferences (see
+  [side effects on your desktop](development.md#side-effects-on-your-desktop)).
+- Linux package verification checks AppRun bytes and the available installed
+  launch modes against the fixed no-sandbox policy. It installs the exact helper
+  but removes the fixture home instead of running the helper's `uninstall`;
+  separate helper tests cover uninstall.
+- Windows exact-installer verification needs an explicitly authorized
+  disposable VM and a literal CLI opt-in
+  ([ADR 0023](adr/0023-verify-exact-nsis-only-in-authorized-disposable-vms.md)).
+  `/D=` changes the destination without isolating old-version removal,
+  registration, shortcuts, or processes. Verification refuses unsafe or unknown
+  installation state. Only its newly created transaction directory is bound to a
+  native long path with matching object identity before NSIS arguments are
+  built; both path spellings keep the original reparse/process/cache
+  inspections. Foreign registration or command ownership is not normalized.
+  Ownership-checked cleanup preserves user data and is part of full
+  verification; unpacked-only diagnostics are partial.
+- Release verification keeps behavioral tests, native builds, exact-artifact
+  checks, and publication separate. Each artifact is verified against its own
+  identity and checksum: natively by default, or under the ADR 0034 emulation
+  exception or the ADR 0036 build-only lanes, with limits recorded. Build-only
+  checks never claim full verification.
+- Results are reused only when the relevant inputs are known to be equivalent.
+  Version-only changes need new packages and package/version checks, not
+  wholesale behavioral reruns; changed product, dependency, or build inputs
+  invalidate the affected results. Applicable failures need a diagnosis-supported disposition, not an inferred pass from a
+  later rerun. The [release procedure](release.md) records checks, limitations,
+  and reuse; this specification is not an execution record.
 
 The [ADRs](adr/) explain architectural choices.
