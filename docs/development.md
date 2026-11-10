@@ -791,10 +791,9 @@ architecture/deployment floor and packaged Node-mode store/lease/bootstrap resol
 final hashes are recorded in `.scratch/extensions-package.json`; native bytes
 may differ after signing, but JavaScript must match exactly. Both macOS and Linux
 ARM64 run Files no-clobber move/conflict checks. The same macOS addon now links
-Foundation for trash; inspection checks its export and root refusal only. Actual
-recoverable Trash semantics require the separate assigned
-[native trash fixture](files-development-preview.md#build-and-evidence-boundary),
-whose bounded exact-package evidence is recorded there. These probes are not full macOS Files,
+Foundation for trash; inspection checks its export and root refusal only. Earlier recoverable
+Trash evidence is recorded in the
+[Files evidence boundary](files-development-preview.md#build-and-evidence-boundary). These probes are not full macOS Files,
 backend activation, production platform admission or Snippets qualification.
 
 The retained

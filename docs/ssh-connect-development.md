@@ -176,58 +176,27 @@ unexplained. Synthetic input, controlled consent and extracted-AppImage executio
 not qualify physical input, real SSH/authentication, FUSE/helper installation,
 compositor behavior, a downloaded public stable host or every admitted version.
 
-On an assigned idle ordinary-user Linux ARM64 guest, reuse the opt-in
-`test/integration/ssh-packaged.test.ts` with absolute `OMXTERM_SSH_PACKAGED_APPIMAGE`,
-`ARCHIVE`, `EVIDENCE` paths and `APPIMAGE_SHA256`, `ARCHIVE_SHA256`, `VERSION`
-(all names prefixed `OMXTERM_SSH_PACKAGED_`). For the bounded public-only path,
-also set `OMXTERM_SSH_PACKAGED_CATALOG=public` and
-`OMXTERM_SSH_PACKAGED_CATALOG_SHA256` to the promoted catalog's exact digest.
+The exact-package `ssh-packaged` harness behind these checkpoints was removed;
+it is in Git history.
+
+### Packaged SSH smoke
+
+`test/integration/ssh-smoke-packaged.test.ts` qualifies an SSH Connect archive on
+a published host, on Linux ARM64 and macOS ARM64. It launches the packaged app
+with an isolated home that has one alias in `~/.ssh/config` and a fake `ssh`
+first on `PATH`. It installs the archive through **Settings → Extensions →
+Install local .omxext…**, picks the alias, and checks the argv the fake client
+received. Nothing touches the network. It runs in seconds:
 
 ```sh
-npm test -- test/integration/ssh-packaged.test.ts
+OMXTERM_SSH_SMOKE_APP=/absolute/OMXTerm-X.Y.Z-arm64.AppImage \
+OMXTERM_SSH_SMOKE_ARCHIVE=/absolute/ssh-X.Y.Z.omxext \
+npx vitest run test/integration/ssh-smoke-packaged.test.ts
 ```
 
-`OMXTERM_SSH_PACKAGED_EXTENSION_VERSION` selects the expected archive version
-(default `0.1.0`). With version `0.3.0` or `0.3.1`, optional
-`OMXTERM_SSH_PACKAGED_APPEARANCE=1` adds normal/narrow dark/light opacity and
-visible/hidden language checks before the synthetic Connect campaign. It requires
-an assigned single-screen desktop lane, retains captures for visual inspection,
-and does not establish native blur in a noncomposited nested lane. It cannot be
-combined with public-catalog mode. Exact-package appearance/language qualification
-is separate from public catalog consumption; neither a source build nor the
-historical compact 0.2.0 rendering campaign proves a new archive's Connect behavior.
-The explicit `0.24.0` / `0.3.1` pair also checks captured trust identity and the
-visible host header, named child region and controls, retaining separate host and
-child images for inspection. This does not qualify other compatible host versions.
-
-The public mode verifies a separate fixed-endpoint readback, then the unchanged
-packaged app independently browses the production endpoint and installs the SSH
-card with captured-digest consent. It checks dormant installation, activation,
-catalog Reinstall/actual backend retirement, fresh activation, Disable/Uninstall,
-the same local PTY/Surface and normal joined Quit. It does not run the longer
-synthetic argv/exit/keyboard campaign or execute an SSH client. No endpoint
-substitution, custom CA or source product runtime is used. Native consent and
-input are fixture-controlled; inspect the retained catalog/terminal captures.
-Catalog captures require the selected, visible Extensions page and exact enabled
-SSH action, with the title/action inside the clipped viewport. One three-second
-deadline bounds two renderer-frame opportunities, capture, target revalidation
-and action dispatch. The fixture saves the exact checked image before clicking;
-unrelated incompatible cards do not block readiness. These ordering and geometry
-checks do not prove compositor presentation: inspect the saved pixels for the
-expected SSH version and Install/Reinstall action before accepting visual evidence.
-For the `0.24.0` / `0.3.1` pair, passive observations bind the actual endpoint
-bytes, captured selection, public archive bytes and exact Official trust warning
-and generations; no request or response transport is substituted. The supervisor
-pass covers scenario and owned shutdown only: truncated native stderr fails this
-checkpoint, and complete stderr requires separate manual review. Unknown
-diagnostics, including the observed #746 presentation rejection, are not waived.
-A locally supplied host is not a publicly downloaded stable host.
-
-Failure receipts/profiles are retained; successful cleanup does not turn a failed
-scenario into a pass. Existing process ownership and exact AppImage/asar checks
-remain in force. Without the public-mode inputs the original synthetic campaign
-is unchanged. Public execution belongs after asset publication and fixed-catalog
-promotion, not during source preparation.
+As with the [packaged Files smoke](files-development-preview.md#packaged-files-smoke),
+on macOS point the app variable at an `OMXTerm.app` copied out of the DMG, and
+run it from a logged-in desktop session.
 
 ## macOS ARM64 exact-pair checkpoint
 

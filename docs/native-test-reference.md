@@ -41,9 +41,7 @@ paths distinguish these cases:
 | Restty host integration/oracles/output                                                           | [`restty-host-main`](../test/fixtures/restty-host-main.ts) injects clipboard counters, synthetic reads and a selection observer, not Electron clipboard I/O. Its [PowerShell Ctrl+V isolation](#restty-host-powershell-isolation) is shell-local, not a host/guest clipboard-sharing control.                                                                                                 |
 
 The two real writers above are part of default discovery on their listed
-platforms, not opt-in suites. The opt-in
-[SSH fixture](../test/fixtures/ssh-packaged.cjs) also mutates the real clipboard;
-apply the same boundary before those separately authorized runs. Reinspect the
+platforms, not opt-in suites. Reinspect the
 selected fixture/composition when its wiring changes rather than assuming this
 map covers future or custom entry points. Use synthetic fixture inputs only and
 retain control metadata/test outcomes, never clipboard-content evidence.

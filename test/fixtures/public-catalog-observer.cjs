@@ -7,53 +7,6 @@ const endpoint =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
 const channel = "omxterm:extensions";
 
-function startSshPublicObservation(options) {
-  const { assertPublicSshTrust } = require("./ssh-packaged-header.cjs");
-  return startPublicCatalogObservation({
-    ...options,
-    release: {
-      id: "omxterm.ssh",
-      name: "SSH Connect",
-      version: "0.3.1",
-      targets: ["linux-arm64"],
-      additionalTargetSets: [["linux-arm64", "darwin-arm64"]],
-      archiveUrl:
-        "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext",
-      archiveBytes: 11606,
-      label: "SSH",
-      generations: [0, 1],
-      forbidFallback: true,
-      verifyTrust: (prompt, digest, _index, generation) =>
-        assertPublicSshTrust(prompt, digest, generation),
-    },
-  });
-}
-
-function startFilesPublicObservation(options) {
-  assert.equal(
-    options.archiveSha256,
-    "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
-    "original Files 0.6.0 digest",
-  );
-  assert.equal(typeof options.verifyTrust, "function");
-  return startPublicCatalogObservation({
-    ...options,
-    release: {
-      id: "omxterm.files",
-      name: "Files — ARM64 preview",
-      version: "0.6.0",
-      targets: ["linux-arm64"],
-      archiveUrl:
-        "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.6.0/files-0.6.0.omxext",
-      archiveBytes: 17331,
-      label: "Files",
-      generations: [0, 1, 5],
-      forbidFallback: true,
-      verifyTrust: options.verifyTrust,
-    },
-  });
-}
-
 function startSnippetsUpdateObservation(options) {
   assert.equal(
     options.archiveSha256,
@@ -538,45 +491,8 @@ function sealPublicObservation(
     throw new AggregateError(failures, "Public observation shutdown failed");
 }
 
-// Serialized into the production Settings renderer; do not match unrelated rows.
-function sshPublicManagementState(document, generation, state, local, action) {
-  const rows = [
-    ...document.querySelectorAll(".extensions-panel section"),
-  ].filter((row) =>
-    [...row.querySelectorAll(":scope > p")].some((paragraph) =>
-      paragraph.textContent.startsWith("omxterm.ssh · generation "),
-    ),
-  );
-  if (rows.length !== 1 || rows[0].closest("[hidden], [inert]")) return false;
-  const row = rows[0];
-  const text = [...row.querySelectorAll(":scope > p")].find((paragraph) =>
-    paragraph.textContent.startsWith("omxterm.ssh · generation "),
-  )?.textContent;
-  if (
-    text !==
-    `omxterm.ssh · generation ${generation} · ${state} · local ${local} · other instances unknown`
-  )
-    return false;
-  if (
-    state !== "uninstalled" &&
-    row.querySelector(":scope > h3")?.textContent !== "SSH Connect · 0.3.1"
-  )
-    return false;
-  if (!action) return true;
-  const buttons = [...row.querySelectorAll("button")].filter(
-    (button) =>
-      button.textContent === action &&
-      !button.disabled &&
-      !button.closest("[hidden], [inert]"),
-  );
-  return buttons.length === 1;
-}
-
 module.exports = {
   startPublicCatalogObservation,
-  startSshPublicObservation,
-  startFilesPublicObservation,
   startSnippetsUpdateObservation,
   sealPublicObservation,
-  sshPublicManagementState,
 };
