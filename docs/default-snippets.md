@@ -3,8 +3,8 @@
 Since **OMXTerm 0.25.0**, new **packaged** profiles on Linux ARM64/x64, macOS ARM64
 and Windows ARM64 try once to install **Snippets 0.1.0**, enabled but inactive
 until opened. Existing profiles and disabled/removed choices stay intact; Windows
-x64 keeps built-in Snippets. The [0.25.0 release limits](snippets-migration.md#stable-0250-release-disposition)
-include unresolved Windows public-install failures. The policy below also applies
+x64 keeps built-in Snippets. The [availability note](snippets-availability.md#windows-arm64-known-issue)
+summarizes unresolved Windows ARM64 public-install failures. The policy below also applies
 to current source; 0.24.0 did not have this default.
 
 ## Enrollment and the permanent attempt
