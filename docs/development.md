@@ -480,12 +480,10 @@ schema or report-only policy for numerical differences.
 `--fail-on-invalid` additionally makes **data-integrity** findings exit non-zero: a missing metric, a stream repetition that did not complete,
 an arrival below the declared payload, a failed keystroke observation, an
 unverified idle window, an unapplied setting, an unstable grid, a missing
-extension-runtime window, or an unexpected skip when a baseline exists. A short
-sample is a lie whether or not anything is compared, so the native lanes
-(`npm run check`, `npm run check:linux`) call
-`npm run perf:benchmark -- --fail-on-invalid`. On Windows the benchmark is not
-part of `check:win` (installer lane), so the Windows claim rests on code and unit
-tests, not a native lane. Run it on one unlocked, idle desktop at a time.
+extension-runtime window, or an unexpected skip when a baseline exists. The
+benchmark is opt-in: no check or release lane runs it, because its baseline is
+tied to the machine that recorded it. Run it on one unlocked, idle desktop at a
+time.
 
 ```sh
 npm run build                # the benchmark measures the built application

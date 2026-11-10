@@ -104,9 +104,6 @@ describe("release script orchestration", () => {
     expect(steps.filter((step) => step === "node build.mjs")).toHaveLength(1);
     expect(steps).toEqual([
       ...commands("check:portable"),
-      // The native lane runs the performance benchmark before packaging. It
-      // reports numbers; --fail-on-invalid only rejects an invalid observation.
-      "npm run perf:benchmark -- --fail-on-invalid",
       ...packagerCommands[platform as "mac" | "linux"],
       "node scripts/verify-packaged-app.mjs",
     ]);
