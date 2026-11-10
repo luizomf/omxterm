@@ -71,7 +71,7 @@ it
       expect(receipt.manifest).toEqual(sourceManifest);
       expect(receipt.manifest).toMatchObject({
         version: "0.8.0",
-        engines: { omxterm: ">=0.25.0-dev.20", api: "0.1.x" },
+        engines: { omxterm: ">=0.26.0", api: "0.1.x" },
         capabilities: ["terminal.insertPath.v1"],
       });
       const page = await readFile(path.join(extracted, "view.js"), "utf8");

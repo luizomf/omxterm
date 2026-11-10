@@ -52,7 +52,7 @@ describe("historical Files 0.4 catalog", () => {
     // Source advances independently; never relabel the published 0.4 bytes.
     expect(manifest.id).toBe(files.id);
     expect(manifest.version).toBe("0.8.0");
-    expect(manifest.engines.omxterm).toBe(">=0.25.0-dev.20");
+    expect(manifest.engines.omxterm).toBe(">=0.26.0");
     expect(manifest.capabilities).toEqual(["terminal.insertPath.v1"]);
     expect(files.name).toBe("Files — Linux ARM64 preview");
   });

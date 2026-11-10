@@ -1,0 +1,174 @@
+// Loaded into a packaged OMXTerm main process through its loopback inspector.
+// Drives the real UI: install Files from a local archive, list a directory,
+// and insert a path into the terminal with Shift+Enter.
+const assert = require("node:assert/strict");
+const { readFile } = require("node:fs/promises");
+const path = require("node:path");
+const { BrowserWindow, Menu, app, dialog, webContents } = require("electron");
+
+async function until(check, label, timeout = 20000) {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (await check()) return;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  throw new Error(`Timed out: ${label}`);
+}
+
+function menu(label) {
+  const find = (items) => {
+    for (const item of items) {
+      if (item.label.replace(/…$/, "") === label) return item;
+      const nested = item.submenu && find(item.submenu.items);
+      if (nested) return nested;
+    }
+  };
+  const item = find(Menu.getApplicationMenu().items);
+  assert.ok(item, `menu ${label}`);
+  item.click(item, BrowserWindow.getAllWindows()[0], {});
+}
+
+function click(contents, label) {
+  return contents.executeJavaScript(`(() => {
+    const button = [...document.querySelectorAll('button')].find(b => (b.textContent === ${JSON.stringify(label)} || b.getAttribute('aria-label') === ${JSON.stringify(label)}) && !b.closest('[hidden]'));
+    if (!button || button.disabled) return false;
+    button.click();
+    return true;
+  })()`);
+}
+
+const filesView = () =>
+  webContents
+    .getAllWebContents()
+    .find(
+      (view) =>
+        !view.isDestroyed() && view.getURL().startsWith("omx-extension://"),
+    );
+
+const shellQuote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
+
+async function run({ archive, directory, fileName, marker }) {
+  const window = BrowserWindow.getAllWindows()[0];
+  assert.ok(window, "application window");
+  const core = window.webContents;
+  const js = (code) => core.executeJavaScript(code);
+  const consents = [];
+  dialog.showOpenDialog = async () => ({
+    canceled: false,
+    filePaths: [archive],
+  });
+  dialog.showMessageBox = async (...args) => {
+    const prompt = args.at(-1);
+    consents.push(prompt.message);
+    // The trust dialog's second button installs.
+    return { response: 1, checkboxChecked: false };
+  };
+
+  async function type(text, enter) {
+    core.focus();
+    await js("document.querySelector('.terminal-surface')?.focus()");
+    await core.insertText(text);
+    if (enter) {
+      core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+      core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    }
+  }
+  const read = (file) => readFile(file, "utf8").catch(() => undefined);
+
+  await until(
+    () => js("!!document.querySelector('.terminal-surface canvas')"),
+    "terminal surface",
+  );
+  // Prove the shell is reading input before the real check.
+  const ready = marker + ".ready";
+  await type(`printf ok > ${shellQuote(ready)}`, true);
+  await until(async () => (await read(ready)) === "ok", "shell reads input");
+
+  menu("Settings");
+  await until(
+    () => js("!!document.querySelector('#settings-tab-extensions')"),
+    "Settings",
+  );
+  await js("document.querySelector('#settings-tab-extensions').click()");
+  await until(() => click(core, "Install local .omxext…"), "install button");
+  await until(
+    () =>
+      js(
+        "document.querySelector('.extensions-panel')?.textContent.includes('omxterm.files · generation 1')",
+      ),
+    "Files installed",
+  );
+  assert.equal(consents.length, 1, "one trust prompt");
+  await js("document.querySelector('.settings-close')?.click()");
+  await until(
+    () => js("!document.querySelector('.settings-dialog')"),
+    "Settings closed",
+  );
+
+  menu("Files");
+  await until(() => !!filesView(), "Files view");
+  const view = filesView();
+  const listed = path.join(directory, fileName);
+  await until(
+    () =>
+      view.executeJavaScript(
+        "document.querySelector('.entries')?.getAttribute('aria-busy') === 'false'",
+      ),
+    "initial listing",
+  );
+  await view.executeJavaScript(`(() => {
+    const input = document.querySelector('form.location input');
+    input.value = ${JSON.stringify(directory)};
+    document.querySelector('form.location').requestSubmit();
+  })()`);
+  const rowQuery = `[...document.querySelectorAll('.file-row[role=treeitem]')].find(row => row.dataset.path === ${JSON.stringify(listed)})`;
+  await until(() => view.executeJavaScript(`!!${rowQuery}`), "listed file row");
+  const rows = await view.executeJavaScript(
+    "[...document.querySelectorAll('.file-row[role=treeitem]')].map(row => row.dataset.path)",
+  );
+
+  // Start a command, insert the path at the prompt, then finish the command.
+  await type("printf '%s' ", false);
+  await view.executeJavaScript(`(() => {
+    const row = ${rowQuery};
+    row.click();
+    row.focus();
+  })()`);
+  view.focus();
+  view.sendInputEvent({
+    type: "keyDown",
+    keyCode: "Enter",
+    modifiers: ["shift"],
+  });
+  view.sendInputEvent({
+    type: "keyUp",
+    keyCode: "Enter",
+    modifiers: ["shift"],
+  });
+  await until(
+    () =>
+      view.executeJavaScript(
+        "![...document.querySelectorAll('[role=status]')].some(n => !n.hidden && n.textContent.startsWith('Inserting path'))",
+      ),
+    "insertion settled",
+  );
+  const notices = await view.executeJavaScript(
+    "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
+  );
+  await type(` > ${shellQuote(marker)}`, true);
+  await until(
+    async () => (await read(marker)) !== undefined,
+    "marker",
+    10000,
+  ).catch(() => {});
+  return { consents, rows, notices, inserted: await read(marker) };
+}
+
+function quit() {
+  setImmediate(() => app.quit());
+  return true;
+}
+
+const windows = () => BrowserWindow.getAllWindows().length;
+
+module.exports = { run, quit, windows };
