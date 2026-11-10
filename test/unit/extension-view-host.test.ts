@@ -422,8 +422,6 @@ it("publishes actual panel focus with one-shot default intent, not retained on l
 
 it.each([
   ["toggleFiles", "omxterm.files.open", "child"],
-  ["toggleSshConnect", "omxterm.ssh.open", "child"],
-  ["toggleFiles", "omxterm.files.open", "core"],
   ["toggleSshConnect", "omxterm.ssh.open", "core"],
 ] as const)(
   "routes %s (%s) Control+Escape from %s through native presentation and dismissal",

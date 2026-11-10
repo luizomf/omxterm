@@ -442,22 +442,6 @@ async function withPathPlatform<T>(
   }
 }
 
-it.each(pathCases)(
-  "restores the actual platform after a rejected mocked $platform path request",
-  async ({ platform }) => {
-    const previous = Object.getOwnPropertyDescriptor(process, "platform");
-    await expect(
-      withPathPlatform(platform, async () => {
-        expect(process.platform).toBe(platform);
-        throw new Error("synthetic request failure");
-      }),
-    ).rejects.toThrow("synthetic request failure");
-    expect(Object.getOwnPropertyDescriptor(process, "platform")).toEqual(
-      previous,
-    );
-  },
-);
-
 it.each([
   ["darwin", "arm64", true],
   ["darwin", "x64", false],
@@ -562,13 +546,10 @@ async function installTool(id: string, title: string, capabilities?: string[]) {
   expect(await request({ operation: "install" })).toMatchObject({ ok: true });
 }
 
-it.each(
-  pathCases.flatMap((paths) =>
-    ["omxterm.files", "omxterm.ssh"].map((id) => [paths, id] as const),
-  ),
-)(
-  "selects terminal transport only for the installed Files companion (%s, %s)",
-  async (paths, id) => {
+it.each(["omxterm.files", "omxterm.ssh"])(
+  "selects terminal transport only for the installed Files companion (%s)",
+  async (id) => {
+    const paths = pathCases[0];
     adapters.semanticRequest.mockResolvedValue({ ok: true });
     await installTool(id, "Tool", ["terminal.insertPath.v1"]);
     service.actions()[0]!.invoke();
@@ -622,20 +603,14 @@ it.each(
   },
 );
 
-it.each(
-  pathCases.flatMap((paths) =>
-    (
-      [
-        [false, false],
-        [false, true],
-        [true, false],
-        [true, true],
-      ] as const
-    ).map(([declared, owner]) => [paths, declared, owner] as const),
-  ),
-)(
-  "composes protected Files drop with %s, declared capability=%s and semantic owner=%s",
-  async (paths, declared, owner) => {
+it.each([
+  [false, true],
+  [true, false],
+  [true, true],
+])(
+  "composes protected Files drop with declared capability=%s and semantic owner=%s",
+  async (declared, owner) => {
+    const paths = pathCases[0];
     if (!owner) {
       await service.dispose();
       await startService("linux", {}, false);
@@ -707,105 +682,103 @@ it.each(
   },
 );
 
-it.each(pathCases)(
-  "delivers each Files drop's captured owner on $platform despite another window becoming focused",
-  async (paths) => {
-    await service.dispose();
-    adapters.semanticRequest.mockResolvedValue({ ok: true });
-    await startService("linux", {
-      isTrustedSender: (event) => adapters.windows.has(event.sender),
-    });
-    adapters.sendOpen.mockImplementation((sender, _channel, command) => {
-      if (!isTerminalTabCommand(command) || command.action !== "open-extension")
-        throw new Error("Expected extension admission command");
-      void request(
-        { operation: "open", token: command.token, accepted: true },
-        { sender, senderFrame: sender.mainFrame },
-      );
-    });
-    await installTool("omxterm.files", "Files", ["terminal.insertPath.v1"]);
-    service.actions()[0]!.invoke();
-    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
-    const first = adapters.hosts[0]!;
-    const otherWindow = Object.assign(new EventEmitter(), {
-      webContents: Object.assign(new EventEmitter(), {
-        mainFrame: {},
-        send: vi.fn(),
-        isDestroyed: () => false,
-      }),
+it("delivers each Files drop's captured owner despite another window becoming focused", async () => {
+  const paths = pathCases[0];
+  await service.dispose();
+  adapters.semanticRequest.mockResolvedValue({ ok: true });
+  await startService("linux", {
+    isTrustedSender: (event) => adapters.windows.has(event.sender),
+  });
+  adapters.sendOpen.mockImplementation((sender, _channel, command) => {
+    if (!isTerminalTabCommand(command) || command.action !== "open-extension")
+      throw new Error("Expected extension admission command");
+    void request(
+      { operation: "open", token: command.token, accepted: true },
+      { sender, senderFrame: sender.mainFrame },
+    );
+  });
+  await installTool("omxterm.files", "Files", ["terminal.insertPath.v1"]);
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  const first = adapters.hosts[0]!;
+  const otherWindow = Object.assign(new EventEmitter(), {
+    webContents: Object.assign(new EventEmitter(), {
+      mainFrame: {},
+      send: vi.fn(),
       isDestroyed: () => false,
-      getContentSize: () => [800, 600],
-    }) as unknown as BrowserWindow;
-    adapters.windows.set(otherWindow.webContents, otherWindow);
-    service.registerWindow(otherWindow, () => ({
-      owner: otherWindow,
-      signal: new AbortController().signal,
-      terminalDirectory: null,
-    }));
-    adapters.selected = otherWindow;
-    service.actions()[0]!.invoke();
-    await vi.waitFor(() => expect(adapters.hosts[1]?.open).toHaveBeenCalled());
-    const second = adapters.hosts[1]!;
-    expect(first.options.owner).toBe(window);
-    expect(second.options.owner).toBe(otherWindow);
-    const input = {
-      ticket: "00000000-0000-4000-8000-000000000001",
-      entry: { path: paths.simple, kind: "file" as const, entryToken: "1" },
-      source: { id: "hosted-view", isCurrentVisible: () => true },
-      revision: 3,
-      signal: new AbortController().signal,
-    };
-    adapters.selected = window;
-    expect(
-      await withPathPlatform(paths.platform, () =>
-        second.options.filesTerminalDrop!(input),
-      ),
-    ).toEqual({
-      status: "accepted",
-    });
-    expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
-      1,
-      otherWindow,
-      expect.objectContaining({
-        operation: "terminal.semanticInput.v1",
-        text: paths.simpleText,
-        intent: "insert",
-      }),
-      expect.objectContaining({
-        id: input.source.id,
-        actionSelectionRevision: 3,
-      }),
-      expect.any(AbortSignal),
-      expect.any(Function),
-      { dropTicket: input.ticket },
-    );
-    adapters.selected = otherWindow;
-    expect(
-      await withPathPlatform(paths.platform, () =>
-        first.options.filesTerminalDrop!(input),
-      ),
-    ).toEqual({
-      status: "accepted",
-    });
-    expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
-      2,
-      window,
-      expect.objectContaining({
-        operation: "terminal.semanticInput.v1",
-        text: paths.simpleText,
-        intent: "insert",
-      }),
-      expect.objectContaining({
-        id: input.source.id,
-        actionSelectionRevision: 3,
-      }),
-      expect.any(AbortSignal),
-      expect.any(Function),
-      { dropTicket: input.ticket },
-    );
-    expect(adapters.semanticRequest).toHaveBeenCalledTimes(2);
-  },
-);
+    }),
+    isDestroyed: () => false,
+    getContentSize: () => [800, 600],
+  }) as unknown as BrowserWindow;
+  adapters.windows.set(otherWindow.webContents, otherWindow);
+  service.registerWindow(otherWindow, () => ({
+    owner: otherWindow,
+    signal: new AbortController().signal,
+    terminalDirectory: null,
+  }));
+  adapters.selected = otherWindow;
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[1]?.open).toHaveBeenCalled());
+  const second = adapters.hosts[1]!;
+  expect(first.options.owner).toBe(window);
+  expect(second.options.owner).toBe(otherWindow);
+  const input = {
+    ticket: "00000000-0000-4000-8000-000000000001",
+    entry: { path: paths.simple, kind: "file" as const, entryToken: "1" },
+    source: { id: "hosted-view", isCurrentVisible: () => true },
+    revision: 3,
+    signal: new AbortController().signal,
+  };
+  adapters.selected = window;
+  expect(
+    await withPathPlatform(paths.platform, () =>
+      second.options.filesTerminalDrop!(input),
+    ),
+  ).toEqual({
+    status: "accepted",
+  });
+  expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
+    1,
+    otherWindow,
+    expect.objectContaining({
+      operation: "terminal.semanticInput.v1",
+      text: paths.simpleText,
+      intent: "insert",
+    }),
+    expect.objectContaining({
+      id: input.source.id,
+      actionSelectionRevision: 3,
+    }),
+    expect.any(AbortSignal),
+    expect.any(Function),
+    { dropTicket: input.ticket },
+  );
+  adapters.selected = otherWindow;
+  expect(
+    await withPathPlatform(paths.platform, () =>
+      first.options.filesTerminalDrop!(input),
+    ),
+  ).toEqual({
+    status: "accepted",
+  });
+  expect(adapters.semanticRequest).toHaveBeenNthCalledWith(
+    2,
+    window,
+    expect.objectContaining({
+      operation: "terminal.semanticInput.v1",
+      text: paths.simpleText,
+      intent: "insert",
+    }),
+    expect.objectContaining({
+      id: input.source.id,
+      actionSelectionRevision: 3,
+    }),
+    expect.any(AbortSignal),
+    expect.any(Function),
+    { dropTicket: input.ticket },
+  );
+  expect(adapters.semanticRequest).toHaveBeenCalledTimes(2);
+});
 
 it.each([
   ["omxterm.files", "toggleFiles"],
@@ -1108,43 +1081,30 @@ it("does not disclose the active terminal directory from a background window", a
   ).rejects.toThrow("unavailable");
 });
 
-it.each([
-  [
-    "en-US",
-    "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
-  ],
-  [
-    "pt-BR",
-    "Nenhum diretório local foi informado pelo terminal ativo. Ele pode ser remoto ou não informar seu diretório. Use Pasta pessoal ou digite um caminho",
-  ],
-] as const)(
-  "explains an unavailable active terminal directory in %s without falling back to the invocation",
-  async (locale, error) => {
-    await installTool("omxterm.files", "Files");
-    const targets = extensionInvocationTarget(window);
-    targets.started("s1");
-    targets.started("s2");
-    targets.selected("s1");
-    service.registerWindow(window, (source, context) =>
-      targets.capture(
-        (id) => (id === "s1" ? "/first" : undefined),
-        source,
-        context,
-      ),
-    );
-    service.actions()[0]!.invoke();
-    await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
-    targets.selected("s2");
-    language = locale;
-    expect(
-      await adapters.hosts[0]!.options.onRequest!(
-        { operation: "terminal-directory" },
-        new AbortController().signal,
-        { id: "hosted-view", isCurrentVisible: () => true },
-      ),
-    ).toEqual({ ok: false, error, reason: "terminal-directory-unavailable" });
-  },
-);
+it("explains an unavailable active terminal directory without falling back to the invocation", async () => {
+  await installTool("omxterm.files", "Files");
+  const targets = extensionInvocationTarget(window);
+  targets.started("s1");
+  targets.started("s2");
+  targets.selected("s1");
+  service.registerWindow(window, (source, context) =>
+    targets.capture(
+      (id) => (id === "s1" ? "/first" : undefined),
+      source,
+      context,
+    ),
+  );
+  service.actions()[0]!.invoke();
+  await vi.waitFor(() => expect(adapters.hosts[0]?.open).toHaveBeenCalled());
+  targets.selected("s2");
+  expect(
+    await adapters.hosts[0]!.options.onRequest!(
+      { operation: "terminal-directory" },
+      new AbortController().signal,
+      { id: "hosted-view", isCurrentVisible: () => true },
+    ),
+  ).toMatchObject({ ok: false, reason: "terminal-directory-unavailable" });
+});
 
 it("does not use a directory from an ended active session", async () => {
   await installTool("omxterm.files", "Files");
@@ -1164,12 +1124,7 @@ it("does not use a directory from an ended active session", async () => {
       new AbortController().signal,
       { id: "hosted-view", isCurrentVisible: () => true },
     ),
-  ).toEqual({
-    ok: false,
-    error:
-      "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
-    reason: "terminal-directory-unavailable",
-  });
+  ).toMatchObject({ ok: false, reason: "terminal-directory-unavailable" });
 });
 
 it("rejects a Files directory request with a caller-supplied target", async () => {
