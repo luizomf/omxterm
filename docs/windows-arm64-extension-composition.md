@@ -22,10 +22,6 @@ Windows ARM64 uses the optional [Snippets extension](snippets-migration.md).
 - **Windows x64.** x64 builds and packages the same runtime and lease addon but
   admits no extension management, and keeps built-in Snippets.
 
-<a id="packaged-runtime-checkpoint"></a>
-<a id="packaged-gui-composition-checkpoint"></a>
-<a id="exact-nsis-installer-checkpoint"></a>
-
 ## Packaging and verification
 
 Packaging unpacks `extension-leases.node` from the ASAR and leaves out the
@@ -39,8 +35,6 @@ Use `npm run package:verify -- --windows-unpacked-only` for the unpacked app,
 or the full `npm run check:win` flow for the NSIS installer. Full NSIS
 verification installs and uninstalls the real package, so run it only in a
 disposable VM; see [Windows ARM64 and x64](release.md#windows-arm64-and-x64).
-
-<a id="evidence-boundary"></a>
 
 ## Installed-package production fixture
 

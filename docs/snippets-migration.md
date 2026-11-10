@@ -7,11 +7,6 @@ selected terminal. [ADR 0044](adr/0044-migrate-snippets-without-changing-termina
 records why it moved out of the core. The user-facing summary is the
 [Snippets availability note](snippets-availability.md).
 
-<a id="linux-x64-source-transition"></a>
-<a id="macos-arm64-source-transition"></a>
-<a id="windows-arm64-source-transition"></a>
-<a id="macos-arm64-published-preview"></a>
-
 ## Which hosts use the extension
 
 `usesOptionalSnippets()` in `src/shared/snippets-mode.ts` is the single platform
@@ -48,8 +43,6 @@ panel next to Files and SSH Connect.
 - **Terminal delivery.** The page never touches the PTY. It sends exact text to
   the core, which owns the target, preview and paste. See
   [Terminal-input rules](#terminal-input-rules).
-
-<a id="existing-catalogs-and-shortcuts"></a>
 
 ## Catalog file and shortcuts
 
@@ -157,8 +150,6 @@ of each target and check: trust prompt and dormant install, Toggle Snippets
 with an existing catalog, Insert and Run of one entry, preview Cancel, and
 disable/uninstall with `snippets.yaml` unchanged and the terminal still usable.
 
-<a id="linux-x64-public-catalog-checkpoint"></a>
-
 ## Publish and install
 
 Snippets ships as its own `ext-snippets-vX.Y.Z` prerelease. Follow
@@ -191,9 +182,6 @@ trust prompt:
 Approving the install enables the package but does not start its backend.
 Toggle Snippets is the activation step. Extension code is trusted code, not a
 sandbox.
-
-<a id="stable-0250-release-disposition"></a>
-<a id="windows-arm64-published-preview-and-catalog-candidate"></a>
 
 ## Known limits
 

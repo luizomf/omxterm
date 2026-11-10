@@ -11,8 +11,8 @@ The official extension catalog offers SSH Connect 0.3.1 on **Linux with ARM64
 (64-bit Arm) processors** and **Macs with Apple silicon**. This is a preview; other operating
 systems and processor types are not qualified. The documented checks used OMXTerm
 0.24.0. An installer compatibility check does not mean every app version or
-connection setup has been tested. See the [developer record](ssh-connect-development.md)
-for exact package versions and qualification limits.
+connection setup has been tested. See the [developer notes](ssh-connect-development.md)
+for how it is built and its current limits.
 
 ## Install and open it
 
@@ -93,4 +93,4 @@ output with an exit-code notice; that is an ended connection, not a live session
 Close that tab when finished reading.
 
 For installation and configuration behavior beyond these steps, see the
-[developer record](ssh-connect-development.md).
+[developer notes](ssh-connect-development.md).
