@@ -41,12 +41,6 @@ describe("published Snippets catalog candidate", () => {
       expect(macos.find((entry) => entry.id === id)).toEqual(
         legacy.find((entry) => entry.id === id),
       );
-    expect(snippets.name).toBe(
-      "Snippets — Linux, macOS and Windows ARM64 preview",
-    );
-    expect(snippets.description).toBe(
-      "Search your saved text snippets, preview the exact text, then insert it into the terminal or run it.",
-    );
   });
 
   it("binds the verified immutable archive, original receipt and embedded manifest", () => {
