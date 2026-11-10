@@ -295,7 +295,7 @@ the [Snippets guide](snippets-migration.md) and the concise
 [optional-tools availability summary](README.md#optional-tools), including
 built-in Windows x64 Snippets and preview limits on Linux/macOS ARM64.
 
-Choose **Insert** to send text to the selected terminal without adding Enter,
+Choose **Insert** to send text to the terminal without adding Enter,
 or **Run** to send it with Enter. **Preview** lets you review the text and
 choose either action. Preview captures its terminal target when opened and does
 not retarget if you switch tabs or panes. Multiline snippets can still run
