@@ -1036,8 +1036,8 @@ runtime ownership evidence is separate; no blocked Foundation call was proved
 cancellable. Published archives, receipts and catalog targets are unchanged.
 
 The package probe itself checks only the macOS trash export and root-path
-refusal, not a recoverable Trash operation. Follow the [macOS preference precautions](development.md#macos-preferences-and-native-verification)
-before packaged Electron probes. An assigned ordinary-user macOS ARM64
+refusal, not a recoverable Trash operation. Packaged Electron probes can change
+OS preferences; see [side effects on your desktop](development.md#side-effects-on-your-desktop). An ordinary-user macOS ARM64
 environment can run the prepared fixture with the bundled Electron:
 
 ```sh
@@ -1069,7 +1069,7 @@ requirements. Never treat source disappearance alone as recoverable trash proof.
 
 `test/fixtures/files-move-native.mjs <absolute-addon> [absolute-other-device-directory]`
 must run under the bundled Electron executable with `ELECTRON_RUN_AS_NODE=1`, as
-an ordinary Linux or macOS ARM64 user, inside an assigned disposable environment.
+an ordinary Linux or macOS ARM64 user, on a machine whose files you don't mind it touching (a VM is safest).
 The other-device directory defaults to `/dev/shm` on Linux and must be supplied
 explicitly on macOS. It must be writable and have a different device identity
 from the temporary source directory; the fixture owns only its newly created
@@ -1120,8 +1120,8 @@ fixture-controlled, not physical-dialog-widget qualification; terminal input is
 synthetic Chromium input. Native input-lane admission is verified separately.
 The bounded Files0.7 consumer requires a separate exact-host/archive receipt;
 preparation alone does not establish native qualification.
-On an assigned disposable Linux ARM64 guest, after the
-[desktop-service prerequisites](development.md#linux-desktop-services-and-native-verification),
+On a Linux ARM64 desktop (a VM is safest; see
+[side effects on your desktop](development.md#side-effects-on-your-desktop)),
 install locked dependencies and build the selected source with `npm ci` and
 `npm run build`. From that source directory, using its normal test-user desktop,
 bus, authentication and runtime environment:

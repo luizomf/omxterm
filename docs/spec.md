@@ -2578,11 +2578,8 @@ flow, Unicode, scrollback, Kitty images, local-image reads and overlay cleanup,
 link gestures, clipboard policy, title sanitization, logging, IPC boundaries and
 packaged startup. Chromium tests retain the production CSP, context isolation,
 disabled Node integration and platform sandbox policy. macOS native verification's
-temporary HOME/XDG/profile paths do not isolate per-bundle OS preferences; the
-[verification precautions](development.md#macos-preferences-and-native-verification)
-cover reuse of a suitable disposable guest account or scoped baseline and
-restoration when preferences must be preserved. The verifier does not
-automatically establish preference restoration. Linux package
+temporary HOME/XDG/profile paths do not isolate per-bundle OS preferences (see
+[side effects on your desktop](development.md#side-effects-on-your-desktop)). Linux package
 verification checks AppRun bytes and available installed launch modes against
 the fixed no-sandbox policy. It installs the exact helper but removes the
 fixture home rather than invoking that helper's `uninstall`; separate helper

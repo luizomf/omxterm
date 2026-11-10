@@ -674,11 +674,9 @@ be able to predict a miss from them:
   and private bytes are not interchangeable and absolute values are
   machine-specific.
 
-Run this only on an assigned disposable guest or held desktop, and follow the
-[Linux desktop-service prerequisites](#linux-desktop-services-and-native-verification)
-and [macOS preference precautions](#macos-preferences-and-native-verification):
-the fixture opens, focuses and blurs real windows repeatedly, and temporary
-HOME/XDG paths do not isolate OS-managed state. Leave the mouse and keyboard
+Run this on a desktop you aren't using (a VM is safest; see
+[side effects on your desktop](#side-effects-on-your-desktop)): the fixture opens,
+focuses and blurs real windows repeatedly. Leave the mouse and keyboard
 idle and run one graphical suite at a time.
 
 <a id="interruption-regressions"></a>
@@ -712,12 +710,9 @@ ARM64 complete native checks (and optional full x64 checks) run `check:portable`
 | Windows ARM64 | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
 | Windows x64   | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
 
-For macOS, apply the [preference precautions](#macos-preferences-and-native-verification)
-to graphical tests and packaged Electron probes, including FULL and inspection-only
-`package:verify` runs. Where preference preservation is required, a successful
-verifier result does not itself establish restoration. For Linux, apply the [desktop-service prerequisites](#linux-desktop-services-and-native-verification)
-before source/package launches; temporary profiles and headless execution do not
-establish account/runtime isolation.
+Packaged and source launches, including `package:verify` in FULL and
+inspection-only modes, have the same
+[side effects on your desktop](#side-effects-on-your-desktop) as graphical tests.
 
 > **Warning:** Full Windows verification (`check:win` or `package:verify` with `--disposable-vm-allow-omxterm-replacement`) runs the NSIS installer and can replace an existing OMXTerm installation on the machine. Run it only in a disposable VM with a recovery snapshot ([Windows release procedure](release.md#windows-arm64-and-x64)). To verify only the unpacked Windows app directory without running the installer, use:
 >
@@ -895,7 +890,7 @@ Linux packaged-wrapper controls: [fixture reference](native-test-reference.md#li
 
 ### Graphical fixture supervision
 
-Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They inherit the caller's desktop/bus/runtime; neither these helpers nor the Linux packaged-process helper provision or validate per-user service isolation. The launching owner must satisfy the [shared-clipboard prelaunch checks](#shared-clipboard-before-native-tests) and [Linux shared-resource prerequisites and preservation checks](#linux-desktop-services-and-native-verification).
+Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They run in the caller's own desktop session and don't isolate per-user services; see [side effects on your desktop](#side-effects-on-your-desktop).
 
 Within the fixture process/profile scope:
 

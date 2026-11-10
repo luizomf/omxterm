@@ -1,4 +1,4 @@
-// Explicit provisioning on the assigned disposable macOS desktop, never npm hooks.
+// Explicit provisioning on a macOS desktop (a VM is safest), never npm hooks.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";

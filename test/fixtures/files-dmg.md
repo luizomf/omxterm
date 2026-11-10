@@ -2,11 +2,11 @@
 
 The [bounded exact-pair checkpoint](../../docs/files-development-preview.md#files-050-macos-controlled-qualification)
 passed on 2026-10-31; this procedure itself is not a publication receipt or
-qualification of other inputs. Run only on the
-assigned ordinary-user unlocked, idle Aqua guest, after root-owned executable,
-artifact and ownership preflight. Follow the [macOS preference precautions](../../docs/development.md#macos-preferences-and-native-verification);
-the isolated paths do not protect the guest user's OS preferences. Never use the
-owner's desktop. No Quartz or physical-input qualification is selected.
+qualification of other inputs. Run it as an ordinary user on an unlocked, idle
+macOS desktop (a VM is safest), after the root-owned executable, artifact and
+ownership checks. It can change OS preferences; see
+[side effects on your desktop](../../docs/development.md#side-effects-on-your-desktop).
+No Quartz or physical-input qualification is selected.
 
 ## Separate immutable inputs
 
@@ -54,8 +54,8 @@ observer and input assertions. A new generic campaign framework is not introduce
 
 ## Files0.7 macOS Files-only mode
 
-On an assigned disposable, unlocked ordinary-user macOS ARM64 guest, after the
-[console and resource checks](../../docs/development.md#macos-console-admission),
+On an unlocked macOS ARM64 desktop as an ordinary user (a VM is safest), after
+reading [side effects on your desktop](../../docs/development.md#side-effects-on-your-desktop),
 use independently verified public inputs and a fresh private evidence lane:
 
 ```sh
