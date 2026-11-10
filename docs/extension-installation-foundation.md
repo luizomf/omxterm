@@ -206,7 +206,8 @@ binaries never enter Git. `yauzl` and `semver` are external runtime
 dependencies of this bundle.
 
 Native builds need Xcode Command Line Tools (macOS), a C++17 compiler (Linux),
-or a target-native MSVC shell with a matching Windows SDK and an absolute
+or MSVC with a matching Windows SDK (found through `vswhere` when no
+developer shell is active) and an absolute
 `OMXTERM_NODE_IMPORT_LIBRARY` pointing at an architecture-matched `node.exe`
 import library that exposes Node-API 8 (Windows). Nothing downloads toolchains.
 

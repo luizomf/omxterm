@@ -1,3 +1,14 @@
+# Check out text as LF on every platform so hashes, patches, and fixtures match.
+* text=auto eol=lf
+
+# Binary assets are never converted.
+*.icns binary
+*.png binary
+*.ttf binary
+*.wasm binary
+*.webp binary
+*.omxext binary
+
 # Preserve the accepted upstream OFL bytes, including its original whitespace.
 assets/fonts/OFL.txt -whitespace
 # Unified-diff context retains upstream blank-line prefixes.

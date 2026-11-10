@@ -57,14 +57,14 @@ Remove the directory when you're done. Don't remount `/tmp` or change system pol
 ### Windows
 
 1. Enable **Developer Mode** in Windows Settings before cloning or running tests so non-elevated processes can create symbolic links.
-2. Clone with `git clone -c core.autocrlf=false -c core.symlinks=true ...` to preserve LF line endings and repository symlinks.
+2. Clone with Git for Windows defaults. `.gitattributes` keeps text files LF whatever `core.autocrlf` says. Make sure symbolic links are enabled (Developer Mode plus `core.symlinks=true`, the Git for Windows default when it can create them).
 3. Install the Microsoft Visual C++ Redistributable that matches your machine (**ARM64** or **x64**). Without it, `npm ci` fails while loading native modules.
 4. Run desktop development and graphical tests as a normal (non-Administrator) user in an interactive desktop session, not a headless SSH session.
 
 `npm run build` (and so `npm run dev` and `check:portable`) compiles the extension lease addon on both ARM64 and x64. That needs:
 
-- Visual Studio C++ Build Tools with the native compiler, linker and Windows SDK libraries for your architecture. Open a native-tools developer shell as your normal user. From PowerShell, start it through `cmd.exe` (`call vcvarsall.bat arm64` or `x64`, then launch `powershell.exe`); running the batch file directly from PowerShell doesn't update its environment. Check that `$env:VSCMD_ARG_TGT_ARCH` matches, and that `where.exe cl.exe` and `where.exe link.exe` find the expected toolchain.
-- A trusted `node.lib` import library for your architecture from a compatible Node release, exporting the Node-API 8 symbols. The build doesn't download one. Set its **absolute** path in that shell:
+- Visual Studio C++ Build Tools with the native compiler, linker and Windows SDK libraries for your architecture. The build scripts find it themselves with `vswhere` and load `vcvarsall` for the host architecture when `cl.exe` isn't on `PATH`, so a plain PowerShell works. If no Build Tools are installed, they fail with a message naming what to install. A native-tools developer shell is optional; if you prefer one, start it through `cmd.exe` (`call vcvarsall.bat arm64` or `x64`, then launch `powershell.exe`; running the batch file directly from PowerShell doesn't update its environment) and check that `$env:VSCMD_ARG_TGT_ARCH` matches.
+- A trusted `node.lib` import library for your architecture from a compatible Node release, exporting the Node-API 8 symbols. The build doesn't download one. Set its **absolute** path in your shell:
 
 ```powershell
 $env:OMXTERM_NODE_IMPORT_LIBRARY = 'C:\tools\node-arm64\node.lib'
