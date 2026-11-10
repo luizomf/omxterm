@@ -807,10 +807,8 @@ with the separately published Files0.6.0 archive (17,331 bytes, SHA-256
 `50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`).
 The host was built from `8717d47327eeab14f522b1b2a448216860d0923d`, the archive
 from `cfc9073010df586eec321641ba5013862734f8fe`, and the fixture used
-`b5ca2aea6087531e523d026424ae0be35a040be3`. The fixture's
-`scripts/linux-packaged-process.mjs` stderr-truncation addition is verifier/test
-infrastructure, not host runtime; host build inputs must be compared separately
-to the final tag. The stable host was not downloaded from a public release.
+`b5ca2aea6087531e523d026424ae0be35a040be3`. Host build inputs must be compared
+separately to the final tag. The stable host was not downloaded from a public release.
 
 The independently read-back legacy catalog SHA-256 was
 `2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda`.
@@ -1036,47 +1034,14 @@ Finder/Gatekeeper/notarization or public distribution qualification. Existing
 runtime ownership evidence is separate; no blocked Foundation call was proved
 cancellable. Published archives, receipts and catalog targets are unchanged.
 
-The package probe itself checks only the macOS trash export and root-path
-refusal, not a recoverable Trash operation. Packaged Electron probes can change
-OS preferences; see [side effects on your desktop](development.md#side-effects-on-your-desktop). An ordinary-user macOS ARM64
-environment can run the prepared fixture with the bundled Electron:
+The package probe (`npm run package:verify`) checks only the macOS trash export
+and root-path refusal, not a recoverable Trash operation. The one-off native
+trash fixture behind the evidence above was removed; it is in Git history.
 
-```sh
-ELECTRON_RUN_AS_NODE=1 /absolute/Electron \
-  test/fixtures/files-trash-native.mjs /absolute/files-move.node \
-  /absolute/new-private-evidence-directory /absolute/writable-fixture-parent \
-  /absolute/optional-other-device-parent
-```
-
-Omit the final argument for the local-volume checks only. The evidence directory
-must not already exist. Both supplied parents must already exist and be writable;
-the optional parent must be on a distinct device, with OS Trash support selected
-by the qualification owner. The fixture creates only its own private scratch
-children. It verifies returned Trash entries by device/inode and contents or link
-text, including literal names, directories, final symlinks, dangling links and
-same-name collisions. It also checks ambiguous-path refusal, missing-source and
-ordinary-user permission failures, plus the shared native admission bound.
-Successful qualification restores only those verified entries through no-clobber
-move before removing owned scratch. No unrelated Trash enumeration occurs.
-
-The private mode-0600 receipt records source identity before dispatch and exact
-returned destinations; it is not a public artifact. Unknown/failing operations
-preserve the scratch and any Trash entries for deliberate recovery, with no retry
-or automatic deletion. Partial cleanup failure remains failed. Do not delete a
-failed evidence directory before inspecting its recovery identities. Read-only
-or trash-unavailable volumes, macOS12 execution, actual runtime retirement,
-full Files lifecycle and exact-package/public-consumption evidence remain separate
-requirements. Never treat source disappearance alone as recoverable trash proof.
-
-`test/fixtures/files-move-native.mjs <absolute-addon> [absolute-other-device-directory]`
-must run under the bundled Electron executable with `ELECTRON_RUN_AS_NODE=1`, as
-an ordinary Linux or macOS ARM64 user, on a machine whose files you don't mind it touching (a VM is safest).
-The other-device directory defaults to `/dev/shm` on Linux and must be supplied
-explicitly on macOS. It must be writable and have a different device identity
-from the temporary source directory; the fixture owns only its newly created
-scratch children, not that parent or its mount. It checks actual file/directory/
-symlink moves, destination races, permissions and cross-device refusal. Source
-inspection and controlled adapter tests are not native qualification.
+The package probe runs the real addon's no-clobber conflict and move checks on
+every packaged build. The one-off native move fixture behind the evidence below
+(directories, symlinks, races, permissions and cross-device refusal) was removed;
+it is in Git history.
 
 **macOS ARM64 move prerequisite evidence.**
 
@@ -1107,83 +1072,10 @@ is not GUI/Files lifecycle, trash, macOS12 execution, Finder/Gatekeeper,
 notarization, full portable-suite or public-distribution qualification. No release,
 archive, original receipt or catalog entry was changed.
 
-The opt-in `test/integration/files-production.test.ts` runs the already-built
-production entry point when `OMXTERM_FILES_PRODUCTION_SOURCE` names its exact
-source directory on an assigned Linux ARM64 guest. Its current-source scenario
-checks one retained Files companion across menu/palette reopen and Settings
-suspension, real operations, backend-loss view retirement, explicit fresh
-activation, management settlement and the original terminal/PTY. It does not
-exercise independent renderer-crash retirement; historical two-view evidence
-below belongs to the earlier Application Tab implementation. Build the app and separate
-archive first. `OMXTERM_FILES_PRODUCTION_EVIDENCE` optionally captures fixture-only
-screenshots and the native supervisor receipt. Native chooser/consent answers are
-fixture-controlled, not physical-dialog-widget qualification; terminal input is
-synthetic Chromium input. Native input-lane admission is verified separately.
-The bounded Files0.7 consumer requires a separate exact-host/archive receipt;
-preparation alone does not establish native qualification.
-On a Linux ARM64 desktop (a VM is safest; see
-[side effects on your desktop](development.md#side-effects-on-your-desktop)),
-install locked dependencies and build the selected source with `npm ci` and
-`npm run build`. From that source directory, using its normal test-user desktop,
-bus, authentication and runtime environment:
-
-```sh
-OMXTERM_FILES_PRODUCTION_SOURCE="$PWD" \
-OMXTERM_FILES_CONSUMER_070=1 \
-OMXTERM_FILES_PRODUCTION_ARCHIVE="/absolute/retained/files-0.7.0.omxext" \
-OMXTERM_FILES_PRODUCTION_EVIDENCE="/absolute/new/private/evidence" \
-OMXTERM_FILES_HTTPS=0 \
-npm test -- test/integration/files-production.test.ts
-```
-
-The built-host fixture recognizes these historical preparation identities; this
-list does not promise that private files or their receipts remain available:
-
-- Original source `1791af0`, 23,256 bytes, SHA-256
-  `63c6567774ba297ef3a0a30f3895d76ca9157e7283551de8bd6c5dbbad8e79ce`.
-- Composing-Escape correction at source `af0ac4b`, 23,285 bytes, SHA-256
-  `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`.
-  Integrated dev.13 source preserves its build inputs; reuse, when the original
-  trio is actually available, does not rewrite its source/dev.12 receipt.
-
-The Ubuntu built-host checkpoint integrated at `424d9f9f` and the Fedora
-built-host checkpoint integrated at `899979fb` passed nine bounded checks on
-their recorded inputs. Neither establishes an exact packaged or public-host
-checkpoint. Neither archive was published at those checkpoints. The historical
-corrected archive was unavailable during the later Linux delivery preparation;
-a fresh clean-commit build produced the same 23,285 bytes/digest, with a **new**
-receipt bound to source `0cb89accd61f1f5d5263c60773454882793e2e99` and its actual
-toolchain. Equal bytes do not recover the historical receipt or relabel earlier
-native results. If retained inputs are missing, build from verified committed
-inputs with fresh provenance and compare the actual digest; never reconstruct
-an old receipt or chase deleted archives. Do not overwrite original outputs. The scenario verifies the selected size and digest
-before installation, then checks loaded filtering, Chromium keyboard/focus
-routing, one confirmed directory move with a no-clobber conflict control,
-Close/reset from a nonempty query, Disable/Uninstall and joined Quit. It reuses
-production installation and lifecycle setup rather than repeating the full
-mutation/crash matrix. The consumer explicitly selects X11 at bootstrap to avoid
-a detached Wayland-to-X11 relaunch; it does not qualify default backend selection.
-Temporary profiles do not isolate per-user services. The fixture does not provision
-or validate a safe guest session; record service preservation separately.
-
-A passing run is built-host evidence, not packaged-host,
-public-catalog, physical-keyboard, native-drag or all-platform qualification.
-Do not combine it with the HTTPS lane. `consumer-files.png` is ordered after
-completed-move readiness and two child animation frames with a readiness recheck;
-this does not prove fresh compositor pixels. Inspect the actual capture before
-accepting it as visual evidence. `consumer-window.png` captures core host content,
-not the separate Files view or final terminal paint. Existing primitive evidence
-retains its original input scope.
-
-Set `OMXTERM_FILES_HTTPS=1` on that same opt-in fixture for the bounded HTTPS
-installation lane instead of the full Files operations scenario. It requires
-`openssl`, creates a one-day localhost test certificate and supplies it only to
-the child via `NODE_EXTRA_CA_CERTS`; production TLS verification is not disabled.
-It exercises a real stalled HTTPS stream/cancellation, malformed archive rejection,
-relative redirect, captured-byte native consent/dormant installation, explicit
-local replacement, retained real terminal/PTY and joined Quit. Its loopback TLS
-server is fixture-owned and closed before Quit. Consent answers and clicks remain
-controlled; it does not qualify public hosting, physical dialogs or other platforms.
+Earlier built-host lanes (`files-production`, with a Files 0.7 consumer and an
+HTTPS install mode) passed on Ubuntu (`424d9f9f`) and Fedora (`899979fb`). They
+were removed in favor of the [packaged Files smoke](#packaged-files-smoke) and
+the headless Files and extension lifecycle tests; they are in Git history.
 
 ### Packaged Files smoke
 
@@ -1301,126 +1193,11 @@ relabel the earlier locally built-host run. At that checkpoint both catalogs sti
 selected Files0.6. The later macOS local checkpoint is separate; other-platform
 Files0.7 and surviving-browser main-death exclusion remain unqualified. Historical built-host checks and failures retain their original scope.
 
-### Historical/current Files0.6 packaged lanes
+### Historical Linux ARM64 qualification
 
-For exact-package qualification, the separate opt-in
-`test/integration/files-packaged.test.ts` takes absolute
-`OMXTERM_FILES_PACKAGED_APPIMAGE` and `OMXTERM_FILES_PACKAGED_ARCHIVE` paths, plus
-`OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256` and `OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256`
-from the retained artifact receipts. Set `OMXTERM_FILES_PACKAGED_VERSION` to the
-expected host version, `OMXTERM_FILES_PACKAGED_EXTENSION_VERSION` to the expected
-archive version, and `OMXTERM_FILES_PACKAGED_EXTENSION_NAME` to its exact display
-name. All three are required; neither version is inferred from the package under
-test. For the stable source pair, these values are `0.24.0`, `0.6.0`, and
-`Files — ARM64 preview`. Historical Linux Files0.4 uses the explicit name
-`Files — Linux ARM64 preview`. The fixture checks the extracted host metadata and
-running app against the expected host version. Before each Linux consent it checks
-the displayed Files ID, expected name/version and selected archive SHA-256.
-
-Set `OMXTERM_FILES_PACKAGED_EVIDENCE` to a separate evidence directory. Run the
-fixture alone on the assigned idle ordinary-user Linux ARM64 desktop. It extracts
-the exact AppImage, launches its unchanged executable/app.asar, and checks package
-identity and unchanged bytes; it does not qualify FUSE launch or Linux helper
-installation. For the exact `0.24.0` / Files `0.6.0` full lifecycle, it creates
-an owned synthetic dotfile and requires the existing host-header, child-region,
-toolbar, dotfile and address-draft checks in the scenario receipt. It also sends
-fixture-controlled DOM `Ctrl+H` gestures to the focused child tree, checking both
-visibility transitions, retained address draft/caret and native child focus. This
-is not physical-keyboard or native shortcut-routing qualification. Attachment and
-terminal-only diagnostics do not run or qualify these Files UI checks.
-
-This fixture attaches only to a randomly assigned loopback main-inspector port
-to observe backend retirement and supply native-dialog responses. The observer is
-ordinary CommonJS loaded via Node `createRequire`: inspector evaluation does not
-supply a dynamic-import callback. For attachment diagnosis only, set
-`OMXTERM_FILES_PACKAGED_ATTACH_ONLY=1`; that checks module loading and actual
-packaged identity, then quits without running Files. Its separately labeled
-attachment-only outcome is never a Files lifecycle pass. Alternatively,
-`OMXTERM_FILES_PACKAGED_TERMINAL_ONLY=1` checks the single-terminal renderer entry:
-it captures the original missing-tab-button error, verifies corrected same-shell
-input, and quits before Files. Select only one diagnostic stopping point; neither
-qualifies the Files lifecycle. Product entry,
-preload, runtime, resources and Files code remain the packaged bytes. It exercises
-local captured-digest trust, dormant installation, real Files creation and
-no-clobber conflict/move, reinstall retirement, fresh activation, disable/uninstall,
-the same shell/Surface and normal Quit. The application PATH contains only shell
-and X11 presentation support, not Node/npm/Python/compilers. Source checkout
-modules are not used as product entries or dependency ancestors. Test-only
-observer code is identified separately from the package and receives no publisher
-or runtime authority outside this disposable test.
-
-For catalog qualification, set `OMXTERM_FILES_PACKAGED_CATALOG=controlled` and
-`OMXTERM_FILES_PACKAGED_CATALOG_FILE` to the generated candidate JSON. The same
-packaged lifecycle first observes cold catalog failure, explicit retry, stale
-snapshot retention and wrong-archive refusal before consent, then installs and
-reinstalls exact Files bytes through the catalog. A fixture-only HTTPS request
-interceptor routes only the fixed catalog and selected asset URLs to an owned
-loopback TLS server with a one-day certificate (`/usr/bin/openssl` required).
-Certificate verification stays enabled with an explicit fixture CA; production
-endpoint/configuration and package bytes are unchanged. The server, sockets and
-interceptor are retired before successful Quit. This is controlled transport
-composition, **not public GitHub TLS/availability qualification**. Captures scroll
-and focus the actual card or error notice, asserting its viewport bounds. A
-controlled catalog-only next-patch offer, derived from the supplied release,
-exercises rendered Update presentation. Archive requests are refused while that
-synthetic offer is visible; it is never installed, and the exact original catalog
-bytes are restored before Reinstall. This visual fixture does not qualify a real
-newer Files artifact. Listener-count
-checkpoints and warning traces distinguish lifecycle fan-out from retention;
-the observer does not raise or suppress listener limits.
-
-The prepared `OMXTERM_FILES_PACKAGED_CATALOG=public` adapter is a separate,
-short checkpoint for the locally retained Linux ARM64 stable host `0.24.0` and
-published Files `0.6.0`. In addition to the ordinary exact input paths and host
-hash above, set:
-
-```sh
-OMXTERM_FILES_PACKAGED_CATALOG=public
-OMXTERM_FILES_PACKAGED_CATALOG_SHA256=2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda
-OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256=50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143
-```
-
-The explicit catalog hash is the owner's confirmed readback of the legacy
-endpoint at this promotion, not an assumption that a `main` URL is immutable.
-The separate retained archive is an identity oracle, not a local install source;
-its length must be 17,331 bytes. The fixture uses no controlled transport, fixture
-CA, catalog file, direct-link or local-install fallback. It passively observes the
-actual production IPC and authorized HTTPS response streams: the selected Files
-card and opaque snapshot must match the exact endpoint bytes, immutable archive
-URL, actual archive length/hash and three Official trust prompts at captured
-installation generations 0, 1 and 5. Reinstall, Disable/Enable/Uninstall, the
-original PTY/Surface and a live third activation at normal joined Quit are
-checked; the full local Files UI campaign is not repeated. Fresh `run-*` evidence
-prevents an older Quit receipt from qualifying the run. The supervisor's pass
-covers the scenario and owned shutdown, not native-diagnostic disposition: a
-truncated stderr fails this public checkpoint, and complete stderr still requires
-manual review. Unknown diagnostics, including the observed #746 presentation
-rejection, are not waived. Captures still need independent visual inspection;
-synthetic Chromium input and controlled consent do
-not qualify physical input or dialogs. A local stable host against public
-extension URLs is **not** a publicly downloaded stable host. The adapter and its
-headless tests alone are not a public checkpoint; the separately executed Linux
-result is recorded [above](#files-060-linux-public-catalog-checkpoint). The historical
-Files0.4 public result remains separate and unchanged. Its exact dev.11/Files0.4
-fixture path and consent checks remain available as a legacy path, without the
-new passive binding; it cannot qualify the stable pair, and the promoted endpoint
-no longer offers its Files version. Neither catalog mode can be combined with
-attachment/terminal-only diagnostics.
-
-The existing packaged-process owner verifies actual main executable/lineage,
-tracks children and joins exit/streams/owned settlement. `scenario.json` records
-assertions, `quit.json` records backend exit/close and shell kernel exit at normal
-Quit, and `supervisor.json` records the native outcome/cleanup distinction. A
-failure preserves its profile/diagnostics, never a successful cleanup as a pass.
-Before cleanup, the packaged fixture attempts one bounded `listing-failure.json`
-snapshot of hosted-view count and listing DOM state (role, busy, summary, row
-count and whether the directory belongs to the fixture). It omits directory
-paths, redacts path-bearing summaries and reports snapshot unavailability without
-replacing the original failure. Settled listing errors are not readiness: the
-fixtures require current singular/plural or supported legacy success summaries.
-Input is synthetic Chromium and trust answers are controlled, not physical native
-dialog qualification. Successful inspection-only evidence does not substitute for
-this opt-in vertical.
+The old exact-package `files-packaged` harness (Files 0.4–0.6 lifecycle and
+catalog modes) went stale with Files 0.7 and was removed; it is in Git history.
+Its recorded results follow.
 
 Qualification is scoped to distinct observations, not one final replay on a
 single source revision:

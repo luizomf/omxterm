@@ -1,6 +1,6 @@
 // Loaded into a packaged OMXTerm main process through its loopback inspector.
-// Drives the real UI: install Files from a local archive, list a directory,
-// and insert a path into the terminal with Shift+Enter.
+// Drives the real UI: install an extension from a local archive through
+// Settings, then exercise Files or SSH Connect against the real terminal.
 const assert = require("node:assert/strict");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
@@ -37,7 +37,7 @@ function click(contents, label) {
   })()`);
 }
 
-const filesView = () =>
+const extensionView = () =>
   webContents
     .getAllWebContents()
     .find(
@@ -47,7 +47,8 @@ const filesView = () =>
 
 const shellQuote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
 
-async function run({ archive, directory, fileName, marker }) {
+// Waits for a working shell, then installs `archive` through Settings.
+async function install(archive, id, marker) {
   const window = BrowserWindow.getAllWindows()[0];
   assert.ok(window, "application window");
   const core = window.webContents;
@@ -94,9 +95,9 @@ async function run({ archive, directory, fileName, marker }) {
   await until(
     () =>
       js(
-        "document.querySelector('.extensions-panel')?.textContent.includes('omxterm.files · generation 1')",
+        `document.querySelector('.extensions-panel')?.textContent.includes(${JSON.stringify(`${id} · generation 1`)})`,
       ),
-    "Files installed",
+    "extension installed",
   );
   assert.equal(consents.length, 1, "one trust prompt");
   await js("document.querySelector('.settings-close')?.click()");
@@ -105,9 +106,18 @@ async function run({ archive, directory, fileName, marker }) {
     "Settings closed",
   );
 
+  return { core, type, read, consents };
+}
+
+async function files({ archive, directory, fileName, marker }) {
+  const { type, read, consents } = await install(
+    archive,
+    "omxterm.files",
+    marker,
+  );
   menu("Files");
-  await until(() => !!filesView(), "Files view");
-  const view = filesView();
+  await until(() => !!extensionView(), "Files view");
+  const view = extensionView();
   const listed = path.join(directory, fileName);
   await until(
     () =>
@@ -164,6 +174,30 @@ async function run({ archive, directory, fileName, marker }) {
   return { consents, rows, notices, inserted: await read(marker) };
 }
 
+async function ssh({ archive, alias, marker }) {
+  const { read, consents } = await install(archive, "omxterm.ssh", marker);
+  menu("SSH Connect");
+  await until(() => !!extensionView(), "SSH view");
+  const view = extensionView();
+  const row = `document.querySelector(${JSON.stringify(`.alias-row[data-alias="${alias}"]`)})`;
+  await until(() => view.executeJavaScript(`!!${row}`), "alias row");
+  await view.executeJavaScript(`${row}.click()`);
+  // The fake ssh client on PATH writes its argv, one per line.
+  await until(
+    async () => (await read(marker)) !== undefined,
+    "ssh launch",
+    10000,
+  ).catch(() => {});
+  const notices = await view.executeJavaScript(
+    "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
+  );
+  return {
+    consents,
+    notices,
+    argv: (await read(marker))?.trimEnd().split("\n"),
+  };
+}
+
 function quit() {
   setImmediate(() => app.quit());
   return true;
@@ -171,4 +205,4 @@ function quit() {
 
 const windows = () => BrowserWindow.getAllWindows().length;
 
-module.exports = { run, quit, windows };
+module.exports = { files, ssh, quit, windows };

@@ -276,6 +276,9 @@ Before publishing, run the extension on a published host of each target
 platform from those exact bytes. For Files, that is the
 [packaged Files smoke](files-development-preview.md#packaged-files-smoke): it
 installs the archive, lists a directory and inserts a path into the terminal.
+For SSH Connect, it is the
+[packaged SSH smoke](ssh-connect-development.md#packaged-ssh-smoke): it installs
+the archive, picks an alias and checks what the ssh client received.
 
 ### Publishing an extension archive
 

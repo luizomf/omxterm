@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { execFile, spawn } from "node:child_process";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { promisify } from "node:util";
 
 export async function until(
   check: () => Promise<boolean> | boolean,
@@ -14,10 +18,7 @@ export async function until(
 }
 
 // Disposable main-process observer only; never a replacement application entry.
-export async function inspector(
-  url: string,
-  onNotification?: (method: string, params: unknown) => void,
-) {
+export async function inspector(url: string) {
   assert.match(url, /^ws:\/\/127\.0\.0\.1:\d+\/[a-f0-9-]+$/);
   const socket = new WebSocket(url);
   await new Promise<void>((resolve, reject) => {
@@ -50,10 +51,6 @@ export async function inspector(
       reject(error: Error): void;
     }
   >();
-  const pauses: unknown[] = [];
-  const scripts = new Map<string, string>();
-  let pauseWaiter:
-    { resolve(value: unknown): void; reject(error: Error): void } | undefined;
   let closed = false;
   socket.addEventListener("message", (event) => {
     const message = JSON.parse(String(event.data)) as {
@@ -63,30 +60,6 @@ export async function inspector(
       error?: unknown;
       result?: { exceptionDetails?: unknown; result?: { value?: unknown } };
     };
-    if (message.method) onNotification?.(message.method, message.params);
-    if (message.method === "Debugger.scriptParsed") {
-      const parsed = message.params as { scriptId?: unknown; url?: unknown };
-      if (
-        typeof parsed?.scriptId === "string" &&
-        typeof parsed.url === "string"
-      ) {
-        if (!scripts.has(parsed.scriptId) && scripts.size >= 10000) {
-          socket.close();
-          return;
-        }
-        scripts.set(parsed.scriptId, parsed.url);
-      }
-      return;
-    }
-    if (message.method === "Debugger.paused") {
-      if (pauseWaiter) {
-        const waiter = pauseWaiter;
-        pauseWaiter = undefined;
-        waiter.resolve(message.params);
-      } else if (pauses.length < 8) pauses.push(message.params);
-      else socket.close();
-      return;
-    }
     if (message.id === undefined) return;
     const request = pending.get(message.id);
     if (!request) return;
@@ -104,8 +77,6 @@ export async function inspector(
     for (const request of pending.values())
       request.reject(new Error("Inspector closed during request"));
     pending.clear();
-    pauseWaiter?.reject(new Error("Inspector closed while awaiting pause"));
-    pauseWaiter = undefined;
   });
   const request = (method: string, params: object = {}, timeout = 90000) => {
     const id = ++sequence;
@@ -135,35 +106,6 @@ export async function inspector(
     });
   };
   return {
-    request,
-    scriptUrl(id: string) {
-      return scripts.get(id);
-    },
-    nextEvent(method: "Debugger.paused", timeout = 5000) {
-      assert.equal(method, "Debugger.paused");
-      if (pauses.length) return Promise.resolve(pauses.shift());
-      if (closed)
-        return Promise.reject(
-          new Error("Inspector closed while awaiting pause"),
-        );
-      assert.equal(pauseWaiter, undefined, "only one pause waiter");
-      return new Promise<unknown>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          pauseWaiter = undefined;
-          reject(new Error("Inspector pause deadline"));
-        }, timeout);
-        pauseWaiter = {
-          resolve(value) {
-            clearTimeout(timer);
-            resolve(value);
-          },
-          reject(error) {
-            clearTimeout(timer);
-            reject(error);
-          },
-        };
-      });
-    },
     async evaluate(expression: string, timeout = 90000) {
       const result = (await request(
         "Runtime.evaluate",
@@ -178,6 +120,118 @@ export async function inspector(
     },
     close() {
       socket.close();
+    },
+  };
+}
+
+const execute = promisify(execFile);
+
+async function executable(root: string, target: string) {
+  if (target.endsWith(".AppImage")) {
+    // Extracting avoids a FUSE dependency; the bytes are unchanged.
+    await execute(path.resolve(target), ["--appimage-extract"], {
+      cwd: root,
+      timeout: 120000,
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    return path.join(root, "squashfs-root/omxterm");
+  }
+  if (target.endsWith(".app")) {
+    const [name] = await readdir(path.join(target, "Contents/MacOS"));
+    return path.join(target, "Contents/MacOS", name!);
+  }
+  return target;
+}
+
+/**
+ * Launches a packaged OMXTerm (.AppImage, .app bundle or executable) with
+ * `root/home` as HOME and a private profile, then loads the smoke observer
+ * into its main process. `call` evaluates `observer.<expression>`.
+ */
+export async function launchPackaged(
+  app: string,
+  root: string,
+  env: NodeJS.ProcessEnv = {},
+) {
+  const home = path.join(root, "home");
+  await mkdir(path.join(home, ".config/omxterm"), { recursive: true });
+  await writeFile(
+    path.join(home, ".config/omxterm/config.json"),
+    JSON.stringify({ version: 1, language: "en-US", confirmClose: false }),
+  );
+  const child = spawn(
+    await executable(root, app),
+    [
+      ...(process.platform === "linux" ? ["--no-sandbox"] : []),
+      "--inspect=127.0.0.1:0",
+      `--user-data-dir=${path.join(root, "profile")}`,
+      "-e",
+      "/bin/sh",
+    ],
+    {
+      env: {
+        ...process.env,
+        HOME: home,
+        XDG_CONFIG_HOME: path.join(home, ".config"),
+        ELECTRON_RUN_AS_NODE: undefined,
+        ...env,
+      },
+      stdio: ["ignore", "ignore", "pipe"],
+    },
+  );
+  let stderr = "";
+  child.stderr.setEncoding("utf8").on("data", (data: string) => {
+    stderr += data;
+  });
+  const exited = new Promise((resolve) => child.once("exit", resolve));
+  let client: Awaited<ReturnType<typeof inspector>> | undefined;
+  const stop = async () => {
+    client?.close();
+    client = undefined;
+    if (child.exitCode === null && child.signalCode === null)
+      child.kill("SIGKILL");
+    await exited;
+  };
+  const observerFile = path.resolve(
+    "test/fixtures/packaged-smoke-observer.cjs",
+  );
+  const observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(observerFile)})(${JSON.stringify(observerFile)})`;
+  const call = (expression: string, timeout = 5000) =>
+    client!.evaluate(`${observer}.${expression}`, timeout);
+  try {
+    await until(
+      () => /Debugger listening on ws:\/\/127\.0\.0\.1:/.test(stderr),
+      "main inspector",
+      60000,
+    );
+    client = await inspector(
+      /Debugger listening on (ws:\/\/\S+)/.exec(stderr)![1]!,
+    );
+    await until(
+      async () => (await call("windows()").catch(() => 0)) === 1,
+      "application window",
+      60000,
+    );
+  } catch (error) {
+    await stop();
+    throw error;
+  }
+  return {
+    home,
+    call,
+    stop,
+    /** Quits through the application and waits for a normal exit. */
+    async quit() {
+      await call("quit()");
+      // Node waits for an attached debugger before the process can exit.
+      client!.close();
+      client = undefined;
+      await Promise.race([
+        exited,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("normal Quit")), 15000),
+        ),
+      ]);
     },
   };
 }

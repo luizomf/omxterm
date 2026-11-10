@@ -167,8 +167,6 @@ if (role === "wrapper") {
   setInterval(() => undefined, 100);
 } else {
   let stopping = false;
-  if (mode === "stderr-limit" || mode === "stderr-overflow")
-    process.stderr.write("x".repeat(mode === "stderr-limit" ? 16384 : 16385));
   const probe = spawn(process.execPath, [import.meta.filename, "probe"], {
     detached: true,
     stdio: ["ignore", "ignore", "inherit", "ipc"],

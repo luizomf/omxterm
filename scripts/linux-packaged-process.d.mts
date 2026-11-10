@@ -15,7 +15,6 @@ export function launchLinuxPackagedProcess(options: {
 }): Promise<{
   child: ChildProcess;
   stderrText(): string;
-  stderrTruncated(): boolean;
   verifyMain(): Promise<void>;
   stop(): Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
 }>;
