@@ -199,8 +199,9 @@ sha256sum --check linux_install.sh.sha256
 ```powershell
 # Windows
 $name = "OMXTerm-<version>-arm64.exe"   # or OMXTerm-<version>-x64.exe
-"$((Get-FileHash $name -Algorithm SHA256).Hash.ToLower())  $name" |
-  Out-File -Encoding ascii "$name.sha256"
+# Write LF, not CRLF, so `shasum -c` / `sha256sum --check` also accept it
+$line = "$((Get-FileHash $name -Algorithm SHA256).Hash.ToLower())  $name`n"
+[IO.File]::WriteAllText("$PWD\$name.sha256", $line)
 Get-Content "$name.sha256"
 ```
 
