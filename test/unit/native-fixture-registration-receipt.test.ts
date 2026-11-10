@@ -501,9 +501,9 @@ it.each([
       expect(forbiddenSpawn).not.toHaveBeenCalled();
       expect(requested).toEqual([pending ? [owner] : [child, owner]]);
       expect(signaled).toEqual(pending || mode === "reused" ? [] : [child]);
-      // Cleanup must inspect again after its identity-specific command; merely
-      // publishing the completed record is not the disappearance receipt.
-      expect(inventories.length).toBeGreaterThanOrEqual(5);
+      // The shared post-kill inventory must follow the identity-specific
+      // command; publishing the completed record is not a disappearance receipt.
+      expect(inventories.length).toBeGreaterThanOrEqual(4);
       expect(inventories.at(-1)).toEqual(live);
       expect(live).toEqual(
         mode === "survived"
