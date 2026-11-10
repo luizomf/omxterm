@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveMsvcEnvironment } from "./windows-msvc-environment.mjs";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 
@@ -15,8 +16,10 @@ export async function buildExtensionLeases(outputDirectory) {
   const defines = ["NAPI_VERSION=8", "NODE_GYP_MODULE_NAME=extension_leases"];
   let command;
   let args;
+  let env;
   if (process.platform === "win32") {
-    // Run in a native-target MSVC developer shell with the Windows SDK.
+    // Uses MSVC and the Windows SDK, found through vswhere when the caller is
+    // not already in a native-tools developer shell.
     // Supply an architecture-matched node.exe import library explicitly; no
     // downloads or implicit caches. Delay loading binds Node-API to the running
     // Node/Electron executable rather than trying to load another node.exe.
@@ -29,6 +32,7 @@ export async function buildExtensionLeases(outputDirectory) {
     if (process.arch !== "arm64" && process.arch !== "x64") {
       throw new Error("Windows extension leases require ARM64 or x64");
     }
+    env = resolveMsvcEnvironment();
     command = "cl.exe";
     args = [
       "/nologo",
@@ -81,6 +85,7 @@ export async function buildExtensionLeases(outputDirectory) {
   execFileSync(command, args, {
     stdio: "pipe",
     timeout: 60_000,
+    ...(env ? { env } : {}),
     // Keep MSVC's generated export and import files with the native output.
     ...(process.platform === "win32" ? { cwd: output } : {}),
   });

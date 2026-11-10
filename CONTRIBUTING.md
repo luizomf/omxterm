@@ -48,7 +48,7 @@ Install your [platform prerequisites](docs/development.md#platform-prerequisites
 Clone your fork and set up the `upstream` remote:
 
 ```sh
-git clone -c core.autocrlf=false -c core.symlinks=true https://github.com/YOUR-USERNAME/omxterm.git
+git clone https://github.com/YOUR-USERNAME/omxterm.git
 cd omxterm
 git remote add upstream https://github.com/luizomf/omxterm.git
 git fetch upstream

@@ -6,6 +6,9 @@ const calls = vi.hoisted(() => ({
   mkdir: vi.fn(),
 }));
 vi.mock("node:child_process", () => ({ execFileSync: calls.compile }));
+vi.mock("../../scripts/windows-msvc-environment.mjs", () => ({
+  resolveMsvcEnvironment: () => null,
+}));
 vi.mock("node:fs/promises", () => ({ mkdir: calls.mkdir }));
 
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
