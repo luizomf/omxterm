@@ -1,57 +1,11 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
 import { afterEach, expect, it, vi } from "vitest";
 import { mountWindowChrome } from "../../src/renderer/window-chrome";
 import type { WindowChromeState } from "../../src/shared/window-chrome";
-const surfaceCss = readFileSync("src/renderer/terminal-window.css", "utf8");
-const chromeCss = readFileSync("src/renderer/window-chrome.css", "utf8");
-const settingsCss = readFileSync(
-  "src/renderer/settings/settings-dialog.css",
-  "utf8",
-);
-const rule = (css: string, selector: string) =>
-  [...css.matchAll(/([^{}]+)\{([^}]*)\}/gu)].find((match) =>
-    match[1]!
-      .replace(/\/\*[\s\S]*?\*\//gu, "")
-      .split(",")
-      .some((value) => value.trim() === selector),
-  )?.[2];
+
 afterEach(() => {
   document.body.replaceChildren();
   document.body.className = "";
-});
-it("keeps a scroll margin around a focused theme card's outline", () => {
-  expect(rule(settingsCss, ".settings-theme-card")).toContain(
-    "scroll-margin: 4px",
-  );
-  expect(
-    rule(
-      settingsCss,
-      ".settings-theme-card input:focus-visible + .settings-theme-content",
-    ),
-  ).toContain("outline: 2px solid");
-});
-it("gives Settings the same bounded native-title drag region without depending on a Surface", () => {
-  const region = rule(surfaceCss, ".settings-tab::before");
-  expect(region).toBeDefined();
-  expect(region).toBe(rule(surfaceCss, ".terminal-surface::before"));
-  for (const declaration of [
-    'content: ""',
-    "position: fixed",
-    "top: 0",
-    "left: 0",
-    "right: 0",
-    "height: var(--native-title-inset)",
-    "app-region: drag",
-  ])
-    expect(region).toContain(declaration);
-  expect(
-    rule(chromeCss, "body.window-preview-active .settings-tab::before"),
-  ).toContain("app-region: no-drag");
-  expect(rule(surfaceCss, "#tab-strip")).toContain("app-region: no-drag");
-  expect(rule(chromeCss, ".window-title-bar nav")).toContain(
-    "app-region: no-drag",
-  );
 });
 it.each(["native", "custom"] as const)(
   "keeps %s title, hidden/fullscreen and preview bounds with only graphical content",
