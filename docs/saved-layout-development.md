@@ -119,8 +119,7 @@ this follow-up is not a new cross-platform or packaged-host qualification.
 The separate archive contains its MIT license, Community Big MIT notice and
 adaptation credit for @ruscher's #622 layout work. Host and archive source
 identities, digests, actual checks and limits must accompany delivery. See
-[ADR0042](adr/0042-save-layouts-without-restoring-sessions.md) and the focused
-[native fixture recipe](../test/fixtures/restoration-native.md). Headless
+[ADR0042](adr/0042-save-layouts-without-restoring-sessions.md). Headless
 codec/page/storage tests and prepared native bundles do not establish graphical
 or native qualification. Other-platform preview support and release/catalog
 publication remain separate work.

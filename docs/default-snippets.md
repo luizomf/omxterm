@@ -58,9 +58,3 @@ existing-profile choices. Reuse unchanged-input results. Record any failures or
 missing coverage for the [maintainer's release decision](release.md#verification-and-release-decisions);
 a blocked fixture does not by itself stop host delivery or unrelated work.
 #741's remaining qualification work stays open.
-
-The separate opt-in [Linux ARM64 ordinary-profile consumer](../test/fixtures/snippets-ordinary.md)
-checks an exact supplied package with cold-start observation, no user-data-dir
-override, genuinely absent ordinary roots, distinct existing-profile controls,
-normal Quit/restart and disable/uninstall persistence. Its test-only source is
-not an outcome or a replacement for exact-package/shared-service verification.

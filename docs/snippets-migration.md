@@ -421,7 +421,7 @@ set; equal snapshots do not prove continuous mode. The experiment used synthetic
 input and an intentionally closed owned PTY, not product GUI or graceful Quit.
 It supports the fixture's distinction between child focus and ConPTY's outer
 focus protocol; it does not turn either earlier failure into a pass. The revised
-[fixture contract](../test/fixtures/snippets-packaged.md#composition-supplied-by-the-integration-owner)
+fixture contract
 retains raw writes and a bounded, truncation-marked selected-PTY output snapshot
 containing the separately asserted child receipts when observed. That decoded
 output is not a complete child-stdin recording or semantic-write provenance.
@@ -493,7 +493,7 @@ The host itself used locked Electron **43.8.1** / embedded Node **24.22.0**.
 The source build/default suite and stock NSIS verifier instead used Node 26.12.1;
 these are distinct toolchain roles, not interchangeable receipts.
 
-The [exact Windows fixture](../test/fixtures/snippets-packaged.md#exact-windows-arm64-staged-adapter-provisional-qualification)
+The exact Windows fixture
 attached at the verified ESM instantiation pause, before the production entry
 body, window and first ConPTY. It released only the inspector-induced startup
 pause of the exact node-pty output worker. No package entry, dependency bytes,
@@ -593,7 +593,7 @@ entries and Snippets archive identity; subsequent Files/SSH promotions are
 separate changes. Windows uses the legacy endpoint, not the macOS endpoint.
 Manifest admission, including other admitted host versions, is not qualification.
 
-The first [installed public fixture](../test/fixtures/snippets-packaged.md#windows-arm64-installed-public-catalog-adapter)
+The first installed public fixture
 occurrence used the publicly downloaded dev.36 NSIS but **failed before Browse,
 trust or backend activation**, with a renderer script error while Settings General
 was selected. Guarded failure cleanup is not normal Quit or a public-consumption
@@ -652,7 +652,7 @@ portable-suite, exact-AppImage GUI or public-HTTPS qualification. This historica
 source campaign did not itself establish a published Linux x64 preview. The separate
 exact-AppImage checkpoint below does not expand that historical source campaign's evidence or
 explain its blank preview capture. The shared
-[exact-AppImage adapter](../test/fixtures/snippets-packaged.md#exact-appimage-adapter)
+exact-AppImage adapter
 admits Linux x64 alongside ARM64 without replacing the packaged entry/ASAR/runtime
 or archive. Its capture barrier and acknowledged-Hide readiness checks are fixture
 changes, not product fixes; headless coverage alone is not native or visual

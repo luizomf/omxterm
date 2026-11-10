@@ -41,9 +41,8 @@ paths distinguish these cases:
 | Restty host integration/oracles/output                                                           | [`restty-host-main`](../test/fixtures/restty-host-main.ts) injects clipboard counters, synthetic reads and a selection observer, not Electron clipboard I/O. Its [PowerShell Ctrl+V isolation](#restty-host-powershell-isolation) is shell-local, not a host/guest clipboard-sharing control.                                                                                                 |
 
 The two real writers above are part of default discovery on their listed
-platforms, not opt-in suites. The opt-in [Mirror Typing](../test/fixtures/mirror-native.md)
-[fixture](../test/fixtures/mirror-production-main.ts) and
-[SSH fixture](../test/fixtures/ssh-packaged.cjs) also mutate the real clipboard;
+platforms, not opt-in suites. The opt-in
+[SSH fixture](../test/fixtures/ssh-packaged.cjs) also mutates the real clipboard;
 apply the same boundary before those separately authorized runs. Reinspect the
 selected fixture/composition when its wiring changes rather than assuming this
 map covers future or custom entry points. Use synthetic fixture inputs only and
@@ -815,7 +814,7 @@ owned uninstall after joined cleanup, including assisted failure settlement; it
 compares assistance metadata but does not turn cleanup permission into PASS.
 
 Headless actual emitted-helper/supervisor controls:
-`npm test -- test/unit/native-fixture-cleanup-assistance.test.ts test/unit/native-fixture-cleanup-failure.test.ts test/unit/snippets-windows-public-campaign.test.ts test/unit/snippets-windows-public-fence.test.ts`.
+`npm test -- test/unit/native-fixture-cleanup-assistance.test.ts test/unit/native-fixture-cleanup-failure.test.ts`.
 These model OS inventories/signals/commands and use real receipt/profile I/O;
 they do not add Windows Snippets, product input or native GUI qualification.
 
