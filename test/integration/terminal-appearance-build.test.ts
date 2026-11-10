@@ -47,6 +47,10 @@ const expectedAssets = {
     "30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad",
   "JetBrainsMonoNerdFontMono-Regular.ttf":
     "f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c",
+  "NotoSansSymbols2-OFL.txt":
+    "b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0",
+  "NotoSansSymbols2-Regular.ttf":
+    "c4a0a80f0041ce4be81e2478faad22776d23edb98ae3f0d19bd37044820ecf9d",
   "NerdFonts-glyphs.txt":
     "c67e7c17fa4fa1f894b8f4a1bb1ca4bbbce19cbea1eb80d5b0c400cf0e2ec332",
 } as const;
@@ -80,6 +84,7 @@ describe("Terminal appearance build", () => {
     expect(rendererJavaScript).toContain("FiraCode Nerd Font Mono");
     expect(rendererJavaScript).toContain("DejaVu Sans Mono");
     expect(rendererJavaScript).toContain("JetBrainsMono Nerd Font Mono");
+    expect(rendererJavaScript).toContain("Noto Sans Symbols 2");
     expect(rendererJavaScript).toContain("restty");
     expect(rendererJavaScript).not.toContain("@xterm");
 

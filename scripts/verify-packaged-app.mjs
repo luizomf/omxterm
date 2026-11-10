@@ -1315,6 +1315,10 @@ export async function verifyPackagedApplication(
         path.join(resources, "licenses", "JetBrainsMono-OFL.txt"),
       ),
       assertSameFile(
+        path.join(projectRoot, "assets", "fonts", "NotoSansSymbols2-OFL.txt"),
+        path.join(resources, "licenses", "NotoSansSymbols2-OFL.txt"),
+      ),
+      assertSameFile(
         path.join(projectRoot, "assets", "fonts", "NerdFonts-glyphs.txt"),
         path.join(resources, "licenses", "NerdFonts-glyphs.txt"),
       ),

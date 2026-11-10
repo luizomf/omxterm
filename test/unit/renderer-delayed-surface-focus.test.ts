@@ -54,6 +54,9 @@ vi.mock("../../assets/fonts/DejaVuSansMono-Bold.ttf", () => ({
 vi.mock("../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf", () => ({
   default: new Uint8Array([5]),
 }));
+vi.mock("../../assets/fonts/NotoSansSymbols2-Regular.ttf", () => ({
+  default: new Uint8Array([6]),
+}));
 const cleanups: Array<() => void> = [];
 beforeEach(() => {
   instances.length = 0;

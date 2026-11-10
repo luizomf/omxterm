@@ -10,20 +10,21 @@ and core corrections; upstream pins and tracked patch provenance are recorded
 in the repository's `assets/restty-sources.json`. Those corrections
 do not remove the upstream attribution.
 
-| Component                                              | License                         | Packaged notice                    |
-| ------------------------------------------------------ | ------------------------------- | ---------------------------------- |
-| Electron                                               | MIT                             | `LICENSE.electron.txt`             |
-| Chromium and Electron transitive components            | See component notices           | `LICENSES.chromium.html`           |
-| `node-pty`                                             | MIT                             | `licenses/node-pty.txt`            |
-| `yaml` v2                                              | ISC                             | `licenses/yaml.txt`                |
-| Restty 0.3.0                                           | MIT                             | `licenses/restty.txt`              |
-| `text-shaper` 0.1.28 and FreeType-derived portions     | MIT and upstream attribution    | `licenses/text-shaper.txt`         |
-| Ghostty/libghostty-vt (`0309af1`)                      | MIT                             | `licenses/ghostty.txt`             |
-| xterm.js visible-link expression (retained derivative) | MIT                             | `licenses/xterm-visible-links.txt` |
-| FiraCode Nerd Font Mono                                | SIL Open Font License 1.1       | `licenses/FiraCode-OFL.txt`        |
-| DejaVu Sans Mono                                       | Bitstream/DejaVu/Arev           | `licenses/DejaVu.txt`              |
-| JetBrainsMono Nerd Font Mono                           | SIL Open Font License 1.1       | `licenses/JetBrainsMono-OFL.txt`   |
-| Nerd Fonts patched glyph sets                          | MIT, OFL, CC BY 4.0, Apache 2.0 | `licenses/NerdFonts-glyphs.txt`    |
+| Component                                              | License                         | Packaged notice                     |
+| ------------------------------------------------------ | ------------------------------- | ----------------------------------- |
+| Electron                                               | MIT                             | `LICENSE.electron.txt`              |
+| Chromium and Electron transitive components            | See component notices           | `LICENSES.chromium.html`            |
+| `node-pty`                                             | MIT                             | `licenses/node-pty.txt`             |
+| `yaml` v2                                              | ISC                             | `licenses/yaml.txt`                 |
+| Restty 0.3.0                                           | MIT                             | `licenses/restty.txt`               |
+| `text-shaper` 0.1.28 and FreeType-derived portions     | MIT and upstream attribution    | `licenses/text-shaper.txt`          |
+| Ghostty/libghostty-vt (`0309af1`)                      | MIT                             | `licenses/ghostty.txt`              |
+| xterm.js visible-link expression (retained derivative) | MIT                             | `licenses/xterm-visible-links.txt`  |
+| FiraCode Nerd Font Mono                                | SIL Open Font License 1.1       | `licenses/FiraCode-OFL.txt`         |
+| DejaVu Sans Mono                                       | Bitstream/DejaVu/Arev           | `licenses/DejaVu.txt`               |
+| JetBrainsMono Nerd Font Mono                           | SIL Open Font License 1.1       | `licenses/JetBrainsMono-OFL.txt`    |
+| Noto Sans Symbols 2                                    | SIL Open Font License 1.1       | `licenses/NotoSansSymbols2-OFL.txt` |
+| Nerd Fonts patched glyph sets                          | MIT, OFL, CC BY 4.0, Apache 2.0 | `licenses/NerdFonts-glyphs.txt`     |
 
 The fixed public Snippets0.1.0 archive bundled for one-time new-profile defaults
 retains its original OMXTerm MIT license and bundled YAML ISC notice inside the

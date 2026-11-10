@@ -68,10 +68,11 @@ adaptation; dependency upgrades need source and behavioral review.
 
 The default stack uses bundled real FiraCode Nerd Font Mono regular/bold,
 DejaVu Sans Mono regular/bold, retained JetBrainsMono Nerd Font Mono, then
-available native emoji/CJK/symbol fallback faces. An explicitly configured exact
-installed family precedes regular fallbacks. Bundled bold faces are omitted in
-that case: Restty's style-first search would otherwise select a different family
-for ordinary bold text.
+available native emoji/CJK/symbol fallback faces, and finally bundled Noto Sans
+Symbols 2 for common symbols none of those faces cover. An explicitly configured
+exact installed family precedes regular fallbacks. Bundled bold faces are omitted
+in that case: Restty's style-first search would otherwise select a different
+family for ordinary bold text.
 
 Main resolves regular and available bold, italic and bold-italic faces in the
 same family, validates metadata and exact collection-face indices, and returns

@@ -5,10 +5,11 @@ faces are FiraCode Nerd Font Mono regular/bold, DejaVu Sans Mono regular/bold,
 and the retained JetBrainsMono Nerd Font Mono regular coverage face. A configured
 system family's validated regular face and available bold, italic and bold-italic
 faces precede them; representative operating-system emoji, CJK, and symbol faces
-follow them. With a configured system family, bundled bold faces are omitted so
-Restty prefers that family's real styles or synthesizes missing traits from its
-available faces instead of selecting another family's bundled bold. OMXTerm never
-downloads fonts at runtime.
+follow them, and bundled Noto Sans Symbols 2 regular is the last coverage face.
+With a configured system family, bundled bold faces are omitted so Restty prefers
+that family's real styles or synthesizes missing traits from its available faces
+instead of selecting another family's bundled bold. OMXTerm never downloads fonts
+at runtime.
 
 ## FiraCode Nerd Font Mono
 
@@ -51,6 +52,23 @@ downloads fonts at runtime.
   `f01031f40e48dc29e1112e6b0b0450a2c6cd097f3f35cfff05c55cb311f8034c`
 - `JetBrainsMono-OFL.txt` SHA-256:
   `30f0c136e3c88e422d0791acd97238870f9054a9729bc34cf2ff0d4ed8cac4ad`
+- License: SIL Open Font License 1.1
+
+## Noto Sans Symbols 2
+
+- Source: Noto Project release `NotoSansSymbols2-v2.008`,
+  `NotoSansSymbols2-v2.008.zip`
+- Upstream: `https://github.com/notofonts/symbols/releases/tag/NotoSansSymbols2-v2.008`
+- Release archive SHA-256:
+  `346c930bbe8eb946701a05c54e9c11a2094dee1d93c387bf1771c0a3e335688f`
+- Variant: `NotoSansSymbols2/hinted/ttf/NotoSansSymbols2-Regular.ttf`,
+  unmodified (identical to the archive's `unhinted` TTF)
+- Coverage: symbols the faces above lack, such as U+23F4–U+23F7 media triangles
+  (`⏵`), Supplemental Arrows-B, and Miscellaneous Symbols and Arrows
+- `NotoSansSymbols2-Regular.ttf` SHA-256:
+  `c4a0a80f0041ce4be81e2478faad22776d23edb98ae3f0d19bd37044820ecf9d`
+- `NotoSansSymbols2-OFL.txt` (archive `OFL.txt`) SHA-256:
+  `b118dd41337806a5d4797052c77caf3bd096aed783e5eb21b4d11154351e1ac0`
 - License: SIL Open Font License 1.1
 
 ## Nerd Fonts patched glyph provenance

@@ -45,7 +45,7 @@ describe("Terminal Font Stack", () => {
       fallbacks: [{ family: "Fallback", data: new Uint8Array([20, 21]) }],
     });
     const configured = fonts[0]!.data;
-    const fallback = fonts.at(-1)!.data;
+    const fallback = fonts.at(-2)!.data;
     expect(configured).toBeInstanceOf(ArrayBuffer);
     expect(fallback).toBeInstanceOf(ArrayBuffer);
     allocation.fill(0);
@@ -79,6 +79,7 @@ describe("Terminal Font Stack", () => {
       "DejaVu Sans Mono",
       "JetBrainsMono Nerd Font Mono",
       "Embedded Emoji",
+      "Noto Sans Symbols 2",
     ]);
     expect(fonts[0]).toMatchObject({
       data: configuredBytes.buffer,
@@ -86,6 +87,6 @@ describe("Terminal Font Stack", () => {
       style: "normal",
     });
     expect(fonts.some((font) => font.weight === 700)).toBe(false);
-    expect(fonts.at(-1)?.data).toEqual(osFallbackBytes.buffer);
+    expect(fonts.at(-2)?.data).toEqual(osFallbackBytes.buffer);
   });
 });
