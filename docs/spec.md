@@ -1385,10 +1385,10 @@ paths open a Local Image Preview
 
 ## Clipboard
 
-Clipboard access is explicit and one-way ([ADR
-0009](adr/0009-keep-clipboard-access-explicit-and-one-way.md)); file paths are
-inserted as lexical shell-quoted text ([ADR
-0021](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)).
+Clipboard access is explicit and one-way
+([ADR 0009](adr/0009-keep-clipboard-access-explicit-and-one-way.md)); file paths
+are inserted as lexical shell-quoted text
+([ADR 0021](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)).
 
 ### Copy and paste
 
