@@ -58,10 +58,12 @@ describe("Linux display backend application", () => {
       "--no-sandbox",
       "--ozone-platform=x11",
     ],
+    env?: NodeJS.ProcessEnv,
   ): void {
     expect(spawn).toHaveBeenCalledExactlyOnceWith(executable, argv, {
       detached: true,
       stdio: "ignore",
+      ...(env ? { env } : {}),
     });
     expect(unref).toHaveBeenCalledOnce();
     expect(app.exit).toHaveBeenCalledExactlyOnceWith(0);
@@ -97,22 +99,28 @@ describe("Linux display backend application", () => {
       const environment = {
         APPIMAGE: "/opt/OMXTerm image.AppImage",
         APPDIR: appDir,
-        LD_LIBRARY_PATH: "/synthetic/inherited/lib",
+        LD_LIBRARY_PATH: `${appDir.replace(/\/$/u, "")}/usr/lib:/synthetic/inherited/lib`,
       };
       process.env = { ...environment };
 
       applyLinuxDisplayBackendDefault(app);
 
-      expectRelaunch("/opt/OMXTerm image.AppImage", [
-        "--no-sandbox",
-        "--ozone-platform=x11",
-        "-e",
-        "/usr/bin/program",
-        "--ozone-platform=wayland",
-        "two words",
-        "$(not-shell-code)",
-        "-e",
-      ]);
+      expectRelaunch(
+        "/opt/OMXTerm image.AppImage",
+        [
+          "--no-sandbox",
+          "--ozone-platform=x11",
+          "-e",
+          "/usr/bin/program",
+          "--ozone-platform=wayland",
+          "two words",
+          "$(not-shell-code)",
+          "-e",
+        ],
+        // The new mount's AppRun starts from the user's environment, not
+        // from this mount's soon-dead entries.
+        { LD_LIBRARY_PATH: "/synthetic/inherited/lib" },
+      );
       expect(process.env).toEqual(environment);
     },
   );

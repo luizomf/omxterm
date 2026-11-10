@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { IPty, IPtyForkOptions, IDisposable } from "node-pty";
+import { withoutAppImageRuntime } from "./appimage-environment";
 import type { LaunchRequest } from "./launch-request";
 import {
   isBoundedTerminalPayload,
@@ -97,7 +98,7 @@ export function createLocalTerminalSession(
     pty = spawnPty(executable, arguments_, {
       cwd: options.workingDirectory ?? options.homeDirectory,
       env: {
-        ...options.environment,
+        ...withoutAppImageRuntime(options.environment, options.platform),
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
         TERM_PROGRAM: "OMXTerm",

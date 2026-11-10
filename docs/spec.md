@@ -44,8 +44,10 @@ session management, and IDE features are outside the product scope.
   and `APPDIR/omxterm` matches `process.execPath` (the packaged AppRun layout).
   Otherwise it relaunches `process.execPath`, so AppImage variables inherited
   from another application never pick the executable. The X11 switch goes before
-  a Launch Request's `-e`, keeping its literal argv. The inherited environment
-  is not modified.
+  a Launch Request's `-e`, keeping its literal argv. An `APPIMAGE` relaunch
+  receives the environment without the current AppImage runtime (as for
+  terminal sessions below), so the new mount's AppRun starts clean; a
+  `process.execPath` relaunch keeps the inherited environment.
 - `--no-sandbox` is a fixed, unconditional launch policy for the ordinary-user
   runtime, direct AppImage, extraction, desktop entry, and X11 relaunch. It is
   not a fallback or a setting. `npm run dev` passes it before Electron
@@ -272,8 +274,10 @@ are the job of a session manager such as tmux.
   consumes the request; later tabs and windows use the Default Shell.
 - A trailing `-e` with no program is an actionable startup failure and never
   falls back to the Default Shell.
-- An explicit command starts in the user's home directory, inherits the normal
-  process environment, and receives the Terminal Capability Identity. It is a
+- An explicit command starts in the user's home directory, inherits the same
+  session environment as the Default Shell (see
+  [Terminal identity and replies](#terminal-identity-and-replies)), and
+  receives the Terminal Capability Identity. It is a
   Busy Session for its whole live lifetime and uses the normal Live Terminal
   Session lifecycle for clean exit, unexpected signal, spawn failure, requested
   close, tab and window closure, and last-window quit.
@@ -1251,6 +1255,14 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 
 - The environment sets `TERM=xterm-256color`, `COLORTERM=truecolor`,
   `TERM_PROGRAM=OMXTerm` and the installed version in `TERM_PROGRAM_VERSION`.
+- Everything else comes from OMXTerm's own environment. On Linux under an
+  AppImage (an absolute `APPDIR`), sessions do not inherit the AppImage
+  runtime: `APPIMAGE`, `APPDIR`, `ARGV0`, `OWD` and `CHROME_DESKTOP` are
+  removed, and so are the entries under `APPDIR` in `PATH`, `LD_LIBRARY_PATH`,
+  `XDG_DATA_DIRS` and `GSETTINGS_SCHEMA_DIR`, along with the defaults AppRun
+  appends to `XDG_DATA_DIRS`. The user's own entries keep their order, and a
+  list left empty is unset. OMXTerm's own environment is not changed, and other
+  platforms pass it through as is.
 - Restty answers DA1 as `CSI ? 1 ; 2 c` and DA2 as `CSI > 0 ; 0 ; 0 c`, once
   per query.
 - Ghostty answers cursor-position queries (`CSI 6 n`) from its parser cursor at

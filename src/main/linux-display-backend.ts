@@ -1,6 +1,7 @@
 import type { App } from "electron";
 import { spawn } from "node:child_process";
 import { posix as path } from "node:path";
+import { withoutAppImageRuntime } from "./appimage-environment";
 import { withSwitchBeforeLaunchRequest } from "./launch-request";
 
 export function applyLinuxDisplayBackendDefault(
@@ -26,13 +27,21 @@ export function applyLinuxDisplayBackendDefault(
         ? appImage
         : process.execPath;
     try {
+      // The relaunched AppImage gets a fresh mount and AppRun environment;
+      // without this it would also keep this mount's soon-dead entries.
       spawn(
         executable,
         withSwitchBeforeLaunchRequest(
           process.argv.slice(1),
           "--ozone-platform=x11",
         ),
-        { detached: true, stdio: "ignore" },
+        {
+          detached: true,
+          stdio: "ignore",
+          ...(executable === appImage
+            ? { env: withoutAppImageRuntime(process.env, "linux") }
+            : {}),
+        },
       ).unref();
       app.exit(0);
     } catch {
