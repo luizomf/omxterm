@@ -214,7 +214,7 @@ The Command Palette is also available from **View → Command Palette…** when 
 
 ## Snippets
 
-Snippets save reusable text or commands in `snippets.yaml`, beside `config.json`. Return from Settings to a terminal tab, then open the Snippets sidebar with `Cmd+Shift+S` or `Ctrl+Shift+S`; the shortcut does nothing in Settings. On current stable releases, Snippets is optional on Linux ARM64/x64, macOS ARM64 and Windows ARM64; it is built in on Windows x64. See the [Snippets guide](snippets-migration.md) for platform availability, installation and migration details.
+Snippets save reusable text or commands in `snippets.yaml`, beside `config.json`. Return from Settings to a terminal tab, then open the Snippets sidebar with `Cmd+Shift+S` or `Ctrl+Shift+S`; the shortcut does nothing in Settings. On current stable releases, Snippets is optional on Linux ARM64/x64, macOS ARM64 and Windows ARM64; it is built in on Windows x64. See the [Snippets availability note](snippets-availability.md) for support and limits, and the [migration guide](snippets-migration.md) for installation and migration details.
 
 Create `snippets.yaml` if it is absent, and save this example:
 

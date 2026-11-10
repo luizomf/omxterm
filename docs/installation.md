@@ -218,11 +218,10 @@ asks you to confirm, because add-ons are trusted code with the app's access.
 Each guide says which OMXTerm versions and systems it works with.
 
 - **Files** shows folders and files and can move or delete them with
-  confirmation. Linux and macOS ARM64 preview; it cannot insert a path into the
-  terminal. On OMXTerm 0.24.0, install the
-  [Files 0.6 archive](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.6.0).
-  [Files guide](files-development-preview.md)
+  confirmation. Linux and Mac versions differ; it cannot insert a path into the
+  terminal. See [Files availability](files-availability.md).
 - **SSH Connect** lists targets and opens SSH connections in normal terminal tabs.
   Linux and macOS ARM64 only; Windows is untested. [SSH Connect guide](ssh-connect.md)
 - **Snippets** stores reusable text; updates are manual. Windows ARM64 public-install
-  Snippets scenarios have unresolved failures of unknown cause. [Known limits](snippets-migration.md#stable-0250-release-disposition)
+  Snippets scenarios have unresolved failures of unknown cause. See
+  [Snippets availability](snippets-availability.md#windows-arm64-known-issue).

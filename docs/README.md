@@ -20,23 +20,22 @@
 ## Optional tools
 
 **[OMXTerm 0.25.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.25.0).**
-Files and SSH are installed separately. Snippets is included as a removable
-default for new profiles on the targets below. Updating an existing profile does
-not install or update tools.
+Files and SSH Connect are installed separately. Snippets is optional on some
+systems and remains built in on Windows x64. These add-ons have different
+platform and testing limits; see each short availability note before installing.
 
-- **[Files](files-development-preview.md)** and
-  **[SSH Connect 0.3.1](ssh-connect.md)** are published previews offered through
-  the official catalogs on **Linux and macOS ARM64**. Follow each tool's guide
-  for installation, compatible hosts and platform/qualification limits.
-- **[Snippets](snippets-migration.md)** is optional on stable 0.25.0 for
-  **Linux ARM64/x64, macOS ARM64 and Windows ARM64**. The official catalog offers
-  0.1.1; new packaged profiles try to install the 0.1.0
-  [removable default](default-snippets.md) once. Existing users choose installation. Your YAML and disabled/removed choices stay intact. Windows x64
-  retains built-in Snippets. Windows ARM64 has
-  [unresolved public-install failures and testing gaps](snippets-migration.md#stable-0250-release-disposition);
-  users needing built-in Snippets may remain on 0.23.0.
+- **[Files](files-availability.md)** is offered for Linux computers with
+  64-bit ARM processors and Macs with Apple silicon (versions 0.6 and 0.7).
+- **[SSH Connect 0.3.1](ssh-connect.md)** is offered for Linux computers with
+  64-bit ARM processors and Macs with Apple silicon; other targets are not
+  qualified.
+- **[Snippets](snippets-availability.md)** is optional on Linux computers with
+  64-bit ARM or Intel/AMD processors, Macs with Apple silicon, and Windows on
+  ARM. New packaged profiles try once to install the removable 0.1.0 default.
+  Windows on ARM has unresolved public-install failures; Windows x64 retains
+  built-in Snippets.
 - **[Saved Layout](saved-layout.md)** and **[Mirror Typing](mirror-typing.md)**
-  are source-only previews with no published archive or catalog offer. Their
+  are source-only previews with no published download or catalog offer. Their
   availability notes summarize the limits; developer records retain build and
   qualification details.
 
@@ -70,6 +69,9 @@ Developer and architecture docs for contributors and coding agents:
 - **[SSH Connect development record](ssh-connect-development.md)** — exact package evidence, integration contract, and qualification limits.
 - **[Saved Layout development record](saved-layout-development.md)** — source build, storage behavior, compatibility and qualification limits.
 - **[Mirror Typing development record](mirror-typing-development.md)** — source build, input behavior, capability contract and qualification limits.
+- **[Files development record](files-development-preview.md)** — implementation, package versions and qualification evidence.
+- **[Snippets migration record](snippets-migration.md)** — exact release limits, historical preview pairs and qualification evidence.
+- **[Extension composition records](macos-extension-composition.md)** — platform-specific foundation, hosted-view and packaging evidence; see also [Linux x64](linux-x64-extension-composition.md) and [Windows ARM64](windows-arm64-extension-composition.md).
 - **[Native subsystem fixture reference](native-test-reference.md)** — focused fixture prerequisites, commands, limits, and evidence boundaries.
 - **[UI style guide](ui-style-guide.md)** — the small palette, spacing, control and responsive-layout vocabulary implemented by Settings.
 - **[Restty Terminal Surface](restty-development.md)** — rendering integration, pinned dependencies, WASM core rebuilds, and optional diagnostics.

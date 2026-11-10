@@ -179,13 +179,11 @@ replace it; on macOS, drag the new **OMXTerm.app** into
 ## Privacy and security
 
 OMXTerm collects no telemetry and does not download or update extensions on its
-own. On most systems, a new installation tries to install the bundled Snippets
-0.1.0 once at startup, from bytes in the app. A Windows network-silence test
-observed system-proxy discovery and reachability traffic, including in an existing
-empty-profile control, but no Snippets catalog or archive acquisition; Windows is
-[not verified to stay network-silent](docs/snippets-migration.md#stable-0250-release-disposition).
-Logs exclude terminal output, commands, clipboard, and settings. Report
-vulnerabilities through [SECURITY.md](SECURITY.md).
+own. On optional-Snippets targets, new packaged profiles try once to install the
+bundled 0.1.0 from the app's own files; it stays inactive until opened. Windows
+is not verified to stay network-silent. Logs exclude terminal output, commands,
+clipboard and settings. See the [Windows availability limits](docs/snippets-availability.md#windows-arm64-known-issue).
+Report vulnerabilities through [SECURITY.md](SECURITY.md).
 
 ## Contributing
 
