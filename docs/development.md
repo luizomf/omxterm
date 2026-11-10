@@ -899,7 +899,7 @@ Within the fixture process/profile scope:
 To run the unit tests for fixture preparation and supervision headlessly:
 
 ```sh
-npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts test/unit/native-preparation-ownership.test.ts test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
+npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
 ```
 
 <a id="supervised-pty-acquisition"></a>

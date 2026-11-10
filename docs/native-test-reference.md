@@ -617,9 +617,7 @@ remain unchanged. Headless ordering/negative controls:
 Fixture Surface import overrides target the canonical composition importer,
 `src/renderer/start-terminal-window.ts`, not the thin `src/renderer/index.ts`
 entry. After moving composition, check every importer-sensitive consumer; normal
-bootstrap equivalence does not prove fixture interception equivalence. Run
-`npm test -- test/unit/renderer-fixture-consumers.test.ts` for actual headless
-bundle/control checks, including deliberately stale-importer negative controls.
+bootstrap equivalence does not prove fixture interception equivalence.
 
 Session-selection notifications describe ownership, not Surface adoption or host
 command readiness: panes may report a started session before their mount returns.
@@ -635,9 +633,7 @@ rejection and resource cleanup are covered headlessly through the production
 host, Surface and Adapter. Native cases remain separate from headless evidence.
 The headless emitted entry and production preload demonstrate host registration
 while the first Surface return is held; independently holding actual host
-registration retains the lost-command/no-replay negative control. Run
-`node node_modules/vitest/vitest.mjs run test/unit/initialization-readiness.test.ts test/unit/renderer-fixture-consumers.test.ts`
-for the ordering and stale-importer negative controls. This is fixture ordering
+registration retains the lost-command/no-replay negative control. This is fixture ordering
 evidence, not a diagnosis of a historical native timeout or native cancellation
 acceptance. Tab-removal retains its
 held-Surface, early-command and held-renderer controls and original deadlines.
