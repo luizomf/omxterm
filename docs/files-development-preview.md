@@ -1038,8 +1038,8 @@ The package probe (`npm run package:verify`) checks only the macOS trash export
 and root-path refusal, not a recoverable Trash operation. The one-off native
 trash fixture behind the evidence above was removed; it is in Git history.
 
-The package probe runs the real addon's no-clobber conflict and move checks on
-every packaged build. The one-off native move fixture behind the evidence below
+The package probe (`npm run package:verify`) runs the real addon's no-clobber
+conflict and move checks. The one-off native move fixture behind the evidence below
 (directories, symlinks, races, permissions and cross-device refusal) was removed;
 it is in Git history.
 
