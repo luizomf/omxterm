@@ -790,16 +790,23 @@ Measurement rules:
 Baseline preflight requires stored absolute byte counts—per-role step steady
 and peak values, addable step totals, stream peaks, and extension-runtime steady
 bytes—to be nonnegative safe integers. These values are min/max/sum results from
-integer-byte samples, not averages. Required primary-role observations remain
-required; optional secondary step-role observations may be absent or null, and
-non-addable step totals remain null. Delivered stream byte counts must be safe
-integers within the existing arrival range. Stored CPU percentages must be finite
-and nonnegative; null remains valid where the profile permits unavailable CPU,
-and one-core percentages may exceed 100. A nonnegative stored CPU aggregate does
-not establish that historical raw CPU counters were monotonic. Derived
-differences remain signed where appropriate, including per-tab marginals,
-idle/runtime growth, stream retained-byte deltas and scrollback-pair deltas;
-per-tab marginals and stream rates may be fractional.
+integer-byte samples, not averages. For extension-runtime aggregation, each
+per-process absolute-byte value in every `RawRuntimeRun` sample must be a
+nonnegative safe integer, and each addable per-sample sum must also be safe.
+These checks apply after the platform memory reader has produced its per-process
+byte values; they do not validate the original OS output before reader
+processing. Any invalid or unavailable runtime memory sample makes both runtime
+memory values unavailable and triggers `extension-runtime-incomplete`; CPU
+remains independently reportable when its readings are valid. Required
+primary-role observations remain required; optional secondary step-role
+observations may be absent or null, and non-addable step totals remain null. Delivered stream byte counts must be safe integers within the
+existing arrival range. Stored CPU percentages must be finite and nonnegative;
+null remains valid where the profile permits unavailable CPU, and one-core
+percentages may exceed 100. A nonnegative stored CPU aggregate does not establish
+that historical raw CPU counters were monotonic. Derived differences remain
+signed where appropriate, including per-tab marginals, idle/runtime growth,
+stream retained-byte deltas and scrollback-pair deltas; per-tab marginals and
+stream rates may be fractional.
 
 Platform profiles: the memory metric and the baseline file are per platform, in
 `PERFORMANCE_BENCHMARK_PROFILES`

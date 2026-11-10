@@ -30,6 +30,23 @@ describe("performance benchmark documentation", () => {
     expect(section).not.toMatch(/structural invariants? (run|gate)/iu);
   });
 
+  it("documents per-process extension-runtime memory integrity and signed growth", () => {
+    const normalized = section.replace(/\s+/gu, " ");
+    expect(normalized).toContain(
+      "per-process absolute-byte value in every `RawRuntimeRun` sample",
+    );
+    expect(normalized).toContain("nonnegative safe integer");
+    expect(normalized).toContain(
+      "after the platform memory reader has produced its per-process byte values",
+    );
+    expect(normalized).toContain(
+      "do not validate the original OS output before reader processing",
+    );
+    expect(normalized).toContain("both runtime memory values unavailable");
+    expect(normalized).toContain("extension-runtime-incomplete");
+    expect(normalized).toContain("idle/runtime growth");
+  });
+
   it("publishes the properties a reader needs to predict a miss", () => {
     expect(section).toContain("uniform");
     expect(section).toContain("idle window");

@@ -11,6 +11,7 @@ import {
   acceptedReport,
   makeRun,
   METRIC,
+  report,
 } from "../fixtures/performance-benchmark-synthetic";
 
 const launch = vi.hoisted(() => vi.fn());
@@ -24,7 +25,10 @@ vi.mock(
     runExtensionRuntime: launch,
   }),
 );
-import { runAndEvaluate } from "../fixtures/performance-benchmark-run";
+import {
+  profileFor,
+  runAndEvaluate,
+} from "../fixtures/performance-benchmark-run";
 
 const REFERENCE_BUILD = {
   runtimeIndex: "a".repeat(64),
@@ -134,6 +138,89 @@ it("refuses invalid raw observations and records a valid run at the real runner 
   launch.mockClear();
   await expect(runAndEvaluate(request)).rejects.toThrow(/--replace/i);
   expect(launch).not.toHaveBeenCalled();
+});
+
+it("reports invalid runtime bytes without suppressing report-only baseline comparisons", async () => {
+  root = await mkdtemp(path.join(os.tmpdir(), "perf-runtime-integrity-"));
+  const baselinePath = path.join(root, "baseline.json");
+  const platformRuns = [
+    makeRun({
+      platform: process.platform,
+      arch: process.arch,
+      scrollbackLines: 10_000,
+    }),
+    makeRun({
+      platform: process.platform,
+      arch: process.arch,
+      scrollbackLines: 0,
+    }),
+  ];
+  const baseline = baselineFrom(
+    report(platformRuns),
+    "c".repeat(40),
+    profileFor(process.platform, process.arch).key,
+  );
+  expect(baselinePreflight(baseline, [10_000, 0])).toBeNull();
+  await writeFile(baselinePath, JSON.stringify(baseline));
+
+  launch.mockImplementation(async (options: { scrollbackLines?: number }) =>
+    options.scrollbackLines === undefined
+      ? {
+          metric: METRIC,
+          windowMs: 2000,
+          processCount: 2,
+          settled: true,
+          build: REFERENCE_BUILD,
+          samples: [
+            {
+              atMs: 0,
+              processes: [
+                { pid: 1, bytes: -1, cpuSeconds: 0 },
+                { pid: 2, bytes: 101, cpuSeconds: 0 },
+              ],
+            },
+            {
+              atMs: 2000,
+              processes: [
+                { pid: 1, bytes: -1, cpuSeconds: 1 },
+                { pid: 2, bytes: 101, cpuSeconds: 1 },
+              ],
+            },
+          ],
+        }
+      : makeRun({
+          scrollbackLines: options.scrollbackLines,
+          platform: process.platform,
+          arch: process.arch,
+        }),
+  );
+
+  const outcome = await runAndEvaluate({
+    scratch: root,
+    baselinePath,
+    repetitions: 1,
+  });
+
+  expect(outcome.comparabilityReasons).toEqual([]);
+  expect(outcome.report.extensionRuntime).toMatchObject({
+    steadyBytes: null,
+    growthBytes: null,
+  });
+  expect(outcome.issues).toContainEqual(
+    expect.objectContaining({
+      code: "extension-runtime-incomplete",
+      blocking: true,
+    }),
+  );
+  expect(
+    outcome.comparison.find((row) => row.family === "extension runtime steady"),
+  ).toMatchObject({
+    candidateMedian: null,
+  });
+  expect(
+    outcome.comparison.find((row) => row.family === "extension runtime steady")
+      ?.baselineMedian,
+  ).toBeGreaterThan(0);
 });
 
 it("allows explicit replacement of an unreadable baseline after a valid run", async () => {

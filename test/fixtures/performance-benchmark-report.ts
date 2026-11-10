@@ -1116,13 +1116,21 @@ function aggregateRuntime(runtime: RawRuntimeRun | null) {
     if (
       !complete ||
       values.length !== runtime.processCount ||
-      values.some((value) => value === null || !Number.isFinite(value))
+      values.some(
+        (value) =>
+          value === null ||
+          (field === "bytes"
+            ? !Number.isSafeInteger(value) || value < 0
+            : !Number.isFinite(value)),
+      )
     )
       return null;
-    return (values as number[]).reduce((total, value) => total + value, 0);
+    const total = (values as number[]).reduce((sum, value) => sum + value, 0);
+    return field === "bytes" && !Number.isSafeInteger(total) ? null : total;
   };
   const elapsedMs = after.atMs - before.atMs;
   const sizes = runtime.samples.map((sample) => sum(sample, "bytes"));
+  const memoryComplete = sizes.every((value) => value !== null);
   const start = sizes[0] ?? null;
   const end = sizes.at(-1) ?? null;
   const startCpu = sum(before, "cpuSeconds");
@@ -1131,10 +1139,9 @@ function aggregateRuntime(runtime: RawRuntimeRun | null) {
     build: runtime.build ?? {},
     windowMs: elapsedMs,
     processCount: runtime.processCount,
-    steadyBytes: sizes.some((value) => value === null)
-      ? null
-      : Math.min(...(sizes as number[])),
-    growthBytes: start === null || end === null ? null : end - start,
+    steadyBytes: memoryComplete ? Math.min(...(sizes as number[])) : null,
+    growthBytes:
+      !memoryComplete || start === null || end === null ? null : end - start,
     cpuPercentOneCore:
       elapsedMs <= 0 || startCpu === null || endCpu === null
         ? null
