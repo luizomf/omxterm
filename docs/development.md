@@ -232,7 +232,7 @@ node -e "const {listPackage}=require('@electron/asar');const files=listPackage(p
 
 Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/integration/`. Support code lives in `test/fixtures/`.
 
-- `npm test -- test/unit` — runs fast, headless unit tests only.
+- `npm run test:unit` — runs the headless unit tests in parallel (about a minute). Use it after every change.
 - `npm run test:panel-cancellation` — runs only the held-activation cancellation cases in Node with GC enabled, including the post-cancel collection discriminator. `check:portable` and both x64 CI lanes require this headless check; ordinary unit runs skip the collection case without `--expose-gc`.
 - `npm test` — runs the full default suite (unit + integration).
 - `npm run test:integration` — runs `test/integration/local-shell.test.ts` only.

@@ -98,7 +98,7 @@ npm run check:portable
 > **Warning:** Graphical integration tests included in `npm test` and `npm run check:portable` open and focus real Electron windows and can write to your system clipboard. Run one graphical suite at a time on an unlocked, idle desktop without moving the mouse or typing during the run. See [side effects on your desktop](docs/development.md#side-effects-on-your-desktop) if you care about your clipboard or OS preferences. For fast headless unit-test feedback while developing, run:
 >
 > ```sh
-> npm test -- test/unit
+> npm run test:unit
 > ```
 
 For changes that affect native packaging or installers, see [packaging verification](docs/development.md#evidence-reuse-and-packaging). Note that full Windows installer verification (`npm run check:win`) performs a real installation and requires a disposable VM with a recovery snapshot.

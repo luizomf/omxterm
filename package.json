@@ -15,6 +15,7 @@
     "lint": "oxlint --type-aware --config .oxlintrc.json --disable-nested-config --deny-warnings --report-unused-disable-directives --threads=1 .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --maxWorkers=4",
+    "test:unit": "vitest run test/unit --fileParallelism",
     "test:panel-cancellation": "vitest run test/unit/application-extensions.test.ts --testNamePattern=\"cancels an in-flight activation\" --execArgv=--expose-gc",
     "test:integration": "vitest run test/integration/local-shell.test.ts",
     "perf:benchmark": "node scripts/performance/run-benchmark.mjs",
