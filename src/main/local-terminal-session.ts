@@ -1,6 +1,10 @@
 import path from "node:path";
 import type { IPty, IPtyForkOptions, IDisposable } from "node-pty";
 import { withoutAppImageRuntime } from "./appimage-environment";
+import {
+  restoreChromiumStartupVariables,
+  type ChromiumStartupVariables,
+} from "./chromium-startup-environment";
 import type { LaunchRequest } from "./launch-request";
 import {
   isBoundedTerminalPayload,
@@ -65,6 +69,8 @@ export interface LocalTerminalSessionOptions {
   readonly workingDirectory?: string;
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
+  // The launch values of the variables Chromium changes in main on Linux.
+  readonly chromiumStartupVariables?: ChromiumStartupVariables | undefined;
   readonly onOutput: (data: string) => void;
   readonly onResizeFailure?: (reason: TerminalResizeFailureReason) => void;
   readonly onExit: (
@@ -98,7 +104,10 @@ export function createLocalTerminalSession(
     pty = spawnPty(executable, arguments_, {
       cwd: options.workingDirectory ?? options.homeDirectory,
       env: {
-        ...withoutAppImageRuntime(options.environment, options.platform),
+        ...restoreChromiumStartupVariables(
+          withoutAppImageRuntime(options.environment, options.platform),
+          options.chromiumStartupVariables,
+        ),
         TERM: "xterm-256color",
         COLORTERM: "truecolor",
         TERM_PROGRAM: "OMXTerm",

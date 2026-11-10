@@ -2,10 +2,15 @@ import type { App } from "electron";
 import { spawn } from "node:child_process";
 import { posix as path } from "node:path";
 import { withoutAppImageRuntime } from "./appimage-environment";
+import {
+  restoreChromiumStartupVariables,
+  type ChromiumStartupVariables,
+} from "./chromium-startup-environment";
 import { withSwitchBeforeLaunchRequest } from "./launch-request";
 
 export function applyLinuxDisplayBackendDefault(
   app: Pick<App, "commandLine" | "exit">,
+  chromiumStartupVariables?: ChromiumStartupVariables,
 ): void {
   const action = planLinuxDisplayBackendDefault(
     app.commandLine.getSwitchValue("ozone-platform"),
@@ -28,7 +33,15 @@ export function applyLinuxDisplayBackendDefault(
         : process.execPath;
     try {
       // The relaunched AppImage gets a fresh mount and AppRun environment;
-      // without this it would also keep this mount's soon-dead entries.
+      // without this it would also keep this mount's soon-dead entries. The
+      // X11 process must also not inherit what Chromium set for this Wayland
+      // one (EGL_PLATFORM=wayland), or its shells would.
+      const environment = restoreChromiumStartupVariables(
+        executable === appImage
+          ? withoutAppImageRuntime(process.env, "linux")
+          : process.env,
+        chromiumStartupVariables,
+      );
       spawn(
         executable,
         withSwitchBeforeLaunchRequest(
@@ -38,9 +51,7 @@ export function applyLinuxDisplayBackendDefault(
         {
           detached: true,
           stdio: "ignore",
-          ...(executable === appImage
-            ? { env: withoutAppImageRuntime(process.env, "linux") }
-            : {}),
+          ...(environment === process.env ? {} : { env: environment }),
         },
       ).unref();
       app.exit(0);

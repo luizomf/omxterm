@@ -4,6 +4,7 @@ import {
   applyLinuxDisplayBackendDefault,
   planLinuxDisplayBackendDefault,
 } from "../../src/main/linux-display-backend";
+import { captureChromiumStartupVariables } from "../../src/main/chromium-startup-environment";
 
 vi.mock("node:child_process", async (importOriginal) => ({
   ...(await importOriginal<typeof import("node:child_process")>()),
@@ -220,6 +221,55 @@ describe("Linux display backend application", () => {
       expect(app.commandLine.appendSwitch).not.toHaveBeenCalled();
     },
   );
+
+  // Main's environment on Wayland once Chromium has started, for a user who
+  // launched OMXTerm with `user`.
+  function chromiumOnWayland(user: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+    return { EGL_PLATFORM: "wayland", ...user, FC_FONTATIONS: "1" };
+  }
+
+  it("relaunches without the variables Chromium set for the Wayland process", () => {
+    const user = { PATH: "/usr/bin", NO_AT_BRIDGE: "0" };
+    process.env = chromiumOnWayland(user);
+    const variables = captureChromiumStartupVariables(
+      process.env,
+      "linux",
+      "wayland",
+    );
+
+    applyLinuxDisplayBackendDefault(app, variables);
+
+    expectRelaunch(
+      "/workspace/node_modules/electron/dist/electron",
+      undefined,
+      user,
+    );
+  });
+
+  it("relaunches the AppImage with the user's own EGL_PLATFORM", () => {
+    const appDir = "/tmp/.mount_OMXTerm123";
+    process.execPath = `${appDir}/omxterm`;
+    process.argv = [process.execPath, "--no-sandbox"];
+    const user = { PATH: "/usr/bin", EGL_PLATFORM: "x11" };
+    process.env = {
+      ...chromiumOnWayland(user),
+      APPIMAGE: "/opt/OMXTerm.AppImage",
+      APPDIR: appDir,
+    };
+    const variables = captureChromiumStartupVariables(
+      process.env,
+      "linux",
+      "wayland",
+    );
+
+    applyLinuxDisplayBackendDefault(app, variables);
+
+    expectRelaunch(
+      "/opt/OMXTerm.AppImage",
+      ["--no-sandbox", "--ozone-platform=x11"],
+      user,
+    );
+  });
 
   it("keeps the seeded backend when spawning the replacement throws", () => {
     vi.mocked(spawn).mockImplementation(() => {

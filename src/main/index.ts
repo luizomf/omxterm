@@ -53,6 +53,7 @@ import { MalformedLaunchRequestError } from "./launch-request";
 import { prepareStartup } from "./application-startup";
 import { registerTerminalShutdown } from "./terminal-shutdown";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
+import { captureChromiumStartupVariables } from "./chromium-startup-environment";
 import { applyChromiumSandboxPolicy } from "./chromium-sandbox-policy";
 import { applyChromiumGpuPolicy } from "./chromium-gpu-policy";
 import {
@@ -101,6 +102,14 @@ import {
   createOperationalEventLog,
   type OperationalEventLog,
 } from "./operational-events";
+
+// Capture before the event loop turns: Chromium changes some of these values
+// in main's environment during startup, and user shells must not inherit them.
+const chromiumStartupVariables = captureChromiumStartupVariables(
+  process.env,
+  process.platform,
+  app.commandLine.getSwitchValue("ozone-platform"),
+);
 
 // Capture before any profile getters or startup writes; never enroll upgrades.
 const defaultProfile = captureDefaultProfile(app);
@@ -168,7 +177,7 @@ applyChromiumSandboxPolicy(app.commandLine);
 
 applyChromiumGpuPolicy(app.commandLine);
 
-applyLinuxDisplayBackendDefault(app);
+applyLinuxDisplayBackendDefault(app, chromiumStartupVariables);
 
 app.on("before-quit", () => operationalEvents?.flush());
 
@@ -394,6 +403,7 @@ app
                   ...(workingDirectory ? { workingDirectory } : {}),
                   applicationVersionProvider: app,
                   environment: process.env,
+                  chromiumStartupVariables,
                   ...callbacks,
                 });
               },
