@@ -27,8 +27,12 @@ also be inherited by unrelated programs launched in the terminal, so packaging
 status alone is insufficient: both `APPIMAGE` and `APPDIR` must be nonempty
 absolute paths, and `process.execPath` must equal `APPDIR/omxterm`, matching the
 packaged AppRun layout. Otherwise the replacement uses `process.execPath`.
-This is a path-ownership check for relaunch selection, not environment cleanup
-or an authenticity check of the AppImage bytes.
+This is a path-ownership check for relaunch selection, not an authenticity
+check of the AppImage bytes. An `APPIMAGE` relaunch passes the environment
+without the current AppImage runtime
+([ADR 0012](0012-use-standard-xterm-terminal-capabilities.md)); otherwise the new
+mount's AppRun would stack its entries on the old mount's, which disappear when
+the first process exits.
 
 Argument/environment tests cover selection and the actual spawn/unref/exit
 relaunch path, including foreign inherited AppImage values and literal `-e` argv.
