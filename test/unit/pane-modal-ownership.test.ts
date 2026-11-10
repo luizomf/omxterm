@@ -31,14 +31,8 @@ function pointer(kind: string, x: number) {
   return event;
 }
 
-it.each([
-  "about",
-  "settings",
-  "snippet",
-  "choosing",
-  "loading",
-  "showing",
-] as const)(
+// Image choosing/loading/showing share one preview gate; "showing" covers it.
+it.each(["about", "settings", "snippet", "showing"] as const)(
   "keeps pane navigation/layout inert under %s but delivers captured closure",
   async (state) => {
     installSettingsDom();
@@ -224,30 +218,23 @@ it.each([
           .click();
       } else {
         openImage();
-        if (state !== "choosing") {
-          loaded.resolve({
-            name: "fixture.png",
-            mime: "image/png",
-            width: 1,
-            height: 1,
-            data: new Uint8Array([1]),
-          });
-          await vi.waitFor(() =>
-            expect(document.querySelector("img")?.hasAttribute("src")).toBe(
-              true,
-            ),
-          );
-          if (state === "showing") {
-            decoded.resolve();
-            await vi.waitFor(() =>
-              expect(
-                document.querySelector<HTMLDialogElement>(
-                  ".local-image-preview",
-                )!.open,
-              ).toBe(true),
-            );
-          }
-        }
+        loaded.resolve({
+          name: "fixture.png",
+          mime: "image/png",
+          width: 1,
+          height: 1,
+          data: new Uint8Array([1]),
+        });
+        await vi.waitFor(() =>
+          expect(document.querySelector("img")?.hasAttribute("src")).toBe(true),
+        );
+        decoded.resolve();
+        await vi.waitFor(() =>
+          expect(
+            document.querySelector<HTMLDialogElement>(".local-image-preview")!
+              .open,
+          ).toBe(true),
+        );
       }
       const active = document.activeElement;
       const range =

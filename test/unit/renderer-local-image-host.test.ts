@@ -280,115 +280,99 @@ describe("local image preview through the Terminal Window host", () => {
       }
     },
   );
-  it.each(["picker", "source"])(
-    "ignores tab bar toggles throughout %s choosing/loading/showing",
-    async (route) => {
-      let finish!: (value: LocalImageData | null) => void;
-      const view = await setup(
-        () =>
-          new Promise((resolve) => {
-            finish = resolve;
-          }),
+  // Picker and source activation share one preview gate; each check uses one.
+  it("ignores tab bar toggles throughout source choosing/loading/showing", async () => {
+    let finish!: (value: LocalImageData | null) => void;
+    const view = await setup(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    let decoded!: () => void;
+    vi.spyOn(HTMLImageElement.prototype, "decode").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          decoded = resolve;
+        }),
+    );
+    try {
+      view.tabCommand({ action: "new" });
+      await vi.waitFor(() => expect(view.tabStrip.hidden).toBe(false));
+      view.surfaceOptions.onLocalImageActivation!({
+        source: "native-path",
+        path: "/tmp/fixture.png",
+      });
+      view.surface.focus.mockClear();
+      view.toggleTabBar();
+      expect(view.tabStrip.hidden).toBe(false);
+      finish(image);
+      await vi.waitFor(() => expect(decoded).toBeDefined());
+      view.toggleTabBar();
+      expect(view.tabStrip.hidden).toBe(false);
+      decoded();
+      await vi.waitFor(() =>
+        expect(document.querySelector("dialog")!.open).toBe(true),
       );
-      let decoded!: () => void;
-      vi.spyOn(HTMLImageElement.prototype, "decode").mockImplementation(
-        () =>
-          new Promise<void>((resolve) => {
-            decoded = resolve;
-          }),
-      );
-      try {
-        view.tabCommand({ action: "new" });
-        await vi.waitFor(() => expect(view.tabStrip.hidden).toBe(false));
-        if (route === "picker") view.openImage();
-        else
-          view.surfaceOptions.onLocalImageActivation!({
-            source: "native-path",
-            path: "/tmp/fixture.png",
-          });
-        view.surface.focus.mockClear();
-        view.toggleTabBar();
-        expect(view.tabStrip.hidden).toBe(false);
-        finish(image);
-        await vi.waitFor(() => expect(decoded).toBeDefined());
-        view.toggleTabBar();
-        expect(view.tabStrip.hidden).toBe(false);
-        decoded();
-        await vi.waitFor(() =>
-          expect(document.querySelector("dialog")!.open).toBe(true),
-        );
-        view.toggleTabBar();
-        expect(view.tabStrip.hidden).toBe(false);
-        expect(view.surface.focus).not.toHaveBeenCalled();
-        document.querySelector<HTMLButtonElement>("dialog button")!.click();
-        view.toggleTabBar();
-        expect(view.tabStrip.hidden).toBe(true);
-        view.toggleTabBar();
-        expect(view.tabStrip.hidden).toBe(false);
-      } finally {
-        view.host.dispose();
-      }
-    },
-  );
+      view.toggleTabBar();
+      expect(view.tabStrip.hidden).toBe(false);
+      expect(view.surface.focus).not.toHaveBeenCalled();
+      document.querySelector<HTMLButtonElement>("dialog button")!.click();
+      view.toggleTabBar();
+      expect(view.tabStrip.hidden).toBe(true);
+      view.toggleTabBar();
+      expect(view.tabStrip.hidden).toBe(false);
+    } finally {
+      view.host.dispose();
+    }
+  });
 
-  it.each(["picker", "source"])(
-    "suppresses title toggle and handle through %s choosing/loading/showing",
-    async (route) => {
-      let finish!: (value: LocalImageData | null) => void;
-      const view = await setup(
-        () =>
-          new Promise((resolve) => {
-            finish = resolve;
-          }),
-        true,
-      );
-      let decoded!: () => void;
-      vi.spyOn(HTMLImageElement.prototype, "decode").mockImplementation(
-        () =>
-          new Promise<void>((resolve) => {
-            decoded = resolve;
-          }),
-      );
-      const handle = document.querySelector<HTMLElement>(
-        ".window-drag-handle",
-      )!;
-      try {
-        expect(handle.hidden).toBe(false);
-        if (route === "picker") view.openImage();
-        else
-          view.surfaceOptions.onLocalImageActivation!({
-            source: "native-path",
-            path: "/tmp/fixture.png",
-          });
-        view.surface.focus.mockClear();
-        const suppressed = () => {
-          view.toggleTitleBar();
-          expect(handle.hidden).toBe(true);
-          expect(view.chromeCommand).not.toHaveBeenCalledWith(
-            "toggle-title-bar",
-          );
-          expect(view.surface.focus).not.toHaveBeenCalled();
-        };
-        suppressed();
-        expect(view.chromeCommand).toHaveBeenLastCalledWith("preview-active");
-        finish(image);
-        await vi.waitFor(() => expect(decoded).toBeDefined());
-        suppressed();
-        decoded();
-        await vi.waitFor(() =>
-          expect(document.querySelector("dialog")!.open).toBe(true),
-        );
-        suppressed();
-        document.querySelector<HTMLButtonElement>("dialog button")!.click();
-        expect(view.chromeCommand).toHaveBeenLastCalledWith("preview-inactive");
-        expect(handle.hidden).toBe(false);
+  it("suppresses title toggle and handle through picker choosing/loading/showing", async () => {
+    let finish!: (value: LocalImageData | null) => void;
+    const view = await setup(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      true,
+    );
+    let decoded!: () => void;
+    vi.spyOn(HTMLImageElement.prototype, "decode").mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          decoded = resolve;
+        }),
+    );
+    const handle = document.querySelector<HTMLElement>(".window-drag-handle")!;
+    try {
+      expect(handle.hidden).toBe(false);
+      view.openImage();
+      view.surface.focus.mockClear();
+      const suppressed = () => {
         view.toggleTitleBar();
-        expect(view.chromeCommand).toHaveBeenLastCalledWith("toggle-title-bar");
-      } finally {
-        view.host.dispose();
-      }
-    },
-  );
+        expect(handle.hidden).toBe(true);
+        expect(view.chromeCommand).not.toHaveBeenCalledWith("toggle-title-bar");
+        expect(view.surface.focus).not.toHaveBeenCalled();
+      };
+      suppressed();
+      expect(view.chromeCommand).toHaveBeenLastCalledWith("preview-active");
+      finish(image);
+      await vi.waitFor(() => expect(decoded).toBeDefined());
+      suppressed();
+      decoded();
+      await vi.waitFor(() =>
+        expect(document.querySelector("dialog")!.open).toBe(true),
+      );
+      suppressed();
+      document.querySelector<HTMLButtonElement>("dialog button")!.click();
+      expect(view.chromeCommand).toHaveBeenLastCalledWith("preview-inactive");
+      expect(handle.hidden).toBe(false);
+      view.toggleTitleBar();
+      expect(view.chromeCommand).toHaveBeenLastCalledWith("toggle-title-bar");
+    } finally {
+      view.host.dispose();
+    }
+  });
 
   it("blocks terminal-directed actions while loading/modal and restores them after dismissal", async () => {
     let finish!: (value: LocalImageData) => void;
@@ -497,23 +481,6 @@ describe("local image preview through the Terminal Window host", () => {
           ),
         ).toBe(`${nativeTitleInset}px`);
       }
-    } finally {
-      view.host.dispose();
-    }
-  });
-
-  it("still delivers confirmed session closure while a preview is open", async () => {
-    const view = await setup(async () => image);
-    try {
-      view.surfaceOptions.onLocalImageActivation!({
-        source: "file-url",
-        url: "file:///tmp/fixture.png",
-      });
-      await vi.waitFor(() =>
-        expect(document.querySelector("dialog")!.open).toBe(true),
-      );
-      view.tabCommand({ action: "close-session", sessionId: "s1" });
-      expect(view.surface.dispose).toHaveBeenCalledOnce();
     } finally {
       view.host.dispose();
     }

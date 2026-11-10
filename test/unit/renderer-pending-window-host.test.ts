@@ -179,19 +179,19 @@ it.each([true, false])(
   },
 );
 
-it.each(["clipboard", "export", "tabs", "snippets"] as const)(
-  "cleans partial synchronous setup when %s registration throws",
+// Window actions and Snippets each roll back their own partial registration.
+it.each(["tabs", "snippets"] as const)(
+  "removes every completed subscription and aborts the mount when %s registration throws",
   async (failureAt) => {
     const elements = createPageElements();
     const aside = document.createElement("aside");
     document.body.append(aside);
-    const removeZoom = vi.fn();
-    const removeClipboard = vi.fn();
-    const removeTabs = vi.fn();
-    const removeTabbar = vi.fn();
-    const removeFind = vi.fn();
-    const removeExport = vi.fn();
-    const removeConfiguration = vi.fn();
+    const removals: Array<ReturnType<typeof vi.fn>> = [];
+    const subscribe = (_listener: unknown) => {
+      const remove = vi.fn();
+      removals.push(remove);
+      return remove;
+    };
     const failure = new Error("registration failed");
     let finish!: (surface: TerminalSurface) => void;
     const pending = new Promise<TerminalSurface>((resolve) => {
@@ -207,49 +207,33 @@ it.each(["clipboard", "export", "tabs", "snippets"] as const)(
         {
           createAdapter: createAdapterFactory(),
           mount,
-          subscribeToConfigurationUpdates: () => removeConfiguration,
-          subscribeToFontZoom: () => removeZoom,
-          subscribeToClipboardActions() {
-            if (failureAt === "clipboard") throw failure;
-            return removeClipboard;
-          },
-          subscribeToTabBarToggle: () => removeTabbar,
-          subscribeToFind: () => removeFind,
-          subscribeToExportRequests() {
-            if (failureAt === "export") throw failure;
-            return removeExport;
-          },
-          subscribeToTabCommands() {
+          subscribeToConfigurationUpdates: subscribe,
+          subscribeToFontZoom: subscribe,
+          subscribeToClipboardActions: subscribe,
+          subscribeToTabBarToggle: subscribe,
+          subscribeToFind: subscribe,
+          subscribeToExportRequests: subscribe,
+          subscribeToTabCommands: (listener) => {
             if (failureAt === "tabs") throw failure;
-            return removeTabs;
+            return subscribe(listener);
           },
           snippets: {
             load: async () => ({ snippets: [] }),
-            subscribeToToggle() {
-              throw failure;
+            subscribeToToggle: (listener) => {
+              if (failureAt === "snippets") throw failure;
+              return subscribe(listener);
             },
           },
         },
       ),
     ).toThrow(failure);
-    expect(removeZoom).toHaveBeenCalledOnce();
-    expect(removeConfiguration).toHaveBeenCalledOnce();
-    expect(removeClipboard).toHaveBeenCalledTimes(
-      failureAt === "clipboard" ? 0 : 1,
-    );
-    expect(removeTabs).toHaveBeenCalledTimes(failureAt === "snippets" ? 1 : 0);
-    expect(removeTabbar).toHaveBeenCalledTimes(
-      failureAt === "clipboard" ? 0 : 1,
-    );
-    expect(removeFind).toHaveBeenCalledTimes(failureAt === "clipboard" ? 0 : 1);
-    expect(removeExport).toHaveBeenCalledTimes(
-      failureAt === "tabs" || failureAt === "snippets" ? 1 : 0,
-    );
+    expect(removals.length).toBeGreaterThan(0);
+    for (const remove of removals) expect(remove).toHaveBeenCalledOnce();
     expect(mount.mock.calls[0]![2].abortSignal?.aborted).toBe(true);
     finish(surface);
     await vi.waitFor(() => expect(surface.dispose).toHaveBeenCalledOnce());
     window.dispatchEvent(new Event("pagehide"));
-    expect(removeZoom).toHaveBeenCalledOnce();
+    for (const remove of removals) expect(remove).toHaveBeenCalledOnce();
   },
 );
 

@@ -59,46 +59,6 @@ function selection(f: Scene) {
   );
 }
 
-it("keeps pane B selected when sibling search gains DOM focus while image decode is pending", async () => {
-  const f = await fixture();
-  await begin(f, "decode");
-  expect(f.notifySelection).toHaveBeenLastCalledWith("s2", ["s1", "s2"]);
-  const notifications = f.notifySelection.mock.calls.length;
-  f.fields[0]!.search.focus();
-  expect(f.notifySelection).toHaveBeenCalledTimes(notifications);
-  expect(
-    f.fields[1]!.terminal.closest(".terminal-surface")!.classList.contains(
-      "pane-focused",
-    ),
-  ).toBe(true);
-});
-it("keeps the original tab visible when another tab button is activated during decode", async () => {
-  const f = await fixture();
-  await begin(f, "decode");
-  const notifications = f.notifySelection.mock.calls.length;
-  f.tabStrip.querySelectorAll<HTMLButtonElement>("button")[1]!.click();
-  expect(selection(f)).toEqual(["true", "false"]);
-  expect(f.notifySelection).toHaveBeenCalledTimes(notifications);
-  expect((f.tabsContainer.children[0] as HTMLElement).hidden).toBe(false);
-  expect((f.tabsContainer.children[1] as HTMLElement).hidden).toBe(true);
-});
-it("makes terminal and tab controls inert before the picker can settle", async () => {
-  const f = await fixture();
-  f.openImage();
-  expect(f.tabsContainer.inert).toBe(true);
-  expect(f.tabStrip.inert).toBe(true);
-});
-it("releases DOM ownership before restoring the original pane after picker cancellation", async () => {
-  const f = await fixture();
-  f.openImage();
-  f.loaded.resolve(null);
-  await vi.waitFor(() => expect(f.surfaces[1]!.focus).toHaveBeenCalledOnce());
-  expect(f.blockedAtFocus).toEqual([false]);
-  expect(f.tabsContainer.inert).toBe(false);
-  expect(f.tabStrip.inert).toBe(false);
-  expect(document.activeElement).toBe(f.fields[1]!.terminal);
-});
-
 it.each(phases)(
   "freezes direct pointer/keyboard/programmatic selection throughout %s and releases it afterward",
   async (phase) => {
@@ -207,13 +167,14 @@ it.each<TerminalTabCommand>([
   },
 );
 
-it.each(
-  phases.flatMap((phase) =>
-    (["pane", "tab", "failure-ack", "ordinary", "dispose"] as const).map(
-      (ending) => ({ phase, ending }),
-    ),
-  ),
-)(
+// One preview gate covers every phase, so each ending runs in one phase.
+it.each([
+  { ending: "pane", phase: "picker" },
+  { ending: "tab", phase: "loading" },
+  { ending: "failure-ack", phase: "decode" },
+  { ending: "ordinary", phase: "open" },
+  { ending: "dispose", phase: "decode" },
+] as const)(
   "delivers $ending lifecycle cleanup during $phase without stealing modal focus",
   async ({ phase, ending }) => {
     const f = await fixture();

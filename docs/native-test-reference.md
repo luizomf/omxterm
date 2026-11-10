@@ -145,9 +145,6 @@ History remains isolated with `SaveNothing` and a fixture-owned path; input
 phases still require the executed setup marker. The readiness oracle also
 requires an executed command marker, not just a prompt or observed PTY write.
 
-Headless encoded-setup and readiness checks (not native console-mode evidence):
-`npm test -- test/unit/restty-host-sessions.test.ts`.
-
 ## Host output evidence
 
 The paced output fixture keeps all sixteen actual Select All/Copy checks over

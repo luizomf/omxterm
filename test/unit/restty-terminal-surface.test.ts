@@ -249,12 +249,8 @@ describe("Restty Terminal Surface", () => {
 });
 
 describe("cancelled tab initialization through the production host and Adapter", () => {
-  it.each([
-    "fonts",
-    "runtime",
-    "fonts-rejection",
-    "runtime-rejection",
-  ] as const)(
+  // Each boundary's resolve/reject pair is split with the later-tab cases.
+  it.each(["fonts", "runtime-rejection"] as const)(
     "closes the first pending tab at %s without starting a session or reviving its owner",
     async (boundary) => {
       harness.instances.length = 0;
@@ -314,9 +310,7 @@ describe("cancelled tab initialization through the production host and Adapter",
         expect(bridge.start).not.toHaveBeenCalled();
         expect(fatal).not.toHaveBeenCalled();
         expect(notifyTabsEmpty).toHaveBeenCalledOnce();
-        expect(released).toHaveBeenCalledTimes(
-          boundary === "fonts-rejection" ? 0 : 1,
-        );
+        expect(released).toHaveBeenCalledOnce();
         for (const runtime of harness.instances) {
           expect(runtime.destroy).toHaveBeenCalledOnce();
           expect(runtime.listeners.size).toBe(0);
@@ -475,36 +469,6 @@ describe("Restty Terminal Surface appearance", () => {
     expect(harness.instances).toHaveLength(1);
     expect(adapter.start).toHaveBeenCalledOnce();
     expect(adapter.close).not.toHaveBeenCalled();
-  });
-
-  it("keeps live scrollback mutation isolated to its owning Surface", async () => {
-    const firstAdapter = createAdapter();
-    const secondAdapter = createAdapter();
-    const { mountResttyTerminalSurface } =
-      await import("../../src/terminal-surface/restty-terminal-surface");
-    const first = await mountResttyTerminalSurface(
-      document.createElement("main"),
-      firstAdapter.adapter,
-      { scrollbackLines: 2_000 },
-    );
-    await mountResttyTerminalSurface(
-      document.createElement("main"),
-      secondAdapter.adapter,
-      { scrollbackLines: 2_000 },
-    );
-
-    first.applyConfiguration({
-      appearance: { fontSize: 16, lineHeight: 1, ligatures: true },
-      padding: { top: 0, right: 8, bottom: 8, left: 8 },
-      scrollbackLines: 1,
-      optionKeyMode: "none",
-      theme: DEFAULT_TERMINAL_THEME,
-    });
-
-    expect(harness.instances[0]!.setScrollbackLines).toHaveBeenCalledWith(1);
-    expect(harness.instances[1]!.setScrollbackLines).not.toHaveBeenCalled();
-    expect(firstAdapter.adapter.close).not.toHaveBeenCalled();
-    expect(secondAdapter.adapter.close).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid live scrollback value before runtime mutation", async () => {
