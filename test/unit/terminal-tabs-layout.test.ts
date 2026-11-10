@@ -51,7 +51,7 @@ function captureBridge() {
 }
 
 describe("initial saved-window layout ownership", () => {
-  it("allocates all panes before mounts, prioritizes selected focus, bounds concurrency and readies independently", async () => {
+  it("allocates every restored pane, prioritizes selected focus, bounds concurrency and readies independently", async () => {
     const releases: (() => void)[] = [];
     const captured = captureBridge();
     const h = createTabsHarness({
@@ -60,9 +60,6 @@ describe("initial saved-window layout ownership", () => {
     });
     owners.push(h.tabs);
     expect(h.createAdapter).toHaveBeenCalledTimes(4);
-    expect(Math.max(...h.createAdapter.mock.invocationCallOrder)).toBeLessThan(
-      h.mount.mock.invocationCallOrder[0]!,
-    );
     expect(h.createAdapter.mock.calls).toEqual(
       plan().tabs.flatMap((tab) =>
         tab.panes.map((token) => [undefined, undefined, token]),

@@ -8,17 +8,6 @@ const cases = cancellations.flatMap((cancel) =>
   ),
 );
 
-it("inherits the following valid cwd after CAN cancels the OSC 7 in the review probe", () => {
-  const tracker = createWorkingDirectoryTracker({
-    platform: "linux",
-    hostName: () => "local",
-    isDirectory: () => true,
-  });
-  tracker.observe("s1", "\x1b]7;file:///old\x07");
-  tracker.observe("s1", "\x1b]7;file:///cancelled\x18\x1b]7;file:///new\x07");
-  expect(tracker.inherited("s1")).toBe("/new");
-});
-
 it.each(cancellations)(
   "cancellation %j preserves a completed cwd unless the cancelled report already exceeded its bound",
   (cancel) => {

@@ -46,12 +46,7 @@ function harness() {
       sendSessionTitle: sent,
     },
   );
-  const sync = vi.fn((id: string) => {
-    // The unfixed candidate never requests reconciliation. Keep baseline runs
-    // on the original lost-label assertion, not a missing-method exception.
-    if ("syncSessionTitle" in controller)
-      (controller.syncSessionTitle as (id: string) => void)(id);
-  });
+  const sync = vi.fn((id: string) => controller.syncSessionTitle(id));
   const close = vi.fn((id: string) => controller.sessionEnded(id));
   const bridge = {
     start() {

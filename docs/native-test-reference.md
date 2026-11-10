@@ -124,14 +124,14 @@ cancelled mounts fail immediately. Native exits and independent supervision are
 still required, not replaced by a result marker or local timeout.
 
 This fixture no longer checks six-child post-reload input/acknowledgement,
-cancelled-sibling usability or a second disposed window. The existing real-read
-headless lifetime matrix retains cancellation/disposal, admission, serialization
-and genuine read-error policy coverage, not that full native usability
-cross-product. Reducing the scenario does not explain or qualify a historical
+cancelled-sibling usability or a second disposed window. Headless unit tests
+retain cancellation/disposal and genuine read-error coverage across reload,
+with admission and serialization covered at the IPC and font-request layers,
+not that full native usability cross-product. Reducing the scenario does not explain or qualify a historical
 native timeout. Run the native suite alone on an idle unlocked desktop with
 `npm test -- test/integration/font-read-reload.test.ts`.
-Headless real-read lifetime checks:
-`npm test -- test/unit/terminal-font-read-reload.test.ts`.
+Headless lifetime checks:
+`npm test -- test/unit/terminal-font-read-reload.test.ts test/unit/terminal-font-data-request.test.ts test/unit/terminal-ipc-controller.test.ts`.
 Successful headless checks or bundle preparation are not native runtime acceptance.
 
 ## Restty host PowerShell isolation

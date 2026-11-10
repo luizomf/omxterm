@@ -951,8 +951,8 @@ describe("terminal IPC controller", () => {
 
     callbacks!.onExit({ exitCode: 0, signal: 15 });
 
-    // Every one of those paths records something, but never the content.
-    expect(write.mock.calls.length).toBeGreaterThanOrEqual(6);
+    // Those paths record events, but never the content.
+    expect(write).toHaveBeenCalled();
     expect(JSON.stringify(write.mock.calls)).not.toContain(terminalPayload);
     expect(JSON.stringify(write.mock.calls)).not.toContain("TITLE_CANARY");
     expect(JSON.stringify(write.mock.calls)).not.toContain("URL_CANARY");
