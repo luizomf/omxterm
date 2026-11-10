@@ -103,7 +103,8 @@ core.
   bracket classes and `**` don't.
 - Bounds: depth 16, 64 file visits, 256 KiB per file, 1 MiB total, 4,096
   characters per line, 4,096 glob entries and 256 aliases. Files are opened
-  non-blocking and must be regular; symlink cycles are refused.
+  non-blocking and must be regular. Include cycles are refused; symlinked config
+  files work.
 - A partial result carries fixed reason counts. Quick connect still works for
   missing aliases.
 - Refresh is serialized per view and stale replies are dropped. The backend runs

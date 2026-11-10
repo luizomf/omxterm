@@ -1,9 +1,9 @@
 # Configuration development notes
 
 [User configuration](configuration.md) covers what users set. This page lists
-the edge cases behind those settings that matter when you change them. Settings
-tab basics, the terminal context menu and the font-read race during reload are
-in the [usage development notes](usage-development.md). The
+the edge cases behind those settings that matter when you change them. The
+terminal context menu and the font-read race during reload are in the
+[usage development notes](usage-development.md). The
 [product contract](spec.md) is the full behavior reference.
 
 ## Configuration folder
@@ -17,10 +17,21 @@ in the [usage development notes](usage-development.md). The
 - Relative `theme.path` values resolve against the logical configuration folder,
   even when `config.json` is a symlink to somewhere else.
 
+## Settings tab
+
+- Switching away keeps the selected category, drafts, caret, scroll and pending
+  save results. **Close Tab** or **Close** discards them without a prompt and
+  never saves raw JSON. Escape doesn't close the tab.
+- Opening Settings doesn't resize the window or change its minimum size.
+- Terminal-only actions (pane, Find, zoom, snippet, file drop) do nothing there.
+  Copy, Paste and Select All edit the focused field, never a hidden terminal.
+- Selecting Settings suspends the Auxiliary Panel. Returning to a terminal
+  restores the selected tool without reopening a closed one.
+- About and image previews can open over Settings and make it inert, then
+  restore its focused control. The Command Palette can open above it too.
+
 ## Saving from Settings
 
-- Preference controls save as soon as they change. Theme drafts and the
-  **Config File** editor wait for an explicit **Save**.
 - Rapid theme or transparency choices replace earlier queued choices for the same
   control that haven't started; a save already running finishes. The replaced
   choice reports that a newer choice superseded it, which is not a saved
@@ -55,8 +66,6 @@ read.
 
 ## Language
 
-- Only the exact tags `en-US` and `pt-BR` are accepted. The language is never
-  inferred from the system.
 - A successful save or reload switches the menu and every open window. Open
   editors keep drafts, selected page, focus, caret, scroll and pending saves. An
   open snippet preview keeps its captured pane even if that terminal ended.
@@ -136,7 +145,6 @@ read.
 - **Settings → Appearance** has a 0–100% slider in 1% steps (arrows adjust it,
   Home/End jump to the ends) and a **Blur desktop background** checkbox. Each
   change goes through the normal reload path.
-- Desktop blur is separate from the softening behind About and Command Palette.
 - Programs that paint an explicit cell background (Neovim, `btop`) stay opaque
   unless they use the default background (`SGR 49`).
 
@@ -173,7 +181,6 @@ Availability and installation are in the
   scroll; Close and reopen starts fresh. Old rows can't run while loading.
   Invalid files show the path and a safe diagnostic with line and column, never a
   command excerpt.
-- `snippets.json` is never read, rewritten or migrated.
 
 ## Themes
 
@@ -269,8 +276,8 @@ Each field is optional, and `appearance: {}` is valid.
 - A keyboard-focused separator always paints its 1 px line in the theme
   foreground, even with `null` or while dragging.
 - Only these three keys with hex or `null` are accepted. `appearance` itself
-  must be an object, and the 21 palette colors stay non-nullable. Builds older
-  than this extension reject `appearance`. Settings has no controls for these
+  must be an object, and the 21 palette colors stay non-nullable. Builds that
+  predate `appearance` reject it. Settings has no controls for these
   roles.
 
 ## OMXTerm Studio
@@ -296,6 +303,3 @@ an older shortcut vocabulary. It can still import a theme with only `version`,
   those panes close, across windows, without another reload.
 - Font and configuration errors stay visible until a successful reload. Closing
   an old pane doesn't dismiss an unrelated error.
-- A rejected manual reload keeps the last valid configuration. At startup an
-  invalid `config.json` falls back to built-in defaults, and files are never
-  overwritten.
