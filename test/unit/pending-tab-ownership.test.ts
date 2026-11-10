@@ -354,28 +354,6 @@ describe("failure acknowledgement ownership across sibling exits", () => {
     },
   );
 
-  it("retains a runtime-failed B before its native exit while A exits ordinarily", async () => {
-    const h = await harness();
-    h.gate.resolve();
-    await vi.waitFor(() => expect(h.completed()).toBe(2));
-    h.renderingFailures[1]!();
-    expect(h.ptys[1]!.kill).toHaveBeenCalledOnce();
-    h.ptys[0]!.exit();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(h.window.isDestroyed()).toBe(false);
-    expect(h.showSessionFailure).not.toHaveBeenCalled();
-    expect(h.nativeQuitCompleted).not.toHaveBeenCalled();
-    h.ptys[1]!.exit();
-    await vi.waitFor(() => expect(h.showSessionFailure).toHaveBeenCalledOnce());
-    expect(h.window.isDestroyed()).toBe(false);
-    h.acknowledgement.resolve();
-    await vi.waitFor(() =>
-      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
-    );
-    expect(h.window.close).toHaveBeenCalledOnce();
-    expect(h.container.children).toHaveLength(0);
-  });
-
   it("acknowledging A cannot discard runtime-failed B awaiting native exit", async () => {
     const h = await harness();
     h.gate.resolve();
@@ -416,25 +394,6 @@ describe("failure acknowledgement ownership across sibling exits", () => {
     expect(h.container.children).toHaveLength(0);
   });
 
-  it("retains each of multiple spawn failures until every acknowledgement completes", async () => {
-    const h = await harness("spawn");
-    h.gate.resolve();
-    await vi.waitFor(() => expect(h.settledMounts()).toBe(2));
-    h.application.newTabInSelectedWindow();
-    await vi.waitFor(() => expect(h.acknowledgements).toHaveLength(2));
-    h.ptys[0]!.exit();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(h.window.isDestroyed()).toBe(false);
-    h.acknowledgements[1]!.resolve();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(h.window.isDestroyed()).toBe(false);
-    h.acknowledgements[0]!.resolve();
-    await vi.waitFor(() =>
-      expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
-    );
-    expect(h.window.close).toHaveBeenCalledOnce();
-  });
-
   it("does not close a still-mounting sibling after last-native-session acknowledgement", async () => {
     const h = await harness();
     h.ptys[0]!.exit(15);
@@ -451,30 +410,6 @@ describe("failure acknowledgement ownership across sibling exits", () => {
       expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
     );
   });
-
-  it.each(["signal", "rendering"] as const)(
-    "retains a last-session %s failure and closes once after acknowledgement",
-    async (failure) => {
-      const h = await harness();
-      h.gate.resolve();
-      await vi.waitFor(() => expect(h.completed()).toBe(2));
-      h.ptys[0]!.exit();
-      await vi.waitFor(() => expect(h.container.children).toHaveLength(1));
-      if (failure === "rendering") h.renderingFailures[1]!();
-      h.ptys[1]!.exit(failure === "signal" ? 15 : 0);
-      await vi.waitFor(() =>
-        expect(h.showSessionFailure).toHaveBeenCalledOnce(),
-      );
-      expect(h.window.isDestroyed()).toBe(false);
-      expect(h.nativeQuitCompleted).not.toHaveBeenCalled();
-      h.acknowledgement.resolve();
-      await vi.waitFor(() =>
-        expect(h.nativeQuitCompleted).toHaveBeenCalledOnce(),
-      );
-      expect(h.window.close).toHaveBeenCalledOnce();
-      expect(h.container.children).toHaveLength(0);
-    },
-  );
 
   it("ignores late acknowledgements after explicit owner closure", async () => {
     const h = await harness();

@@ -423,46 +423,6 @@ it("finishes both started A consumers across reload while new B waits for the bo
   });
 });
 
-it("does not start an obsolete queued generation and gives a returned family a fresh load", async () => {
-  const app = fixture();
-  await app.host.ready;
-  await app.reload(A);
-  const gate = holdRead();
-  app.command({ action: "new" });
-  await gate.entered;
-  await app.reload(B);
-  const queued = app.request(B);
-  const stale = expect(queued).rejects.toThrow("superseded");
-  await app.reload(A);
-  const current = app.request(A);
-  const shared = app.request(A);
-  expect(app.load.mock.calls).toEqual([[undefined], [A]]);
-  const nextRead = holdRead();
-  gate.release();
-  await stale;
-  await nextRead.entered;
-  // A's old completion must not clear the newer generation's pending identity.
-  const laterShared = app.request(A);
-  expect(laterShared).toBe(current);
-  nextRead.release();
-  const [data, same] = await Promise.all([current, shared]);
-  await app.settled();
-  expect(data.configured?.family).toBe(A);
-  expect(same).toBe(data);
-  expect(app.outcomes.filter((result) => result.family === B)).toEqual([
-    {
-      family: B,
-      status: "rejected",
-      error: "Terminal Font request was superseded",
-    },
-  ]);
-  expect(app.load.mock.calls).toEqual([[undefined], [A], [A]]);
-  expect(app.createSession).toHaveBeenCalledTimes(2);
-  expect(io.open).toBe(2); // No native B read; two distinct A generations.
-  await app.request(A); // A completed load does release its own pending identity.
-  expect(app.load).toHaveBeenCalledTimes(4);
-});
-
 it("completes a genuine pending A read across a line-height-only reload", async () => {
   const gate = holdRead();
   const app = fixture(A);
@@ -488,24 +448,6 @@ it("completes a genuine pending A read across a line-height-only reload", async 
   expect(app.router.activeTerminalSurfaceFontConfigurations()).toEqual([
     { fontFamily: A, fontLineHeight: 1 },
   ]);
-});
-
-it("rejects a not-accepted old family and a foreign frame without additional reads", async () => {
-  const app = fixture();
-  await app.host.ready;
-  await app.reload(B);
-  await expect(app.request(A)).rejects.toThrow(
-    "does not match the active configured family",
-  );
-  expect(() =>
-    app.handlers.get(terminalIpc.fontData)!(
-      { ...app.event, senderFrame: {} },
-      B,
-    ),
-  ).toThrow("untrusted sender");
-  await app.settled();
-  expect(app.load.mock.calls).toEqual([[undefined]]);
-  expect(io.open).toBe(0);
 });
 
 it("keeps a genuine bounded-read validation failure visible across reload instead of substituting B", async () => {

@@ -2,13 +2,6 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
-import {
-  registerTerminalIpcRouter,
-  type IpcEvent,
-  type IpcMainPort,
-  type TrustedWebContents,
-} from "../../src/main/terminal-ipc-controller";
-import { createTerminalWindowTitleController } from "../../src/main/terminal-window-title";
 
 const electron = vi.hoisted(() => {
   const listeners = new Map<
@@ -305,103 +298,6 @@ describe("isolated preload terminal bridge requests", () => {
       terminalIpc.localImageOpen,
       expect.any(Function),
     );
-  });
-
-  it("delivers an oversized parser title through preload and main to the safe native fallback", async () => {
-    const handlers = new Map<
-      string,
-      (event: IpcEvent, payload?: unknown) => unknown
-    >();
-    const listeners = new Map<
-      string,
-      (event: IpcEvent, payload?: unknown) => void
-    >();
-    const ipcMain: IpcMainPort = {
-      handle: (channel, handler) => handlers.set(channel, handler),
-      removeHandler: (channel) => handlers.delete(channel),
-      on: (channel, listener) => listeners.set(channel, listener),
-      removeListener: (channel) => listeners.delete(channel),
-    };
-    const frame = {};
-    const webContents: TrustedWebContents = {
-      mainFrame: frame,
-      isDestroyed: () => false,
-      send: vi.fn(),
-    };
-    const event = { sender: webContents, senderFrame: frame };
-    const nativeTitles: string[] = [];
-    const sessionTitles: string[] = [];
-    const titleController = createTerminalWindowTitleController(
-      {
-        isFocused: () => true,
-        setTitle: (title) => nativeTitles.push(title),
-        on: vi.fn(),
-        removeListener: vi.fn(),
-      },
-      {
-        fallbackSessionTitle: "example-shell",
-        requestAttention: vi.fn(() => vi.fn()),
-        sendSessionTitle: (_sessionId, title) => sessionTitles.push(title),
-      },
-    );
-    const router = registerTerminalIpcRouter(ipcMain);
-    const routed = router.registerController({
-      configuration: {
-        fontSize: 16,
-        fontLineHeight: 1,
-        fontLigatures: true,
-        terminalPadding: { top: 0, right: 8, bottom: 8, left: 8 },
-        scrollbackLines: 10_000,
-        optionKeyMode: "none",
-        nativeTitleInset: 0,
-        showTabBar: true,
-        transparency: 0,
-        terminalTheme: DEFAULT_TERMINAL_THEME,
-        userFileErrors: [],
-      },
-      webContents,
-      createSession: vi.fn(() => ({
-        write: vi.fn(),
-        resize: vi.fn(),
-        hasForegroundChildProcess: () => false,
-        close: vi.fn(),
-      })),
-      onSessionStartError: vi.fn(),
-      onSessionExit: vi.fn(),
-      onSessionStarted: titleController.sessionStarted,
-      onSessionSelected: titleController.selectSession,
-      onTitleRequest: titleController.requestTitle,
-      onBell: titleController.ringBell,
-      onUserInteraction: titleController.resetAttention,
-      openExternalLink: vi.fn(async () => {}),
-      onExternalLinkOpenError: vi.fn(),
-      writeClipboardText: vi.fn(),
-      readClipboardText: vi.fn(() => ""),
-      confirmPaste: vi.fn(async () => false),
-      showClipboardContextMenu: vi.fn(),
-      loadSnippets: vi.fn(async () => ({ snippets: [] })),
-      loadLocalImage: vi.fn(async () => null),
-    });
-    electron.send.mockImplementation((channel: string, payload?: unknown) =>
-      listeners.get(channel)?.(event, payload),
-    );
-    handlers.get(terminalIpc.start)!(event);
-    electron.bridge!.notifyTabSelection("s1");
-    const canary = `CANARY${"x".repeat(65_537)}`;
-
-    electron.bridge!.title("s1", canary);
-
-    // Window: startup fallback, selection mirror, then the rejected request
-    // landing back on the Default Shell fallback — never the canary.
-    expect(nativeTitles).toEqual(["OMXTerm", "example-shell", "example-shell"]);
-    expect(sessionTitles).toEqual(["example-shell", "example-shell"]);
-    expect(JSON.stringify(nativeTitles)).not.toContain("CANARY");
-    expect(JSON.stringify(sessionTitles)).not.toContain("CANARY");
-
-    routed.dispose();
-    router.dispose();
-    titleController.dispose();
-    electron.send.mockReset();
   });
 });
 

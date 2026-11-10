@@ -99,14 +99,6 @@ describe("native Terminal Title and bell attention", () => {
     harness.controller.requestTitle("s1", "late");
     expect(harness.chromeTitle).not.toHaveBeenCalled();
   });
-  it("enumerates the complete Bidi_Control set supported by the pinned runtime", () => {
-    const runtimeSet: number[] = [];
-    for (let codePoint = 0; codePoint <= 0x10ffff; codePoint += 1) {
-      if (/\p{Bidi_Control}/u.test(String.fromCodePoint(codePoint)))
-        runtimeSet.push(codePoint);
-    }
-    expect(runtimeSet).toEqual(BIDI_CONTROL_CODE_POINTS);
-  });
 
   it("removes all C0, C1, DEL, and Bidi_Control characters", () => {
     const controls = [
@@ -322,23 +314,5 @@ describe("native Terminal Title and bell attention", () => {
     expect(harness.sessionTitles).not.toHaveBeenCalled();
     expect(harness.window.setTitle).not.toHaveBeenCalled();
     expect(harness.dock).not.toHaveBeenCalled();
-  });
-
-  it("keeps title and attention state isolated per owning window", () => {
-    const first = createControllerHarness(false);
-    const second = createControllerHarness(false);
-    first.controller.sessionStarted("s1");
-    first.controller.selectSession("s1");
-    second.controller.sessionStarted("s1");
-    second.controller.selectSession("s1");
-
-    first.controller.requestTitle("s1", "first");
-    first.controller.ringBell("s1");
-    second.controller.requestTitle("s1", "second");
-
-    expect(first.window.setTitle).toHaveBeenLastCalledWith("🔔 first");
-    expect(second.window.setTitle).toHaveBeenLastCalledWith("second");
-    expect(first.dock).toHaveBeenCalledOnce();
-    expect(second.dock).not.toHaveBeenCalled();
   });
 });

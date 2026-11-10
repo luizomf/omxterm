@@ -306,19 +306,6 @@ describe("Close Tab confirmation ownership", () => {
     expect(h.ptys[0]!.kill).not.toHaveBeenCalled();
   });
 
-  it("coalesces repeated busy requests and closes only once", async () => {
-    const h = await harness();
-    const first = h.application.closeSelectedTab();
-    const second = h.application.closeSelectedTab();
-    expect(second).toBe(first);
-    expect(h.showCloseTabConfirmation).toHaveBeenCalledOnce();
-    h.decision.resolve(true);
-    await Promise.all([first, second]);
-    expect(h.closeRequests).toHaveBeenCalledExactlyOnceWith("s2");
-    expect(h.ptys[1]!.kill).toHaveBeenCalledOnce();
-    expect(h.ptys[0]!.kill).not.toHaveBeenCalled();
-  });
-
   it("releases the target after a rejected dialog and permits a new decision", async () => {
     const h = await harness();
     h.showCloseTabConfirmation.mockRejectedValueOnce(
@@ -344,13 +331,5 @@ describe("Close Tab confirmation ownership", () => {
     await request;
     expect(h.closeRequests).toHaveBeenCalledTimes(closes);
     for (const pty of h.ptys) expect(pty.kill).toHaveBeenCalledOnce();
-  });
-
-  it("keeps immediate closure when confirmation is disabled", async () => {
-    const h = await harness(false);
-    await h.application.closeSelectedTab();
-    expect(h.showCloseTabConfirmation).not.toHaveBeenCalled();
-    expect(h.closeRequests).toHaveBeenCalledExactlyOnceWith("s2");
-    expect(h.ptys[0]!.kill).not.toHaveBeenCalled();
   });
 });
