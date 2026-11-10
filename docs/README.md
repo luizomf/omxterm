@@ -43,7 +43,7 @@ Developer and architecture docs for contributors and coding agents:
 - **[Contributing](../CONTRIBUTING.md)** — reporting bugs, setting up a local checkout, running checks, and opening pull requests.
 - **[Contributing translations](translations.md)** — a beginner-friendly browser-only correction, catalog examples, and maintainer help with new languages and checks.
 - **[AGENTS.md](../AGENTS.md)** — quick command reference and repository rules for coding agents.
-- **[Native development](development.md)** — OS prerequisites, test suites, graphical test precautions, and packaging verification.
+- **[Native development](development.md)** — OS prerequisites, test layers and suites, graphical test precautions, the performance benchmark, and packaging verification.
 - **[First-time reader audit](first-time-reader-audit.md)** — newcomer blockers, documentation dispositions, and platform walkthroughs still needed.
 - **[SSH Connect development record](ssh-connect-development.md)** — exact package evidence, integration contract, and qualification limits.
 - **[Saved Layout development record](saved-layout-development.md)** — source build, storage behavior, compatibility and qualification limits.
@@ -51,7 +51,6 @@ Developer and architecture docs for contributors and coding agents:
 - **[Files development record](files-development-preview.md)** — package, backend, view, build, tests and platform limits.
 - **[Snippets extension](snippets-migration.md)** — which hosts use it, terminal-input rules, build, test and publish.
 - **[Extension composition records](macos-extension-composition.md)** — platform-specific foundation, hosted-view and packaging evidence; see also [Linux x64](linux-x64-extension-composition.md) and [Windows ARM64](windows-arm64-extension-composition.md).
-- **[Native subsystem fixture reference](native-test-reference.md)** — focused fixture prerequisites, commands, limits, and evidence boundaries.
 - **[UI style guide](ui-style-guide.md)** — the small palette, spacing, control and responsive-layout vocabulary implemented by Settings.
 - **[Restty Terminal Surface](restty-development.md)** — rendering integration, pinned dependencies, WASM core rebuilds, and optional diagnostics.
 - **[Usage development notes](usage-development.md)** and **[configuration development notes](configuration-development.md)** — implementation details retained from the concise user guides.
