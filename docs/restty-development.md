@@ -232,18 +232,12 @@ npx vitest run test/integration/restty-host-integration.test.ts
 
 ### Optional rendering and memory diagnostics
 
-For repeatable memory-first baseline/candidate comparisons, calibration controls,
-and review policy, see the [performance baseline workflow](performance-baseline.md).
-It reuses the small real-rendering 1→3→1 Surface fixture without running the
-larger functional suites below.
-
 These opt-in diagnostic runs inspect specific rendering and memory boundaries in isolated fixtures:
 
-| Diagnostic                   | Command                                                                                                                                                                                                         |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Apple emoji `sbix` stripping | `node scripts/emoji-experiment/run.mjs .scratch/emoji-comparison && node scripts/emoji-experiment/summarize.mjs .scratch/emoji-comparison/results.json`                                                         |
-| Hidden Surface rendering     | `OMXTERM_HIDDEN_EVIDENCE="$PWD/.scratch/hidden-rendering.json" npx vitest run test/integration/restty-scrollback-rendering.test.ts`                                                                             |
-| WebGL depth attachment       | `OMXTERM_DEPTH_VARIANT=disabled OMXTERM_DEPTH_EVIDENCE="$PWD/.scratch/depth-disabled.json" npx vitest run test/integration/restty-scrollback-rendering.test.ts` (compare with `OMXTERM_DEPTH_VARIANT=original`) |
+| Diagnostic               | Command                                                                                                                                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hidden Surface rendering | `OMXTERM_HIDDEN_EVIDENCE="$PWD/.scratch/hidden-rendering.json" npx vitest run test/integration/restty-scrollback-rendering.test.ts`                                                                             |
+| WebGL depth attachment   | `OMXTERM_DEPTH_VARIANT=disabled OMXTERM_DEPTH_EVIDENCE="$PWD/.scratch/depth-disabled.json" npx vitest run test/integration/restty-scrollback-rendering.test.ts` (compare with `OMXTERM_DEPTH_VARIANT=original`) |
 
 ## Pinned inputs and WASM core rebuild
 
