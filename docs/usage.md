@@ -32,21 +32,12 @@ Choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) or **Split D
 
 To protect active work, OMXTerm asks for confirmation before closing a pane, tab or window with a running command. Close Pane only asks about the focused pane; Close Tab asks once for all of the tab's panes. On Windows, confirmation is shown for all live sessions. You can disable this prompt anytime by setting `"confirmClose": false` in `config.json`.
 
-### Save a terminal arrangement
+### Source previews
 
-The optional Linux ARM64 [Saved Layout extension](saved-layout.md) explicitly
-saves one window's terminal tabs, splits and available local folders. Open starts
-fresh shells in a new window without closing current work. It does not restore
-output, processes or commands. Installation, conflicts, folder provenance and
-Forget's active-snapshot/remnant limits are described in its guide.
-
-### Mirror typing to selected panes
-
-The optional Linux ARM64 [Mirror Typing preview](mirror-typing.md) copies final
-keyboard bytes to an inspected fixed group in one tab. Use matching terminal
-programs/modes. Paste, snippets and drops stop mirroring before ordinary
-single-pane delivery; core Stop remains visible with hidden title/tab chrome.
-Install/build availability and limitations are described in the guide.
+[Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md) are
+separately built source previews, not tools offered through an extension
+catalog. Their availability notes summarize what is and is not available; the
+linked development records retain build and qualification details.
 
 ## Window controls
 

@@ -168,10 +168,6 @@ You can also adjust line height (`"lineHeight": 1.1`), disable programming ligat
 - **Line height and font family:** apply immediately to new tabs; restart OMXTerm to apply them to already-open tabs.
 - **Temporary zoom:** use `Cmd++` / `Cmd+-` (`Ctrl++` / `Ctrl+-` on Linux/Windows) to zoom a window temporarily, and `Cmd+0` / `Ctrl+0` (**Actual Size**) to reset to your configured size.
 
-The optional [Saved Layout extension](saved-layout.md) stores its explicitly
-saved snapshot under the application profile's extension-state directory, not
-`config.json`. It adds no `layout.*` preferences, startup restore or autosave.
-
 ## Configuration basics
 
 Every setting except `"version": 1` is optional. Anything you leave out uses the built-in default, so this is a valid `config.json`:
