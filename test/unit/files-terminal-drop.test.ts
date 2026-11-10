@@ -35,7 +35,7 @@ it("captures and synchronously claims before any handoff work; preserves the cap
       return { status: "accepted" };
     }),
   };
-  const target = { revision: 7, isCurrent: () => true, completed: vi.fn() };
+  const target = { revision: 7, completed: vi.fn() };
   const capture = vi.fn(() => {
     order.push("capture");
     return target;
@@ -102,15 +102,24 @@ it("refuses native files and absent candidates or ineligible target before any h
   expect(claimFilesTerminalDrop(drop(), bridge, capture)).toBe(false);
   expect(bridge.claim).not.toHaveBeenCalled();
 });
-it("never hands off after changed captured selection or re-captures a replacement", async () => {
-  const target = { revision: 1, isCurrent: () => false, completed: vi.fn() };
+it("hands every claim off so main settles it, without re-capturing a replacement", async () => {
+  const target = { revision: 1, completed: vi.fn() };
   const capture = vi.fn(() => target);
-  const bridge = { claim: vi.fn(() => true), handoff: vi.fn() };
+  const bridge = {
+    claim: vi.fn(() => true),
+    handoff: vi.fn(async () => ({
+      status: "refused" as const,
+      reason: "terminal-unavailable",
+    })),
+  };
   expect(claimFilesTerminalDrop(drop(), bridge, capture)).toBe(true);
   await vi.waitFor(() =>
-    expect(target.completed).toHaveBeenCalledWith({ status: "refused" }),
+    expect(target.completed).toHaveBeenCalledWith({
+      status: "refused",
+      reason: "terminal-unavailable",
+    }),
   );
-  expect(bridge.handoff).not.toHaveBeenCalled();
+  expect(bridge.handoff).toHaveBeenCalledExactlyOnceWith(ticket, 1);
   expect(capture).toHaveBeenCalledOnce();
 });
 it("fails closed on forged claims and bounds bridge outputs without native text leakage", async () => {

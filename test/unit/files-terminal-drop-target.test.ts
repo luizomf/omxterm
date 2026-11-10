@@ -103,3 +103,39 @@ it("never retains a failed claim and bounds capture lookup to the exact single-u
     f.owner.takeTarget("11111111-1111-4111-8111-111111111111"),
   ).toBeUndefined();
 });
+it("tells the user where they dropped when main holds no gesture for the drop", () => {
+  vi.useFakeTimers();
+  try {
+    const f = fixture();
+    f.bridge.claim.mockReturnValueOnce(false);
+    f.owner.over(f.event);
+    f.owner.drop(f.event);
+    const hint = f.area.querySelector(".files-terminal-drop-hint")!;
+    expect(hint.textContent).toBe(
+      "Path not inserted. Drag it again from Files in this window.",
+    );
+    f.language.set("pt-BR");
+    expect(hint.textContent).toBe(
+      "Caminho não inserido. Arraste de novo pelo Files desta janela.",
+    );
+    expect(f.bridge.handoff).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(5000);
+    expect(f.area.children).toHaveLength(0);
+    f.owner.over(f.event);
+    expect(hint.textContent).toBe(
+      "Solte para inserir o caminho (sem executar)",
+    );
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("replaces the refusal with the next drag's candidate", () => {
+  const f = fixture();
+  f.bridge.claim.mockReturnValueOnce(false);
+  f.owner.drop(f.event);
+  f.owner.over(f.event);
+  const hints = f.area.querySelectorAll(".files-terminal-drop-hint");
+  expect(hints).toHaveLength(1);
+  expect(hints[0]!.textContent).toBe("Drop to insert path (not run)");
+});

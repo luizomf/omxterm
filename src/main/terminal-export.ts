@@ -67,6 +67,16 @@ export async function saveTerminalExport(
     if (!host.isAlive()) return "cancelled";
     if ("notice" in request) {
       noticeStarted = true;
+      if (request.notice === "failed") {
+        await host.showMessageBox({
+          type: "error",
+          title: t("export.failed"),
+          message: t("export.readError"),
+          buttons: [t("common.ok")],
+          noLink: true,
+        });
+        return "failed";
+      }
       await host.showMessageBox({
         type: "warning",
         title: t("export.tooLarge.title"),

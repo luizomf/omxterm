@@ -110,6 +110,8 @@ export const brazilianPortugueseMessages: Readonly<
     "Selecione uma parte menor do texto do terminal e exporte a seleção. Nada foi salvo ou truncado.",
   "export.failed": "Falha na Exportação",
   "export.writeError": "O OMXTerm não conseguiu salvar o texto exportado.",
+  "export.readError":
+    "O OMXTerm não conseguiu ler o texto do terminal. Nada foi salvo.",
   "export.failureDetail":
     "Tente exportar de novo e escolha um destino com permissão de escrita e espaço livre suficiente.",
 
@@ -160,6 +162,8 @@ export const brazilianPortugueseMessages: Readonly<
 
   "terminal.surface": "Superfície do terminal",
   "terminal.filesDropCandidate": "Solte para inserir o caminho (sem executar)",
+  "terminal.filesDropRefused":
+    "Caminho não inserido. Arraste de novo pelo Files desta janela.",
   "terminal.sshExit": "SSH encerrou (código {code}).",
   "layout.initializing":
     "Abrindo layout salvo: {settled}/{total} painéis; {fallbacks} pastas substituídas pela pasta pessoal; {failed} painéis indisponíveis.",

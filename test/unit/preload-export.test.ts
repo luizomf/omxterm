@@ -87,11 +87,12 @@ describe("preload export bridge", () => {
     },
   );
 
-  it("accepts both text kinds, empty text and only the bounded too-large notice", async () => {
+  it("accepts both text kinds, empty text and only the bounded notices", async () => {
     for (const request of [
       { kind: "selection", text: "日本語 café 👩‍💻" },
       { kind: "content", text: "" },
       { notice: "too-large" },
+      { notice: "failed" },
     ] as const) {
       electron.invoke.mockClear();
       expect(isTerminalExportSaveRequest(request)).toBe(true);

@@ -37,14 +37,8 @@ function fixture() {
   return { transport, window, context, abort, consume, start, claim, report };
 }
 afterEach(() => vi.useRealTimers());
-it("reports bounded local refusal and completion only to the still-visible source", async () => {
+it("reports completion only to the still-visible source", async () => {
   const f = fixture();
-  expect(f.start({ ...entry, path: "/synthetic/line\nbreak" })).toBeNull();
-  expect(f.report).toHaveBeenCalledExactlyOnceWith({
-    status: "refused",
-    reason: "unsafe-path",
-  });
-  f.report.mockClear();
   const ticket = f.start();
   f.claim(ticket);
   f.transport.end("view-a", ticket);
@@ -264,17 +258,41 @@ it.each([
   null,
   {},
   { ...entry, extra: true },
-  { ...entry, path: "relative" },
-  { ...entry, path: "/bad\nname" },
-  { ...entry, path: "/bad\u001b[201~" },
-  { ...entry, path: "/bad\u009b201~" },
-  { ...entry, path: "/" + "a".repeat(32768) },
+  { ...entry, path: 7 },
   { ...entry, kind: "device" },
   { ...entry, entryToken: "x" },
-])("refuses malformed/unsafe source %#", (value) => {
+])("refuses malformed source %# silently", (value) => {
   const f = fixture();
   expect(f.start(value)).toBeNull();
+  expect(f.report).not.toHaveBeenCalled();
 });
+it.each([
+  ["relative", "invalid-path"],
+  ["/" + "a".repeat(32768), "invalid-path"],
+  ["/bad\nname", "unsafe-path"],
+  ["/bad\u001b[201~", "unsafe-path"],
+  ["/bad\u009b201~", "unsafe-path"],
+])(
+  "keeps a move of %j silent and refuses it only at a terminal drop",
+  async (path, reason) => {
+    const f = fixture();
+    const moved = f.start({ ...entry, path });
+    expect(moved).not.toBeNull();
+    f.transport.end("view-a", moved);
+    expect(f.report).not.toHaveBeenCalled();
+    const dropped = f.start({ ...entry, path });
+    expect(f.claim(dropped)).toBe(true);
+    expect(await f.transport.handoff(dropped, 1)).toEqual({
+      status: "refused",
+      reason,
+    });
+    expect(f.report).toHaveBeenCalledExactlyOnceWith({
+      status: "refused",
+      reason,
+    });
+    expect(f.consume).not.toHaveBeenCalled();
+  },
+);
 it("consumes malformed redemption and distinguishes unknown consumer outcome without retry", async () => {
   const f = fixture();
   const ticket = f.start();

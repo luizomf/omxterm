@@ -71,12 +71,20 @@ export function createSemanticInputDelivery(
     payload: string,
     submit: boolean,
     tracked: boolean,
+    bracketed: boolean,
   ): Promise<boolean> => {
     const chunks = splitTerminalPayload(payload, options.chunkBytes);
     for (const [index, chunk] of chunks.entries()) {
       if (disposed || !options.isLive()) return false;
       if (tracked) {
-        if (!(await writeTracked(chunk))) return false;
+        if (!(await writeTracked(chunk))) {
+          // A stopped paste must not leave the shell inside it. Same-sender IPC
+          // keeps this marker after any unconfirmed chunk; the final chunk
+          // already carried it.
+          if (bracketed && index < chunks.length - 1 && isLive())
+            options.write("\u001b[201~");
+          return false;
+        }
       } else options.write(chunk);
       if (index < chunks.length - 1) await options.pauseBetweenChunks?.();
     }
@@ -123,7 +131,7 @@ export function createSemanticInputDelivery(
       return false;
     }
     const payload = bracketed ? `\u001b[200~${text}\u001b[201~` : text;
-    return sendChunks(payload, submit, tracked);
+    return sendChunks(payload, submit, tracked, bracketed);
   };
 
   const enqueue = (

@@ -18,7 +18,6 @@ export function claimFilesTerminalDrop(
   capture: (event: DragEvent) =>
     | {
         revision: number;
-        isCurrent(): boolean;
         completed(result: FilesDragResult): void;
       }
     | undefined,
@@ -37,11 +36,10 @@ export function claimFilesTerminalDrop(
   event.preventDefault();
   event.stopPropagation();
   // Do not defer the claim to this continuation: child dragend may run first.
+  // Always hand off, even if the capture went stale: main and the captured
+  // target refuse it and report to Files, rather than holding the claim.
   void Promise.resolve()
-    .then(async () => {
-      if (!target.isCurrent()) return { status: "refused" } as const;
-      return bridge.handoff(value.ticket, revision);
-    })
+    .then(() => bridge.handoff(value.ticket, revision))
     .catch(() => ({ status: "unknown" }) as const)
     .then((result) => target.completed(result));
   return true;

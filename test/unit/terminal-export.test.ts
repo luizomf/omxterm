@@ -169,6 +169,24 @@ describe("saving an explicit export", () => {
   });
 });
 
+describe("export read failure", () => {
+  it("reports an unreadable terminal with one fixed notice and no chooser/write", async () => {
+    const fake = host();
+    await expect(saveTerminalExport({ notice: "failed" }, fake)).resolves.toBe(
+      "failed",
+    );
+    expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith({
+      type: "error",
+      title: "Export Failed",
+      message: "OMXTerm could not read the terminal text. Nothing was saved.",
+      buttons: ["OK"],
+      noLink: true,
+    });
+    expect(fake.showSaveDialog).not.toHaveBeenCalled();
+    expect(fake.writeFile).not.toHaveBeenCalled();
+  });
+});
+
 describe("export error containment", () => {
   it.each([{ notice: "too-large" }, { kind: "content", text: " " }] as const)(
     "never retries a rejected informational notice: %j",

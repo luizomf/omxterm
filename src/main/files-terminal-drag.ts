@@ -80,25 +80,23 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
         !isFilesEntryToken(input.entryToken) ||
         !["file", "directory", "link"].includes(input.kind as string) ||
         typeof input.path !== "string" ||
-        input.path.length > MAX_INSERTED_PATH_LENGTH ||
-        /[\u0000-\u001f\u007f-\u009f]/u.test(input.path) ||
         !isFilePathPlatform(process.platform) ||
-        !formatFilePathInsertion([input.path], process.platform) ||
         !windowLive() ||
         signal.aborted ||
         !source.isCurrentVisible()
-      ) {
-        if (windowLive() && !signal.aborted && source.isCurrentVisible())
-          report({
-            status: "refused",
-            reason:
-              typeof input.path === "string" &&
-              /[\u0000-\u001f\u007f-\u009f]/u.test(input.path)
-                ? "unsafe-path"
-                : "invalid-path",
-          });
+      )
         return null;
-      }
+      // Most row drags are internal moves. A path that cannot be inserted is
+      // still registered, and its refusal reported only on an actual terminal
+      // drop; its literal value never reaches the consumer.
+      const refusal =
+        input.path.length > MAX_INSERTED_PATH_LENGTH
+          ? "invalid-path"
+          : /[\u0000-\u001f\u007f-\u009f]/u.test(input.path)
+            ? "unsafe-path"
+            : !formatFilePathInsertion([input.path], process.platform)
+              ? "invalid-path"
+              : undefined;
       const abort = new AbortController();
       const ticket = randomUUID();
       const lost = () => {
@@ -128,7 +126,9 @@ export function createFilesTerminalDrag(window: BrowserWindow) {
           entryToken: input.entryToken,
         },
         source,
-        consume,
+        consume: refusal
+          ? async () => ({ status: "refused", reason: refusal })
+          : consume,
         report,
         signal: AbortSignal.any([signal, abort.signal]),
         abort,

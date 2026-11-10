@@ -83,11 +83,18 @@ export function createResttyContextMenu(
         event.target.closest('[role="search"]') !== null &&
         container.contains(event.target);
       if (query) options.clipboard.requestContextMenu({ target: "field" });
-      else if (enabled)
+      else if (enabled) {
+        let hasSelection = false;
+        try {
+          hasSelection = (liveSelection()?.getSelectionText() ?? "") !== "";
+        } catch {
+          // A failed core read still opens the menu, offering content export.
+        }
         options.clipboard.requestContextMenu({
           target: "terminal",
-          hasSelection: (liveSelection()?.getSelectionText() ?? "") !== "",
+          hasSelection,
         });
+      }
     },
   };
 }

@@ -1306,11 +1306,12 @@ save chooser, suggested timestamped text filename and overwrite confirmation.
 Cancellation writes nothing. Whitespace-only text shows a notice instead of a
 chooser. Files use UTF-8 with LF line breaks; row padding and trailing blank rows
 are trimmed, with exactly one final line break. Newly created files are owner-only
-on macOS and Linux. Setup, chooser and write failures receive a fixed actionable
-notice without private details; notices are not retried. Owner loss before a
-chooser resolves prevents a write or orphan notice; an already-started write may
-settle. Export is user-requested, never automatic, and payload and destination
-stay out of operational logs.
+on macOS and Linux. Setup (including a failed terminal text read), chooser and
+write failures receive a fixed actionable notice without private details;
+notices are not retried. A failed selection read still opens the context menu
+with content export. Owner loss before a chooser resolves prevents a write or
+orphan notice; an already-started write may settle. Export is user-requested,
+never automatic, and payload and destination stay out of operational logs.
 
 ## Clipboard
 
@@ -1354,6 +1355,8 @@ stay out of operational logs.
   For the Files path capability, each chunk awaits a main-session receipt. An
   unresolved or lost receipt stops that path and fences later queued semantic
   input until a definitive late receipt, if any; keyboard input remains direct.
+  A bracketed path stopped before its last chunk still sends the closing paste
+  marker, so the shell never stays inside the paste.
 - OSC 52 may write the clipboard only for target `c` with non-empty canonical
   padded Base64 that decodes as UTF-8. The 10,000,000 UTF-16-code-unit handler
   payload bound counts `c;` and Base64 but excludes the OSC introducer, command
@@ -2447,10 +2450,14 @@ not globally ordered. This neither extends the deadline nor grants input by itse
 Hide, retirement, window loss,
 blur/minimize, installation revocation and timeout revoke either phase without
 hide/reveal revival. Mixed/native/tab, forged, expired or replayed claims are
-refused. Control-bearing paths are refused without rewriting; ordinary spaces
-and quotes survive. The shared main path formatter and protected handoff retain
-the captured owner/revision. A private ticket binds the returning semantic
-request to the original renderer Surface, consumed once, never recaptured.
+refused; an eligible drop whose claim fails (another window's Files, or after
+the deadline) shows a localized "Path not inserted" notice in that terminal
+area. Every claimed drop is handed off so main settles it. Control-bearing
+or invalid paths still register and are refused without rewriting only when
+dropped on a terminal, never at drag start; ordinary spaces and quotes survive.
+The shared main path formatter and protected handoff retain the captured
+owner/revision. A private ticket binds the returning semantic request to the
+original renderer Surface, consumed once, never recaptured.
 Stale selection/Surface/DOM focus and blocked presentation refuse admission.
 The Surface stops Mirror Typing before ordinary single-target Protected Paste
 with no added Enter. Visible Files receives localized accepted, refused,

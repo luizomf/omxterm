@@ -22,13 +22,22 @@ export function createFilesTerminalDropTarget(
   let pending:
     { ticket: string; target: SnippetTarget; taken: boolean } | undefined;
   let area: HTMLElement | undefined;
+  let refusal: ReturnType<typeof setTimeout> | undefined;
   const hint = document.createElement("div");
   hint.className = "files-terminal-drop-hint";
   hint.setAttribute("role", "status");
-  const removeLanguage = language.bind((t) => {
-    hint.textContent = t("terminal.filesDropCandidate");
-  });
+  const label = () => {
+    hint.textContent = language.t(
+      refusal ? "terminal.filesDropRefused" : "terminal.filesDropCandidate",
+    );
+  };
+  const removeLanguage = language.bind(label);
   const clear = () => {
+    if (refusal) {
+      clearTimeout(refusal);
+      refusal = undefined;
+      label();
+    }
     area?.classList.remove("files-terminal-drop-candidate");
     area = undefined;
     hint.remove();
@@ -56,8 +65,9 @@ export function createFilesTerminalDropTarget(
       }
     },
     drop(event: DragEvent) {
+      const dropArea = eligible(event);
       clear();
-      if (!eligible(event) || !bridge) return;
+      if (!dropArea || !bridge) return;
       const claimed = claimFilesTerminalDrop(event, bridge, () => {
         const original = tabs.captureSnippetTarget();
         if (!original?.isCurrent?.()) return undefined;
@@ -80,13 +90,18 @@ export function createFilesTerminalDropTarget(
         pending = capture;
         return {
           revision,
-          isCurrent: () => target.isCurrent?.() === true,
           completed() {
             if (pending === capture) pending = undefined;
           },
         };
       });
-      if (!claimed) pending = undefined;
+      if (claimed) return;
+      pending = undefined;
+      // The candidate promised insertion. Main holds no gesture for a drag from
+      // another window's Files, or after its deadline: say so where it was dropped.
+      refusal = setTimeout(clear, 5000);
+      label();
+      dropArea.append(hint);
     },
     takeTarget(ticket: string) {
       if (
