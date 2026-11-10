@@ -1569,7 +1569,8 @@ See [ADR 0035](adr/0035-select-the-interface-language-explicitly.md).
   recreating tabs, Surfaces or sessions, even mid-mount. Visible Snippets
   errors, narrow-window notices and Surface failure notices relabel without
   rereading data or resetting their lifetime; a host keeps and translates a
-  Surface failure notice until window teardown.
+  Surface failure notice until window teardown, even after an initial mount
+  rejection.
 - Stays English: validator detail in reload notices, technical cause detail in
   Surface failure notices, failures before configuration loads, Operational
   Events, `snippets.yaml` diagnostics, and system, Electron or Restty text
@@ -1597,8 +1598,11 @@ adapter, its HUD fallback and cleanup.
   0–1, default 0. Wrong types, unknown keys and out-of-range values are
   rejected, never clamped.
 - A valid reload applies both to all current and future windows and tabs
-  without replacing native windows, Surfaces or sessions.
-- Transparency reduces only the background tint, painted once behind terminal
+  without replacing native windows, Surfaces or sessions. A reload rejected
+  before application keeps the last snapshot; application-time failures follow
+  the [partial-update limit](#validation-errors-and-reload).
+- Zero is opaque; one removes the tint where native composition supports it.
+  Transparency reduces only the background tint, painted once behind terminal
   content, padding, title chrome, tabs and the Snippets Sidebar. Chrome neutral
   overlays fade too; foreground controls, the selected-tab indicator, glyphs
   (including antialiasing and SGR faint), cursor, selection and Inline Terminal
@@ -1662,7 +1666,8 @@ Vocabulary:
   Command Palette is `CommandOrControl+Shift+P` on macOS and `Control+Shift+P`
   elsewhere.
 - `null` removes only that shortcut: the menu item stays, and OMXTerm stops
-  consuming the key (the OS or another binding may still take it).
+  consuming the key (the OS or another binding may still take it). A `null`
+  entry holds no shortcut and cannot collide.
 - One Action Catalog feeds the native menu, the Command Palette and the main key
   matcher; the menu shows the effective accelerator. PTY control sequences are
   untouched.
@@ -1705,8 +1710,9 @@ Delivery:
 
 - When the platform refuses a menu accelerator (macOS never delivers
   `Control+Tab` to a menu item), main runs the action from the key event and
-  consumes the key.
-- Plain Alt never triggers an AltGr-only binding. The matcher requires the
+  consumes the key. There is no second shortcut system.
+- Plain Alt never triggers an AltGr-only binding; delivery needs the native
+  AltGr identity. The matcher requires the
   logical character and native key position to agree and does not translate
   arbitrary layouts.
 - On macOS, a main-only native provider may map a fresh, unambiguous
@@ -1717,8 +1723,10 @@ Delivery:
 - `keyboard.optionAsAlt` affects terminal input only.
 - Logical keypad (for example keypad Minus for Zoom Out) and logical `Plus`
   delivery still work; `Plus` without explicit Shift also accepts an unshifted
-  `+`. A specific keypad binding wins. Plain `Control+=` stays terminal input
-  unless remapped. These conveniences add no second identity.
+  `+`. Logical keypad fallback follows the configured character and explicit
+  Shift, separately from intrinsic native Shift. A specific keypad binding
+  wins. Plain `Control+=` stays terminal input unless remapped. These
+  conveniences add no second identity and allow no duplicate registration.
 
 ### Snippets file
 
@@ -1743,14 +1751,16 @@ Delivery:
   control-character bodies need approval and are then delivered unchanged. With
   bracketed paste, the body goes as one bracketed paste without confirmation,
   but a body containing the closing marker (`ESC [ 201 ~`) is refused whole
-  before any bytes or Enter, using the clipboard failure notice. This rule is
-  shared by clipboard, DOM paste, snippets and path injection.
+  before any bytes or Enter, using the localized clipboard failure notice and
+  leaving the Surface usable. This rule is shared by clipboard, DOM paste,
+  snippets and path injection and never rewrites literal content.
 - `execute: true` sends Enter after the body (and any closing marker); `false`
   sends nothing more. The preview's Insert/Run choice overrides it (see
   [Window and session behavior](#window-and-session-behavior)).
 - An invalid file never blocks startup and is never silent: the sidebar shows
   the resolved path and the field location or line/column in place of the
-  list, without parser excerpts. The terminal is unaffected.
+  list, never parser excerpts or arbitrary parser messages. The terminal is
+  unaffected.
 - Built-in Snippets: main validates and sends typed data over the preload
   bridge. Extension targets: the installed backend reuses the same parser and
   root logic and returns activation-scoped snapshots in bounded pages; install,
@@ -1781,12 +1791,16 @@ Format:
   partial palettes, CSS names or functions, inheritance or imports.
 - `appearance` accepts only `paneDivider`, `auxiliaryPanelDivider` and
   `activePaneHighlight`, each optional and `#RRGGBB` or `null`. An empty object
-  is valid; other shapes and keys are rejected. Omitted fields keep application
-  defaults (dividers mix foreground into background at 18% at rest, 45% on
-  hover and drag). `null` hides only that decorative paint, never layout, hit
-  targets, ARIA or keyboard focus paint; foreground focus paint wins over
-  divider colors. Appearance-only reloads repaint chrome without refitting the
-  Surface. Older builds reject the object.
+  is valid; a `null` or array object, unknown keys and other scalars are
+  rejected. Omitted fields stay omitted in validated snapshots and restore
+  application defaults on reload (dividers mix foreground into background at
+  18% at rest, 45% on hover and drag). Explicit divider colors stay exact at
+  rest, on hover and while dragging. `null` hides only that decorative paint,
+  never layout, hit targets, ARIA, keyboard controls or keyboard focus paint;
+  foreground focus paint wins over divider colors, including during drag.
+  Appearance-only reloads repaint chrome without refitting the Surface. The
+  color palette itself stays complete and non-nullable. Older builds reject the
+  object; no migration happens.
 - OSC 104 resets the 16 ANSI colors to the latest applied theme (all or the
   requested indices); indexed resets leave other OSC 4 overrides alone. Live
   theme changes replace those 16 overrides but keep extended-color overrides; a
@@ -1797,8 +1811,13 @@ Settings → Appearance picker:
 
 - Lists direct `themes/*.json` entries beside the logical configuration path
   (linked directories and files included) by name and path, plus the built-in
-  default. The configured entry is matched by equivalent logical path. Invalid,
-  unreadable or truncated discovery is reported, never treated as the default.
+  default, so duplicate names stay distinct. Main validates candidates and
+  exposes bounded palette previews and diagnostics through the Settings bridge.
+  The configured entry is matched by equivalent relative or absolute logical
+  path; a path to some other alias is not assumed to identify one of several
+  entries. Missing, empty, unreadable, invalid or truncated discovery is
+  reported, never treated as the default. Discovery never modifies themes or
+  changes relative-path semantics.
 - Refresh is explicit; there is no watcher. A scan reads at most 2,048
   directory entries, 128 JSON candidates, 256 KiB per theme and 4 MiB of
   configuration, and reports truncation.
@@ -1806,38 +1825,67 @@ Settings → Appearance picker:
   the default removes it. A custom path field stays available.
 - Unstarted graphical requests for the same `theme.path` or
   `window.transparency` field coalesce to the latest choice. In-flight work is
-  never cancelled, and other operations are ordering barriers. Superseded
-  requests settle as superseded, not saved. Closing Settings keeps the final
-  queued choice. Saved is not proof of applied.
+  never cancelled. Reads, raw saves, shortcut changes and other field changes
+  are ordering barriers that coalescing never crosses. Superseded requests
+  settle as superseded (not saved) with the winning request's snapshot; the
+  winner keeps the normal save/error/application feedback. Closing Settings
+  keeps the final queued choice. A pending choice shows as saving; afterwards
+  cards show the saved configuration, which is not proof it applied.
 
 Theme editor (inline, retained):
 
-- New starts from the bundled palette; Edit rereads a card's file without
-  selecting it; Import copies a file picked through a native chooser. Reads are
-  capped at 256 KiB and validated; unknown fields and partial palettes are
-  rejected, not repaired.
-- The editor edits all 21 roles and the name in memory. Save, copy and export
-  stay disabled until every input is valid. The DOM preview shows text, cursor,
-  selection and the eight normal/bright ANSI pairs with `Aa` samples and
-  swatches on the draft background; it never paints the live window.
-  `appearance` content and untouched color spellings are preserved.
+- New starts from the bundled palette; Edit rereads a card's full file without
+  selecting it; Import copies a file picked through a window-owned native
+  chooser and is never an overwrite target. Every authoring read (including
+  guarded-write comparisons) is capped at 256 KiB, needs a readable regular
+  target and is validated; unknown fields or versions and partial palettes are
+  rejected, not repaired. The editor never rebuilds a theme from the picker's
+  eight-color summary.
+- The name, a 21-role selector, a native color well and a hex field edit the
+  in-memory draft. Invalid input stays tied to its role across selection and
+  category or tab changes. Save, copy and export stay disabled until every
+  visible or retained input is valid; the specimen uses the last valid colors.
+- The DOM preview shows foreground/background text, cursor, both selection
+  colors and the eight normal/bright ANSI pairs (normal above bright, kept
+  together as the grid reflows), each with a readable name, an `Aa` sample on
+  the draft background and a solid swatch, plus a translated hint. Only sample
+  paint reflects draft contrast. It is not a live Surface, PTY or
+  desktop-effects simulation and never paints the document root or live
+  configuration.
+- An omitted or empty `appearance`, hex and `null` values, and untouched color
+  spellings survive every operation, even without dedicated controls.
 - Save guard-replaces the resolved target by revision, keeping links. Save copy
-  writes a new `themes/*.json` (two-space JSON, trailing newline, OS-safe name)
-  and never replaces an existing file. Export writes a new file through a native
-  save chooser, without replacing, without a writable base and without touching
-  configuration. Copy and export fail rather than clobber when no-replace
-  linking is unavailable.
+  writes a new direct `themes/*.json` (two-space JSON, trailing newline,
+  portable OS-safe leaf name, no path or shell expansion) and never replaces an
+  existing file; a successful copy becomes the base for later Saves.
+- Export publishes the captured valid draft through a window-owned native save
+  chooser without replacing anything; the UI explains the choose-a-new-name rule
+  first, even if the platform dialog offers replacement. Export returns no
+  writable base, changes no configuration and does not mark edits as saved.
+- Copy and export fail rather than clobber when no-replace linking is
+  unavailable. Publication followed by a cleanup failure still counts as saved
+  or exported, with a warning.
 - Detected revision, target or permission changes keep the draft and offer
-  reload or copy, never automatic overwrite or retry. Writes follow ADR 0003;
-  no cross-process atomic compare-and-swap is promised.
+  reload or copy, never automatic overwrite, rebase or retry. Linked parents,
+  private temporary files, mode preservation, identity-checked cleanup and
+  last-check races follow ADR 0003; no cross-process atomic compare-and-swap is
+  promised.
 - Saving a theme file never writes configuration. Use saved theme needs a clean
-  saved draft and submits its path as an ordinary field change, validating the
-  current configuration and file bytes. Failure never rolls back the theme file.
-- One operation at a time per editor; typing continues and newer input is never
-  overwritten. Cancel or closing Settings drops unsaved edits without undoing
-  completed writes. Chooser cancel is a no-op; late choices from disposed
-  windows are refused. Unknown outcomes require refresh before another write.
-  Relabeling keeps inputs, revisions and caret.
+  saved draft and submits its logical path as an ordinary field change (even
+  when already configured), validating the current configuration and file
+  bytes, not a draft snapshot. File-save and configuration status stay
+  separate; failure or partial application never rolls back the theme file.
+- One operation at a time per editor; typing continues during Save or export,
+  keeping the submitted bytes' base revision. Responses never overwrite newer
+  input or focus retired or hidden editors. Category and tab changes keep the
+  editor.
+- Cancel or closing Settings drops unsaved edits without undoing completed
+  operations or cancelling accepted writes; there is no close prompt. Chooser
+  cancel is a no-op; disposed or destroyed owners cannot accept late choices.
+  Unknown transport outcomes require refresh or reopen before another write.
+- Theme operations share the Settings ordering barriers, but a chooser waiting
+  on the user does not hold the queue. Relabeling keeps inputs, revisions and
+  caret.
 
 ### Validation, errors and reload
 
@@ -1861,7 +1909,8 @@ Startup:
 - The exact problem (with the path when relevant) goes to stderr and a
   persistent, non-blocking in-app notice that says which defaults are active.
   The same surface carries warnings for valid configurations, such as control
-  key shadowing. Notices never expire on a timer.
+  key shadowing. Notices never expire on a timer: time alone never resolves a
+  font error or applies creation-time settings.
 
 Manual reload (`View -> Reload User Configuration`):
 
@@ -1870,25 +1919,41 @@ Manual reload (`View -> Reload User Configuration`):
   consumers in sequence. Absence selects defaults without creating a file.
 - A rejection before application keeps the last configuration and shows the new
   failure. An exception during application does not roll back what was already
-  applied; the notice saying the last configuration was kept is then not proof
-  of rollback. Consumer updates are not atomic.
+  applied (snapshot, log level, consumer effects); the notice saying the last
+  configuration was kept is then not proof of rollback. Snapshots are delivered
+  whole, but consumer updates are not atomic.
+- A later successful reload replaces resolved errors and stale warnings with
+  notices from the current validation.
 
 Live and restart-only settings:
 
-- Theme, language, font size, ligatures, padding, scrollback, Option Key Mode
-  and Window Font Zoom apply live and keep the Surface and PTY. Font and
-  spacing changes refit the same Surface and PTY (see
-  [Window and session behavior](#window-and-session-behavior) and
-  [Terminal behavior](#terminal-behavior)). A bad configured font rejects the
-  whole reload.
+- Theme, language, font size baseline, padding and Window Font Zoom apply live
+  and keep the Surface and PTY. Font and spacing changes recompute native
+  minimum-window bounds and refit the same Surface and PTY, within the layout
+  limits in [Window and session behavior](#window-and-session-behavior).
+- `font.ligatures` applies through the Restty runtime setter without reloading
+  fonts. Option Key Mode changes only later keyboard events. Reducing
+  scrollback (including to zero) uses the selected Surface's in-memory behavior
+  from [Terminal behavior](#terminal-behavior).
+- Invalid, missing, unreadable, unsupported or corrupt configured font input
+  rejects the whole reload.
 - `font.family` and `font.lineHeight` are restart-only for existing Surfaces.
   New tabs and windows use the new values; a persistent notice names each
   deferred setting until every surviving Surface (including one still
-  starting) already uses the requested value. Registration, removal and window
-  disposal reconcile it without another reload.
-- A native font read started for a still-current family may finish for its
-  surviving consumers across a reload; disposed controllers reject late
-  results, and a queued request superseded before it starts is dropped.
+  starting before its PTY) already uses the requested value; repeating a reload
+  cannot clear it while an older Surface survives. Main keeps each Surface's
+  creation-time family and line height rather than inferring them from the
+  configuration at PTY startup. Registration, removal and window disposal
+  reconcile the notice without another reload; with no owners, no restart is
+  needed. Clearing resolved restart information keeps current errors and
+  warnings.
+- Native font-byte loading is separate: a read started while its family was
+  current may finish for its surviving creation-time consumers across a reload
+  (including change-away-and-back). Controller disposal rejects late results,
+  and cancelling one consumer does not cancel its siblings. A request must
+  match the current family when received; a queued one superseded before it
+  starts is rejected without a read. There is no arbitrary historical-family
+  lookup. Loads stay serialized and bounded, and real failures still reject.
 
 ### Settings editor
 
@@ -1905,8 +1970,12 @@ Controls:
 - A change saves immediately; clearing a field removes the entry. The language
   selector shows **English (United States)** and **Português (Brasil)** in any
   interface language.
-- The transparency slider (0–100%, 1% steps) saves while it moves, updating
-  real windows; release adds no extra request.
+- Appearance has a labelled native transparency slider (0–100%, 1% steps,
+  percentage readout) and a desktop-blur checkbox. Pointer and keyboard input
+  save while adjusting, updating the real windows rather than a preview;
+  release adds no extra request and no view timer delays the final choice. A
+  compact hint explains the endpoints and desktop/Windows requirements. Native
+  blur stays distinct from the modal underlay blur.
 
 Shortcuts page:
 
@@ -1915,14 +1984,29 @@ Shortcuts page:
   `null`, and recording writes an accelerator, all through the normal save.
 - Recording is owned by main: the next candidate key is captured with the same
   identity delivery uses (including AltGr and bare F1–F24) instead of running a
-  shortcut or reaching the terminal. Its repeats and release are consumed;
-  events reported as composing are not captured.
-- Only unmodified Escape cancels. Keys that cannot round-trip report invalid
-  and keep capturing. On macOS the prompt explains the Option-only limits and
-  that terminal Option Key Mode is separate.
-- Capture ends after one key, on cancel, blur, leaving the page, an overlay,
-  disposal or a 30-second timeout. Each capture carries an identity, so stale
-  notifications cannot affect a newer recording.
+  keybind or menu shortcut or reaching the terminal. Its held repeats and
+  release are consumed, including overlapping invalid or modifier gestures; a
+  fresh press after a lost release is new input.
+- A new event reported as composing is not claimed by capture or the key
+  matcher; already-owned repeats and releases stay consumed. Unmatched events
+  keep normal native-menu routing.
+- Only unmodified Escape cancels; modified Escape (including AltGr) can be
+  recorded. Keys that cannot round-trip report invalid and keep capturing; the
+  logical Plus/keypad exceptions still apply.
+- On macOS the prompt and invalid feedback explain the Option-only letter and
+  digit support and its dead-key and input-method limits, suggest Option with
+  an arrow or function key, and separate terminal Option Key Mode from
+  shortcuts. A dead-key sequence that never reaches main leaves the prompt up
+  until another key, cancel or timeout.
+- Capture ends after one key, on cancel, button or window blur, leaving the
+  category or tab, an overlay, disposal or a real 30-second timeout that
+  notifies the view. Its consumed gestures stay owned until release or a fresh
+  press; window blur, renderer loss or reload and window disposal clear that.
+- Each capture request, stop and notification carries a recording identity: a
+  retired notification cannot save or cancel a newer recording, and a retired
+  stop cannot release its keyboard.
+- Record/Cancel, Unbind and Default have localized, action-specific accessible
+  names that follow the current operation.
 
 Config File page and writes:
 
@@ -1937,31 +2021,51 @@ Config File page and writes:
   non-regular targets are refused with guidance. An absent file may be
   created.
 - Basic permission bits are kept where supported; hard links and other
-  metadata are not. New files use mode `0600` where supported. Cleanup failures
-  report a possible leftover temporary file.
+  metadata are not. The destination directory must be writable. New files and
+  temporary files start with mode `0600` where supported; inherited ACLs still
+  apply. Cleanup failures report a possible leftover temporary file.
+- Snapshot text uses the loader's UTF-8 decoding (dropping a leading BOM).
+  Revisions identify the resolved destination and exact persisted bytes.
 - Requests go straight to main's serialized queue, so a reopened view never
-  overtakes earlier writes. Late results for closed views are ignored.
-- The status line distinguishes saved and applied, saved but not applied,
-  new-window-only and restart-needed settings.
+  overtakes earlier writes. Pending responses keep newer or unrelated drafts,
+  and saving feedback waits for queued changes. Raw operations are
+  single-flight while typing continues; newer edits keep the saved revision as
+  their base and are reported as not saved. Closed views ignore late results.
+- The status line distinguishes saved and applied, saved but not applied (even
+  when reload throws after persisting), new-window or session-only, and
+  restart-needed settings. Both save routes include returned notices and the
+  deferred lifetimes of changed effective values, not no-op spelling
+  changes.
 
 While Settings is selected:
 
 - Pane commands, Find, snippets, file-drop insertion, font zoom and Toggle
   Snippets are no-ops; window and tab actions still work, and configuration
   updates reach hidden terminals.
-- Copy, Paste and Select All act on the focused field and never fall through to
-  a terminal. Clipboard reads are revalidated after focus or tab changes.
-- The Auxiliary Panel is suspended and restored when a terminal is selected
-  again.
-- Language changes relabel everything in place without losing drafts, focus,
-  caret, scroll or pending work. Settings diagnostics never enter operational
-  logs.
+- Copy, Paste and Select All act on the focused field; unsupported controls
+  consume them as no-ops, never falling through to a terminal. Retained
+  terminal-popup targets cannot become field edits. Clipboard reads recheck the
+  interaction generation as well as focus, value and selection; tab
+  deactivation, modals, focus loss and disposal invalidate them. Hidden save
+  results may settle without taking focus.
+- The Auxiliary Panel is suspended, keeping its selected view and query, scroll
+  and width memory, and restored when a terminal is selected again; Snippets
+  still rereads on activation.
+- Language changes relabel everything in place without losing draft bytes,
+  revisions, focus, caret, selection, scroll, page or pending work, and without
+  any read or save. App-owned message identities cross IPC separately from
+  literal validator detail, so late results also use the current language. The
+  main user-file banner keeps its rendered-text contract. Settings diagnostics
+  never enter operational logs.
 
 Layout follows the [UI style guide](ui-style-guide.md#settings-layout): a
 full-area, theme-aware page with six core categories plus Extensions, sized for
 640×480 without changing native window minimums, scrolling instead of
 clipping. Core notices use theme green, red and yellow for success, error and
-warning.
+warning (informational ones stay neutral) and repaint on theme changes;
+installed extension notices keep their own styling. Native control
+color-scheme follows palette luminance. None of this guarantees accessibility
+for arbitrary custom palettes.
 
 ### Operational logs
 
@@ -1999,11 +2103,15 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   [archive contract](extension-installation-foundation.md#archive-contract).
   Update, Reinstall and downgrade never activate code automatically. Official
   means project-maintained, not sandboxed or signed.
-- Spellcheck is disabled in every core and hosted session (Linux and Windows
-  also clear the dictionary list), so Chromium downloads no dictionaries.
+- Main registers an early spellcheck policy for owned sessions: every core and
+  hosted session disables the unused spellchecker, and Linux and Windows also
+  clear the selected dictionary list. No dictionary is acquired or prewarmed,
+  no alternate download URL or network blackhole is used, and there is no
+  spelling UI. Text input and catalog operations keep their normal routes.
 - The Extension View Host loads only its own epoch-local `omx-extension` origin,
-  serving bounded bytes from a pinned immutable version. Remote origins,
-  navigation, connect and workers are refused
+  serving bounded bytes from a pinned immutable version. This enables no
+  catalog fetching, downloads, external web content or public SDK. Remote
+  origins, navigation, connect and browser-worker routes are refused
   ([ADR 0039](adr/0039-own-packaged-web-content-by-epoch.md)).
 
 ### Hosted extension content
@@ -2016,34 +2124,61 @@ and terminal panes are unaffected.
   owner-bound; native views hide before host overlays show, and only a current
   owner is restored.
 - Field input and clipboard stay in the child. Closing or crashing a hosted
-  epoch retires its views, never core PTYs. A rejected presentation blocks
-  native views and overlays until every implicated identity has retired and a
-  native hide is acknowledged.
+  epoch retires its views, never core PTYs; requests racing retirement are
+  refused by owner and identity checks.
+- A rejected identity-bearing presentation blocks native views and overlays
+  until every implicated identity has retired and a current native hide is
+  acknowledged; retired content is never readmitted. Unrelated retirement,
+  refused hides, close failures and epoch-cleanup failures do not clear it.
 - `terminal.semanticInput.v1` sends explicit text, not keys, from the visible
   child into the currently selected Surface. Hiding or losing selection revokes
-  it; geometry updates do not. Insert, Run and preview reuse Protected Paste and
-  the built-in Snippets preview owner. Retirement cancels pending requests but
-  not accepted input.
+  it, even if the child is shown again; same-view geometry updates do not.
+  Main captures the selection revision before admission and core refuses a
+  changed selection. Insert, Run and preview reuse Protected Paste, modal
+  exclusion and the built-in Snippets preview owner; native Enter repeats and
+  release stay owned across focus handoff. Retirement cancels pending requests
+  but not accepted input or sessions.
 - `terminal.insertPath.v1` inserts one bounded absolute path, quoted by the
   shared platform policy, under the same admission and Protected Paste rules
   ([ADR 0021](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)).
-  Completion means every chunk reached node-pty, not that the shell read it;
-  interrupted delivery may be partial.
+  Main checks its private selection and visible-admission stamps at entry and
+  commit, and core checks selection independently, so a hide/reveal before
+  commit cannot revive a request. Completion is reported separately from
+  acceptance and means every chunk reached node-pty without a synchronous
+  error, not that the shell read it; interrupted delivery may be partial and
+  should be inspected before retrying.
 - Neither capability lets a caller pick a terminal or reach the raw PTY. Older
   hosts reject unknown capabilities.
 - On the extension targets the Snippets command opens the installed optional
-  package or Extensions guidance; Windows x64 keeps the built-in view.
+  package or Extensions guidance; Windows x64 keeps the built-in view. Native
+  child activity is separate from temporary visibility, and committed language
+  and search/restore focus intent survive overlays.
 - Packaged content can subscribe to read-only appearance (theme background,
-  foreground and effective tint opacity). The child backing is transparent, so
-  package CSS may show the window tint. No configuration paths or blur control
-  cross this bridge. SSH Connect also follows Interface Language updates
-  without losing drafts or focus.
-- Current Files source hides dot-prefixed entries by default, with a checked
-  Actions menu item (and `Ctrl+H` on Linux, `Cmd+Shift+.` on macOS) to show
-  them for that view only; the choice is never persisted. Only the name rule
-  applies: macOS `UF_HIDDEN` and Linux `.hidden` lists are ignored. Filtering
-  never changes files or listing work, and a hint flags hidden entries.
-  Published Files archives keep their original behavior.
+  foreground and effective tint opacity). Initial and latest snapshots replay
+  to bounded subscribers, including hidden views; epoch retirement stops
+  updates. The child backing is transparent, so package CSS may show the
+  window tint without fading foreground controls; opaque packages keep their
+  paint. No configuration paths or blur control cross this bridge. SSH Connect
+  also follows Interface Language updates, including in hidden views, without
+  losing targets, drafts, focus or pending work and without rediscovery or
+  reconnecting.
+- Current Files source hides dot-prefixed entries and their expanded
+  descendants (relative to the browsing root) by default; a typed dot-prefixed
+  root still opens. Published Files archives keep their original behavior.
+  - A localized, keyboard-accessible checked Actions menu item toggles them.
+    The choice survives navigation and panel hide/reveal for that view, resets
+    on Close or a new view and is never persisted.
+  - Only the name rule applies: macOS `UF_HIDDEN` and Linux `.hidden` lists are
+    ignored.
+  - Filtering never changes files, discards expanded subtrees, interrupts
+    listing or changes an editor's target. A filtered-out selection is cleared
+    and focus falls back to a visible ancestor or row. Bounds, truncation and
+    errors apply before filtering; a hint flags concealed entries without
+    calling the folder empty.
+  - In a focused browsing page or menu with a root, `Ctrl+H` (Linux) or
+    `Cmd+Shift+.` (macOS, physical `Period` with logical `.` or `>`) toggles
+    too. It ignores editable targets, IME composition, repeats and active
+    editors, confirmations or mutations. Host and remapped shortcuts win.
 - Installed extensions are immutable; a host update never changes them.
 
 ### Linux AppImage desktop installer
@@ -2052,35 +2187,51 @@ User guide: [Linux desktop installer](linux-installer.md). Rationale:
 [ADR 0031](adr/0031-keep-linux-installer-choices-small-and-local.md).
 
 - Accepts only a user-supplied, already checksum-verified local OMXTerm
-  AppImage for the host architecture (Linux ARM64 or x64). It never downloads,
-  discovers releases, uses a package manager, elevates or updates on its own.
+  AppImage matching the host architecture (Linux ARM64 or x64), checked before
+  execution. It never downloads, discovers releases, uses a package manager,
+  elevates, changes the system or updates on its own.
 - Commands: `install [--compatibility] <verified-local-AppImage>`, `uninstall`,
   `--version`, `--help`; no prompts.
 - Owns exactly `~/.local/opt/omxterm/OMXTerm.AppImage`,
   `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png` and
   `~/.local/share/applications/omxterm.desktop`. Directories or other
   non-regular, non-symlink entries at those names are refused; files and
-  symlinks are replaced as entries without touching link targets. Uninstall
-  removes only those entries.
-- Install replaces the three files in sequence under rollback traps (not
-  atomically). Failure before the third replacement attempts restoration and
-  keeps any original it cannot restore at a reported backup path. Cleanup
-  failure after the third replacement can exit nonzero with the new install
-  already in place.
+  symlinks (even dangling or pointing at directories) are replaced as entries
+  without touching link targets. Uninstall removes only those entries and
+  keeps unrelated files and parent directories.
+- Install and update replace the three files in sequence under rollback traps,
+  not atomically. Invalid input leaves the previous install untouched. Failure
+  before the third replacement attempts restoration; an original it cannot
+  restore stays at a reported backup path and is never deleted, and the first
+  failure's status and diagnostics are kept.
+- After the third replacement, rollback is disabled before staging and backups
+  are removed. A cleanup failure can then exit nonzero with the new install in
+  place and some originals gone, so a nonzero exit does not always mean the
+  old install survived.
 - At install time the helper tests real FUSE mounting and writes a fixed
   desktop entry that runs the AppImage directly or with
-  `--appimage-extract-and-run`. The test mount child is waited for, then
-  terminated within bounded time; if that cannot be confirmed, install fails and
-  reports the PID and staging directory.
-- The desktop entry forces X11/XWayland, escapes the path safely, and passes
-  arguments literally through a fixed `sh` command. AppImage extraction
-  arguments come before Electron arguments.
-- `--compatibility` adds `LIBGL_ALWAYS_SOFTWARE=1` and
-  `--ignore-gpu-blocklist` for that entry only; a normal reinstall removes it.
-- On Hyprland with XWayland zero-scaling and one shared non-1 monitor scale,
-  install may record `--force-device-scale-factor`, fixed until the next
-  reinstall. Neither option changes compositor policy, global environment or
-  User Configuration.
+  `--appimage-extract-and-run`; launch does no detection. Mount discovery uses
+  at most 50 observations 0.1 s apart. The mount child gets TERM with 20
+  observations, then KILL with 20 more, and is reaped only after its exit is
+  seen. A shutdown timeout fails the install even if KILL works; failure and
+  handled interruption also clean the child up. If termination cannot be
+  confirmed, install fails and reports the PID and staging directory.
+- The desktop entry forces X11/XWayland even when the session prefers Wayland;
+  direct AppImage launches follow the rendering rules in [Product](#product).
+  Desktop Entry encoding keeps literal `%` and `"` in the path, and a fixed
+  `sh` command passes the executable and arguments literally. AppImage
+  extraction arguments come before Electron arguments.
+- Only `--compatibility` adds per-process `LIBGL_ALWAYS_SOFTWARE=1` and
+  `--ignore-gpu-blocklist`; it is never automatic and may cost performance or
+  stability. A normal reinstall removes it.
+- In an active Hyprland session with XWayland zero-scaling and all monitors on
+  one positive scale other than `1`, install may record
+  `--force-device-scale-factor`. Missing tools, bad reports, no session or
+  mixed scales leave scaling alone. The choice is reported, fixed in the
+  desktop entry and refreshed on reinstall.
+- Neither option changes compositor policy, global environment, User
+  Configuration, font zoom, title-bar preferences or the three-file ownership
+  and rollback contract.
 
 ## Architecture boundaries
 
