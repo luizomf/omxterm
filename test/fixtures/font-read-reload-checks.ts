@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { isDeepStrictEqual } from "node:util";
-import type { NativeFixtureResult } from "./native-fixture-outcome";
+import type { NativeFixtureResult } from "./run-native-fixture";
 
 export type FontReadStep = <T>(
   operation: () => T | Promise<T>,
@@ -151,9 +151,8 @@ export function assertOldPostReadRejection(execution: NativeFixtureResult) {
       execution.signal,
       execution.reason,
       execution.cleanupErrors,
-      execution.cleanupFailure,
     ],
-    [1, null, "exit", [], undefined],
+    [1, null, "exit", []],
   );
   const receipts = execution.stderr
     .split(/\r?\n/u)

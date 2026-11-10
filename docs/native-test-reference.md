@@ -2,7 +2,7 @@
 
 This reference details focused native subsystem fixtures, their prerequisites, and evidence boundaries. Start with the [native development prerequisites](development.md#platform-prerequisites) and [focused commands](development.md#focused-checks). Follow the [graphical test precautions](development.md#running-native-tests): use an unlocked, logged-in desktop with WebGL2 support, leave the mouse and keyboard idle, do not resize or switch windows, and run only one graphical suite at a time per desktop. Source-mode Electron fixtures also have [side effects on your desktop](development.md#side-effects-on-your-desktop).
 
-For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls), [supervised PTY acquisition](#supervised-pty-acquisition), [Windows cleanup diagnostics](#windows-cleanup-diagnostics), and [Windows supervision cost](#windows-supervision-cost-and-cleanup-bound). The [graphical fixture supervision overview](development.md#graphical-fixture-supervision) and its headless entry recipe remain in the development guide.
+For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls) and the [native fixture runner](#native-fixture-runner).
 
 ## Admission, input and invocation outcomes
 
@@ -15,7 +15,7 @@ failed invocation. Synthetic OS Quartz/CGEvent input is not physical-keyboard,
 layout or IME qualification.
 
 Record each layer's outcome separately: input/control receipts, application
-exit and stream closure, [supervisor assistance](#supervisor-cleanup-assistance),
+exit and stream closure, [runner cleanup](#native-fixture-runner),
 the nested stock verifier and the outer wrapper. A stock verifier can pass while
 its wrapper fails on metadata collection; app exit0/EOF can coexist with a
 supervisor failure involving its own helper. Neither fact makes the overall
@@ -580,7 +580,7 @@ profile records publication completion, Quit progression and unexpected window
 creation; missing/invalid evidence or any window fails the phase check. These
 checks diagnose fixture ordering, not the exact cause of a native SIGTRAP.
 Headless coverage uses the actual fixture callback and production shutdown owner:
-`npm test -- test/unit/application-about-startup.test.ts test/unit/terminal-shutdown.test.ts test/unit/native-fixture-completion.test.ts`.
+`npm test -- test/unit/application-about-startup.test.ts test/unit/terminal-shutdown.test.ts`.
 
 The auxiliary-panel native fixture fences overlay transitions with bounded,
 window-owned receipts recorded only after the actual production Toggle/Paste
@@ -681,205 +681,18 @@ procfs observation gaps:
 node node_modules/vitest/vitest.mjs run test/unit/linux-packaged-process.test.ts test/unit/linux-wrapper-acquisition.test.ts test/unit/linux-wrapper-control.test.ts
 ```
 
-## Supervised PTY acquisition
+## Native fixture runner
 
-Supervised PTY registration completes **process acquisition**, not native-resource
-quiescence or fixture settlement. Ordinary readiness requires a verified positive
-child identity; ordinary early exit requires a positive PID and reinspection
-confirming its disappearance. The fixture PTY adapter alone knows beta.18's
-`ready_datapipe` ordering; it never waits for payload or a prompt. Production
-session/shutdown interfaces and their actual-exit barrier remain unchanged.
+[`runNativeFixture`](../test/fixtures/run-native-fixture.ts) launches a fixture
+in its own temporary profile and returns its exit code, signal, `reason`
+(`exit`, `timeout`, `cancelled` or `spawn-error`), stdout and stderr. While the
+fixture runs, it samples the fixture's process tree every 500 ms. It also reads
+the processes the fixture registered with `spawnFixturePty` or
+`spawnFixtureProcess`; PTY shells call `setsid`, and children are reparented
+once their parent exits, so descent alone would miss them. When the run ends, it
+kills every owned process still alive, matching each one by PID and start time.
 
-Each registration publishes its pending write-ahead record before spawning, then
-atomically renames a separately staged, validated completion snapshot to its own
-final name. The original pending record is not replaced or unlinked. The
-supervisor pairs the final snapshot with that exact registration and owner; a
-`.tmp` is never acquisition. It also accepts legacy completed base records.
-Malformed, orphaned, mismatched or contradictory final records fail cleanup;
-unpublished completions stay pending. Directory listings are not transactions:
-the collector checks for a completion published after the listing and reads the
-corresponding pending record even when only the completion was listed. Until the
-leader identity is known, it retains uncertainty without adopting processes.
-The actual identity, descendant, reused-PID, cleanup and receipt checks still
-apply. This cooperative protocol does not defend against arbitrary modification
-of its private files or contain unobserved orphan trees.
-
-A Windows ARM64 NTFS non-elevated interactive control at the #759 base showed
-that a separate Node v26 read-only holder coincided with Electron 43.8.1
-pending-record replacement failing with `EPERM` / `rename` in 3/3 attempts; a
-restrictive no-delete-share holder had the same result. Baseline replacement
-and publication to a distinct name with the pending handle held succeeded in
-3/3 each. Holding the rename source instead produced `EBUSY` in 3/3. These
-bounded controls do not identify the historical holder. Separately, the Windows
-Surface font-ownership fixture passed with a temporary diagnostic holding each
-pending record through its PTY completion publication: both pending records
-remained unchanged, and the real supervisor joined with no cleanup errors.
-The same fixture passed once more without instrumentation. These runs do not
-retroactively pass the failed default suite or qualify unrelated scenarios.
-New rename failures report `completed-publication` (or `pending-publication`),
-not the historical `completed-replacement` phase. They remain failures; no retry
-is introduced.
-
-Only the pinned prepared **Windows** `execFailed === true` agent-error event
-selects failed-start acquisition. Reviewed dependency ordering consumes the
-attempt's deferred-connect admission before that notification, so late worker
-readiness cannot initiate another connect. The synchronous observer must verify
-the exact retained live owner and a valid positive-identity descendant closure,
-then atomically publish that snapshot before forwarding lifecycle downstream.
-Include live children/helpers created before native connect threw, even when the
-public PID remains 0. An inspected owner-only snapshot is also allowed; neither
-PID 0, absence nor the marker proves that no child existed or that native handles
-or threads retired. This path does not invoke the successful-readiness callback;
-Unix's shared marker still follows the ordinary actual-child exit path.
-
-Readiness/exit/failed-start observation or publication failures retain the pending
-write-ahead record and retire temporary observers, without throwing through the
-dependency's synchronous listener queue and starving session lifecycle consumers.
-Safe diagnostics distinguish `ready-observation`, `exit-observation` and
-`failed-start-observation` (branch `failed-start`); publication failures retain
-their precise publication phase too. Later events cannot rescue failed
-observation. Synchronous registration failures still throw. The unchanged
-independent supervisor acquires retained ledger identities, rechecks exact birth
-identity before signaling, verifies disappearance and rejects pending/failed
-cleanup even after a fixture exit 0 or empty final inventory. Its join and the
-original native outcome/scenario assertions remain required; cleanup cannot turn
-a nonzero exit or timeout into success.
-
-This is a cooperative fixture protocol, not containment of arbitrary programs or
-unobserved orphan trees. A child that launches descendants and disappears before
-any accepted ancestry snapshot cannot be reconstructed from PID/name or empty
-inventories. The deferred-failure fixture therefore attempts valid PowerShell
-with literal no-profile, bounded, non-spawning arguments while preserving its
-real unavailable-cwd failure oracle. Unknown escaping ancestry is a blocker, not
-permission to invent identities or clear historical blocked receipts.
-Headless composition and receipt coverage:
-`npm test -- test/unit/native-fixture-ownership.test.ts test/unit/native-fixture-registration.test.ts test/unit/native-fixture-publication.test.ts test/unit/native-fixture-registration-diagnostics.test.ts test/unit/native-fixture-registration-receipt.test.ts`.
-Passing those controlled cases does not qualify Windows native D9 or its baseline.
-
-## Supervisor cleanup assistance
-
-New native supervisor receipts include `cleanupAssistance`:
-
-- `none`: process cleanup completed without an observed assistance attempt.
-- `attempted`: an identity-checked POSIX STOP/KILL was attempted, or the Windows
-  termination command emitted its fixed marker immediately before calling Kill
-  on a handle whose creation identity matched. This includes partial command
-  failure and a signal racing with exit; it does **not** prove signal delivery,
-  successful termination, or that the attempt caused disappearance.
-- `unknown`: cleanup did not reach a complete observation and no attempt was
-  recorded. In particular, a failed Windows command without its marker cannot
-  establish that no Kill occurred.
-
-Keep this separate from the existing native exit code, signal, reason and
-`cleanupErrors`. `attempted` plus empty cleanup errors records completed cleanup
-**after an attempt**, not natural Quit or causal proof of assistance. An attempt
-with errors remains failed/uncertain. `none` alone is not success either: actual
-exit, stream closure, registration checks, cleanup errors and owner join still
-apply, within the existing cooperative ownership limits. Natural-settlement
-claims require explicit `none` in addition to those checks and the scenario's
-Quit assertions. No new identity acquisition, signal selection, cleanup authority
-or deadline is introduced.
-
-Historical receipts without this field remain readable but unclassified; do not
-infer `none` from empty cleanup errors or later process absence. Historical
-campaign results are not retroactively reclassified. Snippets source/exact/native,
-Files DMG/production campaigns and the performance runner now require explicit `none` before accepting
-normal settlement. The Windows installed-public fence still permits its existing
-owned uninstall after joined cleanup, including assisted failure settlement; it
-compares assistance metadata but does not turn cleanup permission into PASS.
-
-Headless actual emitted-helper/supervisor controls:
-`npm test -- test/unit/native-fixture-cleanup-assistance.test.ts test/unit/native-fixture-cleanup-failure.test.ts`.
-These model OS inventories/signals/commands and use real receipt/profile I/O;
-they do not add Windows Snippets, product input or native GUI qualification.
-
-## Windows cleanup diagnostics
-
-Windows supervisor receipts can additionally contain optional `cleanupFailure`
-metadata when an existing cleanup PowerShell command throws. Its fixed `callsite`
-is `final-sample`, `registration-before-kill`, `termination`,
-`registration-after-kill`, or `survival`. `elapsedMs` measures the synchronous
-boundary around the failed `execFileSync` call (including JavaScript call/argument
-overhead) using the process-local monotonic clock, floored to whole milliseconds
-and capped at 86,400,000 (one day). It excludes inventory parsing, registration
-file processing and target encoding; it is not total cleanup time or an internal
-PowerShell phase duration. `category` uses only own data properties: `timeout`
-for `ETIMEDOUT`, `command-failed` for a nonzero safe-integer command exit status,
-otherwise `unknown`. No arbitrary error codes/text, command arguments, output, environment
-values or paths enter this metadata. The original `cleanupErrors` strings and
-native exit/signal/reason remain authoritative and unchanged. Successful cleanup
-and failures outside those command boundaries omit the field; legacy receipts
-without it remain valid. This improves future failure discrimination, not
-historical Windows performance or diagnosis of a rare timeout's cause. Command
-bounds, ownership blocking, profile retention and supervisor joining are unchanged.
-Headless emitted-supervisor/schema controls:
-`npm test -- test/unit/native-fixture-cleanup-failure.test.ts test/unit/native-fixture-cleanup-outcome.test.ts test/unit/run-native-fixture-windows.test.ts`.
-They do not replace actual Windows execution.
-
-## Windows supervision cost and cleanup bound
-
-Every Windows process inventory starts a new `powershell.exe` that enumerates
-`Win32_Process`, and the POSIX path starts a new `ps` per call. The
-supervisor-creation launch in the table below is not an inventory: it runs
-`Invoke-CimMethod` with `Win32_Process Create` and enumerates nothing. The supervisor takes
-one `inspect()` and then one per 500 ms interval
-([`native-fixture-supervisor`](../test/fixtures/native-fixture-supervisor.ts)), so
-the number of helpers a fixture starts follows its lifetime rather than the
-product work inside it.
-
-The fixed observations follow from the code, and no duration is derived from
-them. For a three-PTY `production-shutdown` case on Windows:
-
-| Observation                                                  | Count                             |
-| ------------------------------------------------------------ | --------------------------------- |
-| Supervisor creation (`Win32_Process Create`)                 | 1                                 |
-| Launcher inventories (parent and child identity)             | 2                                 |
-| PTY registration (two inventories per `spawnFixtureProcess`) | 6                                 |
-| Supervisor sampling (`inspect()`)                            | 1, then one per 500 ms            |
-| Cleanup callsites                                            | 5, two repeated per survival pass |
-
-One measurement is stated in full because its provenance fits on the page: 25
-`fixtureProcesses()` calls at revision `ec7d9409` took 262–303 ms (minimum to
-maximum, median 269 ms) on an idle Windows 11 ARM64 guest with 8 logical
-processors and real-time protection enabled, where each enumeration returned about
-160 rows, and 25 calls on one macOS ARM64 host took a 17 ms median with a 19 ms
-maximum. The row count matters: the cost scales with what the enumeration returns,
-so a busier guest is not comparable without it. Both runs drove
-[`native-fixture-processes`](../test/fixtures/native-fixture-processes.ts)
-unmodified, bundled with the repository's esbuild, from a scratch harness outside
-the repository; no repository test produced them, and the temporary tracing used
-elsewhere in this investigation has been removed and is not their source.
-
-`cleanupFailure` exists only where a cleanup command runs with a failure context,
-which is the five cleanup callsites. Supervisor creation is separate from
-inventory; launcher, PTY-registration and supervision sampling inventories call
-`fixtureProcesses()` without a failure context. Failures in those operations do
-not themselves attach `cleanupFailure`. A supervision sampling failure sets
-`reason: "inspection-error"` and retains the original error text in
-`cleanupErrors`; a later cleanup command failure can attach `cleanupFailure` to
-the same receipt, for example at `final-sample`.
-
-Where the field is present, `timeout` means one synchronous command did not
-finish. `command-failed` is the only category that proves the helper ran and
-exited nonzero; `unknown` also covers a helper that never started (an `ENOENT` or
-`EACCES` spawn failure) and buffer failures, so check the PowerShell start path
-before assuming a command defect.
-
-The `timeout: 5_000` applies per command, so a recorded `timeout` says that one
-command stalled, not how long cleanup took. The survival loop has its own
-five-second post-termination deadline, which a slow command sequence can also
-exceed, ending in `Fixture processes survived cleanup`. What stalls a command is
-not established by any receipt: the PowerShell start path, WMI, real-time
-scanning and the hypervisor remain candidates, and "an OS-level stall" is an
-inference rather than a cause. The one measurement above characterises this
-instrumentation on that guest: it is not a per-release qualification, and it is not a
-bound for slower hardware.
-
-Do not delete or weaken Windows coverage to make a suite green, and do not weaken
-ownership proof to shorten a wait. Changing a bound is a policy decision that
-needs the affected guest's measured per-command cost; it changes no identity
-comparison, descendant scan, kill sequencing or `callsite`, and nothing here
-proposes one. Preserve the receipt, the retained profile and any `cleanupFailure`
-before clearing a block. The retention steps are above; the block itself and its
-automatic pre-bootstrap exception are described in
-[fixture ownership and cleanup](development.md#fixture-ownership-and-cleanup).
+`cleanupErrors` is empty only when every owned process is gone and the output
+streams closed. The profile is then removed; otherwise it is kept for
+inspection. `cleanupAssistance` is `attempted` when the runner had to kill
+something after the fixture ended, and `none` otherwise.

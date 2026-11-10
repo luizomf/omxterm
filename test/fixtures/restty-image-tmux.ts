@@ -30,22 +30,14 @@ export async function withTmuxImageOutput(options: {
     producer,
     String.raw`process.stdin.setRawMode(true);process.stdin.resume();process.stdout.write('\x1b[2J\x1b[H\x1b[?25l'+process.argv[2]+'\r\n__IMAGE_TMUX_READY__');process.stdin.on('data',()=>process.exit(0));`,
   );
-  const server = spawnFixtureProcess(
-    () => {
-      const child = spawn("tmux", ["-D", "-S", socket, "-f", "/dev/null"], {
-        cwd: options.root,
-        stdio: "ignore",
-      });
-      if (!child.pid) throw new Error("tmux server did not spawn");
-      return Object.assign(child, { pid: child.pid });
-    },
-    (child, completed) => {
-      child.once("exit", completed);
-      return () => {
-        child.removeListener("exit", completed);
-      };
-    },
-  );
+  const server = spawnFixtureProcess(() => {
+    const child = spawn("tmux", ["-D", "-S", socket, "-f", "/dev/null"], {
+      cwd: options.root,
+      stdio: "ignore",
+    });
+    if (!child.pid) throw new Error("tmux server did not spawn");
+    return Object.assign(child, { pid: child.pid });
+  });
   let serverExited = false;
   server.once("exit", () => {
     serverExited = true;

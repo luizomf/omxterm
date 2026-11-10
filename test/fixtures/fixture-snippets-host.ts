@@ -30,38 +30,30 @@ export async function startFixtureSnippetsHost(
   childProcess.fork = ((...args: Parameters<typeof fork>) => {
     if (args[0] !== path.join(root, "extension-runtime", "bootstrap.mjs"))
       return fork(...args);
-    return spawnFixtureProcess(
-      () => {
-        const child = fork(...args);
-        let closed!: () => void;
-        const record = {
-          closed: false,
-          exit: null as {
-            code: number | null;
-            signal: NodeJS.Signals | null;
-          } | null,
-          close: new Promise<void>((resolve) => {
-            closed = resolve;
-          }),
-        };
-        children.push(record);
-        child.once("exit", (code, signal) => {
-          record.exit = { code, signal };
-        });
-        child.once("close", () => {
-          record.closed = true;
-          closed();
-        });
-        assert.ok(child.pid, "backend spawn must have an owned PID");
-        return child as typeof child & { pid: number };
-      },
-      (child, exited) => {
-        child.once("exit", exited);
-        return () => {
-          child.removeListener("exit", exited);
-        };
-      },
-    );
+    return spawnFixtureProcess(() => {
+      const child = fork(...args);
+      let closed!: () => void;
+      const record = {
+        closed: false,
+        exit: null as {
+          code: number | null;
+          signal: NodeJS.Signals | null;
+        } | null,
+        close: new Promise<void>((resolve) => {
+          closed = resolve;
+        }),
+      };
+      children.push(record);
+      child.once("exit", (code, signal) => {
+        record.exit = { code, signal };
+      });
+      child.once("close", () => {
+        record.closed = true;
+        closed();
+      });
+      assert.ok(child.pid, "backend spawn must have an owned PID");
+      return child as typeof child & { pid: number };
+    });
   }) as typeof fork;
   syncBuiltinESMExports();
   const semanticInput = registerSemanticInputIpc({
