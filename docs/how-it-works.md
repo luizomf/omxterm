@@ -36,13 +36,12 @@ Switching tabs leaves sessions running. Closing a pane ends its session; closing
 ## Customization and conveniences
 
 - Use **Settings** for fonts, themes, and shortcuts. If you edit a configuration or theme file yourself, choose **View → Reload User Configuration**; see [Configuration](configuration.md).
-- **Snippets** saves reusable text. Since 0.25.0, eligible new default packaged profiles on Linux ARM64/x64, macOS ARM64, and Windows ARM64 get one attempt to install bundled Snippets 0.1.0. Windows x64 has it built in. See the [exact default policy](default-snippets.md#enrollment-and-the-permanent-attempt) and [Snippets setup](configuration.md#snippets).
-- Windows ARM64 public-install Snippets failures remain unresolved. Linux and Windows x64 packages are build-only, with ordinary desktop behavior unverified; see [Snippets availability](snippets-availability.md#windows-arm64-known-issue).
+- **Snippets** saves reusable text. A new installation adds it once from the app's own files (Windows x64 has it built in). See [Snippets setup](configuration.md#snippets) and [Snippets availability](snippets-availability.md), including a known Windows ARM64 issue.
 - **Protected Paste** can ask before sending multiline text. You can also [preview local images](usage.md#previewing-local-images); see [Protected Paste](usage.md#protected-paste) for its limits.
 
 ## Privacy and local data
 
-- OMXTerm has no telemetry, analytics, crash reporting, automatic update checks, or remote log delivery. Windows is not verified network-silent: 0.25.0 testing observed system-proxy discovery and reachability traffic; see [Snippets availability](snippets-availability.md#windows-arm64-known-issue).
+- OMXTerm has no telemetry, analytics, crash reporting, automatic update checks, or remote log delivery. On Windows, we have not yet confirmed that the app makes no network requests at all.
 - OMXTerm does not automatically save terminal text. Scrollback (earlier output) stays in memory while a pane is open. Operational logs record app events, not terminal contents, commands, clipboard data, or configuration values.
 - Programs and extensions use your permissions, including access to files and the network. Extensions are not sandboxed; install only code you trust. The official catalog is fetched when you choose Browse or Refresh, and an online install can use the network. The bundled Snippets attempt uses local app files instead.
 

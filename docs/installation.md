@@ -12,10 +12,9 @@ check a download rather than run it. The
 The examples use the published `0.25.0` file names. Substitute the version from
 your download row if it differs.
 
-The x64 downloads are **build-only**: automated checks ran, but their desktop,
-graphics, and installer behavior is untested. See the
-[build-only coverage](release.md#hosted-x64-build-only-artifact-delivery) and
-report problems through the [issue tracker](../CONTRIBUTING.md#report-a-problem).
+The x64 (Intel/AMD) downloads are **untested**: they build and pass automated
+checks, but nobody has used them on a real desktop yet. Please
+[report problems](../CONTRIBUTING.md#report-a-problem) if you try them.
 
 **[macOS](#macos)** · **[Linux](#linux)** · **[Windows](#windows)** ·
 **[Update or uninstall](#updating-or-uninstalling)** ·
@@ -93,9 +92,7 @@ package. Upgrade to a release that meets it, or
 source build is a development path, not a supported installation. If neither is
 possible, there is no supported way to run OMXTerm on that system.
 
-Linux x64 is build-only. One check of 0.23.0 ran without a desktop on Ubuntu
-22.04 with glibc 2.35. That is not a minimum version or a broad promise, and no
-desktop test confirms which distributions the x64 AppImage runs on.
+Linux x64 is untested, so we can't say yet which distributions it runs on.
 
 OMXTerm uses X11, a Linux window system. On Wayland desktops, a compatibility
 layer called XWayland lets X11 apps run; most desktops already provide it.
@@ -159,7 +156,7 @@ HiDPI scaling, or VM graphics, see [Linux desktop tips](linux-desktop.md).
 
 Windows 11 ARM64 is tested; Windows 11 x64 and Windows 10 are untested. Choose
 `-arm64.exe` for an ARM-based processor or `-x64.exe` for an x64-based
-processor; the x64 build is build-only. If unsure, check **System type** in
+processor; the x64 build is untested. If unsure, check **System type** in
 **Settings → System → About**; a Surface can use either.
 
 1. Install the

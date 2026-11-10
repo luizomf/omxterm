@@ -24,7 +24,7 @@ For security vulnerabilities, follow the private reporting instructions in [SECU
 
 ### Have an x64 Linux or Windows machine?
 
-Both targets can be built natively from source (`npm run package:win:x64` or `npm run package:linux:x64`). The [latest release](README.md#platforms-and-downloads) includes build-only x64 packages from manual native hosted CI lanes; see [release guidance](docs/release.md#hosted-x64-build-only-artifact-delivery). Desktop, GPU, installers and ordinary-user integration remain unverified and are not release gates for these lanes. Help with native desktop qualification remains welcome in the [Windows x64 issue](https://github.com/luizomf/omxterm/issues/224) and [Linux x64 issue](https://github.com/luizomf/omxterm/issues/223); build-only delivery does not fully qualify either target.
+The [latest release](README.md#platforms-and-downloads) has x64 packages that build and pass automated checks, but nobody has used them on a real desktop yet. If you have an Intel/AMD Linux or Windows machine, try one and tell us how it went in the [Linux x64 issue](https://github.com/luizomf/omxterm/issues/223) or the [Windows x64 issue](https://github.com/luizomf/omxterm/issues/224). You can also build them from source (`npm run package:linux:x64` or `npm run package:win:x64`).
 
 ## Opening a pull request
 

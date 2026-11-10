@@ -17,42 +17,20 @@
 | Add OMXTerm to the Linux application menu                  | [Linux desktop installer](linux-installer.md)                           |
 | Update or uninstall OMXTerm                                | [Installation guide](installation.md#updating-or-uninstalling)          |
 
-## Optional tools
+## Optional add-ons
 
-**[OMXTerm 0.25.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.25.0).**
-Files and SSH Connect are installed separately. Snippets is optional on some
-systems and remains built in on Windows x64. These add-ons have different
-platform and testing limits; see each short availability note before installing.
+Some features are add-ons you install from **Settings → Extensions → Browse
+official extensions**. They are previews, offered only where they have been
+tested.
 
-- **[Files](files-availability.md)** is offered for Linux computers with
-  64-bit ARM processors and Macs with Apple silicon (versions 0.6 and 0.7).
-- **[SSH Connect 0.3.1](ssh-connect.md)** is offered for Linux computers with
-  64-bit ARM processors and Macs with Apple silicon; other targets are not
-  qualified.
-- **[Snippets](snippets-availability.md)** is optional on Linux computers with
-  64-bit ARM or Intel/AMD processors, Macs with Apple silicon, and Windows on
-  ARM. New packaged profiles try once to install the removable 0.1.0 default.
-  Windows on ARM has unresolved public-install failures; Windows x64 retains
-  built-in Snippets.
-- **[Saved Layout](saved-layout.md)** and **[Mirror Typing](mirror-typing.md)**
-  are source-only previews with no published download or catalog offer. Their
-  availability notes summarize the limits; developer records retain build and
-  qualification details.
+| Add-on                               | What it does                                   | Offered on                                                               |
+| ------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------ |
+| [Files](files-availability.md)       | Browse folders, move and delete files          | Linux on ARM64, Macs with Apple silicon                                  |
+| [SSH Connect](ssh-connect.md)        | Open a terminal session on another computer    | Linux on ARM64, Macs with Apple silicon                                  |
+| [Snippets](snippets-availability.md) | Save commands or text and insert them in a tab | Linux, Macs with Apple silicon, Windows on ARM (built in on Windows x64) |
 
-Development source also has Files 0.8 path insertion/drop and #818's revised
-palette preview. Neither is in stable 0.25.0, which cannot run Files 0.8. See each
-tool's guide for the host versions actually tested.
-
-### Historical preview and composition evidence
-
-The [Snippets migration guide](snippets-migration.md) retains the earlier exact
-preview pairs, source/package/public-HTTPS checkpoints and failed occurrences.
-The [macOS ARM64](macos-extension-composition.md),
-[Linux x64](linux-x64-extension-composition.md) and
-[Windows ARM64](windows-arm64-extension-composition.md) composition guides retain
-separate foundation, hosted-view and packaging evidence. Their historical
-built-in-Snippets checkpoints do not qualify later optional-Snippets artifacts;
-the linked guides preserve exact inputs and remaining limits.
+[Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md) are still
+in development and can't be installed yet.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 

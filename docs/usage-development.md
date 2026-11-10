@@ -37,7 +37,7 @@ To protect active work, OMXTerm asks for confirmation before closing a pane, tab
 ### Source previews
 
 Saved Layout and Mirror Typing are code previews, not tools offered through
-an extension catalog. See [Optional tools](README.md#optional-tools) for the
+an extension catalog. See [Optional tools](README.md#optional-add-ons) for the
 current availability summary.
 
 ## Window controls
@@ -284,7 +284,7 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 Snippets are available as an optional extension on supported host versions. To
 install or update it, choose **Settings → Extensions → Browse official
-extensions**. See [Optional tools](README.md#optional-tools) for supported
+extensions**. See [Optional tools](README.md#optional-add-ons) for supported
 systems and known limits.
 
 Choose **Insert** to send text to the terminal without adding Enter,
@@ -301,7 +301,7 @@ versions. Install them from **Settings → Extensions**, then open them from the
 application menu or Command Palette. Files browses local folders; SSH Connect
 starts a separate terminal session.
 
-For platform availability and limits, see [Optional tools](README.md#optional-tools)
+For platform availability and limits, see [Optional tools](README.md#optional-add-ons)
 and the [SSH Connect guide](ssh-connect.md). Updating OMXTerm alone does not
 update an installed extension.
 
