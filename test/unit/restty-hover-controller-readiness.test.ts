@@ -46,6 +46,9 @@ function fixture(
   const runtime = runInNewContext(
     `
     let needsRender = true;
+    const invalidateRender = () => {
+      needsRender = true;
+    };
     const linkState = { visibleHoverCells: new Set() };
     ${instrumented.slice(setterStart, setterEnd)}
     ({ setVisibleLinkHover, frame() {

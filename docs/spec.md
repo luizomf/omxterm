@@ -354,6 +354,11 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Selection refits and redraws current content and cursor before the first
   visible presentation, without a background render-budget delay or replacing
   the Surface, core or Live Terminal Session.
+- An unchanged Terminal Surface stops requesting display frames. It draws only
+  at cursor/text blink phases and rechecks state that changes without a render
+  request (such as a reveal without refit) at most every 250 ms. Output, input,
+  resize, focus, theme and configuration changes present on the next display
+  frame.
 - Native windows have minimum dimensions of 320 px wide by 200 px high. At
   startup and after a valid reload, main grows those bounds using configured
   font metrics, line height, padding, a scrollbar allowance, and title space.

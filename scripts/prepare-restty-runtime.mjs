@@ -12,6 +12,7 @@ import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import { bufferTextCorrections } from "./restty-buffer-text-corrections.mjs";
+import { idleRenderCorrections } from "./restty-idle-render-corrections.mjs";
 import {
   applicationCursorCorrections,
   applicationCursorCoreCorrections,
@@ -149,8 +150,10 @@ const contributorExportDigest =
   "c55a8f4068e18131a3be762e49b8015a62d8fa4bf8b852edf60f5e85f0cb3380";
 const combinedExportDigest =
   "f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b";
-const correctedDigest =
+const priorIdleRenderDigest =
   "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf";
+const correctedDigest =
+  "a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -2022,6 +2025,8 @@ export async function prepareResttyRuntime(options = {}) {
           ].includes(sourceDigest)
         )
           source = applyCorrections(source, bufferTextCorrections);
+      case priorIdleRenderDigest:
+        source = applyCorrections(source, idleRenderCorrections);
         break;
       default:
         throw new Error(

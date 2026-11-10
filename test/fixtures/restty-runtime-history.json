@@ -1,5 +1,111 @@
 [
   {
+    "name": "priorIdleRenderDigest",
+    "sha256": "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf",
+    "edits": [
+      { "start": 56419, "deleteCount": 2, "lines": [] },
+      {
+        "start": 56145,
+        "deleteCount": 1,
+        "lines": ["    needsRender = true;"]
+      },
+      {
+        "start": 56131,
+        "deleteCount": 1,
+        "lines": ["    needsRender = true;"]
+      },
+      {
+        "start": 56117,
+        "deleteCount": 1,
+        "lines": ["    needsRender = true;"]
+      },
+      {
+        "start": 56089,
+        "deleteCount": 1,
+        "lines": ["    needsRender = true;"]
+      },
+      {
+        "start": 56083,
+        "deleteCount": 1,
+        "lines": ["      needsRender = true;"]
+      },
+      {
+        "start": 56071,
+        "deleteCount": 1,
+        "lines": ["        needsRender = true;"]
+      },
+      {
+        "start": 56061,
+        "deleteCount": 1,
+        "lines": ["        needsRender = true;"]
+      },
+      {
+        "start": 56053,
+        "deleteCount": 1,
+        "lines": ["    needsRender = true;"]
+      },
+      {
+        "start": 56017,
+        "deleteCount": 1,
+        "lines": ["    markNeedsRender: () => needsRender = true,"]
+      },
+      {
+        "start": 55937,
+        "deleteCount": 1,
+        "lines": ["      needsRender = true;"]
+      },
+      {
+        "start": 55898,
+        "deleteCount": 1,
+        "lines": ["    needsRender = true;"]
+      },
+      {
+        "start": 55758,
+        "deleteCount": 1,
+        "lines": ["      needsRender = true;"]
+      },
+      {
+        "start": 55752,
+        "deleteCount": 1,
+        "lines": ["      needsRender = true;"]
+      },
+      {
+        "start": 55725,
+        "deleteCount": 1,
+        "lines": ["      needsRender = true;"]
+      },
+      {
+        "start": 55647,
+        "deleteCount": 1,
+        "lines": ["      needsRender = true;"]
+      },
+      { "start": 55612, "deleteCount": 5, "lines": [] },
+      { "start": 55440, "deleteCount": 1, "lines": [] },
+      {
+        "start": 55354,
+        "deleteCount": 1,
+        "lines": [
+          "  const { loop, refresh } = createRuntimeControllerRenderLoop({"
+        ]
+      },
+      { "start": 55334, "deleteCount": 1, "lines": [] },
+      { "start": 55317, "deleteCount": 1, "lines": [] },
+      {
+        "start": 55293,
+        "deleteCount": 20,
+        "lines": ["    renderFrame(state);"]
+      },
+      { "start": 55288, "deleteCount": 4, "lines": [] },
+      { "start": 55286, "deleteCount": 1, "lines": [] },
+      { "start": 55283, "deleteCount": 2, "lines": [] },
+      { "start": 55256, "deleteCount": 1, "lines": [] },
+      { "start": 55252, "deleteCount": 2, "lines": [] },
+      { "start": 55250, "deleteCount": 1, "lines": ["      return;"] },
+      { "start": 54935, "deleteCount": 2, "lines": [] },
+      { "start": 54835, "deleteCount": 2, "lines": [] }
+    ]
+  },
+  {
     "name": "priorBufferTextDigest",
     "sha256": "7cbe4d0fe281a9c221ee88342e7f76fd35f1f285fe5b7eace402c059772a44e7",
     "edits": [

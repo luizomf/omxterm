@@ -158,6 +158,28 @@ These are not DOM Surface, native PTY or graphical qualification.
 
 Panes in hidden tabs continue synchronous output ingestion, protocol replies, and Adapter ACKs while suppressing WebGL frame clears, draws, and texture uploads. Disposable renderer image copies are released while hidden and rebuilt from core storage when the tab is selected again.
 
+### Idle rendering
+
+The pinned loop requested a display frame on every vsync, even for an unchanged
+screen. `scripts/restty-idle-render-corrections.mjs` keeps the loop on
+`requestAnimationFrame` only while there is pending work: a render request,
+resize settling, a changed Kitty animation frame or a deferred presentation
+(synchronized output, hidden-document budget). After 500 ms without work, it
+sleeps on a timer until the next blink phase, at most 250 ms.
+
+Every `needsRender` write in the runtime goes through one wake path, so output,
+input, resize, focus and configuration changes resume vsync on the next frame.
+The timer is the fallback for state that changes without an invalidation:
+reveal without a refit, unpause, and Kitty animation deadlines, which the core
+ABI does not report. Those may present up to one poll late. Blink phases still
+draw even when nothing blinks; skipping them would need render-pass knowledge.
+
+The production loop, its lifecycle cancellation and blink phases run headless:
+
+```sh
+npx vitest run test/unit/restty-blink-scheduling.test.ts
+```
+
 ### Background composition
 
 The WebGL2 context uses `alpha: true, depth: false, antialias: false`. The host paints the theme background tint once behind the Surface:
@@ -239,7 +261,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf` |
+| Restty JavaScript runtime | `a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c` |
 | Embedded-core chunk       | `0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513` |
