@@ -15,8 +15,6 @@ into the test.
 checks each reconstructed input against its pinned digest, prepares it to the
 same reviewed output, checks idempotency and rejects modified input without
 rewriting it. The current corrected runtime is tested as an additional state.
-The [emoji experiment runtime test](../unit/emoji-experiment-runtime.test.ts)
-also uses a prior state to verify rejection of stale probe inputs.
 
 When accepted preparation inputs change, keep the reverse deltas and expected
 hashes consistent with the actual prepared bytes. These checks establish runtime
