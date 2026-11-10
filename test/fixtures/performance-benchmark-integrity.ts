@@ -102,7 +102,9 @@ function attributionIncomplete(
     attribution.endpointCount !== expectedStreams ||
     !attribution.sampleTimesValid ||
     !attribution.applicationMemoryComplete ||
-    (requireCpu && !Number.isFinite(attribution.totalCpuPercentOneCore)) ||
+    (requireCpu &&
+      (!Number.isFinite(attribution.totalCpuPercentOneCore) ||
+        (attribution.totalCpuPercentOneCore ?? 0) < 0)) ||
     !Number.isFinite(attribution.groupWindowMs) ||
     attribution.groupWindowMs <= 0 ||
     ROLES.some(
@@ -157,8 +159,9 @@ function streamIssues(
         continue;
       }
       if (
-        !Number.isFinite(stream.bytes) ||
-        !Number.isFinite(stream.expectedBytes) ||
+        !Number.isSafeInteger(stream.bytes) ||
+        stream.bytes < 0 ||
+        !Number.isSafeInteger(stream.expectedBytes) ||
         stream.expectedBytes <= 0 ||
         stream.elapsedMs === null ||
         !Number.isFinite(stream.elapsedMs) ||
@@ -234,11 +237,15 @@ function repetitionIssues(
       window.windowMs <= 0 ||
       !window.applicationMemoryComplete ||
       !window.sampleTimesValid ||
-      (requireCpu && !Number.isFinite(window.totalCpuPercentOneCore)) ||
+      (requireCpu &&
+        (!Number.isFinite(window.totalCpuPercentOneCore) ||
+          (window.totalCpuPercentOneCore ?? 0) < 0)) ||
       ROLES.some(
         (role) =>
           !Number.isFinite(window.growthBytes[role]) ||
-          (requireCpu && !Number.isFinite(window.cpuPercentOneCore[role])),
+          (requireCpu &&
+            (!Number.isFinite(window.cpuPercentOneCore[role]) ||
+              (window.cpuPercentOneCore[role] ?? 0) < 0)),
       )
     )
       blocking(
@@ -279,7 +286,8 @@ function runtimeIssues(report: BenchmarkReport, blocking: Push): void {
     (runtime.steadyBytes ?? -1) < 0 ||
     !Number.isFinite(runtime.growthBytes) ||
     (report.machine.platform === "linux" &&
-      !Number.isFinite(runtime.cpuPercentOneCore))
+      (!Number.isFinite(runtime.cpuPercentOneCore) ||
+        (runtime.cpuPercentOneCore ?? 0) < 0))
   )
     blocking(
       "extension-runtime-incomplete",

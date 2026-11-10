@@ -41,6 +41,76 @@ describe("performance benchmark report", () => {
     expect(first.roles.shell?.steadyBytes ?? 0).toBeGreaterThan(0);
   });
 
+  it("marks impossible raw memory values as incomplete", () => {
+    const run = makeRun({ scrollbackLines: 10_000 });
+    const invalid = {
+      ...run,
+      steps: run.steps.map((step) => ({
+        ...step,
+        samples: step.samples.map((sample) => ({
+          ...sample,
+          readings: sample.readings.map((reading) =>
+            reading.role === "main" ? { ...reading, bytes: -1 } : reading,
+          ),
+        })),
+      })),
+    };
+    const measured = report([invalid, makeRun({ scrollbackLines: 0 })]);
+    const summary = measured.variants.find(
+      (variant) => variant.scrollbackLines === 10_000,
+    )!.repetitions[0]!.steps[0]!;
+    expect(summary.applicationMemoryComplete).toBe(false);
+    expect(summary.roles.main?.steadyBytes).toBeNull();
+    expect(summary.totalBytes).toBeNull();
+  });
+
+  it("rejects decreasing cumulative CPU counters in required Linux windows", () => {
+    const run = makeRun({ scrollbackLines: 10_000 });
+    const idleCpu = run.idleCpu.map((window) => ({
+      ...window,
+      samples: window.samples.map((sample, index) => ({
+        ...sample,
+        readings: sample.readings.map((reading) =>
+          reading.role === "renderer"
+            ? { ...reading, cpuSeconds: index === 0 ? 1 : 0.5 }
+            : reading,
+        ),
+      })),
+    }));
+    const measured = report([
+      { ...run, idleCpu },
+      makeRun({ scrollbackLines: 0 }),
+    ]);
+    const rendererCpu =
+      measured.variants[0]!.repetitions[0]!.idleCpuWindows[0]!.cpuPercentOneCore
+        .renderer;
+    expect(rendererCpu).toBeNull();
+  });
+
+  it("does not report fractional stream byte counts as throughput", () => {
+    const run = makeRun({ scrollbackLines: 10_000 });
+    const first = run.attribution[0]!;
+    const attribution = [
+      {
+        ...first,
+        streams: first.streams!.map((stream, index) =>
+          index === 0
+            ? { ...stream, bytes: first.expectedBytes + 0.5 }
+            : stream,
+        ),
+      },
+      ...run.attribution.slice(1),
+    ];
+    const measured = report([
+      { ...run, attribution },
+      makeRun({ scrollbackLines: 0 }),
+    ]);
+    expect(
+      measured.variants[0]!.repetitions[0]!.attribution[0]!.streams[0]!
+        .bytesPerSecond,
+    ).toBeNull();
+  });
+
   it("excludes fixture shells from application window CPU", () => {
     const run = makeRun({ scrollbackLines: 10_000 });
     const idle = {
@@ -126,7 +196,14 @@ describe("performance benchmark report", () => {
       ...stream,
       pollCostMs: index + 1,
     }));
-    const endpoint = first.streamEnds!.at(-1)!;
+    const stableEndpoints = first.streamEnds!.map((endpoint, index) => ({
+      ...endpoint,
+      readings: endpoint.readings.map((reading) => ({
+        ...reading,
+        cpuSeconds: reading.cpuSeconds === null ? null : index === 2 ? 1.1 : 1,
+      })),
+    }));
+    const endpoint = stableEndpoints.at(-1)!;
     const final = {
       ...endpoint,
       atMs: 1000,
@@ -142,7 +219,7 @@ describe("performance benchmark report", () => {
           {
             ...first,
             streams,
-            streamEnds: [first.streamEnds![0]!, first.streamEnds![1]!, final],
+            streamEnds: [stableEndpoints[0]!, stableEndpoints[1]!, final],
           },
           ...run.attribution.slice(1),
         ],
