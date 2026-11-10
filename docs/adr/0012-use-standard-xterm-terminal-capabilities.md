@@ -6,6 +6,17 @@ the installed application version. These values describe the new PTY and
 replace misleading inherited values. The rest of the user's environment is
 inherited and remains outside log content.
 
+On Linux, a packaged OMXTerm runs from an AppImage whose runtime and AppRun set
+`APPIMAGE`, `APPDIR`, `ARGV0`, `OWD` and `CHROME_DESKTOP` and prepend mount
+paths to `PATH`, `LD_LIBRARY_PATH`, `XDG_DATA_DIRS` and `GSETTINGS_SCHEMA_DIR`
+for Electron itself. Those values describe OMXTerm, not the user, and point
+into a mount that disappears when OMXTerm quits
+([#913](https://github.com/luizomf/omxterm/issues/913)). Session environments
+drop them and keep the user's own entries. The cleanup is keyed on `APPDIR` and
+the pinned AppRun layout rather than recorded originals, so nothing new is added
+to the environment; a user entry under the mount itself cannot survive, which
+is acceptable for a path that only exists while OMXTerm runs.
+
 Restty's parsed output seam retains device-attribute and cell-size ownership.
 Ghostty answers cursor-position reports (CPR) from its parser cursor, including
 wide/combining text, pending-wrap resize and origin-mode margins. At each parsed

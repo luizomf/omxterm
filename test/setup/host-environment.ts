@@ -1,20 +1,9 @@
-import path from "node:path";
+import { withoutAppImageRuntime } from "../../src/main/appimage-environment";
 
 // Contributors often run the suite inside OMXTerm itself. A packaged Linux
-// OMXTerm runs from an AppImage whose runtime variables and mount paths reach
-// its shells (see #609); keep them away from the Electron and PTY children
-// these tests launch so the host terminal cannot change their behavior.
-const appDir = process.env.APPDIR;
-for (const name of ["APPIMAGE", "APPDIR", "ARGV0", "OWD", "CHROME_DESKTOP"])
-  delete process.env[name];
-if (appDir)
-  for (const name of ["PATH", "LD_LIBRARY_PATH"]) {
-    const kept = (process.env[name] ?? "")
-      .split(path.delimiter)
-      .filter(
-        (entry) =>
-          entry && !`${entry}${path.sep}`.startsWith(`${appDir}${path.sep}`),
-      );
-    if (kept.length) process.env[name] = kept.join(path.delimiter);
-    else delete process.env[name];
-  }
+// OMXTerm runs from an AppImage; keep its runtime variables and mount paths
+// away from the Electron and PTY children these tests launch (see #609).
+const cleaned = withoutAppImageRuntime(process.env, process.platform);
+for (const name of Object.keys(process.env))
+  if (!(name in cleaned)) delete process.env[name];
+Object.assign(process.env, cleaned);
