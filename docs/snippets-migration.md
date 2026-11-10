@@ -73,7 +73,7 @@ Linux ARM64 uses prior behavioral/Settings results for unchanged inputs plus the
 refreshed package and ordinary-profile checks. [#741](https://github.com/luizomf/omxterm/issues/741)
 stays open for the remaining work. The single-release decision does not change
 terminal-input rules or the isolation required for future native tests. See
-[release provenance and exclusions](release.md#stable-0250-publication).
+[release provenance and exclusions](https://github.com/luizomf/omxterm/releases/tag/v0.25.0).
 
 ## Stable 0.24.0 release disposition
 

@@ -105,7 +105,7 @@ The historical dev.0/SSH0.1 host/archive pair passed a synthetic-client campaign
 and host FULL verifier; unchanged Files0.1.0 passed its lifecycle on that host.
 Those Files results do not establish Files0.1 compatibility with dev.11. These are not a real SSH
 connectivity/authentication campaign or proof of public catalog consumption.
-The [release procedure](release.md#ssh-preview-publication) requires a separate
+The [release procedure](release.md#publishing-an-extension-archive) requires a separate
 public-only checkpoint after rollout; record its actual outcome, never infer it
 from source integration or these instructions.
 
