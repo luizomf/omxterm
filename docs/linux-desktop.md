@@ -1,13 +1,13 @@
 # Linux desktop tips
 
-You only need this page for extras: background blur, a bigger interface on a HiDPI screen, or a VM that cannot draw the window. For a normal setup, see [Linux installation](installation.md#linux).
+Use this page for extras: background blur, a larger interface on a high-resolution (HiDPI) display, or a virtual machine (VM) that has trouble drawing the window. For a normal setup, see [Linux installation](installation.md#linux).
 
-OMXTerm runs on X11, or through XWayland on Wayland desktops. Your desktop, not your distribution, decides how transparency and blur work, so pick the section that matches it:
+OMXTerm uses X11, a Linux window system. On Wayland desktops, a compatibility layer called XWayland lets X11 apps run. Your desktop, not your Linux distribution, decides how transparency and blur work, so pick the section that matches it:
 
 - [GNOME](#ubuntu-with-gnome-blur-my-shell)
 - [KDE Plasma](#fedora-with-kde-plasma-and-other-kde-desktops)
 - [Hyprland / Omarchy](#hyprland-including-omarchy)
-- [HiDPI interface size](#small-interface-text-on-a-hidpi-display)
+- [Interface size on high-resolution displays](#small-interface-text-on-a-hidpi-display)
 - [Graphics troubleshooting](#graphics-troubleshooting)
 
 > [!TIP]
@@ -43,7 +43,7 @@ sudo apt install x11-utils      # Ubuntu / Kubuntu
 
 ## Hyprland, including Omarchy
 
-OMXTerm runs through XWayland on Hyprland. If your setup forces Electron apps to use Wayland (for example with `ELECTRON_OZONE_PLATFORM_HINT=wayland`), launch the AppImage with X11 explicitly (replace `VERSION` with the version you downloaded):
+OMXTerm uses XWayland to run on Hyprland. If your setup forces Electron apps to use Wayland (for example with `ELECTRON_OZONE_PLATFORM_HINT=wayland`), launch the AppImage with X11 explicitly (replace `VERSION` with the version you downloaded):
 
 ```sh
 ./OMXTerm-VERSION-arm64.AppImage --ozone-platform=x11
@@ -84,7 +84,7 @@ A few tips:
 
 Terminal zoom (`Ctrl++` / `Ctrl+-`) only changes terminal text. If the tabs, title bar, and sidebar look too small, Electron's display scale is the issue.
 
-On Hyprland, this usually happens when XWayland zero-scaling is on. Check with:
+On Hyprland, this can happen when XWayland zero-scaling is on, which keeps app sizes from following your monitor scale. Check with:
 
 ```sh
 hyprctl monitors
@@ -101,17 +101,17 @@ Use the value that matches your display. This is a launch option, not a `config.
 
 ## Graphics troubleshooting
 
-OMXTerm needs **WebGL2** to draw the terminal. On Linux, OMXTerm permits Chromium's SwiftShader WebGL fallback when available, including on some VMs without 3D acceleration. Software rendering costs CPU and initialization may still fail. This permission accepts [lower graphics/JIT security guarantees](adr/0037-allow-the-linux-software-webgl-fallback.md); it does not force software rendering or bypass the GPU blocklist.
+OMXTerm needs graphics support from its built-in browser. On Linux, a CPU-based software fallback may work on some virtual machines without 3D graphics, but it can be slower and may still fail. Allowing this fallback has [different graphics security protections](adr/0037-allow-the-linux-software-webgl-fallback.md); it does not force software rendering or bypass Chromium's compatibility checks.
 
-A blank window or rendering error alone does not identify a driver problem. For separate, opt-in Mesa/blocklist troubleshooting, if you use the [Linux installer](linux-installer.md#only-if-graphics-fail), reinstall with `--compatibility`. If you launch the AppImage directly, run:
+A blank window or rendering error alone does not identify a driver problem. If you use the [Linux installer](linux-installer.md#only-if-graphics-fail), reinstall with `--compatibility`. If you launch the AppImage directly, run:
 
 ```sh
 LIBGL_ALWAYS_SOFTWARE=1 ./OMXTerm-VERSION-arm64.AppImage \
   --ozone-platform=x11 --ignore-gpu-blocklist
 ```
 
-This switches to CPU rendering and skips Chromium's GPU blocklist. It is slower, so use it only when normal launch fails, and keep it to this command instead of exporting it globally.
+This forces CPU rendering and asks Chromium to bypass its graphics compatibility check. It is slower, so use it only when normal launch fails, and keep it to this command instead of exporting it globally.
 
-If you also need `--appimage-extract-and-run` (no FUSE), put it right after the AppImage path, before the other options.
+If the FUSE feature (used to open AppImages directly) is unavailable, add `--appimage-extract-and-run` right after the AppImage path, before the other options.
 
 Still not working? [Open a bug report](../CONTRIBUTING.md#report-a-problem) with the error message and your GPU or VM details.

@@ -32,7 +32,7 @@ If the window is blank or graphics fail, try compatibility mode as a separate, o
 ./linux_install.sh install --compatibility "$appimage"
 ```
 
-Compatibility mode adds `LIBGL_ALWAYS_SOFTWARE=1` (Mesa software rendering) and `--ignore-gpu-blocklist` to the application-menu launcher. This mode uses the CPU for drawing, so enable it only if normal installation fails. To switch back to normal mode later, run `./linux_install.sh install "$appimage"` without `--compatibility`.
+Compatibility mode adds `LIBGL_ALWAYS_SOFTWARE=1` to force CPU rendering and `--ignore-gpu-blocklist` to skip Chromium's graphics compatibility check. Enable it only if normal installation fails. To switch back to normal mode later, run `./linux_install.sh install "$appimage"` without `--compatibility`.
 
 See [graphics troubleshooting](linux-desktop.md#graphics-troubleshooting) if you are launching the AppImage directly from a terminal instead of the app menu.
 

@@ -172,7 +172,7 @@ This is a known issue ([#568](https://github.com/luizomf/omxterm/issues/568)): a
 
 ### The renderer cannot start
 
-OMXTerm requires WebGL2. Linux may use Chromium's SwiftShader fallback, which can use more CPU and has [lower graphics/JIT security guarantees](adr/0037-allow-the-linux-software-webgl-fallback.md). See [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
+OMXTerm needs graphics support from its built-in browser. On Linux, a CPU-based fallback may work when hardware graphics are unavailable, but it can be slower and has [different graphics security protections](adr/0037-allow-the-linux-software-webgl-fallback.md). See [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
 
 ### macOS asks for folder permissions again after an update
 
