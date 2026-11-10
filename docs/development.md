@@ -693,6 +693,19 @@ recorded baseline beside them when the profile has one, and does not reject
 numeric performance changes. Numeric regression calibration is separate work.
 Operational errors (such as a missing build, unreadable baseline, fixture or
 supervisor failure, or refused recording) still exit non-zero in either mode.
+Before aggregation, every raw variant/repetition must carry the exact protocol
+selected by the runner. A missing, malformed or different protocol refuses the
+run in either mode, even when all observations agree with each other. The runner
+preserves the original set in private `raw-observations.json` and writes a bounded
+`failure.json` diagnostic identifying the variant/repetition without echoing the
+untrusted ID; it creates no report, summary, comparison or baseline from that set.
+If a later measurement launch fails, the completed raw prefix (including any
+partial repetition group) is preserved without inventing missing observations;
+`runtime` is null if no runtime result was collected. An invalid protocol already
+in that prefix retains its indexed diagnostic instead of being hidden by the
+later launch failure. Otherwise the original measurement error is reported.
+This identity check does not change the workload, protocol digest, baseline
+schema or report-only policy for numerical differences.
 
 `--fail-on-invalid` additionally makes **data-integrity** findings exit non-zero: a missing metric, a stream repetition that did not complete,
 an arrival below the declared payload, a failed keystroke observation, an

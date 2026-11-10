@@ -152,13 +152,22 @@ export async function writeBenchmarkArtifacts(
   await mkdir(directory, { recursive: true });
   const reportPath = path.join(directory, "report.json");
   const summaryPath = path.join(directory, "summary.md");
-  const rawPath = path.join(directory, "raw-observations.json");
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
   await writeFile(summaryPath, summary);
+  const rawPath = await writeBenchmarkRawObservations(directory, raw);
+  return { reportPath, summaryPath, rawPath };
+}
+
+export async function writeBenchmarkRawObservations(
+  directory: string,
+  raw: unknown,
+): Promise<string> {
+  await mkdir(directory, { recursive: true });
+  const rawPath = path.join(directory, "raw-observations.json");
   await writeFile(rawPath, `${JSON.stringify(raw, null, 2)}\n`, {
     mode: 0o600,
   });
-  return { reportPath, summaryPath, rawPath };
+  return rawPath;
 }
 
 // A failed run still leaves evidence. Only the error name and a bounded first

@@ -9,7 +9,7 @@ import {
 } from "../fixtures/performance-benchmark-baseline";
 import {
   acceptedReport,
-  makeRun,
+  makeRun as syntheticRun,
   METRIC,
   report,
 } from "../fixtures/performance-benchmark-synthetic";
@@ -29,6 +29,14 @@ import {
   profileFor,
   runAndEvaluate,
 } from "../fixtures/performance-benchmark-run";
+
+import { PERFORMANCE_BENCHMARK_PROTOCOL } from "../fixtures/performance-benchmark-workload";
+
+// The real runner selects its protocol; generic synthetic reports use a fake ID.
+const makeRun = (options: Parameters<typeof syntheticRun>[0] = {}) => ({
+  ...syntheticRun(options),
+  protocol: PERFORMANCE_BENCHMARK_PROTOCOL,
+});
 
 const REFERENCE_BUILD = {
   runtimeIndex: "a".repeat(64),

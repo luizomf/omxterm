@@ -27,12 +27,16 @@ import {
   type RawRuntimeRun,
 } from "./performance-benchmark-report";
 import { renderSummary } from "./performance-benchmark-summary";
-import { PERFORMANCE_BENCHMARK } from "./performance-benchmark-workload";
+import {
+  PERFORMANCE_BENCHMARK,
+  PERFORMANCE_BENCHMARK_PROTOCOL,
+} from "./performance-benchmark-workload";
 import {
   runExtensionRuntime,
   runVariant,
   writeBenchmarkArtifacts,
   writeBenchmarkFailure,
+  writeBenchmarkRawObservations,
   type BenchmarkRunOptions,
   type WrittenArtifacts,
 } from "./performance-benchmark-session";
@@ -102,17 +106,17 @@ async function writeBaseline(
   await writeFile(pathname, `${JSON.stringify(baseline, null, 2)}\n`);
 }
 
+interface RawMeasurements {
+  repetitions: RawBenchmarkRun[][];
+  runtime: RawRuntimeRun | null;
+}
+
 async function measure(
   request: BenchmarkRequest,
   variants: readonly number[],
   repetitions: number,
-): Promise<{
-  report: BenchmarkReport;
-  raw: {
-    repetitions: readonly (readonly RawBenchmarkRun[])[];
-    runtime: RawRuntimeRun;
-  };
-}> {
+  directory: string,
+): Promise<RawMeasurements> {
   const base: Omit<BenchmarkRunOptions, "scrollbackLines"> = {
     scratch: request.scratch,
     ...(request.truncateStream ? { truncateStream: true } : {}),
@@ -120,22 +124,41 @@ async function measure(
   };
   // Several fresh repetitions per variant: a single run of this virtualized
   // renderer swings by tens of percent, so the committed value is a median.
-  const runs = [];
-  for (const scrollbackLines of variants) {
-    const repetition = [];
-    for (let index = 0; index < repetitions; index += 1)
-      repetition.push(await runVariant({ ...base, scrollbackLines }));
-    runs.push(repetition);
+  const raw: RawMeasurements = { repetitions: [], runtime: null };
+  try {
+    for (const scrollbackLines of variants) {
+      const repetition: RawBenchmarkRun[] = [];
+      // Retain the current group even if a later repetition fails.
+      raw.repetitions.push(repetition);
+      for (let index = 0; index < repetitions; index += 1)
+        repetition.push(await runVariant({ ...base, scrollbackLines }));
+    }
+    raw.runtime = await runExtensionRuntime(base);
+  } catch (error) {
+    // A later launch failure cannot erase an already collected invalid ID.
+    // Prefer its indexed, privacy-safe diagnostic; never aggregate this prefix.
+    await validateRawProtocols(raw, directory);
+    await writeBenchmarkRawObservations(directory, raw);
+    throw error;
   }
-  const runtime = await runExtensionRuntime(base);
-  return {
-    report: deriveBenchmarkReport({
-      repetitions: runs,
-      runtime,
-      repetitionsRequested: repetitions,
-    }),
-    raw: { repetitions: runs, runtime },
-  };
+  return raw;
+}
+
+async function validateRawProtocols(
+  raw: RawMeasurements,
+  directory: string,
+): Promise<void> {
+  // Exact selected-protocol equality rejects missing/malformed IDs as well as
+  // mutually matching observations from a different runner.
+  for (const [variant, runs] of raw.repetitions.entries())
+    for (const [repetition, run] of runs.entries())
+      if (run.protocol !== PERFORMANCE_BENCHMARK_PROTOCOL) {
+        await writeBenchmarkRawObservations(directory, raw);
+        // Do not echo the untrusted ID: original values remain private evidence.
+        throw new Error(
+          `Invalid benchmark protocol at variant ${variant + 1}, repetition ${repetition + 1}: observation does not match the selected runner protocol`,
+        );
+      }
 }
 
 export { profileFor };
@@ -203,13 +226,19 @@ export async function runAndEvaluate(
   let baseline: BenchmarkBaseline | undefined;
   let discardedBaseline: string | null = null;
   let report: BenchmarkReport;
-  let raw: Awaited<ReturnType<typeof measure>>["raw"];
+  let raw: Awaited<ReturnType<typeof measure>>;
   try {
     ({ baseline, discardedBaseline } = await prepareBaseline(
       request,
       variants,
     ));
-    ({ report, raw } = await measure(request, variants, repetitions));
+    raw = await measure(request, variants, repetitions, directory);
+    // Validate before aggregation can discard individual protocol identities.
+    await validateRawProtocols(raw, directory);
+    report = deriveBenchmarkReport({
+      ...raw,
+      repetitionsRequested: repetitions,
+    });
   } catch (error) {
     await writeBenchmarkFailure(directory, "measurement", error);
     throw error;
