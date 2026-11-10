@@ -41,6 +41,29 @@ describe("performance benchmark report", () => {
     expect(first.roles.shell?.steadyBytes ?? 0).toBeGreaterThan(0);
   });
 
+  it("marks impossible raw memory values as incomplete", () => {
+    const run = makeRun({ scrollbackLines: 10_000 });
+    const invalid = {
+      ...run,
+      steps: run.steps.map((step) => ({
+        ...step,
+        samples: step.samples.map((sample) => ({
+          ...sample,
+          readings: sample.readings.map((reading) =>
+            reading.role === "main" ? { ...reading, bytes: -1 } : reading,
+          ),
+        })),
+      })),
+    };
+    const measured = report([invalid, makeRun({ scrollbackLines: 0 })]);
+    const summary = measured.variants.find(
+      (variant) => variant.scrollbackLines === 10_000,
+    )!.repetitions[0]!.steps[0]!;
+    expect(summary.applicationMemoryComplete).toBe(false);
+    expect(summary.roles.main?.steadyBytes).toBeNull();
+    expect(summary.totalBytes).toBeNull();
+  });
+
   it("excludes fixture shells from application window CPU", () => {
     const run = makeRun({ scrollbackLines: 10_000 });
     const idle = {

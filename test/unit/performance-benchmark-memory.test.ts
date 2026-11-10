@@ -55,6 +55,16 @@ describe("platform memory readers", () => {
     ).toThrow("Unsupported footprint unit");
   });
 
+  it("does not accept impossible footprint byte counts", () => {
+    const process = (bytes: number) =>
+      JSON.stringify({
+        unit: "byte",
+        processes: [{ pid: 10, footprint: bytes }],
+      });
+    for (const bytes of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1])
+      expect(parseFootprintJson(process(bytes)).has(10)).toBe(false);
+  });
+
   it("builds a Windows PowerShell 5.1 command and parses both JSON shapes", () => {
     const command = windowsMemoryCommand([10, 11]);
     expect(command).toContain("Get-Process -Id 10,11");
@@ -71,6 +81,13 @@ describe("platform memory readers", () => {
       ).get(11),
     ).toBe(4096);
     expect(parseWindowsPrivateBytes("").size).toBe(0);
+  });
+
+  it("does not accept impossible Windows private-byte counts", () => {
+    for (const bytes of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1])
+      expect(
+        parseWindowsPrivateBytes(JSON.stringify({ pid: 10, bytes })).has(10),
+      ).toBe(false);
   });
 
   it("declares one metric per platform family", () => {

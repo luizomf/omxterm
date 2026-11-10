@@ -472,7 +472,10 @@ function roleBytes(
     readings.length === 0 ||
     (!addable && readings.length > 1) ||
     readings.some(
-      (reading) => reading.bytes === null || !Number.isFinite(reading.bytes),
+      (reading) =>
+        reading.bytes === null ||
+        !Number.isSafeInteger(reading.bytes) ||
+        reading.bytes < 0,
     )
   )
     return null;
@@ -522,7 +525,9 @@ function applicationMemoryComplete(
       sample.readings.every(
         (reading) =>
           !APPLICATION_ROLES.some((role) => role === reading.role) ||
-          (reading.bytes !== null && Number.isFinite(reading.bytes)),
+          (reading.bytes !== null &&
+            Number.isSafeInteger(reading.bytes) &&
+            reading.bytes >= 0),
       ),
   );
 }
