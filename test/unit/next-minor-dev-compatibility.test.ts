@@ -56,7 +56,7 @@ it.each([
   ["v0.26.0-dev.0", false],
   [" 0.26.0-dev.0", false],
   ["0.26.0-alpha.0", false],
-  ["0.26.1-dev.0", false],
+  ["0.26.1-dev.0", true],
   ["0.27.0-dev.0", false],
   ["invalid", false],
   [`0.26.0-dev.${"9".repeat(300)}`, false],

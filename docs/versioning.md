@@ -11,21 +11,23 @@ version and publish as **non-Latest prereleases**, following the Files/SSH lanes
 in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
-`0.24.1-dev.N`, `0.25.0-dev.N` and `0.26.0-dev.N` bridges have distinct
+`0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N` and `0.26.1-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
 review compatibility and capabilities deliberately at each transition. The stable
 suffix-removal rule still applies to stable cuts; stable assets now ship per target.
 
-## Post-0.25.0 development baseline
+## Post-0.26.0 development baseline
 
-Stable 0.25.0 uses a frozen cut; the next development baseline is
-`0.26.0-dev.0`. Its explicit [compatibility bridge](extension-installation-foundation.md#archive-contract)
-admits the pinned Snippets and current Files/SSH catalog ranges without changing
-archive bytes, engine ranges, API or capability validation. It preserves upper
-bounds, including Saved Layout's `<0.26.0`; admission is not native qualification.
-The unrelated `0.25.1-dev.N` family is not bridged.
+Stable 0.26.0 uses a frozen cut; the next development baseline is
+`0.26.1-dev.0`. Its explicit [compatibility bridge](extension-installation-foundation.md#archive-contract)
+admits ranges that accept both stable `0.26.0` and `0.26.1`, so the pinned
+Snippets and current Files/SSH catalog ranges (and Files 0.8's `>=0.25.0-dev.20`)
+stay installable without changing archive bytes, engine ranges, API or
+capability validation. Upper bounds still apply, including Saved Layout's
+`<0.26.0`; admission is not native qualification. The first feature in this
+cycle moves `main` to `0.27.0-dev.0`, which needs its own reviewed bridge.
 
 ## Public contract
 

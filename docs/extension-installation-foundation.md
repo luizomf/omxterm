@@ -96,10 +96,11 @@ For canonical `0.25.0-dev.N` hosts under the same identifier rules, a separate
 minor-development bridge accepts an original range only if ordinary semver
 admits **both** `0.24.0` and `0.25.0`. For canonical `0.26.0-dev.N`, a
 separate bridge requires ordinary semver to admit **both** `0.25.0` and
-`0.26.0`. These bridges do not rewrite the original range or imply it admits
+`0.26.0`. For canonical `0.26.1-dev.N`, a maintenance bridge requires ordinary
+semver to admit **both** `0.26.0` and `0.26.1`. These bridges do not rewrite the original range or imply it admits
 every intervening version. The historical Files0.1.0 range excludes the required
 endpoints and gains no admission; Saved Layout's `<0.26.0` upper bound also
-excludes the new bridge. Other development families require ordinary range
+excludes both later bridges. Other development families require ordinary range
 admission or a separate reviewed decision. Actual API, capability validation, catalog target, archive identity
 and trust checks remain unchanged. Admission does not establish runtime,
 package or platform qualification and never changes the reported host version.

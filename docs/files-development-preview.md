@@ -605,8 +605,8 @@ included in Files0.7 and its bounded Linux packaged/public-link checkpoints
 below; the later macOS local checkpoint and broader qualification are separate, and published
 Files0.6 is unchanged.
 The host's narrow [development bridges](extension-installation-foundation.md#archive-contract)
-admit unchanged Files0.6 on recognized `0.24.1-dev.N`, `0.25.0-dev.N` and
-`0.26.0-dev.N` hosts. Admission is not native runtime or package qualification.
+admit unchanged Files0.6 on recognized `0.24.1-dev.N`, `0.25.0-dev.N`,
+`0.26.0-dev.N` and `0.26.1-dev.N` hosts. Admission is not native runtime or package qualification.
 Closing the source terminal preserves the panel; window loss, backend loss and
 package management still retire it. Hiding retains state and does not cancel or
 replay accepted filesystem mutations. Views reserve a 34-DIP core-owned recovery
