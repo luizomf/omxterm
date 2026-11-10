@@ -773,6 +773,9 @@ Measurement rules:
   CPU is sampled while a fixed byte stream is arriving. The two axes are never
   merged. Focused/unfocused names are admitted only when the observed focus and
   visible-document state match; the summary prints those observations.
+- Stored baselines retain aggregate CPU percentages, not the per-process raw
+  counter histories. Preflight rejects negative stored percentages, but cannot
+  prove that historical raw counters were monotonic.
 - Streams carry unique end tokens, so a marker retained by an earlier stream
   cannot satisfy a later wait. All three repetitions of a payload must complete
   and their arrival is checked against the declared bytes; each repetition's

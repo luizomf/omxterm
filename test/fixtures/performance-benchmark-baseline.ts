@@ -206,8 +206,14 @@ function optionalObservation(value: unknown): boolean {
   );
 }
 
+function absoluteBytes(value: unknown): boolean {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
 function cpuObservation(value: unknown, required: boolean): boolean {
-  return optionalObservation(value) && (!required || Number.isFinite(value));
+  return value === null
+    ? !required
+    : typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
 function stepProblem(
@@ -226,10 +232,10 @@ function stepProblem(
       !step.roles ||
       ROLES.some(
         (role) =>
-          !Number.isFinite(step.roles[role]?.steadyBytes) ||
-          !Number.isFinite(step.roles[role]?.peakBytes),
+          !absoluteBytes(step.roles[role]?.steadyBytes) ||
+          !absoluteBytes(step.roles[role]?.peakBytes),
       ) ||
-      (addable ? !Number.isFinite(step.totalBytes) : step.totalBytes !== null)
+      (addable ? !absoluteBytes(step.totalBytes) : step.totalBytes !== null)
     )
       return `incomplete ${name} step`;
   }
@@ -269,7 +275,7 @@ function streamProblem(
       stream.bytes.some(
         (bytes: number | null) =>
           bytes === null ||
-          !Number.isFinite(bytes) ||
+          !Number.isSafeInteger(bytes) ||
           bytes < stream.expectedBytes ||
           bytes > stream.expectedBytes + 64,
       ) ||
@@ -278,7 +284,7 @@ function streamProblem(
       !cpuObservation(stream.cpuPercentOneCore, requireCpu) ||
       ROLES.some(
         (role) =>
-          !Number.isFinite(stream.peaks[role]) ||
+          !absoluteBytes(stream.peaks[role]) ||
           !Number.isFinite(stream.retained[role]),
       )
     )
@@ -530,7 +536,7 @@ function runtimeProblem(baseline: BenchmarkBaseline): string | null {
     !Number.isSafeInteger(runtime.processCount) ||
     runtime.processCount < 1 ||
     !runtime.settled ||
-    !Number.isFinite(runtime.steadyBytes) ||
+    !absoluteBytes(runtime.steadyBytes) ||
     !Number.isFinite(runtime.growthBytes) ||
     !cpuObservation(
       runtime.cpuPercentOneCore,
