@@ -53,8 +53,11 @@ it("bounds directory enumeration even when no glob entry matches", async () => {
   const { ssh, discover } = await fixture();
   await mkdir(path.join(ssh, "parts"));
   await writeFile(path.join(ssh, "config"), "Include parts/*.conf");
-  for (let i = 0; i < 4097; i++)
-    await writeFile(path.join(ssh, "parts", String(i)), "");
+  await Promise.all(
+    Array.from({ length: 4097 }, (_, i) =>
+      writeFile(path.join(ssh, "parts", String(i)), ""),
+    ),
+  );
   expect((await discover()).reasons).toEqual({ "glob-limit": 1 });
 });
 it.skipIf(process.platform === "win32")(

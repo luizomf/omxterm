@@ -380,9 +380,7 @@ actual application PID and observed session key state from held to released, not
 child activation and prevented core repeat, exact PTY isolation and a fresh Enter
 to the same session remain mandatory, parallel to Linux's XTest/XQueryKeymap route.
 This explicitly adopts a synthetic observation contract, not a product input change
-or a claim that Chromium consumed an event it omitted. Provisioning, source/binary
-binding and unsettled-input refusal are specified in the
-[native fixture guide](../../test/fixtures/snippets-packaged.md). Full ordinary
+or a claim that Chromium consumed an event it omitted. Full ordinary
 macOS nine-scenario source qualification passed on the exact host/archive pair
 recorded in the [migration guide](../snippets-migration.md#macos-arm64-source-transition).
 Minimal probes are not product qualification, and source qualification is not

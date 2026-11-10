@@ -41,9 +41,8 @@ paths distinguish these cases:
 | Restty host integration/oracles/output                                                           | [`restty-host-main`](../test/fixtures/restty-host-main.ts) injects clipboard counters, synthetic reads and a selection observer, not Electron clipboard I/O. Its [PowerShell Ctrl+V isolation](#restty-host-powershell-isolation) is shell-local, not a host/guest clipboard-sharing control.                                                                                                 |
 
 The two real writers above are part of default discovery on their listed
-platforms, not opt-in suites. The opt-in [Mirror Typing](../test/fixtures/mirror-native.md)
-[fixture](../test/fixtures/mirror-production-main.ts) and
-[SSH fixture](../test/fixtures/ssh-packaged.cjs) also mutate the real clipboard;
+platforms, not opt-in suites. The opt-in
+[SSH fixture](../test/fixtures/ssh-packaged.cjs) also mutates the real clipboard;
 apply the same boundary before those separately authorized runs. Reinspect the
 selected fixture/composition when its wiring changes rather than assuming this
 map covers future or custom entry points. Use synthetic fixture inputs only and
@@ -617,9 +616,7 @@ remain unchanged. Headless ordering/negative controls:
 Fixture Surface import overrides target the canonical composition importer,
 `src/renderer/start-terminal-window.ts`, not the thin `src/renderer/index.ts`
 entry. After moving composition, check every importer-sensitive consumer; normal
-bootstrap equivalence does not prove fixture interception equivalence. Run
-`npm test -- test/unit/renderer-fixture-consumers.test.ts` for actual headless
-bundle/control checks, including deliberately stale-importer negative controls.
+bootstrap equivalence does not prove fixture interception equivalence.
 
 Session-selection notifications describe ownership, not Surface adoption or host
 command readiness: panes may report a started session before their mount returns.
@@ -635,9 +632,7 @@ rejection and resource cleanup are covered headlessly through the production
 host, Surface and Adapter. Native cases remain separate from headless evidence.
 The headless emitted entry and production preload demonstrate host registration
 while the first Surface return is held; independently holding actual host
-registration retains the lost-command/no-replay negative control. Run
-`node node_modules/vitest/vitest.mjs run test/unit/initialization-readiness.test.ts test/unit/renderer-fixture-consumers.test.ts`
-for the ordering and stale-importer negative controls. This is fixture ordering
+registration retains the lost-command/no-replay negative control. This is fixture ordering
 evidence, not a diagnosis of a historical native timeout or native cancellation
 acceptance. Tab-removal retains its
 held-Surface, early-command and held-renderer controls and original deadlines.
@@ -819,7 +814,7 @@ owned uninstall after joined cleanup, including assisted failure settlement; it
 compares assistance metadata but does not turn cleanup permission into PASS.
 
 Headless actual emitted-helper/supervisor controls:
-`npm test -- test/unit/native-fixture-cleanup-assistance.test.ts test/unit/native-fixture-cleanup-failure.test.ts test/unit/snippets-windows-public-campaign.test.ts test/unit/snippets-windows-public-fence.test.ts`.
+`npm test -- test/unit/native-fixture-cleanup-assistance.test.ts test/unit/native-fixture-cleanup-failure.test.ts`.
 These model OS inventories/signals/commands and use real receipt/profile I/O;
 they do not add Windows Snippets, product input or native GUI qualification.
 

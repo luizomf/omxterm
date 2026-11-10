@@ -424,13 +424,6 @@ not an instruction to recreate sealed releases or replay executed fixtures.
 3. Verify all five draft assets by exact byte size/SHA-256; publish and verify
    anonymous public downloads again. Make Files available before advertising the
    host/archive pair. This is a macOS preview, not a stable release.
-4. Run the separately assigned [public-link checkpoint](../test/fixtures/files-dmg.md#public-link-mode)
-   using that publicly downloaded pair and the actual versioned archive URL.
-   It exercises Settings **Install from link**, captured-byte trust, dormant
-   install/reinstall, basic operations, management, retained terminal and normal
-   joined Quit. No transport interception or local archive substitution. Record
-   actual outcomes separately; public download checks alone do not establish app
-   acquisition. Do not replay the settled local Trash/state matrix.
 
 The published macOS pair uses Settings → Extensions → **HTTPS archive link** →
 **Install from link**, comparing the captured digest to the release checksum;
@@ -472,19 +465,10 @@ promotion used the following sequence:
    package verification; verify original draft and anonymous public DMG/checksum
    bytes. Preserve stable Latest and all sealed releases. Record exact build/tag
    identities rather than relabeling dev.21.
-5. Run the assigned exact-DMG public-catalog fixture using publicly downloaded
-   new host bytes, a fresh profile and actual HTTPS without catalog/archive
-   interception. All three install/reinstall operations must use the Files0.5
-   catalog card and Official captured-byte consent. Verify dormant installation,
-   basic create/move/conflict and exact old-source absence, management, retained
-   PTY and active-backend normal Quit. Inspect actual captures and joined exits;
-   stale captures are not final-state visual proof. Do not replay the eleven-check
-   local lifecycle or native primitive matrices merely for this distribution step.
 
 Source implementation, public endpoint readback, host publication and actual
 packaged consumption are distinct outcomes; pending steps are not qualified.
-See [catalog semantics](extension-distribution.md) and the
-[fixture guide](../test/fixtures/files-dmg.md).
+See [catalog semantics](extension-distribution.md).
 
 ## Files catalog publication
 
@@ -702,10 +686,7 @@ not substitute for the exact packaged host/archive pair.
    archive for generated checkout/host path disclosure as described in [Files
    preview preparation](#files-preview-preparation). A rebuild, including changed
    embedded documentation/locales, is a new artifact identity.
-2. Package and verify the Linux ARM64 host with the normal release tools. Run the
-   [exact Snippets AppImage fixture](../test/fixtures/snippets-packaged.md#exact-appimage-adapter)
-   against those exact bytes and the chosen archive. Keep its synthetic-input,
-   software-rendering and controlled-consent limits explicit. Record full Linux
+2. Package and verify the Linux ARM64 host with the normal release tools. Record full Linux
    verifier evidence separately: extraction-only execution does not qualify FUSE
    launch or helper installation. Include the [migration guide](snippets-migration.md).
 3. After complete source review/corrections and matching qualification, check

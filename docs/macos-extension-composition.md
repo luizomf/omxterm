@@ -40,7 +40,7 @@ not that changed minimal-fixture assertion.
   Normal Quit is not a substitute for that experiment. Historical #746 diagnostics
   remain open; do not suppress their output or relax assertions.
 
-The separate [Files0.5.0 exact-DMG fixture](../test/fixtures/files-dmg.md) passed
+The separate Files0.5.0 exact-DMG fixture passed
 its eleven bounded consumer checks against the compatible retained dev.21 host:
 local archive trust, real operations/recoverable trash, retained companion state,
 management and an active Files backend at normal Quit. Its exact identities and

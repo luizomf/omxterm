@@ -797,12 +797,7 @@ recoverable Trash semantics require the separate assigned
 whose bounded exact-package evidence is recorded there. These probes are not full macOS Files,
 backend activation, production platform admission or Snippets qualification.
 
-The [Files exact-DMG fixture](../test/fixtures/files-dmg.md) keeps its qualified
-local eleven-check lifecycle mode separate from the six-check qualified
-[public-link mode](../test/fixtures/files-dmg.md#public-link-mode).
-The latter uses real Settings HTTPS install/reinstall and the unchanged qualified
-archive/host pair; it does not replay Trash/state matrices or alter the v1 catalog.
-Neither mode substitutes for ordinary FULL package verification. The retained
+The retained
 dev.21 host separately passed the FULL startup/PTY output/privacy check and DMG
 image verification; see the [exact evidence](files-development-preview.md#macos-link-first-distribution).
 That run used matching dev.21 verifier source, not weakened version checks against
@@ -899,7 +894,7 @@ Within the fixture process/profile scope:
 To run the unit tests for fixture preparation and supervision headlessly:
 
 ```sh
-npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/fixture-preparation-callers.test.ts test/unit/native-preparation-ownership.test.ts test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
+npx vitest run test/unit/fixture-preparation.test.ts test/unit/fixture-preparation-recipes.test.ts test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
 ```
 
 <a id="supervised-pty-acquisition"></a>

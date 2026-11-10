@@ -56,7 +56,7 @@ link-first pair described below. Published dev.26 selected a separate macOS0.5
 catalog; its
 [public-catalog checkpoint](#macos-catalog-distribution) passed separately.
 
-The opt-in [exact-DMG Files fixture](../test/fixtures/files-dmg.md) passed the
+The opt-in exact-DMG Files fixture passed the
 bounded consumer checkpoint against the retained compatible dev.21 host.
 Current source's dev.22 metadata does not relabel or require rebuilding those
 host bytes. The fixture uses local captured-byte trust, actual installed Files
@@ -132,7 +132,7 @@ termination is distinct from the prior Files normal-Quit checkpoint; neither is 
 historical escaped-descendant census. Earlier inspection-only receipts remain
 inspection-only. No rebuild or public acquisition occurred in this FULL run.
 
-The separate [public-link checkpoint](../test/fixtures/files-dmg.md#public-link-mode)
+The separate public-link checkpoint
 then passed all six checks on ordinary-user macOS27.0.1 ARM64 using fixture source
 `ad6adc01dfe7cc4337f59e253e1b72c3c77d303b` and five fresh anonymous downloads.
 The exact DMG-derived detached app performed three real Settings HTTPS-link
@@ -735,7 +735,7 @@ paint capture. No terminal input, terminal-directory, path insertion or drag
 was exercised.
 
 The temporary executed adapter and its raw receipts retain their own identities;
-the [durable fixture](../test/fixtures/files-dmg.md#files07-macos-files-only-mode)
+the durable fixture
 is a subsequent source adaptation, not the controller executed in that run.
 An initial headless adapter check failed four existing-mode controls; those failures
 remain distinct from the corrected adapter's 38 passing controls and native run.
@@ -840,7 +840,7 @@ local toolbar/dotfile matrix was not replayed; the original archive receipt rema
 On 2026-11-02, an ordinary-user macOS27.0.1 ARM64 guest used the exact retained
 **locally built**, not downloaded-public, OMXTerm0.24.0 ARM64 DMG (129,751,297 bytes, SHA-256
 `88e66b764cc9fc4fa3a6cfb2c0e081dce5089631a8f8b8640ad875214e8bc34f`)
-passed the bounded [public-catalog fixture](../test/fixtures/files-dmg.md#prepared-files06-public-catalog-checkpoint)
+passed the bounded public-catalog fixture
 with separately published Files0.6.0 (17,331 bytes, SHA-256
 `50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143`).
 The host was built from `8717d47327eeab14f522b1b2a448216860d0923d`; the
