@@ -45,15 +45,15 @@ Developer and architecture docs for contributors and coding agents:
 - **[AGENTS.md](../AGENTS.md)** — quick command reference and repository rules for coding agents.
 - **[Native development](development.md)** — OS prerequisites, test layers and suites, graphical test precautions, the performance benchmark, and packaging verification.
 - **[First-time reader audit](first-time-reader-audit.md)** — newcomer blockers, documentation dispositions, and platform walkthroughs still needed.
-- **[SSH Connect development record](ssh-connect-development.md)** — exact package evidence, integration contract, and qualification limits.
+- **[SSH Connect development notes](ssh-connect-development.md)** — launch handoff to core, build, tests and current limits.
 - **[Saved Layout development record](saved-layout-development.md)** — source build, storage behavior, compatibility and qualification limits.
 - **[Mirror Typing development record](mirror-typing-development.md)** — source build, input behavior, capability contract and qualification limits.
-- **[Files development record](files-development-preview.md)** — package, backend, view, build, tests and platform limits.
+- **[Files development notes](files-development-preview.md)** — package, backend, view, build, tests and platform limits.
 - **[Snippets extension](snippets-migration.md)** — which hosts use it, terminal-input rules, build, test and publish.
 - **[Extension composition records](macos-extension-composition.md)** — platform-specific foundation, hosted-view and packaging evidence; see also [Linux x64](linux-x64-extension-composition.md) and [Windows ARM64](windows-arm64-extension-composition.md).
 - **[UI style guide](ui-style-guide.md)** — the small palette, spacing, control and responsive-layout vocabulary implemented by Settings.
 - **[Restty Terminal Surface](restty-development.md)** — rendering integration, pinned dependencies, WASM core rebuilds, and optional diagnostics.
-- **[Usage development notes](usage-development.md)** and **[configuration development notes](configuration-development.md)** — implementation details retained from the concise user guides.
+- **[Usage development notes](usage-development.md)** and **[configuration development notes](configuration-development.md)** — edge cases the user guides leave out.
 - **[Terminology](../CONTEXT.md)**, **[Product contract](spec.md)**, and **[Architecture Decision Records](adr/README.md)** — domain terms, observable behavior, and architectural rationale.
 - **[Security policy](../SECURITY.md)** — private vulnerability reporting and security boundaries.
 - **[MIT License](../LICENSE)** and **[Third-Party Notices](../THIRD_PARTY_NOTICES.md)**.

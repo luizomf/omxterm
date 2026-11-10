@@ -16,5 +16,5 @@ Windows and other processor types are not offered.
    your account's permissions; it is not sandboxed.
 3. Open **Files** from the File menu or Command Palette to browse local folders.
 
-The [developer record](files-development-preview.md) has exact package versions,
-build steps and platform qualification details.
+The [developer notes](files-development-preview.md) cover how Files is built,
+tested and packaged, and its current platform limits.

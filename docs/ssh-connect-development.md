@@ -153,8 +153,6 @@ Published archives are immutable, so changed bytes need a new version in
 `extension.json`. Updating the host never updates an installed extension; users
 install the newer archive themselves.
 
-<a id="macos-arm64-public-catalog-checkpoint"></a>
-
 ## Current limits
 
 - The official catalogs offer SSH Connect 0.3.1 for Linux ARM64 and macOS ARM64

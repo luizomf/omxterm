@@ -12,8 +12,6 @@ in the ADRs: [immutable installed packages](adr/0038-pin-immutable-installed-pac
 [backends in owned Node children](adr/0040-run-backends-in-owned-node-children.md)
 and [protected path insertion](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md).
 
-<a id="concrete-consumer"></a>
-
 ## Package
 
 The source lives in `extensions/files/`. It is never imported into Electron main
@@ -134,8 +132,6 @@ Files follows the host's `en-US` / `pt-BR` language. Language and theme changes
 relabel and restyle in place without listing again or losing focus, drafts,
 selection or confirmations. File names, paths and backend error codes stay
 literal. The stylesheet is bundled and loads no remote resources.
-
-<a id="terminal-drag-transport-source-increment"></a>
 
 ## Inserting paths into the terminal
 
@@ -279,17 +275,6 @@ npx vitest run test/integration/files-smoke-packaged.test.ts
 On macOS, point `OMXTERM_FILES_SMOKE_APP` at an `OMXTerm.app` copied out of the
 DMG. Run it from a logged-in desktop session (on Linux, with `DISPLAY` set).
 The AppImage is extracted, not modified.
-
-<a id="build-and-evidence-boundary"></a>
-<a id="files-050-macos-controlled-qualification"></a>
-<a id="macos-link-first-distribution"></a>
-<a id="macos-catalog-distribution"></a>
-<a id="files07-macos-stable-local-checkpoint"></a>
-<a id="files07-macos-public-catalog-checkpoint"></a>
-<a id="files-060-linux-public-catalog-checkpoint"></a>
-<a id="files-060-macos-public-catalog-checkpoint"></a>
-<a id="files-040-distribution-and-controlled-qualification"></a>
-<a id="files07-linux-public-link-checkpoint"></a>
 
 ## Platform limits
 
