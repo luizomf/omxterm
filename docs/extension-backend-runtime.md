@@ -5,7 +5,7 @@ This internal runtime lazily activates installed backends for Linux ARM64,
 [macOS ARM64 production composition](macos-extension-composition.md). A bounded
 [Windows ARM64 source-composition checkpoint](windows-arm64-extension-composition.md#evidence-boundary)
 passed separately from a later bounded unpacked-package inspection. Consumers include [Files](files-development-preview.md),
-[SSH Connect](ssh-connect.md), [Saved Layout](saved-layout.md) and
+[SSH Connect](ssh-connect-development.md), [Saved Layout](saved-layout.md) and
 [Mirror Typing](mirror-typing.md). Application startup constructs infrastructure,
 not active extension code. The application manager composes backend and view
 owners with independent generation-matched pins and bounded Quit retirement.
@@ -59,7 +59,7 @@ with unknown effects and the ordinary exit/close joins. Linux's eight-second gio
 command timeout is not a macOS native-I/O guarantee. Bounded exact-package trash checks
 passed for local/distinct APFS volumes and final symlinks; see the
 [recorded evidence and limits](files-development-preview.md#build-and-evidence-boundary).
-This is not full Files qualification or native-I/O cancellation evidence. The separate [SSH Connect](ssh-connect.md) consumer uses a declared, own-view
+This is not full Files qualification or native-I/O cancellation evidence. The separate [SSH Connect](ssh-connect-development.md) consumer uses a declared, own-view
 main capability (`terminal.openSsh.v1`), not a backend-owned PTY. Its package
 requires host0.24.0-dev.0; API0.1.x and existing Files manifests remain compatible.
 The separate [Mirror Typing](mirror-typing.md#capability-and-lifetime) consumer

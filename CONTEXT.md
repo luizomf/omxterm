@@ -319,7 +319,7 @@ removes the active snapshot, not possible interrupted-write remnants. See
 **SSH Connect** — A separately installed Linux and macOS ARM64 preview
 companion-panel page with an incomplete bounded OpenSSH alias index and distinct
 quick-connect field. The same published SSH0.3.1 archive is offered on both; the
-[macOS public-catalog checkpoint](docs/ssh-connect.md#macos-arm64-public-catalog-checkpoint)
+[macOS public-catalog checkpoint](docs/ssh-connect-development.md#macos-arm64-public-catalog-checkpoint)
 is bounded to the exact stable0.24.0 host and controlled inputs.
 Its declared `terminal.openSsh.v1` capability transfers a typed target to a new
 core Terminal Tab while preserving the panel and existing sessions. Core
@@ -331,7 +331,7 @@ Linux ARM64 dev.11. Catalog promotion and bounded public packaged consumption
 passed on that exact pair.
 Historical 0.1.0 bytes remain immutable; upgrading the host does not install the
 new extension. It is not an SSH broker,
-credential vault or reconnect service. See [the guide](docs/ssh-connect.md).
+credential vault or reconnect service. See [the development record](docs/ssh-connect-development.md).
 
 **Ended-readable Surface** — Terminal rendering/font resources retained after
 an ordinary nonzero SSH Connect exit for local copy/search/refit until pane
