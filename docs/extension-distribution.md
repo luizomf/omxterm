@@ -201,11 +201,11 @@ published archive, original receipt and checksum. Its host range was
 `>=0.24.0-dev.8` with API `0.1.x`; the qualified published pair was host
 `0.24.0-dev.11`, not every admitted host. That promotion left Files/SSH entries unchanged.
 At that promotion the fixed endpoint was read back byte-for-byte and the separate
-[packaged public-HTTPS checkpoint](snippets-migration.md#preview-coverage-and-remaining-platforms)
+[packaged public-HTTPS checkpoint](snippets-migration.md#publish-and-install)
 passed on that exact 0.1.0 pair. The current catalog offers Snippets0.1.1 on the
 same declared targets; see the [migration guide](snippets-migration.md) for its
 distinct evidence and limits. The [promotion procedure](release.md#catalog-promotion)
-retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#install-deliberately),
+retains the evidence requirements for future entries. [Local/offline installation](snippets-migration.md#publish-and-install),
 and explicit trust/enablement remain unchanged. Older Windows releases retain
 built-in Snippets; the separate Windows ARM64 dev.36 preview is described below.
 
@@ -213,7 +213,7 @@ The Linux x64 `0.24.0-dev.30` host originally offered the same 0.1.0 archive
 through the official catalog or local installation. That promotion added `linux-x64` to the common
 Snippets entry without altering Files/SSH or archive identity. The host selects the
 legacy endpoint listed above; its public readback and a separate bounded packaged
-public-HTTPS checkpoint passed. See the [Linux x64 checkpoint](snippets-migration.md#linux-x64-public-catalog-checkpoint)
+public-HTTPS checkpoint passed. See the [Linux x64 checkpoint](snippets-migration.md#publish-and-install)
 for the exact pair and limits.
 
 The earlier common Snippets promotion added `win32-arm64` for the immutable public
@@ -221,4 +221,4 @@ Windows ARM64 dev.36 host. At that checkpoint both complete catalogs retained
 every other entry and the same Snippets archive, source, engine ranges and URLs. That exact host passed
 the staged ten-check scenario plus separate FULL NSIS; anonymous public host and
 archive byte readback passed. The installed public-HTTPS checkpoint remains
-separate from catalog integration; source/headless tests are not that result. See the [Windows boundary and local installation](snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate).
+separate from catalog integration; source/headless tests are not that result. See the [Windows boundary and local installation](snippets-migration.md#known-limits).

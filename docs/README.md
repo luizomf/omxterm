@@ -49,7 +49,7 @@ Developer and architecture docs for contributors and coding agents:
 - **[Saved Layout development record](saved-layout-development.md)** — source build, storage behavior, compatibility and qualification limits.
 - **[Mirror Typing development record](mirror-typing-development.md)** — source build, input behavior, capability contract and qualification limits.
 - **[Files development record](files-development-preview.md)** — package, backend, view, build, tests and platform limits.
-- **[Snippets migration record](snippets-migration.md)** — exact release limits, historical preview pairs and qualification evidence.
+- **[Snippets extension](snippets-migration.md)** — which hosts use it, terminal-input rules, build, test and publish.
 - **[Extension composition records](macos-extension-composition.md)** — platform-specific foundation, hosted-view and packaging evidence; see also [Linux x64](linux-x64-extension-composition.md) and [Windows ARM64](windows-arm64-extension-composition.md).
 - **[Native subsystem fixture reference](native-test-reference.md)** — focused fixture prerequisites, commands, limits, and evidence boundaries.
 - **[UI style guide](ui-style-guide.md)** — the small palette, spacing, control and responsive-layout vocabulary implemented by Settings.

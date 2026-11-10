@@ -30,7 +30,7 @@ The [runtime contract](../extension-backend-runtime.md) governs actual caller/ex
 
 Linux ARM64/x64, macOS ARM64 and Windows ARM64 source application startup
 construct the runtime without activating installed code. The bounded
-[Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#evidence-boundary)
+[Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#installed-package-production-fixture)
 passed separately from packaging. [macOS composition](../macos-extension-composition.md)
 and [Linux x64 composition](../linux-x64-extension-composition.md) retain separate
 qualification boundaries; existing package/module receipts are not production-lifecycle qualification. The [runtime reference](../extension-backend-runtime.md) covers
