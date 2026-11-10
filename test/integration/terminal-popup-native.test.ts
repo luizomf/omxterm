@@ -25,7 +25,7 @@ describe.skipIf(process.platform !== "linux")(
         // An unprovisioned desktop is a missing prerequisite, not a regression.
         if (process.env[POPUP_INPUT_PROVISIONING_ENV] !== "1")
           context.skip(
-            `Native popup input lane not provisioned; set ${POPUP_INPUT_PROVISIONING_ENV}=1 after provisioning (see docs/native-test-reference.md)`,
+            `Native popup input lane not provisioned; set ${POPUP_INPUT_PROVISIONING_ENV}=1 after provisioning (see docs/development.md#native-terminal-popup-linux)`,
           );
         context.signal.throwIfAborted();
         if (previousCaseFailed)
