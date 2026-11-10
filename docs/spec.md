@@ -667,7 +667,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   otherwise Actions; a late
   permanent-delete confirmation does not steal focus after the user moves away.
   These changes are included in published Files0.7; immutable Files0.6 remains
-  unchanged. The macOS catalog selects Files0.7.
+  unchanged. Both ARM64 catalogs now select Files0.8.
   Its explicit reported-directory action captures the selected live pane's latest
   local OSC7 report at action time. Main asks the core renderer to confirm the captured session and selection
   revision, rejecting reordered or changed selection rather than retargeting.

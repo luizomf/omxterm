@@ -17,7 +17,7 @@ const targets = [
   ["darwin-arm64", "distribution/official-extensions-darwin-arm64-v1.json"],
 ] as const;
 const filesSha =
-  "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143";
+  "88f3deb79e3b574a6ae4aa71d56ff74eb17fdd6c25b6123b30a519a4cc827563";
 const sshSha =
   "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b";
 const runtime = (appVersion: string, apiVersion = "0.1.0") => ({
@@ -46,38 +46,20 @@ describe("0.24.0 first-party catalog candidate", () => {
       const files = byId(entries, "omxterm.files");
       const ssh = byId(entries, "omxterm.ssh");
       const macos = target === "darwin-arm64";
-      expect(files).toMatchObject(
-        macos
-          ? {
-              name: "Files — ARM64 preview",
-              version: "0.7.0",
-              engines: { omxterm: ">=0.25.0-dev.10", api: "0.1.x" },
-              targets: [target],
-              archive: {
-                url: "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext",
-                sha256:
-                  "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
-                bytes: 23285,
-              },
-              sourceCommit: "0cb89accd61f1f5d5263c60773454882793e2e99",
-              releaseUrl:
-                "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.7.0",
-            }
-          : {
-              name: "Files — ARM64 preview",
-              version: "0.6.0",
-              engines: { omxterm: ">=0.24.0-dev.21", api: "0.1.x" },
-              targets: [target],
-              archive: {
-                url: "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.6.0/files-0.6.0.omxext",
-                sha256: filesSha,
-                bytes: 17331,
-              },
-              sourceCommit: "cfc9073010df586eec321641ba5013862734f8fe",
-              releaseUrl:
-                "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.6.0",
-            },
-      );
+      expect(files).toMatchObject({
+        name: "Files — ARM64 preview",
+        version: "0.8.0",
+        engines: { omxterm: ">=0.26.0", api: "0.1.x" },
+        targets: [target],
+        archive: {
+          url: "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.8.0/files-0.8.0.omxext",
+          sha256: filesSha,
+          bytes: 24682,
+        },
+        sourceCommit: "bf2f0678b748043baa19d514889159bc3c632223",
+        releaseUrl:
+          "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.8.0",
+      });
       expect(ssh).toMatchObject({
         name: "SSH Connect",
         version: "0.3.1",
@@ -154,29 +136,15 @@ describe("0.24.0 first-party catalog candidate", () => {
       const files = byId(await readCatalog(file), "omxterm.files");
       for (const version of [
         "0.23.0",
-        "0.24.0-dev.11",
-        "0.24.0-dev.20",
-        "0.24.2-dev.0",
+        "0.24.0",
+        "0.25.0-dev.20",
+        "0.25.0",
+        "0.26.0-dev.4",
       ])
         expect(catalogCompatible(files, runtime(version), target)).toBe(false);
-      for (const version of [
-        "0.24.0-dev.21",
-        "0.24.0-dev.36",
-        "0.24.0",
-        "0.24.1-dev.0",
-        "0.24.1",
-        "0.25.0-dev.0",
-        "0.25.0-dev.1",
-      ])
-        expect(catalogCompatible(files, runtime(version), target)).toBe(
-          target === "linux-arm64",
-        );
-      expect(catalogCompatible(files, runtime("0.25.0-dev.9"), target)).toBe(
-        target === "linux-arm64",
-      );
-      for (const version of ["0.25.0-dev.10", "0.25.0", "0.26.0-dev.4"])
+      for (const version of ["0.26.0", "0.26.1-dev.0", "0.26.1"])
         expect(catalogCompatible(files, runtime(version), target)).toBe(true);
-      for (const host of ["0.24.0", "0.25.0-dev.0"])
+      for (const host of ["0.26.0", "0.26.1-dev.0"])
         expect(catalogCompatible(files, runtime(host, "0.2.0"), target)).toBe(
           false,
         );
@@ -186,15 +154,15 @@ describe("0.24.0 first-party catalog candidate", () => {
         "win32-arm64",
         "win32-x64",
       ])
-        for (const host of ["0.24.0", "0.25.0-dev.0"])
+        for (const host of ["0.26.0", "0.26.1-dev.0"])
           expect(catalogCompatible(files, runtime(host), other)).toBe(false);
       const otherArm =
         target === "linux-arm64" ? "darwin-arm64" : "linux-arm64";
-      for (const host of ["0.24.0", "0.25.0-dev.0"])
+      for (const host of ["0.26.0", "0.26.1-dev.0"])
         expect(catalogCompatible(files, runtime(host), otherArm)).toBe(false);
       expect(
         catalogAction(files, {
-          version: target === "linux-arm64" ? "0.4.0" : "0.5.0",
+          version: target === "linux-arm64" ? "0.6.0" : "0.7.0",
           digest: "old",
         }),
       ).toBe("update");
@@ -233,18 +201,6 @@ describe("0.24.0 first-party catalog candidate", () => {
       backend: "backend.mjs",
     });
     expect(packageCompatible(old, runtime("0.24.0"))).toBe(false);
-  });
-
-  it("keeps the prior Files0.6 manual route for macOS hosts excluded by 0.7", async () => {
-    const old = byId(await readCatalog(targets[0][1]), "omxterm.files");
-    const selected = byId(await readCatalog(targets[1][1]), "omxterm.files");
-    expect(packageCompatible(old, runtime("0.24.0"))).toBe(true);
-    expect(catalogCompatible(selected, runtime("0.24.0"), "darwin-arm64")).toBe(
-      false,
-    );
-    expect(catalogCompatible(selected, runtime("0.25.0"), "darwin-arm64")).toBe(
-      true,
-    );
   });
 
   it("offers the unchanged SSH archive on Linux and macOS ARM64 only", async () => {

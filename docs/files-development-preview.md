@@ -3,8 +3,8 @@
 Files is a separately installed Linux and macOS ARM64 development preview
 ([#723](https://github.com/luizomf/omxterm/issues/723),
 [#728](https://github.com/luizomf/omxterm/issues/728)), not a stable extension SDK.
-The official catalogs select Files0.6.0 for Linux ARM64 (host `>=0.24.0-dev.21`)
-and Files0.7.0 for macOS ARM64 (host `>=0.25.0-dev.10`), both API `0.1.x`.
+The official catalogs select Files0.8.0 for Linux and macOS ARM64 (host
+`>=0.26.0`, API `0.1.x`). Earlier checkpoints below used Files0.6 and 0.7.
 The bounded [Files0.7 macOS public-catalog checkpoint](#files07-macos-public-catalog-checkpoint)
 passed separately from its local filesystem checkpoint. The earlier bounded
 [Linux](#files-060-linux-public-catalog-checkpoint) and

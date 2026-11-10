@@ -100,12 +100,6 @@ it.each(["0.2.0", "0.1.1-dev.0", "invalid"])(
 
 it.each([
   [
-    "omxterm.files",
-    "0.6.0",
-    ">=0.24.0-dev.21",
-    "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
-  ],
-  [
     "omxterm.ssh",
     "0.3.1",
     ">=0.24.0-dev.8",

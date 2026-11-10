@@ -127,7 +127,15 @@ catalog offer for Linux dev.11–dev.20. Those users can upgrade their host or i
 the unchanged Files0.4 archive locally or by its direct HTTPS link. Files0.1 does
 not admit stable host0.24.0. Existing releases and installed packages remain unchanged.
 
-### macOS Files0.7 catalog offer
+### Files0.8 catalog offer
+
+Both ARM64 catalogs bind the published Files0.8.0 archive (24,682 bytes,
+SHA-256 `88f3deb79e3b574a6ae4aa71d56ff74eb17fdd6c25b6123b30a519a4cc827563`,
+source `bf2f0678b748043baa19d514889159bc3c632223`) with host `>=0.26.0` and API
+`0.1.x`. The one-release-per-ID schema removes the Files offer from 0.25.0 and
+earlier hosts; they keep installing Files0.7 or 0.6 by link or local file.
+
+### macOS Files0.7 catalog offer (historical)
 
 The published macOS catalog binds the published Files0.7.0 archive (23,285
 bytes, SHA-256 `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef`,
