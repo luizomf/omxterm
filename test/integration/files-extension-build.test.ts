@@ -71,7 +71,7 @@ it
       expect(receipt.manifest).toEqual(sourceManifest);
       expect(receipt.manifest).toMatchObject({
         version: "0.8.0",
-        engines: { omxterm: ">=0.25.0-dev.20", api: "0.1.x" },
+        engines: { omxterm: ">=0.26.0", api: "0.1.x" },
         capabilities: ["terminal.insertPath.v1"],
       });
       const page = await readFile(path.join(extracted, "view.js"), "utf8");
@@ -103,7 +103,7 @@ it
       ).toEqual({ ok: true });
       expect(received).toEqual([raw]);
       backend.deactivate();
-      for (const appVersion of ["0.25.0-dev.20", "0.25.0-dev.21", "0.25.0"])
+      for (const appVersion of ["0.26.0", "0.26.1-dev.0", "0.26.1"])
         expect(() =>
           checkCompatibility(validated.manifest, {
             appVersion,
@@ -115,7 +115,8 @@ it
         { appVersion: "0.25.0-dev.10", apiVersion: "0.1.0" },
         { appVersion: "0.25.0-dev.19", apiVersion: "0.1.0" },
         { appVersion: "0.24.0", apiVersion: "0.1.0" },
-        { appVersion: "0.25.1-dev.0", apiVersion: "0.1.0" },
+        { appVersion: "0.25.0", apiVersion: "0.1.0" },
+        { appVersion: "0.26.0-dev.37", apiVersion: "0.1.0" },
         { appVersion: host.version, apiVersion: "0.2.0" },
         { appVersion: host.version, apiVersion: "0.1.1-dev.0" },
       ].entries()) {

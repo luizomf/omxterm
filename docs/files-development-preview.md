@@ -14,10 +14,9 @@ A separate [Linux ARM64 Files0.7 link-first preview](#files07-linux-public-link-
 now pairs the published dev.19 host with Files0.7; its actual public Settings-link
 checkpoint passed with fresh anonymous downloads. A separate [macOS exact-pair
 local checkpoint](#files07-macos-stable-local-checkpoint) passed with the published
-stable0.25.0 DMG and Files0.7 archive. Current source prepares **Files0.8.0**, requiring host
-`>=0.25.0-dev.20` / API `0.1.x` for the integrated protected path-insertion/drop
-consumer. This is archive preparation only, not an exact shipping-pair
-qualification or publication; see [the current archive contract](#concrete-consumer).
+stable0.25.0 DMG and Files0.7 archive. **Files0.8.0** adds protected path
+insertion and drop, and requires host `>=0.26.0` / API `0.1.x`; see
+[the current archive contract](#concrete-consumer).
 
 The earlier Linux catalog offered
 [Files 0.4.0](https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.4.0),
@@ -178,13 +177,12 @@ produce `dist/extensions/files-0.8.0.omxext`. This build needs Python 3's ZIP
 writer and the locked esbuild tool; users receive the precompiled archive and do
 not run Python/npm or compilation to install it. An existing destination is not
 overwritten. The archive includes its MIT license. Version and compatibility come from
-`extensions/files/extension.json`. Current Files0.8.0 declares
-`>=0.25.0-dev.20` / API `0.1.x` and `terminal.insertPath.v1`. The integrated
-dev.20 host owns the shared protected handoff for Insert path/Shift+Enter and
-eligible focused-pane terminal drop. Dev.19 and earlier hosts are refused by
-archive admission; ordinary semver admits dev.20 and later dev.N in the same
-0.25.0 family, plus stable0.25.0. Existing development bridges do not bypass
-this minimum or admit other prerelease families. Local/link admission checks
+`extensions/files/extension.json`. Files0.8.0 declares `>=0.26.0` / API `0.1.x`
+and `terminal.insertPath.v1`. The host owns the shared protected handoff for
+Insert path/Shift+Enter and eligible focused-pane terminal drop. Stable 0.26.0 is
+the first published host with that consumer, so 0.25.0 hosts are neither offered
+nor admitted. The 0.26.1 development bridge admits it; other prerelease families
+are refused. Local/link admission checks
 host/API and capability grammar, not target/platform qualification.
 
 This preparation reuses the existing builder and consumer, without new input or
@@ -1187,36 +1185,24 @@ local replacement, retained real terminal/PTY and joined Quit. Its loopback TLS
 server is fixture-owned and closed before Quit. Consent answers and clicks remain
 controlled; it does not qualify public hosting, physical dialogs or other platforms.
 
-### Exact Linux ARM64 Files0.7 packaged consumer
+### Packaged Files smoke
 
-For the corrected Files0.7 bytes above, the separate exact-AppImage fixture can
-reuse the bounded filtering/keyboard/confirmed directory-move consumer:
+`test/integration/files-smoke-packaged.test.ts` qualifies a Files archive on a
+published host, on Linux ARM64 and macOS ARM64. It launches the packaged app with
+an isolated home and profile, installs the archive through **Settings → Extensions
+→ Install local .omxext…** (one consent), lists a directory, and inserts a file
+path into the terminal with Shift+Enter. The shell then writes what it received,
+and the test compares it with the path. It runs in seconds:
 
 ```sh
-OMXTERM_FILES_PACKAGED_APPIMAGE=/absolute/host.AppImage \
-OMXTERM_FILES_PACKAGED_APPIMAGE_SHA256=EXPECTED_HOST_SHA256 \
-OMXTERM_FILES_PACKAGED_VERSION=0.25.0-dev.19 \
-OMXTERM_FILES_PACKAGED_ARCHIVE=/absolute/files-0.7.0.omxext \
-OMXTERM_FILES_PACKAGED_ARCHIVE_SHA256=611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef \
-OMXTERM_FILES_PACKAGED_EXTENSION_VERSION=0.7.0 \
-OMXTERM_FILES_PACKAGED_EXTENSION_NAME='Files — ARM64 preview' \
-OMXTERM_FILES_PACKAGED_CONSUMER_070=1 \
-OMXTERM_FILES_PACKAGED_EVIDENCE=/absolute/new/private/evidence \
-npm test -- test/integration/files-packaged.test.ts
+OMXTERM_FILES_SMOKE_APP=/absolute/OMXTerm-X.Y.Z-arm64.AppImage \
+OMXTERM_FILES_SMOKE_ARCHIVE=/absolute/files-X.Y.Z.omxext \
+npx vitest run test/integration/files-smoke-packaged.test.ts
 ```
 
-Follow the Linux service/session prerequisites before launch. This local-file
-lane is separate from catalog/public HTTPS and diagnostic modes. It verifies
-captured-byte trust/dormancy, loaded filtering, synthetic keyboard/focus,
-confirmed directory conflict/move with inode/content/source-absence oracles,
-Close/reset, Disable/Uninstall, deliberate reinstall retirement, the retained
-PTY/Surface and a third consent/active backend at normal joined Quit. The observer
-runs in the unchanged extracted package; only fixture helpers come from source.
-No primitive matrix is replayed. Inspect `consumer-files.png` and
-`terminal-after.png`; filenames and DOM readiness are not pixel evidence.
-The separate [public-link checkpoint](#files07-linux-public-link-checkpoint)
-below passed after publication; local execution alone does not establish it.
-At that checkpoint both Files0.6 catalogs remained unchanged.
+On macOS, point `OMXTERM_FILES_SMOKE_APP` at an `OMXTerm.app` copied out of the
+DMG. Run it from a logged-in desktop session (on Linux, with `DISPLAY` set).
+The AppImage is extracted, not modified.
 
 <a id="files07-linux-public-link-consumer-preparation"></a>
 
@@ -1266,55 +1252,6 @@ replayed. This checkpoint is extracted-AppImage/X11, synthetic Chromium input,
 controlled native consent and separate WebContents captures, not physical
 keyboard/drag/dialog, compositor/default-GPU, every filesystem/volume,
 macOS/Windows/x64 Files0.7, stable SDK or surviving-browser main-death qualification.
-
-#### Run the bounded public-link fixture
-
-Use fresh anonymous downloads matching the published pair above; publication or
-byte readback alone does not imply app consumption. Reuse
-`test/integration/files-packaged.test.ts` with all exact-pair
-inputs from the local command above, set the host SHA-256 to
-`ac18dc2e08cbebed6a8b5ce08976eab2e0f043d407bd8b0f24113c1e87534f62`,
-and additionally set:
-
-```sh
-OMXTERM_FILES_PACKAGED_PUBLIC_LINK=https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext
-```
-
-Export that variable for the test invocation or add it as another inline
-assignment. This is the published immutable Files0.7 archive URL.
-`APPIMAGE` and `ARCHIVE` must be the anonymously downloaded dev.19 host and
-Files0.7 archive, with readback provenance recorded separately. After successfully
-verifying the downloaded AppImage's size and SHA-256 against the qualified pair,
-restore its owner-executable bit **before running the fixture**:
-
-```sh
-chmod u+x /absolute/public-downloads/OMXTerm-0.25.0-dev.19-arm64.AppImage
-```
-
-Downloads do not preserve executable mode. This changes file metadata, not bytes;
-it requires no rebuild or helper installation. The fixture directly executes the
-AppImage with `--appimage-extract`. The archive is only a controller-side digest
-oracle: it is not copied into the app profile or returned by a chooser. The lane
-pins this exact host/version/archive/URL and refuses catalog, controlled-catalog
-and diagnostic combinations.
-
-The existing macOS public-link mechanism fills the real Settings HTTPS field
-and clicks **Install from link** for initial install and both subsequent installs,
-including reinstall. Production HTTPS/validation is unchanged; no test CA,
-transport interception, local-file fallback or catalog offer is used. Three
-controlled native consents verify the Files name/version/ID, captured digest and
-generations 0, 3 and 4. A direct link is not an Official catalog selection.
-
-The existing bounded Linux0.7 consumer supplies operations/conflict, management,
-retained terminal and active-backend normal Quit; no primitive, Trash, crash or
-platform matrix is added. Scenario and Quit receipts require the same public URL
-and all three Settings-link submissions. Each run creates a fresh `run-*` child
-under `EVIDENCE`, preserving previous receipts. Inspect the actual Files and
-terminal captures there, all process joins, complete stderr and Linux shared-service
-preservation separately. Submitted-URL receipts describe the exercised UI route,
-not an independent passive network trace. The actual public checkpoint passed
-as recorded above; physical input/compositor and other-platform qualification
-remain unestablished. At that checkpoint the Files0.6 catalogs remained unchanged.
 
 ### Files0.7 Linux packaged checkpoint
 

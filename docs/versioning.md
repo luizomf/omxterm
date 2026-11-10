@@ -23,7 +23,7 @@ suffix-removal rule still applies to stable cuts; stable assets now ship per tar
 Stable 0.26.0 uses a frozen cut; the next development baseline is
 `0.26.1-dev.0`. Its explicit [compatibility bridge](extension-installation-foundation.md#archive-contract)
 admits ranges that accept both stable `0.26.0` and `0.26.1`, so the pinned
-Snippets and current Files/SSH catalog ranges (and Files 0.8's `>=0.25.0-dev.20`)
+Snippets and current Files/SSH catalog ranges (including Files 0.8's `>=0.26.0`)
 stay installable without changing archive bytes, engine ranges, API or
 capability validation. Upper bounds still apply, including Saved Layout's
 `<0.26.0`; admission is not native qualification. The first feature in this

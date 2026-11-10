@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { satisfies, valid } from "semver";
+import { valid } from "semver";
 
 const prefix = "OMXTERM_FILES_PACKAGED_";
-export const linuxFiles070PublicLink =
-  "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext";
 export const linuxFilesPublicEndpoint =
   "https://raw.githubusercontent.com/luizomf/omxterm/main/distribution/official-extensions-v1.json";
 export const linuxFilesPublicArchive =
@@ -19,16 +17,6 @@ export const linuxFilesPublicChecks = [
   "fresh-activation-disable-uninstall",
   "same-PTY-and-Surface",
   "third-consent-active-Files-at-Quit",
-] as const;
-
-export const linuxFiles070Checks = [
-  "exact-archive-trust-dormant-install",
-  "loaded-filter-retains-ancestor-clears-selection-no-recursive-search",
-  "Chromium-Tab-End-F2-Cancel-focus-hide-reveal-query-retained",
-  "confirmed-directory-conflict-no-clobber-source-destination-preserved",
-  "one-explicit-confirmed-directory-move-same-inode-and-bytes",
-  "Close-reset-Disable-Uninstall-normal-backend-exit-same-PTY",
-  "reinstall-retirement-dormant-third-consent-active-Files-at-Quit",
 ] as const;
 
 export const linuxFilesChecks = [
@@ -47,8 +35,6 @@ export function assertLinuxFilesScenario(
   result: unknown,
   expected: {
     currentUi: boolean;
-    consumer070?: boolean;
-    publicLink?: string;
     archiveSha256: string;
     version: string;
     extensionVersion: string;
@@ -58,46 +44,24 @@ export function assertLinuxFilesScenario(
 ) {
   assert.ok(result && typeof result === "object");
   const receipt = result as Record<string, unknown>;
-  assert.equal(
-    receipt.approvals,
-    expected.catalogSha256 || expected.consumer070 ? 3 : 2,
-  );
+  assert.equal(receipt.approvals, expected.catalogSha256 ? 3 : 2);
   assert.deepEqual(
     receipt.checks,
-    expected.consumer070
-      ? [...linuxFiles070Checks]
-      : expected.catalogSha256
-        ? [...linuxFilesPublicChecks]
-        : expected.currentUi
-          ? [
-              ...linuxFilesChecks,
-              "current-Files-toolbar-dotfiles-draft",
-              "linux-Files-Ctrl-H-dotfiles-draft-focus",
-            ]
-          : [...linuxFilesChecks],
+    expected.catalogSha256
+      ? [...linuxFilesPublicChecks]
+      : expected.currentUi
+        ? [
+            ...linuxFilesChecks,
+            "current-Files-toolbar-dotfiles-draft",
+            "linux-Files-Ctrl-H-dotfiles-draft-focus",
+          ]
+        : [...linuxFilesChecks],
     "Linux Files scenario checks",
   );
   assert.equal(receipt.archiveSha256, expected.archiveSha256);
   assert.equal(receipt.host, expected.version);
   assert.equal(receipt.extensionVersion, expected.extensionVersion);
   assert.equal(receipt.extensionName, expected.extensionName);
-  if (expected.consumer070) {
-    assert.equal(receipt.publicCatalog, undefined);
-    assert.deepEqual(
-      receipt.publicLink,
-      expected.publicLink
-        ? {
-            url: expected.publicLink,
-            installs: [
-              expected.publicLink,
-              expected.publicLink,
-              expected.publicLink,
-            ],
-          }
-        : undefined,
-      "exact public-link installation receipts required",
-    );
-  }
   if (expected.catalogSha256) {
     assert.deepEqual(receipt.publicCatalog, {
       url: linuxFilesPublicEndpoint,
@@ -180,61 +144,6 @@ export async function prepareLinuxFiles(directory: string, currentUi: boolean) {
     await writeFile(path.join(directory, ".release-dotfile"), "dotfile");
 }
 
-function assertFiles070Inputs(
-  enabled: boolean,
-  version: string,
-  extensionVersion: string,
-  extensionName: string,
-  archiveSha256: string,
-  ...otherModes: unknown[]
-) {
-  if (!enabled) return;
-  assert.deepEqual(
-    otherModes,
-    [false, false, undefined],
-    "Files0.7 consumer requires the local full scenario",
-  );
-  assert.ok(
-    satisfies(version, ">=0.25.0-dev.10"),
-    "Files0.7 requires a compatible host",
-  );
-  assert.equal(extensionVersion, "0.7.0");
-  assert.equal(extensionName, "Files — ARM64 preview");
-  assert.equal(
-    archiveSha256,
-    "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
-    "corrected Files0.7 bytes required",
-  );
-}
-
-function files070PublicLink(
-  env: NodeJS.ProcessEnv,
-  consumer070: boolean,
-  version: string,
-  appImageSha256: string,
-) {
-  const url = env[prefix + "PUBLIC_LINK"];
-  if (url === undefined) return undefined;
-  assert.equal(consumer070, true, "Public link requires the Files0.7 consumer");
-  assert.equal(
-    url,
-    linuxFiles070PublicLink,
-    "Expected immutable Files0.7 archive URL",
-  );
-  assert.equal(version, "0.25.0-dev.19", "Expected qualified public-link host");
-  assert.equal(
-    appImageSha256,
-    "ac18dc2e08cbebed6a8b5ce08976eab2e0f043d407bd8b0f24113c1e87534f62",
-    "Expected qualified public-link AppImage",
-  );
-  assert.equal(
-    env[prefix + "CATALOG_FILE"],
-    undefined,
-    "Public link forbids controlled catalog",
-  );
-  return url;
-}
-
 export function linuxFilesInputs(env: NodeJS.ProcessEnv) {
   if (
     !Object.keys(env).some(
@@ -292,17 +201,6 @@ export function linuxFilesInputs(env: NodeJS.ProcessEnv) {
   assert.ok(
     !(attachOnly && terminalOnly),
     "Choose only one diagnostic stopping point",
-  );
-  const consumer070 = env[prefix + "CONSUMER_070"] === "1";
-  assertFiles070Inputs(
-    consumer070,
-    version,
-    extensionVersion,
-    extensionName,
-    archiveSha256,
-    attachOnly,
-    terminalOnly,
-    catalogMode,
   );
   const stablePair = version === "0.24.0" && extensionVersion === "0.6.0";
   const linuxPublicCatalog = catalogMode === "public" && stablePair;
@@ -362,8 +260,6 @@ export function linuxFilesInputs(env: NodeJS.ProcessEnv) {
     catalogSha256,
     linuxPublicCatalog,
     linuxHistoricalPublic,
-    consumer070,
-    publicLink: files070PublicLink(env, consumer070, version, appImageSha256),
     currentUi:
       stablePair && !attachOnly && !terminalOnly && catalogMode !== "public",
   };

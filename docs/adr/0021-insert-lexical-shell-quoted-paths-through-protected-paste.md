@@ -18,10 +18,9 @@ latest observed core-selection revision and main-issued visible-admission
 generation. Main validates them at receipt and commit, and core checks its own
 selection before capture; missing or stale stamps fail closed, without a
 caller-selected target or a global cross-process ordering guarantee. Files0.8.0
-preparation declares `terminal.insertPath.v1`, minimum host `>=0.25.0-dev.20` and
-API `0.1.x`, matching the integrated protected consumer. Archive admission refuses
-lower hosts; preparation is not shipping-pair qualification or publication.
-Published Files0.6/0.7 archives and catalogs are unchanged. Its path-only tracked
+declares `terminal.insertPath.v1`, minimum host `>=0.26.0` (the first published
+host with the consumer) and API `0.1.x`. Archive admission and the catalog refuse
+lower hosts. Published Files0.6/0.7 archives are unchanged. Its path-only tracked
 chunks are acknowledged by the captured live local session after passing each
 chunk to node-pty without synchronous error. This is not an OS or shell
 consumption guarantee. A lost receipt stops the path and fences subsequent

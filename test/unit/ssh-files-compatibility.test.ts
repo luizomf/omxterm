@@ -111,7 +111,7 @@ it.each(["files", "ssh"])(
     expect(manifest.version).toBe(name === "files" ? "0.8.0" : "0.3.1");
     if (name === "files") {
       expect(manifest.engines).toEqual({
-        omxterm: ">=0.25.0-dev.20",
+        omxterm: ">=0.26.0",
         api: "0.1.x",
       });
       expect(manifest.capabilities).toEqual(["terminal.insertPath.v1"]);
@@ -144,7 +144,11 @@ it.each(["files", "ssh"])(
             "0.25.0-dev.10",
             "0.25.0-dev.11",
             "0.25.0-dev.19",
+            "0.25.0-dev.20",
+            "0.25.0",
             "0.25.1-dev.0",
+            "0.26.0-dev.0",
+            "0.26.0-dev.37",
           ]
         : []),
     ];
@@ -160,7 +164,7 @@ it.each(["files", "ssh"])(
     };
     const ordinaryHosts =
       name === "files"
-        ? ["0.25.0-dev.20", "0.25.0-dev.21", "0.25.0"]
+        ? ["0.26.0", "0.26.1", "0.27.0"]
         : [
             "0.24.0-dev.8",
             "0.24.0-dev.11",
@@ -170,7 +174,7 @@ it.each(["files", "ssh"])(
             "0.24.0",
           ];
     const bridgeHosts =
-      name === "files" ? ["0.26.0-dev.0", "0.26.0-dev.1", "0.26.0-dev.37"] : [];
+      name === "files" ? ["0.26.1-dev.0", "0.26.1-dev.4"] : [];
     if (name === "files") {
       for (const appVersion of ordinaryHosts)
         expect(satisfies(appVersion, manifest.engines.omxterm)).toBe(true);

@@ -38,24 +38,18 @@ const terminalOnly = inputs?.terminalOnly ?? false;
 const catalogMode = inputs?.catalogMode;
 const linuxPublicCatalog = inputs?.linuxPublicCatalog ?? false;
 const linuxHistoricalPublic = inputs?.linuxHistoricalPublic ?? false;
-const consumer070 = inputs?.consumer070 ?? false;
-const publicLink = inputs?.publicLink;
-const publicAcquisition = linuxPublicCatalog || !!publicLink;
-const scope = consumer070
-  ? publicLink
-    ? "Files0.7-public-HTTPS-link"
-    : "Files0.7-local-packaged-consumer"
-  : linuxPublicCatalog
-    ? "Files0.6-stable-public-HTTPS"
-    : linuxHistoricalPublic
-      ? "Files0.4-historical-public"
-      : catalogMode
-        ? `Files-catalog-${catalogMode}`
-        : attachOnly
-          ? "observer-attachment-only"
-          : terminalOnly
-            ? "terminal-entry-only"
-            : "Files-lifecycle";
+const publicAcquisition = linuxPublicCatalog;
+const scope = linuxPublicCatalog
+  ? "Files0.6-stable-public-HTTPS"
+  : linuxHistoricalPublic
+    ? "Files0.4-historical-public"
+    : catalogMode
+      ? `Files-catalog-${catalogMode}`
+      : attachOnly
+        ? "observer-attachment-only"
+        : terminalOnly
+          ? "terminal-entry-only"
+          : "Files-lifecycle";
 const digest = (bytes: Buffer) =>
   createHash("sha256").update(bytes).digest("hex");
 async function prepareCatalog(root: string) {
@@ -110,9 +104,7 @@ async function prepareEvidence(root: string) {
   );
   await mkdir(directory, { recursive: true });
   // Never accept an older run's Quit receipt as this selected run's result.
-  return linuxPublicCatalog || consumer070
-    ? mkdtemp(path.join(directory, "run-"))
-    : directory;
+  return linuxPublicCatalog ? mkdtemp(path.join(directory, "run-")) : directory;
 }
 
 async function prepareObserver(root: string, archiveBytes: Buffer) {
@@ -123,12 +115,6 @@ async function prepareObserver(root: string, archiveBytes: Buffer) {
   for (const [source, target] of [
     ["files-packaged.cjs", "observer.cjs"],
     ["snippets-process-identity.cjs", "snippets-process-identity.cjs"],
-    ...(consumer070
-      ? [
-          ["files-070-packaged.cjs", "files-070-packaged.cjs"],
-          ["files-070-consumer.mjs", "files-070-consumer.mjs"],
-        ]
-      : []),
     ...(linuxPublicCatalog
       ? [["public-catalog-observer.cjs", "public-catalog-observer.cjs"]]
       : []),
@@ -139,7 +125,7 @@ async function prepareObserver(root: string, archiveBytes: Buffer) {
 }
 
 async function verifyPublicQuit(evidence: string) {
-  if (!linuxPublicCatalog && !consumer070) return;
+  if (!linuxPublicCatalog) return;
   assert.ok(inputs);
   if (linuxPublicCatalog) assert.ok(inputs.catalogSha256);
   const quit = JSON.parse(
@@ -159,8 +145,6 @@ async function verifyPublicQuit(evidence: string) {
     extensionVersion: inputs.extensionVersion,
     extensionName: inputs.extensionName,
     currentUi: false,
-    consumer070,
-    ...(inputs.publicLink ? { publicLink: inputs.publicLink } : {}),
     ...(linuxPublicCatalog ? { catalogSha256: inputs.catalogSha256! } : {}),
   });
   assert.equal(quit.joined, true);
@@ -269,8 +253,6 @@ async function observeScenario(
       extensionVersion: options.extensionVersion,
       extensionName: options.extensionName,
       currentUi: options.linuxCurrentFilesUi,
-      consumer070,
-      ...(publicLink ? { publicLink } : {}),
       ...(linuxPublicCatalog ? { catalogSha256: options.catalogSha256! } : {}),
     });
 }
@@ -331,7 +313,6 @@ it.skipIf(
             expectedExtensionName: inputs!.extensionName,
             expectedCatalogSha256: inputs!.catalogSha256,
             currentUi: inputs!.currentUi,
-            publicLink,
           },
           null,
           2,
@@ -476,8 +457,6 @@ it.skipIf(
         files: path.join(root, "owned-files"),
         readiness,
         terminalOnly,
-        consumer070,
-        publicLink,
         catalogMode,
         ...publicObserverOptions(),
         catalogFile: path.join(root, "catalog.json"),

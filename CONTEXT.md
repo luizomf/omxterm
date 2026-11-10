@@ -450,10 +450,9 @@ Current source also inserts one selected file/folder/link path through the core'
 lexical quoting and Protected Paste into the action-time captured Surface; its
 visible menu action and Shift+Enter row shortcut add no Enter. Focus returns
 only while the captured target remains selected. Incomplete or unknown delivery
-is not automatically retried. Current Files0.8.0 preparation declares
-`terminal.insertPath.v1` and minimum host `>=0.25.0-dev.20` / API `0.1.x`, matching
-the integrated protected consumer. Lower hosts are refused; ordinary admission is
-not shipping-pair qualification or publication. Published Files0.6/0.7 archive
+is not automatically retried. Files0.8.0 declares `terminal.insertPath.v1` and
+minimum host `>=0.26.0` / API `0.1.x`, the first published host with the protected
+consumer; lower hosts are neither offered nor admitted. Published Files0.6/0.7 archive
 bytes remain unchanged. Prior native UI used production modules with inert
 session/backend/package dependencies, not a real PTY or shipping pair; its timeout
 was the Surface receipt timeout, not the ten-second transport deadline. Its composed
