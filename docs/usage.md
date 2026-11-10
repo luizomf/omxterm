@@ -36,8 +36,8 @@ To protect active work, OMXTerm asks for confirmation before closing a pane, tab
 
 [Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md) are
 separately built source previews, not tools currently offered through an
-extension catalog. Their guides are technical records for building and
-qualifying them, not end-user installation instructions.
+extension catalog. Their availability notes explain what is currently offered;
+the linked developer records retain build and qualification details.
 
 ## Window controls
 
