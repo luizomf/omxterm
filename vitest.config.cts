@@ -12,6 +12,10 @@ module.exports = defineConfig({
     // Native Electron fixtures share the desktop compositor; keep them owned
     // and non-overlapping so background windows cannot race each other.
     fileParallelism: false,
+    // A hang guard, not a speed check. test:unit runs every file in parallel;
+    // tests that drive real modules, files or multi-MiB payloads take ~0.5 s
+    // idle but approach 5 s when the machine is busy.
+    testTimeout: 20_000,
     coverage: { enabled: false },
   },
 });
