@@ -43,8 +43,9 @@ enter a destination directly in
 - `alice@[2001:db8::1]:2222`
 
 Select **Connect**. OMXTerm opens a new terminal tab and OpenSSH handles the
-connection, authentication and any first-time server-identity check. Follow the
-prompts in that terminal. The tab may open before the remote connection succeeds.
+connection and sign-in. On a first connection, OpenSSH may show a server
+fingerprint and ask whether to trust it. Confirm the fingerprint with the server
+owner before accepting. The tab may open before the remote connection succeeds.
 
 SSH Connect accepts a host or alias, optional user and optional port. It does
 not accept a URL, remote command or extra SSH options. For other OpenSSH workflows,
@@ -57,8 +58,9 @@ applies, including configured commands, port forwarding and agent access.
   sure the app can find the `ssh` program. Restart OMXTerm after installing it.
 - **Alias missing:** check `~/.ssh/config`, then close and reopen SSH Connect or
   choose **Refresh**. Quick connect works even when an alias is not listed.
-- **Authentication or host-key prompt:** follow OpenSSH's prompt in the terminal.
-  SSH Connect does not bypass host-key checks or fix server credentials.
+- **Sign-in or server identity prompt:** follow OpenSSH's instructions in the
+  terminal. Confirm a first-time server fingerprint with the server owner before
+  accepting it; SSH Connect does not bypass this check or fix your credentials.
 - **Connection refused or timed out:** check the host, port, network and server
   availability. These errors come from the SSH connection, not the alias list.
 
