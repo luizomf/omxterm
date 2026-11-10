@@ -7,6 +7,7 @@ module.exports = defineConfig({
   test: {
     include: ["test/{unit,integration}/**/*.{test,spec}.?(c|m)[jt]s?(x)"],
     environment: "node",
+    setupFiles: ["test/setup/host-environment.ts"],
     reporters: ["default", "json"],
     outputFile: { json: ".scratch/vitest-results.json" },
     // Native Electron fixtures share the desktop compositor; keep them owned
