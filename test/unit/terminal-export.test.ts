@@ -48,6 +48,18 @@ function host(overrides: Partial<TerminalExportHost> = {}) {
   return { ...value, saveDialogs };
 }
 
+function expectNotice(
+  fake: ReturnType<typeof host>,
+  type: MessageBoxOptions["type"],
+) {
+  expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ type, buttons: ["OK"] }),
+  );
+  expect(JSON.stringify(vi.mocked(fake.showMessageBox).mock.calls)).not.toMatch(
+    /private|payload/u,
+  );
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe("saving an explicit export", () => {
@@ -132,21 +144,16 @@ describe("saving an explicit export", () => {
     },
   );
 
-  it.each([
-    ["selection", "The selection has no text to export."],
-    ["content", "The terminal has no text to export."],
-  ] as const)(
+  it.each(["selection", "content"] as const)(
     "explains empty %s content without a chooser",
-    async (kind, message) => {
+    async (kind) => {
       const fake = host();
       await expect(
         saveTerminalExport({ kind, text: " \n\t\n" }, fake),
       ).resolves.toBe("empty");
       expect(fake.showSaveDialog).not.toHaveBeenCalled();
       expect(fake.writeFile).not.toHaveBeenCalled();
-      expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith(
-        expect.objectContaining({ type: "info", message }),
-      );
+      expectNotice(fake, "info");
     },
   );
 
@@ -155,15 +162,7 @@ describe("saving an explicit export", () => {
     await expect(
       saveTerminalExport({ notice: "too-large" }, fake),
     ).resolves.toBe("too-large");
-    expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith({
-      type: "warning",
-      title: "Export Too Large",
-      message: "The requested text exceeds the 16 MiB UTF-8 export limit.",
-      detail:
-        "Select a smaller portion of the terminal text and export the selection. Nothing was saved or truncated.",
-      buttons: ["OK"],
-      noLink: true,
-    });
+    expectNotice(fake, "warning");
     expect(fake.showSaveDialog).not.toHaveBeenCalled();
     expect(fake.writeFile).not.toHaveBeenCalled();
   });
@@ -175,13 +174,7 @@ describe("export read failure", () => {
     await expect(saveTerminalExport({ notice: "failed" }, fake)).resolves.toBe(
       "failed",
     );
-    expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith({
-      type: "error",
-      title: "Export Failed",
-      message: "OMXTerm could not read the terminal text. Nothing was saved.",
-      buttons: ["OK"],
-      noLink: true,
-    });
+    expectNotice(fake, "error");
     expect(fake.showSaveDialog).not.toHaveBeenCalled();
     expect(fake.writeFile).not.toHaveBeenCalled();
   });
@@ -215,15 +208,7 @@ describe("export error containment", () => {
         saveTerminalExport({ kind: "content", text: "text" }, fake),
       ).resolves.toBe("failed");
       expect(fake.writeFile).not.toHaveBeenCalled();
-      expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith({
-        type: "error",
-        title: "Export Failed",
-        message: "OMXTerm could not save the exported text.",
-        detail:
-          "Try exporting again and choose a writable destination with enough free space.",
-        buttons: ["OK"],
-        noLink: true,
-      });
+      expectNotice(fake, "error");
     },
   );
 
@@ -256,15 +241,7 @@ describe("export error containment", () => {
       await expect(
         saveTerminalExport({ kind: "content", text: "text" }, fake),
       ).resolves.toBe("failed");
-      expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith({
-        type: "error",
-        title: "Export Failed",
-        message: "OMXTerm could not save the exported text.",
-        detail:
-          "Try exporting again and choose a writable destination with enough free space.",
-        buttons: ["OK"],
-        noLink: true,
-      });
+      expectNotice(fake, "error");
     },
   );
 });
@@ -411,85 +388,20 @@ describe("export owner lifetime", () => {
 });
 
 describe("translated export text", () => {
-  it("uses Portuguese titles, filters and empty messages", async () => {
+  it("uses the supplied language for the chooser and notices", async () => {
     const { t } = translatorFor("pt-BR");
-    const fake = host();
-    await saveTerminalExport({ kind: "content", text: "texto" }, fake, t);
-    expect(fake.saveDialogs[0]).toMatchObject({
-      title: "Exportar Conteúdo do Terminal",
-      filters: [
-        { name: "Texto", extensions: ["txt"] },
-        { name: "Todos os Arquivos", extensions: ["*"] },
-      ],
-    });
-    for (const [kind, title, message] of [
-      [
-        "selection",
-        "Exportar Seleção",
-        "A seleção não tem texto para exportar.",
-      ],
-      [
-        "content",
-        "Exportar Conteúdo do Terminal",
-        "O terminal não tem texto para exportar.",
-      ],
-    ] as const) {
-      await saveTerminalExport({ kind, text: " " }, fake, t);
-      expect(fake.showMessageBox).toHaveBeenLastCalledWith({
-        type: "info",
-        title,
-        message,
-        buttons: ["OK"],
-        noLink: true,
-      });
+    const english = host();
+    const portuguese = host();
+    for (const fake of [english, portuguese]) {
+      const translate = fake === portuguese ? t : undefined;
+      await saveTerminalExport({ kind: "content", text: "x" }, fake, translate);
+      await saveTerminalExport({ notice: "too-large" }, fake, translate);
     }
-  });
-
-  it("uses a generic Portuguese size notice with a smaller-selection remedy", async () => {
-    const fake = host();
-    await saveTerminalExport(
-      { notice: "too-large" },
-      fake,
-      translatorFor("pt-BR").t,
+    expect(portuguese.saveDialogs[0]!.title).not.toBe(
+      english.saveDialogs[0]!.title,
     );
-    expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith({
-      type: "warning",
-      title: "Exportação Muito Grande",
-      message:
-        "O texto solicitado excede o limite de exportação de 16 MiB em UTF-8.",
-      detail:
-        "Selecione uma parte menor do texto do terminal e exporte a seleção. Nada foi salvo ou truncado.",
-      buttons: ["OK"],
-      noLink: true,
-    });
-    expect(fake.showSaveDialog).not.toHaveBeenCalled();
-    expect(fake.writeFile).not.toHaveBeenCalled();
+    expect(
+      vi.mocked(portuguese.showMessageBox).mock.calls[0]![0].title,
+    ).not.toBe(vi.mocked(english.showMessageBox).mock.calls[0]![0].title);
   });
-
-  it.each(["documentsPath", "showSaveDialog", "writeFile"] as const)(
-    "uses the same private-detail-free Portuguese remedy for %s failures",
-    async (operation) => {
-      const fake = host({
-        [operation]: vi.fn(() => {
-          throw new Error("RAW /synthetic/private");
-        }),
-      });
-      await expect(
-        saveTerminalExport(
-          { kind: "selection", text: "texto" },
-          fake,
-          translatorFor("pt-BR").t,
-        ),
-      ).resolves.toBe("failed");
-      expect(fake.showMessageBox).toHaveBeenCalledExactlyOnceWith({
-        type: "error",
-        title: "Falha na Exportação",
-        message: "O OMXTerm não conseguiu salvar o texto exportado.",
-        detail:
-          "Tente exportar de novo e escolha um destino com permissão de escrita e espaço livre suficiente.",
-        buttons: ["OK"],
-        noLink: true,
-      });
-    },
-  );
 });

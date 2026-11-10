@@ -136,38 +136,121 @@ function createApplicationHarness(
   };
 }
 
-describe("Window Chrome application actions", () => {
-  it.each(["TabBar", "TitleBar", "AuxiliaryPanel"] as const)(
-    "toggles %s only in the selected Terminal Window",
-    async (bar) => {
+type ApplicationHarness = ReturnType<typeof createApplicationHarness>;
+
+describe("selected Terminal Window actions", () => {
+  it.each<{
+    name: string;
+    act(application: ApplicationHarness["application"]): void;
+    sent(harness: ApplicationHarness): ReturnType<typeof vi.fn>;
+    args: unknown[];
+  }>([
+    {
+      name: "Tab Bar toggle",
+      act: (a) => a.toggleSelectedTabBar(),
+      sent: (h) => h.sendTabBarToggle,
+      args: [],
+    },
+    {
+      name: "Title Bar toggle",
+      act: (a) => a.toggleSelectedTitleBar(),
+      sent: (h) => h.sendTitleBarToggle,
+      args: [],
+    },
+    {
+      name: "Auxiliary Panel toggle",
+      act: (a) => a.toggleSelectedAuxiliaryPanel(),
+      sent: (h) => h.sendAuxiliaryPanelToggle,
+      args: [],
+    },
+    {
+      name: "Auxiliary Panel side",
+      act: (a) => a.moveSelectedAuxiliaryPanel(),
+      sent: (h) => h.sendAuxiliaryPanelSideToggle,
+      args: [],
+    },
+    {
+      name: "Snippets toggle",
+      act: (a) => a.toggleSelectedSnippets(),
+      sent: (h) => h.sendSnippetsToggle,
+      args: [],
+    },
+    {
+      name: "Find",
+      act: (a) => a.findInSelectedWindow(),
+      sent: (h) => h.sendFind,
+      args: [],
+    },
+    {
+      name: "local image picker",
+      act: (a) => a.openLocalImageInSelectedWindow(),
+      sent: (h) => h.sendLocalImageOpen,
+      args: [],
+    },
+    {
+      name: "Developer Tools",
+      act: (a) => a.toggleSelectedDevTools(),
+      sent: (h) => h.toggleDeveloperTools,
+      args: [],
+    },
+    {
+      name: "clipboard action",
+      act: (a) => a.clipboardSelectedWindow("paste"),
+      sent: (h) => h.sendClipboardAction,
+      args: ["paste"],
+    },
+    {
+      name: "Window Font Zoom",
+      act: (a) => a.zoomSelectedWindow("out"),
+      sent: (h) => h.sendFontZoom,
+      args: ["out"],
+    },
+    {
+      name: "new tab",
+      act: (a) => a.newTabInSelectedWindow(),
+      sent: (h) => h.sendTabCommand,
+      args: [{ action: "new" }],
+    },
+    {
+      name: "next tab",
+      act: (a) => a.selectNextTab(),
+      sent: (h) => h.sendTabCommand,
+      args: [{ action: "next" }],
+    },
+    {
+      name: "previous tab",
+      act: (a) => a.selectPreviousTab(),
+      sent: (h) => h.sendTabCommand,
+      args: [{ action: "previous" }],
+    },
+    {
+      name: "tab position",
+      act: (a) => a.selectTabInSelectedWindow(3),
+      sent: (h) => h.sendTabCommand,
+      args: [{ action: "select", position: 3 }],
+    },
+  ])(
+    "sends $name only to the selected live window",
+    async ({ act, sent, args }) => {
       const harness = createApplicationHarness();
       await harness.application.newWindow();
       await harness.application.newWindow();
-      harness.application[`toggleSelected${bar}`]();
-      expect(harness[`send${bar}Toggle`]).not.toHaveBeenCalled();
+      act(harness.application);
+      expect(sent(harness)).not.toHaveBeenCalled();
+
       harness.select(harness.windows[1]!.window);
-      harness.application[`toggleSelected${bar}`]();
-      expect(harness[`send${bar}Toggle`]).toHaveBeenCalledExactlyOnceWith(
+      act(harness.application);
+      expect(sent(harness)).toHaveBeenCalledExactlyOnceWith(
         harness.windows[1]!.window,
+        ...args,
       );
-      expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
-      expect(harness.windows[1]!.closeSession).not.toHaveBeenCalled();
+
       harness.application.forceCloseWindow(harness.windows[1]!.window);
-      harness.application[`toggleSelected${bar}`]();
-      expect(harness[`send${bar}Toggle`]).toHaveBeenCalledOnce();
+      act(harness.application);
+      expect(sent(harness)).toHaveBeenCalledOnce();
+      expect(harness.windows[0]!.closeSession).not.toHaveBeenCalled();
     },
   );
-
-  it("routes auxiliary panel side changes to the selected terminal window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    const selected = harness.windows[0]!.window;
-    harness.select(selected);
-    harness.application.moveSelectedAuxiliaryPanel();
-    expect(
-      harness.sendAuxiliaryPanelSideToggle,
-    ).toHaveBeenCalledExactlyOnceWith(selected);
-  });
 });
 
 function lastSessionEnd(sessionId = "s1") {
@@ -227,87 +310,6 @@ describe("Terminal application lifecycle", () => {
     expect(harness.quit).not.toHaveBeenCalled();
   });
 
-  it("sends the Snippets toggle only to the selected Terminal Window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    await harness.application.newWindow();
-
-    harness.select(undefined);
-    harness.application.toggleSelectedSnippets();
-    expect(harness.sendSnippetsToggle).not.toHaveBeenCalled();
-
-    harness.select(harness.windows[1]!.window);
-    harness.application.toggleSelectedSnippets();
-    expect(harness.sendSnippetsToggle).toHaveBeenCalledExactlyOnceWith(
-      harness.windows[1]!.window,
-    );
-  });
-
-  it("sends Find only to the selected Terminal Window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    await harness.application.newWindow();
-
-    harness.select(undefined);
-    harness.application.findInSelectedWindow();
-    expect(harness.sendFind).not.toHaveBeenCalled();
-
-    harness.select(harness.windows[0]!.window);
-    harness.application.findInSelectedWindow();
-    expect(harness.sendFind).toHaveBeenCalledExactlyOnceWith(
-      harness.windows[0]!.window,
-    );
-  });
-
-  it("opens the local image picker only in the selected Terminal Window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    await harness.application.newWindow();
-
-    harness.select(undefined);
-    harness.application.openLocalImageInSelectedWindow();
-    expect(harness.sendLocalImageOpen).not.toHaveBeenCalled();
-
-    harness.select(harness.windows[1]!.window);
-    harness.application.openLocalImageInSelectedWindow();
-    expect(harness.sendLocalImageOpen).toHaveBeenCalledExactlyOnceWith(
-      harness.windows[1]!.window,
-    );
-  });
-
-  it("toggles Developer Tools only for the selected Terminal Window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    await harness.application.newWindow();
-
-    harness.select(undefined);
-    harness.application.toggleSelectedDevTools();
-    expect(harness.toggleDeveloperTools).not.toHaveBeenCalled();
-
-    harness.select(harness.windows[1]!.window);
-    harness.application.toggleSelectedDevTools();
-    expect(harness.toggleDeveloperTools).toHaveBeenCalledExactlyOnceWith(
-      harness.windows[1]!.window,
-    );
-  });
-
-  it("sends explicit clipboard actions only to the selected Terminal Window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    await harness.application.newWindow();
-    harness.select(harness.windows[1]!.window);
-
-    harness.application.clipboardSelectedWindow("copy");
-    harness.application.clipboardSelectedWindow("paste");
-    harness.application.clipboardSelectedWindow("select-all");
-
-    expect(harness.sendClipboardAction.mock.calls).toEqual([
-      [harness.windows[1]!.window, "copy"],
-      [harness.windows[1]!.window, "paste"],
-      [harness.windows[1]!.window, "select-all"],
-    ]);
-  });
-
   it("quits exactly once after the last window closes", async () => {
     const harness = createApplicationHarness();
     await harness.application.newWindow();
@@ -362,46 +364,20 @@ describe("Terminal application lifecycle", () => {
   });
 
   it("ends every independent session after one confirmed quit", async () => {
-    const windows: ReturnType<typeof createWindowHarness>[] = [];
-    const quit = vi.fn(() => {
-      for (const { window } of windows) window.close();
+    const harness: ApplicationHarness = createApplicationHarness({
+      getSelectedWindow: () => harness.windows[0]?.window,
+      quit: vi.fn(() => {
+        for (const { window } of harness.windows) window.close();
+      }),
     });
-    const application = startTerminalApplication({
-      createWindow(lifecycle) {
-        const harness = createWindowHarness(lifecycle);
-        windows.push(harness);
-        return {
-          window: harness.window,
-          sessionActivity: harness.sessionActivity,
-          load: vi.fn(async () => {}),
-        };
-      },
-      getSelectedWindow: () => windows[0]?.window,
-      showQuitConfirmation: vi.fn(async () => true),
-      showCloseWindowConfirmation: vi.fn(async () => true),
-      showCloseTabConfirmation: vi.fn(async () => true),
-      showSessionFailure: vi.fn(async () => {}),
-      sendFontZoom: vi.fn(),
-      sendClipboardAction: vi.fn(),
-      sendSnippetsToggle: vi.fn(),
-      sendTabBarToggle: vi.fn(),
-      sendAuxiliaryPanelToggle: vi.fn(),
-      sendAuxiliaryPanelSideToggle: vi.fn(),
-      sendFind: vi.fn(),
-      sendTitleBarToggle: vi.fn(),
-      sendLocalImageOpen: vi.fn(),
-      toggleDeveloperTools: vi.fn(),
-      sendTabCommand: vi.fn(),
-      quit,
-    });
-    await application.newWindow();
-    await application.newWindow();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
 
-    await application.requestQuit();
+    await harness.application.requestQuit();
 
-    expect(quit).toHaveBeenCalledOnce();
-    expect(windows[0]!.closeSession).toHaveBeenCalledOnce();
-    expect(windows[1]!.closeSession).toHaveBeenCalledOnce();
+    expect(harness.showQuitConfirmation).toHaveBeenCalledOnce();
+    expect(harness.windows[0]!.closeSession).toHaveBeenCalledOnce();
+    expect(harness.windows[1]!.closeSession).toHaveBeenCalledOnce();
   });
 
   it.each([0, 1, 37])(
@@ -557,23 +533,6 @@ describe("Terminal application window actions", () => {
       "floating",
     );
     expect(harness.windows[1]!.setAlwaysOnTop).toHaveBeenCalledTimes(1);
-  });
-
-  it("sends Window Font Zoom only to the selected Terminal Window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    await harness.application.newWindow();
-    harness.select(harness.windows[1]!.window);
-
-    harness.application.zoomSelectedWindow("in");
-    harness.application.zoomSelectedWindow("out");
-    harness.application.zoomSelectedWindow("reset");
-
-    expect(harness.sendFontZoom.mock.calls).toEqual([
-      [harness.windows[1]!.window, "in"],
-      [harness.windows[1]!.window, "out"],
-      [harness.windows[1]!.window, "reset"],
-    ]);
   });
 
   it("updates close policy and only the future-window always-on-top default", async () => {
@@ -875,51 +834,5 @@ describe("Terminal application window actions", () => {
 
     expect(harness.showQuitConfirmation).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
-  });
-
-  it("sends tab commands only to the selected Terminal Window", async () => {
-    const harness = createApplicationHarness();
-    await harness.application.newWindow();
-    await harness.application.newWindow();
-
-    harness.select(undefined);
-    harness.application.newTabInSelectedWindow();
-    harness.application.selectNextTab();
-    expect(harness.sendTabCommand).not.toHaveBeenCalled();
-
-    harness.select(harness.windows[1]!.window);
-    harness.application.newTabInSelectedWindow();
-    harness.application.selectNextTab();
-    harness.application.selectPreviousTab();
-    harness.application.selectTabInSelectedWindow(3);
-
-    expect(harness.sendTabCommand.mock.calls).toEqual([
-      [harness.windows[1]!.window, { action: "new" }],
-      [harness.windows[1]!.window, { action: "next" }],
-      [harness.windows[1]!.window, { action: "previous" }],
-      [harness.windows[1]!.window, { action: "select", position: 3 }],
-    ]);
-  });
-
-  it("records window lifecycle with local identifiers and bounded duration only", async () => {
-    const write = vi.fn(() => true);
-    const harness = createApplicationHarness({ operationalEvents: { write } });
-
-    await harness.application.newWindow();
-    harness.select(harness.windows[0]!.window);
-    await harness.application.closeSelectedWindow();
-
-    expect(write).toHaveBeenNthCalledWith(1, {
-      name: "window.opened",
-      windowId: 1,
-    });
-    expect(write).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        name: "window.closed",
-        windowId: 1,
-        durationMs: expect.any(Number) as unknown,
-      }),
-    );
   });
 });

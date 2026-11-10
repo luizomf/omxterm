@@ -130,8 +130,8 @@ and genuine read-error policy coverage, not that full native usability
 cross-product. Reducing the scenario does not explain or qualify a historical
 native timeout. Run the native suite alone on an idle unlocked desktop with
 `npm test -- test/integration/font-read-reload.test.ts`.
-Headless fixture/oracle/deadline and real-read lifetime checks:
-`npm test -- test/unit/font-read-reload-fixture.test.ts test/unit/terminal-font-read-reload.test.ts`.
+Headless real-read lifetime checks:
+`npm test -- test/unit/terminal-font-read-reload.test.ts`.
 Successful headless checks or bundle preparation are not native runtime acceptance.
 
 ## Restty host PowerShell isolation
@@ -188,16 +188,14 @@ forced backend or GPU-blocklist bypass. macOS/Windows defaults, renderer securit
 preferences, injected dependencies and explicit negative startup controls remain
 unchanged. Actual WebGL2 is still required.
 
-Headless emitted-entrypoint checks build the real recipes and stop at mocked
-Electron readiness, including scrollback startup/mapping variants, the host's
-focused-cancellation build and the old-post-read font control:
+The shared policy itself has a headless check:
 
 ```sh
-npm test -- test/unit/surface-fixture-gpu-policy.test.ts test/unit/chromium-gpu-policy.test.ts
+npm test -- test/unit/chromium-gpu-policy.test.ts
 ```
 
-These checks establish startup wiring only, not native success for every fixture
-or Linux x64 qualification. macOS-only emoji/blur experiments, input-only pages,
+It establishes the policy only, not native success for every fixture or Linux
+x64 qualification. macOS-only emoji/blur experiments, input-only pages,
 PTY-only fixtures and intentional unavailable-backend controls are not additional
 Linux Surface policy omissions. Production-composition fixtures inherit the
 production main's policy. All actual browser/Electron checks, even headless,
@@ -584,8 +582,7 @@ window-owned receipts recorded only after the actual production Toggle/Paste
 listeners return. These receipts establish callback consumption before About
 close, picker cancellation or image Escape; they do not drain asynchronous
 input accepted earlier. The continuous input sample and strict empty assertions
-remain unchanged. Headless ordering/negative controls:
-`npm test -- test/unit/overlay-action-consumption.test.ts`.
+remain unchanged.
 
 Fixture Surface import overrides target the canonical composition importer,
 `src/renderer/start-terminal-window.ts`, not the thin `src/renderer/index.ts`
