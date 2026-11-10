@@ -2,6 +2,50 @@
   "name": "combinedExportDigest",
   "sha256": "f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b",
   "edits": [
+    { "start": 56508, "deleteCount": 1, "lines": [] },
+    { "start": 56427, "deleteCount": 3, "lines": [] },
+    {
+      "start": 56027,
+      "deleteCount": 4,
+      "lines": ["    setIsFocused: (value) => isFocused = value,"]
+    },
+    { "start": 55739, "deleteCount": 1, "lines": [] },
+    { "start": 55731, "deleteCount": 7, "lines": [] },
+    { "start": 55389, "deleteCount": 1, "lines": [] },
+    {
+      "start": 55283,
+      "deleteCount": 2,
+      "lines": ["        options.writeState({ needsRender: true });"]
+    },
+    {
+      "start": 53660,
+      "deleteCount": 11,
+      "lines": [
+        "    preedit: Boolean(imeState.preedit),",
+        "    blinkVisible",
+        "  }) : null;"
+      ]
+    },
+    {
+      "start": 53658,
+      "deleteCount": 1,
+      "lines": ["  const cursorStyle = cursor ? resolveCursorStyle(cursor, {"]
+    },
+    {
+      "start": 50907,
+      "deleteCount": 11,
+      "lines": [
+        "    preedit: Boolean(imeState.preedit),",
+        "    blinkVisible",
+        "  }) : null;"
+      ]
+    },
+    {
+      "start": 50905,
+      "deleteCount": 1,
+      "lines": ["  const cursorStyle = cursor ? resolveCursorStyle(cursor, {"]
+    },
+    { "start": 50789, "deleteCount": 8, "lines": [] },
     { "start": 56419, "deleteCount": 2, "lines": [] },
     { "start": 56145, "deleteCount": 1, "lines": ["    needsRender = true;"] },
     { "start": 56131, "deleteCount": 1, "lines": ["    needsRender = true;"] },

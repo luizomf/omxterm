@@ -355,8 +355,10 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   Selection refits and redraws current content and cursor before the first
   visible presentation, without a background render-budget delay or replacing
   the Surface, core or Live Terminal Session.
-- An unchanged Terminal Surface stops requesting display frames. It draws only
-  at cursor/text blink phases and rechecks state that changes without a render
+- An unchanged Terminal Surface stops requesting display frames. It draws at
+  blink phases only while something on screen blinks (a blinking cursor, or SGR
+  5 text while cursor blink is on), so a steady, hidden or unfocused cursor over
+  plain text draws nothing. It rechecks state that changes without a render
   request (such as a reveal without refit) at most every 250 ms. Output, input,
   resize, focus, theme and configuration changes present on the next display
   frame.

@@ -1,5 +1,55 @@
 [
   {
+    "name": "priorIdleBlinkDigest",
+    "sha256": "a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c",
+    "edits": [
+      { "start": 56508, "deleteCount": 1, "lines": [] },
+      { "start": 56427, "deleteCount": 3, "lines": [] },
+      {
+        "start": 56027,
+        "deleteCount": 4,
+        "lines": ["    setIsFocused: (value) => isFocused = value,"]
+      },
+      { "start": 55739, "deleteCount": 1, "lines": [] },
+      { "start": 55731, "deleteCount": 7, "lines": [] },
+      { "start": 55389, "deleteCount": 1, "lines": [] },
+      {
+        "start": 55283,
+        "deleteCount": 2,
+        "lines": ["        options.writeState({ needsRender: true });"]
+      },
+      {
+        "start": 53660,
+        "deleteCount": 11,
+        "lines": [
+          "    preedit: Boolean(imeState.preedit),",
+          "    blinkVisible",
+          "  }) : null;"
+        ]
+      },
+      {
+        "start": 53658,
+        "deleteCount": 1,
+        "lines": ["  const cursorStyle = cursor ? resolveCursorStyle(cursor, {"]
+      },
+      {
+        "start": 50907,
+        "deleteCount": 11,
+        "lines": [
+          "    preedit: Boolean(imeState.preedit),",
+          "    blinkVisible",
+          "  }) : null;"
+        ]
+      },
+      {
+        "start": 50905,
+        "deleteCount": 1,
+        "lines": ["  const cursorStyle = cursor ? resolveCursorStyle(cursor, {"]
+      },
+      { "start": 50789, "deleteCount": 8, "lines": [] }
+    ]
+  },
+  {
     "name": "priorIdleRenderDigest",
     "sha256": "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf",
     "edits": [

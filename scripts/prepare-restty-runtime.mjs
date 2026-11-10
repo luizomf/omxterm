@@ -13,6 +13,7 @@ import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import { bufferTextCorrections } from "./restty-buffer-text-corrections.mjs";
 import { idleRenderCorrections } from "./restty-idle-render-corrections.mjs";
+import { idleBlinkCorrections } from "./restty-idle-blink-corrections.mjs";
 import {
   applicationCursorCorrections,
   applicationCursorCoreCorrections,
@@ -152,8 +153,10 @@ const combinedExportDigest =
   "f4adfe4712a8edda01733f712318c39fb56574c16340f2960a4538802fe92d7b";
 const priorIdleRenderDigest =
   "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf";
-const correctedDigest =
+const priorIdleBlinkDigest =
   "a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c";
+const correctedDigest =
+  "3194723adecac1901096c384e9a9687fcf0c979dab64fcae22886353354facff";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -2027,6 +2030,8 @@ export async function prepareResttyRuntime(options = {}) {
           source = applyCorrections(source, bufferTextCorrections);
       case priorIdleRenderDigest:
         source = applyCorrections(source, idleRenderCorrections);
+      case priorIdleBlinkDigest:
+        source = applyCorrections(source, idleBlinkCorrections);
         break;
       default:
         throw new Error(

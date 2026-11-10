@@ -127,7 +127,7 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c",
+      "3194723adecac1901096c384e9a9687fcf0c979dab64fcae22886353354facff",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
