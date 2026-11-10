@@ -95,7 +95,7 @@ npm run check:portable
 
 `npm run check:portable` runs Prettier (`format:check`), lint (`npm run lint`), TypeScript type checking (`npm run typecheck`), focused GC-enabled headless cancellation checks (`npm run test:panel-cancellation`), the default Vitest suite (`npm test`), and the unpackaged build (`npm run build`).
 
-> **Warning:** Graphical integration tests included in `npm test` and `npm run check:portable` open and focus real Electron windows. Run one graphical suite at a time on an unlocked, idle desktop without moving the mouse or typing during the run. Before source or packaged Electron tests, follow the [shared-clipboard prelaunch checks](docs/development.md#shared-clipboard-before-native-tests), [macOS preference precautions](docs/development.md#macos-preferences-and-native-verification) and [Linux desktop-service prerequisites](docs/development.md#linux-desktop-services-and-native-verification). Clipboard-writing cases are included by default; hold affected execution if isolation is unavailable. Temporary HOME/XDG/profile paths do not isolate OS-managed preferences or per-user portal services; successful process cleanup does not prove their preservation. For fast headless unit-test feedback while developing, run:
+> **Warning:** Graphical integration tests included in `npm test` and `npm run check:portable` open and focus real Electron windows and can write to your system clipboard. Run one graphical suite at a time on an unlocked, idle desktop without moving the mouse or typing during the run. See [side effects on your desktop](docs/development.md#side-effects-on-your-desktop) if you care about your clipboard or OS preferences. For fast headless unit-test feedback while developing, run:
 >
 > ```sh
 > npm test -- test/unit
@@ -103,12 +103,9 @@ npm run check:portable
 
 For changes that affect native packaging or installers, see [packaging verification](docs/development.md#evidence-reuse-and-packaging). Note that full Windows installer verification (`npm run check:win`) performs a real installation and requires a disposable VM with a recovery snapshot.
 
-In your PR description, list the checks you ran, reused results and any missing
-coverage. If a test cannot run safely, leave that execution unrun and continue
-independent work. Maintainers decide whether the candidate needs more evidence,
-a smaller scope or a documented release-risk decision; a test-setup limitation
-alone does not stop the repository. [ADR 0019](docs/adr/0019-support-native-arm64-releases-on-macos-linux-and-windows.md#verification-and-evidence-reuse)
-already allows bounded unresolved risk to be recorded without inventing a cause.
+In your PR description, list the checks you ran and any you couldn't run. A
+test you couldn't run doesn't block your PR; maintainers decide whether more
+checking is needed.
 
 ## Commits and pull requests
 
@@ -136,4 +133,8 @@ profile link and their public name if known (otherwise just the handle). This
 includes small documentation fixes and one-line translations; contributors can
 correct their names or optional self-provided details later.
 
-Leave application-version metadata unchanged in contribution PRs unless a maintainer explicitly assigns versioning work. The upstream integration maintainer or assigned agent updates development versions under [`docs/versioning.md`](docs/versioning.md), avoiding competing bumps across PRs and forks. Contributors do not need to run multi-platform release builds or publish packages. The upstream integration maintainer or assigned agent handles target-specific qualification, release builds and independent publication from a shared frozen application cut ([`docs/release.md`](docs/release.md)), and [issue tracker triage](docs/agents/issue-tracker.md).
+Leave the application version unchanged in contribution PRs. Maintainers handle
+version bumps ([`docs/versioning.md`](docs/versioning.md)), release builds and
+publication ([`docs/release.md`](docs/release.md)), and
+[issue triage](docs/agents/issue-tracker.md). You don't need to run
+multi-platform release builds.
