@@ -32,7 +32,9 @@ check of the AppImage bytes. An `APPIMAGE` relaunch passes the environment
 without the current AppImage runtime
 ([ADR 0012](0012-use-standard-xterm-terminal-capabilities.md)); otherwise the new
 mount's AppRun would stack its entries on the old mount's, which disappear when
-the first process exits.
+the first process exits. Every relaunch also restores the launch values of the
+variables Chromium set in the Wayland process, so the X11 process and its
+shells do not inherit `EGL_PLATFORM=wayland`.
 
 Argument/environment tests cover selection and the actual spawn/unref/exit
 relaunch path, including foreign inherited AppImage values and literal `-e` argv.

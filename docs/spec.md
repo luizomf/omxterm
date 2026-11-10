@@ -47,7 +47,10 @@ session management, and IDE features are outside the product scope.
   a Launch Request's `-e`, keeping its literal argv. An `APPIMAGE` relaunch
   receives the environment without the current AppImage runtime (as for
   terminal sessions below), so the new mount's AppRun starts clean; a
-  `process.execPath` relaunch keeps the inherited environment.
+  `process.execPath` relaunch keeps the inherited environment. Either relaunch
+  restores the launch values of the variables Chromium changed in the Wayland
+  process (as for terminal sessions below), so the X11 process does not inherit
+  `EGL_PLATFORM=wayland`.
 - `--no-sandbox` is a fixed, unconditional launch policy for the ordinary-user
   runtime, direct AppImage, extraction, desktop entry, and X11 relaunch. It is
   not a fallback or a setting. `npm run dev` passes it before Electron
@@ -1263,6 +1266,16 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
   appends to `XDG_DATA_DIRS`. The user's own entries keep their order, and a
   list left empty is unset. OMXTerm's own environment is not changed, and other
   platforms pass it through as is.
+- On Linux, Chromium also changes OMXTerm's own environment during startup:
+  `NO_AT_BRIDGE=1` (GTK initialization), `FC_FONTATIONS=1`, and
+  `EGL_PLATFORM=wayland` on Wayland. Sessions get the values OMXTerm was
+  launched with instead: main reads them while its module code first runs,
+  before GTK initialization, and a session receives each one back, or unset if
+  it was unset. `FC_FONTATIONS` and `EGL_PLATFORM` are set before any
+  application code runs, so a launch value equal to Chromium's (`1`, or
+  `wayland` when main started on Wayland) cannot be told apart and is removed;
+  a user's own `FC_FONTATIONS` is overwritten by Chromium and cannot be
+  recovered. macOS and Windows sessions are unaffected.
 - Restty answers DA1 as `CSI ? 1 ; 2 c` and DA2 as `CSI > 0 ; 0 ; 0 c`, once
   per query.
 - Ghostty answers cursor-position queries (`CSI 6 n`) from its parser cursor at
