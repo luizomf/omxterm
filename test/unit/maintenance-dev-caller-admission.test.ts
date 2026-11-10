@@ -45,14 +45,14 @@ const runtime = { appVersion, apiVersion: "0.1.0" };
 // The independent hashes identify those manifests and their source ZIPs.
 const releases = [
   {
-    name: "Files 0.6.0",
+    name: "Files 0.8.0",
     id: "omxterm.files",
-    archiveEnv: "OMXTERM_781_FILES_ARCHIVE",
+    archiveEnv: "OMXTERM_FILES_080_ARCHIVE",
     archiveHash:
-      "50c4fb9f5ab7492cd4ee7cdf1b7f75092b03d6f704b380457cb0b3b996bf8143",
+      "88f3deb79e3b574a6ae4aa71d56ff74eb17fdd6c25b6123b30a519a4cc827563",
     manifestHash:
-      "c5f829d9d6831c53c5cef18e13db6df0ec0633504d23a4e7f6b59647df7e5b67",
-    manifest: `{"format":1,"id":"omxterm.files","version":"0.6.0","name":"Files — ARM64 preview","engines":{"omxterm":">=0.24.0-dev.21","api":"0.1.x"},"backend":"backend.mjs","view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
+      "c57f5b0bd629384228d11860a81493a367e7902e0430cb297603ca53b641596e",
+    manifest: `{"format":1,"id":"omxterm.files","version":"0.8.0","name":"Files — ARM64 preview","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
     unsupported: "win32-arm64",
   },
   {
@@ -354,9 +354,10 @@ it("refuses an API-incompatible archive through catalog, local and link", async 
 it("rejects an unknown capability before local or link trust", async () => {
   const fixture = releases[0];
   const unsupported = fixture.manifest.replace(
-    '"backend":"backend.mjs"',
-    '"capabilities":["terminal.future.v1"],"backend":"backend.mjs"',
+    '"capabilities":["terminal.insertPath.v1"]',
+    '"capabilities":["terminal.future.v1"]',
   );
+  expect(unsupported).not.toBe(fixture.manifest);
   const bytes = archive(unsupported);
   const release = await syntheticRelease(fixture, bytes);
   const catalog = await catalogFor(release);
@@ -492,7 +493,8 @@ it("does not revive an old pin after disable, enable or same-byte reinstall", as
 });
 
 it("opens an existing stable-host installation at the current runtime without reinstalling", async () => {
-  const fixture = releases[0];
+  // SSH 0.3.1 also admits the 0.24.0 host; Files 0.8 does not.
+  const fixture = releases[1];
   const bytes = archive(fixture.manifest);
   // This historical host only seeds the pre-upgrade store; the open below uses
   // the real current runtime, not a version substitute for admission.

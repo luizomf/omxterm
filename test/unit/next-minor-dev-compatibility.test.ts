@@ -163,18 +163,13 @@ it.each([
   ["distribution/official-extensions-v1.json", "linux-arm64"],
   ["distribution/official-extensions-darwin-arm64-v1.json", "darwin-arm64"],
 ])(
-  "admits the actual current Files and SSH offers in %s only on their targets",
+  "admits the actual current SSH offer in %s only on its targets",
   async (file, target) => {
     const releases = parseCatalog(await readFile(file));
-    for (const id of ["omxterm.files", "omxterm.ssh"]) {
+    // Files 0.8 requires stable 0.26.0, so 0.26.0-dev hosts are not offered it.
+    for (const id of ["omxterm.ssh"]) {
       const release = releases.find((entry) => entry.id === id)!;
-      expect(release.version).toBe(
-        id === "omxterm.files"
-          ? target === "darwin-arm64"
-            ? "0.7.0"
-            : "0.6.0"
-          : "0.3.1",
-      );
+      expect(release.version).toBe("0.3.1");
       expect(catalogCompatible(release, runtime("0.26.0-dev.0"), target)).toBe(
         true,
       );

@@ -4,20 +4,20 @@
     {
       "id": "omxterm.files",
       "name": "Files — ARM64 preview",
-      "description": "Browse your files and folders: create, rename, move, trash and delete them.",
-      "version": "0.7.0",
+      "description": "Browse your files and folders: create, rename, move, trash and delete them, and insert their paths into the terminal.",
+      "version": "0.8.0",
       "engines": {
-        "omxterm": ">=0.25.0-dev.10",
+        "omxterm": ">=0.26.0",
         "api": "0.1.x"
       },
       "targets": ["darwin-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.7.0/files-0.7.0.omxext",
-        "sha256": "611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef",
-        "bytes": 23285
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.8.0/files-0.8.0.omxext",
+        "sha256": "88f3deb79e3b574a6ae4aa71d56ff74eb17fdd6c25b6123b30a519a4cc827563",
+        "bytes": 24682
       },
-      "sourceCommit": "0cb89accd61f1f5d5263c60773454882793e2e99",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.7.0"
+      "sourceCommit": "bf2f0678b748043baa19d514889159bc3c632223",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.8.0"
     },
     {
       "id": "omxterm.ssh",

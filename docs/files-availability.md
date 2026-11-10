@@ -1,14 +1,14 @@
 # Files availability
 
-Files is an optional add-on for browsing folders and files. The offered 0.6 and
-0.7 previews can move or delete items after confirmation; they do not insert
-file paths into the terminal or accept file drops.
+Files is an optional add-on for browsing folders and files. It can move or
+delete items after confirmation, and insert a file's path into the terminal
+(**Insert path into terminal**, Shift+Enter, or drag it onto a terminal pane).
 
-The official catalogs offer **Files 0.6** for Linux computers with 64-bit ARM
-processors and **Files 0.7** for Macs with Apple silicon. These are previews;
-Windows and other processor types are not offered. The Extensions catalog shows
-whether your OMXTerm version can install the entry. Compatibility alone does
-not mean every package and action has been tested.
+The official catalogs offer **Files 0.8** for Linux computers with 64-bit ARM
+processors and for Macs with Apple silicon. It needs OMXTerm 0.26.0 or later;
+older versions can install Files 0.7 or 0.6 from their
+[releases](https://github.com/luizomf/omxterm/releases). These are previews;
+Windows and other processor types are not offered.
 
 1. Open **Settings → Extensions → Browse official extensions** and choose
    **Install** on the Files card shown for your computer.
