@@ -34,14 +34,14 @@ construct the runtime without activating installed code. The bounded
 passed separately from packaging. [macOS composition](../macos-extension-composition.md)
 and [Linux x64 composition](../linux-x64-extension-composition.md) retain separate
 qualification boundaries; existing package/module receipts are not production-lifecycle qualification. The [runtime reference](../extension-backend-runtime.md) covers
-current consumers and builds; [Files composition](../files-development-preview.md#owned-composition-modules)
+current consumers and builds; [Files composition](../files-development-preview.md#host-composition)
 covers the application manager's separate installation/trust, backend and view
 owners. Installation and enable remain dormant; explicit actions activate code.
 Settings, catalog acquisition, action discovery and web-content hosting are not
 runtime responsibilities. Extension archives remain separate from the host;
 there is no stable SDK.
 
-[Files qualification](../files-development-preview.md#build-and-evidence-boundary)
+[Files qualification](../files-development-preview.md#platform-limits)
 keeps product observations distinct from package inspection and module-native
 tests. Prototype evidence and historical failures retain their identities and
 limits. Surviving-browser main-death file-read exclusion remains unqualified.

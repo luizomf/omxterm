@@ -155,7 +155,7 @@ to retarget. Single-target tracked delivery adds no Enter. Source hide/retiremen
 revokes unaccepted work, while accepted Surface-owned input remains independent.
 A transport ticket is never raw PTY authority. This source composition does not
 qualify native input or a published host/archive pair. See the
-[Files transport seam](../files-development-preview.md#terminal-drag-transport-source-increment).
+[Files transport seam](../files-development-preview.md#inserting-paths-into-the-terminal).
 
 ### Catalog location and transport
 

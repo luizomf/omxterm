@@ -16,7 +16,7 @@ merge, schema negotiation or fallback to the legacy endpoint after failure.
 The original target split kept the legacy document unchanged, preserving Linux's
 Files0.4 offer at that checkpoint. The published catalogs select Files0.6 for
 Linux ARM64 and Files0.7 for macOS ARM64. A separate bounded
-[macOS Files0.7 public-catalog checkpoint](files-development-preview.md#files07-macos-public-catalog-checkpoint)
+[macOS Files0.7 public-catalog checkpoint](files-development-preview.md)
 passed with the published stable0.25.0 host. Common SSH/Snippets
 entries are identical in both documents; promotions must update both together.
 The published SSH0.3.1 offer includes Linux and macOS ARM64 for the same original
@@ -118,7 +118,7 @@ promotion integrated as `24dbf2e0dc2f9ecb5c3233d9f72f8b92f07dc423`. Afterward,
 the fixed endpoints were read back: legacy SHA-256
 `8233d2a6fd3e1b41034acccd7e4b6e13afddd81f0f1c8393e7b9b05329e28d5f`, macOS
 `9f75bf9b0c9a58e75e48a903f8518c0deeded767bacf532a1548e22441d7bd4c`. The
-separate [macOS Files0.6 public-catalog checkpoint](files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+separate [macOS Files0.6 public-catalog checkpoint](files-development-preview.md)
 and [SSH0.3.1 public-catalog checkpoint](ssh-connect-development.md#macos-arm64-public-catalog-checkpoint)
 used the retained locally built 0.24.0 DMG, not a freshly downloaded public host.
 Other public-HTTPS checkpoints remain separate. Preserve newer supported
@@ -142,7 +142,7 @@ bytes, SHA-256 `611886517ee1bd662c8d6bbed2a7673f3b9994ba0d68724be76251427b3c72ef
 source `0cb89accd61f1f5d5263c60773454882793e2e99`) to `darwin-arm64`, host
 `>=0.25.0-dev.10` and API `0.1.x`. The unchanged Linux catalog still offers
 Files0.6; SSH and Snippets remain identical. The original Files0.7 build receipt
-remains Linux-targeted and `not-run`. A separate [macOS local exact-pair checkpoint](files-development-preview.md#files07-macos-stable-local-checkpoint)
+remains Linux-targeted and `not-run`. A separate [macOS local exact-pair checkpoint](files-development-preview.md)
 passed; a separate public endpoint readback and bounded public catalog consumer
 also passed, without repeating that filesystem matrix. The one-release-per-ID schema removes the Files0.6 offer from macOS
 0.24.0 and earlier otherwise-compatible hosts. They can install the unchanged
@@ -160,7 +160,7 @@ passed draft and anonymous public readback; the original receipt remains
 `not-run` with intended host dev.12. Separate controlled qualification passed on
 the already-public dev.11 ARM64 AppImage. A separate actual public-HTTPS native
 consumption checkpoint also passed after reviewed catalog integration; see
-[exact evidence and limits](files-development-preview.md#files-040-distribution-and-controlled-qualification).
+[exact evidence and limits](files-development-preview.md#platform-limits).
 The promotion preserves SSH/Snippets metadata and all historical releases.
 Stable0.23.0 users need the historical Files0.1.0 local/link archive rather than
 the newer catalog entry; no host or archive rebuild was part of that promotion.
@@ -171,7 +171,7 @@ At the earlier macOS checkpoint the endpoint selected immutable Files0.5.0, arch
 source `a343704c0794cb913fba9ad312e90e5f6daa4bb1`, host `>=0.24.0-dev.21`
 and API `0.1.x`, target `darwin-arm64` only. Original assets and receipts remain
 unchanged. Existing dev.21 hosts still fetch the legacy URL: their qualified
-[local/link route](files-development-preview.md#macos-link-first-distribution)
+[local/link route](files-development-preview.md#https-archive-installation)
 remains valid, but catalog discovery requires a new host containing this URL
 selection. New-host packaging, publication and actual public-catalog consumption
 remain separate from source implementation and earlier link qualification.

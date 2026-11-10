@@ -34,7 +34,7 @@ limits, builds and error behavior. Linux ARM64/x64, macOS ARM64 and Windows ARM6
 source application startup constructs installation/runtime infrastructure without
 activating installed code. The bounded [Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#evidence-boundary)
 passed separately from packaging. Execution, web-content hosting, acquisition and trust UI remain consumer responsibilities;
-[Files composition](../files-development-preview.md#owned-composition-modules)
+[Files composition](../files-development-preview.md#host-composition)
 documents their integration. Installation and enable remain dormant. Separate
 extension archives remain excluded from host payloads except the exact pinned
 [one-time default Snippets resource](../default-snippets.md) on optional targets.
@@ -45,7 +45,7 @@ are separate from Files qualification or Snippets migration. Terminal ownership 
 are unchanged; the [specification](../spec.md#configuration-and-local-state) owns
 the application network policy.
 
-[Files qualification](../files-development-preview.md#build-and-evidence-boundary)
+[Files qualification](../files-development-preview.md#platform-limits)
 separates product, module and main-death evidence. Source wiring and module tests
 do not qualify FUSE/helper installation, physical dialogs/input, other platforms,
 signing or a stable SDK. Historical failures remain failed; surviving-browser

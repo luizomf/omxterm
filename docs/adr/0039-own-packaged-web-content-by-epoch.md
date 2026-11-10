@@ -67,7 +67,7 @@ silent; neither late settlement nor a successor receives that notice.
 Successful still-current delivery uses the existing core-focus
 presentation while keeping Files visible. No second input or focus owner is
 introduced, and no native qualification follows from this composition. See the
-[transport contract](../files-development-preview.md#terminal-drag-transport-source-increment).
+[transport contract](../files-development-preview.md#inserting-paths-into-the-terminal).
 
 DOM selection and overlay opening await an acknowledged native hide. When that
 hide removes the selected, natively focused child of an already focused window,
