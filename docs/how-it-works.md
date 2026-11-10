@@ -1,75 +1,63 @@
 # How OMXTerm works
 
-OMXTerm is the desktop window around your command-line tools. It provides tabs, GPU-accelerated text rendering, copy/paste, themes, and image previews, while your shell and the programs you run do the actual work.
+OMXTerm is a desktop terminal: a window for commands with tabs, split panes, themes, and shortcuts. Your computer's shell and programs do the command-line work.
 
-To get started right away, head to [Installation](installation.md) or [Everyday use](usage.md).
+New here? [Install OMXTerm](installation.md), try the [first session](../README.md#first-session), then see [Everyday use](usage.md).
 
 ## The terminal, the shell, and your programs
 
-Three layers work together whenever you type a command:
+- **OMXTerm** displays text and sends your keystrokes.
+- Your **shell** (for example, Zsh, Bash, or PowerShell) reads commands and starts programs.
+- A **program** (such as Git or Neovim) does the requested work.
 
-| Layer                    | What it does                                             | Examples                    |
-| ------------------------ | -------------------------------------------------------- | --------------------------- |
-| **OMXTerm (Terminal)**   | Displays text/graphics and sends your keystrokes         | Tabs, selection, font zoom  |
-| **Shell**                | Reads your commands, expands arguments, and starts tools | Zsh, Bash, PowerShell       |
-| **Command-line program** | Runs the task you asked for                              | Git, Neovim, SSH, AI agents |
-
-When you type `pwd` and press Enter, OMXTerm sends those characters to your shell, the shell runs the command, and OMXTerm draws the output on screen. Your custom prompt, aliases, and command history belong to your shell configuration (like `.zshrc` or `.bashrc`), while your font, window colors, and app shortcuts belong to OMXTerm.
+A prompt is the shell's invitation to enter a command. OMXTerm forwards your input through a local operating-system **pseudo-terminal (PTY)**, a text connection to the shell, and displays the output. Your prompt, aliases, history, and startup settings belong to your shell; OMXTerm does not edit its startup files. See [shell startup help](usage.md#shell-preferences-do-not-load) if your usual prompt or aliases do not appear.
 
 ## What happens when you open OMXTerm
 
-1. **Preferences load.** OMXTerm reads `~/.config/omxterm/config.json` and your selected theme. On your very first launch, it creates editable starter files for you.
-2. **A window and tab open.** Each tab gets its own terminal surface powered by Restty and Ghostty's terminal core over WebGL2.
-3. **A local PTY session starts.** Once the display is ready, OMXTerm connects the tab to an operating-system pseudo-terminal (**PTY**) and starts your shell in your home directory:
-   - **macOS and Linux:** your user account's default shell, started as an interactive login shell.
-   - **Windows:** Windows PowerShell by default, or the shell configured via `windowsShell` (such as PowerShell 7 or Git Bash).
-
-OMXTerm never modifies your shell startup files or injects custom shell scripts. If your prompt or aliases look different in Bash, see [shell startup preferences](usage.md#shell-preferences-do-not-load).
+1. **Settings load.** OMXTerm reads your configuration and theme. It can create starter files without replacing yours; see [Configuration](configuration.md).
+2. **The terminal opens.** A window starts with one tab and one pane—the area that shows a shell.
+3. **Your shell starts** in your home folder. On macOS and Linux, OMXTerm starts your account's shell in interactive login mode. On Windows, it uses the configured shell or Windows PowerShell; if PowerShell is absent, it tries the Windows command processor (`ComSpec`). OMXTerm supplies no login flag on Windows. See [Windows shell preferences](configuration.md#choose-the-windows-default-shell).
 
 ## How input and output flow
 
 ```text
-Keyboard ─▶ OMXTerm ─▶ PTY ─▶ Shell / program
-Screen   ◀─ OMXTerm ◀─ PTY ◀─ Shell / program
+Keyboard ─▶ OMXTerm ─▶ PTY ─▶ Shell / command
+Screen   ◀─ OMXTerm ◀─ PTY ◀─ Shell / command
 ```
 
-- **OMXTerm** turns the program's output (text, colors, cursor movement, full-screen apps, and inline images) into pixels using your GPU.
-- **The PTY** (pseudo-terminal) is the operating system's pipe between OMXTerm and your shell.
-- **Resizing:** when you resize the window or zoom, OMXTerm tells the PTY the new number of rows and columns, so apps like Vim or `btop` redraw to fit.
+OMXTerm draws the result, including colors and full-screen apps. When you resize or zoom the window, OMXTerm updates the terminal's rows and columns so programs can redraw to fit.
 
 ## Tabs and sessions
 
-Each tab runs its own isolated shell process and keeps its own in-memory scrollback history:
+A terminal tab starts with one pane. Splitting it creates another pane with its own independent session: a shell and its terminal state. Changing folders in one pane does not change another. See [tabs and sessions](usage.md#windows-tabs-and-sessions) and [split panes](usage.md#split-panes).
 
-- Changing directories or environment variables in one tab never affects another tab.
-- Switching tabs keeps background sessions running and receiving output.
-- Closing a tab ends its shell process; closing the last window quits OMXTerm. By default, OMXTerm asks for confirmation before closing a busy session.
-- **Session persistence:** OMXTerm does not save or restore running sessions after you quit. If you want long-running sessions to stay alive in the background, run `tmux` inside your shell.
-
-See [Everyday use](usage.md#windows-tabs-and-sessions) for tab and window shortcuts.
+Switching tabs leaves sessions running. Closing a pane ends its session; closing a tab ends all its panes. OMXTerm does not restore running sessions after you quit. To keep a process running beyond the window, use a session manager such as `tmux` inside your shell.
 
 ## Customization and conveniences
 
-- **Your settings stay yours:** OMXTerm separates app settings (`config.json`), color palettes (`themes/*.json`), and reusable text snippets (`snippets.yaml`). Save settings or theme changes and press `Cmd+Shift+,` (macOS) or `Ctrl+Shift+,` (Linux/Windows) to reload them live; close and reopen the Snippets sidebar for snippet edits. See [configuration](configuration.md) for file formats and visual editing options.
-- **Safe paste and path insertion:** [Protected Paste](usage.md#protected-paste) warns before pasting multiple lines into a program that hasn't enabled bracketed paste. Dragging files into the window inserts their shell-quoted paths so you can review them before pressing Enter.
-- **Two ways to view images:** you can `Cmd+click` / `Ctrl+click` a local PNG or JPEG path to open a quick [overlay preview](usage.md#previewing-local-images), or display [inline terminal images](usage.md#inline-terminal-images) directly in the grid with tools like `chafa` and `pi`.
+- Use **Settings** for fonts, themes, and shortcuts. If you edit a configuration or theme file yourself, choose **View → Reload User Configuration**; see [Configuration](configuration.md).
+- **Snippets** saves reusable text. Since 0.25.0, eligible new default packaged profiles on Linux ARM64/x64, macOS ARM64, and Windows ARM64 get one attempt to install bundled Snippets 0.1.0. Windows x64 has it built in. See the [exact default policy](default-snippets.md#enrollment-and-the-permanent-attempt) and [Snippets setup](configuration.md#snippets).
+- Windows ARM64 public-install Snippets failures remain unresolved. Linux and Windows x64 packages are build-only, with ordinary desktop behavior unverified; see [0.25.0 limits](snippets-migration.md#stable-0250-release-disposition).
+- **Protected Paste** can ask before sending multiline text. You can also [preview local images](usage.md#previewing-local-images); see [Protected Paste](usage.md#protected-paste) for its limits.
 
 ## Privacy and local data
 
-- **Explicit network access only:** OMXTerm makes no telemetry, analytics or background update requests. The Linux ARM64 development preview can download an extension archive from a user-supplied HTTPS link through [bounded acquisition and explicit trust](files-development-preview.md#https-archive-installation). The CLI tools you run inside your shell keep their normal network access.
-- **Memory-only terminal output:** your terminal scrollback and images live only in memory while the tab is open. Local diagnostic logs record only app-level events and never log your commands, terminal output, or clipboard.
+- OMXTerm has no telemetry, analytics, crash reporting, automatic update checks, or remote log delivery. Windows is not verified network-silent: 0.25.0 testing observed system-proxy discovery and reachability traffic; see [known limits](snippets-migration.md#stable-0250-release-disposition).
+- OMXTerm does not automatically save terminal text. Scrollback (earlier output) stays in memory while a pane is open. Operational logs record app events, not terminal contents, commands, clipboard data, or configuration values.
+- Programs and extensions use your permissions, including access to files and the network. Extensions are not sandboxed; install only code you trust. The official catalog is fetched when you choose Browse or Refresh, and an online install can use the network. The bundled Snippets attempt uses local app files instead.
 
 <a id="a-short-demonstration"></a>
 
 ## Quick tour
 
-If you want to explore OMXTerm's main features in a few minutes (or demonstrate it to students and colleagues):
+Use the menu bar on macOS; on Linux/Windows, press and release **Alt** to open the app menu.
 
-1. **Run a command:** try `pwd` and `echo "Hello from OMXTerm"`.
-2. **Open a second tab:** press `Cmd+T` / `Ctrl+Shift+T`, run a command, and drag tabs to reorder them.
-3. **Make room:** zoom in (`Cmd++` / `Ctrl++`), reset (`Cmd+0` / `Ctrl+0`), and toggle the title bar (`Cmd+Shift+D` / `Ctrl+Shift+D`) or tab bar (`Cmd+Shift+B` / `Ctrl+Shift+B`). When the title bar is hidden, hover near the top center to use the drag handle.
-4. **Reload a setting live:** change `font.size` in `~/.config/omxterm/config.json` from `16` to `18`, save, and reload (`Cmd+Shift+,` / `Ctrl+Shift+,`).
-5. **Insert a snippet:** toggle Snippets (`Cmd+Shift+S` / `Ctrl+Shift+S`), click the starter snippet to insert it into your prompt, and press Enter.
-6. **Preview an image:** use **File → Open Local Image…** (or `Cmd+click` / `Ctrl+click` an image path in terminal output), then press `Escape` to return to your shell.
+1. **Run a command:** at the prompt, type `pwd` and press Enter to print your current folder. This works in common shells; in Windows Command Prompt, use `cd` instead. For another configured shell, use its equivalent.
+2. **Open a tab:** press `Cmd+T` on macOS or `Ctrl+Shift+T` on Linux/Windows. The new tab has its own shell session.
+3. **Split the tab:** choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) for another shell. If there is not enough space for a split, enlarge the window or reduce zoom. See [split-pane details](usage.md#split-panes).
+4. **Change the look:** open **Settings → Appearance** and change **Font size**. Once applied, it changes open panes.
+5. **Return to a terminal tab**, then choose **View → Toggle Snippets** (`Cmd+Shift+S` / `Ctrl+Shift+S`). If **Settings → Extensions** opens instead, enable Snippets if installed but disabled, or [install it](snippets-migration.md#install-deliberately). Return to a terminal tab and toggle again; if unavailable, skip to step 7.
+6. **Try a snippet:** the panel may be empty. Add an entry to `snippets.yaml`, creating it if needed. It normally sits beside `config.json`; see [locations and exceptions](configuration.md) and the [example](configuration.md#snippets). Adapt the example to your shell: `printf` is for POSIX shells. Close and reopen the panel, then choose **Preview**. Choose **Cancel** to send nothing, or **Insert** or **Run** to send it. Insert adds no Enter, but embedded newlines or controls can still execute commands; Run adds Enter.
+7. **Preview a local image:** choose **File → Open Local Image…**, select an existing supported PNG or JPEG in the chooser, and view the preview. Press `Escape` to return. See [image previews](usage.md#previewing-local-images) for limits.
 
-For deep technical details, see the [product specification](spec.md), [architecture decisions](adr/README.md), and [contributing guide](../CONTRIBUTING.md).
+Shortcuts can be remapped; the application menu shows the active bindings. For technical details, see the [product specification](spec.md), [architecture decisions](adr/README.md), and [contributing guide](../CONTRIBUTING.md).
