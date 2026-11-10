@@ -81,6 +81,18 @@ describe("Restty parsed OSC 52 seam", () => {
     expect(sink.replies).toEqual([]);
   });
 
+  it.each(["\u0007", "\u0018", "\u001a"])(
+    "rejects an unfinished oversized OSC and recovers at %j",
+    (terminator) => {
+      const sink = createSink();
+      const prefix = `\u001b]52;c;${"A".repeat(CONTROL_BODY_LIMIT + 1)}`;
+      expect(sink.handler.filterOutput(prefix)).toBe("");
+      expect(sink.handler.filterOutput(`${terminator}later`)).toBe("later");
+      expect(sink.writes).toEqual([]);
+      expect(sink.replies).toEqual([]);
+    },
+  );
+
   it.each([
     [CONTROL_BODY_LIMIT, "\u0018"],
     [CONTROL_BODY_LIMIT + 1, "m"],
