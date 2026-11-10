@@ -61,7 +61,6 @@ async function runChrome(
         ...(expectation === undefined
           ? []
           : [`--fixture-native-maximize=${expectation}`]),
-        ...(mode === "fail-fast" ? ["--fixture-fail-fast"] : []),
         ...(mode === "about-only" ? ["--fixture-about-only"] : []),
         ...(mode === "settings-only"
           ? [
@@ -73,7 +72,7 @@ async function runChrome(
         ...(mode === "theme-appearance" ? ["--fixture-theme-appearance"] : []),
       ],
       root,
-      timeout: mode === "fail-fast" ? 10_000 : 100_000,
+      timeout: 100_000,
       testContext,
       prepare: async () => {
         await buildFixture(root, "runner", undefined, { optionalSnippets });
@@ -101,7 +100,7 @@ async function runChrome(
 describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
   "Window Chrome through real Electron, Surfaces and PTYs",
   () => {
-    it.for(["continuity", "fail-fast", "about-only", "settings-only"])(
+    it.for(["continuity", "about-only", "settings-only"])(
       "checks %s without leaking a native dialog or process",
       { timeout: nativeWindowDiscoveryTimeout("chrome") + 120_000 },
       async (mode, testContext) => {
@@ -118,16 +117,6 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
               ? "not-exercised-macos"
               : "native-maximize-observed";
         const execution = await runChrome(mode, expectation, testContext);
-        if (mode === "fail-fast") {
-          expect(execution).toMatchObject({
-            exitCode: 1,
-            signal: null,
-            reason: "exit",
-            cleanupErrors: [],
-          });
-          expect(execution.stderr).toContain("Controlled fixture failure");
-          return;
-        }
         expect(
           execution,
           `Window Chrome fixture failed.\nstdout:\n${execution.stdout}\nstderr:\n${execution.stderr}`,

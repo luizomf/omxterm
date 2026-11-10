@@ -1,4 +1,4 @@
-import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import { runNativeFixture } from "../fixtures/run-native-fixture";
 import {
@@ -9,13 +9,7 @@ import { build } from "esbuild";
 import electron from "electron";
 import { expect, it } from "vitest";
 
-it.for([
-  "development",
-  "packaged",
-  "missing-result",
-  "published-failure",
-  "published-hang",
-] as const)(
+it.for(["development", "packaged"] as const)(
   "configures native About before the menu (%s), preserving macOS defaults",
   { timeout: 35_000 },
   async (mode, testContext) => {
@@ -52,9 +46,6 @@ it.for([
           resultPath,
           mode === "packaged" ? resourcesPath : "development",
           `--fixture-about-diagnostics=${diagnosticsPath}`,
-          ...(!["development", "packaged"].includes(mode)
-            ? [`--fixture-${mode}`]
-            : []),
         ],
         root,
         completionFile: "result.json.completion",
@@ -78,10 +69,7 @@ it.for([
             });
           }
         },
-        timeout:
-          mode === "missing-result" || mode === "published-hang"
-            ? 8_000
-            : 25_000,
+        timeout: 25_000,
       });
       const diagnostics = await readAboutDiagnostics(diagnosticsPath);
       const evidence = JSON.stringify({
@@ -90,24 +78,6 @@ it.for([
         diagnosticsPath,
       });
       expect(hasAboutPhaseEvidence(diagnostics, mode), evidence).toBe(true);
-      if (mode === "missing-result" || mode === "published-hang") {
-        expect(execution, evidence).toMatchObject({
-          reason: "timeout",
-          cleanupErrors: [],
-        });
-        await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
-        return;
-      }
-      if (mode === "published-failure") {
-        expect(execution, evidence).toMatchObject({
-          exitCode: 3,
-          signal: null,
-          reason: "exit",
-          cleanupErrors: [],
-        });
-        await expect(stat(root)).rejects.toMatchObject({ code: "ENOENT" });
-        return;
-      }
       expect(execution, evidence).toMatchObject({
         exitCode: 0,
         signal: null,

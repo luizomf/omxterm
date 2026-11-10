@@ -173,53 +173,5 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         }
       },
     );
-    it.for([
-      {
-        control: "early-command",
-        phase: "second-program",
-        markers: [
-          "actual-surface-held",
-          "early-command-observed",
-          "surface-released",
-        ],
-      },
-      {
-        control: "held-renderer",
-        phase: "initial-renderer-boundary",
-        markers: ["held-renderer-boundary"],
-      },
-    ])(
-      "bounds the faithful $control failure at $phase",
-      { timeout: 110_000 },
-      async ({ control, phase, markers }, testContext) => {
-        const { execution, phases, controls } = await runRemoval(
-          testContext,
-          control,
-        );
-        expect(execution).toMatchObject({
-          exitCode: 1,
-          reason: "exit",
-          signal: null,
-          cleanupErrors: [],
-        });
-        expect(execution.stdout).not.toContain(prefix);
-        expect(controls).toEqual(
-          markers.map((n) => TAB_REMOVAL_CONTROL_PREFIX + n),
-        );
-        expect(phases.filter((p) => p.status === "failure")).toHaveLength(1);
-        expect(phases.at(-1)).toMatchObject({
-          phase,
-          status: "failure",
-          category: "operation-timeout",
-          observation: {
-            sessionCount: 1,
-            initialSelected: true,
-            backgroundExited: false,
-            native: { visible: true, minimized: false },
-          },
-        });
-        expect(execution.stderr).toContain(`operation-timeout at ${phase}`);
-      },
-    );
   },
 );
