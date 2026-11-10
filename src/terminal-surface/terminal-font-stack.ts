@@ -3,6 +3,7 @@ import dejaVuSansMonoBytes from "../../assets/fonts/DejaVuSansMono.ttf";
 import firaCodeBoldBytes from "../../assets/fonts/FiraCodeNerdFontMono-Bold.ttf";
 import firaCodeRegularBytes from "../../assets/fonts/FiraCodeNerdFontMono-Regular.ttf";
 import jetBrainsNerdFontBytes from "../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf";
+import notoSansSymbols2Bytes from "../../assets/fonts/NotoSansSymbols2-Regular.ttf";
 import type {
   TerminalFontData,
   TerminalFontFaceData,
@@ -91,6 +92,8 @@ export function terminalFontInputs(
       data: snapshot(font.data),
       name: fontSourceFamily(font),
     })),
+    // Last, so OS emoji faces keep color glyphs for the symbols they share.
+    { data: notoSansSymbols2Bytes, name: "Noto Sans Symbols 2" },
   ];
   // Restty searches styles across the entire stack. Keep bundled bold out of
   // the configured-family path, including when that family's bold is absent.

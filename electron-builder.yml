@@ -31,6 +31,8 @@ extraResources:
     to: licenses/DejaVu.txt
   - from: assets/fonts/JetBrainsMono-OFL.txt
     to: licenses/JetBrainsMono-OFL.txt
+  - from: assets/fonts/NotoSansSymbols2-OFL.txt
+    to: licenses/NotoSansSymbols2-OFL.txt
   - from: assets/fonts/NerdFonts-glyphs.txt
     to: licenses/NerdFonts-glyphs.txt
   - from: assets/licenses/xterm-visible-links-MIT.txt

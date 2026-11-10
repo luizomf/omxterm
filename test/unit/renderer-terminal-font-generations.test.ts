@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { createTerminalFontGenerationOwner } from "../../src/renderer/terminal-font-generations";
 
+const isNativeCoverage = (font: { readonly name: string }) =>
+  font.name === "Native Coverage";
+
 describe("renderer Terminal Font generations", () => {
   it.each([false, true])(
     "removes pending cancellation listeners after settlement (failure: %s)",
@@ -33,8 +36,9 @@ describe("renderer Terminal Font generations", () => {
       owner.acquire(undefined),
       owner.acquire(undefined),
     ]);
-    const firstNative = first.fonts.at(-1)!.data as ArrayBuffer;
-    const secondNative = second.fonts.at(-1)!.data as ArrayBuffer;
+    const firstNative = first.fonts.find(isNativeCoverage)!.data as ArrayBuffer;
+    const secondNative = second.fonts.find(isNativeCoverage)!
+      .data as ArrayBuffer;
     callerBytes.fill(99);
 
     expect(load).toHaveBeenCalledOnce();
@@ -62,12 +66,14 @@ describe("renderer Terminal Font generations", () => {
       "native read failed",
     );
     const recovered = await owner.acquire(undefined);
-    const recoveredBacking = recovered.fonts.at(-1)!.data;
+    const recoveredBacking = recovered.fonts.find(isNativeCoverage)!.data;
     recovered.release();
     const reloaded = await owner.acquire(undefined);
 
     expect(attempt).toBe(3);
-    expect(reloaded.fonts.at(-1)!.data).not.toBe(recoveredBacking);
+    expect(reloaded.fonts.find(isNativeCoverage)!.data).not.toBe(
+      recoveredBacking,
+    );
 
     reloaded.release();
     owner.dispose();
@@ -160,7 +166,9 @@ describe("renderer Terminal Font generations", () => {
 
     expect(load).toHaveBeenCalledOnce();
     expect([
-      ...new Uint8Array(lease.fonts.at(-1)!.data as ArrayBuffer),
+      ...new Uint8Array(
+        lease.fonts.find(isNativeCoverage)!.data as ArrayBuffer,
+      ),
     ]).toEqual([7]);
 
     lease.release();
@@ -179,7 +187,9 @@ describe("renderer Terminal Font generations", () => {
       secondOwner.acquire(undefined),
     ]);
 
-    expect(first.fonts.at(-1)!.data).not.toBe(second.fonts.at(-1)!.data);
+    expect(first.fonts.find(isNativeCoverage)!.data).not.toBe(
+      second.fonts.find(isNativeCoverage)!.data,
+    );
 
     first.release();
     second.release();

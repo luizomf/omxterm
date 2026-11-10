@@ -72,8 +72,9 @@ OMXTerm:
   requested ANSI `0–7` color without remapping it to bright `8–15` (applications
   may request bright colors explicitly), and uses bundled regular and bold
   FiraCode Nerd Font Mono as the default, followed by bundled regular and bold
-  DejaVu Sans Mono, JetBrainsMono Nerd Font Mono, and representative
-  operating-system emoji/CJK/symbol faces for missing-glyph coverage;
+  DejaVu Sans Mono, JetBrainsMono Nerd Font Mono, representative
+  operating-system emoji/CJK/symbol faces, and bundled Noto Sans Symbols 2 for
+  missing-glyph coverage;
 - uses the black-and-blue OMXTerm application icon in development and on the
   packaged macOS Dock, Finder, application-switcher, and DMG surfaces;
 - reads strict, versioned JSON configuration, including an explicit en-US or
@@ -930,8 +931,11 @@ operating-system fallback faces. On Linux, those native candidates are, in order
 `Noto Color Emoji`, `Noto Sans CJK SC`, `DejaVu Sans Mono`, and
 `Source Han Sans CN`. Each is optional, requires an exact installed regular
 family match, and shares the existing bounded fallback-byte budget; no fonts are
-automatically installed. When a family is explicitly configured, the
-bundled bold faces are omitted: the configured family keeps precedence for
+automatically installed. The licensed bundled Noto Sans Symbols 2 regular face
+follows them as the last coverage face, outside that budget, so common symbols
+such as U+23F5 render on every platform while operating-system color emoji keep
+precedence for the code points they share. When a family is explicitly
+configured, the bundled bold faces are omitted: the configured family keeps precedence for
 regular, bold, italic and bold-italic text. Main loads available real style
 faces from that same installed family, validates their identity and style, and
 selects exact faces in font collections. Exact native legacy and typographic
@@ -1446,10 +1450,11 @@ boolean and can disable them without changing the font or underlying terminal
 text. Its real bold face renders SGR bold without changing the requested ANSI
 color. Bundled DejaVu Sans Mono regular/bold and JetBrainsMono Nerd Font Mono
 follow it for coverage before available operating-system emoji, CJK, and symbol
-faces. `font.size` accepts only integral pixel sizes from 8 through 72
-inclusive. `font.lineHeight` is an independent row-height multiplier from 1.0
-through 2.0 inclusive, accepts fractional values, does not change glyph size,
-and defaults to 1.0. Terminal padding uses explicit per-side integer CSS pixels
+faces; bundled Noto Sans Symbols 2 is the last coverage face. `font.size`
+accepts only integral pixel sizes from 8 through 72 inclusive.
+`font.lineHeight` is an independent row-height multiplier from 1.0 through 2.0
+inclusive, accepts fractional values, does not change glyph size, and defaults
+to 1.0. Terminal padding uses explicit per-side integer CSS pixels
 from 0 through 128 inclusive and defaults to top 0, right 8, bottom 8, and
 left 8. User top padding is added below the 30 px native title inset on macOS
 when that title area is visible, or below the 34 px app-drawn title row on Linux

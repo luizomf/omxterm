@@ -118,7 +118,7 @@ describe("Restty Terminal Surface", () => {
       data: Uint8Array;
       name: string;
     }>;
-    expect(fonts).toHaveLength(5);
+    expect(fonts).toHaveLength(6);
     expect(fonts.every((font) => font.data instanceof Uint8Array)).toBe(true);
     expect(fonts.map((font) => font.name)).toEqual([
       "FiraCode Nerd Font Mono",
@@ -126,6 +126,7 @@ describe("Restty Terminal Surface", () => {
       "DejaVu Sans Mono",
       "DejaVu Sans Mono Bold",
       "JetBrainsMono Nerd Font Mono",
+      "Noto Sans Symbols 2",
     ]);
     expect(adapter.start).toHaveBeenCalledOnce();
     expect(adapter.resize).toHaveBeenLastCalledWith({ cols: 96, rows: 31 });

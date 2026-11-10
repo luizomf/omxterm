@@ -124,3 +124,6 @@ vi.mock("../../assets/fonts/DejaVuSansMono-Bold.ttf", () => ({
 vi.mock("../../assets/fonts/JetBrainsMonoNerdFontMono-Regular.ttf", () => ({
   default: new Uint8Array([3, 1]),
 }));
+vi.mock("../../assets/fonts/NotoSansSymbols2-Regular.ttf", () => ({
+  default: new Uint8Array([4, 1]),
+}));
