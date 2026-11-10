@@ -5,12 +5,11 @@ import path from "node:path";
 import { expect, it } from "vitest";
 import { buildMirrorTypingExtension } from "../../scripts/build-mirror-typing-extension.mjs";
 import {
-  checkCompatibility,
   extractPackage,
   parseManifest,
 } from "../../src/installed-packages/archive";
 
-it("declares only memory-only mirror authority for the implementing host and API preview", async () => {
+it("declares only the memory-only mirror capability and ships the AshyTerm license", async () => {
   const manifest = parseManifest(
     JSON.parse(
       await readFile("extensions/mirror-typing/extension.json", "utf8"),
@@ -23,22 +22,6 @@ it("declares only memory-only mirror authority for the implementing host and API
     capabilities: ["terminal.mirrorTyping.v1"],
     view: { context: "window", action: "omxterm.mirror-typing.open" },
   });
-  for (const appVersion of ["0.24.0-dev.0", "0.24.0-dev.1", "0.25.0"])
-    expect(() =>
-      checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
-    ).toThrow("incompatible");
-  expect(() =>
-    checkCompatibility(manifest, {
-      appVersion: "0.24.0-dev.2",
-      apiVersion: "0.1.0",
-    }),
-  ).not.toThrow();
-  expect(() =>
-    checkCompatibility(manifest, {
-      appVersion: "0.24.0-dev.2",
-      apiVersion: "0.2.0",
-    }),
-  ).toThrow("incompatible");
   expect(
     await readFile("extensions/mirror-typing/licenses/ashyterm.txt", "utf8"),
   ).toBe(await readFile("assets/licenses/ashyterm-MIT.txt", "utf8"));

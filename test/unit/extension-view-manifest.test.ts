@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -62,15 +62,22 @@ describe("concrete application-view declaration", () => {
         path.join(os.tmpdir(), "omxterm-view-manifest-"),
       );
       try {
-        const pending = extractPackage(
+        // Exercise the on-disk archive path that local installation uses.
+        const archive = path.join(directory, "view.omxext");
+        const destination = path.join(directory, "extracted");
+        await mkdir(destination);
+        await writeFile(
+          archive,
           packageArchive([
             { name: "extension.json", data: JSON.stringify(manifest) },
             { name: "backend.mjs", data: "export function activate() {}" },
             { name, data: name.endsWith("/") ? "" : "<!doctype html>" },
           ]),
-          directory,
-          { appVersion: "0.23.0-dev.5", apiVersion: "0.1.0" },
         );
+        const pending = extractPackage(archive, destination, {
+          appVersion: "0.23.0-dev.5",
+          apiVersion: "0.1.0",
+        });
         if (name === manifest.view.entry)
           expect((await pending).manifest.view).toEqual(manifest.view);
         else await expect(pending).rejects.toThrow("invalid-package");

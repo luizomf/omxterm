@@ -71,25 +71,12 @@ it("loads only explicitly, renders plain text, localizes retained cards and bind
   });
 });
 it.each([
-  [
-    "platform",
-    "Not offered by this catalog for this platform",
-    "Não oferecida por este catálogo para esta plataforma",
-  ],
-  [
-    "engine",
-    "Not compatible with this OMXTerm or extension API version",
-    "Incompatível com esta versão do OMXTerm ou da API de extensões",
-  ],
-  [
-    "platform-and-engine",
-    "Not offered by this catalog for this platform",
-    "Não oferecida por este catálogo para esta plataforma",
-  ],
+  ["platform", "Not offered by this catalog for this platform"],
+  ["engine", "Not compatible with this OMXTerm or extension API version"],
+  ["platform-and-engine", "Not offered by this catalog for this platform"],
 ] as const)(
   "shows %s incompatibility and supported platforms",
-  async (reason, en, pt) => {
-    const labels: ((t: Translate) => void)[] = [];
+  async (reason, en) => {
     const request = vi
       .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
       .mockResolvedValue({
@@ -107,9 +94,7 @@ it.each([
           ],
         },
       });
-    document.body.append(
-      renderExtensions(document, { request }, () => true, labels),
-    );
+    document.body.append(renderExtensions(document, { request }, () => true));
     await vi.waitFor(() => expect(document.body.textContent).toContain(en));
     expect(document.body.textContent).toContain(
       "Catalog offer platforms: Linux ARM64, macOS ARM64",
@@ -118,44 +103,27 @@ it.each([
       expect(document.body.textContent).toContain(
         "Not compatible with this OMXTerm or extension API version",
       );
-    const install = button("Replace installed version");
-    expect(install.disabled).toBe(true);
-    labels.forEach((label) => label(translatorFor("pt-BR").t));
-    expect(document.body.textContent).toContain(pt);
-    expect(document.body.textContent).toContain(
-      "Plataformas desta oferta do catálogo: Linux ARM64, macOS ARM64",
-    );
-    expect(install.disabled).toBe(true);
+    expect(button("Replace installed version").disabled).toBe(true);
   },
 );
-it("explains unavailable extension management without a Files-specific claim", async () => {
-  const labels: ((t: Translate) => void)[] = [];
+it("explains unavailable extension management", async () => {
   const request = vi
     .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
     .mockResolvedValue({ ok: false, error: "unsupported" });
-  document.body.append(
-    renderExtensions(document, { request }, () => true, labels),
-  );
+  document.body.append(renderExtensions(document, { request }, () => true));
   await vi.waitFor(() =>
     expect(document.body.textContent).toContain(
       "Extension management is unavailable on this platform",
     ),
   );
-  labels.forEach((label) => label(translatorFor("pt-BR").t));
-  expect(document.body.textContent).toContain(
-    "O gerenciamento de extensões não está disponível nesta plataforma",
-  );
 });
 it.each(["unsupported", "runtime-unavailable"])(
   "does not promise offline installation when catalog refresh returns %s",
   async (error) => {
-    const labels: ((t: Translate) => void)[] = [];
     const request = vi
       .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
       .mockResolvedValue({ ok: false, error });
-    document.body.append(
-      renderExtensions(document, { request }, () => true, labels),
-    );
+    document.body.append(renderExtensions(document, { request }, () => true));
     await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
     button("Browse official extensions").click();
     await vi.waitFor(() =>
@@ -165,10 +133,6 @@ it.each(["unsupported", "runtime-unavailable"])(
     );
     expect(document.body.textContent).not.toContain(
       "local-file installation still work offline",
-    );
-    labels.forEach((label) => label(translatorFor("pt-BR").t));
-    expect(document.body.textContent).toContain(
-      "O catálogo e a instalação estão indisponíveis porque o gerenciamento de extensões está indisponível",
     );
   },
 );

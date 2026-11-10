@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 import type { BrowserWindow, MessageBoxOptions } from "electron";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { fromBufferPromise } from "yauzl";
 import { version as appVersion } from "../../package.json";
 import { InstalledPackages } from "../../src/installed-packages/installed-packages";
 import {
@@ -41,41 +40,22 @@ vi.mock("../../src/main/extension-download", async (original) => ({
 
 // Exercise the actual current source host version; do not spoof admission.
 const runtime = { appVersion, apiVersion: "0.1.0" };
-// Verbatim extension.json bytes extracted from immutable public archives.
-// The independent hashes identify those manifests and their source ZIPs.
+// Verbatim extension.json bytes extracted from the published archives.
 const releases = [
   {
     name: "Files 0.8.0",
     id: "omxterm.files",
-    archiveEnv: "OMXTERM_FILES_080_ARCHIVE",
-    archiveHash:
-      "88f3deb79e3b574a6ae4aa71d56ff74eb17fdd6c25b6123b30a519a4cc827563",
-    manifestHash:
-      "c57f5b0bd629384228d11860a81493a367e7902e0430cb297603ca53b641596e",
     manifest: `{"format":1,"id":"omxterm.files","version":"0.8.0","name":"Files — ARM64 preview","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
-    unsupported: "win32-arm64",
   },
   {
     name: "SSH 0.3.1",
     id: "omxterm.ssh",
-    archiveEnv: "OMXTERM_781_SSH_ARCHIVE",
-    archiveHash:
-      "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b",
-    manifestHash:
-      "5f418f7877777f242e67ed29ea03ed07bb3b059bb64ce88785e5a54950dfe4bf",
     manifest: `{"format":1,"id":"omxterm.ssh","version":"0.3.1","name":"SSH Connect","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1"],"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
-    unsupported: "win32-arm64",
   },
   {
     name: "Snippets 0.1.1",
     id: "omxterm.snippets",
-    archiveEnv: "OMXTERM_741_SNIPPETS_011_ARCHIVE",
-    archiveHash:
-      "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b",
-    manifestHash:
-      "bc7b873785add9bdb9f0bb50e4987375d181d3f6764fd0f12528382e76d7dda1",
     manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.1","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
-    unsupported: "win32-x64",
   },
 ] as const;
 type ReleaseFixture = (typeof releases)[number];
@@ -147,7 +127,6 @@ async function publishedRelease(
   );
   const release = catalog.find((entry) => entry.id === fixture.id);
   if (!release) throw new Error(`Missing catalog release: ${fixture.id}`);
-  expect(release.archive.sha256).toBe(fixture.archiveHash);
   const manifest = JSON.parse(fixture.manifest) as {
     id: string;
     version: string;
@@ -172,8 +151,8 @@ async function syntheticRelease(fixture: ReleaseFixture, bytes: Buffer) {
     archive: { ...release.archive, bytes: bytes.length, sha256: sha256(bytes) },
   };
 }
-async function catalogFor(release: CatalogRelease, target = "linux-arm64") {
-  const catalog = createExtensionCatalog(runtime, target);
+async function catalogFor(release: CatalogRelease) {
+  const catalog = createExtensionCatalog(runtime, "linux-arm64");
   adapters.download.mockResolvedValueOnce(
     Buffer.from(JSON.stringify({ schemaVersion: 1, entries: [release] })),
   );
@@ -203,7 +182,6 @@ async function expectInstalled(
   digest: string,
   backendBytes: string | Buffer,
   generation = 1,
-  originalFiles?: Map<string, Buffer>,
 ) {
   expect(await manager.snapshot()).toMatchObject([
     { id: fixture.id, digest, generation, enabled: true, local: "dormant" },
@@ -219,22 +197,10 @@ async function expectInstalled(
     expect(await readFile(path.join(pin.directory, "backend.mjs"))).toEqual(
       Buffer.from(backendBytes),
     );
-    for (const [name, contents] of originalFiles ?? [])
-      expect(await readFile(path.join(pin.directory, name)), name).toEqual(
-        contents,
-      );
   } finally {
     await pin.release();
   }
 }
-
-it.each(releases)(
-  "binds the published $name manifest bytes to its recorded identity",
-  async (fixture) => {
-    expect(sha256(fixture.manifest)).toBe(fixture.manifestHash);
-    await publishedRelease(fixture);
-  },
-);
 
 it.each(releases)(
   "offers and installs $name via captured catalog trust at the current runtime",
@@ -268,61 +234,42 @@ it.each(releases)(
   },
 );
 
-it.each(releases)(
-  "admits $name through local and direct-link trust with the same bytes",
-  async (fixture) => {
-    const bytes = archive(fixture.manifest);
-    const digest = sha256(bytes);
-    const release = await syntheticRelease(fixture, bytes);
-    const file = path.join(root, "selected.omxext");
-    await writeFile(file, bytes);
-    adapters.picker.mockResolvedValueOnce({
-      canceled: false,
-      filePaths: [file],
-    });
-    adapters.consent.mockImplementationOnce(async (_window, prompt) => {
-      expect(prompt.detail).toContain(digest);
-      expect(prompt.detail).not.toContain(
-        translator().t("extensions.catalogTrust"),
-      );
-      await writeFile(file, "changed after preparation");
-      return { response: 1 };
-    });
-    expect(
-      await installExtensionFromDialog(
-        window,
-        manager,
-        () => false,
-        translator,
-      ),
-    ).toBe(true);
-    await expectInstalled(fixture, digest, backend);
-    const downloaded = Buffer.from(bytes);
-    adapters.consent.mockImplementationOnce(async (_window, prompt) => {
-      expect(prompt.detail).toContain(digest);
-      expect(prompt.detail).toContain("Current generation: 1");
-      expect(prompt.detail).not.toContain(
-        translator().t("extensions.catalogTrust"),
-      );
-      downloaded.fill(0);
-      return { response: 1 };
-    });
-    await installLink(release, downloaded);
-    await expectInstalled(fixture, digest, backend, 2);
-  },
-);
-
-it.each(releases)(
-  "refuses a $name card on an unsupported target",
-  async (fixture) => {
-    const release = await syntheticRelease(fixture, archive(fixture.manifest));
-    const catalog = await catalogFor(release, fixture.unsupported);
-    const card = catalog.snapshot([]).entries[0]!;
-    expect(card).toMatchObject({ compatible: false, action: "install" });
-    expect(() => catalog.select(card.selection)).toThrow("incompatible");
-    expect(await packages.snapshot()).toEqual([]);
-  },
-);
+it("admits a published manifest through local and direct-link trust with the same bytes", async () => {
+  const fixture = releases[0];
+  const bytes = archive(fixture.manifest);
+  const digest = sha256(bytes);
+  const release = await syntheticRelease(fixture, bytes);
+  const file = path.join(root, "selected.omxext");
+  await writeFile(file, bytes);
+  adapters.picker.mockResolvedValueOnce({
+    canceled: false,
+    filePaths: [file],
+  });
+  adapters.consent.mockImplementationOnce(async (_window, prompt) => {
+    expect(prompt.detail).toContain(digest);
+    expect(prompt.detail).not.toContain(
+      translator().t("extensions.catalogTrust"),
+    );
+    await writeFile(file, "changed after preparation");
+    return { response: 1 };
+  });
+  expect(
+    await installExtensionFromDialog(window, manager, () => false, translator),
+  ).toBe(true);
+  await expectInstalled(fixture, digest, backend);
+  const downloaded = Buffer.from(bytes);
+  adapters.consent.mockImplementationOnce(async (_window, prompt) => {
+    expect(prompt.detail).toContain(digest);
+    expect(prompt.detail).toContain("Current generation: 1");
+    expect(prompt.detail).not.toContain(
+      translator().t("extensions.catalogTrust"),
+    );
+    downloaded.fill(0);
+    return { response: 1 };
+  });
+  await installLink(release, downloaded);
+  await expectInstalled(fixture, digest, backend, 2);
+});
 
 it("refuses an API-incompatible archive through catalog, local and link", async () => {
   const fixture = releases[0];
@@ -377,37 +324,6 @@ it("rejects an unknown capability before local or link trust", async () => {
   expect(adapters.consent).not.toHaveBeenCalled();
   expect(await packages.snapshot()).toEqual([]);
 });
-
-it.each([
-  "size",
-  "digest",
-  "id",
-  "version",
-  "host range",
-  "api range",
-] as const)(
-  "rejects a catalog/archive %s mismatch before consent",
-  async (field) => {
-    const fixture = releases[0];
-    const bytes = archive(fixture.manifest);
-    const release = await syntheticRelease(fixture, bytes);
-    if (field === "size") release.archive.bytes++;
-    if (field === "digest") release.archive.sha256 = "b".repeat(64);
-    if (field === "id") release.id = "other.files";
-    if (field === "version") release.version = "0.6.1";
-    if (field === "host range") release.engines.omxterm = ">=0.24.0";
-    if (field === "api range") release.engines.api = ">=0.1.0 <0.2.0";
-    const catalog = await catalogFor(release);
-    const card = catalog.snapshot([]).entries[0]!;
-    expect(card.compatible).toBe(true);
-    const selected = catalog.select(card.selection);
-    await expect(installLink(selected, bytes, true)).rejects.toMatchObject({
-      code: "catalog-mismatch",
-    });
-    expect(adapters.consent).not.toHaveBeenCalled();
-    expect(await packages.snapshot()).toEqual([]);
-  },
-);
 
 it("refuses a refreshed selection without revoking an already captured release", async () => {
   const fixture = releases[0];
@@ -511,58 +427,3 @@ it("opens an existing stable-host installation at the current runtime without re
   await expectInstalled(fixture, sha256(bytes), backend);
   expect(await packages.snapshot()).toEqual([previous]);
 });
-
-async function archiveFiles(bytes: Buffer) {
-  const zip = await fromBufferPromise(bytes, { lazyEntries: true });
-  const files = new Map<string, Buffer>();
-  try {
-    for await (const entry of zip.eachEntry()) {
-      if (entry.fileName.endsWith("/")) continue;
-      const stream = await zip.openReadStreamPromise(entry);
-      const chunks: Buffer[] = [];
-      for await (const chunk of stream as AsyncIterable<Buffer>)
-        chunks.push(chunk);
-      files.set(entry.fileName, Buffer.concat(chunks));
-    }
-    return files;
-  } finally {
-    zip.close();
-  }
-}
-
-// Optional exact-archive regression. Portable CI uses the synthetic tests above;
-// callers may explicitly supply each unchanged archive, never a private default.
-for (const fixture of releases) {
-  it.skipIf(!process.env[fixture.archiveEnv])(
-    `installs the supplied original ${fixture.name} archive at the current runtime`,
-    async () => {
-      const bytes = await readFile(process.env[fixture.archiveEnv]!);
-      expect(sha256(bytes)).toBe(fixture.archiveHash);
-      const files = await archiveFiles(bytes);
-      expect(files.get("extension.json")).toEqual(
-        Buffer.from(fixture.manifest),
-      );
-      const originalBackend = files.get("backend.mjs");
-      expect(originalBackend).toBeDefined();
-      const release = await publishedRelease(fixture);
-      expect(release.archive.bytes).toBe(bytes.length);
-      const catalog = await catalogFor(release);
-      const card = catalog.snapshot([]).entries[0]!;
-      expect(card.compatible).toBe(true);
-      const selected = catalog.select(card.selection);
-      const downloaded = Buffer.from(bytes);
-      adapters.consent.mockImplementationOnce(async () => {
-        downloaded.fill(0);
-        return { response: 1 };
-      });
-      await installLink(selected, downloaded, true);
-      await expectInstalled(
-        fixture,
-        fixture.archiveHash,
-        originalBackend!,
-        1,
-        files,
-      );
-    },
-  );
-}

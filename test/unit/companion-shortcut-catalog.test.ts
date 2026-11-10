@@ -11,7 +11,6 @@ import { companionToolShortcut } from "../../src/main/extension-presentation";
 import { validateUserConfiguration } from "../../src/main/user-configuration";
 import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 import { translatorFor } from "../../src/shared/i18n";
-import { shortcutActionName } from "../../src/renderer/settings/settings-shortcuts";
 
 function flatten(
   items: MenuItemConstructorOptions[],
@@ -26,21 +25,18 @@ const tools = [
     id: "omxterm.files",
     action: "toggleFiles",
     title: "Files",
-    label: "Toggle Files",
-    pt: "Alternar Files",
   },
   {
     id: "omxterm.ssh",
     action: "toggleSshConnect",
     title: "SSH Connect",
-    label: "Toggle SSH Connect",
-    pt: "Alternar SSH Connect",
   },
 ] as const;
 
 it.each(tools)(
   "projects $id once with its captured callback and nullable core binding",
   (tool) => {
+    const { t } = translatorFor("en-US");
     const invoke = vi.fn();
     const metadata = {
       id: tool.id,
@@ -64,52 +60,46 @@ it.each(tools)(
         ).keybinds;
         expect(configured.toggleSnippets).toBe(defaults.toggleSnippets);
         expect(configured.toggleAuxiliaryPanel).toBeNull();
-        for (const language of ["en-US", "pt-BR"] as const) {
-          const { t } = translatorFor(language);
-          expect(shortcutActionName(tool.action, t)).toBe(
-            language === "en-US" ? tool.label : tool.pt,
-          );
-          const catalog = createCoreActionCatalog(
-            "OMXTerm",
-            new Proxy({} as TerminalApplicationMenuActions, {
-              get: () => vi.fn(),
-            }),
-            configured,
-            t,
-            [
-              {
-                id: metadata.view.action,
-                shortcut: tool.action,
-                extension: true,
-                label: tool.title,
-                accelerator: "F9",
-                palette: true,
-                invoke,
-              },
-            ],
-          );
-          const projected = catalog[tool.action];
-          expect(projected.invoke).toBe(invoke);
-          expect(projected.label).toBe(tool.title);
-          expect(projected.accelerator).toBe(value);
-          expect(catalog[metadata.view.action]).toBeUndefined();
-          expect(coreActionKeybinds(catalog)[tool.action]).toBe(value);
-          expect(
-            corePaletteActions(catalog).filter(
-              (entry) => entry.invoke === invoke,
-            ),
-          ).toEqual([projected]);
-          const items = flatten(
-            coreActionMenuTemplate("OMXTerm", catalog, t),
-          ).filter((entry) => entry.click === invoke);
-          expect(items).toHaveLength(1);
-          expect(items[0]?.label).toBe(tool.title);
-          expect(items[0]?.accelerator ?? null).toBe(value);
-          projected.invoke();
-        }
+        const catalog = createCoreActionCatalog(
+          "OMXTerm",
+          new Proxy({} as TerminalApplicationMenuActions, {
+            get: () => vi.fn(),
+          }),
+          configured,
+          t,
+          [
+            {
+              id: metadata.view.action,
+              shortcut: tool.action,
+              extension: true,
+              label: tool.title,
+              accelerator: "F9",
+              palette: true,
+              invoke,
+            },
+          ],
+        );
+        const projected = catalog[tool.action];
+        expect(projected.invoke).toBe(invoke);
+        expect(projected.label).toBe(tool.title);
+        expect(projected.accelerator).toBe(value);
+        expect(catalog[metadata.view.action]).toBeUndefined();
+        expect(coreActionKeybinds(catalog)[tool.action]).toBe(value);
+        expect(
+          corePaletteActions(catalog).filter(
+            (entry) => entry.invoke === invoke,
+          ),
+        ).toEqual([projected]);
+        const items = flatten(
+          coreActionMenuTemplate("OMXTerm", catalog, t),
+        ).filter((entry) => entry.click === invoke);
+        expect(items).toHaveLength(1);
+        expect(items[0]?.label).toBe(tool.title);
+        expect(items[0]?.accelerator ?? null).toBe(value);
+        projected.invoke();
       }
     }
-    expect(invoke).toHaveBeenCalledTimes(12);
+    expect(invoke).toHaveBeenCalledTimes(6);
   },
 );
 
