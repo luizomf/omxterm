@@ -206,8 +206,50 @@ function optionalObservation(value: unknown): boolean {
   );
 }
 
+function nonnegativeObservation(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function nonnegativeSafeByteCount(value: unknown): boolean {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
 function cpuObservation(value: unknown, required: boolean): boolean {
-  return optionalObservation(value) && (!required || Number.isFinite(value));
+  return value === null ? !required : nonnegativeObservation(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const PRIMARY_ROLES = new Set<string>(ROLES);
+
+function stepRoleProblem(value: unknown, required: boolean): boolean {
+  if (!isRecord(value)) return true;
+  const validObservation = (observation: unknown) =>
+    observation === null ? !required : nonnegativeSafeByteCount(observation);
+  return (
+    !validObservation(value.steadyBytes) || !validObservation(value.peakBytes)
+  );
+}
+
+function stepRolesProblem(value: unknown): boolean {
+  if (!isRecord(value)) return true;
+  if (ROLES.some((role) => stepRoleProblem(value[role], true))) return true;
+  return Object.entries(value).some(
+    ([role, observation]) =>
+      !PRIMARY_ROLES.has(role) && stepRoleProblem(observation, false),
+  );
+}
+
+function cpuRolesProblem(value: unknown, requirePrimary: boolean): boolean {
+  if (!isRecord(value)) return true;
+  if (ROLES.some((role) => !cpuObservation(value[role], requirePrimary)))
+    return true;
+  return Object.entries(value).some(
+    ([role, observation]) =>
+      !PRIMARY_ROLES.has(role) && !cpuObservation(observation, false),
+  );
 }
 
 function stepProblem(
@@ -223,13 +265,10 @@ function stepProblem(
     if (
       !step ||
       step.tabs !== tabs ||
-      !step.roles ||
-      ROLES.some(
-        (role) =>
-          !Number.isFinite(step.roles[role]?.steadyBytes) ||
-          !Number.isFinite(step.roles[role]?.peakBytes),
-      ) ||
-      (addable ? !Number.isFinite(step.totalBytes) : step.totalBytes !== null)
+      stepRolesProblem(step.roles) ||
+      (addable
+        ? !nonnegativeSafeByteCount(step.totalBytes)
+        : step.totalBytes !== null)
     )
       return `incomplete ${name} step`;
   }
@@ -270,6 +309,7 @@ function streamProblem(
         (bytes: number | null) =>
           bytes === null ||
           !Number.isFinite(bytes) ||
+          !Number.isSafeInteger(bytes) ||
           bytes < stream.expectedBytes ||
           bytes > stream.expectedBytes + 64,
       ) ||
@@ -278,7 +318,7 @@ function streamProblem(
       !cpuObservation(stream.cpuPercentOneCore, requireCpu) ||
       ROLES.some(
         (role) =>
-          !Number.isFinite(stream.peaks[role]) ||
+          !nonnegativeSafeByteCount(stream.peaks[role]) ||
           !Number.isFinite(stream.retained[role]),
       )
     )
@@ -295,13 +335,9 @@ function idleProblem(
   if (
     repetition.quiet.name !== "sitting-still-after-history" ||
     !repetition.idle.growthBytes ||
-    !repetition.idle.cpuPercentOneCore ||
-    ROLES.some(
-      (role) =>
-        !Number.isFinite(repetition.idle.growthBytes[role]) ||
-        !cpuObservation(repetition.idle.cpuPercentOneCore[role], requireCpu) ||
-        !cpuObservation(repetition.idleCpuMedianPercent?.[role], requireCpu),
-    ) ||
+    ROLES.some((role) => !Number.isFinite(repetition.idle.growthBytes[role])) ||
+    cpuRolesProblem(repetition.idle.cpuPercentOneCore, requireCpu) ||
+    cpuRolesProblem(repetition.idleCpuMedianPercent, requireCpu) ||
     (addable && !Number.isFinite(repetition.idle.totalGrowthBytes)) ||
     !cpuObservation(repetition.idleCpuTotalMedianPercent, requireCpu)
   )
@@ -330,7 +366,6 @@ function windowProblem(
       !window ||
       typeof window.name !== "string" ||
       !window.growthBytes ||
-      !window.cpuPercentOneCore ||
       !window.applicationMemoryComplete ||
       !window.sampleTimesValid ||
       !Number.isFinite(window.windowMs) ||
@@ -339,11 +374,8 @@ function windowProblem(
       (window.name.startsWith("blink-") &&
         (window.documentHasFocus !== !window.name.endsWith("-unfocused") ||
           window.visibilityState !== "visible")) ||
-      ROLES.some(
-        (role) =>
-          !Number.isFinite(window.growthBytes[role]) ||
-          !cpuObservation(window.cpuPercentOneCore[role], requireCpu),
-      ) ||
+      ROLES.some((role) => !Number.isFinite(window.growthBytes[role])) ||
+      cpuRolesProblem(window.cpuPercentOneCore, requireCpu) ||
       (addable && !Number.isFinite(window.totalGrowthBytes)) ||
       !cpuObservation(window.totalCpuPercentOneCore, requireCpu)
     )
@@ -530,7 +562,7 @@ function runtimeProblem(baseline: BenchmarkBaseline): string | null {
     !Number.isSafeInteger(runtime.processCount) ||
     runtime.processCount < 1 ||
     !runtime.settled ||
-    !Number.isFinite(runtime.steadyBytes) ||
+    !nonnegativeSafeByteCount(runtime.steadyBytes) ||
     !Number.isFinite(runtime.growthBytes) ||
     !cpuObservation(
       runtime.cpuPercentOneCore,

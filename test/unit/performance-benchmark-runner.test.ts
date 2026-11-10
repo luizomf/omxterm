@@ -33,6 +33,7 @@ const REFERENCE_BUILD = {
   runtimeLeases: "d".repeat(64),
 };
 let root = "";
+
 afterEach(async () => {
   if (root) await rm(root, { recursive: true, force: true });
   launch.mockReset();

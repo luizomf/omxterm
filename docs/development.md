@@ -787,6 +787,20 @@ Measurement rules:
 - The scrollback pair runs the same sequence with `scrollback.lines` at 10,000
   and 0 and prints the per-process delta at six tabs for each repetition.
 
+Baseline preflight requires stored absolute byte counts—per-role step steady
+and peak values, addable step totals, stream peaks, and extension-runtime steady
+bytes—to be nonnegative safe integers. These values are min/max/sum results from
+integer-byte samples, not averages. Required primary-role observations remain
+required; optional secondary step-role observations may be absent or null, and
+non-addable step totals remain null. Delivered stream byte counts must be safe
+integers within the existing arrival range. Stored CPU percentages must be finite
+and nonnegative; null remains valid where the profile permits unavailable CPU,
+and one-core percentages may exceed 100. A nonnegative stored CPU aggregate does
+not establish that historical raw CPU counters were monotonic. Derived
+differences remain signed where appropriate, including per-tab marginals,
+idle/runtime growth, stream retained-byte deltas and scrollback-pair deltas;
+per-tab marginals and stream rates may be fractional.
+
 Platform profiles: the memory metric and the baseline file are per platform, in
 `PERFORMANCE_BENCHMARK_PROFILES`
 (`test/fixtures/performance-benchmark-report.ts`); this section names the
