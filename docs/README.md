@@ -66,6 +66,7 @@ Developer and architecture docs for contributors and coding agents:
 - **[Contributing translations](translations.md)** — a beginner-friendly browser-only correction, catalog examples, and maintainer help with new languages and checks.
 - **[AGENTS.md](../AGENTS.md)** — quick command reference and repository rules for coding agents.
 - **[Native development](development.md)** — OS prerequisites, test suites, graphical test precautions, and packaging verification.
+- **[First-time reader audit](first-time-reader-audit.md)** — newcomer blockers, documentation dispositions, and platform walkthroughs still needed.
 - **[SSH Connect development record](ssh-connect-development.md)** — exact package evidence, integration contract, and qualification limits.
 - **[Saved Layout development record](saved-layout-development.md)** — source build, storage behavior, compatibility and qualification limits.
 - **[Mirror Typing development record](mirror-typing-development.md)** — source build, input behavior, capability contract and qualification limits.
