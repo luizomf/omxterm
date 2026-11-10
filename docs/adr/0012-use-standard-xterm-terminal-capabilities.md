@@ -23,8 +23,8 @@ on Wayland, `EGL_PLATFORM=wayland` (unless already set) before any application
 code runs, and `NO_AT_BRIDGE=1` during GTK initialization, which comes after
 main's module code. Main captures the three values while its module code first
 runs and sessions get those values back, or have them unset. The process's
-initial environment block cannot be used instead: Chromium's process-title
-setup overwrites it, and `/proc/self/environ` reads back empty. A launcher
+initial environment block cannot be used instead: `/proc/self/environ` reads
+back empty in main (likely overwritten by Chromium's process-title setup). A launcher
 that recorded the originals would cover the AppImage but not every launch path,
 and would add a variable of its own to clean up. So a launch value identical to
 Chromium's for the two early variables is dropped, which is the accepted cost.
