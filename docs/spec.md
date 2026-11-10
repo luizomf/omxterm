@@ -709,9 +709,8 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   A path containing a bracketed-paste terminator is refused rather than rewritten.
   Explicit focus returns to terminal input rather than a retained search query;
   a newer companion selection or pending overlay prevents focus theft.
-  Files0.8.0 preparation packages this behavior with `terminal.insertPath.v1`,
-  minimum host `>=0.25.0-dev.20` and API `0.1.x`. Exact shipping-pair qualification
-  and publication remain separate; installed Files0.6/0.7 bytes are unchanged.
+  Files0.8.0 packages this behavior with `terminal.insertPath.v1`, minimum host
+  `>=0.26.0` and API `0.1.x`; installed Files0.6/0.7 bytes are unchanged.
   SSH Connect creates a new Terminal Tab, preserving previous sessions and the
   visible panel. Its foreground handoff acknowledges native focus returning to
   core while the panel remains visible; a background result does not steal focus.
@@ -2503,11 +2502,10 @@ Published Files0.7.0 uses `>=0.25.0-dev.10` / API `0.1.x`, the neutral ARM64
 preview name and existing host services for filtering/keyboard and confirmed
 directory moves, without terminal insertion/drop. Current Files0.8.0 prepares
 selected-path insertion and Files-to-terminal drop with `terminal.insertPath.v1`,
-minimum host `>=0.25.0-dev.20` and API `0.1.x`, matching the integrated host
-consumer. Production archive admission refuses lower hosts; ordinary semver
-admits dev.20 and later dev.N in the same 0.25.0 family. The explicit 0.26.0
-bridge also admits this range; unrelated development families and incompatible
-APIs remain refused unless ordinary semver admits them.
+minimum host `>=0.26.0` and API `0.1.x`, the first published host with the
+consumer. Production archive admission and the catalog refuse lower hosts; the
+explicit 0.26.1 development bridge admits this range, and unrelated development
+families and incompatible APIs remain refused.
 Published Files0.6/0.7 bytes remain unchanged. Preparation is
 not exact shipping-pair qualification or publication. Prior Linux native UI used
 production modules with inert session/backend/package dependencies, not a real
