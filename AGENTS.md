@@ -7,12 +7,12 @@ OMXTerm is an open-source desktop terminal for ARM64 macOS, Linux, and Windows (
 ```sh
 npm ci                       # Install locked dependencies and prepare native runtimes
 npm run dev                  # Build and launch OMXTerm in development
-npm test -- test/unit        # Run headless unit tests
+npm run test:unit            # Fast headless check (~1 min); run it after every change
 npm run check:portable       # Format check, lint, typecheck, default tests, and build
 npm run format:check         # Check formatting with Prettier
 ```
 
-Graphical integration tests (part of `npm test` and `npm run check:portable`) open and focus real Electron windows and can write to the system clipboard. Run one suite at a time on an idle, unlocked desktop. Use `npm test -- test/unit` for fast headless feedback.
+Graphical integration tests (part of `npm test` and `npm run check:portable`) open and focus real Electron windows and can write to the system clipboard. Run one suite at a time on an idle, unlocked desktop. Use `npm run test:unit` for fast headless feedback.
 
 Pick verification proportional to the change. If a test can't run, report it as unrun and keep going.
 
