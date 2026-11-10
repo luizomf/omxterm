@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { expect, it } from "vitest";
+import { skipWithoutFixtureFonts } from "../fixtures/native-fixture-fonts";
 import {
   runNativeFixture,
   type NativeFixtureTestContext,
@@ -20,6 +21,8 @@ import {
   nativeWindowDiscoveryTimeout,
   rejectLegacyNativeWindowDeclarations,
 } from "../fixtures/window-policy";
+
+skipWithoutFixtureFonts(["DejaVu Sans Mono"]);
 
 async function runCursor(
   dpr: number,

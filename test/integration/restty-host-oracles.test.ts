@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { skipWithoutHostFixtureFonts } from "../fixtures/native-fixture-fonts";
 import { buildHostFixture } from "../fixtures/restty-host-build";
 import {
   hasResttyImagePlacementEvidence,
@@ -23,6 +24,8 @@ import type { ResttyGestureControl } from "../fixtures/restty-gesture-routing-mu
 import type { exerciseResttyOrdinaryGestures } from "../fixtures/restty-link-gestures";
 import type { ResttySearchEvidence } from "../fixtures/restty-host-search";
 import type { ResttyExportEvidence } from "../fixtures/restty-host-export";
+
+skipWithoutHostFixtureFonts();
 
 const electronExecutable = createRequire(import.meta.url)("electron") as string;
 const prefix = "__OMXTERM_RESTTY_HOST_RESULT__";

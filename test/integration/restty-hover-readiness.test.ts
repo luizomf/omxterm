@@ -3,6 +3,7 @@ import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
+import { skipWithoutHostFixtureFonts } from "../fixtures/native-fixture-fonts";
 import { buildHostFixture } from "../fixtures/restty-host-build";
 import {
   runNativeFixture,
@@ -22,6 +23,8 @@ import {
   type HoverGeometry,
   type HoverPixels,
 } from "../fixtures/restty-hover-evidence";
+
+skipWithoutHostFixtureFonts();
 
 interface Phase {
   readonly phase: string;

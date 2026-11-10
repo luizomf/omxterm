@@ -11,6 +11,10 @@ import {
   installedFontData,
   installedFontFamilyMetrics,
 } from "../../src/main/installed-font-family";
+import {
+  DEJAVU_SANS_MONO_STYLES,
+  missingFixtureFontsReason,
+} from "../fixtures/native-fixture-fonts";
 
 describe("native installed font-family availability", () => {
   it
@@ -56,7 +60,9 @@ describe("native installed font-family availability", () => {
     },
   );
 
-  it("delivers native regular, bold, italic and bold-italic faces through the bounded font contract", async () => {
+  it("delivers native regular, bold, italic and bold-italic faces through the bounded font contract", async (context) => {
+    const missing = missingFixtureFontsReason(DEJAVU_SANS_MONO_STYLES);
+    if (missing) context.skip(missing);
     const family =
       process.platform === "darwin"
         ? "Menlo"
@@ -82,7 +88,9 @@ describe("native installed font-family availability", () => {
       ).toBe(4);
     }
   }, 30_000);
-  it("accepts an exact built-in family and rejects a nonexistent family", async () => {
+  it("accepts an exact built-in family and rejects a nonexistent family", async (context) => {
+    const missing = missingFixtureFontsReason(["DejaVu Sans"]);
+    if (missing) context.skip(missing);
     const installedFamily =
       process.platform === "darwin"
         ? "Helvetica"

@@ -8,7 +8,6 @@ import { runNativeFixture } from "../fixtures/run-native-fixture";
 import {
   POPUP_INPUT_PROVISIONING_ENV,
   POPUP_INPUT_RECEIPT_PREFIX,
-  requireProvisionedPopupInput,
 } from "../fixtures/terminal-popup-input-admission";
 
 const executable = createRequire(import.meta.url)("electron") as string;
@@ -23,8 +22,12 @@ describe.skipIf(process.platform !== "linux")(
       "checks %s routing with settled native ownership",
       { timeout: 120_000 },
       async (control, context) => {
+        // An unprovisioned desktop is a missing prerequisite, not a regression.
+        if (process.env[POPUP_INPUT_PROVISIONING_ENV] !== "1")
+          context.skip(
+            `Native popup input lane not provisioned; set ${POPUP_INPUT_PROVISIONING_ENV}=1 after provisioning (see docs/development.md#native-terminal-popup-linux)`,
+          );
         context.signal.throwIfAborted();
-        requireProvisionedPopupInput(process.env[POPUP_INPUT_PROVISIONING_ENV]);
         if (previousCaseFailed)
           throw new Error(
             "Native popup input lane requires operator inspection after the previous case failed",

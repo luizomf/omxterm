@@ -31,7 +31,7 @@ sudo pacman -S --needed base-devel python patch binutils procps-ng fontconfig fi
 ```
 
 - `npm ci` patches and rebuilds the `node-pty` addon (with exec-status reporting) on ARM64 and x64, so both need C++ build tools and `patch`.
-- Check the fixture fonts with `fc-list : family`. A missing font fails native font tests with `Configured native fixture font is missing`.
+- Check the fixture fonts with `fc-list : family`. Native tests that need a missing one skip with `Fixture font not installed: …`.
 - Linux package verification also needs Python 3.9+ and pidfd support (kernel 5.3+). Without them it fails instead of signaling by bare PID.
 
 If `npm ci` failed part-way because a tool like `patch` or `make` was missing, install it and run:
@@ -286,7 +286,7 @@ dialog. Then declare the setup and run the suite alone:
 OMXTERM_TEST_PROVISIONED_NATIVE_INPUT=1 npx vitest run test/integration/terminal-popup-native.test.ts
 ```
 
-Without the variable the suite fails, not skips. The fixture sends one F5/F6
+Without the variable its cases skip; a skip is not qualification. The fixture sends one F5/F6
 calibration pair and requires the app to receive F6 before opening any popup.
 
 ### Opt-in native test suites
