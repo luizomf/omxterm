@@ -48,6 +48,7 @@ interface NativeFixtureOptions {
 
 const SAMPLE_INTERVAL_MS = 500;
 const KILL_DEADLINE_MS = 5_000;
+const EXIT_GRACE_MS = 1_000;
 const STREAM_CLOSE_MS = 1_000;
 
 const delay = (ms: number) =>
@@ -70,6 +71,38 @@ export function runNativeFixture(
 }
 
 function noop(): void {}
+
+/** Kill every owned process still alive after `graceMs`. */
+async function killRemaining(
+  sample: () => FixtureProcess[],
+  owned: ReadonlyMap<number, FixtureProcess>,
+  graceMs: number,
+): Promise<"none" | "attempted"> {
+  const killFrom = Date.now() + graceMs;
+  const deadline = killFrom + KILL_DEADLINE_MS;
+  let assistance: "none" | "attempted" = "none";
+  let failure: unknown;
+  while (Date.now() < deadline) {
+    try {
+      const alive = sample().filter(
+        (row) => owned.get(row.pid)?.identity === row.identity,
+      );
+      if (alive.length === 0) return assistance;
+      failure = new Error(
+        `Fixture processes survived cleanup: ${alive.map((row) => row.pid).join(",")}`,
+      );
+      if (Date.now() >= killFrom) {
+        assistance = "attempted";
+        for (const row of alive) kill(row.pid);
+      }
+    } catch (error) {
+      // A failed inventory is retried until the deadline.
+      failure = error;
+    }
+    await delay(100);
+  }
+  throw failure;
+}
 
 function kill(pid: number): void {
   try {
@@ -146,6 +179,7 @@ async function execute({
       owned.set(leader.pid, leader);
     const registry = path.join(root, FIXTURE_PROCESS_DIRECTORY);
     for (const name of readdirSync(registry)) {
+      if (!name.endsWith(".json")) continue; // Still being written.
       const row = JSON.parse(
         readFileSync(path.join(registry, name), "utf8"),
       ) as FixtureProcess;
@@ -193,21 +227,15 @@ async function execute({
   abortSignal?.removeEventListener("abort", cancel);
 
   let cleanupAssistance: "none" | "attempted" = "none";
+  if (!exited && child.exitCode === null && child.signalCode === null) {
+    cleanupAssistance = "attempted";
+    child.kill("SIGKILL");
+  }
   try {
-    const deadline = Date.now() + KILL_DEADLINE_MS;
-    for (;;) {
-      const alive = sample().filter(
-        (row) => owned.get(row.pid)?.identity === row.identity,
-      );
-      if (alive.length === 0) break;
-      if (Date.now() >= deadline)
-        throw new Error(
-          `Fixture processes survived cleanup: ${alive.map((row) => row.pid).join(",")}`,
-        );
+    // A naturally exiting fixture gets a moment for its helpers to exit too.
+    const grace = reason === "exit" ? EXIT_GRACE_MS : 0;
+    if ((await killRemaining(sample, owned, grace)) === "attempted")
       cleanupAssistance = "attempted";
-      for (const row of alive) kill(row.pid);
-      await delay(100);
-    }
   } catch (error) {
     cleanupErrors.push(String(error));
   }

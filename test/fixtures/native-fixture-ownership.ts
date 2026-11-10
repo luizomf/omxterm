@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fixtureProcesses } from "./native-fixture-processes";
 
@@ -14,10 +14,10 @@ export function registerFixtureProcess(pid: number): void {
   if (!root) throw new Error("Native fixture ownership root is missing");
   const row = fixtureProcesses().find((candidate) => candidate.pid === pid);
   if (!row) return; // Already gone; nothing left to own.
-  writeFileSync(
-    path.join(root, FIXTURE_PROCESS_DIRECTORY, `${pid}.json`),
-    JSON.stringify(row),
-  );
+  // Write then rename, so the runner never reads a partial record.
+  const record = path.join(root, FIXTURE_PROCESS_DIRECTORY, `${pid}.json`);
+  writeFileSync(`${record}.tmp`, JSON.stringify(row));
+  renameSync(`${record}.tmp`, record);
 }
 
 export function spawnFixtureProcess<T extends { readonly pid: number }>(
