@@ -101,7 +101,7 @@ npm run check:portable
 > npm run test:unit
 > ```
 
-For changes that affect native packaging or installers, see [packaging verification](docs/development.md#evidence-reuse-and-packaging). Note that full Windows installer verification (`npm run check:win`) performs a real installation and requires a disposable VM with a recovery snapshot.
+For changes that affect native packaging or installers, see [packaging verification](docs/development.md#packaging-and-verification). Note that full Windows installer verification (`npm run check:win`) performs a real installation and requires a disposable VM with a recovery snapshot.
 
 In your PR description, list the checks you ran and any you couldn't run. A
 test you couldn't run doesn't block your PR; maintainers decide whether more

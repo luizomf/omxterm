@@ -3,7 +3,7 @@
 Measured on a disposable Linux ARM64 guest, profile **linux-arm64** (machine
 class `linux-arm64-4cpu-virtualized`, Electron 43.8.1, Chromium 150.0.7871.250,
 virtualized GPU). The host is not identified further on purpose; see
-[the benchmark contract](../../development.md#performance-regression-benchmark).
+[the benchmark contract](../../development.md#performance-benchmark).
 
 The current baseline recording measured clean source
 `573eb96de4a620b2106ad1eb00d98aa163682b6e` with schema 5. It replaces the

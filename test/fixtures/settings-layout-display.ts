@@ -63,6 +63,6 @@ export function assertSettingsDisplayGeometry(options: {
       "Provision a larger logical usable work area in the assigned test desktop, " +
       "then run npm test -- test/integration/window-chrome.test.ts -t settings-only " +
       "before the full suite. The matrix has not run; this is a failure, not a skip. " +
-      "See docs/native-test-reference.md#settings-layout.",
+      "See docs/development.md#settings-layout-display-requirement.",
   );
 }
