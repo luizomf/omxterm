@@ -43,9 +43,10 @@ vi.mock("electron", () => ({
 }));
 
 // The preload keeps the latest configuration and replays it to subscribers,
-// so each test loads a fresh module instead of inheriting another's state.
+// so each test loads a fresh module and counts only its own IPC calls.
 beforeEach(async () => {
   vi.resetModules();
+  vi.clearAllMocks();
   electron.listeners.clear();
   await import("../../src/preload/index");
 });
