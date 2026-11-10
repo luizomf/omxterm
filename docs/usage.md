@@ -34,10 +34,9 @@ To protect active work, OMXTerm asks for confirmation before closing a pane, tab
 
 ### Source previews
 
-[Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md) are
-separately built source previews, not tools currently offered through an
-extension catalog. Their availability notes explain what is currently offered;
-the linked developer records retain build and qualification details.
+Saved Layout and Mirror Typing are code previews, not tools offered through
+an extension catalog. See [Optional tools](README.md#optional-tools) for the
+current availability summary.
 
 ## Window controls
 
@@ -281,10 +280,8 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 Snippets are available as an optional extension on supported host versions. To
 install or update it, choose **Settings → Extensions → Browse official
-extensions**. For current platform availability and offline installation, see
-the [Snippets guide](snippets-migration.md) and the concise
-[optional-tools availability summary](README.md#optional-tools), including
-built-in Windows x64 Snippets and preview limits on Linux/macOS ARM64.
+extensions**. See [Optional tools](README.md#optional-tools) for supported
+systems and known limits.
 
 Choose **Insert** to send text to the terminal without adding Enter,
 or **Run** to send it with Enter. **Preview** lets you review the text and
@@ -300,11 +297,9 @@ versions. Install them from **Settings → Extensions**, then open them from the
 application menu or Command Palette. Files browses local folders; SSH Connect
 starts a separate terminal session.
 
-For version availability and platform limits, see the [Files
-guide](files-development-preview.md) and [SSH Connect
-guide](ssh-connect.md). Source-only features may require a newer host and
-extension archive; updating OMXTerm alone does not update an installed
-extension.
+For platform availability and limits, see [Optional tools](README.md#optional-tools)
+and the [SSH Connect guide](ssh-connect.md). Updating OMXTerm alone does not
+update an installed extension.
 
 ### Resize or close the auxiliary panel
 
