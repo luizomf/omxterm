@@ -1,192 +1,139 @@
-# SSH Connect development preview
+# SSH Connect development
 
-This is a maintainer and contributor record. For installation and connection
-steps, see the [SSH Connect user guide](ssh-connect.md).
+SSH Connect is an optional extension that opens OpenSSH sessions in new
+OMXTerm terminal tabs. It ships as a separate `.omxext` archive, not inside the
+host. Users install it from **Settings → Extensions** and open it from File, the
+Command Palette or the terminal context menu, or with an optional
+`toggleSshConnect` shortcut. The [SSH Connect user guide](ssh-connect.md) covers
+installation and connecting.
 
-SSH Connect is an optional, separately installed extension. The published
-catalogs offer the same unchanged SSH0.3.1 archive for **Linux ARM64** and
-**macOS ARM64**. The [bounded macOS public-catalog checkpoint](#macos-arm64-public-catalog-checkpoint)
-used the stable0.24.0 host; catalog admission does not qualify every host or
-workflow. It is not bundled with the terminal, a stable SDK, or an SSH broker.
-Windows and other targets are not qualified by this work.
+The extension lists `Host` aliases from `~/.ssh/config` and offers a quick-connect
+field. It never runs `ssh` itself. It asks core, through one typed capability, to
+open a terminal tab that runs the system `ssh`. Core owns that tab from then on.
+It is not an SDK, an SSH broker, a credential vault or a reconnect service.
 
-The separately published SSH0.3.1 archive and its original checksum/receipt are
-immutable. Current source includes a later capability-unavailable message correction;
-it is not present in that archive. An isolated test build may use a distinct output
-path, but must not be confused with or replace the published archive. A maintainer
-must assign a new extension version before publishing changed bytes. Install an
-offered archive through Settings → Extensions and review the ordinary trusted-code
-warning. Open **SSH Connect** from File, the Command Palette or the terminal context
-menu. There is no new toolbar or default shortcut. Host source also
-supports an optional `toggleSshConnect` binding in Settings → Shortcuts, reusing
-the same entry point once per key press. Missing/disabled/unsupported tools do
-not consume that key. A host change does not update an installed extension, and
-building an archive alone does not publish it.
+## Where the code lives
 
-Source version 0.3.1 requires host 0.24.0-dev.8 or later for its read-only
-appearance and interface-language subscriptions. Compact controls share the terminal's theme tokens;
-the base surface reveals the parent window's single tint rather than painting
-an opaque background. Live theme/opacity updates retain search, quick-connect
-and other view state, including while hidden. Native blur remains host-owned
-and compositor dependent. The bundled stylesheet includes all shared tokens.
-Controls, accessible names and notices follow the host's `en-US` or `pt-BR`
-interface language. Live language changes retain drafts, selected aliases, focus
-and pending operations without rediscovery or automatic connection retries.
-Alias names and connection targets remain literal, untranslated data.
-Version 0.3.0 is separately published; the historical 0.1.0 archive remains
-immutable. Updating the host alone does not update a separately installed extension:
-review and deliberately install the newer extension. Current source leaves the
-visible SSH Connect identity to the host header while retaining its named child
-region and OpenSSH sections. The published 0.3.0 archive keeps its original
-heading, including on a newer host. The separately published
-[SSH0.3.1 archive](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1)
-uses the shared panel header. The exact Linux ARM64 host0.24.0/SSH0.3.1 local
-pair and a bounded older dev.11/local-archive pair passed with synthetic clients;
-this does not establish real SSH authentication or remote connectivity. The
-original archive/checksum/receipt were byte-verified separately, and the receipt
-remains `not-run`. Catalog promotion and the separate
-[public-HTTPS checkpoint](#ssh-031-linux-public-catalog-checkpoint) did not
-replace that receipt. The stable-pair [#746](https://github.com/luizomf/omxterm/issues/746)
-diagnostic remains unexplained.
+- `extensions/ssh/extension.json`: id `omxterm.ssh`, version, host range, API and
+  the `terminal.openSsh.v1` capability.
+- `extensions/ssh/page.ts`, `view.ts`, `index.html`, `ssh.css`: the panel page.
+  It follows the host theme and interface language (`en-US`, `pt-BR`) through
+  read-only subscriptions; strings live in `messages.ts`.
+- `extensions/ssh/backend.ts`, `discovery.ts`: the backend and the alias index.
+- `src/shared/ssh-target.ts`: target grammar and argv.
+- `src/main/ssh-terminal-launch.ts`, `ssh-terminal-ipc.ts`,
+  `application-extension-views.ts`: capability routing, admission and the handoff
+  token.
 
-## Installing the distributed preview
+## Connecting
 
-The [stable OMXTerm 0.24.0 host](https://github.com/luizomf/omxterm/releases/tag/v0.24.0)
-and the separately published [SSH Connect 0.3.1 archive](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1)
-are distinct downloads. On Linux and macOS ARM64, **Browse official extensions**
-offers SSH0.3.1. Local/link installation checks host/API compatibility, not
-catalog target qualification. Check this guide and the selected release rather
-than treating a successful manual install as a platform-support guarantee.
+- Search only filters the alias list; an unmatched query is never a destination.
+  The separate **Quick connect** field takes `[user@]host[:port]`, such as
+  `alice@[2001:db8::1]:2222`.
+- Hosts and aliases are 1–253 ASCII letters, digits, `_`, `.` and `-`, without a
+  leading hyphen. Users follow the same rule up to 64 characters. Ports are
+  1–65535. The field accepts at most 384 characters and trims surrounding ASCII
+  spaces. IPv6 needs brackets. Zone ids, Unicode names, URLs, remote commands and
+  extra options are refused.
+- Keyboard Connect captures the target on Enter down and dispatches on release;
+  repeats are consumed. Editing, hiding, blur or a lost release cancels it.
+  Pointer Connect is immediate. Pending controls block duplicate submits.
+- An accepted reply means core accepted a terminal tab, not that SSH
+  authenticated. An uncertain reply says a tab may already exist, and the page
+  never retries on its own.
+- The new tab takes focus only while the panel owns foreground interaction and
+  no modal owns input. Otherwise it opens in the background. The panel stays
+  open.
 
-Review the version, digest and trusted-code warning. Installation is dormant; open
-SSH Connect separately to activate it. Official does not mean sandboxed. The
-archive requires host 0.24.0-dev.8 or later, but a minimum version alone does not
-establish platform support or qualify every admitted host. The immutable SSH0.3.1
-archive's capability-unavailable message still mentions only Linux ARM64; that
-historical wording is not a current macOS compatibility test. Stable host0.24.0
-also incorrectly describes extension management itself as Linux ARM64-only in
-Settings; the host-source correction is not present in that immutable release.
+## Capability and admission
 
-The earlier [Linux ARM64 host 0.24.0-dev.11 prerelease](https://github.com/luizomf/omxterm/releases/tag/v0.24.0-dev.11)
-and [SSH Connect 0.3.0 release](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.0)
-remain a separate historical exact pair. Stable 0.23.0 and 0.23.0-dev.9 cannot
-run SSH Connect. Their earlier catalog checkpoint does not establish the new offer.
+[ADR 0041](adr/0041-transfer-ssh-launches-to-core.md) records why launches move to
+core.
 
-The published [ssh-0.3.0-77937fc.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.0/ssh-0.3.0-77937fc.omxext)
-is 11,572 bytes, SHA-256
-`13b265058ba051bb1dcf57ba1cef9347ed8d6851069a4ad1206af0469feb46cf`.
-The immutable prerelease was published on 2026-10-30 at 20:07:34 UTC; draft and
-anonymous public downloads of the archive and both original sidecars matched
-byte-for-byte. Tag `ext-ssh-v0.3.0` identifies build source
-`77937fcf87ae71a68709111df7ace7359fb3f0b6`, not the later source-integration squash.
-The original receipt retains build-time `qualification.status: not-run` and
-`intendedHost: 0.24.0-dev.19`; later qualification used public dev.11 instead.
-That AppImage's SHA-256 is
-`04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`.
+- The manifest declares `"capabilities": ["terminal.openSsh.v1"]`; unknown
+  declarations are rejected. The view can ask
+  `{operation: "host.capabilities"}` for the available selectors.
+- The request is `{operation: "terminal.openSsh.v1", target: {host, user?, port?}}`
+  with exact keys.
+- Main validates the target, then looks for an executable regular `ssh` file
+  (symlinks allowed) in the absolute directories of the application `PATH` at
+  Connect time. That `PATH` can differ from a login shell's. If `ssh` is missing,
+  the page shows an error and no tab opens. OMXTerm never installs `ssh`.
+- Main builds literal argv: optional `-l USER`, optional `-p PORT`, then
+  `-- HOST`. There is no shell string and the caller can't pick the executable or
+  environment.
+- Requests are bound to the view's captured package pin, generation, digest,
+  local revision and original window. Store revalidation authorizes the request.
+  A separate synchronous transfer rechecks local revocation, then commits a
+  one-shot core pane token. No lock spans rendering or spawn.
+- Tokens belong to one window and one pending pane. There is at most one per view
+  and 32 per application. They expire after 60 seconds unused and are removed on
+  use, cancellation, window loss or Quit. They can't select startup `-e`, another
+  window, or start twice.
+- Renderer acknowledgement is a notification, not authorization. A missing
+  acknowledgement makes the outcome unknown, and it is never replayed.
 
-The exact dev.11/SSH0.3 pair passed the 12-cell appearance/language and
-synthetic Connect campaign, including normal/narrow geometry, retained state,
-core-owned terminals and joined Quit. A noncomposited nested desktop does not
-qualify native blur or universal transparency readability. Controlled inputs and
-synthetic clients do not establish real authentication or remote connectivity.
-Public asset verification and the subsequent catalog checkpoint remain separate
-evidence boundaries.
+## Core-owned SSH tabs
 
-### Historical 0.1.0 preview
+- After transfer the session belongs to core. Disabling, updating or uninstalling
+  the extension, or losing its backend, doesn't end it.
+- A live SSH session counts as Busy for close and Quit.
+- Exit 0 closes the pane. A nonzero exit keeps a readable, copyable, searchable
+  Surface with an exit-code notice and Close. Input, resize and protocol replies
+  stop. Ended content isn't Busy. Startup failures and signals keep their
+  acknowledgement behavior.
+- SSH output never feeds local OSC 7 directory tracking. New tabs and splits
+  start the default shell at home.
+- Remote titles are display-only, with an `SSH · HOST` fallback. `ssh` typed in an
+  ordinary shell isn't detected.
 
-The original [ssh-6d939f0.omxext archive](https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.1.0/ssh-6d939f0.omxext)
-retains its source-named filename and original checksum/receipt unchanged:
-version0.1.0,9418bytes,SHA-256
-`d11d16df09876d20a6fc766fcb1e5d76e2214d0d0965ad90be47496e4b066699`.
-The receipt identifies source6d939f0 and build-time qualification `not-run`;
-subsequent package evidence is separate, not a rewritten build receipt.
+## Alias index
 
-The historical dev.0/SSH0.1 host/archive pair passed a synthetic-client campaign
-and host FULL verifier; unchanged Files0.1.0 passed its lifecycle on that host.
-Those Files results do not establish Files0.1 compatibility with dev.11. These are not a real SSH
-connectivity/authentication campaign or proof of public catalog consumption.
-The [release procedure](release.md#publishing-an-extension-archive) requires a separate
-public-only checkpoint after rollout; record its actual outcome, never infer it
-from source integration or these instructions.
+- Opening and **Refresh** read the account's `.ssh/config`; a missing file is
+  normal. Discovery never runs `ssh -G`, `Match exec`, a shell, DNS or a network
+  probe, and never writes SSH files. It lists literal `Host` names, not resolved
+  `HostName`, user or key data.
+- The tokenizer handles case-insensitive directives, whitespace or `=`, double
+  quotes and comments outside quotes. Malformed quotes, escapes and unsupported
+  tokens mark the result incomplete.
+- `Include` is followed only in unconditional context: at the start, or after
+  exact `Host *` or `Match all`. Included Host/Match state continues in the
+  parent. Relative includes anchor at `.ssh`, even in nested files. Absolute
+  paths, `~/`, `*` and `?` work; environment variables, `%` tokens, `~user`,
+  bracket classes and `**` don't.
+- Bounds: depth 16, 64 file visits, 256 KiB per file, 1 MiB total, 4,096
+  characters per line, 4,096 glob entries and 256 aliases. Files are opened
+  non-blocking and must be regular; symlink cycles are refused.
+- A partial result carries fixed reason counts. Quick connect still works for
+  missing aliases.
+- Refresh is serialized per view and stale replies are dropped. The backend runs
+  at most eight discoveries at once, and a slot frees only when its filesystem
+  work settles.
 
-## Public distribution checkpoint
+## Build and test
 
-The SSH0.3 catalog promotion at `6f4355d6573b0fb4e3f8591655d7db789106a8a7`
-passed independent review, full formatting/types/lint and 4,305 headless tests
-(66 skipped). Fixed raw endpoint bytes matched SHA-256
-`0a446b1a3c53960508f0d0b16a951e5f889d9998230832624d8f1edddef6dd15` after the
-initial CDN cache expired. Files and Snippets entries were preserved.
+Unit tests cover the target grammar, discovery bounds, the page, IPC and renderer
+composition and the retained Surface:
 
-A separate ordinary-user Linux ARM64 public-HTTPS checkpoint passed using fresh
-public dev.11 AppImage/SSH0.3 downloads with the hashes above. Production Settings
-installed and reinstalled the captured archive with two digest-bound consents;
-installation stayed dormant, explicit activation worked, reinstall/disable joined
-both backends, uninstall completed, and the same original terminal/Surface
-remained usable. Normal Busy Quit joined the PTY and main exit0; independent
-process/profile/lane absence and unchanged source/artifact hashes were checked.
-No SSH client was executed. Controlled input/dialogs, extracted AppImage execution
-and noncomposited rendering do not qualify real authentication, physical input,
-FUSE/helper installation, native blur or broad GPU support.
+```sh
+npx vitest run test/unit/ssh-*.test.ts
+```
 
-The initial public run failed because its observer required every Settings button
-to be enabled, including an intentionally incompatible Files card. The failure
-was retained; fixture `f65c1c1d38a5a5866d2fe5118b75d575c21c5f55` scopes readiness
-to the page's own acquisition controls, with busy/missing-control negatives checked.
-The corrected run passed without changing product or archive bytes. The retained
-terminal capture was inspected; the two catalog captures lagged DOM transitions
-and are **not** additional visual qualification. Public lifecycle proof comes from
-actual production actions/receipts; SSH appearance evidence is the separate
-12-cell exact-package campaign above.
-
-### SSH 0.3.1 Linux public-catalog checkpoint
-
-🤖 AI-assisted.
-
-On 2026-11-02, an ordinary-user Ubuntu26.04 ARM64 guest used the retained,
-**locally built**, extracted OMXTerm0.24.0 AppImage (128,175,114 bytes, SHA-256
-`0dd3ff2c0ad9dc069c5c22daf735acb84633dce48e484532882f9a375b53c913`)
-and the separately published SSH0.3.1 archive (11,606 bytes, SHA-256
-`be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`).
-Both were built from `8717d47327eeab14f522b1b2a448216860d0923d`; the passing
-fixture used `b5ca2aea6087531e523d026424ae0be35a040be3`. The host was not
-downloaded from a public stable release. Its build inputs and the verifier-only
-stderr-truncation addition have the separate provenance described in the
-[Files Linux checkpoint](files-development-preview.md#files-060-linux-public-catalog-checkpoint).
-
-The independently read-back legacy catalog SHA-256 was
-`2ab4f15d697559a261a19dc014297200a277e60289e67bf788303d6fbc0eacda`.
-Production HTTPS, with no controlled transport or local/link fallback, supplied
-both archive downloads. Passive observations bound the actual catalog bytes,
-selected snapshot and archive bytes to controlled Official consents at installation
-generations 0 and 1. Nine checks passed: dormant install/reinstall, activation,
-retirement and management, the retained usable PTY/Surface and normal joined Quit.
-Both backends closed with exit 0; the main exited 0 and owned processes settled.
-Separate WebContents captures showed the SSH0.3.1 Install/Reinstall cards and
-surviving terminal. No SSH client was executed.
-
-The first public attempt reached joined PTY/backend Quit but the main did not exit
-within five seconds and recovery terminated it with SIGTERM; that failed occurrence
-remains recorded. The observer incorrectly required the extensions IPC handler to
-remain present after production shutdown had removed it. Its teardown was corrected,
-and a directed subsequent run passed; the first timeout's cause was not proved.
-The passing run retained two Chromium/X portal atom-cache diagnostics in stderr.
-No user-facing failure was demonstrated in that occurrence, but their cause and
-impact remain unknown. It did not show the earlier #746 diagnostic, which remains
-unexplained. Synthetic input, controlled consent and extracted-AppImage execution do
-not qualify physical input, real SSH/authentication, FUSE/helper installation,
-compositor behavior, a downloaded public stable host or every admitted version.
-
-The exact-package `ssh-packaged` harness behind these checkpoints was removed;
-it is in Git history.
+To build an archive, follow
+[Building an extension archive](release.md#building-an-extension-archive) with
+`node scripts/build-ssh-extension.mjs`. It writes
+`dist/extensions/ssh-<version>.omxext` with `.sha256` and `.json` sidecars and
+refuses a dirty checkout. To try it, install the archive through
+**Settings → Extensions → Install local .omxext…**.
 
 ### Packaged SSH smoke
 
-`test/integration/ssh-smoke-packaged.test.ts` qualifies an SSH Connect archive on
-a published host, on Linux ARM64 and macOS ARM64. It launches the packaged app
-with an isolated home that has one alias in `~/.ssh/config` and a fake `ssh`
-first on `PATH`. It installs the archive through **Settings → Extensions →
-Install local .omxext…**, picks the alias, and checks the argv the fake client
-received. Nothing touches the network. It runs in seconds:
+`test/integration/ssh-smoke-packaged.test.ts` checks an archive on a packaged
+host, on Linux ARM64 and macOS ARM64. It launches the app with an isolated home
+that has one alias in `~/.ssh/config` and a fake `ssh` first on `PATH`. It
+installs the archive through **Install local .omxext…**, picks the alias and
+checks the argv the fake client received. Nothing touches the network, and it
+runs in seconds:
 
 ```sh
 OMXTERM_SSH_SMOKE_APP=/absolute/OMXTerm-X.Y.Z-arm64.AppImage \
@@ -194,192 +141,36 @@ OMXTERM_SSH_SMOKE_ARCHIVE=/absolute/ssh-X.Y.Z.omxext \
 npx vitest run test/integration/ssh-smoke-packaged.test.ts
 ```
 
-As with the [packaged Files smoke](files-development-preview.md#packaged-files-smoke),
-on macOS point the app variable at an `OMXTerm.app` copied out of the DMG, and
-run it from a logged-in desktop session.
+On macOS, point the app variable at an `OMXTerm.app` copied out of the DMG and
+run it from a logged-in desktop session. The test skips when either variable is
+unset.
 
-## macOS ARM64 exact-pair checkpoint
+### Publishing
 
-On macOS 27.0.1 ARM64, the retained original OMXTerm0.24.0 DMG
-(SHA-256 `88e66b764cc9fc4fa3a6cfb2c0e081dce5089631a8f8b8640ad875214e8bc34f`)
-and SSH0.3.1 archive (SHA-256
-`be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b`)
-passed bounded local-install scenarios with controlled consent and synthetic input.
-A synthetic client verified alias import, literal argv, retained exit, Hide/Close,
-Disable with a surviving core SSH terminal, and joined normal Quit. Separately,
-production Connect invoked a wrapper with literal `['--', 'fixture-local']`;
-the wrapper added `-F` and `-E` to isolate configuration and capture diagnostics,
-then exec'd the guest's verified `/usr/bin/ssh` (OpenSSH10.3p1). Client and owned
-loopback server both recorded public-key authentication using generated keys.
-The SSH session ran no remote shell or command; the client ended on signal 1 and
-server on 255 during normal app shutdown. The host/backend joined; these are not
-SSH exit-0 claims.
+Follow [Publishing an extension archive](release.md#publishing-an-extension-archive).
+Published archives are immutable, so changed bytes need a new version in
+`extension.json`. Updating the host never updates an installed extension; users
+install the newer archive themselves.
 
-These local-pair checks do not establish unwrapped SSH/config behavior, a
-physical-input/accessibility or remote-shell campaign, all-host qualification,
-or public HTTPS/catalog consumption. The separate public-catalog checkpoint below
-exercised that acquisition path. The app's bounded stderr tails retained
-sandbox-extension permission warnings of unknown cause/impact and have no
-truncation indicator. Three earlier GUI attempts failed; a corrected observer
-waited for the retained panel to become visible before Close and the later
-distinct occurrence passed. Original archive receipt qualification remains
-`not-run`; these subsequent checks are separate.
+<a id="macos-arm64-public-catalog-checkpoint"></a>
 
-## macOS ARM64 public-catalog checkpoint
+## Current limits
 
-On 2026-11-03, one controlled ordinary-user macOS 27.0.1 ARM64 guest occurrence
-used the retained original stable0.24.0 DMG and SSH0.3.1 identities above. The
-host was not freshly downloaded from the public release for this check. In the
-unchanged packaged app, Settings browsed the production macOS catalog, selected
-SSH Connect0.3.1 and installed it through actual HTTPS; no local/link fallback,
-preinstalled extension, substituted transport or custom CA was used. Passive
-observations bound the selected snapshot, one generation-0 Official trust consent,
-and completed catalog/archive responses. The catalog was 2,771 bytes, SHA-256
-`9f75bf9b0c9a58e75e48a903f8518c0deeded767bacf532a1548e22441d7bd4c`;
-the archive response was 11,606 bytes and matched the original archive SHA-256
-above after the actual GitHub redirect. Each request had authorized TLS1.3.
-Catalog and archive hashes bind bytes, not an independent publisher signature.
+- The official catalogs offer SSH Connect 0.3.1 for Linux ARM64 and macOS ARM64
+  only. Windows and x64 aren't offered or tested.
+- The published 0.3.1 archive's "capability unavailable" message names only
+  Linux ARM64. Source has the fix; it ships with the next version.
+- OpenSSH owns authentication, host-key prompts and network access. The user's
+  OpenSSH configuration still applies, including configured commands, forwards,
+  agent access and sockets, and connecting can write `known_hosts`.
+- No connection history, credential storage, config editing or reconnect.
+- The alias index is deliberately incomplete; see the bounds above.
+- Real authentication has only been checked against a local loopback server.
+  Remote connectivity, physical-keyboard and accessibility behavior aren't
+  qualified.
 
-Installation was dormant. Explicit activation imported a synthetic alias without
-executing a client; Enter release launched a synthetic client once with literal
-`['--', 'fixture-fast']`. The app displayed an exit-code-37 notice; a separate
-OS wait status was not captured. Normal Busy Quit joined the backend and tracked
-PTYs; the backend and Electron main exited 0. Inputs and consent were controlled.
-A bounded later audit found 14 sampled process identities absent; it is not an
-exhaustive descendant census. The bounded app stderr tail contained 15
-sandbox-extension permission warnings of unknown impact and had no truncation
-indicator. No screenshot was captured.
+## Credits
 
-This checkpoint does not qualify physical input, accessibility, compositor
-presentation, real SSH authentication, remote shells, other hosts or a complete
-platform matrix. Real SSH against an owned loopback server was a separate,
-wrapper-mediated local-install check above; neither result upgrades the original
-archive receipt or rewrites earlier failed occurrences.
-
-## Connecting
-
-Search filters the displayed aliases; it never interprets an unmatched query as
-a destination. Select a row, or use the separate **Quick connect** field:
-
-- `work-server`
-- `alice@example.org:2222`
-- `alice@[2001:db8::1]:2222`
-
-Host/alias names allow 1–253 ASCII letters, digits, underscore, dot and hyphen,
-without a leading hyphen. Users have the same grammar with a 64-character limit.
-Ports are digits from 1 through 65535. Omitted user/port preserve OpenSSH
-configuration/defaults. The field accepts at most 384 characters and trims only
-surrounding ASCII spaces. IPv6 requires brackets; zone identifiers, Unicode
-names, URLs, remote commands and additional options are not supported here.
-Use ordinary terminal `ssh` for other workflows.
-
-Keyboard Connect captures the target at Enter down and dispatches only after
-release; repeats are consumed. Editing, hiding, blur or a lost release cancels an
-undispatched gesture. Pointer Connect is immediate. Pending controls prevent
-accidental duplicate submission. An accepted result means a **core terminal tab
-was accepted**, not that authentication or connection succeeded. An uncertain
-reply says a terminal may already have opened; check tabs rather than retrying
-automatically. In the companion panel, Connect opens a new Terminal Tab while
-keeping the panel visible and existing sessions alive. Focus transfers only while
-this same panel page owns foreground interaction and no modal owns input;
-otherwise the tab is appended in the background.
-
-Main resolves an executable regular `ssh` file (symlinks allowed) only from
-absolute, nonempty application-PATH directories at Connect time. That PATH can
-differ from a login shell's PATH and is not publisher verification. Missing
-OpenSSH leaves an actionable page error and opens no tab. Later spawn failure
-uses the ordinary native failure acknowledgement. OMXTerm never installs ssh.
-
-Main builds literal argv: optional `-l USER`, optional `-p PORT`, then `-- HOST`.
-There is no interpolated shell command, caller-selected executable/environment,
-backend PTY, credential vault, connection history, config editing or reconnect.
-OpenSSH owns authentication, host-key prompts and network access. **Current user
-and system configuration still applies**, including configured commands, forwards,
-agent access and sockets; deliberate connection can write `known_hosts`.
-Read-only discovery does not mean the OpenSSH process is read-only.
-
-## Incomplete alias index
-
-Opening and explicit Refresh read the account's `.ssh/config`. Missing config is
-normal. Discovery never invokes `ssh -G`, Match exec, a shell, DNS or a network
-probe, and never rewrites SSH files. It lists literal Host candidates, not
-resolved HostName/User/key metadata or a promise that a condition applies.
-
-The small tokenizer supports case-insensitive directives, whitespace or `=`,
-double quotes and comments outside quotes. Malformed quotes, escapes and
-unsupported tokens report incompleteness. Later Host directives remain visible
-after Match. Includes are followed only in unconditional context: initially, or
-after exact `Host *` / `Match all`. Traversal is inline: child Host/Match state
-continues in the parent. Relative includes always anchor at `.ssh`, even inside
-nested files. Absolute paths, `~/`, sorted `*` and `?` are supported; environment,
-percent, other-user tilde, bracket classes and recursive `**` are not.
-
-Product bounds: depth16,64 file visits,256KiB per file,1MiB aggregate reads,
-4096 characters per line,4096 visited glob entries and256 unique aliases.
-Files are opened nonblocking and checked as regular before bounded reads;
-active-stack realpath cycles are refused, while symlinked regular configs work.
-Partial results carry fixed reason counts. Quick connect remains available for
-omitted aliases. One result fits both existing JSON capture hops without changing
-runtime limits. Refresh is serialized per view; stale replies are invalidated,
-not magically cancelled. Eight actual backend discoveries may run at once;
-cancellation/timeouts do not release slots before the filesystem work settles.
-
-## Core lifetime
-
-An SSH terminal belongs to core after transfer, independent of extension disable,
-update, uninstall or backend death. It retains no extension package lease.
-Live SSH is Busy for close/Quit; normal Quit still waits for actual native exit.
-Exit0 closes normally. Ordinary nonzero exit retains the readable/copyable/
-searchable Surface with an exit-code notice and Close. This is not an inferred
-authentication error. Input, PTY resize and protocol replies stop; local refit,
-zoom, theme and final renderer/font disposal remain available. Ended content is
-not Busy. Startup failures/signals and explicitly authorized removal keep their
-existing precedence.
-
-Known SSH sessions never supply local OSC7 directory provenance, even with an
-empty/local hostname. New tabs/splits start the Default Shell at home, not SSH.
-Remote titles remain display-only, with validated `SSH · HOST` fallback. This
-does not detect manually typed ssh inside an ordinary shell.
-
-## Capability and admission
-
-The optional exact manifest declaration is
-`"capabilities": ["terminal.openSsh.v1"]`; unknown declarations are rejected.
-The historical Files 0.1.0 preview receives no SSH capability. Hosts
-0.24.0-dev.0 through 0.24.0-dev.5 explicitly admit its original
-`>=0.23.0-dev.8 <0.24.0` host range at both catalog and installed-store checks;
-ordinary semver would exclude this new prerelease tuple. This exception is
-limited to those enumerated host versions, Files identity/version and its original host/API
-ranges. API compatibility and target checks still apply. It does not modify the
-published Files archive or admit other packages or future host versions.
-The own-view bridge's `{operation:"host.capabilities"}` query reports declared
-available selectors. The concrete request is
-`{operation:"terminal.openSsh.v1",target:{host,user?,port?}}` with exact keys.
-It is not a generic terminal SDK or a security sandbox for trusted Node code.
-
-Actual child/main-frame routing binds requests to the captured pin, generation,
-digest, local revision and original window/view lifetime. The companion panel
-survives the terminal that originally opened it; its SSH launches remain new,
-independently core-owned terminal sessions. Store
-revalidation is the first authorization point. A different instance's later
-change cannot retroactively revoke admission. A separate synchronous main
-transfer rechecks local revocation before committing a one-shot core pane token;
-local revocation before that point wins. No store writer lock spans rendering or
-spawn. Renderer acknowledgement is notification, not authorization.
-
-Tokens are owner-bound, at most one pending per view and32 application-wide,
-removed on consumption/cancellation/window loss/Quit, with a60-second unconsumed
-expiry. They cannot select startup `-e` or another window, start provisionally, or
-allocate twice. A notification failure or missing acknowledgement is uncertain,
-never automatically replayed. Closing a pending pane cancels its token.
-
-See [ADR0041](adr/0041-transfer-ssh-launches-to-core.md). Controlled tests cover
-input/index/wire budgets, view gesture/admission and retained Surface behavior.
-Native/package evidence must identify exact host and separate archive hashes;
-build receipts alone are not qualification. The bounded macOS loopback check above
-is not a general remote-connectivity campaign. Windows and other-platform preview
-enablement and physical-keyboard/accessibility matrices remain unqualified.
-
-The original #622/#671 proposal by @ruscher and `luizomf/sshtoolkit` informed the
-design. This small parser/grammar is independently implemented; the archive keeps
-MIT licensing and its design acknowledgement in `NOTICE`.
+The original proposal in #622 and #671 by @ruscher and `luizomf/sshtoolkit`
+informed the design. The parser and grammar here are independent. The archive
+keeps MIT licensing and the acknowledgement in `extensions/ssh/NOTICE`.

@@ -21,7 +21,7 @@ passed with the published stable0.25.0 host. Common SSH/Snippets
 entries are identical in both documents; promotions must update both together.
 The published SSH0.3.1 offer includes Linux and macOS ARM64 for the same original
 archive. After source integration and public endpoint readback, a separate bounded
-[macOS public-catalog checkpoint](ssh-connect-development.md#macos-arm64-public-catalog-checkpoint)
+[macOS public-catalog checkpoint](ssh-connect-development.md)
 passed on the exact stable0.24.0 host with controlled input and a synthetic client.
 Only explicit Browse/Refresh requests the selected endpoint. No startup, reopen, polling or automatic
 update traffic is added. Responses use the existing 60-second HTTPS/redirect policy
@@ -119,7 +119,7 @@ the fixed endpoints were read back: legacy SHA-256
 `8233d2a6fd3e1b41034acccd7e4b6e13afddd81f0f1c8393e7b9b05329e28d5f`, macOS
 `9f75bf9b0c9a58e75e48a903f8518c0deeded767bacf532a1548e22441d7bd4c`. The
 separate [macOS Files0.6 public-catalog checkpoint](files-development-preview.md)
-and [SSH0.3.1 public-catalog checkpoint](ssh-connect-development.md#macos-arm64-public-catalog-checkpoint)
+and [SSH0.3.1 public-catalog checkpoint](ssh-connect-development.md)
 used the retained locally built 0.24.0 DMG, not a freshly downloaded public host.
 Other public-HTTPS checkpoints remain separate. Preserve newer supported
 Snippets targets when reconciling promotions. Schema1 has one release per ID: promoting Files0.6 removes a compatible
@@ -185,7 +185,7 @@ and host minimum0.24.0-dev.8. The immutable `ext-ssh-v0.3.0` release provides
 `77937fcf87ae71a68709111df7ace7359fb3f0b6` and its original checksum/receipt.
 Draft and anonymous public asset readback passed; catalog promotion preserves
 Files and Snippets metadata. Fixed-endpoint readback and bounded public packaged
-consumption passed; [the SSH guide](ssh-connect-development.md#public-distribution-checkpoint)
+consumption passed; [the SSH guide](ssh-connect-development.md)
 records the exact catalog digest, lifecycle results and capture limitations. The exact native-qualified pair reuses public
 Linux ARM64 host0.24.0-dev.11; the original receipt's build-time `not-run` and
 intended dev.19 fields remain unchanged. Historical SSH0.1.0
