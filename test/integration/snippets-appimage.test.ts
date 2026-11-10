@@ -102,7 +102,7 @@ function assertScenario(values: Inputs, scenario: unknown) {
   }
 }
 
-// Opt-in on the assigned disposable Linux ARM64/x64 desktop only. The shared
+// Opt-in on a Linux ARM64/x64 desktop (a VM is safest). The shared
 // scenario observes the untouched package, not a replacement application entry.
 it.skipIf(!values)(
   "qualifies separate Snippets in the exact Linux AppImage",

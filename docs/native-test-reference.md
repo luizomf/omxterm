@@ -1,13 +1,13 @@
 # Native subsystem fixture reference
 
-This reference details focused native subsystem fixtures, their prerequisites, and evidence boundaries. Start with the [native development prerequisites](development.md#platform-prerequisites) and [focused commands](development.md#focused-checks). Follow the [graphical test precautions](development.md#running-native-tests): use an unlocked, logged-in desktop with WebGL2 support, leave the mouse and keyboard idle, do not resize or switch windows, and run only one graphical suite at a time per desktop. On macOS, also follow the [preference precautions](development.md#macos-preferences-and-native-verification) for source-mode Electron fixtures.
+This reference details focused native subsystem fixtures, their prerequisites, and evidence boundaries. Start with the [native development prerequisites](development.md#platform-prerequisites) and [focused commands](development.md#focused-checks). Follow the [graphical test precautions](development.md#running-native-tests): use an unlocked, logged-in desktop with WebGL2 support, leave the mouse and keyboard idle, do not resize or switch windows, and run only one graphical suite at a time per desktop. Source-mode Electron fixtures also have [side effects on your desktop](development.md#side-effects-on-your-desktop).
 
 For fixture ownership and cleanup, see [Linux packaged-wrapper controls](#linux-packaged-wrapper-controls), [supervised PTY acquisition](#supervised-pty-acquisition), [Windows cleanup diagnostics](#windows-cleanup-diagnostics), and [Windows supervision cost](#windows-supervision-cost-and-cleanup-bound). The [graphical fixture supervision overview](development.md#graphical-fixture-supervision) and its headless entry recipe remain in the development guide.
 
 ## Admission, input and invocation outcomes
 
-Apply [macOS live console admission](development.md#macos-console-admission) before
-native launches there. An admitted desktop is setup evidence, not proof that
+On macOS, see [side effects on your desktop](development.md#side-effects-on-your-desktop) before
+native launches. A ready desktop is setup evidence, not proof that
 posted input reached the intended application, window or PTY. Require the
 selected fixture's actual input/action receipts and unchanged assertions; a
 successful input API call or later successful control does not pass an earlier
@@ -28,8 +28,8 @@ not retroactive qualification of failed runs.
 
 ## Fixture clipboard boundaries
 
-Apply the [shared-clipboard prelaunch checks](development.md#shared-clipboard-before-native-tests)
-before native real-clipboard cases. A real window/PTY or a test name containing
+Real-clipboard cases write your system clipboard (see
+[side effects on your desktop](development.md#side-effects-on-your-desktop)). A real window/PTY or a test name containing
 "clipboard" does not by itself identify an OS clipboard writer. Current source
 paths distinguish these cases:
 
@@ -51,8 +51,8 @@ retain control metadata/test outcomes, never clipboard-content evidence.
 
 ## Hosted extension view composition
 
-On an assigned idle, unlocked Linux or macOS desktop, after the
-[shared-clipboard prelaunch checks](development.md#shared-clipboard-before-native-tests),
+On an idle, unlocked Linux or macOS desktop (see
+[side effects on your desktop](development.md#side-effects-on-your-desktop)),
 run the existing hosted-view composition and native installed-version pin
 fixtures together:
 
@@ -214,8 +214,8 @@ or Linux x64 qualification. macOS-only emoji/blur experiments, input-only pages,
 PTY-only fixtures and intentional unavailable-backend controls are not additional
 Linux Surface policy omissions. Production-composition fixtures inherit the
 production main's policy. All actual browser/Electron checks, even headless,
-must run in an assigned disposable guest; see the
-[verification precautions](development.md#macos-preferences-and-native-verification).
+can change your desktop's state; see
+[side effects on your desktop](development.md#side-effects-on-your-desktop).
 
 ## Resize and continued-text coverage
 
@@ -367,9 +367,8 @@ backend or bypassing the GPU blocklist. macOS and Windows keep Chromium's defaul
 actual WebGL2 availability remains a prerequisite. Headless emitted-entrypoint
 ordering coverage: `npm test -- test/unit/terminal-popup-gpu-policy.test.ts`.
 
-**Clipboard prerequisite:** this default Linux suite writes the real clipboard;
-complete the [shared-clipboard prelaunch checks](development.md#shared-clipboard-before-native-tests)
-before launch, independently of native-input admission.
+**Clipboard prerequisite:** this default Linux suite writes the real clipboard (see
+[side effects on your desktop](development.md#side-effects-on-your-desktop)).
 
 **Native-input prerequisite:** use an idle, explicitly provisioned input-capable
 X11/XWayland desktop with the standard X11/evdev F5=71 and F6=72 keycode

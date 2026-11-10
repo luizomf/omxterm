@@ -3,10 +3,9 @@
 This opt-in, reporting-only workflow compares an identified baseline and candidate
 on the **same idle native desktop**. It is not part of `npm test`, a RAM budget,
 a leak detector, a release gate, or a claim about total application consumption.
-Run on an assigned disposable desktop, not inside the terminal being measured.
-Do not run other graphical tests, builds or workloads concurrently. On macOS,
-follow the [preference precautions](development.md#macos-preferences-and-native-verification):
-an isolated Electron profile does not protect OS preferences.
+Run it on an idle desktop, not inside the terminal being measured, and don't run
+other graphical tests, builds or workloads at the same time. See
+[side effects on your desktop](development.md#side-effects-on-your-desktop).
 
 The [initial Ubuntu calibration](performance-calibration.md) retains raw
 normal/normal/control results, demonstrates large-cost sensitivity, and explains

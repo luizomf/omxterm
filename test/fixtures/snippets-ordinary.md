@@ -2,9 +2,9 @@
 
 `test/integration/snippets-ordinary.test.ts` is a separate opt-in consumer of an
 exact packaged host, not the older overridden-profile Snippets input matrix.
-Run it only in an **assigned disposable Linux ARM64 guest**, as the ordinary
-logged-in test user on its normal desktop, bus and runtime. First establish the
-[Linux shared-service/input baseline](../../docs/development.md#linux-desktop-services-and-native-verification).
+Run it on a Linux ARM64 desktop (a VM is safest), as the ordinary logged-in
+user on its normal desktop, bus and runtime; see
+[side effects on your desktop](../../docs/development.md#side-effects-on-your-desktop).
 An idle unlocked X11/XWayland display with working WebGL2 and the normal native
 build/verification prerequisites is required. No physical-host Electron/browser
 probes, including headless ones, or nested delegates outside that guest.

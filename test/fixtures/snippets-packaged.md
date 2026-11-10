@@ -31,9 +31,9 @@ installation and records it as `SNIPPETS_SOURCE_HOST`; Electron's fallback versi
 is not matching-host evidence. The archive digest is checked before launch, at consent, in
 the result, and after execution; the entry digest is checked before/after.
 
-On an assigned disposable Linux ARM64/x64 or macOS/Windows ARM64 desktop only, run the normal source build.
-For macOS, follow the [preference precautions](../../docs/development.md#macos-preferences-and-native-verification)
-for source-mode Electron too; an isolated profile does not protect OS preferences.
+On a Linux ARM64/x64 or macOS/Windows ARM64 desktop (a VM is safest), run the normal source build.
+On macOS, source-mode Electron can change OS preferences too; see
+[side effects on your desktop](../../docs/development.md#side-effects-on-your-desktop).
 Then run `node test/fixtures/snippets-qualification-build.mjs /absolute/new/qualification`
 to copy its artifacts and rebuild main/renderer without source substitutions.
 The builder refuses output reuse and records source hashes (including the real
@@ -288,7 +288,7 @@ still `linux-arm64` / `not-run`, not macOS evidence; no rebuild is needed here.
 
 ## macOS Quartz tool provisioning and ownership
 
-On the assigned disposable macOS ARM64 desktop, build the stock Swift helper into
+On the macOS ARM64 test desktop, build the stock Swift helper into
 a new **stable** directory (Command Line Tools required). Do not rebuild it for each
 fixture profile or grant permissions to arbitrary newly generated tools:
 
@@ -339,7 +339,7 @@ marker reset, rerun, permission prompt, or fallback from failed Quartz evidence.
 
 ## Exact AppImage adapter
 
-On an assigned disposable, nonroot Linux ARM64 or x64 X11 desktop,
+On a nonroot Linux ARM64 or x64 X11 desktop (a VM is safest),
 `test/integration/snippets-appimage.test.ts` extracts the supplied exact AppImage
 without replacing its entry, dependencies or ASAR. Both architectures use the
 same observer and shared scenario, with architecture-specific expected input
@@ -413,9 +413,9 @@ are not qualified by either controlled scenario.
 ## Exact macOS ARM64 DMG adapter
 
 `test/integration/snippets-dmg.test.ts` is opt-in tooling, not a qualification
-receipt. On the assigned disposable, unlocked Aqua desktop, follow the
-[macOS preference precautions](../../docs/development.md#macos-preferences-and-native-verification);
-the isolated paths do not protect the guest user's OS preferences. Then supply:
+receipt. On an unlocked macOS desktop (a VM is safest; see
+[side effects on your desktop](../../docs/development.md#side-effects-on-your-desktop)),
+supply:
 
 ```sh
 OMXTERM_SNIPPETS_DMG_DMG=/absolute/host.dmg \
@@ -638,9 +638,8 @@ First integrate and review the candidate, then compare both public catalog
 endpoints byte-for-byte with integrated source. Record the SHA-256 of the actual
 legacy endpoint bytes for this invocation; a stored endpoint receipt alone is not
 a passive network trace or public-consumption result. The observer checks the
-actual production request stream separately. Use only an assigned disposable
-Linux ARM64 guest after the desktop, shared-clipboard and Linux service
-prerequisites in [development](../../docs/development.md#running-native-tests).
+actual production request stream separately. Use a Linux ARM64 desktop (a VM is
+safest) that meets the [native test requirements](../../docs/development.md#running-native-tests).
 Follow the existing AppImage adapter's settlement and preservation requirements;
 retain failures and scoped evidence. No automatic replay or test-oracle relaxation.
 
