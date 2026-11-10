@@ -41,7 +41,7 @@ For 0.25.0, Linux/macOS ARM64 package and ordinary-profile checks passed. Window
 ARM64 installer checks passed and profile behavior was accepted separately from
 its failed network-silence test. Its graphical suite did not run, and public-install
 Snippets failures remain unresolved. x64 is build-only. See the
-[release limits](snippets-migration.md#stable-0250-release-disposition) for details.
+[release limits](snippets-migration.md#known-limits) for details.
 
 The earlier diagnostic and fixture requirements below are developer references,
 not additional results for 0.25.0.

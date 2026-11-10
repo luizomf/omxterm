@@ -21,7 +21,7 @@ not that changed minimal-fixture assertion.
 ## Preserved boundaries
 
 - The delivered composition prerequisite retained built-in Snippets and its
-  starter kit. The subsequent [qualified Snippets source transition](snippets-migration.md#macos-arm64-source-transition)
+  starter kit. The subsequent [qualified Snippets source transition](snippets-migration.md#which-hosts-use-the-extension)
   selects the optional implementation through the same owners. Its native campaign
   passed; macOS host distribution remains a separate gate. The duplicate
   package action remains withheld and existing shortcut configuration is preserved.

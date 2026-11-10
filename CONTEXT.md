@@ -208,9 +208,9 @@ Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
 or verified local/offline installation; positively new packaged profiles get the
 [removable one-time default](docs/default-snippets.md), enabled but dormant.
 Windows ARM64's unrun graphical suite and unresolved public-install failures are
-accepted [for 0.25.0 only](docs/snippets-migration.md#stable-0250-release-disposition).
+accepted [for 0.25.0 only](docs/snippets-migration.md#known-limits).
 The migration guide retains historical preview/0.24.0 receipts. Published Snippets
-`0.1.1` fixes the [home override limitation](docs/snippets-migration.md#existing-catalogs-and-shortcuts)
+`0.1.1` fixes the [home override limitation](docs/snippets-migration.md#catalog-file-and-shortcuts)
 through a deliberate official-catalog or local update. The bundled default remains
 `0.1.0`, and existing installations are not automatically updated.
 Each remaining cutover requires matching host/package qualification,
@@ -379,10 +379,10 @@ immutable installed versions, aggregate registry transactions, installation
 generations and deferred cleanup. It is consumed by the Linux ARM64/x64 and
 macOS ARM64 application composition and admitted by Windows ARM64 source, but
 does not itself own management UI or execution. The bounded
-[Windows ARM64 source-composition checkpoint](docs/windows-arm64-extension-composition.md#evidence-boundary)
-is distinct from the bounded [unpacked-package inspection](docs/windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
-and a later [packaged-GUI checkpoint](docs/windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
-on that retained package. A separate [exact-NSIS checkpoint](docs/windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
+[Windows ARM64 source-composition checkpoint](docs/windows-arm64-extension-composition.md#installed-package-production-fixture)
+is distinct from the bounded [unpacked-package inspection](docs/windows-arm64-extension-composition.md#packaging-and-verification)
+and a later [packaged-GUI checkpoint](docs/windows-arm64-extension-composition.md#packaging-and-verification)
+on that retained package. A separate [exact-NSIS checkpoint](docs/windows-arm64-extension-composition.md#packaging-and-verification)
 verified a new installer built from an independent copy of that package. See the
 [foundation contract](docs/extension-installation-foundation.md).
 
@@ -523,13 +523,13 @@ retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
 official-catalog browsing and HTTPS extension archive installation on Linux ARM64/x64
 and macOS/Windows ARM64, through bounded main-owned acquisition and
 captured-byte trust. The published Windows ARM64 dev.36 capability is separate
-from its pending [installed public-consumption checkpoint](docs/snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate). No startup/reopen catalog, telemetry or background update
+from its pending [installed public-consumption checkpoint](docs/snippets-migration.md#known-limits). No startup/reopen catalog, telemetry or background update
 requests are made. macOS composition alone does not broaden published catalog
 targets or qualify Files. The published Snippets dev.16 preview now offers the
 same immutable archive through the official catalog on `darwin-arm64`, alongside
 `linux-arm64`, while retaining local/offline installation. Exact public catalog
 readback and a separate bounded macOS packaged public-HTTPS checkpoint passed;
-see [the delivery scope](docs/snippets-migration.md#macos-arm64-catalog-delivery).
+see [the delivery scope](docs/snippets-migration.md#publish-and-install).
 This does not add Files/SSH qualification.
 Internal hosted content remains
 restricted to its owned epoch-local packaged-resource protocol. Child processes

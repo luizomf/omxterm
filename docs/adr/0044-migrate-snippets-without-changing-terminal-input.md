@@ -30,7 +30,7 @@ qualification limits remain in the linked guides.
 Linux ARM64 migration is available in the published OMXTerm `0.24.0-dev.11` /
 Snippets `0.1.0` preview pair. The compatible package was published and download-verified
 before the host; matching exact-package qualification and full Linux package
-verification are recorded in the [migration guide](../snippets-migration.md#preview-coverage-and-remaining-platforms)
+verification are recorded in the [migration guide](../snippets-migration.md#publish-and-install)
 and linked release notes, with their input/rendering limits. Source includes
 activation-scoped catalog paging, a declared own-view semantic-input capability,
 separately buildable package/UI and the compatibility entry point described in
@@ -41,21 +41,21 @@ macOS package verifier passed. The immutable, non-Latest macOS ARM64 host
 `0.24.0-dev.16` is now published with the unchanged Snippets `0.1.0` archive
 verified publicly before host publication. That catalog promotion offered the
 same immutable Snippets entry on `darwin-arm64` and `linux-arm64`, preserving
-Files/SSH metadata and the [local/offline archive route](../snippets-migration.md#macos-arm64-published-preview).
+Files/SSH metadata and the [local/offline archive route](../snippets-migration.md#publish-and-install).
 Complete candidate review, integration and exact public catalog readback are done;
 a separate bounded macOS packaged public-HTTPS checkpoint passed. Its
-[delivery evidence and limits](../snippets-migration.md#macos-arm64-catalog-delivery)
+[delivery evidence and limits](../snippets-migration.md#publish-and-install)
 remain distinct from public byte verification and the earlier exact-DMG/FULL
 passes, which were not rerun. No broader platform or new Files/SSH qualification
 is implied.
 At these preview publication checkpoints, stable `0.23.0` remained Latest.
 The published Linux x64 `0.24.0-dev.30` preview
-selects the optional tool. Its prepublication [exact-AppImage checkpoint](../snippets-migration.md#linux-x64-exact-appimage-checkpoint)
+selects the optional tool. Its prepublication [exact-AppImage checkpoint](../snippets-migration.md)
 passed the shared ten checks and controlled visible-preview inspection, with
 separate stock FULL modes and explicit evidence/diagnostic limits. Catalog
 promotion and endpoint readback were followed by a separate bounded [public-HTTPS
-checkpoint](../snippets-migration.md#linux-x64-public-catalog-checkpoint) on that
-published pair. The separate [Windows ARM64 dev.36 preview](../snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+checkpoint](../snippets-migration.md#publish-and-install) on that
+published pair. The separate [Windows ARM64 dev.36 preview](../snippets-migration.md#known-limits)
 is published after fresh full portable, exact staged ten-check and separate FULL
 NSIS gates; its installed public-HTTPS checkpoint remains pending at this revision.
 Older Windows hosts and Windows x64 retain built-in Snippets.
@@ -71,13 +71,13 @@ captured-target and gesture guarantees currently owned by the terminal renderer.
 
 There is also a platform prerequisite: application extension composition admits
 Linux ARM64/x64, macOS ARM64 and Windows ARM64 source (`startApplicationExtensions`).
-The bounded [Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#evidence-boundary)
-passed with built-in Snippets retained. A separate [unpacked-package inspection](../windows-arm64-extension-composition.md#packaged-runtime-checkpoint)
-passed for runtime loading only; a later [packaged-GUI composition checkpoint](../windows-arm64-extension-composition.md#packaged-gui-composition-checkpoint)
+The bounded [Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#installed-package-production-fixture)
+passed with built-in Snippets retained. A separate [unpacked-package inspection](../windows-arm64-extension-composition.md#packaging-and-verification)
+passed for runtime loading only; a later [packaged-GUI composition checkpoint](../windows-arm64-extension-composition.md#packaging-and-verification)
 exercised that retained package with a minimal local extension. A later separate
-[exact-NSIS checkpoint](../windows-arm64-extension-composition.md#exact-nsis-installer-checkpoint)
+[exact-NSIS checkpoint](../windows-arm64-extension-composition.md#packaging-and-verification)
 passed on a new installer built from an independent copy. Windows ARM64 source
-now selects optional Snippets; its separate bounded [ordinary source checkpoint](../snippets-migration.md#windows-arm64-source-transition)
+now selects optional Snippets; its separate bounded [ordinary source checkpoint](../snippets-migration.md#which-hosts-use-the-extension)
 passed on exact dev.33 source. Later dev.36 full portable and exact-package gates
 passed separately; public-consumption qualification remains distinct and pending.
 Earlier intermittent failures are not claimed fixed.
@@ -302,7 +302,7 @@ on other distributed platforms. Older Windows hosts and Windows x64 keep the
 built-in experience. The published Windows ARM64 dev.36 preview selects the
 optional package after its separate full portable, exact-stage and FULL NSIS
 checkpoints; catalog promotion/readback and installed public consumption remain
-separate pending milestones. The [migration guide](../snippets-migration.md#windows-arm64-published-preview-and-catalog-candidate)
+separate pending milestones. The [migration guide](../snippets-migration.md#known-limits)
 is the current exact evidence boundary, not a claim about every admitted host.
 Other targets retain the built-in experience until their extension infrastructure
 and equivalent migration are qualified. This
@@ -318,7 +318,7 @@ Windows ARM64 qualification and separately verified new stable NSIS bytes. The
 additional installed public-HTTPS checkpoint remains unresolved after ordinary
 failures and non-qualifying diagnostic observations. It is deferred as a host
 publication blocker, not declared passed or removed from #741's completion work.
-See the [migration disclosure](../snippets-migration.md#stable-0240-release-disposition).
+See the [migration disclosure](../snippets-migration.md#known-limits).
 No input invariant or failed observation is waived as successful; a catalog
 listing remains distinct from demonstrated public consumption. Users depending
 on the previous Windows ARM64 built-in experience may remain on 0.23.0.
@@ -339,7 +339,7 @@ The maintainer accepted profile behavior separately from that failed oracle.
 Linux behavior/package results and macOS package/profile/source graphical results
 support the release. macOS exact-DMG/public-archive Insert, preview and acquisition
 remain untested; that limit is accepted too. x64 stays build-only. The
-[0.25.0 migration disclosure](../snippets-migration.md#stable-0250-release-disposition)
+[0.25.0 migration disclosure](../snippets-migration.md#known-limits)
 has the user-facing details. #741 remains open. Terminal-input rules and future
 native-test isolation requirements are unchanged; the preceding 0.24.0 record
 remains historical.
@@ -382,7 +382,7 @@ to the same session remain mandatory, parallel to Linux's XTest/XQueryKeymap rou
 This explicitly adopts a synthetic observation contract, not a product input change
 or a claim that Chromium consumed an event it omitted. Full ordinary
 macOS nine-scenario source qualification passed on the exact host/archive pair
-recorded in the [migration guide](../snippets-migration.md#macos-arm64-source-transition).
+recorded in the [migration guide](../snippets-migration.md#which-hosts-use-the-extension).
 Minimal probes are not product qualification, and source qualification is not
 published-host cutover.
 

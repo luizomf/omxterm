@@ -8,9 +8,9 @@ existing owned retirement joins. Infrastructure failure does not prevent termina
 startup. Other unsupported targets retain the explicit unavailable result.
 
 This #712 prerequisite was delivered with built-in Snippets and its starter kit
-intact. The subsequent [Linux x64 Snippets source transition](snippets-migration.md#linux-x64-source-transition)
+intact. The subsequent [Linux x64 Snippets source transition](snippets-migration.md#which-hosts-use-the-extension)
 is separate; neither alone established a stable SDK or distributed cutover. The
-later [published dev.30 preview](snippets-migration.md#linux-x64-published-preview-and-catalog-candidate)
+later [published dev.30 preview](snippets-migration.md#which-hosts-use-the-extension)
 has its own exact-pair evidence. The separate Files native move addon remains
 ARM64-only. Admitting host infrastructure alone does not qualify an existing
 archive for this target; published manifests and immutable releases remain unchanged. No automatic installation, activation or
