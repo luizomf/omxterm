@@ -2,198 +2,105 @@
 
 [Install OMXTerm](installation.md), then follow [your first session](../README.md#first-session) to run a command. OMXTerm opens your default shell in your home folder (Windows uses Windows PowerShell by default).
 
-**[Tabs](#windows-tabs-and-sessions)** · **[Command Palette](#command-palette)** · **[Shortcuts](#built-in-platform-shortcuts)** · **[Copy and paste](#copy-and-paste)** · **[Images](#previewing-local-images)** · **[Troubleshooting](#troubleshooting)**
-
 For fonts, themes, shortcuts, and snippets, see [Configuration](configuration.md). [How it works](how-it-works.md) explains the relationship between the terminal, your shell, and running sessions.
 
 ## Windows, tabs, and sessions
 
-Choose **File → New Tab** for another session in the same window, or **File → New Window** for a separate window. Each Terminal Tab starts with one independent shell and can hold several panes.
-**Settings…** opens a graphical tab in the same strip, with no shell. It is
-included in reordered/numbered/next/previous navigation, and repeated open
-returns to the same editor. Settings remains open after the last terminal exits;
-closing the last application tab closes the window. See [Settings](configuration.md#settings)
-for retained drafts and explicit JSON Save.
+Choose **File → New Tab** for another session in the same window, or **File → New Window** for a separate window. Each Terminal Tab starts with one independent shell and can hold several panes. **Settings…** opens a graphical tab without a shell. Closing the last application tab closes the window.
 
-- **Tab bar:** appears automatically when a window has two or more tabs. Click a tab to select it, drag horizontally to reorder tabs, or use keyboard shortcuts. **View → Toggle Tab Bar** (`Cmd+Shift+B` / `Ctrl+Shift+B`) hides or shows the strip at any time.
-- **Tab titles:** Settings has a localized title; each Terminal Tab starts with your active shell or program name (such as `zsh` or `powershell.exe`) and updates automatically when a program sets a terminal title.
-- **Closing:** closing a tab ends its sessions, and closing the last window exits the app. Typing `exit` in your shell closes that pane, or the tab when it is its last pane.
+The tab bar appears when a window has two or more tabs. Click a tab to select it, drag tabs to reorder, or use the next/previous shortcuts below. **View → Toggle Tab Bar** hides or shows it. Typing `exit` closes that pane, or the tab if it is the last pane.
 
 ### Split panes
 
-Choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) or **Split Down** (`Cmd+Shift+E` / `Ctrl+Shift+E`) to divide the current pane into two independent shells in the same tab.
+Choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) or **Split Down** (`Cmd+Shift+E` / `Ctrl+Shift+E`). Each pane has its own shell. Click a pane or use the focus shortcuts below; typing, copy, paste, Find, snippets, and dropped paths go to the focused pane. Drag the divider to resize. **Close Pane** (`Cmd+Option+W` / `Ctrl+Shift+K`) ends that shell and gives its space to the neighbor.
 
-- **Where the new shell starts:** in the directory your shell last reported through OSC 7, if it reports one (many shells do when configured to; OMXTerm never changes your shell setup to make it happen), otherwise in your home directory. Non-local host names and unavailable directories fall back to home. An empty or local host name emitted over SSH cannot be distinguished from a local report; program output can emit it too. The report can only select an existing local start directory, never execute shell text.
-- **Focus:** click a pane, or use **Focus Next/Previous Pane** (`Cmd+]` / `Cmd+[`, `Ctrl+Shift+]` / `Ctrl+Shift+[`) and the arrow variants (`Cmd+Alt+Arrow` / `Alt+Shift+Arrow`). Typing, Copy, Paste, Find, snippets and dropped paths go to the focused pane, which, in a split tab, has a thin top line inset by its horizontal terminal padding (no side or bottom outline). The line uses your theme's cyan, falling back to its foreground if cyan has low contrast against the configured background and foreground improves it. Custom themes and transparent backgrounds can still make it hard to see. The tab title follows it.
-- **Resize:** drag the line between panes, or focus it with Tab and use the arrow keys. The visible line is 1 px within a 4 px resize target; hover and drag share a neutral highlight, while keyboard focus highlights just the line. **Equalize Panes** (`Cmd+Ctrl+=` / `Ctrl+Shift+0`) gives the panes beside the focused one equal space. New splits require room for two usable grids of at least 20 columns by 5 rows, including padding and dividers. The source pane's current cell size is the new pane's admission reference. A later window shrink or zoom may make those minima impossible: sessions and layout survive, and an impossible divider move keeps the existing proportions.
-- **Close:** **Close Pane** (`Cmd+Alt+W` / `Ctrl+Shift+K`) ends the focused pane's session; its neighbor takes the space. You can also right-click a pane and choose **Close Pane** from its context menu, which appears while the tab is split. The popup stays tied to that pane: if it ends or you change panes/tabs before activation, the old menu does nothing rather than acting on a replacement. Closing the last pane closes the tab.
-
-### Close confirmation
-
-To protect active work, OMXTerm asks for confirmation before closing a pane, tab or window with a running command. Close Pane only asks about the focused pane; Close Tab asks once for all of the tab's panes. On Windows, confirmation is shown for all live sessions. You can disable this prompt anytime by setting `"confirmClose": false` in `config.json`.
+The **Close Pane** context-menu action is available in split tabs. Closing a pane, tab, or window with a running command asks for confirmation. Disable confirmation with `"confirmClose": false` in `config.json`.
 
 ### Source previews
 
-Saved Layout and Mirror Typing are code previews, not tools offered through
-an extension catalog. See [Optional tools](README.md#optional-tools) for the
-current availability summary.
+Saved Layout and Mirror Typing are code previews, not tools offered through the extension catalog. See [Optional tools](README.md#optional-tools) for current availability.
 
 ## Window controls
 
-- **Zoom:** changes the font size in the current window (`Cmd++` / `Cmd+-` on macOS, `Ctrl++` / `Ctrl+-` on Linux/Windows). **Actual Size** (`Cmd+0` / `Ctrl+0`) resets to your configured size.
-- **View → Toggle Title Bar:** hides or shows the window title bar (`Cmd+Shift+D` / `Ctrl+Shift+D`). When hidden, move your pointer near the top center of the window and drag the three-dot handle to reposition the window.
-- **View → Toggle Full Screen:** fills the display (`Ctrl+Cmd+F` on macOS, `F11` on Linux/Windows) and hides the title bar while in fullscreen.
-- **Window → Always on Top:** keeps the current window floating above normal windows.
+- **Zoom:** changes text size in the current window (`Cmd++` / `Cmd+-` on macOS; `Ctrl++` / `Ctrl+-` on Linux and Windows). **Actual Size** (`Cmd+0` / `Ctrl+0`) resets it.
+- **View → Toggle Title Bar:** hide or show the title bar (`Cmd+Shift+D` / `Ctrl+Shift+D`). Drag the three-dot handle at the top to move a window without its title bar.
+- **View → Toggle Full Screen:** use `Ctrl+Cmd+F` on macOS or `F11` on Linux/Windows.
+- **Window → Always on Top:** keep the current window above normal windows.
 
-These toggles apply to the current window. To change the defaults for new windows, see [Configuration](configuration.md).
+These toggles affect the current window. Set defaults for new windows in [Configuration](configuration.md).
 
 ## Built-in platform shortcuts
 
-The application menu displays your active shortcuts, including any custom bindings from `config.json`.
+The application menu displays active shortcuts, including custom bindings.
 
-| Action                    | macOS             | Linux and Windows               |
-| ------------------------- | ----------------- | ------------------------------- |
-| New Window                | `Cmd+N`           | `Ctrl+Shift+N`                  |
-| New Tab                   | `Cmd+T`           | `Ctrl+Shift+T`                  |
-| Close Tab                 | `Cmd+W`           | `Ctrl+Shift+W`                  |
-| Close Window              | `Cmd+Shift+W`     | `Ctrl+Shift+Q`                  |
-| Quit                      | `Cmd+Q`           | `Ctrl+Alt+Shift+Q`              |
-| Next Tab                  | `Ctrl+Tab`        | `Ctrl+PageDown`                 |
-| Previous Tab              | `Ctrl+Shift+Tab`  | `Ctrl+PageUp`                   |
-| Select Tab 1 through 9    | `Cmd+1` … `Cmd+9` | `Alt+1` … `Alt+9`               |
-| Split Right               | `Cmd+D`           | `Ctrl+Shift+O`                  |
-| Split Down                | `Cmd+Shift+E`     | `Ctrl+Shift+E`                  |
-| Close Pane                | `Cmd+Alt+W`       | `Ctrl+Shift+K`                  |
-| Focus Next/Previous Pane  | `Cmd+]` / `Cmd+[` | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
-| Focus Pane in a direction | `Cmd+Alt+Arrow`   | `Alt+Shift+Arrow`               |
-| Equalize Panes            | `Cmd+Ctrl+=`      | `Ctrl+Shift+0`                  |
-| Copy                      | `Cmd+C`           | `Ctrl+Shift+C`                  |
-| Paste                     | `Cmd+V`           | `Ctrl+Shift+V`                  |
-| Select All                | `Cmd+A`           | `Ctrl+Shift+A`                  |
-| Find                      | `Cmd+F`           | `Ctrl+Shift+F`                  |
-| Zoom In                   | `Cmd++`           | `Ctrl++`                        |
-| Zoom Out                  | `Cmd+-`           | `Ctrl+-`                        |
-| Actual Size               | `Cmd+0`           | `Ctrl+0`                        |
-| Toggle Full Screen        | `Ctrl+Cmd+F`      | `F11`                           |
-| Toggle Tab Bar            | `Cmd+Shift+B`     | `Ctrl+Shift+B`                  |
-| Toggle Title Bar          | `Cmd+Shift+D`     | `Ctrl+Shift+D`                  |
-| Toggle Snippets           | `Cmd+Shift+S`     | `Ctrl+Shift+S`                  |
-| Reload User Configuration | `Cmd+Shift+,`     | `Ctrl+Shift+,`                  |
+| Action                     | macOS                         | Linux and Windows               |
+| -------------------------- | ----------------------------- | ------------------------------- |
+| New Window / New Tab       | `Cmd+N` / `Cmd+T`             | `Ctrl+Shift+N` / `Ctrl+Shift+T` |
+| Close Tab / Close Window   | `Cmd+W` / `Cmd+Shift+W`       | `Ctrl+Shift+W` / `Ctrl+Shift+Q` |
+| Quit                       | `Cmd+Q`                       | `Ctrl+Alt+Shift+Q`              |
+| Next / Previous Tab        | `Ctrl+Tab` / `Ctrl+Shift+Tab` | `Ctrl+PageDown` / `Ctrl+PageUp` |
+| Select Tab 1–9             | `Cmd+1` … `Cmd+9`             | `Alt+1` … `Alt+9`               |
+| Split Right / Down         | `Cmd+D` / `Cmd+Shift+E`       | `Ctrl+Shift+O` / `Ctrl+Shift+E` |
+| Close Pane                 | `Cmd+Option+W`                | `Ctrl+Shift+K`                  |
+| Focus Next / Previous Pane | `Cmd+]` / `Cmd+[`             | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
+| Focus Pane by Direction    | `Cmd+Option+Arrow`            | `Alt+Shift+Arrow`               |
+| Equalize Panes             | `Cmd+Ctrl+=`                  | `Ctrl+Shift+0`                  |
+| Copy / Paste               | `Cmd+C` / `Cmd+V`             | `Ctrl+Shift+C` / `Ctrl+Shift+V` |
+| Select All / Find          | `Cmd+A` / `Cmd+F`             | `Ctrl+Shift+A` / `Ctrl+Shift+F` |
+| Zoom In / Out              | `Cmd++` / `Cmd+-`             | `Ctrl++` / `Ctrl+-`             |
+| Actual Size                | `Cmd+0`                       | `Ctrl+0`                        |
+| Full Screen                | `Ctrl+Cmd+F`                  | `F11`                           |
+| Toggle Tab Bar / Title Bar | `Cmd+Shift+B` / `Cmd+Shift+D` | `Ctrl+Shift+B` / `Ctrl+Shift+D` |
+| Toggle Snippets            | `Cmd+Shift+S`                 | `Ctrl+Shift+S`                  |
+| Reload Configuration       | `Cmd+Shift+,`                 | `Ctrl+Shift+,`                  |
 
-On keyboards where `+` shares the `=` key, include `Shift` (`Cmd+Shift+=` or `Ctrl+Shift+=`).
-
-On Linux and Windows, press and release **Alt** to open the application menu (even when the title bar is hidden), and press `Escape` to close it. On macOS, use the system menu bar. To customize shortcuts, see [keybinds](configuration.md#keybinds).
+If `+` shares a key with `=`, press Shift as well. On Linux and Windows, press and release **Alt** to open the application menu; on macOS use the system menu bar. Customize shortcuts in [Settings](configuration.md#keybinds).
 
 ## Command Palette
 
-Choose **View → Command Palette…** to search core application actions. On Linux
-and Windows, release **Alt** to reach the native menu; on macOS, use the system
-menu bar. The default shortcut is **Cmd+Shift+P** on macOS and **Ctrl+Shift+P** on
-Linux/Windows. Remap or disable it in **Settings → Shortcuts → Command Palette…**
-or [`keybinds.commandPalette`](configuration.md#keybinds). Explicit remaps and
-`null` are preserved. If a custom action already uses this combination, resolve
-the standard configuration collision error by remapping or disabling either
-binding; no automatic config rewrite occurs.
+Choose **View → Command Palette…**, then type part of an action name, use the arrow keys to select it, and press **Enter** or click. **Escape** or clicking outside cancels. The default shortcut is `Cmd+Shift+P` on macOS and `Ctrl+Shift+P` on Linux/Windows; change it in **Settings → Shortcuts** or through [`keybinds.commandPalette`](configuration.md#keybinds). The palette is also available from the menu if unbound.
 
-Type part of an action's displayed name, use **↑/↓** to select a result, then
-press and release **Enter**, or click a result. The dialog closes before the
-existing action runs, keeping its normal guards and close confirmations.
-**Escape** or clicking the backdrop cancels. Copy/Paste/Select All edit the
-palette query while it owns input, not your terminal.
-
-Like About, the palette follows the window's theme tint/transparency and softens
-application content behind it, including Settings and chrome outside its bounds.
-Text and keyboard focus stay sharp; closing restores the underlying detail.
-This application-underlay effect is separate from native desktop blur and does
-not depend on `window.blur`.
-
-Results include window/tab and pane actions, Settings, About, local-image
-preview, reload and developer tools, with their current shortcuts where bound.
-Search uses case-insensitive substring matching in the selected interface
-language (en-US or pt-BR); there is no fuzzy search or command history. Copy,
-Paste, Select All, Find, numbered tab selection and the palette itself are not
-results. **Find is intentionally omitted:** routing it back to the formerly
-focused Terminal Surface after palette input is not established. Use
-**Edit → Find…** directly instead.
-
-The palette keeps its original tab/pane target; if that target changes or ends,
-it does not run the action against a replacement. It can open above Settings
-without discarding drafts or pending saves, but does not stack with About,
-image preview or snippet preview. Cancel returns focus to the surviving prior
-control when its target is still current. If the window loses focus, cancel and
-reopen the palette before choosing an action: its old authorization is no longer
-valid. Reopen after a language or shortcut change to refresh the catalog. Opening or searching does not rewrite your
-configuration, and adds no persistent toolbar.
+The palette searches actions in the selected interface language. It does not search terminal output or provide fuzzy search/history. Use **Edit → Find…** to search terminal text. The palette retains the tab and pane it opened for; if either closes, it will not run an action against another target.
 
 ## Copy and paste
 
-- **Copy:** select text with the mouse, then use **Edit → Copy**, its shortcut, or the right-click menu. Selecting text alone does not overwrite your clipboard. If a terminal app (like Vim or `tmux`) captures mouse clicks, hold **Shift** while dragging to select text.
-- **Paste:** use **Edit → Paste**, its shortcut, or the right-click menu.
-- **Terminal control keys:** `Ctrl+C` interrupts the running command, and `Ctrl+V` is sent directly to the terminal program (for example, CLI tools that use `Ctrl+V` to attach clipboard images).
+Select terminal text with the mouse, then choose **Edit → Copy**, use its shortcut, or right-click and choose **Copy**. If Vim or `tmux` captures mouse clicks, hold **Shift** while selecting. Use **Edit → Paste** or its shortcut to paste.
 
-To hide OMXTerm's popup over terminal content and padding, disable **Terminal
-context menu** in **Settings → Terminal**, or set
-[`terminal.contextMenuEnabled`](configuration.md#terminal-context-menu) to
-`false` and reload. Application mouse input is unchanged. This also disables
-keyboard-originated terminal popups, without a Shift exception; existing Edit
-actions/keybindings and the Scrollback Search query menu remain available.
+`Ctrl+C` interrupts the running command. `Ctrl+V` is sent to the terminal program. To hide the terminal context menu, clear **Terminal context menu** in **Settings → Terminal**; existing Edit actions and shortcuts remain available.
 
 ### Searching the scrollback
 
-Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the focused pane's scrollback and visible screen. The search field gets focus, matches highlight as you type, and the counter shows the selected match and total. While the search field has focus, press `Enter` (or **↓**) for the next match, `Shift+Enter` (or **↑**) for the previous one, and `Escape` to close the bar and return to the terminal. Copy, Paste, and Select All also work on the search text there.
-
-Click the terminal to keep typing with the bar still open: your keys, including `Enter` and `Escape`, go to the terminal program as usual. Choose **Find…** again to return to the search field.
-
-Search only sees output the pane still holds in memory, so lines beyond your [scrollback limit](configuration.md) are not found. Each pane keeps its own search, and the query is never saved or logged.
+Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the focused pane. Matches highlight as you type. Press **Enter** or **↓** for the next match, **Shift+Enter** or **↑** for the previous one, and **Escape** to close search. Click the terminal to return keyboard input to the program while keeping the search bar open. Search covers only scrollback still held in memory; each pane keeps its own query.
 
 ### Exporting terminal text
 
-Right-click the terminal to save text to a file. With text selected, choose **Export Selection…**; with nothing selected, choose **Export Terminal Content…** to save that pane's scrollback and screen (only the current screen while a full-screen program like `vim` uses the alternate screen). Pick where to save in the system dialog; cancelling saves nothing, and your selection stays as it was.
-
-The menu belongs to the pane where you opened it. If that pane ends or you switch panes or tabs before choosing Export, open the menu again; an old menu cannot export another pane. After choosing Export, its text is captured, so later focus changes do not change the file. Closing the window while the save chooser is pending prevents a new write; a write already started may still finish.
-
-The file is plain UTF-8 text. Export accepts at most 16 MiB of UTF-8 text, including at the exact limit. Retained terminal text can exceed that limit: OMXTerm shows a notice asking you to select a smaller portion, without saving or truncating it. If the save chooser or file write fails, try again with a writable destination and enough free space.
-
-OMXTerm only saves when you ask through the normal save chooser; there is no extra opt-in setting, and it never records the terminal automatically. Text and destinations are excluded from operational logs.
+Right-click the terminal and choose **Export Selection…** when text is selected, or **Export Terminal Content…** to save the pane's scrollback and screen. A full-screen program such as Vim may use an alternate screen, in which case only that screen is exported. Choose a destination in the save dialog. Export is user initiated and saves plain UTF-8 text; it does not record terminal output automatically.
 
 ### Protected Paste
 
-When you paste multiple lines or control characters into a program that has not enabled **bracketed paste**, OMXTerm asks for confirmation before sending the text so pasted newlines do not accidentally execute commands right away.
-
-Modern shells and editors that enable bracketed paste receive pasted text directly without an extra dialog. Text containing a closing bracketed-paste marker is refused instead of being changed or partially sent; the window shows a clipboard-operation failure notice and the terminal stays usable. Snippets and dropped file paths use the same protection.
+When pasted text contains multiple lines or control characters and the terminal program has not enabled bracketed paste, OMXTerm asks for confirmation before sending it. Programs that enable bracketed paste receive text without the extra confirmation. The same protection applies to snippets and dropped paths.
 
 ## Inserting file and folder paths
 
-Drag files or folders from your file manager into OMXTerm to insert their shell-quoted paths into the focused pane, separated by spaces. You can also copy files in your file manager and paste them into the terminal (on Windows, drag-and-drop supports multiple files at once, while clipboard paste inserts one file).
-
-Paths are quoted for POSIX shells on macOS/Linux and PowerShell on Windows. Review the inserted text before pressing Enter, especially if you are inside Git Bash, WSL, or an SSH session. Quoting assumes a fresh shell argument, not an existing quote or a text editor. Newlines and control characters can themselves act on the receiving program, particularly if you approve an unbracketed paste.
+Drag files or folders from your file manager into OMXTerm to insert shell-quoted paths in the focused pane. You can also copy files and paste them. Review the inserted text before pressing Enter, especially in Git Bash, WSL, or an SSH session. Newlines in paths or text can act on the receiving program.
 
 ## Opening visible web links
 
-Hold **Cmd** (macOS) or **Ctrl** (Linux/Windows) while hovering over an `http://` or `https://` URL in terminal output. Click the underlined link to open it in your default browser.
+Hold **Cmd** (macOS) or **Ctrl** (Linux/Windows) while hovering over an `http://` or `https://` URL in terminal output, then click the underlined link to open it in your default browser.
 
 ## Previewing local images
 
-You can preview local PNG and JPEG images in an overlay without leaving OMXTerm (up to 64 MiB, 8192 pixels per side, and 32 megapixels; animated images are not supported):
-
-- **Click a path in output:** hold **Cmd** (macOS) or **Ctrl** (Linux/Windows) and click a visible image path or `file:///` URL.
-- **Open via file picker:** choose **File → Open Local Image…** from the menu.
-- **Relative paths:** if you click a relative path (like `./screenshot.png`), OMXTerm prompts you to choose the base folder.
-- **Close the preview:** press **Escape**, click the close button, or click outside the image to return focus to the selected content (terminal or Settings).
-
-If an image path contains spaces, wrap it in single or double quotes in your terminal output (or print the full path on its own line) so OMXTerm can recognize the complete path. Note that clicked paths always open files on the machine running OMXTerm, even if the text was printed inside an SSH session.
+OMXTerm can preview local PNG and JPEG files in an overlay. Hold **Cmd** (macOS) or **Ctrl** (Linux/Windows) and click a visible image path or `file:///` URL, or choose **File → Open Local Image…**. A relative path prompts you to choose its base folder. Press **Escape** or click outside the image to close the preview. Paths refer to files on the machine running OMXTerm, including paths printed by an SSH session.
 
 ## Inline terminal images
 
-OMXTerm also renders inline images directly inside the terminal grid using the Kitty graphics protocol subset supported by [Chafa](https://hpjansson.org/chafa/) and [Pi](https://github.com/badlogic/pi-mono) in direct sessions (outside `tmux` or `screen`).
-
-With **Chafa**:
+OMXTerm supports a subset of the Kitty graphics protocol for inline images. With [Chafa](https://hpjansson.org/chafa/), run:
 
 ```sh
 chafa -f kitty /path/to/image.png
 ```
 
-With **Pi**, enable Kitty images in your Pi settings:
+With Pi, enable Kitty images in its settings:
 
 ```json
 {
@@ -203,131 +110,76 @@ With **Pi**, enable Kitty images in your Pi settings:
 }
 ```
 
-Or for a single session:
-
-```sh
-PI_IMAGE_PROTOCOL=kitty pi
-```
-
-Inline images stay anchored to their terminal cells as you scroll, zoom, or resize the window.
+Or start one session with `PI_IMAGE_PROTOCOL=kitty pi`. Inline images stay with their terminal cells while scrolling, zooming, or resizing.
 
 ## Bells and attention
 
-Terminal bells (`BEL`) are silent. When a session rings the bell, OMXTerm adds a `🔔` badge to the tab title and requests desktop attention if the window is unfocused (such as bouncing the Dock icon on macOS). Focusing the window or interacting with the tab clears the indicator.
+Terminal bells are silent. When a session rings the bell, OMXTerm adds a `🔔` badge to the tab title and requests desktop attention if the window is unfocused. Focusing the window or interacting with the tab clears the indicator.
 
 ## About and credits
 
-Choose **OMXTerm → About OMXTerm** in the application menu for the running
-version, project, contributors, issue tracker and MIT license. On Linux and
-Windows, release **Alt** to open that menu; on macOS use the system menu bar.
-The same compact dialog appears on every supported platform. Use **Tab** to
-move between its buttons and **Escape** or **Close** to return to the selected terminal or Settings control.
-Links open in your default browser only when activated. Contributor credits
-live in [CONTRIBUTORS.md](../CONTRIBUTORS.md), while legal notices remain bundled.
-About and local-image preview do not stack; dismiss one before opening the other. Pane splitting, focus navigation and equalizing are ignored while either owns input, including image choosing/loading. Confirmed closure and failure acknowledgement still work.
+Choose **OMXTerm → About OMXTerm** for the running version, project links, contributors, issue tracker, and license. Press **Escape** or choose **Close** to return to your terminal or Settings. Contributor credits are in [CONTRIBUTORS.md](../CONTRIBUTORS.md).
 
 ## Troubleshooting
 
 ### The download will not open
 
-See the [installation guide](installation.md) for your platform:
+See the [installation guide](installation.md) for platform-specific steps.
 
-| Symptom                                                      | Solution                                                                                                                                                |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS warns about an unverified developer                    | Open **System Settings → Privacy & Security** and click **Open Anyway** ([details](installation.md#first-launch-on-macos)).                             |
-| Linux says `Permission denied`                               | Run `chmod +x OMXTerm-*.AppImage` first, and make sure the file is on a partition that allows executing programs.                                       |
-| Linux reports a FUSE or mount error                          | Launch with `./OMXTerm-*.AppImage --appimage-extract-and-run` or install with `linux_install.sh`.                                                       |
-| Linux reports `GLIBC_2.42 not found`                         | The ARM64 AppImage needs glibc 2.42+ (for example Fedora 43+ or Ubuntu 25.10+). See [architecture-specific requirements](installation.md#requirements). |
-| Linux reports an executable format error                     | Check `uname -m`: use `-arm64.AppImage` for `aarch64`, or the build-only `-x64.AppImage` for `x86_64`.                                                  |
-| Windows reports a missing runtime DLL or `ERR_DLOPEN_FAILED` | Install the Microsoft Visual C++ Redistributable for your architecture (ARM64 or x64), see [installation](installation.md#windows).                     |
-| Checksum verification fails                                  | Ensure both the installer and `.sha256` file were downloaded from the same release.                                                                     |
+| Symptom                               | Next step                                                                                                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| macOS blocks the first launch         | Open **System Settings → Privacy & Security → Security → Open Anyway**. See [first launch](installation.md#first-launch-on-macos). |
+| Linux says `Permission denied`        | Run `chmod +x OMXTerm-*.AppImage`; check that the partition allows execution.                                                      |
+| Linux reports FUSE or mount errors    | Try `./OMXTerm-*.AppImage --appimage-extract-and-run` or use `linux_install.sh`.                                                   |
+| Linux reports `GLIBC_2.42 not found`  | Check [architecture-specific requirements](installation.md#requirements).                                                          |
+| Linux reports executable format error | Run `uname -m` and choose the matching AppImage architecture.                                                                      |
+| Windows reports a missing runtime DLL | Install the Microsoft Visual C++ Redistributable for your architecture.                                                            |
+| Checksum verification fails           | Download the installer and `.sha256` file from the same release.                                                                   |
 
-Still having trouble? [Open a bug report](../CONTRIBUTING.md#report-a-problem) with your OS, OMXTerm version, and the error message.
+If the problem persists, [open a bug report](../CONTRIBUTING.md#report-a-problem) with your OS, OMXTerm version, and the error.
 
 ### Background blur or transparency does not appear
 
-Set `window.transparency` above `0` (for example `0.2`) in `config.json`, save, and reload (`Cmd+Shift+,` / `Ctrl+Shift+,`). On Windows, also set `"blur": true`. Note that full-screen TUI apps that paint their own solid background color will appear opaque over the blurred window. See [background effects](configuration.md#background-transparency-and-blur) and [Linux desktop tips](linux-desktop.md).
+Set `window.transparency` above `0`; on Windows also set `window.blur` to `true`. Reload configuration. See [background effects](configuration.md#background-transparency-and-blur) and the [Linux desktop guide](linux-desktop.md).
 
 ### Bright screen flashes in Bash or Vim
 
-Some shells and editors use a full-screen visual flash instead of a standard bell:
-
-- **Bash:** run `bind 'set bell-style none'` for the current session, or add `set bell-style none` to `~/.inputrc`.
-- **Vim / Neovim:** run `:set belloff=all`, or add `set belloff=all` to your `.vimrc` / `init.vim`.
+For Bash, run `bind 'set bell-style none'` or add `set bell-style none` to `~/.inputrc`. For Vim or Neovim, run `:set belloff=all` or add `set belloff=all` to your Vim configuration.
 
 ### Shell preferences do not load
 
-OMXTerm starts your default shell on macOS and Linux as an interactive **login shell** and does not inject custom startup scripts:
-
-- **Zsh** reads `~/.zshrc`.
-- **Bash** login shells read the first existing file among `~/.bash_profile`, `~/.bash_login`, and `~/.profile`. If you keep your aliases and prompt in `~/.bashrc`, source `~/.bashrc` from your login profile.
-- **Windows** starts your configured shell (`windowsShell` or Windows PowerShell) using its standard startup profile.
-
-Open a new tab after editing your shell profile to see the changes.
+OMXTerm starts macOS and Linux shells as interactive login shells. Zsh reads `~/.zshrc`; Bash reads the first existing login profile. If your aliases are in `~/.bashrc`, source it from that profile. On Windows, check the configured shell's standard startup profile. Open a new tab after editing.
 
 ### Configuration changes do not appear
 
-Editing `config.json` does not apply changes until you press `Cmd+Shift+,` (macOS) or `Ctrl+Shift+,` (Linux/Windows), or choose **View → Reload User Configuration**:
-
-- If `config.json` has a syntax error or invalid value, OMXTerm displays an error banner explaining what to fix while keeping your previous valid settings active.
-- Changes to `font.family` and `font.lineHeight` apply to new panes/tabs and require restarting OMXTerm to update existing Surfaces. A native font read already started for a pending Surface can finish with its original family. Requests must still match the current family at admission; obsolete queued reads that have not started can fail initialization.
-- Changes to `windowsShell` apply to new Default Shell sessions; changes to default bar visibility (`showTitleBar`, `showTabBar`, `alwaysOnTop`) apply to new windows.
-- Edits to `snippets.yaml` load automatically whenever you close and reopen the Snippets sidebar.
-
-See [reloading user configuration](configuration.md#reloading-user-configuration) and [theme troubleshooting](configuration.md#theme-troubleshooting) for details.
+After editing `config.json` or a theme, choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`). Invalid JSON leaves the previous valid settings active. Font family and line height apply to new tabs; restart to update existing tabs. Shell changes apply to new tabs, and window defaults apply to new windows. Snippets reload when you open the sidebar. See [configuration help](configuration.md#reload-and-troubleshooting).
 
 ### Insert, run or preview a snippet
 
-Snippets are available as an optional extension on supported host versions. To
-install or update it, choose **Settings → Extensions → Browse official
-extensions**. See [Optional tools](README.md#optional-tools) for supported
-systems and known limits.
-
-Choose **Insert** to send text to the terminal without adding Enter,
-or **Run** to send it with Enter. **Preview** lets you review the text and
-choose either action. Preview captures its terminal target when opened and does
-not retarget if you switch tabs or panes. Multiline snippets can still run
-individual lines or require paste confirmation. See
-[Snippets](configuration.md#snippets) for editing the catalog and its settings.
+Snippets may require installation on your system. See [Optional tools](README.md#optional-tools). **Preview** captures its terminal target when opened. **Insert** sends text without adding Enter; **Run** adds Enter. Multiline snippets can run multiple shell commands, so review the preview first. See [Snippets configuration](configuration.md#snippets).
 
 ### Files and SSH Connect
 
-**Files** and **SSH Connect** are optional extensions on supported host
-versions. Install them from **Settings → Extensions**, then open them from the
-application menu or Command Palette. Files browses local folders; SSH Connect
-starts a separate terminal session.
-
-For platform availability and limits, see [Optional tools](README.md#optional-tools)
-and the [SSH Connect guide](ssh-connect.md). Updating OMXTerm alone does not
-update an installed extension.
+Files and SSH Connect are optional extensions. See [Optional tools](README.md#optional-tools) for platform availability, and the [SSH Connect guide](ssh-connect.md) for connecting to a host.
 
 ### Resize or close the auxiliary panel
 
-Choose **Settings → Window → Auxiliary panel side** to set its default side.
-Drag the separator to resize it. **Hide** or **Escape** hides the panel while
-keeping the tool open; **Close tool** closes the selected extension view.
-Choose **View → Toggle Auxiliary Panel** to show or hide it. See [Window
-settings](configuration.md#settings) and the tool-specific guides for details.
+Choose **Settings → Window → Auxiliary panel side** to set its default side. Drag the separator to resize. **Hide** or **Escape** keeps the tool open; **Close tool** closes it. **View → Toggle Auxiliary Panel** hides or reveals the panel. See [Settings](configuration.md#settings).
 
 ### A program draws text in the wrong place
 
-This is a known issue ([#568](https://github.com/luizomf/omxterm/issues/568)). Programs that ask the terminal where the cursor is can get a slightly wrong answer after emoji, other wide characters, or a window resize.
+This is a known issue ([#568](https://github.com/luizomf/omxterm/issues/568)): after emoji, other wide characters, or a window resize, a program may receive a slightly wrong cursor position.
 
 ### The renderer cannot start
 
-OMXTerm requires **WebGL2** to draw the terminal. On Linux it permits Chromium's SwiftShader WebGL fallback when available, with higher CPU use and [lower graphics/JIT security guarantees](adr/0037-allow-the-linux-software-webgl-fallback.md). Initialization may still fail; the error alone does not diagnose a driver problem. Separate, opt-in Mesa/blocklist troubleshooting remains available through the Linux installer's [graphics compatibility mode](linux-installer.md#only-if-graphics-fail) or the launch flags in [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
+OMXTerm requires WebGL2. Linux may use Chromium's SwiftShader fallback, which can use more CPU and has [lower graphics/JIT security guarantees](adr/0037-allow-the-linux-software-webgl-fallback.md). See [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
 
 ### macOS asks for folder permissions again after an update
 
-Quit OMXTerm before replacing `OMXTerm.app` in `/Applications`, and approve folder access if macOS prompts you on launch.
+Quit OMXTerm before replacing `OMXTerm.app` in `/Applications`, then approve folder access if macOS asks again.
 
 ## Local diagnostics
 
-To inspect runtime diagnostics, choose **View → Toggle Developer Tools**. Be sure to redact any private paths or terminal output before sharing screenshots.
+Choose **View → Toggle Developer Tools** to inspect runtime diagnostics. Redact private paths or terminal output before sharing screenshots. Logs are stored under `~/.local/state/omxterm/logs` on macOS/Linux (or `$XDG_STATE_HOME/omxterm/logs`) and `%USERPROFILE%\.local\state\omxterm\logs` on Windows. Set `logLevel` in `config.json` to `error`, `info` (default), or `debug`. Logs exclude terminal text, commands, clipboard contents, and configuration values.
 
-OMXTerm writes bounded operational logs (up to two 5 MiB files: `omxterm.jsonl` and `omxterm.previous.jsonl`) in:
-
-- **macOS and Linux:** `~/.local/state/omxterm/logs` (or `$XDG_STATE_HOME/omxterm/logs`)
-- **Windows:** `%USERPROFILE%\.local\state\omxterm\logs`
-
-You can set `"logLevel"` in `config.json` to `"error"`, `"info"` (default), or `"debug"`. Logs record only app lifecycle and operational events — never your terminal text, commands, clipboard, or configuration values.
+For implementation details and less common edge cases, see the [usage development notes](usage-development.md).
