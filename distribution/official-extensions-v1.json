@@ -4,7 +4,7 @@
     {
       "id": "omxterm.files",
       "name": "Files — ARM64 preview",
-      "description": "Project-maintained local file manager preview: browse, create, rename, move, trash and delete files.",
+      "description": "Browse your files and folders: create, rename, move, trash and delete them.",
       "version": "0.6.0",
       "engines": {
         "omxterm": ">=0.24.0-dev.21",
@@ -22,7 +22,7 @@
     {
       "id": "omxterm.ssh",
       "name": "SSH Connect",
-      "description": "Project-maintained Linux and macOS ARM64 preview: searchable OpenSSH aliases and quick-connect in core-owned terminal tabs. macOS has a bounded controlled loopback authentication check; remote shells and general connectivity remain unqualified.",
+      "description": "Pick a server from your SSH config, or type an address, and connect in a new terminal tab.",
       "version": "0.3.1",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
