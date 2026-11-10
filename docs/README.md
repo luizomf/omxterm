@@ -69,6 +69,7 @@ Developer and architecture docs for contributors and coding agents:
 - **[Native subsystem fixture reference](native-test-reference.md)** — focused fixture prerequisites, commands, limits, and evidence boundaries.
 - **[UI style guide](ui-style-guide.md)** — the small palette, spacing, control and responsive-layout vocabulary implemented by Settings.
 - **[Restty Terminal Surface](restty-development.md)** — rendering integration, pinned dependencies, WASM core rebuilds, and optional diagnostics.
+- **[Usage development notes](usage-development.md)** and **[configuration development notes](configuration-development.md)** — implementation details retained from the concise user guides.
 - **[Terminology](../CONTEXT.md)**, **[Product contract](spec.md)**, and **[Architecture Decision Records](adr/README.md)** — domain terms, observable behavior, and architectural rationale.
 - **[Security policy](../SECURITY.md)** — private vulnerability reporting and security boundaries.
 - **[MIT License](../LICENSE)** and **[Third-Party Notices](../THIRD_PARTY_NOTICES.md)**.
