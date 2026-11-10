@@ -359,7 +359,7 @@ last-successful snapshot may be stale. Hosts select one complete schema1 endpoin
 by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
 endpoint offered Linux Files0.4; the published catalogs now select Files0.8 on
 both ARM64 targets, plus the same SSH0.3.1 archive. The
-[Files0.7 macOS public-consumption checkpoint](docs/files-development-preview.md#files07-macos-public-catalog-checkpoint)
+[Files0.7 macOS public-consumption checkpoint](docs/files-development-preview.md)
 passed separately from the earlier Files0.6 checkpoint.
 Common SSH/Snippets entries match; no merging or fallback occurs. Cards show the
 selected offer's platforms and distinguish target from host/API incompatibility.
@@ -423,9 +423,9 @@ no-replace move; external drags, same-directory, self/descendant and final
 symlink destinations are refused. Cross-volume moves do not copy/delete and
 symlink sources move as links. Files-to-terminal drag remains separate. These
 source UI changes are included in the published Files0.7 Linux ARM64 link-first
-preview with host dev.19. Its bounded [actual public Settings-link checkpoint](docs/files-development-preview.md#files07-linux-public-link-checkpoint)
+preview with host dev.19. Its bounded [actual public Settings-link checkpoint](docs/files-development-preview.md)
 passed using fresh anonymous downloads. A separate macOS stable0.25.0 / Files0.7
-[local checkpoint](docs/files-development-preview.md#files07-macos-stable-local-checkpoint)
+[local checkpoint](docs/files-development-preview.md)
 passed filtering and confirmed directory movement; a separate public-catalog
 checkpoint passed. Broader macOS qualification remains separate. Hide/reveal retains the dotfile choice;
 Close/new view resets it. Published archives are unchanged. Host-language
@@ -475,11 +475,11 @@ ARM64. A separate Files0.5.0/dev.21 exact-pair consumer checkpoint passed real
 operations, retained companion state, management and active-backend normal Quit.
 Host dev.21 and Files0.5.0 are published as separate immutable, non-Latest
 prereleases; a separate actual Settings HTTPS-link installation checkpoint passed.
-This is [macOS link-first distribution](docs/files-development-preview.md#macos-link-first-distribution),
+This is [macOS link-first distribution](docs/files-development-preview.md),
 not macOS catalog discovery or broader platform qualification. Current source
 adds a separate macOS catalog endpoint; existing dev.21 binaries still use the
 legacy URL. Published dev.26 passed its separate exact-package
-[public catalog checkpoint](docs/files-development-preview.md#macos-catalog-distribution),
+[public catalog checkpoint](docs/files-development-preview.md),
 including three Official consents and normal joined Quit; prior link evidence
 is not relabeled.
 The corrected archive requires host dev.21; its neutral ARM64 preview name is
@@ -487,7 +487,7 @@ display metadata, not a manifest platform fence or blanket native qualification.
 The earlier Linux catalog selected Files0.4.0; the later promotion selected
 Files0.6.0 on both ARM64 endpoints, then macOS Files0.7. Both endpoints now
 select Files0.8 (host `>=0.26.0`).
-A separate [macOS public-catalog checkpoint](docs/files-development-preview.md#files-060-macos-public-catalog-checkpoint)
+A separate [macOS public-catalog checkpoint](docs/files-development-preview.md)
 passed with a retained locally built 0.24.0 DMG, not a downloaded-public host.
 The host's optional `toggleFiles` shortcut is unbound
 by default and reuses the existing tool entry point; unavailable tools do not
@@ -502,7 +502,7 @@ copy retains its original deadline while awaiting the core claim, which can reac
 main after child dragend; completion alone grants no input. View/window/epoch
 loss and the ten-second deadline revoke both phases. Without a protected consumer the source
 stays move-only. Current source composes the shared captured-pane Protected Paste
-owner for one eligible terminal-area drop; see the [transport seam](docs/files-development-preview.md#terminal-drag-transport-source-increment).
+owner for one eligible terminal-area drop; see the [transport seam](docs/files-development-preview.md#inserting-paths-into-the-terminal).
 
 **Extension View Host** — Internal owner of lazy native packaged-content views
 and their reads in a nonpersistent epoch, retaining an immutable package-version

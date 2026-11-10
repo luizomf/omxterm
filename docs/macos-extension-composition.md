@@ -33,7 +33,7 @@ not that changed minimal-fixture assertion.
   distinct APFS volumes, including final symlinks and recoverable identity;
   this is not full macOS Files lifecycle qualification. Files archive
   publication/catalog admission remains separate. See the
-  [primitive contract and evidence boundary](files-development-preview.md#build-and-evidence-boundary).
+  [primitive contract and evidence boundary](files-development-preview.md#native-addon).
 - Published archives/manifests and catalog target restrictions are unchanged.
   Broader host admission does not make a catalog release macOS-compatible.
 - Surviving-browser main-death package-file-read exclusion remains unqualified.
@@ -44,7 +44,7 @@ The separate Files0.5.0 exact-DMG fixture passed
 its eleven bounded consumer checks against the compatible retained dev.21 host:
 local archive trust, real operations/recoverable trash, retained companion state,
 management and an active Files backend at normal Quit. Its exact identities and
-[qualification limits](files-development-preview.md#files-050-macos-controlled-qualification)
+[qualification limits](files-development-preview.md#platform-limits)
 remain separate from this minimal fixture and the qualified Snippets campaign.
 Public host/archive/catalog distribution is not established by that checkpoint.
 

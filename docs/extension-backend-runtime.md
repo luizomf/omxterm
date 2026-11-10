@@ -58,7 +58,7 @@ synchronous work: the existing ten-second request deadline retires the epoch,
 with unknown effects and the ordinary exit/close joins. Linux's eight-second gio
 command timeout is not a macOS native-I/O guarantee. Bounded exact-package trash checks
 passed for local/distinct APFS volumes and final symlinks; see the
-[recorded evidence and limits](files-development-preview.md#build-and-evidence-boundary).
+[recorded evidence and limits](files-development-preview.md#platform-limits).
 This is not full Files qualification or native-I/O cancellation evidence. The separate [SSH Connect](ssh-connect-development.md) consumer uses a declared, own-view
 main capability (`terminal.openSsh.v1`), not a backend-owned PTY. Its package
 has a declared minimum host version of 0.24.0-dev.8 for SSH0.3.1; this does not
@@ -155,7 +155,7 @@ Controlled tests cover admission races, cancellation, bounded pending calls, rep
 Qualification must identify exact source/runtime and architecture/elevation limits.
 Module tests and this artifact alone do not qualify packaged inclusion/unpacking,
 security-fuse bytes, Developer ID/notarization, deployment floors, x64 or Windows
-ordinary-user permissions. The [Files evidence summary](files-development-preview.md#build-and-evidence-boundary)
+ordinary-user permissions. The [Files evidence summary](files-development-preview.md#platform-limits)
 distinguishes production, renderer-crash, module-native management and actual
 main-death observations; controlled views are not graphical recovery evidence.
 Surviving-browser file-read exclusion remains unqualified. Neither source wiring
