@@ -63,7 +63,7 @@ Layout/state declarations require a
 compatible newer host; older hosts reject them rather than partially activating.
 Mirror Typing requires host 0.24.0-dev.2 or newer within its declared 0.24.x
 range. Its own-view describe/start/stop capability grants no extension-authored
-keyboard payload route; see [the capability contract](mirror-typing.md#capability-and-lifetime).
+keyboard payload route; see [the capability contract](mirror-typing-development.md#capability-and-lifetime).
 Semantic input requires host 0.24.0-dev.7 or newer and validates a currently visible,
 authenticated view before admitting exact text to a captured core Surface. It
 shares core Protected Paste and the read-only choice preview; it grants no PTY,

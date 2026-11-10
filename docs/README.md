@@ -36,8 +36,9 @@ not install or update tools.
   [unresolved public-install failures and testing gaps](snippets-migration.md#stable-0250-release-disposition);
   users needing built-in Snippets may remain on 0.23.0.
 - **[Saved Layout](saved-layout.md)** and **[Mirror Typing](mirror-typing.md)**
-  remain separately built source previews; their guides describe compatibility
-  and evidence, not a published catalog offer.
+  are source-only previews with no published archive or catalog offer. Their
+  availability notes summarize the limits; developer records retain build and
+  qualification details.
 
 Development source also has Files 0.8 path insertion/drop and #818's revised
 palette preview. Neither is in stable 0.25.0, which cannot run Files 0.8. See each
@@ -67,6 +68,8 @@ Developer and architecture docs for contributors and coding agents:
 - **[AGENTS.md](../AGENTS.md)** — quick command reference and repository rules for coding agents.
 - **[Native development](development.md)** — OS prerequisites, test suites, graphical test precautions, and packaging verification.
 - **[SSH Connect development record](ssh-connect-development.md)** — exact package evidence, integration contract, and qualification limits.
+- **[Saved Layout development record](saved-layout-development.md)** — source build, storage behavior, compatibility and qualification limits.
+- **[Mirror Typing development record](mirror-typing-development.md)** — source build, input behavior, capability contract and qualification limits.
 - **[Native subsystem fixture reference](native-test-reference.md)** — focused fixture prerequisites, commands, limits, and evidence boundaries.
 - **[UI style guide](ui-style-guide.md)** — the small palette, spacing, control and responsive-layout vocabulary implemented by Settings.
 - **[Restty Terminal Surface](restty-development.md)** — rendering integration, pinned dependencies, WASM core rebuilds, and optional diagnostics.

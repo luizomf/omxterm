@@ -5,8 +5,8 @@ This internal runtime lazily activates installed backends for Linux ARM64,
 [macOS ARM64 production composition](macos-extension-composition.md). A bounded
 [Windows ARM64 source-composition checkpoint](windows-arm64-extension-composition.md#evidence-boundary)
 passed separately from a later bounded unpacked-package inspection. Consumers include [Files](files-development-preview.md),
-[SSH Connect](ssh-connect-development.md), [Saved Layout](saved-layout.md) and
-[Mirror Typing](mirror-typing.md). Application startup constructs infrastructure,
+[SSH Connect](ssh-connect-development.md), [Saved Layout](saved-layout-development.md) and
+[Mirror Typing](mirror-typing-development.md). Application startup constructs infrastructure,
 not active extension code. The application manager composes backend and view
 owners with independent generation-matched pins and bounded Quit retirement.
 
@@ -62,7 +62,7 @@ passed for local/distinct APFS volumes and final symlinks; see the
 This is not full Files qualification or native-I/O cancellation evidence. The separate [SSH Connect](ssh-connect-development.md) consumer uses a declared, own-view
 main capability (`terminal.openSsh.v1`), not a backend-owned PTY. Its package
 requires host0.24.0-dev.0; API0.1.x and existing Files manifests remain compatible.
-The separate [Mirror Typing](mirror-typing.md#capability-and-lifetime) consumer
+The separate [Mirror Typing](mirror-typing-development.md#capability-and-lifetime) consumer
 requires host 0.24.0-dev.2 and declares `terminal.mirrorTyping.v1`. Core owns
 its visible revocable input lease; no keyboard bytes or per-key calls enter the
 backend. Backend lifetime loss revokes its views and input authority before
@@ -84,7 +84,7 @@ Errors distinguish busy, conflict, invalid-state/value and outcome-unknown.
 No retry, repair, sweep, migration, arbitrary filename or global event bus is
 provided. State survives installation management. Interrupted temp documents
 can remain; Forget removes only active data. This helper is correctness support
-for trusted code, not a filesystem sandbox. See [Saved Layout](saved-layout.md)
+for trusted code, not a filesystem sandbox. See [Saved Layout](saved-layout-development.md)
 for the first concrete consumer, privacy and cleanup disclosure.
 
 ## Bootstrap and immutable-version handoff
