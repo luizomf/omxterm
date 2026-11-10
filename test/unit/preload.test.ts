@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TerminalBridge } from "../../src/shared/terminal-bridge";
 import { terminalIpc } from "../../src/shared/terminal-ipc";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
@@ -42,7 +42,11 @@ vi.mock("electron", () => ({
   },
 }));
 
-beforeAll(async () => {
+// The preload keeps the latest configuration and replays it to subscribers,
+// so each test loads a fresh module instead of inheriting another's state.
+beforeEach(async () => {
+  vi.resetModules();
+  electron.listeners.clear();
   await import("../../src/preload/index");
 });
 

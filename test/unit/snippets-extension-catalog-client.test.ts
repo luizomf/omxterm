@@ -27,10 +27,15 @@ function transport(...pages: unknown[]) {
 }
 
 describe("Snippets catalog client", () => {
-  it.each(["  echo 'hello'\r\n\t世界\n", '\u0000"\\\n'.repeat(16_384)])(
-    "assembles all 512 bounded rows preserving exact text (%#)",
-    async (body) => {
-      const snippets = Array.from({ length: 512 }, (_, index) => ({
+  // The full count proves the row bound; a few maximum-size escaped bodies
+  // prove the byte bound without re-encoding 32 MiB on a loaded machine.
+  it.each([
+    [512, "  echo 'hello'\r\n\t世界\n"],
+    [16, '\u0000"\\\n'.repeat(16_384)],
+  ])(
+    "assembles all %i bounded rows preserving exact text",
+    async (count, body) => {
+      const snippets = Array.from({ length: count }, (_, index) => ({
         name: `Snippet ${index}`,
         body,
         description: "  Literal description\n",

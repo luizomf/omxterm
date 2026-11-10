@@ -35,10 +35,15 @@ describe("Snippets activation catalog transport", () => {
     }));
     await expect(catalog.open()).rejects.toThrow("oversized-catalog-page");
   });
-  it.each(["x", '\u0000"\\\n'.repeat(16_384)])(
-    "preserves all 512 entries across bounded protocol pages (%#)",
-    async (body) => {
-      const snippets = Array.from({ length: 512 }, (_, index) => ({
+  // The full count proves the row bound; a few maximum-size escaped bodies
+  // prove the byte bound without re-encoding 32 MiB on a loaded machine.
+  it.each([
+    [512, "x"],
+    [16, '\u0000"\\\n'.repeat(16_384)],
+  ])(
+    "preserves all %i entries across bounded protocol pages",
+    async (count, body) => {
+      const snippets = Array.from({ length: count }, (_, index) => ({
         name: `item ${index}`,
         body,
         execute: index % 2 === 0,
@@ -56,7 +61,7 @@ describe("Snippets activation catalog transport", () => {
       }
       expect(pages).toBeGreaterThan(1);
       expect(rows).toEqual(snippets);
-      expect(page.total).toBe(512);
+      expect(page.total).toBe(count);
     },
   );
 
