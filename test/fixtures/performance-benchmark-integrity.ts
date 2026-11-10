@@ -275,7 +275,8 @@ function runtimeIssues(report: BenchmarkReport, blocking: Push): void {
     !Number.isSafeInteger(runtime.processCount) ||
     runtime.processCount < 1 ||
     !runtime.settled ||
-    !Number.isFinite(runtime.steadyBytes) ||
+    !Number.isSafeInteger(runtime.steadyBytes) ||
+    (runtime.steadyBytes ?? -1) < 0 ||
     !Number.isFinite(runtime.growthBytes) ||
     (report.machine.platform === "linux" &&
       !Number.isFinite(runtime.cpuPercentOneCore))

@@ -1116,10 +1116,16 @@ function aggregateRuntime(runtime: RawRuntimeRun | null) {
     if (
       !complete ||
       values.length !== runtime.processCount ||
-      values.some((value) => value === null || !Number.isFinite(value))
+      values.some(
+        (value) =>
+          value === null ||
+          !Number.isFinite(value) ||
+          (field === "bytes" && (!Number.isSafeInteger(value) || value < 0)),
+      )
     )
       return null;
-    return (values as number[]).reduce((total, value) => total + value, 0);
+    const total = (values as number[]).reduce((sum, value) => sum + value, 0);
+    return field === "bytes" && !Number.isSafeInteger(total) ? null : total;
   };
   const elapsedMs = after.atMs - before.atMs;
   const sizes = runtime.samples.map((sample) => sum(sample, "bytes"));

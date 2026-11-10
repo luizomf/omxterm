@@ -420,11 +420,13 @@ describe("performance benchmark reference and admission", () => {
         settled: true,
         samples: [
           { atMs: 0, processes: [{ pid: 1, bytes: 20, cpuSeconds: null }] },
-          { atMs: 1000, processes: [{ pid: 1, bytes: 20, cpuSeconds: null }] },
+          { atMs: 1000, processes: [{ pid: 1, bytes: 10, cpuSeconds: null }] },
         ],
       },
     });
     expect(measured.extensionRuntime?.cpuPercentOneCore).toBeNull();
+    expect(measured.extensionRuntime?.steadyBytes).toBe(10);
+    expect(measured.extensionRuntime?.growthBytes).toBe(-10);
     expect(blockingIssues(integrityIssues(measured, context()))).toEqual([]);
   });
 
@@ -466,31 +468,35 @@ describe("performance benchmark reference and admission", () => {
     expect(codes(measured)).toContain("extension-runtime-incomplete");
   });
 
-  it("does not invent zero for unread reference runtime measurements", () => {
-    const run = makeRun({ scrollbackLines: 10_000, platform: "darwin" });
-    const measured = deriveBenchmarkReport({
-      repetitions: [
-        [run],
-        [makeRun({ scrollbackLines: 0, platform: "darwin" })],
-      ],
-      runtime: {
-        metric: run.metric,
-        windowMs: 1000,
-        processCount: 1,
-        settled: true,
-        samples: [
-          { atMs: 0, processes: [{ pid: 1, bytes: null, cpuSeconds: null }] },
-          {
-            atMs: 1000,
-            processes: [{ pid: 1, bytes: null, cpuSeconds: null }],
-          },
+  it.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects invalid raw reference runtime bytes: %s",
+    (bytes) => {
+      const run = makeRun({ scrollbackLines: 10_000, platform: "darwin" });
+      const measured = deriveBenchmarkReport({
+        repetitions: [
+          [run],
+          [makeRun({ scrollbackLines: 0, platform: "darwin" })],
         ],
-      },
-    });
-    expect(measured.extensionRuntime?.steadyBytes).toBeNull();
-    expect(measured.extensionRuntime?.cpuPercentOneCore).toBeNull();
-    expect(codes(measured)).toContain("extension-runtime-incomplete");
-  });
+        runtime: {
+          metric: run.metric,
+          windowMs: 1000,
+          processCount: 1,
+          settled: true,
+          samples: [
+            { atMs: 0, processes: [{ pid: 1, bytes, cpuSeconds: null }] },
+            {
+              atMs: 1000,
+              processes: [{ pid: 1, bytes, cpuSeconds: null }],
+            },
+          ],
+        },
+      });
+      expect(measured.extensionRuntime?.steadyBytes).toBeNull();
+      expect(measured.extensionRuntime?.growthBytes).toBeNull();
+      expect(measured.extensionRuntime?.cpuPercentOneCore).toBeNull();
+      expect(codes(measured)).toContain("extension-runtime-incomplete");
+    },
+  );
 
   it("rejects a missing metric instead of reporting around it", () => {
     const measured = report([
