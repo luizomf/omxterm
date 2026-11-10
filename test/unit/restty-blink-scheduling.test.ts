@@ -109,8 +109,11 @@ function harness(start = 599) {
     visible: true,
     synchronized: false,
     animating: false,
+    // Whether the content a draw presents changes with the blink phase.
+    blinking: true,
     cacheClears: 0,
   };
+  let lastFrameBlinks = true;
   const resizeState = { lastAt: -10000 };
   const options = {
     internalState,
@@ -125,7 +128,11 @@ function harness(start = 599) {
     isSynchronizedOutput: () => controls.synchronized,
     readState: () => shared,
     writeState: (patch: Partial<typeof shared>) => Object.assign(shared, patch),
-    tickWebGL: () => paints.push(now),
+    lastFrameBlinks: () => lastFrameBlinks,
+    tickWebGL: () => {
+      lastFrameBlinks = controls.blinking;
+      paints.push(now);
+    },
   };
   const factory = runInNewContext(`(${loopSource})`, environment) as (
     input: typeof options,
@@ -418,4 +425,68 @@ it("does not restart after lifecycle teardown cancels a sleeping loop", () => {
   h.vsync(2500, 4000);
   expect(h.framePending).toBe(false);
   expect(h.timers.size).toBe(0);
+});
+
+it("draws nothing at blink phases while the presented frame does not blink", () => {
+  const h = harness(0);
+  h.controls.blinking = false;
+  // Output with a steady cursor presents once; later phases draw nothing.
+  h.invalidate(100);
+  h.vsync(100, 6010);
+  expect(h.paints).toEqual([100]);
+  expect(h.frames.length).toBeLessThan(60);
+  // Output that starts blinking (DECSCUSR, SGR 5) restores absolute phases.
+  h.controls.blinking = true;
+  h.invalidate(6020);
+  h.vsync(6020, 7300);
+  expect(h.paints.slice(0, 2)).toEqual([100, 6020]);
+  // One draw on the first display frame of each later phase (6600, 7200).
+  expect(h.paints.slice(2).map((paint) => Math.floor(paint / 600))).toEqual([
+    11, 12,
+  ]);
+  // Output that stops it again stops the phase draws.
+  h.controls.blinking = false;
+  h.invalidate(7310);
+  h.vsync(7310, 9000);
+  expect(h.paints).toHaveLength(5);
+  expect(h.paints.at(-1)).toBe(7310);
+});
+
+it("decides from the presented cursor and cells whether a blink phase changes the frame", () => {
+  // Both production pieces: the renderers' cursor style and the new decision.
+  const [resolveCursorStyle, changes] = runInNewContext(
+    `[${extract(/\n {2}(function resolveCursorStyle\(cursor, opts\) \{[\s\S]*?\n {2}\})/u)},
+    ${extract(/(function blinkPhaseChangesFrame\([\s\S]*?\n\})/u)}]`,
+    {},
+  ) as [unknown, (input: object) => boolean];
+  const STYLE_BLINK = 1 << 3;
+  const plainCells = new Uint16Array(4);
+  const blinkingCells = Uint16Array.of(0, STYLE_BLINK | 1, 0, 0);
+  const frame = ({
+    blinking = 1,
+    visible = 1,
+    focused = true,
+    preedit = false,
+    styleFlags = plainCells,
+  }) =>
+    changes({
+      isBlinking: blinking !== 0,
+      cursor: { blinking, visible, style: 0 },
+      cursorOptions: { focused, preedit },
+      resolveCursorStyle,
+      styleFlags,
+      STYLE_BLINK,
+    });
+
+  expect(frame({})).toBe(true);
+  expect(frame({ styleFlags: blinkingCells })).toBe(true);
+  expect(frame({ visible: 0, styleFlags: blinkingCells })).toBe(true);
+  expect(frame({ focused: false, styleFlags: blinkingCells })).toBe(true);
+  // Steady cursor (DECSCUSR), hidden cursor, hollow unfocused cursor, preedit.
+  expect(frame({ blinking: 0 })).toBe(false);
+  expect(frame({ visible: 0 })).toBe(false);
+  expect(frame({ focused: false })).toBe(false);
+  expect(frame({ preedit: true })).toBe(false);
+  // The renderers show SGR 5 cells steadily unless the cursor blinks.
+  expect(frame({ blinking: 0, styleFlags: blinkingCells })).toBe(false);
 });

@@ -248,8 +248,11 @@ describe("Restty scrollback through the production Surface seam", () => {
       for (const [name, count] of Object.entries(measurement.surfaces[0]!))
         if (name !== "deleteTexture")
           expect.soft(count, `hidden ${name}`).toBe(0);
-      expect.soft(measurement.surfaces[1]!.clear).toBeGreaterThan(0);
     }
+    // The visible Surface draws for output. Idle, with nothing on it blinking,
+    // it skips blink phases and draws nothing either (#869).
+    expect.soft(result!.hidden.output.surfaces[1]!.clear).toBeGreaterThan(0);
+    expect.soft(result!.hidden.idle.surfaces[1]!.clear).toBe(0);
     const synchronized = result!.hidden.synchronizedReveal;
     expect.soft(synchronized.batchedClears).toBe(0);
     expect.soft(synchronized.before).toEqual([12, 34, 56, 255]);

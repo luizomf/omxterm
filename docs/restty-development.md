@@ -171,10 +171,21 @@ Every `needsRender` write in the runtime goes through one wake path, so output,
 input, resize, focus and configuration changes resume vsync on the next frame.
 The timer is the fallback for state that changes without an invalidation:
 reveal without a refit, unpause, and Kitty animation deadlines, which the core
-ABI does not report. Those may present up to one poll late. Blink phases still
-draw even when nothing blinks; skipping them would need render-pass knowledge.
+ABI does not report. Those may present up to one poll late.
 
-The production loop, its lifecycle cancellation and blink phases run headless:
+A blink phase draws only when the last presented frame depends on it
+(`scripts/restty-idle-blink-corrections.mjs`). Both renderers record that while
+drawing: the cursor blinks and either its resolved style differs between phases
+or a visible cell carries SGR 5. The pinned renderers show SGR 5 cells steadily
+unless the cursor blinks, so a steady, hidden or unfocused cursor over plain
+text draws nothing at idle. Output, scrolling, preedit and focus moves (the
+canvas, the IME input and `focus()`/`blur()`) invalidate, so the answer is
+recomputed before it can go stale. Time-based custom shader stages and the
+Restty resize overlay, which OMXTerm does not use, no longer get blink-phase
+redraws.
+
+The production loop, its lifecycle cancellation, blink phases and the blink
+decision run headless:
 
 ```sh
 npx vitest run test/unit/restty-blink-scheduling.test.ts
@@ -255,7 +266,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c` |
+| Restty JavaScript runtime | `3194723adecac1901096c384e9a9687fcf0c979dab64fcae22886353354facff` |
 | Embedded-core chunk       | `0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513` |
