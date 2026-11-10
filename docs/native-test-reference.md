@@ -579,8 +579,8 @@ observation publication (`published-hang`). Bounded metadata outside the removed
 profile records publication completion, Quit progression and unexpected window
 creation; missing/invalid evidence or any window fails the phase check. These
 checks diagnose fixture ordering, not the exact cause of a native SIGTRAP.
-Headless coverage uses the actual fixture callback and production shutdown owner:
-`npm test -- test/unit/application-about-startup.test.ts test/unit/terminal-shutdown.test.ts`.
+Headless coverage of the production shutdown owner:
+`npm test -- test/unit/terminal-shutdown.test.ts`.
 
 The auxiliary-panel native fixture fences overlay transitions with bounded,
 window-owned receipts recorded only after the actual production Toggle/Paste

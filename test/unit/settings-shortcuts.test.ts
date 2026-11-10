@@ -362,6 +362,28 @@ describe("main-owned capture", () => {
     });
   });
 
+  it("leaves an event an earlier owner already handled to that owner", () => {
+    const capture = createKeybindCapture("linux");
+    const window = target();
+    const contents = Object.assign(new EventEmitter(), { send: window.send });
+    const invoke = vi.fn();
+    deliverKeybindsFromKeyEvents(
+      contents,
+      () => terminalDefaultKeybinds("linux"),
+      invoke,
+      "linux",
+      capture,
+    );
+    const find = key({ key: "F", code: "KeyF", control: true, shift: true });
+    const handled = { defaultPrevented: true, preventDefault: vi.fn() };
+    contents.emit("before-input-event", handled, find);
+    expect(invoke).not.toHaveBeenCalled();
+    capture.set(contents, { captureId: "handled", active: true });
+    contents.emit("before-input-event", handled, find);
+    expect(window.sent).toEqual([]);
+    expect(handled.preventDefault).not.toHaveBeenCalled();
+  });
+
   it("leaves reported composition alone during recording and shortcut delivery", () => {
     const capture = createKeybindCapture("darwin");
     const window = target();
