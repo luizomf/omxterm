@@ -3,7 +3,7 @@
 > [!TIP]
 > Choose **Settings…** in the OMXTerm application menu for preferences and keyboard shortcuts without editing JSON. For custom colors, edit a [theme file](#terminal-themes).
 
-OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Targets with built-in Snippets also create the example catalog below; Linux ARM64/x64 and macOS/Windows ARM64 source with optional Snippets leave it user-owned and absent until you create it:
+OMXTerm works out of the box with its bundled font, theme, and default shortcuts. On your first launch, it creates editable configuration and theme files. Systems with built-in Snippets also create the example catalog below. On systems where Snippets is optional, OMXTerm does not create `snippets.yaml`; create it only if you want to add your own snippets:
 
 ```text
 omxterm/
@@ -22,8 +22,7 @@ where the environment home matches the account home, you can find the files in:
 - **Windows:** `%USERPROFILE%\.config\omxterm` (or `%XDG_CONFIG_HOME%\omxterm`)
 
 If XDG is unset or empty and your home environment is overridden, use the actual
-account configuration path instead. See the [optional Snippets 0.1.0 limitation](snippets-migration.md#existing-catalogs-and-shortcuts)
-when locating its catalog.
+account configuration path instead.
 
 **In the app:** [Settings](#settings) validates, saves, and applies control changes for you. **Config File** also lets you edit `config.json` with an explicit **Save**.
 
@@ -498,21 +497,9 @@ For example, to use `F11` for Snippets instead of full screen:
 
 ## Snippets
 
-Published **OMXTerm 0.25.0** and current source use optional Snippets on Linux
-ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and the unchanged0.23.0
-host retain built-in Snippets. Use the official catalog or a verified local
-archive; the local route also works offline after download. See the
-[migration guide](snippets-migration.md) for matching downloads, installation,
-existing catalogs and exact qualification limits.
-
-Windows ARM64 still has [public-install Snippets failures and testing gaps](snippets-migration.md#stable-0250-release-disposition).
-Read those limits before upgrading if you rely on built-in Snippets.
-
-Since 0.25.0, new packaged profiles try once to install the
-[removable default](default-snippets.md), enabled but inactive until opened.
-Existing profiles, YAML and disabled/removed choices stay intact. This uses the
-unchanged bundled 0.1.0 archive and creates no user YAML. Removing it does not
-trigger a reinstall. Developer startup and Windows x64 are excluded.
+Snippets stores reusable commands or text in `snippets.yaml` and inserts them
+from the Snippets panel. Availability, the one-time default on new profiles and
+the Windows ARM64 issue are summarized in the [Snippets availability note](snippets-availability.md).
 
 Snippets let you save commonly used commands or text in `snippets.yaml` (next to `config.json`) and insert them from the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`). Configuration and theme files remain JSON.
 
