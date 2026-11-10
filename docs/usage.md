@@ -291,13 +291,16 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 Snippets are available as an optional extension on supported host versions. To
 install or update it, choose **Settings → Extensions → Browse official
 extensions**. For current platform availability and offline installation, see
-the [Snippets guide](snippets-migration.md).
+the [Snippets guide](snippets-migration.md) and the concise
+[optional-tools availability summary](README.md#optional-tools), including
+built-in Windows x64 Snippets and preview limits on Linux/macOS ARM64.
 
 Choose **Insert** to place text at the prompt without adding Enter, or **Run**
 to send it with Enter. **Preview** lets you review the text and choose either
-action. Multiline snippets can still run individual lines or require paste
-confirmation. See [Snippets](configuration.md#snippets) for editing the catalog
-and its settings.
+action. Preview captures the terminal target when opened and does not retarget
+if you switch tabs or panes. Multiline snippets can still run individual lines
+or require paste confirmation. See [Snippets](configuration.md#snippets) for
+editing the catalog and its settings.
 
 ### Files and SSH Connect
 
