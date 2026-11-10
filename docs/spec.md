@@ -86,7 +86,7 @@ OMXTerm:
 AI assistance, unrestricted broadcast input, saved or reconnectable running sessions, shell integration,
 profiles, a remote theme marketplace, automatic configuration reload, automatic
 updates, and remote terminal features beyond the optional
-[Linux/macOS ARM64 SSH Connect preview](ssh-connect.md) are outside the current product
+[Linux/macOS ARM64 SSH Connect preview](ssh-connect-development.md) are outside the current product
 contract. SSH Connect is separately installed: its incomplete read-only alias
 index and distinct quick-connect page request a typed, main-owned literal
 system-ssh launch, without brokering authentication or adding reconnect. The optional
@@ -314,7 +314,7 @@ succeeds ([ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)).
   protocol replies, including exit replay before start resolves. Native records
   still retire on actual exit, and ended content is not Busy. Startup/signal
   acknowledgement and authorized removal retain precedence. See
-  [the capability/admission contract](ssh-connect.md#capability-and-admission).
+  [the capability/admission contract](ssh-connect-development.md#capability-and-admission).
 - Native executable-start failure is distinct from a successfully executed
   program returning nonzero. Unix reports exec failure through a private native
   status channel. Windows' pinned dependency explicitly marks its asynchronous
@@ -2069,7 +2069,7 @@ macOS Files0.7 and SSH0.3.1 for Linux and macOS ARM64. The bounded [Files0.7
 macOS public-catalog checkpoint](files-development-preview.md#files07-macos-public-catalog-checkpoint)
 passed separately from the local filesystem checkpoint. The SSH offer uses the same original
 archive; source integration, public endpoint readback and the separate bounded
-[macOS public-catalog checkpoint](ssh-connect.md#macos-arm64-public-catalog-checkpoint)
+[macOS public-catalog checkpoint](ssh-connect-development.md#macos-arm64-public-catalog-checkpoint)
 have completed. The earlier catalog promotion
 added `linux-x64` to Snippets; public endpoint readback and the separate packaged public-HTTPS checkpoint passed
 for the exact [Linux x64 preview pair](snippets-migration.md#linux-x64-public-catalog-checkpoint).

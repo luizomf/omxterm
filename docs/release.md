@@ -607,7 +607,7 @@ not a description of subsequent exact-pair qualification.
 The new pair reuses already public Linux ARM64 host `v0.24.0-dev.11`, AppImage
 SHA-256 `04344920a6229baf695d01e03fedcf5396c897f6805d6ed2ed4b9f4104f67c86`.
 Its exact SSH0.3 appearance/language and synthetic Connect qualification is
-recorded in the [SSH guide](ssh-connect.md#installing-the-distributed-preview).
+recorded in the [SSH guide](ssh-connect-development.md#installing-the-distributed-preview).
 No host rebuild/release is required; stable `v0.23.0` remains Latest. Historical
 SSH0.1 assets, tags, notes and receipts remain immutable.
 
@@ -615,7 +615,7 @@ The independently reviewed catalog/docs/test promotion replaced only SSH metadat
 preserving Files and Snippets, and was integrated at
 `6f4355d6573b0fb4e3f8591655d7db789106a8a7`. Fixed raw catalog readback matched SHA-256
 `0a446b1a3c53960508f0d0b16a951e5f889d9998230832624d8f1edddef6dd15`.
-The bounded [public SSH checkpoint](ssh-connect.md#public-distribution-checkpoint)
+The bounded [public SSH checkpoint](ssh-connect-development.md#public-distribution-checkpoint)
 then passed on exact publicdev.11/SSH0.3 with fresh public downloads, without
 appearance mode. Its results and initial fixture failure are separate from
 prepublication qualification. Catalog/docs/test-only promotion needed no
@@ -655,7 +655,7 @@ Stable0.23.0, dev.9 and Files0.1.0 remain immutable.
    immutable release URLs. `create-files-catalog.mjs` is Files-specific, not an SSH
    generator; do not replace the complete catalog with a Files-only output.
 4. Read back the exact fixed raw catalog endpoint and compare its bytes to the
-   promoted source. Run the bounded [public SSH checkpoint](ssh-connect.md#public-distribution-checkpoint)
+   promoted source. Run the bounded [public SSH checkpoint](ssh-connect-development.md#public-distribution-checkpoint)
    on the exact publicly downloaded host/archive. It uses production HTTPS and
    verifies catalog install/reinstall, dormant activation, management, retained
    local terminal and actual-exit Quit without rerunning the synthetic SSH matrix.
