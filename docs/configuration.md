@@ -30,7 +30,7 @@ when locating its catalog.
 **In a text editor: edit, save, reload.** After editing configuration or theme files, choose **View → Reload User Configuration** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux/Windows). Snippets reload automatically whenever you open the Snippets sidebar (`Cmd+Shift+S` / `Ctrl+Shift+S`).
 
 - [Change settings in the app](#settings)
-- [Make your first display change](#add-one-display-change)
+- [Make your first display change](#make-your-first-display-change)
 - [Find or create your configuration folder](#create-the-configuration-directory)
 - [Legacy palette editing and drafts in OMXTerm Studio](#edit-visually-with-omxterm-studio)
 - [Background transparency and blur](#background-transparency-and-blur)
@@ -39,6 +39,25 @@ when locating its catalog.
 - [Custom keyboard shortcuts](#keybinds)
 - [Snippets](#snippets) and [Themes](#terminal-themes)
 - [Reloading behavior and validation](#reloading-user-configuration)
+
+## Make your first display change
+
+Change **Font size** in **Settings → Appearance** to resize your terminal text.
+For the same change in a text editor, update `font.size` in `config.json`, save,
+and reload (`Cmd+Shift+,` / `Ctrl+Shift+,`):
+
+```json
+{
+  "version": 1,
+  "font": {
+    "size": 18
+  }
+}
+```
+
+You can also adjust line height (`"lineHeight": 1.1`), disable programming
+ligatures (`"ligatures": false`), or customize terminal grid padding. See the
+[configuration reference](#configuration-reference) for all available settings.
 
 ## Settings
 
@@ -126,51 +145,6 @@ available, but pointer access and discoverability are reduced; this is not an
 accessibility guarantee. A valid reload updates existing, hidden and mounting
 panes without restarting their sessions. Rejected reloads retain the last valid
 settings.
-
-## Add one display change
-
-Change **Font size** in **Settings → Appearance** to resize your terminal text.
-To do the same in a text editor, update `font.size` in `config.json` (for example,
-from `16` to `18`), save, and reload (`Cmd+Shift+,` / `Ctrl+Shift+,`):
-
-```json
-{
-  "version": 1,
-  "font": {
-    "size": 18
-  }
-}
-```
-
-You can also adjust line height (`"lineHeight": 1.1`), disable programming ligatures (`"ligatures": false`), or customize padding around the terminal grid:
-
-```json
-{
-  "version": 1,
-  "font": {
-    "size": 18,
-    "lineHeight": 1.1,
-    "ligatures": false
-  },
-  "terminal": {
-    "padding": {
-      "top": 4,
-      "right": 8,
-      "bottom": 8,
-      "left": 8
-    }
-  }
-}
-```
-
-- **Font family:** by default, OMXTerm uses its bundled `FiraCode Nerd Font Mono`. To use an installed system font, set `font.family` to its exact, case-sensitive family name.
-- **Linux missing-glyph coverage:** after bundled fonts, OMXTerm tries installed `Noto Color Emoji`, `Noto Sans CJK SC`, `DejaVu Sans Mono`, and `Source Han Sans CN`, in that order. Each needs an exact regular-family match and must fit the fallback-byte budget. Source Han can provide CJK glyphs when Noto CJK is absent; coverage depends on the available fonts, not an automatic installation or a guarantee of every CJK character. You do not need to change `font.family` to use these fallbacks.
-- **Line height and font family:** apply immediately to new tabs; restart OMXTerm to apply them to already-open tabs.
-- **Temporary zoom:** use `Cmd++` / `Cmd+-` (`Ctrl++` / `Ctrl+-` on Linux/Windows) to zoom a window temporarily, and `Cmd+0` / `Ctrl+0` (**Actual Size**) to reset to your configured size.
-
-The optional [Saved Layout extension](saved-layout.md) stores its explicitly
-saved snapshot under the application profile's extension-state directory, not
-`config.json`. It adds no `layout.*` preferences, startup restore or autosave.
 
 ## Configuration basics
 
