@@ -2500,7 +2500,7 @@ moves and one-shot permanent-delete confirmation remain unchanged. See the
 Files archive version/compatibility is maintained separately from the host.
 Published Files0.7.0 uses `>=0.25.0-dev.10` / API `0.1.x`, the neutral ARM64
 preview name and existing host services for filtering/keyboard and confirmed
-directory moves, without terminal insertion/drop. Current Files0.8.0 prepares
+directory moves, without terminal insertion/drop. Published Files0.8.0 adds
 selected-path insertion and Files-to-terminal drop with `terminal.insertPath.v1`,
 minimum host `>=0.26.0` and API `0.1.x`, the first published host with the
 consumer. Production archive admission and the catalog refuse lower hosts; the

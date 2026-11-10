@@ -185,9 +185,9 @@ nor admitted. The 0.26.1 development bridge admits it; other prerelease families
 are refused. Local/link admission checks
 host/API and capability grammar, not target/platform qualification.
 
-This preparation reuses the existing builder and consumer, without new input or
-focus routes. Headless archive admission/content checks do not qualify a shipping
-host/archive pair. Prior bounded Linux native UI evidence exercised production
+Files0.8 reuses the existing builder and consumer, without new input or focus
+routes. Its published archive passed the [packaged Files smoke](#packaged-files-smoke)
+on the 0.26.0 Linux and macOS ARM64 hosts. Prior bounded Linux native UI evidence exercised production
 Files/core/Surface modules with inert session/backend/package dependencies, not
 a real PTY, receiving program or package store. Its observed timeout was the
 Surface receipt timeout, not the ten-second transport deadline (covered
