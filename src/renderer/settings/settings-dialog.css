@@ -33,6 +33,15 @@ body.tabs-visible .settings-tab {
 .settings-body.application-page {
   background: transparent;
 }
+/* Cap the content track at the panel width so the header rule ends with it. */
+.settings-body.application-page.has-navigation {
+  grid-template-columns: 168px minmax(0, 880px);
+}
+@media (min-width: 900px) {
+  .settings-body.application-page.has-navigation {
+    grid-template-columns: 192px minmax(0, 880px);
+  }
+}
 .settings-tabs {
   display: flex;
   flex-direction: column;

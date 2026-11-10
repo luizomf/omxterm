@@ -75,7 +75,8 @@ these conventions do not establish universal accessibility or compositor parity.
 
 The full-area workspace caps at 1440 px. Sidebar width is 168 px below 900 px
 and 192 px above; outer padding is 24 px, growing to 32 px at 1200 px.
-The title and Close share a ruled in-flow header, within the same content cap.
+The title and Close share a ruled in-flow header that ends at the same edge as
+the 880 px content boundary.
 These outer breakpoints use viewport media queries; `.application-page-content`
 (the Settings panels slot) is the only size-query container. Every category uses
 the same 880 px content boundary, aligning form rows, theme cards, Extension

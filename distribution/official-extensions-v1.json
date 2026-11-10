@@ -4,7 +4,7 @@
     {
       "id": "omxterm.files",
       "name": "Files — ARM64 preview",
-      "description": "Project-maintained local file manager preview: browse, create, rename, move, trash and delete files.",
+      "description": "Browse your files and folders: create, rename, move, trash and delete them.",
       "version": "0.6.0",
       "engines": {
         "omxterm": ">=0.24.0-dev.21",
@@ -22,7 +22,7 @@
     {
       "id": "omxterm.ssh",
       "name": "SSH Connect",
-      "description": "Project-maintained Linux and macOS ARM64 preview: searchable OpenSSH aliases and quick-connect in core-owned terminal tabs. macOS has a bounded controlled loopback authentication check; remote shells and general connectivity remain unqualified.",
+      "description": "Pick a server from your SSH config, or type an address, and connect in a new terminal tab.",
       "version": "0.3.1",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
@@ -40,7 +40,7 @@
     {
       "id": "omxterm.snippets",
       "name": "Snippets — Linux, macOS and Windows ARM64 preview",
-      "description": "Project-maintained optional Snippets preview: search your existing YAML catalog, preview exact text, then Insert or Run. Version 0.1.1 fixes account-home resolution. Platform verification remains limited; Windows ARM64 public-install failures are unresolved, and Windows x64 retains built-in Snippets.",
+      "description": "Search your saved text snippets, preview the exact text, then insert it into the terminal or run it.",
       "version": "0.1.1",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",

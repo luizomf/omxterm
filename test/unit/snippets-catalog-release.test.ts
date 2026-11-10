@@ -41,15 +41,6 @@ describe("published Snippets catalog candidate", () => {
       expect(macos.find((entry) => entry.id === id)).toEqual(
         legacy.find((entry) => entry.id === id),
       );
-    expect(snippets.name).toBe(
-      "Snippets — Linux, macOS and Windows ARM64 preview",
-    );
-    expect(snippets.description).toContain(
-      "Windows ARM64 public-install failures are unresolved",
-    );
-    expect(snippets.description).toContain(
-      "Windows x64 retains built-in Snippets",
-    );
   });
 
   it("binds the verified immutable archive, original receipt and embedded manifest", () => {

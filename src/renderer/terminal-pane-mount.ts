@@ -9,6 +9,7 @@ import type {
   TerminalSurfaceOptions,
 } from "../terminal-surface/terminal-surface";
 import type { TerminalTabsOptions } from "./terminal-tabs";
+import { forwardFieldContextMenu } from "./field-context-menu";
 import type { TerminalHostClipboard } from "./terminal-pane-context-menu";
 import {
   endPane,
@@ -66,9 +67,10 @@ export function createPaneMount(deps: {
     // Title and BEL events carry the emitting pane's session id;
     // the Surface itself stays pane-unaware. Events can only follow session
     // output, so the id is always known by the time they fire.
-    const clipboard = deps.surfaceOptions().clipboard;
-    const { clipboard: _clipboard, ...baseSurfaceOptions } =
-      deps.surfaceOptions();
+    const { clipboard, ...baseSurfaceOptions } = deps.surfaceOptions();
+    const forwardFieldRequest = clipboard
+      ? forwardFieldContextMenu(clipboard, deps.fieldClipboard)
+      : undefined;
     const paneSurfaceOptions: TerminalSurfaceOptions = {
       ...baseSurfaceOptions,
       routeKeyInput: (data) =>
@@ -93,7 +95,7 @@ export function createPaneMount(deps: {
               requestContextMenu(request) {
                 if (deps.disposed() || pane.removed || pane.ended) return;
                 if (request.target === "field") {
-                  deps.fieldClipboard(clipboard)?.requestContextMenu(request);
+                  forwardFieldRequest?.(request);
                   return;
                 }
                 const target = deps.captureContextMenuTarget(

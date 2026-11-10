@@ -2,6 +2,7 @@ import type {
   InitialLayout,
   TerminalLayoutBridge,
 } from "../shared/terminal-layout";
+import { forwardFieldContextMenu } from "./field-context-menu";
 import { createCompanionContent } from "./companion-content";
 import type { HostedContentBridge } from "../shared/extension-view";
 import { mountWindowChrome, type WindowChromeBridge } from "./window-chrome";
@@ -196,10 +197,9 @@ export function mountTerminalWindowPage(
   const fieldClipboard = options.clipboard
     ? {
         ...options.clipboard,
-        requestContextMenu: (
-          request: import("../terminal-surface/terminal-surface").TerminalContextMenuDescriptor,
-        ) =>
-          tabs.fieldClipboard(options.clipboard)?.requestContextMenu(request),
+        requestContextMenu: forwardFieldContextMenu(options.clipboard, (c) =>
+          tabs.fieldClipboard(c),
+        ),
       }
     : undefined;
   const companion = createCompanionContent(
