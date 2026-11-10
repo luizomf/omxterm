@@ -84,7 +84,9 @@ means ARM64 and `x86_64` means x64. Any other result has no matching download.
 library your Linux distribution ships. Releases with an older glibc, such as
 Ubuntu 24.04 LTS, are not supported; the
 [Linux steps](docs/installation.md#requirements) show how to check and what to
-do instead. It also needs X11/XWayland, which most desktops provide.
+do instead. OMXTerm uses X11, a Linux window system. On Wayland desktops, a
+compatibility layer called XWayland lets X11 apps run; most desktops already
+provide it.
 
 The x64 AppImage is build-only.
 
