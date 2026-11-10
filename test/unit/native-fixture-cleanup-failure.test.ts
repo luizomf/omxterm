@@ -20,8 +20,7 @@ const callsites = [
   "final-sample",
   "registration-before-kill",
   "termination",
-  "registration-after-kill",
-  "survival",
+  "post-kill-verification",
 ] as const;
 let processProgram: string, supervisorProgram: string;
 beforeAll(async () => {
@@ -68,6 +67,18 @@ describe("optional native cleanup failure schema", () => {
     expect(isNativeFixtureResult(legacy)).toBe(true);
     expect(isNativeFixtureResult({ ...legacy, cleanupErrors: [] })).toBe(true);
     expect(isNativeFixtureResult({ ...legacy, cleanupFailure })).toBe(true);
+  });
+
+  it("accepts the shared post-kill verification callsite", () => {
+    expect(
+      isNativeFixtureResult({
+        ...legacy,
+        cleanupFailure: {
+          ...cleanupFailure,
+          callsite: "post-kill-verification",
+        },
+      }),
+    ).toBe(true);
   });
 
   it.each([
@@ -432,8 +443,8 @@ describe("actual emitted supervisor cleanup evidence", () => {
     expect(observed.rootRetained).toBe(false);
     // Native failure is not converted into a successful supervisor outcome.
     expect(observed.status).toEqual([1]);
-    expect(observed.calls).toHaveLength(6);
-    for (const index of [0, 1, 2, 4, 5]) {
+    expect(observed.calls).toHaveLength(5);
+    for (const index of [0, 1, 2, 4]) {
       expect(observed.calls[index]).toEqual([
         "powershell.exe",
         inventoryArgs,
@@ -471,7 +482,7 @@ describe("actual emitted supervisor cleanup evidence", () => {
       cleanupAssistance: "none",
       ownedProcesses: [owner],
     });
-    expect(observed.calls).toHaveLength(6);
+    expect(observed.calls).toHaveLength(5);
     expect(observed.rootRetained).toBe(false);
     expect(observed.status).toEqual([0]);
   });

@@ -168,8 +168,11 @@ export async function terminateFixtureProcesses(
   // Freeze/rescan and signal operations above have separate command bounds.
   const deadline = Date.now() + 5_000;
   while (true) {
-    collectRegistered(undefined, context("registration-after-kill"));
-    const remaining = fixtureProcesses(context("survival")).filter(
+    // One post-kill inventory proves survival and also supplies the current
+    // identities needed to reconcile newly published ownership records.
+    const rows = fixtureProcesses(context("post-kill-verification"));
+    collectRegistered(rows);
+    const remaining = rows.filter(
       (row) => owned.get(row.pid)?.identity === row.identity,
     );
     if (remaining.length === 0) return;

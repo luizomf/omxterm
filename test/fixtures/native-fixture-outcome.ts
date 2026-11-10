@@ -9,7 +9,8 @@ export interface NativeFixtureCleanupFailure {
     | "registration-before-kill"
     | "termination"
     | "registration-after-kill"
-    | "survival";
+    | "survival"
+    | "post-kill-verification";
   // Failed execFileSync invocation only, floored milliseconds, capped at one day.
   readonly elapsedMs: number;
   readonly category: "timeout" | "command-failed" | "unknown";
@@ -31,7 +32,8 @@ function isCleanupFailure(
       value.callsite === "registration-before-kill" ||
       value.callsite === "termination" ||
       value.callsite === "registration-after-kill" ||
-      value.callsite === "survival") &&
+      value.callsite === "survival" ||
+      value.callsite === "post-kill-verification") &&
     "elapsedMs" in value &&
     typeof value.elapsedMs === "number" &&
     Number.isSafeInteger(value.elapsedMs) &&
