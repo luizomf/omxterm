@@ -48,6 +48,8 @@ export function inspectWindowsInstallerInputs(
   // #741 adds only exact target-scoped public Snippets resource preparation:
   // ARM64 includes the fixed archive, x64 excludes it. Host identity, NSIS
   // registration/cache paths, templates/options and builder remain unchanged.
+  // #864 adds only the Noto Sans Symbols 2 OFL notice under resources/licenses.
+  // NSIS identity, registration/cache paths, templates and options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -55,7 +57,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "7803299ec667f8d7605304adfaf28818df2a5b0868447eb13cd8d0d5e29fa6fb"
+      "fdeb21f6bbceb759cc2c43663e4609490337111304e34c128452e07a9b546ac2"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",
