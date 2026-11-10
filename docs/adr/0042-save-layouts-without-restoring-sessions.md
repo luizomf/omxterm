@@ -6,7 +6,7 @@ Status: Accepted for the optional Linux ARM64 Saved Layout preview (#673).
 
 One separately installed extension owns manual Save/Replace/Open/Forget policy
 and one explicitly saved current-window layout with local-directory provenance.
-The [user guide](../saved-layout.md) owns observable bounds, exclusions and
+The [development record](../saved-layout-development.md) owns observable bounds, exclusions and
 retention disclosure. This narrows the old workspace proposal: no startup
 or distributed multi-window snapshot coordinator, autosave or command replay.
 

@@ -306,7 +306,7 @@ visible Stop, native/renderer generation fencing and revocable memory-only
 authority; extension code receives no keyboard payloads. Paste, snippets and
 drops stop mirroring before ordinary single-target delivery. No persistence,
 autostart, semantic per-target encoding or atomic multi-PTY transaction is implied.
-See [Mirror Typing](docs/mirror-typing.md).
+See [Mirror Typing](docs/mirror-typing-development.md).
 
 **Saved Layout** — One explicitly saved current-window terminal arrangement:
 terminal order, weighted splits, focused panes and local-folder provenance.
@@ -314,7 +314,7 @@ The separately installed Linux ARM64 preview opens fresh Default Shells in a new
 window, preserving current work. It is not a saved running session, command
 replay or startup restoration. Its revisioned state survives uninstall; Forget
 removes the active snapshot, not possible interrupted-write remnants. See
-[the guide](docs/saved-layout.md).
+[the guide](docs/saved-layout-development.md).
 
 **SSH Connect** — A separately installed Linux and macOS ARM64 preview
 companion-panel page with an incomplete bounded OpenSSH alias index and distinct

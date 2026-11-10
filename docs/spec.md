@@ -90,11 +90,11 @@ updates, and remote terminal features beyond the optional
 contract. SSH Connect is separately installed: its incomplete read-only alias
 index and distinct quick-connect page request a typed, main-owned literal
 system-ssh launch, without brokering authentication or adding reconnect. The optional
-[Saved Layout preview](saved-layout.md) explicitly saves one window's terminal
+[Saved Layout preview](saved-layout-development.md) explicitly saves one window's terminal
 layout and local-directory provenance, opening fresh Default Shells in a new
 window without changing current work. It never saves/restores running sessions,
 commands or output; no startup restore or autosave is added. The optional
-[Mirror Typing preview](mirror-typing.md) is a narrow same-tab keyboard-byte
+[Mirror Typing preview](mirror-typing-development.md) is a narrow same-tab keyboard-byte
 exception, not unrestricted broadcast or multi-pane paste.
 
 Restty 0.3.0 and its pinned Ghostty core provide the sole Terminal Surface in
@@ -823,7 +823,7 @@ remain the responsibility of a session manager such as tmux.
 
 ## Saved Layout
 
-The separately installed Linux ARM64 [Saved Layout extension](saved-layout.md)
+The separately installed Linux ARM64 [Saved Layout extension](saved-layout-development.md)
 offers Save/Replace/Open/Forget, with Refresh for cross-instance conflicts or
 unknown outcomes. It captures only the original window's terminal tabs, weighted
 flat pane trees, focus/selection and reported-local/launch-local/home provenance.
@@ -855,7 +855,7 @@ access networks. See [ADR0042](adr/0042-save-layouts-without-restoring-sessions.
 
 ## Mirror Typing
 
-The separately installed Linux ARM64 [Mirror Typing extension](mirror-typing.md)
+The separately installed Linux ARM64 [Mirror Typing extension](mirror-typing-development.md)
 requires host 0.24.0-dev.2 and API 0.1.x. These are implementation contracts, not
 claims of native qualification or catalog/release publication.
 

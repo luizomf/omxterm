@@ -18,7 +18,7 @@ The **Close Pane** context-menu action is available in split tabs. Closing a pan
 
 ### Source previews
 
-Saved Layout and Mirror Typing are code previews, not tools offered through the extension catalog. See [Optional tools](README.md#optional-tools) for current availability.
+Saved Layout and Mirror Typing are source-only previews with no published archive or catalog offer. See the [Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md) availability notes; the developer index links their detailed build and qualification records.
 
 ## Window controls
 
