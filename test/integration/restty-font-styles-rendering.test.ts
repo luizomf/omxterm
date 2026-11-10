@@ -62,7 +62,7 @@ async function observe(
       "utf8",
     );
     expect(createHash("sha256").update(runtime).digest("hex")).toBe(
-      "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf",
+      "a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c",
     );
     let probed = runtime;
     if (priorSynthesis) {
@@ -73,7 +73,7 @@ async function observe(
       expect(createHash("sha256").update(probed).digest("hex")).toBe(
         // Current input routing/cursor encoding retained; only synthesis is reversed.
         // The historical b4112dac baseline remains verified separately.
-        "bbb5796986ffc939fa14a9127e1ce37a91f437e25bf27002a80dd243174a14bd",
+        "e5e636ad5213a76216118818fa39cd81e799a8e415351dcb7e330e7d1c70de9a",
       );
     }
     const synthesisRuntimeSha256 = capture

@@ -19,7 +19,7 @@ import exportHistory from "../fixtures/restty-export-runtime-history.json";
 
 const dist = path.dirname(createRequire(import.meta.url).resolve("restty"));
 const correctedDigest =
-  "70374576b1af5b36f3f06d654856555f8fa0f3548c4d45e5e4bdcb94992794cf";
+  "a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c";
 
 // Prepare only task-owned copies, including core and types: other fixtures may
 // still be exercising the installed prior runtime during a correction review.
