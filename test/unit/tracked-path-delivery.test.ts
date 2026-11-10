@@ -265,6 +265,67 @@ it("times out a missing receipt, refuses queued input, and never resumes that pa
   }
 });
 
+it.each(["timeout", "rejected", "unknown"] as const)(
+  "closes a bracketed path that stops on %s before any later input",
+  async (failure) => {
+    vi.useFakeTimers();
+    try {
+      let finish!: (receipt: "accepted") => void;
+      const late = new Promise<"accepted">((resolve) => {
+        finish = resolve;
+      });
+      const writeTracked = vi
+        .fn<(chunk: string) => Promise<"accepted" | "rejected" | "unknown">>()
+        .mockResolvedValueOnce("accepted")
+        .mockReturnValueOnce(
+          failure === "timeout" ? late : Promise.resolve(failure),
+        );
+      const write = vi.fn<(chunk: string) => void>();
+      const delivery = createSemanticInputDelivery({
+        isLive: () => true,
+        isBracketedPasteEnabled: () => true,
+        write,
+        writeTracked,
+        chunkBytes: 8,
+      });
+      const path = delivery.deliverTracked("abcdefghijkl");
+      await vi.advanceTimersByTimeAsync(5000);
+      await expect(path).resolves.toBe(false);
+      expect(writeTracked.mock.calls.flat()).toEqual([
+        "\u001b[200~ab",
+        "cdefghij",
+      ]);
+      expect(write.mock.calls.flat()).toEqual(["\u001b[201~"]);
+      finish("accepted");
+      await flush();
+      expect(writeTracked).toHaveBeenCalledTimes(2);
+      expect(write).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
+
+it("does not repeat the closing marker when the final bracketed chunk fails", async () => {
+  const writeTracked = vi
+    .fn<(chunk: string) => Promise<"accepted" | "rejected" | "unknown">>()
+    .mockResolvedValueOnce("accepted")
+    .mockResolvedValueOnce("unknown");
+  const write = vi.fn<(chunk: string) => void>();
+  const delivery = createSemanticInputDelivery({
+    isLive: () => true,
+    isBracketedPasteEnabled: () => true,
+    write,
+    writeTracked,
+    chunkBytes: 8,
+  });
+  expect(await delivery.deliverTracked("ab")).toBe(false);
+  expect(writeTracked.mock.calls.flat().join("")).toBe(
+    "\u001b[200~ab\u001b[201~",
+  );
+  expect(write).not.toHaveBeenCalled();
+});
+
 it.each(["rejected IPC", "invalid receipt"])(
   "fails closed after %s without sending later queued input",
   async (mode) => {

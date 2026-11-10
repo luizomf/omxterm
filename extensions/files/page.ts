@@ -512,14 +512,6 @@ export function mountFilesPage(
     )
       return;
     if (event.key === "Enter" && event.shiftKey) {
-      if (
-        event.ctrlKey ||
-        event.altKey ||
-        event.metaKey ||
-        event.isComposing ||
-        composing
-      )
-        return;
       event.preventDefault();
       event.stopPropagation();
       if (!event.repeat && editor.hidden && visible && !disposed) {

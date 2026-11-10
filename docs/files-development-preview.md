@@ -493,11 +493,14 @@ move token and distinct opaque terminal ticket. The source offers copyMove after
 registration; an eligible internal directory target still selects move and
 requires the existing fixed-source/folder confirmation and no-clobber backend.
 Spaces and quotes are preserved. C0/C1 controls, including line breaks and paste
-delimiters, are refused with a localized Files notice, not rewritten.
+delimiters, are refused with a localized Files notice when dropped on the
+terminal, not rewritten; dragging such a row to a folder shows no notice.
 
 Core captures the exact pane, Surface, selection revision and current DOM focus
 synchronously at drop, then claims the ticket plus matching internal token before
 any await. Canceled/internal-move dragend revokes only an unclaimed gesture.
+An eligible drop whose claim fails (Files in another window, or an expired
+gesture) shows a localized "Path not inserted" notice in that terminal area.
 A completed native copy leaves the original ticket within its existing deadline
 for the core claim, because that message can reach main after child dragend.
 It never extends the deadline or authorizes input by itself. Hide,

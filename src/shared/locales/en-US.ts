@@ -102,6 +102,8 @@ export const englishMessages = {
     "Select a smaller portion of the terminal text and export the selection. Nothing was saved or truncated.",
   "export.failed": "Export Failed",
   "export.writeError": "OMXTerm could not save the exported text.",
+  "export.readError":
+    "OMXTerm could not read the terminal text. Nothing was saved.",
   "export.failureDetail":
     "Try exporting again and choose a writable destination with enough free space.",
 
@@ -150,6 +152,8 @@ export const englishMessages = {
 
   "terminal.surface": "Terminal Surface",
   "terminal.filesDropCandidate": "Drop to insert path (not run)",
+  "terminal.filesDropRefused":
+    "Path not inserted. Drag it again from Files in this window.",
   "terminal.sshExit": "SSH exited (code {code}).",
   "layout.initializing":
     "Opening saved layout: {settled}/{total} panes; {fallbacks} folder fallbacks; {failed} unavailable panes.",

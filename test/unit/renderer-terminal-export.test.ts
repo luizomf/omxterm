@@ -380,6 +380,19 @@ describe("renderer contextual export lifetime", () => {
     },
   );
 
+  it("asks main for a failure notice when the core text read throws", async () => {
+    const view = await setup();
+    try {
+      view.surfaces[0]!.exportText.mockImplementationOnce(() => {
+        throw new Error("core read failed");
+      });
+      view.deliver(view.open());
+      expect(view.save).toHaveBeenCalledExactlyOnceWith({ notice: "failed" });
+    } finally {
+      view.host.dispose();
+    }
+  });
+
   it("snapshots once synchronously before a pending save and later tab switch", async () => {
     const view = await setup();
     let finish!: () => void;

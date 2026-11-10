@@ -100,7 +100,13 @@ export function createPaneContextMenu(options: {
         original.kind !== context.kind
       )
         return undefined;
-      const text = original.surface.exportText(context.kind);
+      let text: string;
+      try {
+        text = original.surface.exportText(context.kind);
+      } catch {
+        // Core text extraction can fail (e.g. WASM allocation); main reports it.
+        return { notice: "failed" };
+      }
       return utf8ByteLength(text) > MAX_TERMINAL_EXPORT_BYTES
         ? { notice: "too-large" }
         : { kind: context.kind, text };

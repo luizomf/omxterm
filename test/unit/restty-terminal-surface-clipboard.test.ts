@@ -251,6 +251,17 @@ describe("Restty clipboard actions", () => {
       target: "terminal",
       hasSelection: false,
     });
+    value.restty.getSelectionText.mockImplementationOnce(() => {
+      throw new Error("core read failed");
+    });
+    value.container.dispatchEvent(
+      new MouseEvent("contextmenu", { cancelable: true }),
+    );
+    expect(value.clipboard.requestContextMenu).toHaveBeenCalledTimes(3);
+    expect(value.clipboard.requestContextMenu).toHaveBeenLastCalledWith({
+      target: "terminal",
+      hasSelection: false,
+    });
     const search = document.createElement("div");
     search.setAttribute("role", "search");
     const query = document.createElement("input");

@@ -111,10 +111,11 @@ export interface TerminalExportContext {
   readonly kind: TerminalExportKind;
   readonly target: TerminalContextMenuTarget;
 }
-// Oversized text is neither truncated nor transported to obtain a notice.
+// Oversized or unreadable text is neither truncated nor transported to obtain
+// a notice.
 export type TerminalExportSaveRequest =
   | { readonly kind: TerminalExportKind; readonly text: string }
-  | { readonly notice: "too-large" };
+  | { readonly notice: "too-large" | "failed" };
 // A finite IPC bound in UTF-8 bytes. The core's scrollback byte limit does not
 // imply extracted text fits: combining marks and wide graphemes can exceed it.
 export const MAX_TERMINAL_EXPORT_BYTES = 16 * 1024 * 1024;
@@ -457,7 +458,8 @@ export function isTerminalExportContext(
 export function isTerminalExportSaveRequest(
   value: unknown,
 ): value is TerminalExportSaveRequest {
-  if (isStrictRecord(value, ["notice"])) return value.notice === "too-large";
+  if (isStrictRecord(value, ["notice"]))
+    return value.notice === "too-large" || value.notice === "failed";
   return (
     isStrictRecord(value, ["kind", "text"]) &&
     isTerminalExportKind(value.kind) &&
