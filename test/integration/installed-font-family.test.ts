@@ -11,7 +11,10 @@ import {
   installedFontData,
   installedFontFamilyMetrics,
 } from "../../src/main/installed-font-family";
-import { missingFixtureFontsReason } from "../fixtures/native-fixture-fonts";
+import {
+  DEJAVU_SANS_MONO_STYLES,
+  missingFixtureFontsReason,
+} from "../fixtures/native-fixture-fonts";
 
 describe("native installed font-family availability", () => {
   it
@@ -58,7 +61,7 @@ describe("native installed font-family availability", () => {
   );
 
   it("delivers native regular, bold, italic and bold-italic faces through the bounded font contract", async (context) => {
-    const missing = missingFixtureFontsReason(["DejaVu Sans Mono"]);
+    const missing = missingFixtureFontsReason(DEJAVU_SANS_MONO_STYLES);
     if (missing) context.skip(missing);
     const family =
       process.platform === "darwin"

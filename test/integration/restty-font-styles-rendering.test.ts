@@ -7,7 +7,10 @@ import { createRequire } from "node:module";
 import { createHash } from "node:crypto";
 import { build } from "esbuild";
 import { describe, it, expect } from "vitest";
-import { skipWithoutFixtureFonts } from "../fixtures/native-fixture-fonts";
+import {
+  DEJAVU_SANS_MONO_STYLES,
+  skipWithoutFixtureFonts,
+} from "../fixtures/native-fixture-fonts";
 import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
 import { supportedFixtureChromiumArguments } from "../fixtures/supported-fixture-chromium-arguments";
 import {
@@ -18,7 +21,7 @@ import {
   type FontStyleRetentionStatus,
 } from "../fixtures/restty-font-style-evidence";
 
-skipWithoutFixtureFonts(["DejaVu Sans Mono"]);
+skipWithoutFixtureFonts(DEJAVU_SANS_MONO_STYLES);
 
 interface Observation {
   retention?: FontStyleRetentionStatus;

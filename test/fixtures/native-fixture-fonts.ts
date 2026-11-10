@@ -4,43 +4,50 @@ import { beforeEach } from "vitest";
 // macOS and Windows ship every family the native fixtures read. Linux depends
 // on packages listed in docs/development.md#linux, so probe fontconfig
 // directly (not through the product's discovery code under test) and skip
-// with a reason instead of failing on an incomplete desktop.
-let installedLinuxFamilies: ReadonlySet<string> | undefined;
+// with a reason instead of failing on an incomplete desktop. Each requirement
+// is a fontconfig pattern, such as "DejaVu Sans Mono:style=Bold".
+const installedPatterns = new Map<string, boolean>();
 
-function linuxFamilies(): ReadonlySet<string> {
-  if (installedLinuxFamilies) return installedLinuxFamilies;
-  let output = "";
-  try {
-    output = execFileSync("fc-list", [":", "family"], { encoding: "utf8" });
-  } catch {
-    // Without fontconfig every Linux fixture font counts as missing.
+function installed(pattern: string): boolean {
+  let found = installedPatterns.get(pattern);
+  if (found === undefined) {
+    try {
+      found =
+        execFileSync("fc-list", [pattern, "family"], {
+          encoding: "utf8",
+        }).trim() !== "";
+    } catch {
+      found = false; // Without fontconfig every fixture font counts as missing.
+    }
+    installedPatterns.set(pattern, found);
   }
-  installedLinuxFamilies = new Set(
-    output
-      .split(/[,\n]/u)
-      .map((family) => family.trim())
-      .filter(Boolean),
-  );
-  return installedLinuxFamilies;
+  return found;
 }
 
 export function missingFixtureFontsReason(
-  linuxFamiliesRequired: readonly string[],
+  linuxPatternsRequired: readonly string[],
 ): string | undefined {
   if (process.platform !== "linux") return undefined;
-  const installed = linuxFamilies();
-  const missing = linuxFamiliesRequired.filter(
-    (family) => !installed.has(family),
+  const missing = linuxPatternsRequired.filter(
+    (pattern) => !installed(pattern),
   );
   if (missing.length === 0) return undefined;
   return `Fixture font not installed: ${missing.join(", ")} (see docs/development.md#linux)`;
 }
 
+/** DejaVu Sans Mono with the real faces that style tests compare. */
+export const DEJAVU_SANS_MONO_STYLES = Object.freeze([
+  "DejaVu Sans Mono",
+  ...["Bold", "Oblique", "Bold Oblique"].map(
+    (style) => `DejaVu Sans Mono:style=${style}`,
+  ),
+]);
+
 /** Skip every test in the calling file when a Linux fixture font is absent. */
 export function skipWithoutFixtureFonts(
-  linuxFamiliesRequired: readonly string[],
+  linuxPatternsRequired: readonly string[],
 ): void {
-  const reason = missingFixtureFontsReason(linuxFamiliesRequired);
+  const reason = missingFixtureFontsReason(linuxPatternsRequired);
   beforeEach((context) => {
     if (reason) context.skip(reason);
   });
