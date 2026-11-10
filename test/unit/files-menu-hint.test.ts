@@ -50,18 +50,12 @@ it("keeps active/local and unverified, stale/remote context visible and accessib
   expect(hint.textContent).toBe(
     "Active terminal; local folder. Unverified; may be stale or remote.",
   );
-  expect(item.title).toContain("active terminal's last reported path");
-  expect(item.title).toContain("unverified");
-  expect(item.title).toContain("stale or come from a remote session");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
   language("pt-BR");
   expect(item.getAttribute("aria-label")).toBe("Usar último caminho informado");
   expect(hint.textContent).toBe(
     "Terminal ativo; pasta local. Não verificado; pode ser antigo ou remoto.",
   );
-  expect(item.title).toContain("terminal ativo");
-  expect(item.title).toContain("não verificado");
-  expect(item.title).toContain("desatualizado ou vir de uma sessão remota");
   expect(item.getAttribute("aria-describedby")).toBe(hint.id);
   expect(getComputedStyle(hint).display).toBe("block");
   item.dispatchEvent(

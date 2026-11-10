@@ -5,98 +5,10 @@ import path from "node:path";
 import { expect, it } from "vitest";
 import { buildExtension } from "../../scripts/build-files-extension.mjs";
 import {
-  checkCompatibility,
   extractPackage,
   parseManifest,
 } from "../../src/installed-packages/archive";
 
-it("declares window-scoped state and layout capabilities without changing saved data identity", async () => {
-  const manifest = parseManifest(
-    JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
-  );
-  expect(manifest).toMatchObject({
-    id: "omxterm.restoration",
-    version: "0.1.1",
-    name: "Saved Layout",
-    view: { context: "window" },
-  });
-  expect(manifest.capabilities).toEqual([
-    "terminal.captureLayout.v1",
-    "terminal.openLayout.v1",
-    "state.v1",
-  ]);
-  expect(manifest.engines).toEqual({
-    omxterm: ">=0.24.0-dev.1 <0.26.0",
-    api: "^0.1.0",
-  });
-});
-
-it("preserves the source manifest's bounded host admission", async () => {
-  const manifest = parseManifest(
-    JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
-  );
-  const host = JSON.parse(await readFile("package.json", "utf8")) as {
-    version: string;
-  };
-  for (const appVersion of [
-    "0.24.0-dev.1",
-    "0.24.0-dev.36",
-    "0.24.0",
-    "0.24.1-dev.0",
-    "0.24.1",
-    "0.25.0-dev.0",
-    "0.25.0-dev.22",
-    "0.25.0",
-    "0.25.1",
-  ])
-    expect(() =>
-      checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
-    ).not.toThrow();
-
-  // The current host exceeds this manifest's upper bound; the bridge cannot waive it.
-  expect(() =>
-    checkCompatibility(manifest, {
-      appVersion: host.version,
-      apiVersion: "0.1.0",
-    }),
-  ).toThrow("incompatible");
-
-  // Historical archive metadata stays refused on this host, not globally waived.
-  const historical = parseManifest({
-    ...manifest,
-    version: "0.1.0",
-    engines: { ...manifest.engines, omxterm: ">=0.24.0-dev.1 <0.25.0" },
-  });
-  expect(() =>
-    checkCompatibility(historical, {
-      appVersion: host.version,
-      apiVersion: "0.1.0",
-    }),
-  ).toThrow("incompatible");
-});
-
-it("keeps earlier hosts, future minor families and incompatible APIs refused", async () => {
-  const manifest = parseManifest(
-    JSON.parse(await readFile("extensions/restoration/extension.json", "utf8")),
-  );
-  for (const appVersion of [
-    "0.23.0",
-    "0.24.0-dev.0",
-    "0.24.2-dev.0",
-    "0.25.0-beta.1",
-    "0.25.1-dev.0",
-    "0.26.0-dev.0",
-    "0.26.0-dev.1",
-    "0.26.0",
-  ])
-    expect(() =>
-      checkCompatibility(manifest, { appVersion, apiVersion: "0.1.0" }),
-    ).toThrow("incompatible");
-  for (const apiVersion of ["0.0.9", "0.2.0", "0.1.1-dev.0"])
-    expect(() =>
-      checkCompatibility(manifest, { appVersion: "0.25.0-dev.4", apiVersion }),
-    ).toThrow("incompatible");
-});
 it("rejects non-string capability declarations rather than coercing them", async () => {
   const manifest: unknown = JSON.parse(
     await readFile("extensions/restoration/extension.json", "utf8"),

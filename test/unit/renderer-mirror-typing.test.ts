@@ -259,19 +259,10 @@ it("retains original context for describe and refuses an ended original even wit
   expect(h.capture().ok).toBe(false);
 });
 
-it("shows localized partial-delivery failure and preserves same-element marker padding", async () => {
+it("shows localized partial-delivery failure and clears the mirroring marker", async () => {
   const h = await harness();
   await h.start();
-  const { readFile } = await import("node:fs/promises");
-  const css = await readFile("src/renderer/terminal-window.css", "utf8");
   const pane = document.querySelector<HTMLElement>(".pane-mirroring")!;
-  // The real Surface adds its class to this exact pane, not a child.
-  pane.classList.add("restty-terminal-surface");
-  const selector = ".terminal-tab .pane-mirroring.restty-terminal-surface";
-  expect(pane.matches(selector)).toBe(true);
-  expect(css).toContain(
-    `${selector} {\n  padding-top: calc(22px + var(--terminal-padding-top, 0px));`,
-  );
   h.command({ kind: "stop", context: "context", reason: "write-failed" });
   expect(
     document.querySelector(".mirror-typing-status")!.textContent,

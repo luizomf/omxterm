@@ -73,29 +73,15 @@ it("keeps the original reported path when selection changes during admission", a
   await expect(pending).resolves.toEqual({ ok: true, directory: "/first" });
 });
 
-it("does not return a path when its source ends during admission", async () => {
+it.each<[string, (f: ReturnType<typeof fixture>) => void]>([
+  ["its source ends", (f) => f.session.abort()],
+  ["the Files view hides", (f) => f.hide()],
+  ["its window loses focus", () => (native.focused = undefined)],
+])("does not return a path when %s during admission", async (_, lose) => {
   const f = fixture();
   const pending = f.request();
   await vi.waitFor(() => expect(f.admit).toHaveBeenCalledOnce());
-  f.session.abort();
-  f.release();
-  await expect(pending).rejects.toThrow("unavailable");
-});
-
-it("does not return a path when the Files view hides during admission", async () => {
-  const f = fixture();
-  const pending = f.request();
-  await vi.waitFor(() => expect(f.admit).toHaveBeenCalledOnce());
-  f.hide();
-  f.release();
-  await expect(pending).rejects.toThrow("unavailable");
-});
-
-it("does not return a path when its window loses focus during admission", async () => {
-  const f = fixture();
-  const pending = f.request();
-  await vi.waitFor(() => expect(f.admit).toHaveBeenCalledOnce());
-  native.focused = undefined;
+  lose(f);
   f.release();
   await expect(pending).rejects.toThrow("unavailable");
 });

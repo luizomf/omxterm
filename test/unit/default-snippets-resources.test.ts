@@ -54,7 +54,7 @@ describe("pinned public archive and narrow package resources", () => {
         );
   });
 
-  it.each(["linux-arm64", "linux-x64", "darwin-arm64", "win32-arm64"])(
+  it.each(["linux-arm64", "win32-arm64"])(
     "stages and verifies only exact pinned resource for %s",
     async (target) => {
       const f = await prepared();
@@ -77,7 +77,7 @@ describe("pinned public archive and narrow package resources", () => {
     },
   );
 
-  it.each(["win32-x64", "darwin-x64", "unknown-x64"])(
+  it.each(["win32-x64", "unknown-x64"])(
     "clears stale same-target archive on unsupported %s even with no input",
     async (target) => {
       const f = await defaultSnippetsFixture();

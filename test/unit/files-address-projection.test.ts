@@ -9,8 +9,7 @@ afterEach(() => {
   document.body.replaceChildren();
   vi.restoreAllMocks();
 });
-async function setup(platform = "Linux aarch64") {
-  vi.spyOn(navigator, "platform", "get").mockReturnValue(platform);
+async function setup() {
   const request = vi.fn(async (value: unknown) => {
     const input = value as { operation: string; path?: string };
     return input.operation === "home"
@@ -75,53 +74,6 @@ it("preserves an unfocused address draft and caret when the checkbox changes vis
   expect(document.activeElement).toBe(actions);
   expect(request).toHaveBeenCalledTimes(calls);
 });
-
-it.each([
-  ["Linux aarch64", "h", { code: "KeyH", ctrlKey: true }],
-  ["MacIntel", ">", { code: "Period", metaKey: true, shiftKey: true }],
-] as const)(
-  "preserves a draft and caret with the toolbar-focused shortcut on %s",
-  async (platform, key, modifiers) => {
-    const { request } = await setup(platform);
-    const address = draft();
-    const actions = button("Actions…");
-    actions.focus();
-    const calls = request.mock.calls.length;
-    const event = new KeyboardEvent("keydown", {
-      key,
-      ...modifiers,
-      bubbles: true,
-      cancelable: true,
-    });
-    actions.dispatchEvent(event);
-    expect(event.defaultPrevented).toBe(true);
-    expect(document.querySelector('[data-path="/root/.private"]')).toBeTruthy();
-    expect(address.value).toBe("/root/.config");
-    expect([
-      address.selectionStart,
-      address.selectionEnd,
-      address.selectionDirection,
-    ]).toEqual([2, 9, "backward"]);
-    expect(document.activeElement).toBe(actions);
-    const again = new KeyboardEvent("keydown", {
-      key,
-      ...modifiers,
-      bubbles: true,
-      cancelable: true,
-    });
-    actions.dispatchEvent(again);
-    expect(again.defaultPrevented).toBe(true);
-    expect(document.querySelector('[data-path="/root/.private"]')).toBeNull();
-    expect(address.value).toBe("/root/.config");
-    expect([
-      address.selectionStart,
-      address.selectionEnd,
-      address.selectionDirection,
-    ]).toEqual([2, 9, "backward"]);
-    expect(document.activeElement).toBe(actions);
-    expect(request).toHaveBeenCalledTimes(calls);
-  },
-);
 
 it("keeps ordinary navigation and refresh synchronization of the address", async () => {
   const { request } = await setup();

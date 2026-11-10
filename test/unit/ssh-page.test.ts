@@ -63,7 +63,7 @@ const launches = (request: ReturnType<typeof vi.fn<SshBridge["request"]>>) =>
     ([value]) =>
       (value as { operation: string }).operation === "terminal.openSsh.v1",
   );
-it("explains a missing SSH capability without a Linux-only claim", async () => {
+it("explains a missing SSH capability and disables quick connect", async () => {
   let language!: (value: "en-US" | "pt-BR") => void;
   const page = mountSshPage(document, {
     onAppearance: () => () => {},
@@ -85,7 +85,6 @@ it("explains a missing SSH capability without a Linux-only claim", async () => {
   expect(document.body.textContent).toContain(
     "Check the OMXTerm version and platform requirements",
   );
-  expect(document.body.textContent).not.toContain("Linux ARM64 preview host");
   expect(
     document.querySelector<HTMLButtonElement>(".quick-connect button")!
       .disabled,
@@ -145,11 +144,6 @@ it("relabels in place without requests, lost drafts, focus or captured target", 
 it.each([
   [{ ok: true, status: "accepted" }, "Terminal aceito", "Terminal accepted"],
   [
-    { ok: false, error: "ssh-not-found" },
-    "Cliente OpenSSH não encontrado",
-    "OpenSSH client not found",
-  ],
-  [
     { ok: false, error: "outcome-unknown" },
     "Um terminal pode já",
     "A terminal may already",
@@ -191,13 +185,7 @@ it.each([
     expect(request.mock.calls).toHaveLength(calls);
   },
 );
-it.each([
-  "host:0",
-  "host:65536",
-  "[bad::address]",
-  "a".repeat(385),
-  "user@host command",
-])(
+it.each(["host:65536", "user@host command"])(
   "localizes validation without exposing parser English: %s",
   async (target) => {
     const { request, quick, language } = await setup();

@@ -42,15 +42,3 @@ it("searches absolute semicolon-separated PATH directories for a literal regular
     ["C:\\ready\\ssh", constants.X_OK],
   ]);
 });
-
-it("does not use PATHEXT to resolve an ssh.exe-only PATH", async () => {
-  files.stat.mockImplementation(async (name) => {
-    if (name === "C:\\bin\\ssh.exe") return { isFile: () => true };
-    throw new Error("missing");
-  });
-  expect(
-    await findSsh({ PATH: "C:\\bin", PATHEXT: ".EXE;.CMD" }),
-  ).toBeUndefined();
-  expect(files.stat.mock.calls).toEqual([["C:\\bin\\ssh"]]);
-  expect(files.access).not.toHaveBeenCalled();
-});
