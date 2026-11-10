@@ -8,6 +8,14 @@
 > This run measures. It carries no threshold and no verdict: nothing here says a
 > number is acceptable, and a smaller number is not a pass.
 
+> Later review found that the quiescence snapshot reads visible Surface geometry
+> before `observerCostMs` starts and can trigger Restty resize/refit activity even
+> when geometry is unchanged. The snapshot/refit is outside that timer, while
+> later observer work (`textHash`) is timed. The `draws` values count instrumented
+> WebGL `draw*`/`clear` calls, not complete frames. The contribution of this
+> observer-induced resize/refit work to these observations is unknown; the
+> historical values are retained and not automatically invalidated.
+
 Protocol `application-tabs-scrollback-idle-input-attribution:6359733f8ead`; metric pss (linux /proc/<pid>/smaps_rollup Pss); machine class `linux-arm64-4cpu-virtualized`; identity `9d4c154fdc0caa15`; PSS is measured on Linux ARM64 by this lane and is the metric this report compares.
 
 Electron 43.8.1, Chromium 150.0.7871.250, Node 24.22.0. Build: main 353be67b3c66, preload 13897f4da936, renderer df7c7ddc1640.

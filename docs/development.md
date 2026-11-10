@@ -765,14 +765,27 @@ Measurement rules:
   Stream-group endpoints must be chronological, bracketed by the pre-stream and
   post-stream samples. Step settles are labelled "before sampling" and idle
   windows "across the sampled window".
-- Idle CPU is sampled only after that verification, reported per window and as
-  the median across the four windows, for every measured application process
-  (main, renderer, GPU). The renderer fixture installs no permanent
-  animation-frame loop, so the observer cannot keep the surface working during
-  idle windows; per-read observation cost is measured and reported. Active-output
-  CPU is sampled while a fixed byte stream is arriving. The two axes are never
-  merged. Focused/unfocused names are admitted only when the observed focus and
-  visible-document state match; the summary prints those observations.
+- Idle CPU readings are collected over the interval bracketed by the before/after
+  quiescence probes, reported per window and as the median across the four
+  windows, for every measured application process (main, renderer, GPU). After
+  sampling and the final probe, the fixture compares the probes for unchanged
+  PTY output bytes and grid; a failed comparison is reported as
+  `quiescence-not-verified` and makes `--fail-on-invalid` exit non-zero, so the
+  window is not accepted as verified quiescent. The renderer fixture has no
+  permanent animation-frame loop, but `probeActivity()` calls `surfaces()` and
+  reads visible
+  Surface geometry before the `observerCostMs` timer starts. That path calls
+  Restty's `updateSize(true)`, starting resize activity, marking rendering
+  dirty, and resetting render time even when geometry is unchanged. The
+  snapshot/refit is outside `observerCostMs`; later work, including `textHash`,
+  is timed, so the metric is not total observer cost. This may contribute to
+  idle work in sampled windows, but its magnitude and attribution to prior
+  observations are unknown; historical recordings are not automatically
+  invalidated. The `draws` count is instrumented WebGL `draw*`/`clear` calls, not
+  complete frames or presentation. Active-output CPU is sampled while a fixed
+  byte stream is arriving. The two axes are never merged. Focused/unfocused
+  names are admitted only when the observed focus and visible-document state
+  match; the summary prints those observations.
 - Streams carry unique end tokens, so a marker retained by an earlier stream
   cannot satisfy a later wait. All three repetitions of a payload must complete
   and their arrival is checked against the declared bytes; each repetition's
