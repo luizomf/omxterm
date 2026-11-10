@@ -52,8 +52,8 @@ _macOS, with background transparency and blur._
 ## Platforms and downloads
 
 OMXTerm runs on Apple Silicon Macs and on Linux and Windows PCs with ARM64 or
-Intel/AMD processors. The x64 builds are **build-only**: automated checks ran,
-but their desktop, graphics, installer, and everyday use have not been tested.
+Intel/AMD processors. The x64 (Intel/AMD) builds are **untested**: they build
+and pass automated checks, but nobody has used them on a real desktop yet.
 If one misbehaves,
 [report it](https://github.com/luizomf/omxterm/issues/new?template=bug-report.md).
 
@@ -88,7 +88,7 @@ do instead. OMXTerm uses X11, a Linux window system. On Wayland desktops, a
 compatibility layer called XWayland lets X11 apps run; most desktops already
 provide it.
 
-The x64 AppImage is build-only.
+The x64 AppImage is untested.
 
 1. Download the AppImage (a single file you run without installing) for your
    architecture from the table below.
@@ -99,7 +99,7 @@ The x64 AppImage is build-only.
 
 Windows 11 ARM64 is tested; Windows 11 x64 and Windows 10 are untested. Choose
 **Windows ARM64** for an ARM PC (such as one with Snapdragon) or **Windows x64**
-for Intel/AMD; the x64 build is build-only. If unsure, check **System type** in
+for Intel/AMD; the x64 build is untested. If unsure, check **System type** in
 **Settings → System → About**; a Surface can be either.
 
 1. Install the
@@ -116,13 +116,13 @@ The DMG, installer, and AppImage are the app downloads. The Linux helper
 installs OMXTerm and adds a menu entry; it is not the app. `.sha256` files check
 a download.
 
-| Platform                 | App version | Download                                                                                                                                                                                                 | Checksum                                                                                                                                                                                                                      | Notes                                                                    |
-| ------------------------ | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Apple Silicon macOS      | 0.25.0      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.dmg)                                                                                                             | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.dmg.sha256)                                                                                                                       | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
-| Linux ARM64              | 0.25.0      | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.AppImage), [optional helper](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh) | [AppImage SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.AppImage.sha256), [helper SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh.sha256) | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
-| Linux x64 (build-only)   | 0.25.0      | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.AppImage), [optional helper](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh)   | [AppImage SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.AppImage.sha256), [helper SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh.sha256)   | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
-| Windows ARM64            | 0.25.0      | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.exe)                                                                                                       | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.exe.sha256)                                                                                                                       | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
-| Windows x64 (build-only) | 0.25.0      | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.exe)                                                                                                         | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.exe.sha256)                                                                                                                         | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
+| Platform               | App version | Download                                                                                                                                                                                                 | Checksum                                                                                                                                                                                                                      | Notes                                                                    |
+| ---------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Apple Silicon macOS    | 0.25.0      | [DMG](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.dmg)                                                                                                             | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.dmg.sha256)                                                                                                                       | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
+| Linux ARM64            | 0.25.0      | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.AppImage), [optional helper](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh) | [AppImage SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.AppImage.sha256), [helper SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh.sha256) | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
+| Linux x64 (untested)   | 0.25.0      | [AppImage](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.AppImage), [optional helper](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh)   | [AppImage SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.AppImage.sha256), [helper SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/linux_install.sh.sha256)   | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
+| Windows ARM64          | 0.25.0      | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.exe)                                                                                                       | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-arm64.exe.sha256)                                                                                                                       | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
+| Windows x64 (untested) | 0.25.0      | [Installer](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.exe)                                                                                                         | [SHA-256](https://github.com/luizomf/omxterm/releases/download/v0.25.0/OMXTerm-0.25.0-x64.exe.sha256)                                                                                                                         | [Release notes](https://github.com/luizomf/omxterm/releases/tag/v0.25.0) |
 
 Platforms can ship at different times; the
 [installation guide](docs/installation.md) has requirements and checksum
@@ -133,7 +133,7 @@ and Linux ARM64 desktops: Debian 13.4 (KDE Plasma), Fedora 44 (GNOME and KDE
 Plasma), Ubuntu 26.04 GNOME, and Omarchy/Hyprland.
 
 Debian 13.4 is below the glibc requirement, so the current ARM64 package is not
-supported there. On Intel/AMD Debian, use the build-only x64 build; on ARM64,
+supported there. On Intel/AMD Debian, use the untested x64 build; on ARM64,
 build from source as a development path.
 
 ## First session
@@ -180,19 +180,19 @@ replace it; on macOS, drag the new **OMXTerm.app** into
 
 ## Privacy and security
 
-OMXTerm collects no telemetry and does not download or update extensions on its
-own. On optional-Snippets targets, new packaged profiles try once to install the
-bundled 0.1.0 from the app's own files; it stays inactive until opened. Windows
-is not verified to stay network-silent. Logs exclude terminal output, commands,
-clipboard and settings. See the [Windows availability limits](docs/snippets-availability.md#windows-arm64-known-issue).
-Report vulnerabilities through [SECURITY.md](SECURITY.md).
+OMXTerm collects no telemetry and never downloads or updates extensions on its
+own. A new installation may add the Snippets add-on from the app's own files; it
+stays off until you open it. Logs never include what you type, your terminal
+output, your clipboard, or your settings. We have not yet confirmed that the
+Windows app makes no network requests at all. Report vulnerabilities through
+[SECURITY.md](SECURITY.md).
 
 ## Contributing
 
 Bug reports, documentation fixes, and code are welcome: read
 [CONTRIBUTING.md](CONTRIBUTING.md) and
 [open an issue](https://github.com/luizomf/omxterm/issues/new?template=bug-report.md).
-Testing the build-only x64 packages is welcome in
+Testing the untested x64 packages is welcome in
 [Linux #223](https://github.com/luizomf/omxterm/issues/223) and
 [Windows #224](https://github.com/luizomf/omxterm/issues/224).
 

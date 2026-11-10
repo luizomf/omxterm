@@ -160,11 +160,11 @@ After editing `config.json` or a theme, choose **View → Reload User Configurat
 
 ### Insert, run or preview a snippet
 
-Snippets may require installation on your system. See [Optional tools](README.md#optional-tools). **Preview** captures its terminal target when opened and does not retarget if you change selection. **Insert** sends text without adding Enter; **Run** adds Enter. Multiline snippets can run multiple shell commands, so review the preview first. See [Snippets configuration](configuration.md#snippets).
+Snippets may require installation on your system. See [Optional tools](README.md#optional-add-ons). **Preview** captures its terminal target when opened and does not retarget if you change selection. **Insert** sends text without adding Enter; **Run** adds Enter. Multiline snippets can run multiple shell commands, so review the preview first. See [Snippets configuration](configuration.md#snippets).
 
 ### Files and SSH Connect
 
-Files and SSH Connect are optional extensions. See [Optional tools](README.md#optional-tools) for platform availability, and the [SSH Connect guide](ssh-connect.md) for connecting to a host.
+Files and SSH Connect are optional extensions. See [Optional tools](README.md#optional-add-ons) for platform availability, and the [SSH Connect guide](ssh-connect.md) for connecting to a host.
 
 ### Resize or close the auxiliary panel
 

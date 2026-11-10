@@ -7,9 +7,8 @@ with Apple silicon, and Windows computers with 64-bit ARM processors. The
 official catalog offers version **0.1.1** on those targets. Intel/AMD Windows
 computers keep built-in Snippets.
 
-The Linux x64 app download is build-only; desktop use has not been tested.
-Catalog availability does not establish qualification on every platform or for
-every action.
+The Linux x64 app itself is untested, and being offered in the catalog doesn't
+mean every platform or action has been tested.
 
 New packaged profiles on optional targets try once to install Snippets 0.1.0;
 it remains inactive until you open it. Existing profiles do not get it
@@ -18,14 +17,10 @@ and choices to disable or remove Snippets are preserved.
 
 ## Windows ARM64 known issue
 
-OMXTerm 0.25.0 shipped with unresolved Windows ARM64 failures during public
-Snippets installation; the cause is not known. Snippets 0.1.1 has not been
-qualified on that exact Windows release. If you depend on built-in Snippets, you
-can stay on [OMXTerm 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0).
-
-Windows is also not verified to stay network-silent. One check observed system
-proxy discovery and reachability traffic, but no Snippets catalog or archive
-download.
+On Windows ARM64, installing Snippets from the catalog can fail on OMXTerm
+0.25.0, and we don't know why yet. If you depend on Snippets there, stay on
+[OMXTerm 0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0), which
+has Snippets built in.
 
 ## Install or update
 
@@ -35,5 +30,5 @@ download.
    your account's permissions; it is not sandboxed.
 3. Return to a terminal tab, then choose **View → Toggle Snippets** to open the panel.
 
-See the [developer record](snippets-migration.md) for exact platform results,
-qualification evidence and additional limits.
+Technical details for contributors are in the
+[developer record](snippets-migration.md).
