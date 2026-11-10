@@ -88,8 +88,7 @@ platforms remain explicit, not inferred callback completion or tree settlement.
 No command, environment, process name or terminal payload is captured. Birth
 reads may perturb timing; failure reads are synchronous and read-only, before
 additional cleanup closes. The wait deadline and independent fixture settlement
-still apply. Headless diagnostic and callback-order checks:
-`npm test -- test/unit/restty-host-concurrent-cleanup.test.ts test/unit/restty-host-failure-state.test.ts test/unit/restty-session-diagnostic.test.ts`.
+still apply.
 The historical Fedora timeout in [#722](https://github.com/luizomf/omxterm/issues/722)
 remains unattributed and is not cleared by these checks or the later instrumented
 native pass.
@@ -103,9 +102,6 @@ continuations are only a presentation opportunity. The existing positive and
 release cases retain their strict destination/complement/unused-edge pixel
 oracles, and the other invalidation controls retain zero-pixel checks.
 
-Headless capture-helper/frame-hold checks cover equal/different bitmaps and a
-released/current-draw counterexample:
-`npm test -- test/unit/restty-hover-readiness.test.ts`.
 Pixel comparison metadata remains in phase receipts. These checks establish
 oracle semantics, not native compositor reproduction or all-platform qualification.
 The historical bitmap variation in [#721](https://github.com/luizomf/omxterm/issues/721)
@@ -150,7 +146,7 @@ phases still require the executed setup marker. The readiness oracle also
 requires an executed command marker, not just a prompt or observed PTY write.
 
 Headless encoded-setup and readiness checks (not native console-mode evidence):
-`npm test -- test/unit/restty-host-sessions.test.ts test/unit/restty-host-paste.test.ts`.
+`npm test -- test/unit/restty-host-sessions.test.ts`.
 
 ## Host output evidence
 
@@ -183,9 +179,6 @@ the destination rejection in that same synchronous check, before failure cleanup
 New chunks before settlement remain counted. A timeout or unavailable real flow
 metadata is an accounting failure retaining the destination cause, not a qualified
 destination-only negative. This snapshot is not the positive post-exit finalization.
-Headless parser/core and composed producer/session/harness controls:
-`npm test -- test/unit/restty-output-checkpoint.test.ts test/unit/restty-host-output-phases.test.ts`.
-They do not qualify native continuation or Windows transport.
 
 ## Standalone Surface startup policy
 
@@ -203,7 +196,7 @@ Electron readiness, including scrollback startup/mapping variants, the host's
 focused-cancellation build and the old-post-read font control:
 
 ```sh
-npm test -- test/unit/surface-fixture-gpu-policy.test.ts test/unit/appearance-gpu-policy.test.ts test/unit/terminal-popup-gpu-policy.test.ts test/unit/chromium-gpu-policy.test.ts
+npm test -- test/unit/surface-fixture-gpu-policy.test.ts test/unit/chromium-gpu-policy.test.ts
 ```
 
 These checks establish startup wiring only, not native success for every fixture
@@ -299,12 +292,7 @@ completed phases together, including asynchronous stall completion and cleanup;
 the last line alone need not identify the first failed operation. Absence of a
 receipt is not success. Diagnostic sink failure is ignored, never converted to
 acceptance. Deadlines, focus policy, producer pacing, backpressure and original
-assertions remain unchanged. Headless ordering, privacy and real-supervisor
-outer-termination controls:
-
-```sh
-node node_modules/vitest/vitest.mjs run test/unit/restty-host-window.test.ts test/unit/restty-host-phases.test.ts test/unit/restty-host-output-phases.test.ts test/unit/restty-host-phase-supervision.test.ts
-```
+assertions remain unchanged.
 
 ## Auxiliary panel and shortcut capture
 
@@ -361,8 +349,7 @@ clean ownership settlement. Its standalone main applies the shared production GP
 policy before Electron readiness, including Linux's SwiftShader permission
 ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)), without forcing a
 backend or bypassing the GPU blocklist. macOS and Windows keep Chromium's defaults;
-actual WebGL2 availability remains a prerequisite. Headless emitted-entrypoint
-ordering coverage: `npm test -- test/unit/terminal-popup-gpu-policy.test.ts`.
+actual WebGL2 availability remains a prerequisite.
 
 **Clipboard prerequisite:** this default Linux suite writes the real clipboard (see
 [side effects on your desktop](development.md#side-effects-on-your-desktop)).
@@ -422,8 +409,6 @@ On KDE, `OMXTERM_POPUP_EVIDENCE_DIR` optionally uses Spectacle to capture and cr
 a synthetic-content-only native popup PNG (not `capturePage`, which omits OS
 menus). Busy answers are fixture-controlled, not native dialog-widget evidence;
 input is synthetic, not physical keyboard/layout or cross-platform qualification.
-Headless input-observer/child/build checks (no native input or provisioning declaration needed):
-`npm test -- test/unit/terminal-popup-input-admission.test.ts test/unit/terminal-popup-native-submission.test.ts test/unit/terminal-popup-native-fixture.test.ts`.
 
 ## Window chrome, About and drag geometry
 
@@ -463,9 +448,7 @@ size changes fail; there is no tolerance or retry. Electron's enclosing DIP boun
 can gain or lose a DIP solely from moving across a fractional-scale rounding
 boundary, so their sizes are not the no-resize oracle. Physical and DIP movement,
 foreground/point ownership, pointer release/restoration and continuity checks are
-still required. Headless validator and caller controls:
-`npm test -- test/unit/window-chrome-drag-geometry.test.ts test/unit/window-chrome-native-drag.test.ts`.
-They do not replace native Windows execution.
+still required.
 
 ## Settings layout
 
@@ -500,9 +483,7 @@ unchanged exact-target oracle. At non-default renderer zoom the check converts
 CSS sizes to content DIPs with that zoom before adding the observed native frame;
 it does not multiply by display scale factor or change zoom, minima or display
 configuration. Headless controlled checks of this diagnostic and the unchanged
-matrix/targeting behavior:
-`npm test -- test/unit/settings-layout-display.test.ts test/unit/settings-layout-oracles.test.ts`.
-They do not qualify native layout.
+matrix/targeting behavior.
 
 The Window Chrome `settings-only` case additionally runs the graphical editor's
 layout matrix: seven categories after a native-minimum request and at eight exact
@@ -567,9 +548,7 @@ control through persistence/reload into two retained hosts while both dirty raw
 editors keep bytes, selection, scroll, DOM focus and identity. The language event
 is dispatched programmatically without moving focus; pane-close confirmation is
 fixture-approved. This does not automate OS widgets, physical input, every split
-axis/weight case, or preview target death. Headless preparation/control coverage:
-`node node_modules/vitest/vitest.mjs run test/unit/feature-native-smoke-fixture.test.ts`.
-Native behavior is established only by actually running the native case, not by
+axis/weight case, or preview target death. Native behavior is established only by actually running the native case, not by
 its successful bundle build or collection.
 
 The independent theme-appearance case reuses that Window Chrome fixture:
@@ -601,7 +580,7 @@ profile records publication completion, Quit progression and unexpected window
 creation; missing/invalid evidence or any window fails the phase check. These
 checks diagnose fixture ordering, not the exact cause of a native SIGTRAP.
 Headless coverage uses the actual fixture callback and production shutdown owner:
-`npm test -- test/unit/application-about-startup.test.ts test/unit/application-about-diagnostics.test.ts test/unit/terminal-shutdown.test.ts test/unit/native-fixture-completion.test.ts`.
+`npm test -- test/unit/application-about-startup.test.ts test/unit/terminal-shutdown.test.ts test/unit/native-fixture-completion.test.ts`.
 
 The auxiliary-panel native fixture fences overlay transitions with bounded,
 window-owned receipts recorded only after the actual production Toggle/Paste
@@ -609,7 +588,7 @@ listeners return. These receipts establish callback consumption before About
 close, picker cancellation or image Escape; they do not drain asynchronous
 input accepted earlier. The continuous input sample and strict empty assertions
 remain unchanged. Headless ordering/negative controls:
-`npm test -- test/unit/overlay-action-consumption.test.ts test/unit/auxiliary-panel-fixture.test.ts`.
+`npm test -- test/unit/overlay-action-consumption.test.ts`.
 
 Fixture Surface import overrides target the canonical composition importer,
 `src/renderer/start-terminal-window.ts`, not the thin `src/renderer/index.ts`
@@ -637,8 +616,6 @@ held-Surface, early-command and held-renderer controls and original deadlines.
 Held Surface now positively establishes reception before adoption; the
 held-registration and early-command controls independently delay the real
 subscription, preserving arrival-only, no-replay, retirement and timeout checks.
-Headless emitted-entry/production-callback coverage:
-`node node_modules/vitest/vitest.mjs run test/unit/tab-removal-host-readiness.test.ts`.
 The production host receives commands during synchronous setup without buffering
 or changing mount readiness. Actions requiring an unavailable Surface remain
 no-ops; zoom/tab-bar state and Snippets are already available.
