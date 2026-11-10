@@ -222,13 +222,6 @@ it("qualifies only the exact held-read A supersession, never unrelated native fa
     { reason: "timeout" },
     { signal: "SIGTERM" as const },
     { cleanupErrors: ["termination failed"] },
-    {
-      cleanupFailure: {
-        callsite: "termination" as const,
-        category: "command-failed" as const,
-        elapsedMs: 1,
-      },
-    },
     { stdout: "__OMXTERM_FONT_READ_RELOAD_RESULT__{}" },
   ])
     expect(

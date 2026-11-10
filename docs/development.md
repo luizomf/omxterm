@@ -192,10 +192,6 @@ must accompany the source/lock, target and compiler/SDK evidence; Unix compiler
 outputs are not claimed bit-for-bit reproducible across toolchains. Prepared
 JavaScript identities are listed in the [Restty guide](restty-development.md#pinned-inputs-and-wasm-core-rebuild).
 
-For the fixture adapter's readiness, early-exit and failed-start protocol, see
-[Supervised PTY acquisition](native-test-reference.md#supervised-pty-acquisition). Acquisition does not
-establish native-resource quiescence or fixture settlement.
-
 Windows public kill/resize still
 defer until first output; controlled callback-order units are not native timing
 qualification or proof of containment of later native resize exceptions.
@@ -677,24 +673,6 @@ Run this on a desktop you aren't using (a VM is safest; see
 focuses and blurs real windows repeatedly. Leave the mouse and keyboard
 idle and run one graphical suite at a time.
 
-<a id="interruption-regressions"></a>
-
-#### Interruption regressions
-
-These opt-in suites deliberately terminate fixture-owned processes to test cleanup and recovery. Run them only inside a disposable VM:
-
-```sh
-OMXTERM_TEST_NATIVE_INTERRUPTION=1 npm test -- test/integration/native-fixture-interruption.test.ts test/integration/native-fixture-early-exit.test.ts
-```
-
-On Windows, additional WMI outcome and bootstrap suites are available:
-
-```powershell
-$env:OMXTERM_TEST_NATIVE_INTERRUPTION = '1'
-npm test -- test/integration/native-fixture-interruption.test.ts test/integration/native-fixture-early-exit.test.ts test/integration/native-fixture-outcome-windows.test.ts test/integration/native-fixture-bootstrap-windows.test.ts
-Remove-Item Env:OMXTERM_TEST_NATIVE_INTERRUPTION
-```
-
 <a id="evidence-reuse-and-packaging"></a>
 
 ### Packaging and verification commands
@@ -872,9 +850,7 @@ Host/oracle phase receipts: [fixture reference](native-test-reference.md#hostora
 
 - [Linux packaged-wrapper controls](native-test-reference.md#linux-packaged-wrapper-controls)
 - [Graphical fixture supervision](#graphical-fixture-supervision)
-- [Supervised PTY acquisition](native-test-reference.md#supervised-pty-acquisition)
-- [Windows cleanup diagnostics](native-test-reference.md#windows-cleanup-diagnostics)
-- [Windows supervision cost and cleanup bound](native-test-reference.md#windows-supervision-cost-and-cleanup-bound)
+- [Native fixture runner](native-test-reference.md#native-fixture-runner)
 
 <a id="linux-packaged-wrapper-controls"></a>
 
@@ -882,24 +858,4 @@ Linux packaged-wrapper controls: [fixture reference](native-test-reference.md#li
 
 ### Graphical fixture supervision
 
-Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They run in the caller's own desktop session and don't isolate per-user services; see [side effects on your desktop](#side-effects-on-your-desktop).
-
-Within the fixture process/profile scope:
-
-- Fixture diagnostics and stdout/stderr logs are written under `.scratch/native-fixtures/`.
-- The supervisor removes temporary profiles only after verifying that child processes have exited and streams have closed. Its [cleanup-assistance classification](native-test-reference.md#supervisor-cleanup-assistance) distinguishes no observed attempt from attempted or unknown assistance; cleanup success alone is not natural Quit.
-- If a fixture process cannot be cleanly verified on exit, it writes an `ownership-blocked.json` receipt in `.scratch/native-fixtures/` and blocks further launches in that scope until inspected (except for abandoned Windows pre-bootstrap receipts whose parent process has already exited, which are archived automatically).
-
-To run the unit tests for fixture preparation and supervision headlessly:
-
-```sh
-npx vitest run test/unit/run-native-fixture-windows.test.ts test/unit/native-fixture-recovery.test.ts
-```
-
-<a id="supervised-pty-acquisition"></a>
-
-Supervised PTY acquisition: [fixture reference](native-test-reference.md#supervised-pty-acquisition).
-
-<a id="windows-cleanup-diagnostics"></a>
-
-Windows cleanup diagnostics: [fixture reference](native-test-reference.md#windows-cleanup-diagnostics).
+Graphical integration tests use [`runNativeFixture`](../test/fixtures/run-native-fixture.ts) and [`prepareFixture`](../test/fixtures/prepare-fixture.ts) to manage temporary user profiles, child Electron processes, and PTYs (`spawnFixturePty` / `spawnFixtureProcess`). They run in the caller's own desktop session and don't isolate per-user services; see [side effects on your desktop](#side-effects-on-your-desktop). The runner kills whatever a fixture leaves behind and keeps the profile when cleanup fails; see the [native fixture runner](native-test-reference.md#native-fixture-runner).
