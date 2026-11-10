@@ -25,7 +25,19 @@ describe("performance benchmark documentation", () => {
         `docs/development.md must name the ${profile.key} profile`,
       ).toContain(profile.key);
     expect(section).toContain("PERFORMANCE_BENCHMARK_PROFILES");
-    expect(section).toContain("--fail-on-invalid");
+    for (const option of [
+      "--record",
+      "--replace",
+      "--fail-on-invalid",
+      "--truncate-stream",
+    ])
+      expect(section).toContain(option);
+    expect(section.replace(/\s+/gu, " ")).toContain(
+      "positional values, empty arguments, delimiters and malformed forms are rejected",
+    );
+    expect(section).toContain(
+      "diagnostic identifies argument positions and supported options without echoing",
+    );
   });
 
   it("states that the benchmark reports and does not judge", () => {

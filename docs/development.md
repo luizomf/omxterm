@@ -710,6 +710,14 @@ npm run perf:benchmark       # report + summary; never writes a baseline
 npm run perf:benchmark -- --fail-on-invalid   # also reject invalid observations
 ```
 
+The CLI accepts only `--record`, `--replace`, `--fail-on-invalid` and
+`--truncate-stream`; each flag is independent and repeating a known flag is
+harmless. Arguments must be standalone supported flags: positional values,
+empty arguments, delimiters and malformed forms are rejected. The nonzero
+diagnostic identifies argument positions and supported options without echoing
+rejected values. Invalid arguments are rejected before the Git check, scratch
+creation, runner bundle build, benchmark execution or recording.
+
 What runs:
 
 - `dist/main/index.js` (production main, copied as fixture `main/index.mjs`), `dist/preload/index.cjs`,
