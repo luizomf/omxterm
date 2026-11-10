@@ -2,7 +2,7 @@
 
 ## Decision
 
-The optional, separately installed Linux ARM64 [Mirror Typing preview](../mirror-typing.md)
+The optional, separately installed Linux ARM64 [Mirror Typing preview](../mirror-typing-development.md)
 owns setup and deliberate Start; core owns a revocable, visible input route.
 This is a narrow exception to single-pane keyboard delivery, not an extension
 PTY API, command runner or semantic keyboard translator. The implementation
