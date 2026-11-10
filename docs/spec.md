@@ -903,8 +903,8 @@ tradeoffs; the guide covers installation, recovery and separate archive builds.
 
 ## Terminal behavior
 
-The Restty Terminal Surface (Ghostty WASM core) renders each Terminal Tab and
-talks to a real PTY through the session Adapter
+The Restty Terminal Surface (Ghostty WASM core) works with Terminal Tabs, the
+session Adapter and the real PTY lifecycle
 ([ADR 0008](adr/0008-make-the-terminal-surface-the-portable-module.md),
 [ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)). It covers Unicode
 input and output, grid resize, focus, Default Shell and explicit-command
@@ -947,7 +947,7 @@ startup, shell exit, tab close and renderer-loss cleanup.
      budget. No fonts are installed automatically.
   4. The bundled Noto Sans Symbols 2 regular face, last and outside that budget,
      so symbols such as U+23F5 render everywhere while operating-system color
-     emoji keep precedence.
+     emoji keep precedence for the code points they share.
 - A configured family drops the bundled bold faces and has precedence for
   regular, bold, italic and bold-italic text. Main loads its real style faces
   from the same installed family, validates identity and style, and selects
@@ -965,14 +965,16 @@ startup, shell exit, tab close and renderer-loss cleanup.
   is not promised.
 - Missing glyphs use the regular fallback faces.
 - Compatible tabs share native font bytes and parsed faces; faces in one
-  collection share its buffer. Apple Color Emoji reaches Restty without the
-  unused `sbix` bitmap table (main skips it with bounded reads); native Canvas
-  still uses the installed font.
+  collection share its buffer. Apple Color Emoji reaches Restty as memory-only
+  shaping input without the unused `sbix` bitmap table, keeping every face and
+  other table; main skips that payload with bounded reads before validation and
+  IPC. Native Canvas still uses the installed font, and other fonts are not
+  affected.
 - Font reads use native platform facilities without shell interpolation.
   Responses carry bounded bytes and face metadata, not paths. There is no broad
   filesystem API, remote fallback or persistent byte cache. Known limitation: a
   failed on-demand read after validation can put a native font path in the IPC
-  rejection.
+  rejection. It grants no filesystem access.
 - A Surface fixes its font family and line height at creation; a restart applies
   a change everywhere. Theme, font size, programming ligatures and padding
   update live and refit the same PTY. Started font reads survive reload for
@@ -984,24 +986,27 @@ startup, shell exit, tab close and renderer-loss cleanup.
 - Ghostty's grapheme-cluster mode is on, so emoji-presentation and ZWJ clusters
   take one two-column cell for rendering and selection.
 - Bar cursors stay visible inside their cell at the first column, regardless of
-  padding or font family.
+  padding or font family. Block and underline cursors and focus/blink behavior
+  are not affected.
 
 ### Keyboard input and terminal events
 
 - Copy, paste, selection, context-menu actions, Protected Paste, snippet and
   path injection, and write-only OSC 52 follow [Clipboard](#clipboard). The DOM
-  paste event is intercepted only to enter that asynchronous path; ordinary key
-  input goes to the PTY directly.
+  paste event is intercepted synchronously only to enter that asynchronous path;
+  ordinary key input goes to the PTY directly.
 - Option Key Mode applies live. `none` keeps macOS native Unicode and
   composition input; `left`, `right` and `both` turn only that physical Option
   key into terminal Alt.
 - A native dead key completed with Space sends the layout's text, also on X11
   paths that emit `insertText` without composition events. It sends no
-  substituted ASCII space and no duplicate keyboard-protocol release.
+  substituted ASCII space and no duplicate keyboard-protocol release. Ordinary
+  Space and configured terminal modifiers keep their encoding.
 - Unmodified legacy arrows follow Ghostty's live DECCKM mode (including
   save/restore and reset): CSI A/B/C/D in normal mode, SS3 A/B/C/D in
-  application mode. Modified arrows and negotiated Kitty keyboard events keep
-  their own encoding.
+  application mode. The mode comes from parser state, not a render frame or a
+  separate JavaScript tracker. Modified arrows, negotiated Kitty keyboard events
+  and non-arrow keys keep their own encoding.
 - Restty passes Ghostty's parsed OSC 0/2 title and BEL events to the
   per-session host; it does not scan Terminal Payload with a second parser.
   Title sanitization, fallback, ownership, the silent bell marker,
@@ -1031,9 +1036,10 @@ Titles are display-only
 - PTY output crosses the Adapter/IPC route in order, each message carrying a
   cumulative UTF-8 byte position.
 - Only the owning renderer main frame may acknowledge progress for its own Live
-  Terminal Session. An ACK means the whole message was submitted to the Terminal
-  Surface, not that pixels were drawn or memory released. Duplicate, stale,
-  unknown-session, foreign-session and beyond-sent ACKs are ignored.
+  Terminal Session. An ACK means the whole message was synchronously submitted
+  to the Terminal Surface, not that pixels were drawn or memory released.
+  Duplicate, stale, unknown-session, foreign-session and beyond-sent ACKs are
+  ignored.
 - Main pauses the PTY at 65,536 pending bytes and resumes it at or below 16,384.
   A native read in progress can overshoot the pause threshold by up to its own
   size.
@@ -1078,9 +1084,9 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
   per query.
 - Ghostty answers cursor-position queries (`CSI 6 n`) from its parser cursor at
   the query's place in the output stream, including wide/combining text and
-  pending-wrap resize, without a render frame. Origin-mode reports are relative
-  to the scrolling margins. Replies keep stream order with later DA1, DA2 and
-  cell-size replies.
+  pending-wrap resize, without a render frame or JavaScript cursor hint.
+  Origin-mode reports are relative to the scrolling margins. Replies keep stream
+  order with later DA1, DA2 and cell-size replies.
 - `CSI 16 t` gets the cell size from the Surface metrics once the Surface opens.
 - Not every xterm extension is guaranteed. OMXTerm installs no custom terminfo,
   does not touch shell startup files, and does not impersonate another terminal
@@ -1221,8 +1227,9 @@ paths open a Local Image Preview
   native picker instead.
 - A destination may span only core-proven, fully visible soft wraps (including
   literal spaces at a row end); producer hard breaks never join. Cell
-  coordinates stay correct after grapheme and wide-cell prefixes, also across
-  core pages. A destination that may continue beyond the viewport is refused.
+  coordinates stay correct after grapheme and wide-cell prefixes. Exact row
+  equality, hard-break proofs and conservative clipping hold across core pages.
+  A destination that may continue beyond the viewport is refused.
 - Wide-wrap spacer cells add no text and share the hover span and hit target of
   the preceding link cluster on the same row. Link detection does not change
   copy or selection.
@@ -1353,14 +1360,15 @@ paths open a Local Image Preview
 - Content export reads the source pane's retained Scrollback Buffer and screen,
   or only the alternate screen when it is active, without modifying the
   selection.
-- The one-shot popup belongs to its exact pane and Surface. Pane or tab
-  changes, pane end or removal, a field or newer popup, and owner disposal
-  invalidate it. A blocked or wrong-kind callback consumes only its own claim
-  without reading; a stale callback cannot consume a newer one. A valid callback
-  snapshots the text once, before the dialog opens.
-- The limit is 16 MiB of UTF-8 (inclusive), checked at preload and main.
-  Retained terminal content can exceed it. Over-limit text is neither truncated
-  nor sent; main says nothing was saved and suggests a smaller selection.
+- The one-shot popup belongs to its exact pane and Surface. Pane or tab changes,
+  pane end or removal, a field or newer popup, and owner disposal invalidate it.
+  A blocked or wrong-kind callback consumes only its own claim without reading;
+  a stale callback cannot consume a newer one. A valid callback snapshots the
+  text once, before the dialog opens, so later focus changes do not change it.
+- The limit is 16 MiB of UTF-8 (inclusive), measured in bytes and checked
+  independently at preload and main. Retained terminal content can exceed it.
+  Over-limit text is neither truncated nor sent; main says nothing was saved and
+  suggests a smaller selection.
 - Main owns the native save chooser, the suggested timestamped text filename and
   overwrite confirmation. Cancellation writes nothing. Whitespace-only text
   shows a notice instead of a chooser.
@@ -1377,10 +1385,10 @@ paths open a Local Image Preview
 
 ## Clipboard
 
-Clipboard access is explicit and one-way
-([ADR 0009](adr/0009-keep-clipboard-access-explicit-and-one-way.md)); file paths
-are inserted as lexical shell-quoted text
-([ADR 0021](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)).
+Clipboard access is explicit and one-way ([ADR
+0009](adr/0009-keep-clipboard-access-explicit-and-one-way.md)); file paths are
+inserted as lexical shell-quoted text ([ADR
+0021](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)).
 
 ### Copy and paste
 
