@@ -1609,18 +1609,20 @@ adapter, its HUD fallback and cleanup.
   Images do not.
 - Implicit default cell backgrounds (including SGR 49) show the tint. Explicit
   ANSI and RGB backgrounds stay opaque **even when they equal the theme
-  background**, including background-color erase and alternate screens; inverse
-  text is opaque too. A TUI that paints its own background may stay opaque.
+  background**, including background-color erase and alternate screens. Inverse
+  text uses opaque background-color ink and the foreground color as its opaque
+  cell background. A TUI that paints its own background may stay opaque.
   Theme colors stay strict `#RRGGBB` with no opacity field.
 - With positive transparency, `blur: true` requests native macOS background blur
   (radius 20), Windows Acrylic, or the KDE blur-region hint on each owned X11
   window when `xprop` is available. Effects apply after native show without
-  recreating a window, Surface or PTY. There is no background retry; a later
-  reload, show or restore may retry.
+  recreating a window, Surface or PTY. If blur cleanup cannot be confirmed,
+  main does not stack another effect; a later reload, show or restore may
+  retry, but there is no background retry.
 - Blur is best effort. The OS or compositor may ignore it or keep its own tint;
   missing helpers and native errors are quiet fallbacks, never launch
   prerequisites; API success does not prove visible blur.
-- Windows windows stay non-transparent natively to keep resize, maximize,
+- Windows windows stay non-transparent natively to keep resize, maximize/restore,
   fullscreen, corners and shadow. Transparency without blur renders opaque.
   `blur: true` can show the tint through Acrylic on Windows 11 22H2 or later;
   earlier or unknown versions and failed material calls stay opaque (including
@@ -1633,7 +1635,8 @@ adapter, its HUD fallback and cleanup.
 ### Windows default shell
 
 - `windowsShell` is an optional non-empty string without NUL on every platform.
-  macOS and Linux accept it without filesystem access and ignore it.
+  macOS and Linux accept it without filesystem access or warning and ignore
+  it.
 - On Windows it must be an absolute path whose final target (through links and
   reparse points) is an existing regular file; inspection failure is invalid.
 - The path is used as written for each new Default Shell session, passed to the
@@ -1701,7 +1704,8 @@ Validation:
   keypad bindings for the same digit (`Alt+9`, `Alt+num9`) collide.
 - Colliding with another action's remaining default is the same error;
   OMXTerm never reassigns a shortcut. The diagnostic names both actions and the
-  parsed key, and suggests another shortcut or `null`.
+  key as derived from the parsed accelerator (never the configured text), and
+  suggests another shortcut or `null`.
 - A binding that resolves on the current platform to a bare `Ctrl+<key>`
   shadowing a PTY control key (`Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`,
   `Ctrl+U`, `Ctrl+W`, `Ctrl+A`, `Ctrl+E`) stays active with a warning naming the
@@ -1716,11 +1720,16 @@ Delivery:
   AltGr identity. The matcher requires the
   logical character and native key position to agree and does not translate
   arbitrary layouts.
-- On macOS, a main-only native provider may map a fresh, unambiguous
-  Option-only `KeyA`–`KeyZ`/`Digit0`–`Digit9` keydown to its current-layout
-  identity for recording and delivery. Anything unverifiable (repeats, IMEs,
-  dead keys, mismatches) falls back to the normal matcher. Nothing is cached or
-  sent to the renderer.
+- On macOS, a main-only native provider may map a fresh Option-only
+  `KeyA`–`KeyZ`/`Digit0`–`Digit9` keydown to its current-layout identity for
+  recording and core/hosted-child delivery. Digits use validated top-row native
+  codes; letters use only a single ASCII, Option-stripped current-layout
+  letter, not the physical position. The sample must match the owned key
+  window, event type, native code, characters, Option-only flags and the
+  current keyboard-layout input source, with no composition or AltGr. Repeats,
+  mismatches, IMEs and missing data fall back to the normal matcher and
+  native-menu path. An unobservable dead-key keydown cannot be recovered.
+  Nothing is cached or sent to the renderer.
 - `keyboard.optionAsAlt` affects terminal input only.
 - Logical keypad (for example keypad Minus for Zoom Out) and logical `Plus`
   delivery still work; `Plus` without explicit Shift also accepts an unshifted
@@ -1748,10 +1757,11 @@ Delivery:
   (the root is level 1) and 4,096 total mapping pairs and sequence entries
   (mapping keys included), checked iteratively before recursive composition.
   Duplicate keys, aliases, custom or non-core tags, non-scalar keys, non-1.2
-  versions and multiple documents are rejected. Literal block chomping (`|-`,
-  `|`, `|+`) is preserved.
+  versions and multiple documents are rejected. Literal block chomping is
+  preserved: `|-` strips trailing line breaks, `|` keeps one, `|+` keeps all.
 - Injection uses Protected Paste. Without bracketed paste, multiline or
-  control-character bodies need approval and are then delivered unchanged. With
+  control-character bodies need approval and are then delivered unchanged, so
+  they may execute through embedded line breaks or control characters. With
   bracketed paste, the body goes as one bracketed paste without confirmation,
   but a body containing the closing marker (`ESC [ 201 ~`) is refused whole
   before any bytes or Enter, using the localized clipboard failure notice and
@@ -1803,7 +1813,8 @@ Format:
   foreground focus paint wins over divider colors, including during drag.
   Appearance-only reloads repaint chrome without refitting the Surface. The
   color palette itself stays complete and non-nullable. Older builds reject the
-  object; no migration happens.
+  object; no migration happens. There are no configurable widths or controls
+  for these roles.
 - OSC 104 resets the 16 ANSI colors to the latest applied theme (all or the
   requested indices); indexed resets leave other OSC 4 overrides alone. Live
   theme changes replace those 16 overrides but keep extended-color overrides; a
@@ -1873,7 +1884,8 @@ Theme editor (inline, retained):
   private temporary files, mode preservation, identity-checked cleanup and
   last-check races follow ADR 0003; no cross-process atomic compare-and-swap is
   promised.
-- Saving a theme file never writes configuration. Use saved theme needs a clean
+- Saving a theme file never writes configuration or applies appearance. Use
+  saved theme needs a clean
   saved draft and submits its logical path as an ordinary field change (even
   when already configured), validating the current configuration and file
   bytes, not a draft snapshot. File-save and configuration status stay
@@ -2030,6 +2042,7 @@ Config File page and writes:
   apply. Cleanup failures report a possible leftover temporary file.
 - Snapshot text uses the loader's UTF-8 decoding (dropping a leading BOM).
   Revisions identify the resolved destination and exact persisted bytes.
+  Snapshot parsing happens before writing.
 - Requests go straight to main's serialized queue, so a reopened view never
   overtakes earlier writes. Pending responses keep newer or unrelated drafts,
   and saving feedback waits for queued changes. Raw operations are
@@ -2050,7 +2063,8 @@ While Settings is selected:
   consume them as no-ops, never falling through to a terminal. Retained
   terminal-popup targets cannot become field edits. Clipboard reads recheck the
   interaction generation as well as focus, value and selection; tab
-  deactivation, modals, focus loss and disposal invalidate them. Hidden save
+  deactivation, modals, focus loss and disposal invalidate them, even after
+  returning to the same unchanged field. Hidden save
   results may settle without taking focus.
 - The Auxiliary Panel is suspended, keeping its selected view and query, scroll
   and width memory, and restored when a terminal is selected again; Snippets
@@ -2097,12 +2111,15 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   processes keep their normal network access.
 - Main selects the macOS ARM64 catalog for `darwin-arm64` and the general one
   for every other target, without merge or fallback. It fetches only on Browse
-  or Refresh. Cards show the selected offer's platforms and distinguish target
+  or Refresh; the bounded, versioned JSON supplies plain-text release cards.
+  Cards show the selected offer's platforms and distinguish target
   from host/API incompatibility. A failed refresh keeps a visibly stale
   snapshot; a cold failure is unavailable, not empty. Local management works
   offline. See [extension distribution](extension-distribution.md).
 - Installs require exact archive size, SHA-256 and manifest identity, version
-  and engines, then the one-shot trust flow. Manual archives check host/API,
+  and engines, then the one-shot trust flow. Main bounds acquisition and passes
+  the captured bytes through archive validation and explicit trust. Manual
+  archives check host/API,
   not catalog targets. Host compatibility is semver plus the narrow
   development-host bridges in the
   [archive contract](extension-installation-foundation.md#archive-contract).
@@ -2143,18 +2160,22 @@ and terminal panes are unaffected.
   exclusion and the built-in Snippets preview owner; native Enter repeats and
   release stay owned across focus handoff. Retirement cancels pending requests
   but not accepted input or sessions.
-- `terminal.insertPath.v1` inserts one bounded absolute path, quoted by the
+- `terminal.insertPath.v1` inserts one bounded absolute lexical path, quoted by
+  the
   shared platform policy, under the same admission and Protected Paste rules
   ([ADR 0021](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)).
   Main checks its private selection and visible-admission stamps at entry and
   commit, and core checks selection independently, so a hide/reveal before
-  commit cannot revive a request. Completion is reported separately from
+  commit cannot revive a request; a same-view geometry refresh does not revoke
+  it. Completion is reported separately from
   acceptance and means every chunk reached node-pty without a synchronous
   error, not that the shell read it; interrupted delivery may be partial and
   should be inspected before retrying.
 - Neither capability lets a caller pick a terminal or reach the raw PTY. Older
   hosts reject unknown capabilities.
-- On the extension targets the Snippets command opens the installed optional
+- The optional Snippets package (`extensions/snippets`) shares the Snippets UI
+  and bounded catalog client; its separate action is withheld from production.
+  On the extension targets the Snippets command opens the installed optional
   package or Extensions guidance; Windows x64 keeps the built-in view. Native
   child activity is separate from temporary visibility, and committed language
   and search/restore focus intent survive overlays.
@@ -2199,16 +2220,18 @@ User guide: [Linux desktop installer](linux-installer.md). Rationale:
   `--version`, `--help`; no prompts.
 - Owns exactly `~/.local/opt/omxterm/OMXTerm.AppImage`,
   `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png` and
-  `~/.local/share/applications/omxterm.desktop`. Directories or other
-  non-regular, non-symlink entries at those names are refused; files and
+  `~/.local/share/applications/omxterm.desktop`. Before replacing any file,
+  install checks all three names: directories or other non-regular,
+  non-symlink entries are refused; files and
   symlinks (even dangling or pointing at directories) are replaced as entries
   without touching link targets. Uninstall removes only those entries and
   keeps unrelated files and parent directories.
 - Install and update replace the three files in sequence under rollback traps,
   not atomically. Invalid input leaves the previous install untouched. Failure
   before the third replacement attempts restoration; an original it cannot
-  restore stays at a reported backup path and is never deleted, and the first
-  failure's status and diagnostics are kept.
+  restore stays at a reported backup path and is never deleted, incomplete
+  recovery is reported, and the first failure's status and diagnostics are
+  kept.
 - After the third replacement, rollback is disabled before staging and backups
   are removed. A cleanup failure can then exit nonzero with the new install in
   place and some originals gone, so a nonzero exit does not always mean the
