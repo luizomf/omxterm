@@ -288,143 +288,37 @@ See [reloading user configuration](configuration.md#reloading-user-configuration
 
 ### Insert, run or preview a snippet
 
-Published **OMXTerm 0.25.0** supports optional Snippets on Linux ARM64/x64,
-macOS ARM64 and Windows ARM64. Its bundled default is 0.1.0; the official catalog
-offers [Snippets 0.1.1](snippets-migration.md#install-deliberately) for deliberate
-installation or update. Windows x64 and unchanged
-**0.23.0** hosts retain the built-in tool. If Snippets is not installed, use
-**Settings → Extensions → Browse official extensions** or a verified local archive;
-the local route works offline after download. Existing YAML and shortcuts stay
-intact. Without an enabled package, the existing Snippets shortcut opens Extensions
-management.
+Snippets are available as an optional extension on supported host versions. To
+install or update it, choose **Settings → Extensions → Browse official
+extensions**. For current platform availability and offline installation, see
+the [Snippets guide](snippets-migration.md).
 
-Windows ARM64 still has [public-install Snippets failures and testing gaps](snippets-migration.md#stable-0250-release-disposition).
-The migration guide explains what failed, what was tested and how to install offline.
+Choose **Insert** to place text at the prompt without adding Enter, or **Run**
+to send it with Enter. **Preview** lets you review the text and choose either
+action. Multiline snippets can still run individual lines or require paste
+confirmation. See [Snippets](configuration.md#snippets) for editing the catalog
+and its settings.
 
-Since 0.25.0, new packaged profiles try once to install the
-[removable default](default-snippets.md), ready to open but inactive at startup.
-Existing profiles, your YAML and disabled/removed choices stay intact. No user
-YAML is created.
+### Files and SSH Connect
 
-Each snippet row shows what clicking it does: **Insert** types the snippet without pressing Enter, and **Run · adds Enter** types it and presses Enter (`execute: true` in `snippets.yaml`). Click **Preview** to see the exact text first, then choose **Insert — no added Enter** or **Run — adds Enter**; that choice wins over the snippet's default. The snippet goes only to the focused pane captured when you opened the preview, never to a later selected or replacement pane. If that terminal ends, fails or is removed, the actions are disabled and nothing is sent, even if its pane remains visible for failure acknowledgement. Insert only skips the final Enter: a snippet with several lines can still run each line, and multiline text may still ask for paste confirmation.
+**Files** and **SSH Connect** are optional extensions on supported host
+versions. Install them from **Settings → Extensions**, then open them from the
+application menu or Command Palette. Files browses local folders; SSH Connect
+starts a separate terminal session.
 
-Change the interface language in **Settings → General → Language**. Row and preview controls update in place, including an unavailable-terminal notice; your snippet text, captured target, focus and disabled actions are retained. About, local-image and snippet previews do not stack. Those modals block pane split/focus/equalize, tab navigation and divider input; approved closure still works. Settings is instead a normal tab: terminal-only actions do nothing there, while tab/window actions stay available. Pane menus, Surface names and resize separators also follow the interface language without replacing sessions.
+For version availability and platform limits, see the [Files
+guide](files-development-preview.md) and [SSH Connect
+guide](ssh-connect.md). Source-only features may require a newer host and
+extension archive; updating OMXTerm alone does not update an installed
+extension.
 
-### Shared companion panel
+### Resize or close the auxiliary panel
 
-On the Linux and macOS ARM64 previews, installed **Files** and **SSH Connect**
-tools open beside the terminal through their existing File-menu, palette or
-terminal-context actions.
-Optional `toggleFiles` and `toggleSshConnect` shortcuts can be configured in
-**Settings → Shortcuts**; neither has a default binding. They use the same tool
-entry points, once per key press. Missing or disabled tools do not consume their
-configured key or install/enable themselves.
-In current source, one open tool is named in the panel header. With multiple
-open tools, the header's labeled buttons identify and switch between them without
-closing them; buttons wrap in a narrow panel. The Files and SSH Connect source
-pages rely on that host identity, while the earlier Files0.4/0.5 and SSH0.3.0
-archives retain their own headings. Updating only the host does not update those packages.
-**Hide panel** (−) or Escape retains their state. **Close tool** (×) closes the
-selected tool and hides the panel, retaining any other open tools. Invoking a
-tool's ordinary entry point closes it only when it is already selected and
-visible; otherwise it reveals or opens it. Reopening a closed tool creates a
-fresh view, discarding its old drafts/search state.
-
-**View → Toggle Auxiliary Panel** independently hides or reveals retained tools.
-It has no default shortcut; configure `toggleAuxiliaryPanel` in Settings or
-`keybinds`. Reveal restores the remembered open tool or the first remaining one;
-with no open tools, current source opens Snippets if installed and enabled
-(or the built-in tool on Windows x64). If unavailable, a discreet notice disappears
-after about four seconds without moving focus. It appears once per application
-process across its windows; further failed attempts stay quiet, but later manual
-installation/enablement can make the next attempt work. This never installs or
-enables anything, opens Settings, or changes shortcut defaults/custom bindings.
-Settings, modals and stale pending requests cannot trigger a late reveal.
-Tool close does not disable the extension or end terminal sessions. Accepted file operations or SSH launches may still
-finish; close does not promise cancellation or rollback, and reopening does not
-repeat an operation.
-Switching terminal tabs keeps the panel visible. Connecting through SSH opens a
-new terminal tab without replacing the current session or closing the panel.
-Settings and general extension tabs temporarily suspend it.
-
-Files initially opens Home. In current Files source, **Actions… → Use last
-reported path** opens the active pane's last locally accepted OSC 7 path as a local
-folder, even if the panel was opened for another pane. An inline hint and tooltip
-explain that the report is unverified and can be stale or come from a remote
-session. A report is not authenticated; OMXTerm does not inspect the current
-process or configure the shell.
-Without a usable report or for a known SSH Connect pane, Files explains the
-unavailable directory and leaves the browsing location alone; use Home or enter
-a path if needed. It does not follow later terminal changes or retarget an
-operation already started. Compatible installed archives retain their original
-**Use terminal directory** label and do not gain the new inline hint or
-tooltip from a host update.
-In current source, Files focuses **Filter loaded entries** when opened. Type to
-filter names already loaded in expanded folders; this is not a recursive search
-and does not search collapsed folders. Tab enters the tree, including an empty
-one. Up/Down and Home/End move between rows; Left/Right expand, collapse or
-move between levels. A focused row is selected for Actions. Use F2 for
-**Rename / move** or Shift+F10 for its context menu. Cancel returns to the
-initiating row/control if available. The query stays while navigating or hiding
-the panel, and resets when Files is closed. A no-match message covers loaded
-entries only; hidden dotfiles, errors and listing limits still apply.
-
-To move one entry in current source, drag it onto another folder row, or select it
-and choose **Move to folder…** from Actions or its keyboard context menu. The
-keyboard action asks for an absolute folder path. Review the fixed source and
-folder, then choose **Move** or **Cancel**. Files does not accept external drags
-for this action, overwrite a collision, move a folder into itself or its children,
-or copy/delete across volumes. A symbolic link is moved as a link and cannot be
-the destination folder. If the outcome is unknown, refresh and inspect rather
-than repeating blindly. Dragging a Files entry into the terminal is not part of
-this workflow.
-
-In current source, select a file, folder or link and choose **Actions… → Insert
-path into terminal**, or focus its row and press `Shift+Enter`. The path is
-quoted and sent without an added Enter through Protected Paste to the terminal
-selected when the action is requested. If the paste completes, focus returns to
-that terminal when it is still selected; changing panes does not redirect it.
-Files explains unavailable, busy or incomplete requests. If the result is
-unknown, check the terminal before trying again. This action needs a future
-Files archive and a host that understands it; it is not in published Files0.6/0.7.
-
-Newer source also accepts one Files row dropped **only on the focused live pane's
-visible terminal area**. The copy cursor and **Drop to insert path (not run)**
-hint mark a candidate, not guaranteed acceptance. Other panes, tabs, panels,
-search controls and overlays do not accept it. The protected handoff captures
-that exact pane, never switches to a newer one, stops Mirror Typing and adds no
-Enter. Spaces and quotes are preserved; control-bearing paths and mixed/external
-payloads are refused. Files explains the outcome. Successful still-current
-completion focuses that pane's input; a failure or newer focus intent does not
-move focus. Keyboard Insert path/Shift+Enter and confirmed folder moves remain
-separate alternatives. This source composition still needs native qualification
-and a newly versioned archive; published Files0.6/0.7 remain unchanged.
-
-These source changes are not a release and do not replace published archives.
-Recognized `0.24.1-dev.N`, `0.25.0-dev.N` and `0.26.0-dev.N` hosts admit unchanged
-Files0.6 through the narrow [development bridges](extension-installation-foundation.md#archive-contract).
-
-Closing the opening terminal leaves the tool available; disabling or removing
-the extension retires its view. In current Files source, **Actions… → Show dotfiles (names
-starting with .)** reveals dot-prefixed files and folders; they are hidden by
-default. With the Files list or toolbar focused, use `Ctrl+H` on Linux or
-`Cmd+Shift+.` on macOS; the Actions menu remains available if a core shortcut
-claims the key or the keyboard layout does not match. Shortcuts do not interrupt editing or an
-operation editor. Type a hidden directory path to open it directly. The setting
-stays while navigating or hiding the panel, but resets when the view is closed.
-On both Linux and macOS, the filter uses names only; it does not interpret
-macOS Finder hidden flags or the `.hidden` name lists used by some Linux desktops.
-Earlier Files0.4/0.5 archives retain their own styling and do not gain this
-behavior from a host update. Files0.6 is a separately built archive; its release
-and catalog promotion are separate from the host.
-
-### Resize or close Snippets
-
-Choose **Settings → Window → Auxiliary panel side** for left or right placement (right by default). This saved choice applies live to the shared Snippets/Files/SSH panel in all windows, preserving tool drafts and focus. **View → Move Auxiliary Panel to Other Side** (`Cmd+Shift+Option+P` on macOS, `Ctrl+Shift+Alt+P` on Linux and Windows) flips only the focused window until that saved side changes, and does not rewrite it. One press moves the panel once. Settings and hosted tabs can use it without revealing the suspended panel; a modal still blocks it. Width and visibility remain memory-only. Drag the separator between the panel and terminal to resize. Its 1 px line matches pane dividers but retains a 6 px resize target; keyboard focus highlights the line, not a rectangle. You can also focus the separator with Tab: Left/Right move it physically by 10 px (Left grows a right-side panel; Right grows a left-side panel), and Home/End choose the current minimum/maximum. The default width is 280 px, bounded to 220–560 px and the available window space. The header's Hide button or Escape inside the panel hides it and returns terminal focus. Close disposes the selected tool instead. `Cmd+Shift+S` / `Ctrl+Shift+S` (**View → Toggle Snippets**) closes selected-visible Snippets, otherwise opens or reveals it.
-
-The panel shrinks automatically in narrow windows and hides below 406 px of content width. Widen the window and open it again; it does not reopen automatically. Your preferred width, search and scroll survive hiding and configuration/theme changes in that window only, not restart. The remaining terminal allowance does not guarantee columns with extreme padding.
-
-Snippets is nonmodal: clicking the terminal keeps normal terminal input. Copy/Paste/Select All edit the search field while it holds focus; unsupported panel controls suppress terminal clipboard delivery instead. Selecting Settings or a general extension tab suspends the panel; returning to a terminal restores the selected tool. About, snippet preview and Local Image Preview temporarily make the retained visible panel inert.
+Choose **Settings → Window → Auxiliary panel side** to set its default side.
+Drag the separator to resize it. **Hide** or **Escape** hides the panel while
+keeping the tool open; **Close tool** closes the selected extension view.
+Choose **View → Toggle Auxiliary Panel** to show or hide it. See [Window
+settings](configuration.md#settings) and the tool-specific guides for details.
 
 ### A program draws text in the wrong place
 
