@@ -112,6 +112,9 @@ it.skipIf(!app || !archive)(
       expect(result.notices).toEqual([]);
       expect(result.inserted).toBe(path.join(directory, fileName));
       await client.evaluate(`${observer}.quit()`, 5000);
+      // Node waits for an attached debugger before the process can exit.
+      client.close();
+      client = undefined;
       await Promise.race([
         exited,
         new Promise((_, reject) =>
