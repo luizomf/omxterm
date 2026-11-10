@@ -1680,7 +1680,8 @@ Files and SSH Connect slots:
 - A missing, disabled or unsupported tool keeps its configuration but has no
   entry or active shortcut, so its key is not consumed. Collision checks ignore
   installation state, and nothing is activated, installed or enabled to check
-  availability.
+  availability. Later activation failures use the existing unavailable
+  handling.
 - They toggle like other tools (close visible, reveal hidden, or open fresh).
   One press invokes once; its repeats and release stay owned across focus
   transfer and never reach the terminal. Recording takes priority.
@@ -1734,8 +1735,9 @@ Delivery:
   creates (outside the kit), rewrites or migrates it; absence is the empty
   state. It is reread each time the sidebar opens. `snippets.json` is not read.
 - Published Snippets `0.1.1` resolves it with the account-home fallback; the
-  bundled default `0.1.0` can resolve a different file when XDG is unset and
-  the environment home is overridden. Updating is deliberate. See the
+  installed or bundled-default `0.1.0` can resolve a different file when XDG
+  is unset or empty and the environment home is overridden. The bundled default
+  stays `0.1.0`. Updating is deliberate. See the
   [Snippets migration guide](snippets-migration.md).
 - One UTF-8 YAML 1.2 core document (parsed with `yaml` v2): exactly
   `version: 1` and a `snippets` array of at most 512 entries. Each entry has
@@ -1743,8 +1745,9 @@ Delivery:
   optional `description` (≤512) and optional boolean `execute` (default
   `false`).
 - Limits: 1 MiB read, rejected before decoding; at most 16 collection levels
-  and 4,096 total mapping pairs and sequence entries, checked before recursive
-  composition. Duplicate keys, aliases, custom tags, non-scalar keys, non-1.2
+  (the root is level 1) and 4,096 total mapping pairs and sequence entries
+  (mapping keys included), checked iteratively before recursive composition.
+  Duplicate keys, aliases, custom or non-core tags, non-scalar keys, non-1.2
   versions and multiple documents are rejected. Literal block chomping (`|-`,
   `|`, `|+`) is preserved.
 - Injection uses Protected Paste. Without bracketed paste, multiline or
@@ -2014,8 +2017,9 @@ Config File page and writes:
 - Every write validates fully and replaces the file atomically. Field changes
   keep all other entries. A raw save is refused when the file changed since the
   draft loaded, and a dirty draft is never overwritten.
-- A final comparison before replacing rejects detected external edits; the race
-  after it remains (no cross-process compare-and-swap).
+- A final destination, bytes, presence and permission comparison before
+  replacing rejects detected external edits or retargeting, without retry; the
+  race after it remains (no cross-process compare-and-swap).
 - Settings follows symlinks (relative, chained, linked parents) and replaces the
   resolved regular file, keeping the links. Dangling or cyclic links and
   non-regular targets are refused with guidance. An absent file may be
@@ -2082,7 +2086,8 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   names, arguments, commands, titles, secrets, transcripts, URLs or archive
   contents.
 - Explicit copy, local search and export are not logging. Search stays in
-  memory; export writes only the requested text to the chosen file.
+  memory; export writes only the requested text to the chosen file. Neither
+  authorizes automatic recording or diagnostic capture.
 
 ### Network access
 
