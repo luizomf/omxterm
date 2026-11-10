@@ -295,12 +295,12 @@ the [Snippets guide](snippets-migration.md) and the concise
 [optional-tools availability summary](README.md#optional-tools), including
 built-in Windows x64 Snippets and preview limits on Linux/macOS ARM64.
 
-Choose **Insert** to place text at the prompt without adding Enter, or **Run**
-to send it with Enter. **Preview** lets you review the text and choose either
-action. Preview captures the terminal target when opened and does not retarget
-if you switch tabs or panes. Multiline snippets can still run individual lines
-or require paste confirmation. See [Snippets](configuration.md#snippets) for
-editing the catalog and its settings.
+Choose **Insert** to send text to the selected terminal without adding Enter,
+or **Run** to send it with Enter. **Preview** lets you review the text and
+choose either action. Preview captures its terminal target when opened and does
+not retarget if you switch tabs or panes. Multiline snippets can still run
+individual lines or require paste confirmation. See
+[Snippets](configuration.md#snippets) for editing the catalog and its settings.
 
 ### Files and SSH Connect
 
