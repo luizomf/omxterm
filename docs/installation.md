@@ -97,7 +97,8 @@ Linux x64 is build-only. One check of 0.23.0 ran without a desktop on Ubuntu
 22.04 with glibc 2.35. That is not a minimum version or a broad promise, and no
 desktop test confirms which distributions the x64 AppImage runs on.
 
-OMXTerm also uses X11/XWayland, the display system most Linux desktops provide.
+OMXTerm uses X11, a Linux window system. On Wayland desktops, a compatibility
+layer called XWayland lets X11 apps run; most desktops already provide it.
 Install the few desktop packages it relies on if any are missing:
 
 ```sh

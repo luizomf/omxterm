@@ -1,16 +1,15 @@
 # User configuration
 
-OMXTerm works with bundled defaults. It creates editable files on first launch:
+OMXTerm works with bundled defaults. On first launch, it creates these editable files:
 
 ```text
 omxterm/
 ├── config.json
-├── snippets.yaml
 └── themes/
     └── omtheme.json
 ```
 
-The Snippets catalog is created only on targets with built-in Snippets. Optional Snippets installs leave it user-owned and absent until created. Configuration lives in `$XDG_CONFIG_HOME/omxterm` when `XDG_CONFIG_HOME` is nonempty, or `.config/omxterm` in your account home otherwise. On Windows, the ordinary path is `%USERPROFILE%\.config\omxterm`.
+On systems with built-in Snippets, OMXTerm also creates `snippets.yaml`. Optional Snippets installs leave this file absent until you create it. Configuration files live in `$XDG_CONFIG_HOME/omxterm` when the `XDG_CONFIG_HOME` environment setting (used by some apps) has a nonempty value. If it is unset or empty, they live in `.config/omxterm` under your account home. On Windows, the ordinary path is `%USERPROFILE%\.config\omxterm`.
 
 Use **Settings…** in the application menu for preferences and shortcuts. To edit files, save your changes and choose **View → Reload User Configuration** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux and Windows). Snippets reload when you open its sidebar.
 

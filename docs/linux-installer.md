@@ -1,12 +1,12 @@
 # Linux desktop installer
 
-You can run the OMXTerm AppImage directly, or use `linux_install.sh` to install it into your user folder and add OMXTerm to your desktop application menu.
+An AppImage is a single Linux app file you can run without installing it. You can also use `linux_install.sh` to put OMXTerm in your user folder and add it to your application menu.
 
-Get the AppImage, `linux_install.sh`, and their `.sha256` files from your architecture's row in the [download index](../README.md#platforms-and-downloads). For system requirements, see the [Linux installation guide](installation.md#linux).
+Get the AppImage, `linux_install.sh`, and their `.sha256` files from your computer's row in the [download index](../README.md#platforms-and-downloads). ARM64 is for 64-bit Arm computers; x64 is for Intel/AMD. For system requirements, see the [Linux installation guide](installation.md#linux).
 
 ## Install to your application menu
 
-Download the files from the same target row, replace `VERSION` with your downloaded version, and use `x64` instead of `arm64` on Intel/AMD. Same-cut Linux helpers are identical; x64 helper installation remains unverified ([coverage](installation.md#linux)). Run as your normal user (no `sudo` needed):
+Download the files from the same target row. Open Terminal, go to the folder containing them (for example, `cd ~/Downloads`), and replace `VERSION` with your downloaded version. Use `x64` instead of `arm64` on Intel/AMD. The download table lists a helper for each target, but x64 helper installation has not been tested ([coverage](installation.md#linux)). Run as your normal user; you do not need `sudo`:
 
 ```sh
 appimage=./OMXTerm-VERSION-arm64.AppImage
@@ -22,25 +22,25 @@ Once installed, open **OMXTerm** from your application launcher. The script plac
 - `~/.local/share/icons/hicolor/1024x1024/apps/omxterm.png`
 - `~/.local/share/applications/omxterm.desktop`
 
-It automatically detects whether your system supports direct FUSE mounting or needs `--appimage-extract-and-run`, and configures the launcher to use X11/XWayland.
+It checks whether your system can open an AppImage directly or needs `--appimage-extract-and-run` instead. It configures the launcher to use X11, a Linux window system; on Wayland desktops, a compatibility layer called XWayland runs X11 apps.
 
 ## Only if graphics fail
 
-On Linux, OMXTerm permits Chromium's SwiftShader WebGL fallback when available. Software rendering costs CPU and does not guarantee successful WebGL2 initialization; see the [accepted graphics/JIT security tradeoff](adr/0037-allow-the-linux-software-webgl-fallback.md). A blank window or initialization error alone does not diagnose a driver problem. For separate, opt-in Mesa/blocklist troubleshooting, install with the `--compatibility` flag:
+If normal launch fails, you can try the optional compatibility mode. It may still fail, is slower, and has lower security guarantees; see the [graphics decision](adr/0037-allow-the-linux-software-webgl-fallback.md). Install with the `--compatibility` flag:
 
 ```sh
 ./linux_install.sh install --compatibility "$appimage"
 ```
 
-Compatibility mode adds `LIBGL_ALWAYS_SOFTWARE=1` (Mesa software rendering) and `--ignore-gpu-blocklist` to the application-menu launcher. Because software rendering uses the CPU, only enable this mode if normal installation fails. To switch back to normal mode later, run `./linux_install.sh install "$appimage"` without `--compatibility`.
+Compatibility mode adds `LIBGL_ALWAYS_SOFTWARE=1` to force CPU rendering and `--ignore-gpu-blocklist` to tell Chromium to ignore its graphics blocklist. To switch back to normal mode later, run `./linux_install.sh install "$appimage"` without `--compatibility`.
 
 See [graphics troubleshooting](linux-desktop.md#graphics-troubleshooting) if you are launching the AppImage directly from a terminal instead of the app menu.
 
 ## Interface size on Hyprland
 
-When you run `linux_install.sh` inside an active Hyprland session where XWayland zero-scaling is enabled and all monitors use the same scale factor, the installer automatically adds `--force-device-scale-factor` to the desktop entry so UI controls match your display.
+When you run `linux_install.sh` in Hyprland with XWayland zero-scaling enabled and all monitors using the same scale factor, the installer adds `--force-device-scale-factor` to the menu entry so controls match your display.
 
-If you change monitor scales later, rerun `./linux_install.sh install "$appimage"` to refresh the desktop entry, or see [HiDPI tips](linux-desktop.md#small-interface-text-on-a-hidpi-display) and [Hyprland/Omarchy tips](linux-desktop.md#hyprland-including-omarchy).
+If you change monitor scales later, rerun `./linux_install.sh install "$appimage"` to refresh the desktop entry, or see [high-resolution display tips](linux-desktop.md#small-interface-text-on-a-hidpi-display) and [Hyprland/Omarchy tips](linux-desktop.md#hyprland-including-omarchy).
 
 ## Update or uninstall
 

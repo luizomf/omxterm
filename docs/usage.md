@@ -68,23 +68,25 @@ Select terminal text with the mouse, then choose **Edit → Copy**, use its shor
 
 `Ctrl+C` interrupts the running command. `Ctrl+V` is sent to the terminal program. To hide the terminal context menu, clear **Terminal context menu** in **Settings → Terminal**; existing Edit actions and shortcuts remain available.
 
-### Searching the scrollback
+### Searching terminal history
 
-Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the focused pane. Matches highlight as you type. Press **Enter** or **↓** for the next match, **Shift+Enter** or **↑** for the previous one, and **Escape** to close search. Click the terminal to return keyboard input to the program while keeping the search bar open. Search covers only scrollback still held in memory; each pane keeps its own query.
+Choose **Edit → Find…** (`Cmd+F` / `Ctrl+Shift+F`) to search the focused pane. Matches highlight as you type. Press **Enter** or **↓** for the next match, **Shift+Enter** or **↑** for the previous one, and **Escape** to close search. Click the terminal to return keyboard input to the program while keeping the search bar open. Search covers the current screen and recent terminal history kept in memory. Each pane keeps its own query.
 
 ### Exporting terminal text
 
 These export actions are available in development source, not stable 0.25.0.
 
-Right-click the terminal and choose **Export Selection…** when text is selected, or **Export Terminal Content…** to save the pane's scrollback and screen. A full-screen program such as Vim may use an alternate screen, in which case only that screen is exported. Choose a destination in the save dialog. Export is user initiated and saves plain UTF-8 text; it does not record terminal output automatically.
+Right-click the terminal and choose **Export Selection…** when text is selected, or **Export Terminal Content…** to save the pane's recent terminal history and current screen. A full-screen program such as Vim may temporarily replace the terminal history with its own screen; in that case, only that screen is exported. Choose a destination in the save dialog. Export is user initiated and saves plain UTF-8 text; it does not record terminal output automatically.
 
 ### Protected Paste
 
-When pasted text contains multiple lines or control characters and the terminal program has not enabled bracketed paste, OMXTerm asks for confirmation before sending it. Programs that enable bracketed paste receive text without the extra confirmation. The same protection applies to snippets and dropped paths.
+When pasted text contains multiple lines or control characters, OMXTerm asks before sending it unless the terminal program tells OMXTerm it can handle pasted text safely. The same protection applies to snippets and dropped paths.
 
 ## Inserting file and folder paths
 
-Drag files or folders from your file manager into OMXTerm to insert shell-quoted paths in the focused pane. You can also copy files and paste them. Review the inserted text before pressing Enter, especially in Git Bash, WSL, or an SSH session. Newlines in paths or text can act on the receiving program.
+Drag files or folders from your file manager into OMXTerm to insert their paths in the focused pane. You can also copy files and paste them. OMXTerm quotes paths for POSIX shells such as Bash or Zsh on macOS/Linux and for PowerShell on Windows; Command Prompt and other shells may need different quoting. This assumes insertion at a new argument, not inside existing quotes.
+
+Review the inserted text before pressing Enter, especially in Git Bash, WSL, or an SSH session. In a shell, pasted text with line breaks can send more than one command.
 
 ## Opening visible web links
 
@@ -174,7 +176,7 @@ This is a known issue ([#568](https://github.com/luizomf/omxterm/issues/568)): a
 
 ### The renderer cannot start
 
-OMXTerm requires WebGL2. Linux may use Chromium's SwiftShader fallback, which can use more CPU and has [lower graphics/JIT security guarantees](adr/0037-allow-the-linux-software-webgl-fallback.md). See [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
+OMXTerm needs graphics support to display the terminal. On Linux, a CPU-based fallback may work when hardware graphics are unavailable, but it can be slower and has lower security guarantees (see the [graphics decision](adr/0037-allow-the-linux-software-webgl-fallback.md)). See [Linux graphics troubleshooting](linux-desktop.md#graphics-troubleshooting).
 
 ### macOS asks for folder permissions again after an update
 

@@ -1,6 +1,6 @@
 # How OMXTerm works
 
-OMXTerm is a desktop terminal: a window for commands with tabs, split panes, themes, and shortcuts. Your computer's shell and programs do the command-line work.
+OMXTerm is a desktop terminal for your command-line programs. It adds tabs, split panes, copy and paste, themes, and image previews around the shell already on your computer. Your shell and programs do the command-line work; OMXTerm displays their output in the terminal window.
 
 New here? [Install OMXTerm](installation.md), try the [first session](../README.md#first-session), then see [Everyday use](usage.md).
 
@@ -10,7 +10,7 @@ New here? [Install OMXTerm](installation.md), try the [first session](../README.
 - Your **shell** (for example, Zsh, Bash, or PowerShell) reads commands and starts programs.
 - A **program** (such as Git or Neovim) does the requested work.
 
-A prompt is the shell's invitation to enter a command. OMXTerm forwards your input through a local operating-system **pseudo-terminal (PTY)**, a text connection to the shell, and displays the output. Your prompt, aliases, history, and startup settings belong to your shell; OMXTerm does not edit its startup files. See [shell startup help](usage.md#shell-preferences-do-not-load) if your usual prompt or aliases do not appear.
+A prompt is the shell's invitation to enter a command. OMXTerm sends your input through a local system connection called a **pseudo-terminal (PTY)** to the shell, then displays the output. Your prompt, aliases (short command names), history, and startup settings belong to your shell; OMXTerm does not edit its startup files. See [shell startup help](usage.md#shell-preferences-do-not-load) if your usual prompt or aliases do not appear.
 
 ## What happens when you open OMXTerm
 
@@ -25,7 +25,7 @@ Keyboard ─▶ OMXTerm ─▶ PTY ─▶ Shell / command
 Screen   ◀─ OMXTerm ◀─ PTY ◀─ Shell / command
 ```
 
-OMXTerm draws the result, including colors and full-screen apps. When you resize or zoom the window, OMXTerm updates the terminal's rows and columns so programs can redraw to fit.
+OMXTerm draws the result—including colors, full-screen apps, and inline images—on your screen. When you resize or zoom the window, OMXTerm updates the terminal's rows and columns so programs can redraw to fit.
 
 ## Tabs and sessions
 

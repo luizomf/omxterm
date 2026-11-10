@@ -65,13 +65,20 @@ applies, including configured commands, port forwarding and agent access.
 
 ## If the connection does not start
 
-- **OpenSSH not found:** install your operating system's OpenSSH client and make
-  sure the app can find the `ssh` program. Restart OMXTerm after installing it.
+- **OpenSSH not found:** run `ssh -V` in Terminal; a version line means the
+  client is available. On
+  Ubuntu or Debian, install the [OpenSSH client](https://packages.ubuntu.com/openssh-client)
+  with `sudo apt install openssh-client`. On Fedora, install the
+  [OpenSSH client package](https://packages.fedoraproject.org/pkgs/openssh/openssh-clients/)
+  with `sudo dnf install openssh-clients`. On macOS, use the `ssh` command in
+  Terminal. Restart OMXTerm after installing so it can find the program.
 - **Alias missing:** check `~/.ssh/config`, then close and reopen SSH Connect or
   choose **Refresh**. Quick connect works even when an alias is not listed.
-- **Unwanted authentication prompt:** press **Ctrl+C** in the SSH terminal to
-  cancel authentication. This is not a general way to end arbitrary remote
-  programs or sessions. SSH Connect cannot fix server credentials.
+- **Sign-in or server identity prompt:** follow OpenSSH's instructions in the
+  terminal. Confirm a first-time fingerprint through a trusted separate channel,
+  as described above. Press **Ctrl+C** to cancel authentication; this does not end
+  arbitrary remote programs or sessions. SSH Connect cannot bypass host-key checks
+  or fix your credentials.
 - **Connection refused or timed out:** check the host, port, network and server
   availability. These errors come from the SSH connection, not the alias list.
 - **Unknown launch outcome:** inspect the terminal tabs before trying again; a
