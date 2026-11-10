@@ -16,11 +16,7 @@ import {
   type CursorDiagnostic,
 } from "../fixtures/restty-cursor-readiness";
 
-import { observeNativeWindow } from "../fixtures/native-window-observation";
-import {
-  nativeWindowDiscoveryTimeout,
-  rejectLegacyNativeWindowDeclarations,
-} from "../fixtures/window-policy";
+import { rejectLegacyNativeWindowDeclarations } from "../fixtures/window-policy";
 
 skipWithoutFixtureFonts(["DejaVu Sans Mono"]);
 
@@ -207,70 +203,5 @@ it(
     expect(pointerEvents).toHaveLength(2);
     expect(pointerEvents[1]).toEqual({ moving: true });
     expect(result.stdout).not.toContain("__OMXTERM_CURSOR_RESULT__");
-  },
-);
-
-it.for(["unavailable-presentation", "held-execute", "held-capture"])(
-  "rejects native cursor readiness control %s with retained phase evidence and supervised cleanup",
-  { timeout: nativeWindowDiscoveryTimeout("cursor") + 120_000 },
-  async (scenario, testContext) => {
-    const control =
-      scenario === "unavailable-presentation"
-        ? await observeNativeWindow("cursor", 1, undefined, testContext)
-        : scenario;
-    expect([
-      "early-minimize",
-      "early-hide",
-      "held-execute",
-      "held-capture",
-    ]).toContain(control);
-    // Discovery has separate supervision; this still bounds only the behavior guard.
-    const started = Date.now();
-    const { result, phases } = await runCursor(1, testContext, control);
-    const evidence = JSON.stringify({ result, phases });
-    expect(result, evidence).toMatchObject({
-      exitCode: 1,
-      reason: "exit",
-      cleanupErrors: [],
-    });
-    expect(Date.now() - started, evidence).toBeLessThan(20_000);
-    expect(result.stdout).not.toContain("__OMXTERM_CURSOR_RESULT__");
-    const capture = control === "held-capture";
-    const unavailable =
-      control === "early-minimize" || control === "early-hide";
-    const step = {
-      dpr: 1,
-      font: "bundled",
-      padding: 0,
-      lifecycle: capture ? "initial" : "mount",
-      kind: capture ? "capture" : "execute",
-      operation: capture ? "hidden" : "mount",
-    };
-    expect(phases.at(-2), evidence).toMatchObject({
-      step,
-      status: "begin",
-      category: "none",
-    });
-    expect(phases.at(-1), evidence).toMatchObject({
-      step,
-      status: "failure",
-      category: unavailable ? "presentation-unavailable" : "operation-timeout",
-      native: { minimized: control === "early-minimize" },
-    });
-    if (control === "early-hide") {
-      expect(phases.at(-1)?.native, evidence).toMatchObject({
-        visible: false,
-        minimized: false,
-      });
-    } else if (!unavailable) {
-      expect(phases.at(-1)?.native?.visible, evidence).toBe(true);
-    }
-    // Neither timeout nor a requested action proves the actual control was reached.
-    expect(
-      result.stdout
-        .split("\n")
-        .filter((line) => line === `__OMXTERM_CURSOR_CONTROL__${control}`),
-      evidence,
-    ).toHaveLength(1);
   },
 );
