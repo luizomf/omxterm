@@ -1,5 +1,12 @@
 import { execFile, spawn } from "node:child_process";
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -36,7 +43,10 @@ it.skipIf(!app || !archive)(
   "installs Files, lists a directory and inserts a path into the terminal",
   { timeout: 300000 },
   async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "omxterm-files-smoke-"));
+    // Files shows canonical paths (macOS /var is /private/var).
+    const root = await realpath(
+      await mkdtemp(path.join(os.tmpdir(), "omxterm-files-smoke-")),
+    );
     const home = path.join(root, "home");
     const directory = path.join(root, "listed");
     const fileName = "smoke file.txt";
