@@ -44,11 +44,8 @@ describe("published Snippets catalog candidate", () => {
     expect(snippets.name).toBe(
       "Snippets — Linux, macOS and Windows ARM64 preview",
     );
-    expect(snippets.description).toContain(
-      "Windows ARM64 public-install failures are unresolved",
-    );
-    expect(snippets.description).toContain(
-      "Windows x64 retains built-in Snippets",
+    expect(snippets.description).toBe(
+      "Search your saved text snippets, preview the exact text, then insert it into the terminal or run it.",
     );
   });
 

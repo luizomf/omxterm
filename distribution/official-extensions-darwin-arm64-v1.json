@@ -40,7 +40,7 @@
     {
       "id": "omxterm.snippets",
       "name": "Snippets — Linux, macOS and Windows ARM64 preview",
-      "description": "Project-maintained optional Snippets preview: search your existing YAML catalog, preview exact text, then Insert or Run. Version 0.1.1 fixes account-home resolution. Platform verification remains limited; Windows ARM64 public-install failures are unresolved, and Windows x64 retains built-in Snippets.",
+      "description": "Search your saved text snippets, preview the exact text, then insert it into the terminal or run it.",
       "version": "0.1.1",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",

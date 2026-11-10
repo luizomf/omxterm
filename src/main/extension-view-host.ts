@@ -560,23 +560,22 @@ class NativeExtensionViewHost {
     )
       void this.retire();
   }
-  #captureVisible(entry: Entry): ExtensionViewRequestContext {
-    const generation = this.#admissionGeneration;
-    const visible =
-      entry.visible &&
-      this.#selected === entry.descriptor.id &&
-      this.options.owner.isVisible() &&
-      !this.options.owner.isMinimized();
+  #requestContext(
+    entry: Entry,
+    generation: number,
+    visible: boolean,
+    actionSelectionRevision?: number,
+  ): ExtensionViewRequestContext {
     return {
       id: entry.descriptor.id,
+      ...(actionSelectionRevision === undefined
+        ? {}
+        : { actionSelectionRevision }),
       isCurrentVisible: () =>
         visible &&
         this.#live() &&
-        this.options.owner.isVisible() &&
-        !this.options.owner.isMinimized() &&
+        this.#currentlyVisible(entry) &&
         this.#admissionGeneration === generation &&
-        this.#selected === entry.descriptor.id &&
-        entry.visible &&
         !entry.closing &&
         !entry.rendererGone &&
         !entry.abort.signal.aborted &&
@@ -604,7 +603,11 @@ class NativeExtensionViewHost {
       // Assign only the final reply: Electron sends each returnValue immediately.
       event.returnValue = this.options.filesDrag.start(
         args[0],
-        this.#captureVisible(entry),
+        this.#requestContext(
+          entry,
+          this.#admissionGeneration,
+          this.#currentlyVisible(entry),
+        ),
         entry.abort.signal,
         (result) => {
           if (
@@ -657,21 +660,12 @@ class NativeExtensionViewHost {
             (!visible || generation !== this.#admissionGeneration)
           )
             return { ok: false, reason: "terminal-unavailable" };
-          const context: ExtensionViewRequestContext = {
-            id: entry.descriptor.id,
-            ...(stamp
-              ? { actionSelectionRevision: stamp.selectionRevision }
-              : {}),
-            isCurrentVisible: () =>
-              visible &&
-              this.#live() &&
-              this.#currentlyVisible(entry) &&
-              this.#admissionGeneration === generation &&
-              !entry.closing &&
-              !entry.rendererGone &&
-              !entry.abort.signal.aborted &&
-              !contents.isDestroyed(),
-          };
+          const context = this.#requestContext(
+            entry,
+            generation,
+            visible,
+            stamp?.selectionRevision,
+          );
           pending++;
           try {
             const result = await this.options.onRequest!(

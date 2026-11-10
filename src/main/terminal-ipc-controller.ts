@@ -136,14 +136,16 @@ export function registerTerminalIpcRouter(
     event.senderFrame === event.sender.mainFrame
       ? controllers.get(event.sender)
       : undefined;
+  const rejectSender = () =>
+    operationalEvents?.write({
+      name: "boundary.rejected",
+      boundary: "ipc",
+      reason: "untrusted-sender",
+    });
   const start: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
+      rejectSender();
       throw new Error("Rejected terminal IPC from an untrusted sender");
     }
     return controller.start(payload);
@@ -151,11 +153,7 @@ export function registerTerminalIpcRouter(
   const configuration: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
+      rejectSender();
       throw new Error("Rejected configuration IPC from an untrusted sender");
     }
     return controller.configuration(payload);
@@ -166,23 +164,14 @@ export function registerTerminalIpcRouter(
   ) => {
     const controller = controllerFor(event);
     if (controller) action(controller);
-    else
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
+    else rejectSender();
   };
   const input: IpcListener = (event, payload) =>
     route(event, (controller) => controller.input(payload));
   const trackedInput: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller || disposed || event.sender.isDestroyed()) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
+      rejectSender();
       throw new Error("Rejected tracked terminal IPC from an untrusted sender");
     }
     return controller.trackedInput(payload);
@@ -208,11 +197,7 @@ export function registerTerminalIpcRouter(
   const localImage: IpcHandler = async (event, payload) => {
     const controller = controllerFor(event);
     if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
+      rejectSender();
       throw new Error("Rejected local image IPC from an untrusted sender");
     }
     return controller.localImage(payload);
@@ -269,11 +254,7 @@ export function registerTerminalIpcRouter(
   const fontData: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
     if (!controller) {
-      operationalEvents?.write({
-        name: "boundary.rejected",
-        boundary: "ipc",
-        reason: "untrusted-sender",
-      });
+      rejectSender();
       throw new Error("Rejected Terminal Font IPC from an untrusted sender");
     }
     return controller.fontData(payload);
@@ -288,12 +269,6 @@ export function registerTerminalIpcRouter(
     return controller.snippets(payload);
   };
 
-  const rejectSender = () =>
-    operationalEvents?.write({
-      name: "boundary.rejected",
-      boundary: "ipc",
-      reason: "untrusted-sender",
-    });
   const removeSurfaceFontIpc = registerSurfaceFontIpc(
     ipcMain,
     controllerFor,
