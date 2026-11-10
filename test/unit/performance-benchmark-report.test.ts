@@ -64,6 +64,53 @@ describe("performance benchmark report", () => {
     expect(summary.totalBytes).toBeNull();
   });
 
+  it("rejects decreasing cumulative CPU counters in required Linux windows", () => {
+    const run = makeRun({ scrollbackLines: 10_000 });
+    const idleCpu = run.idleCpu.map((window) => ({
+      ...window,
+      samples: window.samples.map((sample, index) => ({
+        ...sample,
+        readings: sample.readings.map((reading) =>
+          reading.role === "renderer"
+            ? { ...reading, cpuSeconds: index === 0 ? 1 : 0.5 }
+            : reading,
+        ),
+      })),
+    }));
+    const measured = report([
+      { ...run, idleCpu },
+      makeRun({ scrollbackLines: 0 }),
+    ]);
+    const rendererCpu =
+      measured.variants[0]!.repetitions[0]!.idleCpuWindows[0]!.cpuPercentOneCore
+        .renderer;
+    expect(rendererCpu).toBeNull();
+  });
+
+  it("does not report fractional stream byte counts as throughput", () => {
+    const run = makeRun({ scrollbackLines: 10_000 });
+    const first = run.attribution[0]!;
+    const attribution = [
+      {
+        ...first,
+        streams: first.streams!.map((stream, index) =>
+          index === 0
+            ? { ...stream, bytes: first.expectedBytes + 0.5 }
+            : stream,
+        ),
+      },
+      ...run.attribution.slice(1),
+    ];
+    const measured = report([
+      { ...run, attribution },
+      makeRun({ scrollbackLines: 0 }),
+    ]);
+    expect(
+      measured.variants[0]!.repetitions[0]!.attribution[0]!.streams[0]!
+        .bytesPerSecond,
+    ).toBeNull();
+  });
+
   it("excludes fixture shells from application window CPU", () => {
     const run = makeRun({ scrollbackLines: 10_000 });
     const idle = {

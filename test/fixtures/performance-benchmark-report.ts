@@ -501,7 +501,9 @@ function roleCpu(sample: RawSample, role: string): number | null {
     readings.length === 0 ||
     readings.some(
       (reading) =>
-        reading.cpuSeconds === null || !Number.isFinite(reading.cpuSeconds),
+        reading.cpuSeconds === null ||
+        !Number.isFinite(reading.cpuSeconds) ||
+        reading.cpuSeconds < 0,
     )
   )
     return null;
@@ -553,7 +555,9 @@ function totalCpu(sample: RawSample): number | null {
     readings.length === 0 ||
     readings.some(
       (reading) =>
-        reading.cpuSeconds === null || !Number.isFinite(reading.cpuSeconds),
+        reading.cpuSeconds === null ||
+        !Number.isFinite(reading.cpuSeconds) ||
+        reading.cpuSeconds < 0,
     )
   )
     return null;
@@ -712,7 +716,11 @@ function idleSummary(
     const startCpu = roleCpu(before, role);
     const endCpu = roleCpu(after, role);
     cpuPercentOneCore[role] =
-      !timesValid || startCpu === null || endCpu === null || elapsedMs <= 0
+      !timesValid ||
+      startCpu === null ||
+      endCpu === null ||
+      endCpu < startCpu ||
+      elapsedMs <= 0
         ? null
         : (100 * (endCpu - startCpu)) / (elapsedMs / 1000);
   }
@@ -735,7 +743,11 @@ function idleSummary(
         : endApplication - startApplication,
     cpuPercentOneCore,
     totalCpuPercentOneCore:
-      !timesValid || startCpu === null || endCpu === null || elapsedMs <= 0
+      !timesValid ||
+      startCpu === null ||
+      endCpu === null ||
+      endCpu < startCpu ||
+      elapsedMs <= 0
         ? null
         : (100 * (endCpu - startCpu)) / (elapsedMs / 1000),
     draws: window.drawsDelta,
@@ -774,7 +786,8 @@ function streamSummary(
     drawsAtFound: stream.drawsAtFound ?? null,
     bytesPerSecond:
       stream.found &&
-      Number.isFinite(stream.bytes) &&
+      Number.isSafeInteger(stream.bytes) &&
+      stream.bytes >= 0 &&
       Number.isFinite(stream.elapsedMs) &&
       stream.elapsedMs > 0 &&
       stream.bytes >= expectedBytes &&
