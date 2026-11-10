@@ -917,7 +917,8 @@ startup, shell exit, tab close and renderer-loss cleanup.
 - On Linux, main permits Chromium's SwiftShader WebGL fallback when available.
   It does not force software rendering or change the GPU blocklist or driver
   selection. It does not guarantee backend availability or successful
-  initialization ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
+  initialization
+  ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
 - Initialization failure releases partial resources and starts no shell.
 - Closing an initializing Surface is cancellation, not a failure. Late font,
   runtime and session-start callbacks are inert and start no session; an
@@ -978,8 +979,9 @@ startup, shell exit, tab close and renderer-loss cleanup.
 - A Surface applies its font family and line height when it is created. After
   User Configuration Reload, existing Surfaces keep theirs and new Surfaces use
   the latest values, so a restart applies them everywhere. Theme, font size,
-  programming ligatures and padding update live and refit the same PTY. Started font reads survive reload for
-  existing consumers, subject to the admission and queued-read limits under
+  programming ligatures and padding update live and refit the same PTY.
+- Started font reads survive reload for existing consumers, subject to the
+  admission and queued-read limits under
   [configuration and local state](#configuration-and-local-state).
 - Toggling programming ligatures keeps text, selection, copy results, cells,
   cursor positions and the same Surface, font generation, Live Terminal Session
@@ -1177,9 +1179,9 @@ authority; OMXTerm adds no second parser.
   rows; OMXTerm never estimates bytes per line.
 - Zero disables history: retained history is dropped at once and none builds
   up through output or resize. A later positive reload keeps only new output.
-- Valid live changes keep the same Surface, core, Live Terminal Session and PTY, and
-  keep reflow, alternate-screen, selection and viewport state coherent. Each
-  Surface is independent.
+- Valid live changes keep the same Surface, core, Live Terminal Session and
+  PTY, and keep reflow, alternate-screen, selection and viewport state
+  coherent. Each Surface is independent.
 - Resize keeps pending soft-wrap positions, and selection and copy distinguish
   retained history, active wrapping and producer hard breaks.
 - Accepted keyboard input and delivered paste, snippet or path input return the
