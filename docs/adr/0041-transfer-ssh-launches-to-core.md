@@ -2,7 +2,7 @@
 
 Status: Accepted for the optional SSH Connect preview (#671). The published
 catalogs offer the same original SSH0.3.1 archive for Linux and macOS ARM64;
-bounded local and public-catalog checks are described in the [SSH guide](../ssh-connect.md).
+bounded local and public-catalog checks are described in the [SSH guide](../ssh-connect-development.md).
 
 ## Decision
 
@@ -10,7 +10,7 @@ Keep discovery and its application page in a separate installed extension. Add
 one concrete declared/queryable `terminal.openSsh.v1` host capability with typed
 host/user/port, not a general executable/argv SDK. Main validates/copies semantic
 input, resolves application PATH and builds literal system-ssh argv. OpenSSH
-retains configuration/authentication authority. The [SSH guide](../ssh-connect.md)
+retains configuration/authentication authority. The [SSH guide](../ssh-connect-development.md)
 owns the exact grammar, discovery budgets and user-visible limitations.
 
 A manager admission callback revalidates the captured independent UI pin under
