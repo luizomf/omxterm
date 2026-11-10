@@ -903,485 +903,571 @@ tradeoffs; the guide covers installation, recovery and separate archive builds.
 
 ## Terminal behavior
 
-The Restty Terminal Surface uses the existing Terminal Tabs, session Adapter and
-real PTY lifecycle for ordinary Unicode input/output, grid resize, focus,
-Default Shell and explicit-command startup, shell exit, tab close and
-renderer-loss cleanup. It requires the bundled Terminal Font Stack TTFs, Ghostty
-core and an actual WebGL2 backend before a PTY starts. On Linux, main permits
-Chromium's SwiftShader WebGL fallback when available, without forcing software
-rendering or changing the GPU blocklist or driver selection
-([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)). This permission
-does not guarantee backend availability or successful initialization.
-Initialization failure releases partial resources and starts no shell. Closing
-an initializing Surface is cancellation, not a rendering failure: font, runtime and session-start
-continuations cannot notify a removed owner or start a session after
-cancellation. An already accepted session start is closed exactly once through
-its Adapter. Late callbacks are inert; pending acquisitions settle before their
-partial resources and font leases are released. Genuine failures of a live owner
-remain visible. WebGL context loss shows a persistent failure and disposes only
-the owning Surface/session without core recreation. Main retains a fixed
-actionable native failure dialog until acknowledgement, including when the
-failed session was the window's last one. Restty applies the selected Terminal
-Theme, configured font size, programming ligature setting, per-side padding and
-Window Font Zoom through its runtime and existing host geometry. It resolves an
-exact configured installed family through the Electron main process and gives
-Restty only bounded bytes for that family validated at admission, followed by the
-licensed bundled FiraCode regular/bold, DejaVu Sans Mono regular/bold and
-JetBrainsMono Nerd Font Mono faces, then representative locally installed
-operating-system fallback faces. On Linux, those native candidates are, in order,
-`Noto Color Emoji`, `Noto Sans CJK SC`, `DejaVu Sans Mono`, and
-`Source Han Sans CN`. Each is optional, requires an exact installed regular
-family match, and shares the existing bounded fallback-byte budget; no fonts are
-automatically installed. The licensed bundled Noto Sans Symbols 2 regular face
-follows them as the last coverage face, outside that budget, so common symbols
-such as U+23F5 render on every platform while operating-system color emoji keep
-precedence for the code points they share. When a family is explicitly
-configured, the bundled bold faces are omitted: the configured family keeps precedence for
-regular, bold, italic and bold-italic text. Main loads available real style
-faces from that same installed family, validates their identity and style, and
-selects exact faces in font collections. Exact native legacy and typographic
-family names are accepted when recorded in the selected face's metadata;
-matching remains case-sensitive, without fuzzy names or family substitution.
-Missing styles use Restty's synthesis: bold-italic may use a same-family bold or
-italic face for its available trait; regular, bold-only and italic-only text
-never acquire an unrequested trait. Synthetic bold expands monochrome strokes in
-both horizontal and vertical directions within the available cell space,
-including over a real italic face. Additional ink stays inside the cell without
-removing any pre-existing italic overhang. It does not change cell layout,
-requested ANSI colors, real bold faces, color emoji, or regular and italic-only
-text; exact pixel parity with native outline rasterizers is not promised.
-Missing glyphs still use the regular fallback faces. Non-default variable-font
-instances are not materialized; when a native style needs those axes, it remains
-unavailable and synthesis applies without rejecting the usable regular family.
-Style faces share native source bytes and parsed resources across compatible
-tabs; faces in one collection share its backing buffer. Apple Color Emoji
-collections use memory-only shaping inputs that omit the unused `sbix` bitmap
-table while retaining every face and other table. Main skips that payload with
-bounded positional reads before validation and IPC; native Canvas still uses the
-unchanged installed font. Other fonts keep their existing input and fallback
-semantics. This reduces font-byte costs, not a guaranteed total RSS or GPU
-budget. Font reads use native platform facilities without shell interpolation.
-Successful font responses contain bounded bytes and face metadata, not paths;
-the bridge exposes no broad filesystem API, remote fallback or persistent byte
-cache. A current error-path limitation can expose a native font path in an IPC
-rejection when an on-demand read fails after validation. It does not grant
-arbitrary filesystem access. A Restty Surface applies its configured family and
-line height when it is created; a surviving Restty Surface keeps both after User
-Configuration Reload, while theme, font size, programming ligatures and padding
-update it in place and refit the same PTY. New Surfaces use the latest values,
-so restarting applies them everywhere. Started font reads survive reload for
-existing consumers, subject to the admission and queued-read limits under
-[configuration and local state](#configuration-and-local-state). Changing
-programming ligatures preserves source text, selection and copy results,
-terminal cells and cursor positions, and the existing Surface, font generation,
-Live Terminal Session and PTY. Restty explicit copy/paste, selection,
-context-menu actions, Protected Paste, snippets/path injection and write-only
-OSC 52 follow the shared contract below. Its DOM paste source is intercepted
-synchronously only to enter OMXTerm's asynchronous policy and delivery path;
-ordinary key input remains direct. Semantic paste and injection requests retain
-request order, recheck the current bracketed-paste mode and Surface lifetime
-after asynchronous decisions, and stop future chunks if their owning Surface
-closes. Bytes already sent before closure cannot be recalled, and a submitting
-snippet never appends Enter after closure. Restty delivers Ghostty's parsed OSC
-0/2 title and BEL events through the same existing per-session host callbacks.
-It does not scan Terminal Payload or add a second parser: title sanitization,
-fallback, ownership, silent bell marker, focus/interaction reset and platform
-attention remain existing host policy. OSC BEL terminators and cancelled or
-malformed controls produce no extra title or bell event, and title-report
-queries receive no reply. Restty applies Option Key Mode live: `none` preserves
-macOS native Unicode and composition input, while `left`, `right`, and `both`
-turn only the configured physical Option key into terminal Alt input. Native
-dead-key literals completed with Space retain the keyboard layout's text,
-including on X11 paths that emit `insertText` without composition events. They
-produce neither a substituted ASCII space nor a duplicate keyboard-protocol
-release. Ordinary Space input and configured terminal modifiers retain their
-existing encoding. Unmodified legacy arrows follow the live Ghostty DECCKM
-application-cursor mode: normal mode sends CSI A/B/C/D; application mode sends
-SS3 A/B/C/D. The encoder reads parser-owned state, including mode save/restore
-and reset, without a render-frame dependency or a second JavaScript mode tracker.
-Modified arrows and negotiated Kitty keyboard events retain their existing
-encoding, and non-arrow keys are unchanged. Restty image rendering and scrollback follow the shared
-contracts below through the pinned Ghostty core. Bar cursors remain visible
-inside their addressed cell at the first column, independently of terminal
-padding or font family; block/underline styles and focus/blink behavior remain
-unchanged. Native rasterization can differ across Supported Platforms and GPUs;
-pixel-identical glyph output is not claimed.
+The Restty Terminal Surface (Ghostty WASM core) works with Terminal Tabs, the
+session Adapter and the real PTY lifecycle
+([ADR 0008](adr/0008-make-the-terminal-surface-the-portable-module.md),
+[ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md)). It covers Unicode
+input and output, grid resize, focus, Default Shell and explicit-command
+startup, shell exit, tab close and renderer-loss cleanup.
 
-PTY output crosses the shared Adapter/IPC route in order. Each output message
-carries a cumulative UTF-8 byte position, and only the owning renderer main
-frame may acknowledge forward progress for its own Live Terminal Session. An ACK
-means that the complete message was synchronously submitted to the selected
-Terminal Surface; it does not mean that pixels were rendered or that a parser,
-image decoder, browser, GPU, or core allocation was released. Duplicate, stale,
-unknown-session, foreign-session and beyond-sent ACKs have no flow-control
-effect. Main pauses the owned PTY at 65,536 pending bytes and resumes it at or
-below 16,384; because a native read already in progress crosses the threshold,
-the observable pending maximum is bounded by the pause threshold plus the
-largest crossing native read rather than exactly 65,536 bytes. Renderer loss,
-send failure, tab disposal and window disposal terminate only the affected owned
-session; cleanup resumes an owned paused stream before termination so it cannot
-remain an immortal paused process or send into a dead owner. On Unix, the pinned
-node-pty close guard defers its socket-destroy timeout while that stream is
-paused so a final readable tail is not discarded. This adaptation does not
-change the separate ConPTY implementation.
+### Surface startup and failure
 
-Restty's pinned OutputFilter retains at most 10,000,000 UTF-16 code units of an
-unfinished OSC or CSI control body. For OSC, the body is the handler payload
-after a short numeric command and separator when present; otherwise it begins
-after the OSC introducer. For CSI, it begins after the CSI introducer and
-excludes the final byte. A control that exceeds the budget is consumed as one
-rejected control until its terminator or cancellation: BEL, ST, CAN or SUB for
-OSC, and a CSI final byte, CAN or SUB for CSI. It produces no partial clipboard,
-title, reply, mode or other control side effect, releases retained text, and
-allows following ordinary output to continue. Controls at the budget remain
-accepted, including the largest valid OSC 52 write. This is not a limit on
-ordinary terminal text, copy, paste, input or complete output.
+- A PTY starts only after the bundled Terminal Font Stack TTFs, the Ghostty core
+  and a working WebGL2 backend are ready.
+- On Linux, main permits Chromium's SwiftShader WebGL fallback when available.
+  It does not force software rendering or change the GPU blocklist or driver
+  selection. It does not guarantee backend availability or successful
+  initialization
+  ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
+- Initialization failure releases partial resources and starts no shell.
+- Closing an initializing Surface is cancellation, not a failure. Late font,
+  runtime and session-start callbacks are inert and start no session; an
+  already accepted session start is closed exactly once through its Adapter.
+  Pending acquisitions settle before their partial resources and font leases
+  are released. Genuine failures of a live owner stay visible.
+- WebGL context loss shows a persistent failure and disposes only the owning
+  Surface and session, without recreating the core.
+- Main keeps a fixed, actionable native failure dialog until it is
+  acknowledged, including when the failed session was the window's last one.
+- Native rasterization can differ across Supported Platforms and GPUs;
+  pixel-identical glyph output is not claimed.
+
+### Terminal fonts and rendering
+
+- Restty applies the Terminal Theme, font size, programming ligatures, per-side
+  padding and Window Font Zoom.
+- Font faces are tried in this order:
+  1. An exact configured installed family. Main resolves it and gives Restty
+     only bounded bytes validated at admission.
+  2. The bundled FiraCode regular/bold, DejaVu Sans Mono regular/bold and
+     JetBrainsMono Nerd Font Mono faces.
+  3. Locally installed operating-system fallback faces. On Linux these are, in
+     order, `Noto Color Emoji`, `Noto Sans CJK SC`,
+     `DejaVu Sans Mono` and `Source Han Sans CN`. Each is optional, needs an
+     exact installed regular family match and shares the bounded fallback-byte
+     budget. No fonts are installed automatically.
+  4. The bundled Noto Sans Symbols 2 regular face, last and outside that budget,
+     so symbols such as U+23F5 render everywhere while operating-system color
+     emoji keep precedence for the code points they share.
+- A configured family drops the bundled bold faces and has precedence for
+  regular, bold, italic and bold-italic text. Main loads its real style faces
+  from the same installed family, validates identity and style, and selects
+  exact faces in collections. Exact legacy and typographic family names from
+  the face metadata are accepted; matching is case-sensitive, with no fuzzy
+  names or substitution.
+- Missing styles use Restty's synthesis. Bold-italic may use a same-family bold
+  or italic face; regular, bold-only and italic-only text never gain an
+  unrequested trait. Non-default variable-font instances are not materialized,
+  so a style that needs them is synthesized and the regular family still works.
+- Synthetic bold thickens monochrome strokes in both directions, also over a
+  real italic face. Extra ink stays inside the cell and keeps any italic
+  overhang. It does not change cell layout, ANSI colors, real bold faces, color
+  emoji, or regular and italic-only text. Pixel parity with native rasterizers
+  is not promised.
+- Missing glyphs use the regular fallback faces.
+- Compatible tabs share native font bytes and parsed faces; faces in one
+  collection share its buffer. Apple Color Emoji reaches Restty as memory-only
+  shaping input without the unused `sbix` bitmap table, keeping every face and
+  other table; main skips that payload with bounded reads before validation and
+  IPC. Native Canvas still uses the installed font, and other fonts are not
+  affected.
+- Font reads use native platform facilities without shell interpolation.
+  Responses carry bounded bytes and face metadata, not paths. There is no broad
+  filesystem API, remote fallback or persistent byte cache. Known limitation: a
+  failed on-demand read after validation can put a native font path in the IPC
+  rejection. It does not grant arbitrary filesystem access.
+- A Surface applies its font family and line height when it is created. After
+  User Configuration Reload, existing Surfaces keep theirs and new Surfaces use
+  the latest values, so a restart applies them everywhere. Theme, font size,
+  programming ligatures and padding update live and refit the same PTY.
+- Started font reads survive reload for existing consumers, subject to the
+  admission and queued-read limits under
+  [configuration and local state](#configuration-and-local-state).
+- Toggling programming ligatures keeps text, selection, copy results, cells,
+  cursor positions and the same Surface, font generation, Live Terminal Session
+  and PTY.
+- Ghostty's grapheme-cluster mode is on by default, so emoji-presentation and
+  ZWJ clusters take one two-column cell for rendering and selection.
+- Bar cursors stay visible inside their cell at the first column, regardless of
+  padding or font family. Block and underline cursors and focus/blink behavior
+  are not affected.
+
+### Keyboard input and terminal events
+
+- Copy, paste, selection, context-menu actions, Protected Paste, snippet and
+  path injection, and write-only OSC 52 follow [Clipboard](#clipboard). The DOM
+  paste event is intercepted synchronously only to enter that asynchronous path;
+  ordinary key input goes to the PTY directly.
+- Option Key Mode applies live. `none` keeps macOS native Unicode and
+  composition input; `left`, `right` and `both` turn only that physical Option
+  key into terminal Alt.
+- A native dead key completed with Space sends the layout's text, also on X11
+  paths that emit `insertText` without composition events. It sends no
+  substituted ASCII space and no duplicate keyboard-protocol release. Ordinary
+  Space and configured terminal modifiers keep their encoding.
+- Unmodified legacy arrows follow Ghostty's live DECCKM mode (including
+  save/restore and reset): CSI A/B/C/D in normal mode, SS3 A/B/C/D in
+  application mode. The mode comes from parser state, not a render frame or a
+  separate JavaScript tracker. Modified arrows, negotiated Kitty keyboard events
+  and non-arrow keys keep their own encoding.
+- Restty passes Ghostty's parsed OSC 0/2 title and BEL events to the
+  per-session host; it does not scan Terminal Payload with a second parser.
+  Title sanitization, fallback, ownership, the silent bell marker,
+  focus/interaction reset and platform attention are host policy. OSC BEL
+  terminators and cancelled or malformed controls produce no extra title or bell
+  event. Title-report queries get no reply.
+
+### Terminal titles
+
+Titles are display-only
+([ADR 0010](adr/0010-keep-terminal-titles-display-only.md)).
+
+- OSC 0 and OSC 2 titles are per session. The raw request must be at most 256
+  code points; control and bidi characters are then removed and the result must
+  be one printable line.
+- A tab shows its focused pane's accepted title and falls back to the basename
+  of the shell selected when that session started.
+- Startup reconciles the current main-owned title once the pane's session
+  identity is known, including when the initial fallback arrived before the
+  start response. It never overwrites a newer accepted title or retargets a
+  cancelled pane. Unknown titles are not kept for future panes.
+- The native window title mirrors the selected tab and falls back to `OMXTerm`.
+- Title contents are never logged or reported to the PTY.
+
+### PTY output flow control
+
+- PTY output crosses the Adapter/IPC route in order, each message carrying a
+  cumulative UTF-8 byte position.
+- Only the owning renderer main frame may acknowledge progress for its own Live
+  Terminal Session. An ACK means the whole message was synchronously submitted
+  to the Terminal Surface, not that pixels were drawn or memory released.
+  Duplicate, stale, unknown-session, foreign-session and beyond-sent ACKs are
+  ignored.
+- Main pauses the PTY at 65,536 pending bytes and resumes it at or below 16,384.
+  A native read in progress can overshoot the pause threshold by up to its own
+  size.
+- Renderer loss, send failure, tab disposal and window disposal terminate only
+  the affected session, resuming a paused stream first so it cannot stay a
+  paused process or send into a dead owner.
+- On Unix, the pinned node-pty close guard waits while the stream is paused, so
+  a final readable tail is not discarded. ConPTY is not affected.
+
+### Unfinished control budget
+
+- Restty's pinned OutputFilter retains at most 10,000,000 UTF-16 code units of
+  an unfinished control body. For OSC, the body is the handler payload after a
+  short numeric command and separator when present, otherwise everything after
+  the introducer. For CSI, it is everything after the introducer, excluding the
+  final byte.
+- An over-budget control is consumed as one rejected control until its end (BEL,
+  ST, CAN or SUB for OSC; a final byte, CAN or SUB for CSI). It has no partial
+  clipboard, title, reply, mode or other effect, releases retained text, and
+  later output continues normally.
+- Controls exactly at the budget are accepted, including the largest valid OSC
+  52 write. Ordinary text, copy, paste, input and complete output are not
+  limited.
+
+### Terminal memory accounting
 
 The pending IPC byte count, JavaScript heap and process RSS are separate
-metadata domains. Ghostty core image/scrollback storage, transient decode
-allocations, browser canvas/WebGL resources and GPU memory remain separately
-accounted or unmeasured. Neither flow control nor the scanner budget is a total
-application-memory bound, and concurrent sessions multiply the independent
-costs.
+measures. Core image and scrollback storage, decode buffers, browser
+canvas/WebGL resources and GPU memory are counted separately or not at all.
+Flow control, the control budget and the image limits below are not a total
+memory bound, and concurrent sessions multiply the costs.
 
-OMXTerm advertises `TERM=xterm-256color`, `COLORTERM=truecolor`,
-`TERM_PROGRAM=OMXTerm`, and its installed version in `TERM_PROGRAM_VERSION`.
-Restty answers DA1 as `CSI ? 1 ; 2 c` and DA2 as `CSI > 0 ; 0 ; 0 c` once per
-query. Ghostty answers cursor-position queries (`CSI 6 n`) using its parser
-cursor at the query's position in the output stream, including wide/combining
-text and pending-wrap resize; origin-mode reports are relative to scrolling
-margins. The existing parsed runtime seam synchronously submits each filtered
-prefix including CPR and drains its core reply before later filter-owned
-DA1/DA2/cell-size replies. No render frame or JavaScript cursor hint is used to
-answer CPR. Cell-size reports keep the Surface metrics provider. This is not a
-guarantee of every xterm extension. OMXTerm installs no custom terminfo and does
-not edit or inject shell startup files. Inline-image support does not impersonate another
-terminal or inject application-specific capability variables.
+### Terminal identity and replies
 
-In a direct Live Terminal Session, the Terminal Surface renders two bounded
-static-image paths through the Kitty graphics protocol. The Pi-compatible path
-targets the subset emitted by Pi 0.84.4: direct transmit-and-display (`a=T`,
-`f=100`, `q=2`), optional cell columns and rows, image ID and cursor movement,
-4,096-character Base64 chunks joined with `m=1` and `m=0`, and image-ID (`d=I`),
-all-image (`d=A`), and all-placement (`d=a`) deletion. The Chafa-compatible path
-is the output emitted by Chafa 1.18.2 with `-f kitty`: one anonymous,
-semicolon-less metadata prelude using direct transmission (`t=d` or the
-default), `a=T`, `f=32`, positive source width and height (`s` and `v`),
-positive cell columns and rows (`c` and `r`), `m=1`, and `q=2`, followed by
-anonymous Base64 payload chunks using `m=1` and a final standalone `m=0` APC
-with no semicolon or payload (completion on the last data-bearing chunk also
-remains accepted). It accepts only uncompressed RGBA with exactly four decoded
-bytes per source pixel.
+OMXTerm uses standard xterm capabilities and does not inject shell integration
+([ADR 0012](adr/0012-use-standard-xterm-terminal-capabilities.md),
+[ADR 0013](adr/0013-do-not-inject-shell-integration.md)).
 
-`CSI 16 t` receives the terminal cell-size response after the Surface opens.
-Images stay cell-anchored through direct-session scrolling, Terminal Window
-resizing, Window Font Zoom, tab selection, and valid User Configuration Reload,
-subject to the pinned Ghostty core's placement and scrollback retention. Width
-reflow clips a blank-cell anchor to the available destination columns without
-borrowing a preceding hard row's column offset. Genuine wrapped text and
-viewport scrolling may change an image's visible cell coordinates. Terminal
-reset, tab disposal, and leaving the alternate buffer release the applicable
-image resources.
+- The environment sets `TERM=xterm-256color`, `COLORTERM=truecolor`,
+  `TERM_PROGRAM=OMXTerm` and the installed version in `TERM_PROGRAM_VERSION`.
+- Restty answers DA1 as `CSI ? 1 ; 2 c` and DA2 as `CSI > 0 ; 0 ; 0 c`, once
+  per query.
+- Ghostty answers cursor-position queries (`CSI 6 n`) from its parser cursor at
+  the query's place in the output stream, including wide/combining text and
+  pending-wrap resize, without a render frame or JavaScript cursor hint.
+  Origin-mode reports are relative to the scrolling margins. Replies keep stream
+  order with later DA1, DA2 and cell-size replies.
+- `CSI 16 t` gets the cell size from the Surface metrics once the Surface opens.
+- Not every xterm extension is guaranteed. OMXTerm installs no custom terminfo,
+  does not touch shell startup files. Inline-image support does not
+  impersonate another terminal or inject application-specific capability
+  variables.
 
-The Restty Surface uses the pinned Ghostty core as its Kitty parser, decoder,
-image store and placement authority; OMXTerm does not add a second parser. A
-direct transmission may contain at most 33,554,432 decoded input bytes, and
-positive source dimensions may contain at most 4,194,304 pixels before PNG or
-raw-RGBA decode can allocate the completed image. Chafa RGBA must have exactly
-four bytes per source pixel, so it contains at most 16,777,216 bytes. Invalid
-Base64, malformed or cancelled APC, invalid dimensions, decoded length mismatch,
-decode failure, or an exceeded limit renders nothing, clears unfinished state,
-and does not block later terminal output.
+### Inline Terminal Images
 
-Restty retains at most one unfinished Kitty image per screen, matching the
-native Ghostty pending-image model. A new metadata-bearing transmission replaces
-that unfinished image, including Chafa's anonymous semicolon-less prelude;
-completion, reset, alternate-buffer exit, and Surface disposal release it. Each
-screen stores at most 64,000,000 bytes of completed decoded image data and uses
-Ghostty's native eviction behavior. Deletion by Pi image ID, all-image deletion,
-all-placement deletion and reset release their corresponding native resources.
-Hidden deletion, reset, alternate-buffer exit and disposal also release
-applicable cached renderer resources without requiring a visible draw. Valid
-core images and placements survive hiding and render again on reveal; disposable
-renderer copies may be discarded while hidden.
+A direct Live Terminal Session renders two bounded static-image paths through
+the Kitty graphics protocol
+([ADR 0022](adr/0022-render-bounded-kitty-images-in-direct-sessions.md)). The
+pinned Ghostty core is the Kitty parser, decoder, image store and placement
+authority; OMXTerm adds no second parser.
 
-These controls are not a total process-memory limit. Base64 decoding and PNG
-decoding have transient allocations; Restty's JavaScript/WebGL renderer may copy
-visible decoded RGBA into browser and GPU resources outside core storage
-accounting; concurrent tabs multiply those costs. Pi's default 2,000-by-2,000
-autoresized PNG pipeline is the compatibility target; images produced with
-autoresize disabled have no finite compatibility promise.
+**Supported paths**
 
-SIXEL, iTerm2 Inline Image Protocol, raw RGB (`f=24`), compressed raw pixels
-(`o=z`), placement IDs, animation, remote or filesystem image sources inside
-Kitty Terminal Payload, downloads, persistence, and image behavior through
-`tmux`, `screen`, or another multiplexer are unsupported. The separately
-activated Local Image Preview below is not an Inline Terminal Image or Kitty
-filesystem source. Other Kitty and Chafa paths exposed by the pinned Ghostty
-core are unclaimed. For Pi versions that do not recognize
-`TERM_PROGRAM=OMXTerm`, select Kitty explicitly; OMXTerm does not configure Pi.
-Image bytes remain opaque, memory-only Terminal Payload on the existing PTY
-output path: they introduce no main-process, preload, IPC, Adapter, clipboard,
-filesystem, logging, or application-network capability.
+- Pi-compatible, the subset emitted by Pi 0.84.4: direct transmit-and-display
+  (`a=T`, `f=100`, `q=2`), optional cell columns and rows, image ID and cursor
+  movement, 4,096-character Base64 chunks joined with `m=1` and `m=0`, and
+  image-ID (`d=I`), all-image (`d=A`) and all-placement (`d=a`) deletion. Pi's
+  default 2,000-by-2,000 autoresized PNG pipeline is the compatibility target;
+  images produced with autoresize disabled have no finite compatibility
+  promise.
+- Chafa-compatible, the output of Chafa 1.18.2 with `-f kitty`: one anonymous,
+  semicolon-less metadata prelude using direct transmission (`t=d` or the
+  default), `a=T`, `f=32`, positive source width and height (`s` and `v`),
+  positive cell columns and rows (`c` and `r`), `m=1` and `q=2`; then anonymous
+  Base64 payload chunks with `m=1` and a final standalone `m=0` APC with no
+  semicolon or payload. Completion on the last data-bearing chunk is also
+  accepted. Only uncompressed RGBA with exactly four decoded bytes per source
+  pixel is accepted.
+- For Pi versions that do not recognize `TERM_PROGRAM=OMXTerm`, select Kitty
+  explicitly; OMXTerm does not configure Pi.
 
-Scrollback is memory-only and per Live Terminal Session. `scrollback.lines`
-defaults to 10,000, accepts 0 through 100,000, and rejects larger values rather
-than clamping them. Restty treats a positive value as an approximate maximum of
-physical history rows, excluding the active screen: Ghostty evicts only whole
-historical pages, so retention may exceed the requested target by one minimum
-boundary page and remains bounded. Restty also enforces its independent
-10,000,000-byte core ceiling for positive history, which may retain fewer rows
-than requested; OMXTerm never estimates bytes per line. Zero disables history.
-Restty uses Ghostty's no-history path, immediately drops retained history,
-retains none through sustained output or resize, and can retain only new output
-after a later positive reload. Valid live changes keep the same Surface, core,
-Live Terminal Session and PTY and preserve coherent reflow, alternate-screen,
-selection and viewport state. Resize preserves pending soft-wrap insertion
-positions and distinguishes retained history, active wrapping and producer hard
-breaks in selection and copy. Each Surface is independent. Accepted keyboard
-input and delivered paste, snippet, or path input return the viewport to the
-live cursor. Output alone, protocol replies, focus, selection, and cancelled
-paste do not force the viewport to the bottom. The scrollback scrollbar shows a
-thumb only while scrollback extends beyond the visible screen; an empty
-scrollbar track paints nothing on any platform. Desktops with a fine pointer
-retain native scrolling even when touch capability is also present; touch-only
-devices keep the existing touch scrolling path.
+**Placement**
 
-OSC 0 and OSC 2 titles are display-only and per session: the raw OSC request
-must be no longer than 256 code points, then control and bidi characters are
-removed and the result must be one printable line. A tab shows its focused pane's
-accepted title and falls back to the basename of the shell selected when that
-session started. Startup reconciles the current main-owned title once the pane's
-session identity is known, including when the initial fallback arrived before
-the start response. It neither overwrites a newer accepted title nor retargets a
-cancelled pane; unknown titles are not retained for future panes. The native
-window title mirrors the selected tab and falls back to `OMXTerm`. Title
-contents are never logged or reported to the PTY.
+- Images stay cell-anchored through direct-session scrolling, Terminal Window
+  resizing, Window Font Zoom, tab selection and valid User Configuration
+  Reload, subject to the core's placement and scrollback retention.
+- Width reflow clips a blank-cell anchor to the available destination columns
+  without borrowing a preceding hard row's column offset. Genuine wrapped text
+  and viewport scrolling may change an image's visible cell coordinates.
+- Terminal reset, tab disposal and leaving the alternate buffer release the
+  applicable image resources.
 
-Only literal visible lowercase `http:`, `https:`, and absolute authority-free
-`file:///` URLs are links. Visible native path references are separate Local
-Image Preview destinations. Absolute POSIX paths begin with one `/`; Windows
-paths are drive-qualified with a letter, colon, and slash or backslash. `~` and
-`~/...` name the local OMXTerm user's home, including inside matching quotes.
-Relative references begin `./` or `../` (backslash separators also work on
-Windows), or have a relative image name ending `.png`, `.jpg`, `.jpeg` or
-`.webp` (case-insensitive). Recognition is not format support. While the pointer
-is over a recognized destination, holding that same platform modifier
-transiently underlines its complete visible span. Pointer movement and modifier
-press or release update the cue without activation; output, scrolling, geometry
-changes, focus loss, tab hiding, and preview or Surface lifecycle changes remove
-stale cues. Recognition alone performs no file read, image decode, network
-access, IPC opening request, or Terminal Payload logging. `Cmd+click` on macOS
-or `Ctrl+click` on Linux and Windows explicitly activates a recognized
-destination. For HTTP(S), the Electron main process parses and validates the
-exact URL before asking the operating system to open it. The valid modified
-primary click takes precedence over application mouse reporting and is consumed
-without a duplicate PTY mouse report; other gestures retain ordinary selection
-or application-mouse routing. Restty reconstructs a destination only across
-core-proven, fully visible soft wraps. It preserves hard breaks and cell
-coordinates for grapheme and wide-cell prefixes, and conservatively refuses a
-destination that may continue beyond the visible viewport. Link-only selection
-proofs exclude a terminal wide-wrap spacer from the queried endpoint, avoiding
-selection's expansion into the next row's grapheme without changing copy or
-selection semantics. Spacers contribute no text and retain the existing hover
-span and hit target with the preceding link cluster on the same physical row.
-Exact row equality, hard-break proofs and conservative clipping remain required,
-including across core pages. Restty enables
-Ghostty's grapheme-cluster mode by default so emoji-presentation and ZWJ
-clusters occupy one two-column terminal cell for rendering and selection. For
-`file:///`, main independently requires the literal lowercase scheme, no remote
-or `localhost` authority, no query or fragment, and a platform-absolute local
-path. Exact native paths remain a distinct typed source; visible references
-requiring interpretation use a separate bounded source validated independently
-in main. `%` and `#` remain literal filename characters. References begin at a
-line boundary or after whitespace, as a complete non-whitespace token or a path
-inside one pair of matching single/double quotes (allowing spaces). An unquoted
-absolute path containing ASCII spaces is also recognized when it occupies the
-complete logical line, begins at its first character, and ends in `.png`, `.jpg`
-or `.jpeg` (case-insensitive), optionally with a positive location suffix. This
-conservative whole-line cue excludes tabs, trailing spaces, an earlier
-image-extension token followed by spaces, and a space-separated new absolute,
-home (including bare `~`), dot-relative, quoted or HTTP(S)/`file:///` reference.
-It does not infer boundaries inside prose or between same-line references; those
-use token/quoted recognition. Only core-proven fully visible soft wraps form a
-logical line, including literal spaces at a physical row end; producer hard
-breaks never join. Quotes do not evaluate shell syntax or escapes. Brackets,
-assignments and trailing punctuation are not trimmed. Ambiguous forms may use
-the native picker instead.
+**Limits and cleanup**
 
-A positive `:line` or `:line:column` outside closing quotes is decoration; a
-suffix inside quotes is part of the literal filename. An unquoted suffix first
-names the exact file and falls back to the unsuffixed target only on ENOENT,
-never on permission, format or decode failure. Exact native sources, picker
-selections and file URLs have no suffix interpretation. Main checks platform
-locality before reads; UNC/device, drive-relative and Windows root-relative
-paths are rejected. Relative activation opens a native directory picker starting
-at the local user's home; only the explicit selection supplies the base.
-Cancellation is inert. Every activation asks anew; no base preference or cwd is
-retained. Normal `..` resolution is allowed, not a filesystem sandbox. Home and
-absolute references need no base picker. Resolved paths must pass the same local
-absolute validation and source-length bound. No source opens an operating-system
-URL handler: after activation only, main reads the target through a non-shell
-regular-file boundary. On macOS and Linux, that read rejects a symlink in the
-final path component. The content must be a structurally valid, natively
-decodable static PNG or JPEG of at most 64 MiB encoded, 8192 pixels per side,
-and 32 million pixels (inclusive). APNG and every other animated or unsupported
-format are rejected regardless of extension. The same Terminal Window permits at
-most one picker or activated-source read at a time; owner closure makes late
-picker, read, and decode results inert. Both picker and URL paths must be local
-absolute paths before any read; Windows paths must include a drive, and
-UNC/device paths are rejected even from the native picker.
+- A direct transmission holds at most 33,554,432 decoded bytes, and source
+  dimensions at most 4,194,304 pixels, checked before decode allocates the
+  image (so Chafa RGBA is at most 16,777,216 bytes).
+- Invalid Base64, malformed or cancelled APC, invalid dimensions, length
+  mismatch, decode failure or an exceeded limit renders nothing, clears
+  unfinished state and does not block later output.
+- Each screen keeps at most one unfinished image; a new metadata-bearing
+  transmission (including Chafa's prelude) replaces it. Completion, reset,
+  alternate-buffer exit and Surface disposal release it.
+- Each screen stores at most 64,000,000 bytes of completed decoded image data,
+  with Ghostty's native eviction.
+- Pi image-ID, all-image and all-placement deletion and reset release their
+  native resources. Deletion, reset, alternate-buffer exit and disposal also
+  release cached renderer resources while hidden.
+- Core images and placements survive hiding and render again on reveal;
+  renderer copies may be dropped while hidden.
+- Decoding has transient allocations, and the renderer may copy visible RGBA
+  into browser and GPU resources outside core storage accounting.
 
-The renderer receives only bounded validated name, dimensions, media type, and
-bytes, creates a memory-only Blob URL under the production CSP, and
-synchronously removes the image source and revokes that URL on dismissal,
-replacement failure, page teardown, or owner close. It never receives an
-arbitrary filesystem API or path. These input bounds are not a total
-process-memory budget: native validation, IPC, browser decode and GPU resources
-can add transient copies. Dismissal releases application ownership, not a
-promise of immediate RSS or native/GPU reclamation. The preview fits the
-complete image proportionally within the overlay's content area, including after
-window resizing, without clipping or stretching it. Failed reads, PNG/JPEG
-validation failures (including APNG rejection) and decode failures show a fixed
-non-path load error. Unrecognized formats such as WebP have a separate fixed
-non-path format message, regardless of extension or successful path recognition.
-OMXTerm never reads on output or hover, infers a relative base, performs shell
-expansion, consults shell/agent cwd, fetches or transfers a remote image, accepts
-UNC/file authorities, treats OSC 8 metadata as a local source, logs image paths
-or payload, writes/downloads image data, or persists the preview. A clicked path
-always addresses the machine running OMXTerm regardless of where its text originated.
+**Unsupported**
 
-Application mouse modes own buttons, motion, and wheel reporting in normal and
-alternate screens; Shift retains the selection override, and explicit copy and
-valid modified-link gestures — web or local image — do not produce duplicate PTY
-mouse input. OSC 8 destinations and all other schemes are ignored.
+- SIXEL, the iTerm2 Inline Image Protocol, raw RGB (`f=24`), compressed raw
+  pixels (`o=z`), placement IDs, animation, remote or filesystem image sources
+  inside Kitty Terminal Payload, downloads, persistence, and images through
+  `tmux`, `screen` or another multiplexer. Other Kitty and Chafa paths the core
+  exposes are unclaimed.
+- Local Image Preview is not an Inline Terminal Image or a Kitty source.
+- Image bytes stay opaque, memory-only Terminal Payload on the PTY output path.
+  They add no main-process, preload, IPC, Adapter, clipboard, filesystem,
+  logging or network capability.
 
-`terminal.contextMenuEnabled` accepts only a boolean and defaults to true.
-Omission or true preserves existing native host-menu eligibility, even when
-Restty has already cancelled the canvas context event for application mouse
-reporting. False suppresses OMXTerm popup requests over terminal content and
-padding for all modifiers, application mouse modes and contextmenu origins,
-including keyboard-originated events. The DOM default is still cancelled; real
-application mouse input, clipboard actions and OSC 52 are unchanged. There is
-no automatic mouse-mode policy or Shift exception for menu access. The Scrollback
-Search query field keeps its menu, as do unrelated Snippets, Settings and Window
-Chrome controls. Existing Edit actions and configured keybindings remain
-available, but disabling the popup reduces pointer access and discoverability;
-this is not an accessibility guarantee. Valid reloads apply to existing, hidden
-and mounting panes without replacing a Surface, core or Live Terminal Session.
+### Scrollback history
 
-Scrollback Search opens only through **Edit → Find…** or the `find` keybind
-(`Cmd+F` on macOS, `Ctrl+Shift+F` on Linux and Windows). It uses Restty's
-search bar and the pinned core's search over the focused pane's retained
-Scrollback Buffer and visible screen; output evicted by the scrollback limits
-is not searchable. Opening the bar focuses its query field, and invoking Find
-again focuses and selects the query. Keys act on the bar only while its query
-field holds focus: `Enter` or the down button selects the next match below
-(newer output), `Shift+Enter` or the up button the previous match above (older
-output), and `Escape` or the close button closes the bar and returns focus to
-the terminal. The bar owns the whole Escape gesture that closes it: its held
-repeats and its release never reach the terminal, including under Kitty
-keyboard event reporting. An open bar never captures keys while the terminal
-holds focus;
-`Enter`, `Shift+Enter` and `Escape` then remain ordinary terminal input. Window
-focus returns to the query field only when it held focus before. While the
-field holds focus, application Copy, Paste and Select All, from the menu, a
-keybind or the context menu, act on the query instead of the terminal: Paste
-inserts clipboard text at the field's selection with line breaks replaced by
-spaces, and nothing reaches Protected Paste or the PTY. The bar, including its
-match counter, follows the active Terminal Theme. Each Surface owns its own query.
-Search state, the query and its matches, stays in renderer memory and is never
-persisted, logged or written to the PTY, and searching never sends it to main.
-Only an explicit Copy from the focused field moves the selected query text,
-through the same main-owned clipboard IPC as any other Copy. Find is ignored
-while a Local Image Preview or About owns modal input.
+- Scrollback is memory-only and per Live Terminal Session. `scrollback.lines`
+  defaults to 10,000, accepts 0 through 100,000 and rejects larger values
+  instead of clamping them.
+- A positive value approximates the maximum physical history rows, excluding
+  the active screen. Ghostty evicts whole pages, so retention may exceed it by
+  one boundary page. A separate 10,000,000-byte core ceiling may keep fewer
+  rows; OMXTerm never estimates bytes per line.
+- Zero disables history: retained history is dropped at once and none builds
+  up through output or resize. A later positive reload keeps only new output.
+- Valid live changes keep the same Surface, core, Live Terminal Session and
+  PTY, and keep reflow, alternate-screen, selection and viewport state
+  coherent. Each Surface is independent.
+- Resize keeps pending soft-wrap positions, and selection and copy distinguish
+  retained history, active wrapping and producer hard breaks.
+- Accepted keyboard input and delivered paste, snippet or path input return the
+  viewport to the live cursor. Output, protocol replies, focus, selection and
+  cancelled paste do not.
+- The scrollbar shows a thumb only while there is scrollback beyond the screen;
+  an empty track paints nothing.
+- Desktops with a fine pointer keep native scrolling even with touch; touch-only
+  devices use touch scrolling.
 
-Explicit Export is offered in the terminal context menu: **Export Selection…**
-when selected text exists, otherwise **Export Terminal Content…**. The label
-and kind are captured when the menu opens. A field menu offers editing only.
-Content export reads the source pane's retained Scrollback Buffer and screen,
-or only the alternate screen when active, without modifying selection. The
-one-shot popup belongs to its exact pane and Surface; pane/tab changes, pane
-end or removal, a field or newer popup, and owner disposal invalidate it. A
-matching blocked or wrong-kind callback consumes its own claim without reading;
-a stale callback cannot consume a newer one. A valid callback snapshots once
-before the asynchronous dialog, so later focus changes do not change its text.
-The context-menu opt-out also suppresses the export offer.
+### Links and local paths
 
-The inclusive limit is 16 MiB of UTF-8, measured in bytes and independently
-validated at preload and main. The core storage limit does not guarantee that
-extracted text fits. Over-limit text is neither truncated nor sent; main reports
-that nothing was saved and suggests a smaller selection. Main owns the native
-save chooser, suggested timestamped text filename and overwrite confirmation.
-Cancellation writes nothing. Whitespace-only text shows a notice instead of a
-chooser. Files use UTF-8 with LF line breaks; row padding and trailing blank rows
-are trimmed, with exactly one final line break. Newly created files are owner-only
-on macOS and Linux. Setup (including a failed terminal text read), chooser and
-write failures receive a fixed actionable notice without private details;
-notices are not retried. A failed selection read still opens the context menu
-with content export. Owner loss before a chooser resolves prevents a write or
-orphan notice; an already-started write may settle. Export is user-requested,
-never automatic, and payload and destination stay out of operational logs.
+External links are validated in main
+([ADR 0011](adr/0011-validate-external-links-at-the-main-process.md)); local
+paths open a Local Image Preview
+([ADR 0026](adr/0026-preview-explicitly-activated-local-images.md)).
+
+**What is recognized**
+
+- Only literal visible lowercase `http:`, `https:` and absolute authority-free
+  `file:///` URLs are links. OSC 8 destinations and all other schemes are
+  ignored.
+- Visible native path references are separate Local Image Preview
+  destinations:
+  - absolute POSIX paths begin with one `/`;
+  - Windows paths are drive-qualified with a letter, colon, and slash or
+    backslash;
+  - `~` and `~/...` name the local OMXTerm user's home, including inside
+    matching quotes;
+  - relative references begin `./` or `../` (backslash separators also work on
+    Windows), or are a relative image name ending `.png`, `.jpg`, `.jpeg` or
+    `.webp` (case-insensitive).
+- Recognition is not format support.
+- References begin at a line boundary or after whitespace, as a complete
+  non-whitespace token or a path inside one pair of matching single or double
+  quotes (spaces allowed). Quotes do not evaluate shell syntax or escapes.
+  Brackets, assignments and trailing punctuation are not trimmed. `%` and `#`
+  are literal filename characters.
+- An unquoted absolute path containing ASCII spaces is recognized only when it
+  fills the complete logical line, starts at its first character and ends in
+  `.png`, `.jpg` or `.jpeg` (case-insensitive), optionally with a positive
+  location suffix. This excludes tabs, trailing spaces, an earlier
+  image-extension token followed by spaces, and a space-separated new absolute,
+  home (including bare `~`), dot-relative, quoted or HTTP(S)/`file:///`
+  reference. Boundaries inside prose or between same-line references are not
+  inferred; those use token or quoted recognition. Ambiguous forms may use the
+  native picker instead.
+- A destination may span only core-proven, fully visible soft wraps (including
+  literal spaces at a row end); producer hard breaks never join. Cell
+  coordinates stay correct after grapheme and wide-cell prefixes. Exact row
+  equality, hard-break proofs and conservative clipping hold across core pages.
+  A destination that may continue beyond the viewport is refused.
+- Wide-wrap spacer cells add no text and share the hover span and hit target of
+  the preceding link cluster on the same row. Link detection does not change
+  copy or selection.
+
+**Hover and activation**
+
+- Holding the platform modifier over a recognized destination underlines its
+  whole visible span. Pointer and modifier changes update the cue without
+  activating it. Output, scrolling, geometry changes, focus loss, tab hiding
+  and preview or Surface lifecycle changes clear it.
+- Recognition alone performs no file read, image decode, network access, IPC
+  open request or Terminal Payload logging.
+- `Cmd+click` on macOS or `Ctrl+click` on Linux and Windows activates a
+  recognized destination. The valid modified primary click takes precedence
+  over application mouse reporting and sends no duplicate PTY mouse report;
+  other gestures keep ordinary selection or application-mouse routing.
+- For HTTP(S), main parses and validates the exact URL before asking the
+  operating system to open it.
+- For `file:///`, main requires the literal lowercase scheme, no remote or
+  `localhost` authority, no query or fragment, and a platform-absolute local
+  path.
+- Exact native paths are a distinct typed source. References that need
+  interpretation use a separate bounded source that main validates
+  independently.
+
+**Path resolution**
+
+- A positive `:line` or `:line:column` outside closing quotes is decoration; a
+  suffix inside quotes is part of the filename. An unquoted suffix first names
+  the exact file and falls back to the unsuffixed target only on ENOENT, never
+  on permission, format or decode failure. Exact native sources, picker
+  selections and file URLs have no suffix interpretation.
+- Main checks platform locality before reads. UNC/device, drive-relative and
+  Windows root-relative paths are rejected. Windows paths must include a drive,
+  and UNC/device paths are rejected even from the native picker.
+- Relative activation opens a native directory picker at the local user's home;
+  only the explicit selection supplies the base. Cancellation is inert. Every
+  activation asks again; no base preference or cwd is kept. Normal `..`
+  resolution applies; this is not a filesystem sandbox.
+- Home and absolute references need no base picker. Resolved paths must pass
+  the same local absolute validation and source-length bound.
+- A clicked path always addresses the machine running OMXTerm, wherever its text
+  came from.
+
+### Local Image Preview
+
+- No source opens an operating-system URL handler. Only after activation, main
+  reads the target through a non-shell regular-file boundary. On macOS and
+  Linux, that read rejects a symlink in the final path component.
+- The content must be a structurally valid, natively decodable static PNG or
+  JPEG of at most 64 MiB encoded, 8192 pixels per side and 32 million pixels
+  (inclusive). APNG and every other animated or unsupported format are rejected
+  regardless of extension.
+- A Terminal Window allows at most one picker or activated-source read at a
+  time. Owner closure makes late picker, read and decode results inert.
+- The renderer receives only the bounded, validated name, dimensions, media type
+  and bytes, never a filesystem API or path. It creates a memory-only Blob URL
+  under the production CSP. Dismissal, replacement failure, page teardown or
+  owner close synchronously removes the image source and revokes the URL.
+- The input bounds are not a total memory budget: validation, IPC, browser
+  decode and GPU resources can add transient copies. Dismissal releases
+  application ownership, not necessarily RSS or GPU memory right away.
+- The preview fits the whole image proportionally in the overlay, also after
+  window resizing, without clipping or stretching.
+- Failed reads, PNG/JPEG validation failures (including APNG) and decode
+  failures show a fixed load error without the path. Unrecognized formats such
+  as WebP show a separate fixed format message, regardless of extension or
+  successful path recognition.
+- OMXTerm never infers a relative base, performs shell expansion, consults the
+  shell or agent cwd, fetches or transfers a remote image, treats OSC 8
+  metadata as a local source, logs image paths or payload, writes or downloads
+  image data, or persists the preview.
+
+### Mouse and context menu
+
+- Application mouse modes own button, motion and wheel reporting in normal and
+  alternate screens. Shift keeps the selection override. Explicit copy and
+  valid modified-link gestures (web or local image) produce no duplicate PTY
+  mouse input.
+- `terminal.contextMenuEnabled` accepts only a boolean and defaults to true.
+  Omission or true preserves eligibility for the native menu, even when Restty
+  has cancelled the canvas context event for application mouse reporting.
+- False suppresses the popup over terminal content and padding for every
+  modifier, mouse mode and origin, keyboard included. The DOM default is still
+  cancelled; mouse input, clipboard actions and OSC 52 are not affected. There
+  is no Shift exception or mouse-mode policy for reaching the menu.
+- The Scrollback Search field, Snippets, Settings and Window Chrome keep their
+  menus. Edit actions and keybindings stay available, but turning the popup off
+  reduces pointer access and discoverability; this is not an accessibility
+  guarantee.
+- Reloads apply to existing, hidden and mounting panes without replacing a
+  Surface, core or Live Terminal Session.
+
+### Scrollback Search
+
+- Opens only through **Edit → Find…** or the `find` keybind (`Cmd+F` on macOS,
+  `Ctrl+Shift+F` on Linux and Windows). Opening focuses the query field; Find
+  again focuses and selects the query.
+- Restty's search bar searches the focused pane's retained Scrollback Buffer and
+  visible screen. Evicted output is not searchable.
+- Keys act on the bar only while its query field has focus:
+  - `Enter` or the down button selects the next match below (newer output);
+  - `Shift+Enter` or the up button selects the previous match above (older
+    output);
+  - `Escape` or the close button closes the bar and returns focus to the
+    terminal. The bar owns the whole closing Escape gesture: its held repeats
+    and its release never reach the terminal, including under Kitty keyboard
+    event reporting.
+- While the terminal has focus, `Enter`, `Shift+Enter` and `Escape` are
+  ordinary terminal input even with the bar open. Window focus returns to the
+  query field only if it had focus before.
+- While the field has focus, application Copy, Paste and Select All (from the
+  menu, a keybind or the context menu) act on the query instead of the terminal.
+  Paste inserts clipboard text at the field's selection with line breaks
+  replaced by spaces; nothing reaches Protected Paste or the PTY.
+- The bar, including its match counter, follows the active Terminal Theme.
+- Each Surface has its own query. The query and its matches stay in renderer
+  memory: never persisted, logged, written to the PTY or sent to main. Only an
+  explicit Copy from the field moves query text, through the normal clipboard
+  IPC.
+- Find is ignored while a Local Image Preview or About owns modal input.
+
+### Terminal export
+
+- The terminal context menu offers **Export Selection…** when selected text
+  exists, otherwise **Export Terminal Content…**. The label and kind are
+  captured when the menu opens. A field menu offers editing only. Turning the
+  context menu off also removes the export offer.
+- Content export reads the source pane's retained Scrollback Buffer and screen,
+  or only the alternate screen when it is active, without modifying the
+  selection.
+- The one-shot popup belongs to its exact pane and Surface. Pane or tab changes,
+  pane end or removal, a field or newer popup, and owner disposal invalidate it.
+  A matching blocked or wrong-kind callback consumes its own claim without
+  reading; a stale callback cannot consume a newer one. A valid callback
+  snapshots the text once, before the dialog opens, so later focus changes do
+  not change it.
+- The limit is 16 MiB of UTF-8 (inclusive), measured in bytes and checked
+  independently at preload and main. Retained terminal content can exceed it.
+  Over-limit text is neither truncated nor sent; main says nothing was saved and
+  suggests a smaller selection.
+- Main owns the native save chooser, the suggested timestamped text filename and
+  overwrite confirmation. Cancellation writes nothing. Whitespace-only text
+  shows a notice instead of a chooser.
+- Files use UTF-8 with LF line breaks. Row padding and trailing blank rows are
+  trimmed, with exactly one final line break. New files are owner-only on macOS
+  and Linux.
+- Setup (including a failed text read), chooser and write failures show a
+  fixed, actionable notice without private details. Notices are not retried. A
+  failed selection read still opens the menu with content export.
+- Owner loss before the chooser resolves means no write and no orphan notice; a
+  write already started may finish.
+- Export is user-requested, never automatic. Payload and destination stay out of
+  operational logs.
 
 ## Clipboard
 
+Clipboard access is explicit and one-way
+([ADR 0009](adr/0009-keep-clipboard-access-explicit-and-one-way.md)); file paths
+are inserted as lexical shell-quoted text
+([ADR 0021](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)).
+
+### Copy and paste
+
 - Selection never copies automatically.
-- Terminal Paste stops active [Mirror Typing](#mirror-typing) synchronously before
-  payload filtering, clipboard reads or confirmation, even for empty/unsupported
-  payloads. Ordinary original-target Protected Paste follows; it never fans out.
-- `Ctrl+C` and `Ctrl+V` remain PTY input.
+- `Ctrl+C` and `Ctrl+V` stay PTY input.
 - `Cmd+C` and `Cmd+V` on macOS, `Ctrl+Shift+C` and `Ctrl+Shift+V` on Linux and
-  Windows, and the native context menu perform explicit text copy and paste. Any
-  non-empty plain text, including whitespace-only text, is pasted unchanged and
-  takes priority over every file-list representation. When text is empty and the
-  clipboard exposes a supported native file-manager file list, Paste inserts its
-  paths in the same form as a file drop. Plain-text URLs and non-file URI-list
-  entries are never inferred to be paths. Electron 43 exposes only one Explorer
-  `FileNameW` path through its public Windows clipboard API, so Windows
-  clipboard Paste inserts that one path; dropping several Windows files remains
-  complete and ordered.
-- Inserted paths are lexical platform-absolute values only: OMXTerm never reads,
-  resolves, normalizes, or checks the target. A malformed, empty, over-bound, or
-  mixed list inserts nothing. A list accepts at most 256 paths, each at most
-  32,768 UTF-16 code units, with at most 1,048,576 code units in the decoded
-  source or formatted result; a serialized native UTF-8 source above 1,048,576
-  bytes is rejected before decoding.
-- On macOS and Linux, each path is an independently single-quoted POSIX shell
-  token, with an apostrophe represented by closing the quote, a backslash-escaped
-  apostrophe, and reopening it. On Windows, each path is an independently
-  single-quoted Windows PowerShell 5.1 token; U+0027 and U+2018 through U+201B
-  are doubled. Tokens are separated by one ASCII space. This encoding is fixed
-  by platform, not by `windowsShell`, and assumes insertion at a fresh ordinary
-  argument-token boundary in the corresponding shell. Without Shell Integration,
-  OMXTerm cannot promise correct syntax in another shell, a partial quote, SSH
-  session, REPL, or TUI.
+  Windows, and the native context menu perform explicit text copy and paste.
+- These are the built-in keybind defaults. A `keybinds` remap can move copy or
+  paste, or bind an action onto a bare `Ctrl+<key>` that is otherwise PTY input.
+  `CommandOrControl` resolves to `Control` off macOS, so importing another
+  platform's map can do this by accident. Such a remap is honored, with a
+  warning when it shadows a PTY control key on the current platform.
+- Terminal Paste stops active [Mirror Typing](#mirror-typing) synchronously
+  before payload filtering, clipboard reads or confirmation, even for empty or
+  unsupported payloads. Ordinary Protected Paste to the original target follows;
+  it never fans out.
+- Any non-empty plain text, including whitespace-only text, is pasted unchanged
+  and takes priority over every file-list representation.
 - Multiline or control-character paste asks for confirmation only when the
   receiving process has not enabled bracketed paste.
-- Paste is never truncated, interpreted, summarized, or logged. Semantic paste,
-  snippet and path-insertion operations preserve request order without delaying
-  ordinary keyboard input. Current bracketed mode and ownership are checked
-  after asynchronous clipboard reads or confirmation. Mid-delivery disposal
-  stops later chunks and a snippet's optional Enter, without rollback or replay.
-  For the Files path capability, each chunk awaits a main-session receipt. An
-  unresolved or lost receipt stops that path and fences later queued semantic
-  input until a definitive late receipt, if any; keyboard input remains direct.
-  A bracketed path stopped before its last chunk still sends the closing paste
-  marker, so the shell never stays inside the paste.
-- OSC 52 may write the clipboard only for target `c` with non-empty canonical
-  padded Base64 that decodes as UTF-8. The 10,000,000 UTF-16-code-unit handler
-  payload bound counts `c;` and Base64 but excludes the OSC introducer, command
-  and terminator. Thus a canonical 9,999,998-unit request is accepted completely
-  and the next canonical 10,000,002-unit request is consumed without action.
-  Clipboard read, clear, invalid target, malformed, non-canonical, cancelled and
-  over-bound requests are consumed without clipboard action or PTY reply.
+- Paste is never truncated, interpreted, summarized or logged.
 - Image clipboard behavior belongs to the child CLI. OMXTerm forwards its key
   input but never moves image bytes through the PTY.
-- These shortcuts are the built-in keybind defaults. A `keybinds` remap can move
-  copy or paste onto other keys or bind an application action onto a bare
-  `Ctrl+<key>` these defaults keep as PTY input; because `CommandOrControl`
-  resolves to `Control` off macOS, importing another platform's map can do this
-  unintentionally. The keybinds contract honors such a remap and warns when it
-  shadows a PTY control key on the current platform.
+
+### File-list paste
+
+- When text is empty and the clipboard exposes a supported native file-manager
+  file list, Paste inserts its paths in the same form as a file drop. Plain-text
+  URLs and non-file URI-list entries are never treated as paths.
+- On Windows, clipboard Paste inserts the single Explorer `FileNameW` path that
+  Electron exposes. Dropping several Windows files stays complete and ordered.
+- Inserted paths are lexical platform-absolute values: OMXTerm never reads,
+  resolves, normalizes or checks the target.
+- A malformed, empty, over-bound or mixed list inserts nothing. A list accepts
+  at most 256 paths, each at most 32,768 UTF-16 code units, with at most
+  1,048,576 code units in the decoded source or formatted result. A serialized
+  native UTF-8 source above 1,048,576 bytes is rejected before decoding.
+- On macOS and Linux, each path is an independently single-quoted POSIX shell
+  token; an apostrophe is written as closing the quote, a backslash-escaped
+  apostrophe, and reopening it.
+- On Windows, each path is an independently single-quoted Windows PowerShell 5.1
+  token; U+0027 and U+2018 through U+201B are doubled.
+- Tokens are separated by one ASCII space. The encoding is fixed by platform,
+  not by `windowsShell`, and assumes insertion at a fresh ordinary
+  argument-token boundary in that shell. Without Shell Integration, correct
+  syntax in another shell, a partial quote, an SSH session, a REPL or a TUI is
+  not promised.
+
+### Paste delivery
+
+- Semantic paste, snippet and path-insertion operations keep request order
+  without delaying ordinary keyboard input.
+- The current bracketed-paste mode and Surface ownership are checked again after
+  asynchronous clipboard reads or confirmation.
+- If the owning Surface closes mid-delivery, later chunks stop and a
+  submitting snippet never appends Enter. Bytes already sent cannot be recalled;
+  there is no rollback or replay.
+- For the Files path capability, each chunk awaits a main-session receipt. An
+  unresolved or lost receipt stops that path and fences later queued semantic
+  input until a definitive late receipt, if any; keyboard input stays direct. A
+  bracketed path stopped before its last chunk still sends the closing paste
+  marker, so the shell never stays inside the paste.
+
+### OSC 52
+
+- OSC 52 may write the clipboard only for target `c` with non-empty, canonical,
+  padded Base64 that decodes as UTF-8.
+- The handler payload (`c;` plus the Base64, without the OSC introducer,
+  command or terminator) may be at most 10,000,000 UTF-16 code units; see
+  [Unfinished control budget](#unfinished-control-budget). A canonical request
+  within the bound is accepted whole; a larger one is consumed without action.
+- Clipboard read, clear, invalid-target, malformed, non-canonical, cancelled and
+  over-bound requests are consumed with no clipboard action and no PTY reply.
 
 ## Configuration and local state
 
