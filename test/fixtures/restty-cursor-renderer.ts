@@ -1,3 +1,4 @@
+import "../../src/renderer/ui.css";
 import "../../src/renderer/terminal-window.css";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { terminalFontInputs } from "../../src/terminal-surface/terminal-font-stack";

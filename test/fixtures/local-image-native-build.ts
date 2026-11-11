@@ -1,5 +1,5 @@
 import { prepareFixture } from "./prepare-fixture";
-import { copyFile, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
@@ -46,11 +46,17 @@ export async function buildFixture(root: string): Promise<void> {
           `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"><link rel="stylesheet" href="./preview.css"></head><body><textarea aria-label="Terminal input"></textarea><script src="./preview.js"></script></body></html>`,
         ),
       ),
+      // The preview's look comes from the design system plus its layout.
       start(() =>
-        copyFile(
-          path.join(projectRoot, "src/renderer/terminal-window.css"),
-          path.join(root, "preview.css"),
-        ),
+        build({
+          stdin: {
+            contents: '@import "./ui.css";\n@import "./terminal-window.css";\n',
+            resolveDir: path.join(projectRoot, "src/renderer"),
+            loader: "css",
+          },
+          bundle: true,
+          outfile: path.join(root, "preview.css"),
+        }),
       ),
       start(() =>
         writeFile(
