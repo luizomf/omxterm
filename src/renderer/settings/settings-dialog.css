@@ -400,7 +400,9 @@ body.tabs-visible .settings-tab {
   text-align: end;
   font-variant-numeric: tabular-nums;
 }
-.settings-background-hint {
+.settings-form > .settings-background-hint {
+  /* Its hairline spans the row width like the rows around it. */
+  max-width: none;
   padding-block: 0 12px;
   border-block-end: 1px solid var(--ui-decoration);
   font-size: 12px;
