@@ -14,14 +14,18 @@ The application uses neither Apple Developer ID signing nor notarization. This
 keeps paid Apple distribution services outside the obligations of a small
 open-source project, with the tradeoff that users must complete a deliberate
 one-time Gatekeeper review. The assembled application still receives a complete
-ad-hoc code seal because Apple Silicon requires internal code integrity even
-without a verified publisher identity. An ad-hoc seal provides bundle integrity;
-it does not identify the publisher, satisfy Gatekeeper trust, or replace
-Developer ID signing and notarization.
+code seal because Apple Silicon requires internal code integrity even without a
+verified publisher identity. Release builds use OMXTerm's stable self-signed
+certificate so privacy permissions survive updates
+([ADR 0046](0046-sign-macos-releases-with-a-stable-self-signed-certificate.md));
+builds without that key use an ad-hoc seal. Neither identifies the publisher to
+Apple, satisfies Gatekeeper trust, or replaces Developer ID signing and
+notarization.
 
 Automated package verification must run `codesign --verify --deep --strict`
-against the assembled application and reject both an invalid seal and any
-unexpected signing authority or Team ID. Browser-quarantined Gatekeeper
+against the assembled application and reject an invalid seal, an Apple Team ID,
+and any certificate other than the release certificate. Release verification
+requires the release certificate. Browser-quarantined Gatekeeper
 exercise is optional macOS dogfood, not a release gate, even when packaging,
 code sealing, or Gatekeeper-facing metadata changes. When automation cannot
 observe the resulting security UI, the release record states that boundary as

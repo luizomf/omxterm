@@ -30,7 +30,7 @@ describe("release version consistency", () => {
     expect(lockMetadata.packages[""]?.version).toBe(packageMetadata.version);
   });
 
-  it("requires a complete ad-hoc macOS application seal", () => {
+  it("prepares a complete macOS application seal for the sign hook", () => {
     expect(builderConfiguration).toMatch(/^  identity: "-"$/mu);
     expect(builderConfiguration).toMatch(/^  hardenedRuntime: false$/mu);
   });

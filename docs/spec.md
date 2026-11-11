@@ -2595,7 +2595,7 @@ implementation; there is no renderer selector or registry
 - macOS ARM64 and Linux ARM64/x64 package inspection exercises packaged
   store/lease/bootstrap resolution, not backend activation or the Files
   lifecycle. Native extension addons must be explicitly unpacked; macOS also
-  needs the complete ad-hoc application seal. Only the ARM64 targets include and
+  needs the complete application seal. Only the ARM64 targets include and
   exercise the Files no-clobber move primitive; the macOS probe also checks the
   trash export and root refusal without running a trash mutation
   ([building an extension archive](release.md#building-an-extension-archive)).
@@ -2639,8 +2639,13 @@ uploads, and download checks. This section states only the contract it follows.
 - The [README download index](../README.md#platforms-and-downloads) links each
   target's version, assets, checksums, and notes.
 - Artifacts include SHA-256 checksums but no verified publisher identity. The
-  macOS app has an ad-hoc integrity seal, not Developer ID signing or
-  notarization; Windows NSIS is unsigned. Installation guidance explains
+  macOS release app is signed with OMXTerm's stable self-signed certificate, so
+  its designated requirement (`identifier "com.otaviomiranda.omxterm" and
+certificate root = H"7208e5…"`) is the same in every release and macOS
+  privacy permissions survive updates; builds without the release key are
+  ad-hoc. It is not Developer ID signed or notarized
+  ([ADR 0046](adr/0046-sign-macos-releases-with-a-stable-self-signed-certificate.md));
+  Windows NSIS is unsigned. Installation guidance explains
   Gatekeeper and SmartScreen without recommending disabling system-wide
   protections.
 - An owner-requested release covers the procedure's steps without per-step

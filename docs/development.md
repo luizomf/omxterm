@@ -126,7 +126,7 @@ exit never means startup failure.
 
 Packages exclude foreign prebuilds, winpty, PDBs and redundant build inputs.
 Package verification compares the prepared JavaScript and native files against
-the packaged copies (on macOS, after ad-hoc signing) and records the native
+the packaged copies (on macOS, after code signing) and records the native
 hashes in `.scratch/node-pty-package.json`.
 
 ## Dependency maintenance traps
@@ -463,7 +463,7 @@ In every mode, package verification also checks the bundled extension runtime:
 exact bundled bytes, native architecture, that its lease addon (and on ARM64
 macOS/Linux the Files move addon) is unpacked from `app.asar`, and a packaged
 store/lease/bootstrap probe. Results go to `.scratch/extensions-package.json`.
-On macOS native bytes change with ad-hoc signing, so the verifier records final
+On macOS native bytes change with code signing, so the verifier records final
 hashes and checks the full signature seal; JavaScript must match exactly.
 Windows x64 packages carry the runtime too, but the app enables extensions only
 on macOS ARM64, Linux ARM64/x64 and Windows ARM64.

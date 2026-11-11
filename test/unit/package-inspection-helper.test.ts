@@ -24,6 +24,21 @@ it("inspection is explicit, platform-independent and cannot authorize full verif
   }
 });
 
+it("release verification is a macOS-only option", () => {
+  expect(windowsVerificationOptions(["--release"], "darwin")).toEqual({
+    windowsUnpackedOnly: false,
+    disposableVm: false,
+    release: true,
+  });
+  expect(
+    windowsVerificationOptions(["--inspection-only", "--release"], "darwin"),
+  ).toMatchObject({ inspectionOnly: true, release: true });
+  expect(() => windowsVerificationOptions(["--release"], "linux")).toThrow();
+  expect(() =>
+    windowsVerificationOptions(["--release", "--release"], "darwin"),
+  ).toThrow();
+});
+
 it.each(["win32", "linux"])(
   "the actual %s inspection helper uses only its target addons and native resize contract",
   async (platform) => {

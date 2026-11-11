@@ -49,7 +49,7 @@ with no V8/Electron internal ABI or addon framework. `npm run build` targets
 macOS 12.0. Linux/Windows neither compile nor package the addon.
 
 The generated addon sits beside the ESM main bundle, is unpacked from ASAR and
-included in the ad-hoc code seal. Build failure fails the macOS build; runtime
+included in the application code seal. Build failure fails the macOS build; runtime
 load failure preserves launch. Package checks inspect ARM64 architecture,
 deployment floor, ASAR-relative loading and the complete code seal.
 

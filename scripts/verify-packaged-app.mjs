@@ -22,6 +22,7 @@ import { linuxHelperName, renderLinuxHelper } from "./package-linux-assets.mjs";
 import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs";
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
+import { releaseDesignatedRequirement } from "./sign-macos.mjs";
 import { launchLinuxPackagedProcess } from "./linux-packaged-process.mjs";
 
 const execFile = promisify(execFileCallback);
@@ -225,7 +226,7 @@ async function verifyPackagedExtensions(executable, asar) {
         process.platform,
       );
     }
-    // Final macOS ad-hoc signing changes native bytes, but not JS bundles.
+    // Final macOS code signing changes native bytes, but not JS bundles.
     if (process.platform === "darwin" && entry.endsWith(".node")) {
       const addon = path.join(`${asar}.unpacked`, entry.slice(1));
       const { stdout } = await execFile("otool", ["-l", addon]);
@@ -450,8 +451,14 @@ async function inspectArchitecture(file, label, platform, arch = process.arch) {
     );
 }
 
-export async function inspectAdHocApplication(
+/**
+ * Requires a complete code seal that is either ad-hoc (builds without the
+ * release keychain) or the stable release certificate. With `release`, only
+ * the release certificate's designated requirement is accepted.
+ */
+export async function inspectApplicationSignature(
   applicationPath,
+  { release = false } = {},
   execute = execFile,
 ) {
   await execute("codesign", [
@@ -467,14 +474,32 @@ export async function inspectAdHocApplication(
     "--verbose=4",
     applicationPath,
   ]);
-  if (
-    !/^Signature=adhoc$/mu.test(stderr) ||
-    /^Authority=/mu.test(stderr) ||
-    /TeamIdentifier=(?!not set)/u.test(stderr)
-  )
+  if (/TeamIdentifier=(?!not set)/u.test(stderr))
+    throw new Error("Packaged application unexpectedly has an Apple team");
+  const adHoc = /^Signature=adhoc$/mu.test(stderr);
+  if (adHoc && !/^Authority=/mu.test(stderr)) {
+    if (release)
+      throw new Error(
+        "Release verification requires the stable release certificate, but the application is ad-hoc signed",
+      );
+    return "adhoc";
+  }
+
+  // The requirement, not the certificate name, identifies the release
+  // certificate: anyone can create a certificate with the same name.
+  await execute("codesign", [
+    "--verify",
+    "--deep",
+    "--strict",
+    `-R=${releaseDesignatedRequirement}`,
+    applicationPath,
+  ]);
+  const { stdout } = await execute("codesign", ["-d", "-r-", applicationPath]);
+  if (!stdout.includes(`designated => ${releaseDesignatedRequirement}`))
     throw new Error(
-      "Packaged application unexpectedly has a signing authority",
+      "Packaged application is not signed with the stable release certificate",
     );
+  return "release";
 }
 
 async function inspectApplicationIcon(applicationPath) {
@@ -927,6 +952,7 @@ export async function verifyPackagedApplication(
     windowsUnpackedOnly = false,
     disposableVm = false,
     inspectionOnly = false,
+    release = false,
   } = {},
 ) {
   if (
@@ -1122,7 +1148,7 @@ export async function verifyPackagedApplication(
     for (const file of selectedNativeFiles) {
       const packaged = path.join(nativeRoot, file);
       await inspectArchitecture(packaged, `node-pty ${file}`, platform);
-      // macOS's final ad-hoc seal can change native bytes. The complete seal is
+      // macOS's final code seal can change native bytes. The complete seal is
       // checked below; record those final sealed hashes instead of raw equality.
       if (platform !== "darwin")
         await assertSameFile(path.join(preparedNativeRoot, file), packaged);
@@ -1198,7 +1224,7 @@ export async function verifyPackagedApplication(
         { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }, timeout: 10_000 },
       );
       await inspectApplicationIcon(applicationRoot);
-      await inspectAdHocApplication(applicationRoot);
+      await inspectApplicationSignature(applicationRoot, { release });
     } else {
       if (platform === "linux")
         await assertSameFile(

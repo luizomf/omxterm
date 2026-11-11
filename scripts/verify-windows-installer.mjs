@@ -50,6 +50,8 @@ export function inspectWindowsInstallerInputs(
   // registration/cache paths, templates/options and builder remain unchanged.
   // #864 adds only the Noto Sans Symbols 2 OFL notice under resources/licenses.
   // NSIS identity, registration/cache paths, templates and options are unchanged.
+  // ADR 0046 adds only the macOS sign hook. Windows payload, NSIS identity,
+  // registration/cache paths, templates and options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -57,7 +59,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "fdeb21f6bbceb759cc2c43663e4609490337111304e34c128452e07a9b546ac2"
+      "bc5a9277c3004ca7130099786b9f98893fcb018d88468666f63e79f2338caf57"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

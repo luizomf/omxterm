@@ -48,10 +48,11 @@ export type ExecuteFile = (
   args: string[],
 ) => Promise<{ readonly stdout: string; readonly stderr: string }>;
 
-export function inspectAdHocApplication(
+export function inspectApplicationSignature(
   applicationPath: string,
+  options?: { release?: boolean },
   execute?: ExecuteFile,
-): Promise<void>;
+): Promise<"adhoc" | "release">;
 
 export function provisionLinuxHelper(
   helper: string,
@@ -85,6 +86,7 @@ export function verifyPackagedApplication(
   applicationPath?: string,
   options?: {
     readonly inspectionOnly?: boolean;
+    readonly release?: boolean;
     readonly windowsUnpackedOnly?: boolean;
     readonly disposableVm?: boolean;
   },
