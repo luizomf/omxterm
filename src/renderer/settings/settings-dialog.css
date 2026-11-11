@@ -88,6 +88,10 @@ body.tabs-visible .settings-tab {
   background: var(--ui-raised-tint);
   align-items: flex-start;
 }
+/* Installed rows place their actions inline after the text. */
+.extension-installed-list .page-button + .page-button {
+  margin-inline-start: 8px;
+}
 /* Quiet buttons keep a visible fill on the raised card. */
 .extension-catalog-card .page-button-quiet {
   background: var(--ui-hover-tint);
@@ -297,7 +301,7 @@ body.tabs-visible .settings-tab {
 }
 .settings-theme-ansi {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 184px), 1fr));
   gap: 4px 24px;
   margin: 0;
   padding: 0;
@@ -305,7 +309,9 @@ body.tabs-visible .settings-tab {
 }
 .settings-theme-ansi-pair {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 32px 32px;
+  /* Name, then both swatches right beside it: the eye never travels far. */
+  grid-template-columns: minmax(0, 8em) 32px 32px;
+  justify-content: start;
   align-items: center;
   gap: 4px;
   min-width: 0;
