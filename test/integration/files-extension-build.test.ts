@@ -70,7 +70,7 @@ it
       expect(validated).toEqual({ digest, manifest: receipt.manifest });
       expect(receipt.manifest).toEqual(sourceManifest);
       expect(receipt.manifest).toMatchObject({
-        version: "0.8.0",
+        version: "0.8.1",
         engines: { omxterm: ">=0.26.0", api: "0.1.x" },
         capabilities: ["terminal.insertPath.v1"],
       });

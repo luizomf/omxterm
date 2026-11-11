@@ -1,6 +1,7 @@
 // Loaded into a packaged OMXTerm main process through its loopback inspector.
 // Drives the real UI: install an extension from a local archive through
-// Settings, then exercise Files or SSH Connect against the real terminal.
+// Settings, then exercise Files, SSH Connect or Snippets against the real
+// terminal.
 const assert = require("node:assert/strict");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
@@ -198,6 +199,44 @@ async function ssh({ archive, alias, marker }) {
   };
 }
 
+// `insert` and `run` name two snippets whose bodies write `marker` and
+// `marker + ".run"`.
+async function snippets({ archive, insert, run, marker }) {
+  const { type, read, consents } = await install(
+    archive,
+    "omxterm.snippets",
+    marker,
+  );
+  menu("Toggle Snippets");
+  await until(() => !!extensionView(), "Snippets view");
+  const view = extensionView();
+  const row = (name) =>
+    `[...document.querySelectorAll('.snippet-activate')].find(row => row.querySelector('.snippet-name')?.textContent === ${JSON.stringify(name)})`;
+  await until(() => view.executeJavaScript(`!!${row(insert)}`), "snippet rows");
+  const written = (file) =>
+    until(async () => (await read(file)) !== undefined, file, 10000).catch(
+      () => {},
+    );
+
+  // Insert types the body at the prompt; Enter is ours to press.
+  await view.executeJavaScript(`${row(insert)}.click()`);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await type("", true);
+  await written(marker);
+  // Run types the body and presses Enter itself.
+  await view.executeJavaScript(`${row(run)}.click()`);
+  await written(marker + ".run");
+  const notices = await view.executeJavaScript(
+    "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
+  );
+  return {
+    consents,
+    notices,
+    inserted: await read(marker),
+    ran: await read(marker + ".run"),
+  };
+}
+
 function quit() {
   setImmediate(() => app.quit());
   return true;
@@ -205,4 +244,4 @@ function quit() {
 
 const windows = () => BrowserWindow.getAllWindows().length;
 
-module.exports = { files, ssh, quit, windows };
+module.exports = { files, ssh, snippets, quit, windows };
