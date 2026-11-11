@@ -276,10 +276,11 @@ export async function exerciseSettingsDialog(
 
   // An X11 window manager places a new window when it maps it, after Electron
   // already reports bounds. A window takes focus only once mapped, so wait for
-  // focus before recording the bounds that opening Settings must keep.
+  // focus before recording the bounds that opening Settings must keep. macOS
+  // and Windows place the window synchronously.
   window.focus();
   const focusDeadline = Date.now() + 5_000;
-  while (!window.isFocused()) {
+  while (process.platform === "linux" && !window.isFocused()) {
     if (Date.now() > focusDeadline)
       throw new Error("Settings fixture window never took focus");
     await new Promise((resolve) => setTimeout(resolve, 25));

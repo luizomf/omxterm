@@ -287,10 +287,9 @@ The Window Chrome `settings-only` case checks the Settings editor at viewports u
 to **1280×640 CSS px**. Nothing in the Settings layout changes past that: the
 widest step is the 900 px navigation width and the 720 px content cap, and the
 only height step is at 360 px. The selected display's usable work area, in
-logical DIPs, must fit that viewport plus the window's native frame, which a
-1366×768-class desktop at 100% scaling does. Physical resolution isn't what
-counts: display scaling and panels or docks can make a high-resolution screen
-too small.
+logical DIPs, must fit that viewport plus the window's native frame (about
+1300×700 DIPs). Physical resolution isn't what counts: display scaling and
+panels or docks can make a high-resolution screen too small.
 
 The fixture checks this before anything else. If the display is too small, the
 case fails (it doesn't skip) and prints the required and observed sizes. Enlarge
