@@ -1,6 +1,7 @@
 // Loaded into a packaged OMXTerm main process through its loopback inspector.
 // Drives the real UI: install an extension from a local archive through
-// Settings, then exercise Files or SSH Connect against the real terminal.
+// Settings, then exercise Files, SSH Connect or Snippets against the real
+// terminal.
 const assert = require("node:assert/strict");
 const { readFile } = require("node:fs/promises");
 const path = require("node:path");
@@ -198,6 +199,32 @@ async function ssh({ archive, alias, marker }) {
   };
 }
 
+async function snippets({ archive, name, marker }) {
+  const { type, read, consents } = await install(
+    archive,
+    "omxterm.snippets",
+    marker,
+  );
+  menu("Snippets");
+  await until(() => !!extensionView(), "Snippets view");
+  const view = extensionView();
+  const row = `[...document.querySelectorAll('.snippet-activate')].find(row => row.querySelector('.snippet-name')?.textContent === ${JSON.stringify(name)})`;
+  await until(() => view.executeJavaScript(`!!${row}`), "snippet row");
+  // An Insert snippet types its body at the prompt; Enter is ours to press.
+  await view.executeJavaScript(`${row}.click()`);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const notices = await view.executeJavaScript(
+    "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
+  );
+  await type("", true);
+  await until(
+    async () => (await read(marker)) !== undefined,
+    "marker",
+    10000,
+  ).catch(() => {});
+  return { consents, notices, inserted: await read(marker) };
+}
+
 function quit() {
   setImmediate(() => app.quit());
   return true;
@@ -205,4 +232,4 @@ function quit() {
 
 const windows = () => BrowserWindow.getAllWindows().length;
 
-module.exports = { files, ssh, quit, windows };
+module.exports = { files, ssh, snippets, quit, windows };
