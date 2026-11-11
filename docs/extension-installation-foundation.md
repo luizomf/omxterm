@@ -134,8 +134,9 @@ development hosts keep accepting the same archives.
   archive whose range accepts **both** the previous stable line and the next one.
   The bridges are `0.24.1-dev.N` (needs `0.24.0` and `0.24.1`), `0.25.0-dev.N`
   (`0.24.0` and `0.25.0`), `0.26.0-dev.N` (`0.25.0` and `0.26.0`),
-  `0.26.1-dev.N` (`0.26.0` and `0.26.1`) and `0.27.0-dev.N` (`0.26.0` and
-  `0.27.0`). They do not rewrite the range, and a
+  `0.26.1-dev.N` (`0.26.0` and `0.26.1`), `0.27.0-dev.N` (`0.26.0` and
+  `0.27.0`) and `0.27.1-dev.N` (`0.27.0` and `0.27.1`). They do not rewrite the
+  range, and a
   range with an upper bound that excludes the required stable versions gains
   nothing. Other development families need ordinary admission or a reviewed
   decision.
