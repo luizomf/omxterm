@@ -2631,10 +2631,13 @@ uploads, and download checks. This section states only the contract it follows.
   dependency, or build inputs after a target ships needs a new application
   version; later targets of an unchanged cut need no artificial bump or rebuild.
   Actual build SHAs and proven non-artifact differences are retained. Tags never
-  move and there is no roll-up release.
+  move.
+- Once every target of a version has shipped, a complete `vMAJOR.MINOR.PATCH`
+  release carries the same verified assets and is GitHub's global Latest, so
+  `/releases/latest` always offers the newest version for every platform, with
+  a plain "which file do I download?" guide at the top of its notes.
 - The [README download index](../README.md#platforms-and-downloads) links each
-  target's version, assets, checksums, and notes. GitHub's global Latest stays
-  the legacy complete 0.25.0 bundle, not that index.
+  target's version, assets, checksums, and notes.
 - Artifacts include SHA-256 checksums but no verified publisher identity. The
   macOS app has an ad-hoc integrity seal, not Developer ID signing or
   notarization; Windows NSIS is unsigned. Installation guidance explains

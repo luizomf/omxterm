@@ -235,7 +235,25 @@ Download the draft assets and compare every byte count and SHA-256 with the loca
 gh release edit "$tag" --draft=false --latest=false
 ```
 
-Verify the release is stable, non-Latest and points to the frozen cut. Never move a published tag, replace assets, disable immutability, or add platforms to a sealed release. When it is the newest application version for its target, update that row in the [README index](../README.md#platforms-and-downloads), using exact tag URLs for its version, download, checksum and release notes; Linux rows also link their own helper and checksum. An older backfill does not replace a newer indexed version. Leave other rows at their latest available versions. GitHub's global Latest remains the legacy complete `v0.25.0` bundle, not the per-platform index; do not use `/latest/download` for target links.
+Verify the release is stable, non-Latest and points to the frozen cut. Never move a published tag, replace assets, disable immutability, or add platforms to a sealed release. When it is the newest application version for its target, update that row in the [README index](../README.md#platforms-and-downloads), using exact tag URLs for its version, download, checksum and release notes; Linux rows also link their own helper and checksum. An older backfill does not replace a newer indexed version. Leave other rows at their latest available versions. Target rows use exact tag URLs, not `/latest/download`.
+
+### Complete release
+
+Once every target of a version is published, publish one complete release so
+`/releases/latest` offers the newest version for every platform:
+
+1. Download each target release's assets and check them with `shasum -a 256 -c`.
+   Linux helpers must be byte-identical across Linux targets; upload one copy.
+2. `gh release create "v$VERSION" --target "$CUT" --draft --title "OMXTerm $VERSION" --notes-file NOTES.md` with every installer and its `.sha256`, plus `linux_install.sh` and its `.sha256`.
+3. Notes start with a plain **Which file do I download?** table (Mac with an
+   Apple chip, Windows Intel/AMD, Windows ARM/Snapdragon, Linux Intel/AMD,
+   Linux ARM), how to tell which one you have, first-launch steps per platform,
+   then what's new, links to the target releases and a SHA-256 table. Write
+   for someone who doesn't know what ARM64, x64, DMG or AppImage mean.
+4. Publish with `gh release edit "v$VERSION" --draft=false --latest`, then
+   download each asset anonymously from
+   `https://github.com/luizomf/omxterm/releases/latest/download/<file>` and
+   compare SHA-256 with the target releases.
 
 Write release notes in plain words for people who use the terminal: new features, fixes, configuration changes, SHA-256 checksums, the frozen cut SHA, and first-launch notes:
 

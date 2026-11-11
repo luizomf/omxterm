@@ -1,6 +1,6 @@
 # Versioning policy
 
-OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/). Stable application versions are `MAJOR.MINOR.PATCH`. New stable target releases use `<os>-<arch>-vMAJOR.MINOR.PATCH` tags; the target prefix is not part of the application version. The legacy complete release `v0.25.0` remains unchanged.
+OMXTerm uses [Semantic Versioning 2.0.0](https://semver.org/). Stable application versions are `MAJOR.MINOR.PATCH`. New stable target releases use `<os>-<arch>-vMAJOR.MINOR.PATCH` tags; the target prefix is not part of the application version. Once every target of a version has shipped, a complete `vMAJOR.MINOR.PATCH` release with the same assets is GitHub's Latest (see [release](release.md#complete-release)).
 
 - `package.json` and `package-lock.json` define the application version.
 - Versions ending in `-dev.N` (for example `0.20.3-dev.0`) mark the development baseline on `main` between releases.
