@@ -3,6 +3,9 @@ import path from "node:path";
 import type { BrowserWindow } from "electron";
 import type { SupportedLanguage } from "../../src/shared/i18n";
 import type { SettingsLayoutObservation } from "./settings-layout-observation";
+import { settingsWideViewport } from "./settings-layout-display";
+
+const wide = settingsWideViewport[0];
 
 // Keep the captured receipt bounded to representative synthetic geometry.
 export function recordLayoutGeometry(options: {
@@ -35,7 +38,7 @@ export function recordLayoutGeometry(options: {
       nativeMinimum ||
       width === 600 ||
       (width === 960 && height === 320) ||
-      width === 1920
+      width === wide
     ) ||
     ![
       "general",
@@ -85,7 +88,7 @@ export async function captureLayoutEvidence(options: {
     light,
   } = options;
   if (!evidence) return;
-  if (width === 600 || width === 1920 || width < 480) {
+  if (width === 600 || width === wide || width < 480) {
     await contents.executeJavaScript(
       "document.activeElement?.blur(); for (const selector of ['.settings-body', '.settings-tabs', '.settings-panels']) document.querySelector(selector).scrollTo({ top: 0, behavior: 'instant' })",
       true,
@@ -103,7 +106,7 @@ export async function captureLayoutEvidence(options: {
     category === "config-file" &&
     language === "en-US" &&
     !light &&
-    width === 1920
+    width === wide
   ) {
     await contents.executeJavaScript(
       "document.querySelector('.settings-config-file [role=status]').scrollIntoView({block: 'end'})",
@@ -111,7 +114,10 @@ export async function captureLayoutEvidence(options: {
     );
     await frame();
     await writeFile(
-      path.join(evidence, "en-US-dark-1920x1080-config-result.png"),
+      path.join(
+        evidence,
+        `en-US-dark-${settingsWideViewport.join("x")}-config-result.png`,
+      ),
       (await contents.capturePage()).toPNG(),
     );
   }

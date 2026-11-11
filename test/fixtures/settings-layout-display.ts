@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import type { SettingsGeometrySize } from "./settings-layout-observation";
 
+// The widest case only needs to pass the 900 px navigation step and the 720 px
+// content cap; no Settings layout changes above it or above 360 px of height.
+// Kept at 640 px high so it fits a 1366x768-class desktop.
+export const settingsWideViewport = [1280, 640] as const;
+
 export const settingsExactViewports = [
   [600, 320],
   [600, 480],
@@ -8,8 +13,7 @@ export const settingsExactViewports = [
   [800, 600],
   [960, 320],
   [960, 640],
-  [1280, 800],
-  [1920, 1080],
+  settingsWideViewport,
 ] as const;
 
 // Electron screen/bounds are DIPs, not physical pixels. Only renderer zoom
