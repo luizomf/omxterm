@@ -74,7 +74,7 @@ All fields are optional except `version`. The built-in defaults are shown below.
 | `font.lineHeight`                          | number 1.0–2.0                          | `1.0`                           |
 | `font.ligatures`                           | boolean                                 | `true`                          |
 | `terminal.contextMenuEnabled`              | boolean                                 | `true`                          |
-| `terminal.padding.top/right/bottom/left`   | integer 0–128 CSS px                    | `0` / `8` / `8` / `8`           |
+| `terminal.padding.top/right/bottom/left`   | integer 0–128 CSS px                    | `12` on every side              |
 | `scrollback.lines`                         | integer 0–100000                        | `10000`                         |
 | `keyboard.optionAsAlt`                     | `"none"`, `"left"`, `"right"`, `"both"` | `"none"`                        |
 | `window.alwaysOnTop`                       | boolean                                 | `false`                         |
@@ -123,7 +123,7 @@ In **Settings → Appearance**, choose the font family and size. To set a font s
 
 `font.size` accepts integers from 8 to 72 CSS pixels. `font.family` must match an installed system font; the default is the bundled FiraCode Nerd Font Mono. `font.lineHeight` accepts 1.0–2.0 and `font.ligatures` is a boolean. Font family and line height apply to new tabs; restart to update open tabs.
 
-Terminal padding is set in CSS pixels from 0 to 128. The defaults are top 0, right 8, bottom 8 and left 8. `scrollback.lines` accepts 0–100000 lines and defaults to 10000; setting it to 0 disables history. On Linux, installed optional fonts can provide emoji and CJK fallback.
+Terminal padding is set in CSS pixels from 0 to 128. The default is 12 on every side. `scrollback.lines` accepts 0–100000 lines and defaults to 10000; setting it to 0 disables history. On Linux, installed optional fonts can provide emoji and CJK fallback.
 
 ### Transparency and blur
 

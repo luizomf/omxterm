@@ -489,8 +489,8 @@ are the job of a session manager such as tmux.
 
 - `About OMXTerm` in the application menu opens one compact in-window dialog on
   every Supported Platform. It shows the application icon, name, running
-  version, and MIT license, and links to the project, contributors, issue
-  tracker, and license. Developer lists live in `CONTRIBUTORS.md`, not the
+  version, and MIT license, and text links on one line to the project,
+  contributors, issue tracker, and license. Developer lists live in `CONTRIBUTORS.md`, not the
   dialog; no individual copyright is spotlighted, and legal notices stay in the
   distribution.
 - Main supplies runtime metadata and opens only fixed named destinations after
@@ -564,12 +564,14 @@ overlays.
   configuration updates, approved pane/tab/session/window closure, failure
   acknowledgement, and Quit stay active. Already accepted terminal input is not
   rolled back.
-- About and Command Palette share theme-derived surfaces, subtle hairlines,
-  controls, and typography. Their background tint follows effective window
-  transparency without fading text or keyboard focus; no opaque scrim overrides
-  that preference. The tint composites over application content but is not
-  native desktop blur, which stays main-owned and best effort.
-- While About or Command Palette is open, a shared fixed 12 px CSS filter
+- About, Command Palette, Local Image Preview and the Snippets preview share
+  one overlay recipe: theme-derived surface, subtle hairline, 8 px radius,
+  quiet filled buttons and the same typography (the SSH exit notice uses the
+  same surface). Their background tint follows effective window transparency
+  without fading text or keyboard focus; no opaque scrim overrides that
+  preference. The tint composites over application content but is not native
+  desktop blur, which stays main-owned and best effort.
+- While any of these overlays is open, a shared fixed 12 px CSS filter
   softens the non-dialog body-child underlays (terminal, Settings, chrome),
   including underlays inserted later, and ends on dismissal or disposal. It does
   not filter body/html, the body tint, the modal foreground, or transparent
@@ -654,7 +656,8 @@ Connect share it; no per-tool placement or second panel exists.
 **Header and switching**
 
 - With one open tool the header shows its name. With several, a labeled,
-  wrapping switcher fills the same header and identifies the selected tool,
+  single-line switcher (long names truncate) fills the same header and
+  identifies the selected tool,
   without a second host title. One view is visible at a time; switcher buttons
   select without closing.
 - The host keeps the panel's accessible name and does not inspect or strip
@@ -672,8 +675,9 @@ Connect share it; no per-tool placement or second panel exists.
   view through the acknowledged host lifecycle, not extension disable or backend
   retirement. Reopening creates fresh view state and invocation context.
   Repeated closes coalesce; a pending close never queues an automatic reopen.
-- Header Hide and Escape (from inside the panel) keep every opened tool and its
-  state.
+- Header Hide (a chevron toward the panel's edge, distinct from Close's ×, both
+  with tooltips) and Escape (from inside the panel) keep every opened tool and
+  its state.
 - Close and Hide return focus to the live selected terminal after native
   acknowledgement, unless a newer selection or modal owns focus. Neither closes
   terminal sessions. Escape in the terminal stays terminal input. An Escape or
@@ -2273,7 +2277,7 @@ While Settings is selected:
   main user-file banner keeps its rendered-text contract. Settings diagnostics
   never enter operational logs.
 
-Layout follows the [UI style guide](ui-style-guide.md#settings-layout): a
+Layout follows the [UI style guide](ui-style-guide.md#settings): a
 full-area, theme-aware page with six core categories plus Extensions, sized for
 640×480 without changing native window minimums, scrolling instead of
 clipping. Core notices use theme green, red and yellow for success, error and

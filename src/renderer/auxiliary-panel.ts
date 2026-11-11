@@ -85,7 +85,9 @@ export function createAuxiliaryPanel(
   const renderTools = () => tools(current, language.t);
   const unbindLabels = language.bind((t) => {
     close.setAttribute("aria-label", t("panel.close"));
+    close.title = t("panel.close");
     hideButton.setAttribute("aria-label", t("panel.hide"));
+    hideButton.title = t("panel.hide");
     const definition = definitions.get(current ?? "");
     if (definition) {
       title.textContent = labelOf(definition, t);

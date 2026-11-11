@@ -136,7 +136,7 @@
 
 /* The default action is visible before activation. */
 .snippets-view .snippet-intent {
-  font-size: 11px;
+  font-size: 12px;
   color: color-mix(
     in srgb,
     var(--terminal-background, #000000),
