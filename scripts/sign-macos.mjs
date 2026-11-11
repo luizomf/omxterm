@@ -50,13 +50,18 @@ export default async function sign(options) {
     password,
     release.keychain,
   ]);
+  const { optionsForFile } = options;
   return signAsync({
     ...options,
     identity: releaseCertificateSHA1,
     identityValidation: false,
     keychain: release.keychain,
     // No timestamp server: the certificate is not Apple-issued and the build
-    // must not depend on the network.
-    timestamp: "none",
+    // must not depend on the network. electron-builder's per-file options
+    // take precedence over top-level ones, so set it there.
+    optionsForFile: (file) => ({
+      ...(typeof optionsForFile === "function" ? optionsForFile(file) : {}),
+      timestamp: "none",
+    }),
   });
 }
