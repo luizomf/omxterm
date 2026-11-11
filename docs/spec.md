@@ -2191,8 +2191,8 @@ Controls:
 
 Shortcuts page:
 
-- Shows each action's effective shortcut and whether it is default, custom or
-  unbound. Default removes the entry (and an emptied group), Unbind writes
+- Shows each action's effective shortcut as a key chip. Custom and unbound
+  bindings are marked in text; an unmarked binding is the default. Default removes the entry (and an emptied group), Unbind writes
   `null`, and recording writes an accelerator, all through the normal save.
 - Recording is owned by main: the next candidate key is captured with the same
   identity delivery uses (including AltGr and bare F1–F24) instead of running a

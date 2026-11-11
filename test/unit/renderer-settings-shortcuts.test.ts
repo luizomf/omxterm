@@ -199,15 +199,12 @@ describe("Shortcuts page", () => {
       expect(view.changeKeybind).not.toHaveBeenCalled();
     },
   );
-  it("shows each action's effective shortcut and state", async () => {
+  it("shows each action's effective shortcut and marks only custom or unbound ones", async () => {
     const view = await open();
-    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
-    expect(view.cells("newTab")).toEqual(["Ctrl+Shift+T", "Default"]);
-    expect(view.cells("toggleAuxiliaryPanel")).toEqual(["None", "Default"]);
-    expect(view.cells("moveAuxiliaryPanel")).toEqual([
-      "Ctrl+Alt+Shift+P",
-      "Default",
-    ]);
+    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
+    expect(view.cells("newTab")).toEqual(["Ctrl+Shift+T", ""]);
+    expect(view.cells("toggleAuxiliaryPanel")).toEqual(["None", ""]);
+    expect(view.cells("moveAuxiliaryPanel")).toEqual(["Ctrl+Alt+Shift+P", ""]);
     expect(
       view.button("moveAuxiliaryPanel", "record").getAttribute("aria-label"),
     ).toBe("Record shortcut for Move Auxiliary Panel to Other Side");
@@ -218,7 +215,7 @@ describe("Shortcuts page", () => {
       ["toggleFiles", "Files"],
       ["toggleSshConnect", "SSH Connect"],
     ]) {
-      expect(view.cells(action!)).toEqual(["None", "Default"]);
+      expect(view.cells(action!)).toEqual(["None", ""]);
       expect(view.button(action!, "record").getAttribute("aria-label")).toBe(
         `Record shortcut for Toggle ${title}`,
       );
@@ -289,7 +286,7 @@ describe("Shortcuts page", () => {
     expect(
       view.changeKeybind.mock.calls.map(([change]) => change.choice),
     ).toEqual([{ state: "unbound" }, { state: "inherit" }]);
-    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
+    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
   });
 
   it("ends capture when recording is toggled off or the dialog closes", async () => {
@@ -310,12 +307,12 @@ describe("Shortcuts page", () => {
     expect(document.querySelector("#settings-tab-shortcuts")!.textContent).toBe(
       "Atalhos",
     );
-    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Padrão"]);
+    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
     for (const [action, title] of [
       ["toggleFiles", "Files"],
       ["toggleSshConnect", "SSH Connect"],
     ]) {
-      expect(view.cells(action!)).toEqual(["Nenhum", "Padrão"]);
+      expect(view.cells(action!)).toEqual(["Nenhum", ""]);
       expect(view.button(action!, "record").getAttribute("aria-label")).toBe(
         `Gravar atalho para Alternar ${title}`,
       );
@@ -327,11 +324,8 @@ describe("Shortcuts page", () => {
       document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
     ).toContain("não aparecem aqui");
     expect(view.cells("quit")).toEqual(["Nenhum", ""]);
-    expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", "Padrão"]);
-    expect(view.cells("moveAuxiliaryPanel")).toEqual([
-      "Ctrl+Alt+Shift+P",
-      "Padrão",
-    ]);
+    expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", ""]);
+    expect(view.cells("moveAuxiliaryPanel")).toEqual(["Ctrl+Alt+Shift+P", ""]);
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
     ).toBe("Gravar atalho para Alternar Painel Auxiliar");
@@ -348,7 +342,7 @@ describe("Shortcuts page", () => {
     expect(
       document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
     ).toContain("are not listed here");
-    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", "Default"]);
+    expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
     expect(view.button("find", "record").textContent).toBe("Record");
   });
 });

@@ -35,11 +35,11 @@ body.tabs-visible .settings-tab {
 }
 /* Cap the content track at the panel width so the header rule ends with it. */
 .settings-body.application-page.has-navigation {
-  grid-template-columns: 168px minmax(0, 880px);
+  grid-template-columns: 168px minmax(0, 720px);
 }
 @media (min-width: 900px) {
   .settings-body.application-page.has-navigation {
-    grid-template-columns: 192px minmax(0, 880px);
+    grid-template-columns: 192px minmax(0, 720px);
   }
 }
 /* Flat navigation: only the selected category gets a fill. */
@@ -67,8 +67,22 @@ body.tabs-visible .settings-tab {
   flex-direction: column;
   gap: 24px;
   width: 100%;
-  max-width: 880px;
+  max-width: 720px;
   min-width: 0;
+}
+/* Form pages read as one list: rows separated by hairlines, not gaps. */
+.settings-form {
+  gap: 0;
+}
+.settings-form > .settings-themes {
+  margin-block-end: 24px;
+}
+.settings-form > .settings-row {
+  padding-block: 12px;
+  border-block-end: 1px solid var(--ui-decoration);
+}
+.settings-form > .settings-row:has(+ .settings-background-hint) {
+  border-block-end: 0;
 }
 .extensions-panel p,
 .extensions-panel [role="status"],
@@ -387,7 +401,8 @@ body.tabs-visible .settings-tab {
   font-variant-numeric: tabular-nums;
 }
 .settings-background-hint {
-  margin-top: -12px;
+  padding-block: 0 12px;
+  border-block-end: 1px solid var(--ui-decoration);
   font-size: 12px;
 }
 .settings-config-file {
@@ -432,9 +447,10 @@ body.tabs-visible .settings-tab {
 .settings-shortcut {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px 16px;
+  gap: 8px 16px;
   align-items: center;
-  padding-block: 16px 20px;
+  min-height: 48px;
+  padding-block: 6px;
   border-bottom: 1px solid var(--ui-decoration);
 }
 .settings-shortcut-name,
@@ -442,16 +458,24 @@ body.tabs-visible .settings-tab {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.settings-shortcut-name {
-  font-weight: 500;
-}
 .settings-shortcut-binding {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
 }
+/* The binding reads as a key chip. */
 .settings-shortcut-value {
-  font-family: ui-monospace, monospace;
+  padding: 2px 8px;
+  border: 1px solid var(--ui-decoration);
+  border-radius: 4px;
+  background: var(--ui-raised-tint);
+  font:
+    12px/1.5 ui-monospace,
+    monospace;
+}
+.settings-shortcut-state:empty {
+  display: none;
 }
 .settings-shortcut-state {
   font-size: 12px;
@@ -461,10 +485,19 @@ body.tabs-visible .settings-tab {
   grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px;
+}
+/* Quiet, compact row actions; the binding is what the eye should find. */
+.settings-shortcut-actions .page-button {
+  min-height: 28px;
+  padding: 2px 10px;
+  font-size: 13px;
+}
+.settings-shortcut-actions .page-button-text {
+  color: var(--ui-secondary);
 }
 .settings-shortcut-record {
-  min-width: 84px;
+  min-width: 72px;
 }
 .settings-shortcut.is-recording .settings-shortcut-value {
   font-weight: 600;
@@ -479,7 +512,7 @@ body.tabs-visible .settings-tab {
     align-items: center;
   }
 }
-@container (min-width: 760px) {
+@container (min-width: 600px) {
   .settings-shortcut {
     grid-template-columns: minmax(144px, 1fr) minmax(112px, 200px) auto;
   }
