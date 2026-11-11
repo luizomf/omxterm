@@ -44,12 +44,20 @@ export default async function sign(options) {
   // Unlock first so codesign never meets a locked keychain, which would ask
   // for the password in a graphical dialog.
   const password = (await readFile(release.passwordFile, "utf8")).trim();
-  await execFile("security", [
-    "unlock-keychain",
-    "-p",
-    password,
-    release.keychain,
-  ]);
+  try {
+    await execFile("security", [
+      "unlock-keychain",
+      "-p",
+      password,
+      release.keychain,
+    ]);
+  } catch {
+    // execFile's error repeats the full command line, password included, so
+    // never let it reach build logs.
+    throw new Error(
+      `Could not unlock the macOS signing keychain ${release.keychain}`,
+    );
+  }
   const { optionsForFile } = options;
   return signAsync({
     ...options,
