@@ -1037,6 +1037,10 @@ export function mountFilesPage(
   }
   function placeMenu(x: number, y: number) {
     const viewport = document.documentElement;
+    // Measure at the origin: a fixed menu shrinks to the room right of its
+    // current left, so a narrowed viewport would otherwise squeeze it.
+    menu.style.left = "0px";
+    menu.style.top = "0px";
     menu.style.left = `${Math.max(0, Math.min(x, viewport.clientWidth - menu.offsetWidth))}px`;
     menu.style.top = `${Math.max(0, Math.min(y, viewport.clientHeight - menu.offsetHeight))}px`;
   }

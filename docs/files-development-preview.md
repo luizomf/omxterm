@@ -23,7 +23,7 @@ or the terminal renderer; it ships only as a `.omxext` archive.
 - `view.ts`, `page.ts`, `tree.ts`, `toolbar.ts`, `messages.ts`, `index.html`,
   `files.css` — the view page shown in the companion panel.
 
-Files 0.8.2 declares host `>=0.26.0`, API `0.1.x` and the
+Files 0.8.3 declares host `>=0.26.0`, API `0.1.x` and the
 `terminal.insertPath.v1` capability. Host 0.26.0 is the first published host
 with the protected path consumer, so older hosts neither offer nor admit Files 0.8.
 The narrow [development bridges](extension-installation-foundation.md#archive-contract)
