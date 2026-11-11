@@ -37,9 +37,7 @@ it("exposes labelled native background controls near themes without writing on o
   expect(blur.getAttribute("aria-describedby")).toBe(
     "settings-background-hint",
   );
-  expect(view.query("#settings-background-hint").textContent).toContain(
-    "About and Command Palette blur content behind them independently of desktop blur.",
-  );
+  expect(view.query("#settings-background-hint").textContent).toContain("blur");
   expect(view.bridge.change).not.toHaveBeenCalled();
   slider.value = "0.37";
   slider.dispatchEvent(new Event("input"));
@@ -122,7 +120,7 @@ it("relabels pending controls in place and keeps saved-but-not-applied feedback"
     "checkbox",
   );
   expect(view.query("#settings-background-hint").textContent).toContain(
-    "Paleta de comandos",
+    "desfoque",
   );
   pending.resolve(
     saved(

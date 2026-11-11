@@ -82,10 +82,10 @@ it("retains a pending HTTPS request across language changes and cancels its exac
     url: input.value,
   });
   expect(input.disabled).toBe(true);
-  expect(document.body.textContent).toContain("Downloading and validating");
+  expect(document.body.textContent).toContain("Downloading and checking");
   labels.forEach((label) => label(translatorFor("pt-BR").t));
   expect(input.value).toBe("https://example.org/archive?signature=abc");
-  expect(document.body.textContent).toContain("Baixando e validando");
+  expect(document.body.textContent).toContain("Baixando e verificando");
   expect(request).toHaveBeenCalledTimes(2);
   disposers.forEach((dispose) => dispose());
   expect(request).toHaveBeenLastCalledWith({

@@ -32,7 +32,6 @@ export function renderExtensionCatalog(
   const section = document.createElement("section");
   section.className = "extension-catalog";
   const heading = document.createElement("h3");
-  const explanation = document.createElement("p");
   const actions = document.createElement("div");
   actions.className = "application-page-actions";
   const browse = createPageButton(document);
@@ -53,7 +52,6 @@ export function renderExtensionCatalog(
   disposers.push(cancelLoad);
   function relabel() {
     heading.textContent = t("extensions.catalogHeading");
-    explanation.textContent = t("extensions.catalogTrust");
     browse.textContent = t(
       failed
         ? "extensions.catalogRetry"
@@ -64,22 +62,20 @@ export function renderExtensionCatalog(
     browse.disabled = !!token;
     cancel.hidden = !token;
     cancel.textContent = t("common.cancel");
+    // Idle and loaded catalogs need no notice: the button and cards say it.
+    const message = token
+      ? "extensions.catalogLoading"
+      : managementUnavailable
+        ? "extensions.catalogManagementUnavailable"
+        : failed || snapshot.stale
+          ? snapshot.loaded
+            ? "extensions.catalogStale"
+            : "extensions.catalogUnavailable"
+          : snapshot.loaded && !snapshot.entries.length
+            ? "extensions.catalogEmpty"
+            : undefined;
     setPageNotice(notice, {
-      text: t(
-        token
-          ? "extensions.catalogLoading"
-          : managementUnavailable
-            ? "extensions.catalogManagementUnavailable"
-            : failed || snapshot.stale
-              ? snapshot.loaded
-                ? "extensions.catalogStale"
-                : "extensions.catalogUnavailable"
-              : !snapshot.loaded
-                ? "extensions.catalogIdle"
-                : snapshot.entries.length
-                  ? "extensions.catalogLoaded"
-                  : "extensions.catalogEmpty",
-      ),
+      text: message ? t(message) : "",
       severity:
         managementUnavailable || failed || snapshot.stale ? "warning" : "info",
     });
@@ -196,7 +192,7 @@ export function renderExtensionCatalog(
     relabel();
   });
   actions.append(browse, cancel);
-  section.append(heading, explanation, actions, notice, list);
+  section.append(heading, actions, notice, list);
   relabel();
   return {
     element: section,

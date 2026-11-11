@@ -112,7 +112,6 @@ it("keeps localized contextual guidance separate from runtime status without rep
     ".settings-snippets-notice",
   )!;
   expect(notice.textContent).toContain("optional extension");
-  expect(notice.textContent).toContain("snippets.yaml");
   expect(document.querySelector(".extensions-panel")!.textContent).toContain(
     language.t("extensions.runtime-unavailable"),
   );

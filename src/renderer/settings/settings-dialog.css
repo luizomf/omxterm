@@ -84,6 +84,22 @@ body.tabs-visible .settings-tab {
 .settings-form > .settings-row:has(+ .settings-background-hint) {
   border-block-end: 0;
 }
+/* The nav already names the page; keep the heading for assistive tech. */
+.extensions-panel > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.extensions-panel .extensions-learn-more {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  text-decoration: underline;
+}
 .extensions-panel p,
 .extensions-panel [role="status"],
 .settings-config-file [role="status"] {

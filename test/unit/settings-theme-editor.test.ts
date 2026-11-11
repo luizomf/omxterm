@@ -377,7 +377,7 @@ it("explains new-name export before the chooser and keeps local dirty state on c
   expect(
     document.getElementById(exportButton.getAttribute("aria-describedby")!)!
       .textContent,
-  ).toContain("Choose a new filename");
+  ).toContain("Export never replaces an existing file");
   exportButton.click();
   await view.settle();
   expect(button("Save").disabled).toBe(true);
