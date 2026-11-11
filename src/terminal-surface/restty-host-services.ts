@@ -24,9 +24,9 @@ export function resttyClipboardActions(
 > {
   return {
     async copy() {
-      const text = liveSelection()?.getSelectionText() ?? "";
-      if (!text) return;
       try {
+        const text = liveSelection()?.getSelectionText() ?? "";
+        if (!text) return;
         await options.clipboard?.writeText(text);
       } catch {
         options.onClipboardError?.();

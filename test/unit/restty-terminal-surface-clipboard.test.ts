@@ -131,6 +131,27 @@ beforeEach(() => {
 });
 
 describe("Restty clipboard actions", () => {
+  it("reports a failed selection read and allows a later copy", async () => {
+    const onClipboardError = vi.fn();
+    const value = await mount(createHarness(), { onClipboardError });
+    value.restty.getSelectionText.mockImplementationOnce(() => {
+      throw new Error("selection read failed");
+    });
+
+    await expect(value.surface.copy()).resolves.toBeUndefined();
+
+    expect(onClipboardError).toHaveBeenCalledExactlyOnceWith();
+    expect(value.clipboard.writeText).not.toHaveBeenCalled();
+
+    value.restty.selection = "selected text";
+    await value.surface.copy();
+    expect(value.clipboard.writeText).toHaveBeenCalledExactlyOnceWith(
+      "selected text",
+    );
+    expect(onClipboardError).toHaveBeenCalledOnce();
+    value.surface.dispose();
+  });
+
   it("notifies semantic admission before clipboard reads or empty injection", async () => {
     const semantic = vi.fn();
     const route = vi.fn(() => true);

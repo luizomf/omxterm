@@ -1592,6 +1592,8 @@ are inserted as lexical shell-quoted text
 ### Copy and paste
 
 - Selection never copies automatically.
+- If reading the selection or writing to the clipboard fails, Copy shows the
+  clipboard-operation failure notice and leaves the Terminal Surface usable.
 - `Ctrl+C` and `Ctrl+V` stay PTY input.
 - `Cmd+C` and `Cmd+V` on macOS, `Ctrl+Shift+C` and `Ctrl+Shift+V` on Linux and
   Windows, and the native context menu perform explicit text copy and paste.
