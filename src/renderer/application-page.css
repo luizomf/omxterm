@@ -29,7 +29,12 @@
 }
 .application-page-header h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 18px;
+  font-weight: 600;
+}
+/* Section titles sit on the 14 px body size; only the page title is 18 px. */
+.application-page :is(h3, h4) {
+  font-size: 14px;
   font-weight: 600;
 }
 .application-page-header > button {
@@ -112,7 +117,7 @@
 .page-notice {
   margin: 0;
   padding: 12px 16px;
-  border: 1px solid var(--ui-decoration);
+  border: 0;
   border-inline-start: 4px solid var(--ui-secondary);
   border-radius: var(--ui-radius);
   background: var(--ui-raised);
@@ -124,12 +129,16 @@
 .page-notice[data-severity="warning"]::before {
   display: inline-grid;
   place-items: center;
-  width: 1.25em;
-  height: 1.25em;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
   margin-inline-end: 8px;
   border: 1px solid currentColor;
   border-radius: 50%;
+  vertical-align: -3px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1;
 }
 .page-notice[data-severity="success"]::before {
   content: "✓";
@@ -202,6 +211,7 @@
   .application-page-header h2 {
     font-size: 18px;
   }
+
   .application-page-content {
     grid-row: 4;
   }

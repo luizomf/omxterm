@@ -37,6 +37,8 @@
      to different faces on Linux and Windows. */
   --ui-font: system-ui, sans-serif;
   --ui-radius: 6px;
+  /* Overlays (About, Command Palette, previews, notices) share one radius. */
+  --ui-radius-overlay: 8px;
   --ui-space-1: 4px;
   --ui-space-2: 8px;
   --ui-space-3: 12px;
@@ -48,7 +50,14 @@
 /* About and Command Palette soften application paint, including outside the modal.
    Never filter the body tint or dialog foreground. :modal restores automatically
    on close/removal and covers inserted underlays; this is not desktop blur. */
-body:has(> :is(.about-dialog, .command-palette):modal)
+body:has(
+    > :is(
+        .about-dialog,
+        .command-palette,
+        .local-image-preview,
+        .snippet-preview
+      ):modal
+  )
   > :not(dialog, script, style, link) {
   filter: blur(12px);
 }

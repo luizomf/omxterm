@@ -12,10 +12,10 @@ export const MAX_TERMINAL_LINE_HEIGHT = 2;
 export const MIN_TERMINAL_PADDING = 0;
 export const MAX_TERMINAL_PADDING = 128;
 export const DEFAULT_TERMINAL_PADDING: TerminalPadding = Object.freeze({
-  top: 0,
-  right: 8,
-  bottom: 8,
-  left: 8,
+  top: 12,
+  right: 12,
+  bottom: 12,
+  left: 12,
 });
 export const DEFAULT_SCROLLBACK_LINES = 10_000;
 export const MAX_SCROLLBACK_LINES = 100_000;

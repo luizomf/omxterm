@@ -51,7 +51,7 @@ Developer and architecture docs for contributors and coding agents:
 - **[Files development notes](files-development-preview.md)** — package, backend, view, build, tests and platform limits.
 - **[Snippets extension](snippets-migration.md)** — which hosts use it, terminal-input rules, build, test and publish.
 - **[Extension composition records](macos-extension-composition.md)** — platform-specific foundation, hosted-view and packaging evidence; see also [Linux x64](linux-x64-extension-composition.md) and [Windows ARM64](windows-arm64-extension-composition.md).
-- **[UI style guide](ui-style-guide.md)** — the small palette, spacing, control and responsive-layout vocabulary implemented by Settings.
+- **[UI style guide](ui-style-guide.md)** — short design rules and tokens for every OMXTerm surface: chrome, Settings, the auxiliary panel, overlays and notices.
 - **[Restty Terminal Surface](restty-development.md)** — rendering integration, pinned dependencies, WASM core rebuilds, and optional diagnostics.
 - **[Usage development notes](usage-development.md)** and **[configuration development notes](configuration-development.md)** — edge cases the user guides leave out.
 - **[Terminology](../CONTEXT.md)**, **[Product contract](spec.md)**, and **[Architecture Decision Records](adr/README.md)** — domain terms, observable behavior, and architectural rationale.

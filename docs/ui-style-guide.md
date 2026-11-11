@@ -1,165 +1,140 @@
 # OMXTerm UI style guide
 
-Internal DOM primitives in `src/renderer/application-page.ts` and
-`application-page.css`, used by the retained Settings application tab. These are
-not an extension runtime, public SDK or new theme schema. Terminal canvas
-geometry and native OS dialogs remain separate.
+Short rules for every DOM surface OMXTerm draws: window chrome, tabs, Settings,
+the auxiliary panel, overlays and notices. The terminal canvas, native OS
+dialogs and installed extension views style themselves.
 
-## Reusing an application page
+## Principles
 
-`createApplicationPage(document, { title, actions, navigation, notice, content,
-status })` composes existing nodes into an in-flow header and bounded workspace.
-Only `title` and `content` are required. Navigation and content scroll
-independently; notices and status have bounded overflow. The content slot is the
-single size-query container. Callers own navigation semantics, lifecycle,
-localization, focus and actions; the shell never recreates supplied controls.
-Import `application-page.css` along with the shared UI tokens.
+- **The terminal comes first.** Chrome is quiet: thin rules, soft fills, no
+  shadows, no decoration that competes with terminal output.
+- **Few words.** At most one short sentence of guidance per page or section.
+  Details live in the docs. A successful action needs no notice.
+- **Few buttons.** Prefer one clear action per row. Secondary actions are text
+  buttons; destructive or rare ones stay out of the way.
+- **One system.** Every surface uses the same tokens below. Don't add local
+  fonts, radii, colors or button styles.
 
-Use `createPageButton(document, "primary" | "quiet" | "text")`, then attach the
-localized label and action. It always creates a non-submit button; primary
-styling is explicit, never dependent on sibling order. Apply `page-control` to
-native fields and keep their native labels, validation and keyboard behavior.
-Use `setPageNotice(element, { text, severity })` for retained feedback, with
-`info`, `success`, `warning` or `error`. The caller supplies `role="status"` for
-operation feedback or `role="alert"` for blocking file problems. Empty feedback
-is hidden; updates do not take focus. Success, error and warning use distinct
-foreground markers and bounded tinted containers with active-theme green, red
-and yellow accents. Message text keeps the theme foreground; info remains
-neutral. Weak accents cannot hide the foreground markers or actionable text.
-Color alone does not convey the result. This applies to core page notices, not
-independently styled installed extensions. Keep user data literal, not HTML.
+## Tokens
 
-## Palette and hierarchy
+All tokens live in `src/renderer/ui-tokens.css` and derive from the active
+Terminal Theme, so light and dark themes need no separate rules.
 
-`src/renderer/ui-tokens.css` supplies opaque `--ui-surface`/`--ui-text` from the
-validated Terminal Theme. Neutral chrome (`#808090`) mixes into the surface at
-12% for raised areas, 25% for hover and 35% for selection. Foreground mixes at
-18% for decorative hairlines, 55% for identifiable input boundaries and 75% for
-secondary text. Decoration is not focus: keyboard focus uses a 2 px foreground
-outline, independent of nullable pane appearance. No card/border around every
-shortcut row or category; spacing and subdued rules organize content.
+- **Color.** `--ui-surface` and `--ui-text` come from the theme. Neutral chrome
+  (`#808090`) mixes into the surface at 12% (`--ui-raised`), 25% (`--ui-hover`)
+  and 35% (`--ui-selected`). Foreground mixes at 18% for hairlines
+  (`--ui-decoration`), 55% for input borders and 75% for secondary text. The
+  `-tint` variants scale with window transparency.
+- **Font.** `--ui-font` (`system-ui`) everywhere. Never `-apple-system` or a
+  bare `sans-serif`: they resolve to other faces on Linux and Windows.
+  Monospace only for shortcut bindings, terminal samples and the JSON editor.
+- **Type scale.** 12 px metadata and chrome labels, 13 px chrome text (tabs,
+  panel, banners, JSON editor), 14 px body and section titles (600 weight),
+  18 px page titles. Nothing else.
+- **Spacing.** 4, 8, 12, 16, 24 and 32 px.
+- **Radius.** `--ui-radius` (6 px) for controls, `--ui-radius-overlay` (8 px)
+  for overlays and floating notices, 4 px for chips and swatches.
+- **Focus.** A 2 px foreground outline. Decoration is never focus.
+- **Native controls** take `color-scheme` from background luminance (light
+  above 0.179), not the OS appearance.
 
-Settings leaves its page layers transparent: the window body owns the base
-Terminal Theme tint once. Navigation is flat: only the selected category gets a
-fill, and the active auxiliary-panel tool is marked the same way (a fill, not
-a border). Catalog cards use alpha-scaled raised tint, and quiet buttons on a card
-step up to the hover tint so they still read as buttons; fields, selection and
-focus keep their readable foreground treatment.
-About and Command Palette use `--ui-overlay` at the effective window background
-opacity, with shared spacing, quiet controls and low-contrast outer hairlines.
-Their backdrop is clear, not an independently forced dark scrim. While About
-is modal, a fixed 12 px CSS filter softens non-dialog body-child application
-underlays, including terminal/Settings and chrome outside its rounded bounds.
-Body/html, About text/controls and its backdrop remain unfiltered. The selector
-covers inserted underlays and restores automatically on dismissal or disposal;
-no wrapper, clone or lifecycle state is needed. This modal focus treatment is
-independent of the native `window.blur` preference.
-Overlay tint can
-accumulate over underlying application paint; neither CSS alpha nor page captures
-prove desktop blur. Main retains native effect ownership. No whole-element
-opacity fades text or focus. The native-control
-`color-scheme` follows background sRGB luminance (light above 0.179), not OS
-appearance. Arbitrary low-contrast custom palettes remain the user's choice;
-these conventions do not establish universal accessibility or compositor parity.
+## Controls
 
-## Typography, spacing and controls
+Application pages compose with `createApplicationPage(document, { title,
+actions, navigation, notice, content, status })` from
+`src/renderer/application-page.ts`. Create buttons with
+`createPageButton(document, variant)` and apply `page-control` to native
+fields, keeping their labels and keyboard behavior.
 
-- One interface face, `--ui-font` (`system-ui`), for every DOM surface: Settings,
-  tabs, title bar, auxiliary panel, overlays, notices and banners. Don't add
-  `-apple-system` or bare `sans-serif` stacks; they resolve to different faces
-  on Linux and Windows.
-- System UI, 14 px / 1.5 body; 12 px metadata; 22 px heading (18 px compact).
-- Monospace only for effective shortcut bindings and the 13 px JSON editor.
-- Spacing vocabulary: 4, 8, 12, 16, 24 and 32 px; 6 px control radius.
-- Button groups (`.settings-actions`, `.application-page-actions`) wrap with an
-  8 px gap; buttons never touch.
-- Application surfaces (Settings, Command Palette, auxiliary panel, previews)
-  use thin scrollbars in the input-border color on a transparent track. The
-  terminal Surface keeps its own scrollbar.
-- Command Palette opens straight to its search field; its title is visually
-  hidden and still names the dialog.
-- Ordinary controls have a 36 px minimum height. Checkboxes stay native.
-- **Primary:** explicit JSON Save, foreground fill/background text.
-- **Quiet:** Record/Cancel, Close and ordinary actions, raised fill.
-- **Text:** Unbind/Default, always visible with hover and keyboard focus.
-- Custom/Unbound is visible text, not color alone; an unmarked binding is the
-  default. Disabled operations
-  remain recognizable and retain their action-specific accessible names.
+- **Primary:** foreground fill. One per view at most (for example, Save).
+- **Quiet:** raised fill. Ordinary actions. On a raised card, step up to the
+  hover tint so the button still reads as one.
+- **Text:** no fill, secondary color in dense lists. Always visible.
+- Controls are at least 36 px tall; compact row actions are 28 px.
+- Button groups wrap with an 8 px gap (4 px in dense rows). Buttons never
+  touch.
+- Checkboxes stay native. Disabled controls stay recognizable and keep their
+  accessible names.
+- Application surfaces use thin scrollbars in the input-border color on a
+  transparent track. The terminal keeps its own scrollbar.
 
-## Settings layout
+## Window chrome and tabs
 
-The full-area workspace caps at 1440 px. Sidebar width is 168 px below 900 px
-and 192 px above; outer padding is 24 px, growing to 32 px at 1200 px.
-The title and Close share a ruled in-flow header that ends at the same edge as
-the 720 px content boundary.
-These outer breakpoints use viewport media queries; `.application-page-content`
-(the Settings panels slot) is the only size-query container. Every category uses
-the same 720 px content boundary, aligning form rows, theme cards, Extension
-cards and Shortcuts separators. Ordinary fields remain at most 384 px; prose
-stays near 72 characters, except the Shortcuts introduction which shares the
-list edge. Content and navigation scroll
-independently, with wrapped translated labels and diagnostics.
+- Tabs use 12 px text, a 10% neutral fill, and a 40% fill for the selected
+  tab, which also keeps a 1 px underline when transparency removes the fill.
+- The Linux/Windows title bar uses 13 px text and the same hover fill as tabs.
+- Pane dividers are 1 px hairlines that strengthen on hover; the focused pane
+  in a split gets a 1 px accent line on top.
+- Default terminal padding is 12 px on every side.
 
-Container width, not viewport width, controls density: below 560 px labels sit
-above their fields; number inputs cap at 112 px and other fields at 384 px.
-Shortcut rows have action name, binding plus state, and visible actions; below
-600 px the actions wrap onto their own line; at wider sizes the binding column
-is at most 200 px to prevent over-spread rows. This changes layout without
-replacing controls or recording focus. Shortcut rows are at least 48 px tall
-with 6 px vertical padding; the binding is a monospace key chip and the compact
-row actions sit 4 px apart; the recording button gains an explicit border while
-its binding displays the recording prompt. Form pages read as one list: each
-row has 12 px vertical padding and a hairline below it.
+## Settings
 
-File problems and operation results use the same notice presentation. Raw saves
-retain error severity for rejected writes and saved-but-not-applied outcomes;
-returned warnings and newer unsaved edits remain warnings. Config File can save
-through valid configuration symlinks, including relative links, chains and linked
-parent directories: Settings replaces the resolved regular target and preserves
-the links. Notices for dangling or cyclic links and non-regular targets guide the
-user to fix the problem and reload. Conflict checks reduce races with external
-editors but do not eliminate them; replacement does not preserve hard-link
-relationships or all metadata. See the [configuration guide](configuration.md#settings)
-for recovery and write limitations.
+- Header: an 18 px title and Close above a hairline.
+- Navigation is flat: only the selected category gets a fill.
+- Every category shares a 720 px content boundary. The sidebar is 168 px below
+  900 px viewport width and 192 px above; outer padding is 24 px, 32 px from
+  1200 px.
+- Form pages read as one list: each row has 12 px vertical padding and a
+  hairline below it. Labels sit left, fields end at the content edge. Fields
+  are at most 384 px wide (number inputs 112 px). Below 560 px of content
+  width, labels sit above their fields.
+- Shortcut rows are at least 48 px tall: name, binding as a monospace key chip
+  (at most 200 px wide), and compact actions. Only Custom and Unbound are
+  labelled; an unmarked binding is the default. Below 600 px of content width
+  the actions take their own line.
+- Prose stays near 72 characters wide. Content and navigation scroll
+  independently. `.application-page-content` is the only size-query container.
+- Settings is comfortable at 640×480. Below 640 px the sidebar stays while
+  there's room (480–639 px); below 480 px categories become a two-column
+  scrolling grid. Short windows scroll instead of clipping.
+- The theme editor shows each normal ANSI color next to its bright variant and
+  lets a swatch pick the role to edit.
 
-640×480 is the comfortable starting verification target, not a native minimum.
-Below 640 px, the vertical sidebar remains in place while there is room for
-readable content (480–639 px). Below 480 px, categories form a two-column
-scrollable navigation area with rows tall enough for wrapped labels; there is
-no 40 px height clamp that conceals the last category. At 360 px height and
-below, the navigation keeps a 72 px (or 34vh) minimum scrollport while the page
-can scroll; focused tabs must enter both the navigation and viewport. Short
-windows allow additional vertical scrolling. No native bound/minimum changes are tied to
-Settings selection. Large JSON content scrolls within its editor.
+## Auxiliary panel
 
-## Verification
+- 13 px text on a 15% neutral fill, separated from the terminal by a hairline.
+- The header holds the tool name, or a single-line switcher when several tools
+  are open. Long names truncate; the active tool gets a fill.
+- Hide is a chevron toward the panel's edge; Close (×) ends the tool. Both have
+  tooltips.
+- Extension views span the panel width so their own padding lines up with the
+  panel title.
 
-Headless host/Settings tests establish ownership, retained identity and palette
-selection, not visual quality. The real `window-chrome` **settings-only** fixture
-covers seven categories after a native-minimum window-size request, then at eight
-exact renderer viewports: 600×320, 600×480, 640×480, 800×600, 960×320,
-960×640, 1280×800 and 1920×1080. Both Interface Languages and representative
-light/dark palettes retain 252 matrix cases plus four exact panel-container edges
-(559/560/599/600 px at viewport
-height 640). Opening Settings separately preserves native outer bounds and
-minimum before deliberate configuration edits.
+## Overlays
 
-The native-minimum slot records requested minimum and actual outer/content/
-viewport sizes, not a claimed exact 320×200 renderer viewport. It requires a
-compact viewport at most 639 px wide / 360 px high, smaller on both axes than
-the original desktop viewport, and stable across the same category checks.
-The runtime minimum is never lowered; no rounding tolerance or native clamp
-cause is inferred. The fixture finally requests the original outer bounds once,
-without claiming independent physical restoration proof. It checks the clicked category
-against selected/hidden/computed-display state, form and shortcut placement on
-each side of the content breakpoints, and label width/line geometry (not only
-last-control reachability), theme grid/card and Extension card edges, nested
-editor row width, and navigation scroll reachability on focus. The fixture uses
-only synthetic local themes and Extension entries, without catalog network or
-installation. Optional synthetic-only captures use
-`OMXTERM_SETTINGS_EVIDENCE_DIR`. Failures capture a bounded frame and geometry
-before restoring the renderer and requesting the saved outer bounds; the normal
-runner retains them outside its removed profile under `.scratch/native-fixtures/`. Its programmatic focus/input
-is not physical keyboard/layout qualification. Record actual execution and
-limitations separately;
-a built fixture is not a rendered pass.
+About, Command Palette, Local Image Preview and the Snippets preview share one
+recipe:
+
+- `--ui-overlay` surface (follows window transparency), a 1 px
+  `--ui-decoration` hairline, `--ui-radius-overlay`, no shadow.
+- A clear backdrop. While any of them is modal, a fixed 12 px CSS filter
+  softens the other body children; it restores itself on dismissal and is
+  independent of the native `window.blur` preference.
+- Quiet filled buttons; About's links are one line of text links.
+- The Command Palette opens straight to its search field; its title is
+  visually hidden but still names the dialog.
+
+The SSH exit notice uses the same surface as a small floating card.
+
+## Notices
+
+- `setPageNotice(element, { text, severity })` with `info`, `success`,
+  `warning` or `error`. The caller supplies `role="status"` or `role="alert"`.
+  Empty notices hide; updates never take focus.
+- A notice is a tinted block with a 4 px colored start edge and no outer
+  border. Success, warning and error add a centered glyph in a circle, so
+  color is never the only signal. Text keeps the theme foreground.
+- Keep user data literal, never HTML.
+- The startup configuration banner stays a full-width red strip: it means
+  OMXTerm fell back to defaults.
+
+## Wording
+
+- Short, plain sentences. Name what happens, not how it's implemented.
+- No notices for success or idle states.
+- Put limitations, trust details and edge cases in the docs and link to them.
+- Interface Languages ship together: update English and Portuguese in the same
+  change.
+
+Verification for Settings layout lives in the
+[development reference](development.md#settings-layout-matrix).

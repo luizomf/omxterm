@@ -260,6 +260,27 @@ npx vitest run test/integration/window-chrome.test.ts -t 'reloads theme appearan
 npx vitest run test/integration/restty-appearance-rendering.test.ts -t 'renders theme colors and preserves configured geometry'
 ```
 
+#### Settings layout matrix
+
+Headless Settings tests cover ownership, retained identity and palette choice,
+not visual quality. The `settings-only` Window Chrome case checks real layout:
+
+- Seven categories after a native-minimum window request, then at 600×320,
+  600×480, 640×480, 800×600, 960×320, 960×640, 1280×800 and 1920×1080, in both
+  Interface Languages with light and dark palettes, plus the panel-container
+  edges at 559/560/599/600 px (viewport height 640).
+- The minimum slot records the requested minimum and the actual outer, content
+  and viewport sizes. It needs a compact viewport (at most 639×360) smaller than
+  the desktop one; the runtime minimum is never lowered.
+- Each case checks the clicked category's selected/hidden state, form and
+  shortcut placement on both sides of the breakpoints, label geometry, theme
+  and Extension card edges against the 720 px boundary, editor rows, and
+  navigation scroll on focus.
+- It uses only synthetic themes and Extension entries, with no catalog network.
+  `OMXTERM_SETTINGS_EVIDENCE_DIR` saves optional captures; failures keep a
+  bounded frame and geometry under `.scratch/native-fixtures/`. Programmatic
+  focus and input aren't physical keyboard qualification.
+
 #### Settings layout display requirement
 
 The Window Chrome `settings-only` case checks the Settings editor at viewports up

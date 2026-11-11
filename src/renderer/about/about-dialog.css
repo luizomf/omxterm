@@ -1,12 +1,12 @@
 .about-dialog {
   box-sizing: border-box;
-  width: min(26rem, calc(100vw - 24px));
+  width: min(30rem, calc(100vw - 24px));
   max-height: calc(100vh - 24px);
   overflow: auto;
   margin: auto;
   padding: var(--ui-space-6);
   border: 1px solid var(--ui-decoration);
-  border-radius: var(--ui-radius);
+  border-radius: var(--ui-radius-overlay);
   background: var(--ui-overlay);
   color: var(--ui-text);
   color-scheme: var(--ui-color-scheme, dark);
@@ -27,15 +27,29 @@
   margin: var(--ui-space-2) 0;
 }
 .about-dialog .about-name {
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 600;
 }
+/* Links read as one quiet line of text, not a row of buttons. */
 .about-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--ui-space-2);
+  gap: var(--ui-space-1) var(--ui-space-3);
   margin: var(--ui-space-4) 0;
+}
+.about-dialog .about-links button {
+  min-height: auto;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--ui-secondary);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.about-dialog .about-links button:hover {
+  background: transparent;
+  color: var(--ui-text);
 }
 .about-dialog button {
   min-height: 36px;

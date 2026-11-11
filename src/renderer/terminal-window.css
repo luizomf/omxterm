@@ -64,7 +64,7 @@ body {
   outline-offset: 2px;
 }
 .terminal-tab .pane-mirroring.restty-terminal-surface {
-  padding-top: calc(22px + var(--terminal-padding-top, 0px));
+  padding-top: calc(22px + var(--terminal-padding-top, 12px));
 }
 .mirror-typing-marker {
   position: absolute;
@@ -76,7 +76,7 @@ body {
   text-overflow: ellipsis;
   pointer-events: none;
   color: var(--terminal-foreground, #eee);
-  font: 11px/18px var(--ui-font);
+  font: 12px/18px var(--ui-font);
 }
 
 .terminal-exit-notice {
@@ -84,18 +84,29 @@ body {
   z-index: 5;
   right: 12px;
   bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   max-width: calc(100% - 24px);
-  padding: 8px 12px;
-  color: var(--terminal-foreground, #eee);
-  background: var(--terminal-background, #111);
-  border: 1px solid currentColor;
+  padding: 8px 8px 8px 12px;
+  color: var(--ui-text);
+  background: var(--ui-overlay);
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius-overlay);
   font: 13px/1.5 var(--ui-font);
 }
 .terminal-exit-notice button {
+  min-height: 28px;
+  padding: 2px 10px;
   color: inherit;
-  background: transparent;
-  border: 1px solid currentColor;
+  background: var(--ui-raised-tint);
+  border: 0;
+  border-radius: var(--ui-radius);
+  font: inherit;
   cursor: pointer;
+}
+.terminal-exit-notice button:hover {
+  background: var(--ui-hover-tint);
 }
 
 #terminal-window-content {
@@ -227,8 +238,8 @@ body {
   position: absolute;
   z-index: 1;
   top: 0;
-  right: var(--terminal-padding-right, 8px);
-  left: var(--terminal-padding-left, 8px);
+  right: var(--terminal-padding-right, 12px);
+  left: var(--terminal-padding-left, 12px);
   height: 1px;
   background: var(--terminal-pane-accent, var(--terminal-foreground));
   pointer-events: none;
@@ -276,14 +287,14 @@ body {
 
 .restty-terminal-surface {
   display: flex;
-  padding: calc(var(--native-title-inset) + var(--terminal-padding-top, 0px))
-    var(--terminal-padding-right, 8px) var(--terminal-padding-bottom, 8px)
-    var(--terminal-padding-left, 8px);
+  padding: calc(var(--native-title-inset) + var(--terminal-padding-top, 12px))
+    var(--terminal-padding-right, 12px) var(--terminal-padding-bottom, 12px)
+    var(--terminal-padding-left, 12px);
 }
 
 body.tabs-visible .restty-terminal-surface,
 .terminal-tab .restty-terminal-surface {
-  padding-top: var(--terminal-padding-top, 0px);
+  padding-top: var(--terminal-padding-top, 12px);
 }
 
 /* The tab owns the native inset once, including before its first split. */
@@ -425,7 +436,20 @@ body.tabs-visible .terminal-tab {
   flex: none;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
+}
+
+/* Hide collapses the panel toward its edge; Close (×) ends the tool. */
+.auxiliary-header > .auxiliary-hide {
+  font-size: 0;
+}
+.auxiliary-header > .auxiliary-hide::before {
+  content: "›";
+  font: 20px/1 var(--ui-font);
+}
+#terminal-window-content[data-auxiliary-panel-side="left"]
+  .auxiliary-hide::before {
+  content: "‹";
 }
 
 .auxiliary-header h2 {
@@ -441,8 +465,8 @@ body.tabs-visible .terminal-tab {
 
 .auxiliary-header > button {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   font: 22px/1 var(--ui-font);
   color: inherit;
@@ -470,22 +494,30 @@ body.tabs-visible .terminal-tab {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
+  /* Extension views pad themselves; span the panel so their content lines up
+     with the panel title instead of sitting 12 px further in. */
+  margin-inline: -12px;
 }
 
+/* One line at any panel width; long names truncate instead of wrapping. */
 .auxiliary-tools {
   display: flex;
   flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: 4px;
+  flex-wrap: nowrap;
+  gap: 2px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .auxiliary-tools button {
+  flex: 0 1 auto;
+  min-width: 0;
   max-width: 100%;
-  min-height: 28px;
-  padding: 4px 8px;
+  min-height: 24px;
+  padding: 2px 6px;
   overflow: hidden;
   font: inherit;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: inherit;
@@ -607,27 +639,19 @@ body.tabs-visible .auxiliary-separator {
   max-width: min(90vw, 1200px);
   max-height: 90vh;
   margin: auto;
-  padding: 42px 16px 16px;
+  padding: 40px 16px 16px;
   overflow: hidden;
-  color: var(--terminal-foreground, #e6e6e6);
-  background: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 18%
-  );
-  border: 1px solid
-    color-mix(
-      in srgb,
-      var(--terminal-background, #000000),
-      var(--terminal-foreground, #e6e6e6) 45%
-    );
-  border-radius: 10px;
-  box-shadow: 0 18px 60px rgb(0 0 0 / 55%);
+  color: var(--ui-text);
+  background: var(--ui-overlay);
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius-overlay);
   app-region: no-drag;
 }
 
+/* Same recipe as About and the Command Palette: a clear backdrop over the
+   softened underlay, not a dark scrim. */
 .local-image-preview::backdrop {
-  background: rgb(0 0 0 / 72%);
+  background: transparent;
 }
 
 .local-image-preview img {
@@ -646,8 +670,8 @@ body.tabs-visible .auxiliary-separator {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   font: 22px/28px var(--ui-font);
   color: inherit;
@@ -659,11 +683,7 @@ body.tabs-visible .auxiliary-separator {
 
 .local-image-preview-close:hover,
 .local-image-preview-close:focus-visible {
-  background: color-mix(
-    in srgb,
-    var(--terminal-background, #000000),
-    var(--terminal-chrome-neutral) 45%
-  );
+  background: var(--ui-hover-tint);
   outline: none;
 }
 
@@ -683,21 +703,21 @@ body.tabs-visible .auxiliary-separator {
   max-height: calc(100vh - 24px);
   overflow: auto;
   margin: auto;
-  padding: 20px;
-  border: 1px solid currentColor;
-  border-radius: 12px;
-  background: var(--terminal-background, #101218);
-  color: var(--terminal-foreground, #f4f4f4);
-  font: 14px/1.4 var(--ui-font);
+  padding: 24px;
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius-overlay);
+  background: var(--ui-overlay);
+  color: var(--ui-text);
+  font: 14px/1.5 var(--ui-font);
 }
 
 .snippet-preview::backdrop {
-  background: rgb(0 0 0 / 45%);
+  background: transparent;
 }
 
 .snippet-preview h2 {
   margin: 0 0 8px;
-  font-size: 16px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 
@@ -754,13 +774,18 @@ body.tabs-visible .auxiliary-separator {
 }
 
 .snippet-preview button {
-  padding: 6px 10px;
+  min-height: 36px;
+  padding: 7px 12px;
   font: inherit;
   color: inherit;
   cursor: pointer;
-  background: transparent;
-  border: 1px solid currentColor;
-  border-radius: 6px;
+  background: var(--ui-raised-tint);
+  border: 0;
+  border-radius: var(--ui-radius);
+}
+
+.snippet-preview button:hover:not(:disabled) {
+  background: var(--ui-hover-tint);
 }
 
 .snippet-preview button:disabled {

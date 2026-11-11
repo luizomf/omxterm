@@ -5,7 +5,7 @@
   margin: 24px auto auto;
   padding: var(--ui-space-4);
   border: 1px solid var(--ui-decoration);
-  border-radius: var(--ui-radius);
+  border-radius: var(--ui-radius-overlay);
   background: var(--ui-overlay);
   color: var(--ui-text);
   color-scheme: var(--ui-color-scheme, dark);
@@ -68,7 +68,7 @@
 }
 .command-palette kbd {
   color: var(--ui-secondary);
-  font-size: 0.85em;
+  font-size: 12px;
   white-space: nowrap;
 }
 .command-palette [role="status"] {
