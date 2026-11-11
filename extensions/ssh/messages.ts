@@ -3,6 +3,7 @@ import type { AliasIndex } from "./discovery.js";
 
 const english = {
   hint: "Connects with OpenSSH and your SSH config.",
+  learnMore: "Learn more",
   quick: "Quick connect",
   placeholder: "user@host:port or user@[::1]:port",
   connect: "Connect",
@@ -41,6 +42,7 @@ type Messages = {
 };
 const portuguese: Messages = {
   hint: "Conecta com o OpenSSH e a sua configuração SSH.",
+  learnMore: "Saiba mais",
   quick: "Conexão rápida",
   placeholder: "usuário@host:porta ou usuário@[::1]:porta",
   connect: "Conectar",

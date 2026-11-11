@@ -128,8 +128,10 @@ are full pages with an 18 px title.
 
 - Short, plain sentences. Name what happens, not how it's implemented.
 - At most one sentence of guidance per page. Put limitations, trust details
-  and edge cases in the docs and link to them where the surface can open
-  links.
+  and edge cases in the docs and link to them with a `ui-link` "Learn more".
+  Core surfaces open links through main; extension views declare the URL in
+  their manifest and open it by id with `links.open.v1`
+  ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)).
 - No notices for success or idle states. A notice says what happened and,
   if needed, what to do next, in one or two sentences.
 - Buttons are verbs ("Connect", "Save"), not "OK". Sentence case everywhere.

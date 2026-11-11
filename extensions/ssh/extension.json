@@ -1,11 +1,14 @@
 {
   "format": 1,
   "id": "omxterm.ssh",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "name": "SSH Connect",
-  "engines": { "omxterm": ">=0.24.0-dev.8", "api": "0.1.x" },
+  "engines": { "omxterm": ">=0.27.0-dev.0", "api": "0.1.x" },
   "backend": "backend.mjs",
-  "capabilities": ["terminal.openSsh.v1"],
+  "capabilities": ["terminal.openSsh.v1", "links.open.v1"],
+  "links": {
+    "docs": "https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md"
+  },
   "view": {
     "entry": "index.html",
     "action": "omxterm.ssh.open",
