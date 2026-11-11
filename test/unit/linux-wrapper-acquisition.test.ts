@@ -13,6 +13,13 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { verifyLinuxWrapperPropagation } from "../../scripts/linux-packaged-process.mjs";
+import {
+  controlProposalIn,
+  controlWorkerReadyIn,
+  controlWrapperExitedIn,
+  holdDeadlineUntil,
+  liveProcess,
+} from "../fixtures/linux-control-deadline";
 
 // Control external filesystem I/O through the unchanged verifier caller.
 // Native actors, streams, outcomes, recovery and pidfd validation remain real.
@@ -278,12 +285,21 @@ async function setup(mode = "control-streams") {
   vi.stubEnv("OMXTERM_FIXTURE_MODE", mode);
   return { root, launcher };
 }
-async function failed(launcher: string, timeoutMs = 250) {
+// A short control expires only after `ready`, so a slow machine still reaches
+// the state the control is meant to cut off.
+async function failed(
+  launcher: string,
+  timeoutMs = 250,
+  ready?: () => boolean,
+) {
+  const clock = ready ? holdDeadlineUntil(ready, timeoutMs) : undefined;
   let failure: unknown;
   try {
     await verifyLinuxWrapperPropagation(launcher, timeoutMs);
   } catch (cause) {
     failure = cause;
+  } finally {
+    clock?.restore();
   }
   expect(failure).toBeInstanceOf(AggregateError);
   const error = failure as AggregateError;
@@ -342,8 +358,8 @@ function lateHiddenCollection(root: string, timeoutMs: number) {
     );
     const started = deadline - timeoutMs;
     // One bounded scheduling fault, not an ownership/readiness substitute. Keep
-    // this collection hidden until setup +220 ms: the next 50 ms opportunity is
-    // too late for the deliberate 250 ms negative, but not the positive budget.
+    // this collection hidden until setup +220 ms; the positive budget still
+    // acquires the actor at the next 50 ms opportunity.
     const pause = Math.max(0, Math.min(220, started + 220 - Date.now()));
     const before = Date.now();
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, pause);
@@ -709,7 +725,11 @@ describe.skipIf(process.platform !== "linux")(
         });
         return visible;
       };
-      const { error, directory, receipt } = await failed(launcher);
+      const { error, directory, receipt } = await failed(
+        launcher,
+        250,
+        controlWrapperExitedIn(root),
+      );
       const witness = json<{ worker: Identity }>(`${root}/control-ready.json`);
       cleanup.push(witness.worker);
       expect(identity(witness.worker.pid).start).toBe(witness.worker.start);
@@ -803,7 +823,11 @@ describe.skipIf(process.platform !== "linux")(
           else fields[0] = "Z";
           return text.slice(0, end) + fields.join(" ");
         };
-        const { receipt, directory } = await failed(launcher);
+        const { receipt, directory } = await failed(
+          launcher,
+          250,
+          controlWorkerReadyIn(root),
+        );
         const witness = json<{ leader: Identity; worker: Identity }>(
           `${root}/control-ready.json`,
         );
@@ -879,23 +903,21 @@ describe.skipIf(process.platform !== "linux")(
 );
 
 it.skipIf(process.platform !== "linux")(
-  "expires the deliberate 250 ms control after a late hidden collection without releasing the actor, then settles cleanup",
+  "expires the deliberate 250 ms control while the live actor stays hidden, without releasing it, then settles cleanup",
   async () => {
     const { root, launcher } = await setup("normal");
-    let release = false;
-    const hidden = lateHiddenCollection(root, 250);
-    rootOnlyUntilReleased(() => release, hidden.sample);
-    const pending = failed(launcher);
-    try {
-      await until(() => hidden.state.ready);
-      const stem = fs.readFileSync(`${root}/control-path`, "utf8");
-      expect(fs.existsSync(`${stem}.acquired.json`)).toBe(false);
-      release = true;
-    } finally {
-      release = true;
-      await pending;
-    }
-    const { error, directory, receipt } = await pending;
+    // Keep the actor out of every collection until it gives up on its own
+    // 250 ms deadline, and expire the verifier only after it saw the proposal.
+    let actor: number | undefined;
+    rootOnlyUntilReleased(
+      () => actor !== undefined && !liveProcess(actor),
+      () => (actor ??= controlProposalIn(root)?.pid),
+    );
+    const { error, directory, receipt } = await failed(
+      launcher,
+      250,
+      () => actor !== undefined,
+    );
     expect(error.message).toContain(
       "Linux wrapper control acquisition did not complete",
     );
