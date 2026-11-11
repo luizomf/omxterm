@@ -103,7 +103,12 @@ it
       ).toEqual({ ok: true });
       expect(received).toEqual([raw]);
       backend.deactivate();
-      for (const appVersion of ["0.26.0", "0.26.1-dev.0", "0.26.1"])
+      for (const appVersion of [
+        "0.26.0",
+        "0.26.1-dev.0",
+        "0.26.1",
+        "0.27.0-dev.0",
+      ])
         expect(() =>
           checkCompatibility(validated.manifest, {
             appVersion,

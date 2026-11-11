@@ -43,6 +43,10 @@ destination. This does not extend the Terminal Surface's external-link privilege
 or allow renderer-supplied addresses for About. Opening the dialog itself makes
 no network request.
 
+[ADR 0045](0045-open-declared-extension-links-by-id.md) gives extension views
+the same shape: a view names an id, and main maps it to an exact HTTPS URL
+declared in the installed manifest before using this route.
+
 [ADR 0026](0026-preview-explicitly-activated-local-images.md) adds literal
 `file:///` URL and conservative native path-reference recognition to the same
 visible-destination and gesture owner, but keeps their bounded local-file

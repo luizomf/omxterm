@@ -70,10 +70,14 @@ run and separate FULL NSIS check passed. Installed public consumption remains a
 separate checkpoint. Older Windows hosts and Windows x64 retain the built-in view;
 #741 remains open.
 
+[ADR0045: Open declared extension links by id](0045-open-declared-extension-links-by-id.md)
+lets an extension view open one of its manifest's exact HTTPS links through
+main's validated external-link route.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035.
-- Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037.
+- Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045.
 - Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036.

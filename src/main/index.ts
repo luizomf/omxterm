@@ -30,6 +30,7 @@ import { terminalMenuActions } from "./terminal-menu-actions";
 import { extensionInvocationTarget } from "./extension-invocation-target";
 import { usesOptionalSnippets } from "../shared/snippets-mode";
 import { startApplicationExtensions } from "./application-extensions";
+import { requestExternalLink } from "./terminal-ipc-boundaries";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
 import { registerSemanticInputIpc } from "./semantic-input-ipc";
 import { startApplicationLayout } from "./application-layout";
@@ -263,6 +264,22 @@ app
           mirrorTyping: mirrors,
           semanticInput,
           isTrustedSender: terminalIpcRouter.isTrustedSender,
+          // Same validation, OS hand-off and failure dialog as core links.
+          openExternalLink: (url) =>
+            requestExternalLink(
+              url,
+              {
+                openExternalLink: (link) => shell.openExternal(link),
+                onExternalLinkOpenError: nativeDialogs.externalLinkError,
+              },
+              operationalEvents,
+              (boundary, reason) =>
+                operationalEvents?.write({
+                  name: "boundary.rejected",
+                  boundary,
+                  reason,
+                }),
+            ),
           changed: () => rebuildMenu(),
           keybind: (event, input, owner, companionOnly) =>
             deliverExtensionKeybind(

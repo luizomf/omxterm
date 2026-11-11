@@ -376,11 +376,16 @@ Auxiliary Panel; retiring a view does not end core terminal sessions. See
 [ADR 0039](docs/adr/0039-own-packaged-web-content-by-epoch.md) and the
 [hosted-content contract](docs/spec.md#configuration-and-local-state).
 
+**Extension Link** — An exact HTTPS URL an extension declares under an id in its
+manifest (`links.open.v1`). Its view opens it by id, never by URL; main checks
+the installed manifest and opens it through the External Link route. See
+[ADR 0045](docs/adr/0045-open-declared-extension-links-by-id.md).
+
 **Application Network Boundary** — The rules for network requests made by
 OMXTerm itself. Main fetches catalogs and extension archives only after explicit
 user actions, with no telemetry, startup catalog fetches or background updates.
 Terminal programs and extension backends retain their own network access;
-activated terminal links open through the OS. See
+activated terminal links and Extension Links open through the OS. See
 [extension distribution](docs/extension-distribution.md) and the
 [installation guide](docs/extension-installation-foundation.md).
 

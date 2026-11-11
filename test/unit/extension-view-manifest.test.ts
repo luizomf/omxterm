@@ -52,6 +52,35 @@ describe("concrete application-view declaration", () => {
         "invalid-package",
       );
   });
+  it("accepts declared exact HTTPS links only together with links.open.v1", () => {
+    const docs = "https://github.com/luizomf/omxterm/blob/main/docs/usage.md";
+    const linked = {
+      ...manifest,
+      capabilities: ["links.open.v1"],
+      links: { docs, "release-notes": `${docs}#notes` },
+    };
+    expect(parseManifest(linked)).toEqual(linked);
+    for (const invalid of [
+      { ...manifest, links: { docs } },
+      { ...manifest, capabilities: ["links.open.v1"] },
+      { ...linked, links: {} },
+      { ...linked, links: { docs: "http://example.com/" } },
+      { ...linked, links: { docs: "file:///etc/passwd" } },
+      { ...linked, links: { docs: "javascript:alert(1)" } },
+      { ...linked, links: { docs: "https://exa mple.com/" } },
+      { ...linked, links: { docs: `https://example.com/${"a".repeat(2048)}` } },
+      { ...linked, links: { Docs: docs } },
+      { ...linked, links: { "docs.page": docs } },
+      { ...linked, links: [docs] },
+      {
+        ...linked,
+        links: Object.fromEntries(
+          Array.from({ length: 9 }, (_, index) => [`l${index}`, docs]),
+        ),
+      },
+    ])
+      expect(() => parseManifest(invalid)).toThrow("invalid-package");
+  });
   it("requires an exact regular view entry in the captured archive", async () => {
     for (const name of [
       "view/index.html",
