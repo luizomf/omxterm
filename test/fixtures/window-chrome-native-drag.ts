@@ -6,6 +6,10 @@ import { assertWindowsDragGeometry } from "./window-chrome-drag-geometry";
 
 // Real desktop input: sendInputEvent does not exercise Windows nonclient drag
 // hit testing. Never click unless the owned window is actually under the point.
+// Windows refuses focus() to a process without foreground rights (for example
+// when the suite runs inside a terminal and another app is in front). Keep the
+// window above everything during the drag and let the real press activate it,
+// as a user's click would.
 export async function exerciseWindowsHandleDrag(
   window: BrowserWindow,
   useNativeCursor: () => void,
@@ -72,7 +76,6 @@ $original = New-Object Pointer+Point
 if (-not [Pointer]::GetCursorPos([ref]$original)) { throw 'Original pointer read failed' }
 $down = $false
 try {
-  if ([Pointer]::GetForegroundWindow().ToInt64() -ne ${handle}) { throw 'Owned window is not foreground' }
   if (-not [Pointer]::SetCursorPos(${point.x}, ${point.y})) { throw 'Pointer move failed' }
   Start-Sleep -Milliseconds 500
   $point = New-Object Pointer+Point
@@ -86,6 +89,7 @@ try {
     if (-not [Pointer]::SetCursorPos(${point.x} + $i * 5, ${point.y} + $i * 5)) { throw 'Drag pointer move failed' }
   }
   Start-Sleep -Milliseconds 100
+  if ([Pointer]::GetForegroundWindow().ToInt64() -ne ${handle}) { throw 'Native press did not activate the owned window' }
 } finally {
   if ($down) { [Pointer]::mouse_event(4, 0, 0, 0, [UIntPtr]::Zero) }
   if (-not [Pointer]::SetCursorPos($original.X, $original.Y)) { throw 'Pointer restoration failed' }
@@ -93,6 +97,7 @@ try {
 $afterGeometry = [Pointer]::Snapshot([IntPtr]${handle})
 @{before=$beforeGeometry;after=$afterGeometry} | ConvertTo-Json -Depth 4 -Compress
 `;
+  window.setAlwaysOnTop(true);
   const geometry = await new Promise<string>((resolve, reject) => {
     spawnFixtureProcess(() => {
       const child = execFile(
@@ -109,7 +114,7 @@ $afterGeometry = [Pointer]::Snapshot([IntPtr]${handle})
         throw new Error("Native pointer helper did not start");
       return Object.assign(child, { pid: child.pid });
     });
-  });
+  }).finally(() => window.setAlwaysOnTop(false));
   assertWindowsDragGeometry(geometry, handle);
   assertRestored();
   assert.equal(window.getNativeWindowHandle().readBigUInt64LE(), handle);
