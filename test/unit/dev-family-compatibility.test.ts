@@ -2,11 +2,12 @@ import { expect, it } from "vitest";
 import { packageCompatible } from "../../src/installed-packages/compatibility";
 
 // Each development family admits a range only when it admits both stable
-// endpoints. The current 0.26.1 family is covered by patch-dev-compatibility.
+// endpoints. The 0.26.1 family is covered in more depth by patch-dev-compatibility.
 const families = [
   { host: "0.24.1-dev.0", from: "0.24.0", to: "0.24.1" },
   { host: "0.25.0-dev.0", from: "0.24.0", to: "0.25.0" },
   { host: "0.26.0-dev.0", from: "0.25.0", to: "0.26.0" },
+  { host: "0.27.0-dev.0", from: "0.26.0", to: "0.27.0" },
 ];
 const compatible = (range: string, appVersion: string, apiVersion = "0.1.0") =>
   packageCompatible(
@@ -47,7 +48,8 @@ it.each([
   ["0.25.0-rc.0", false],
   ["0.24.2-dev.0", false],
   ["0.25.1-dev.0", false],
-  ["0.27.0-dev.0", false],
+  ["0.27.1-dev.0", false],
+  ["0.28.0-dev.0", false],
   ["invalid", false],
   [`0.25.0-dev.${"9".repeat(300)}`, false],
 ])("limits the bridge to canonical development host %j", (host, expected) => {

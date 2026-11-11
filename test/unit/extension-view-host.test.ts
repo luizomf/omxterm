@@ -1426,6 +1426,34 @@ describe("native extension host through its production resource interface", () =
   });
 });
 
+describe("native extension link requests", () => {
+  it("never forwards a link request from another sender or frame", async () => {
+    const f = await fixture(false);
+    const invoke = vi.fn(async () => ({ ok: true }));
+    const host = createExtensionViewHost({ ...f.options, onRequest: invoke });
+    cleanups.push(() => host.retire());
+    await host.open(opening);
+    const contents = f.views[0]!.webContents;
+    const handler = contents.ipc.handle.mock.calls[0]![1] as (
+      event: unknown,
+      ...args: unknown[]
+    ) => Promise<unknown>;
+    const link = { operation: "links.open.v1", link: "docs" };
+    for (const event of [
+      { sender: f.owner.webContents, senderFrame: contents.mainFrame },
+      { sender: contents, senderFrame: {} },
+    ])
+      await expect(handler(event, link)).rejects.toThrow("unavailable");
+    expect(invoke).not.toHaveBeenCalled();
+    const sender = { sender: contents, senderFrame: contents.mainFrame };
+    await expect(handler(sender, link)).resolves.toEqual({ ok: true });
+    expect(invoke).toHaveBeenCalledOnce();
+    await host.retire();
+    await expect(handler(sender, link)).rejects.toThrow("unavailable");
+    expect(invoke).toHaveBeenCalledOnce();
+  });
+});
+
 describe("native extension visible request admission", () => {
   it("preserves authenticated visible request admission across same-view geometry revisions", async () => {
     const f = await fixture(false);

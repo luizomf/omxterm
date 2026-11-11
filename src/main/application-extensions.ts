@@ -144,6 +144,8 @@ export type ApplicationExtensionsOptions = {
     >,
     "open"
   >;
+  /** Main's validated External Link opener, shared with core surfaces. */
+  openExternalLink?(url: string): void;
   isTrustedSender(event: IpcEvent): boolean;
   changed(): void;
   translator(): Translator;

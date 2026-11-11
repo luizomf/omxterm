@@ -79,7 +79,7 @@ import {
 } from "./surface-font-ipc";
 import { createRendererConfigurationState } from "./terminal-renderer-configuration";
 import { createLocalImageIpcBoundary } from "./local-image-ipc";
-export { isValidExternalLink } from "./external-link";
+export { isValidExternalLink } from "../shared/external-link";
 import {
   acknowledgeTerminalOutput,
   clipboardRequests,

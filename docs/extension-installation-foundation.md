@@ -106,14 +106,20 @@ The manifest is strict and small:
 - An optional, nonempty, unique `capabilities` array may use only the names the
   host knows: `terminal.openSsh.v1`, `terminal.captureLayout.v1`,
   `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`,
-  `terminal.semanticInput.v1`, `terminal.insertPath.v1` and `state.v1`. Unknown
-  names are refused, so an older host rejects a package that needs a newer
-  capability instead of half-activating it. The first six are host operations
-  on the extension's own view; `state.v1` is backend bootstrap support, not
+  `terminal.semanticInput.v1`, `terminal.insertPath.v1`, `links.open.v1` and
+  `state.v1`. Unknown names are refused, so an older host rejects a package
+  that needs a newer capability instead of half-activating it. The first seven
+  are host operations on the extension's own view; `state.v1` is backend bootstrap support, not
   browser filesystem access. A capability grants nothing beyond its contract:
   for example, `terminal.semanticInput.v1` sends text through Protected Paste
   and never exposes the PTY or key injection
   ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+- `links` is required with `links.open.v1` and refused without it: one to
+  eight ids (`^[a-z][a-z0-9-]{0,31}$`), each mapped to an exact `https://` URL
+  of at most 2,048 characters, for example
+  `"links": { "docs": "https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md" }`.
+  The view opens one with `{ "operation": "links.open.v1", "link": "docs" }`
+  ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)).
 - Other contribution fields, platform declarations and publisher metadata are
   rejected. This schema is internal, not a stable author API.
 
@@ -127,8 +133,9 @@ development hosts keep accepting the same archives.
   a plain nonnegative integer, no extra suffix or build metadata) also admits an
   archive whose range accepts **both** the previous stable line and the next one.
   The bridges are `0.24.1-dev.N` (needs `0.24.0` and `0.24.1`), `0.25.0-dev.N`
-  (`0.24.0` and `0.25.0`), `0.26.0-dev.N` (`0.25.0` and `0.26.0`) and
-  `0.26.1-dev.N` (`0.26.0` and `0.26.1`). They do not rewrite the range, and a
+  (`0.24.0` and `0.25.0`), `0.26.0-dev.N` (`0.25.0` and `0.26.0`),
+  `0.26.1-dev.N` (`0.26.0` and `0.26.1`) and `0.27.0-dev.N` (`0.26.0` and
+  `0.27.0`). They do not rewrite the range, and a
   range with an upper bound that excludes the required stable versions gains
   nothing. Other development families need ordinary admission or a reviewed
   decision.

@@ -8,7 +8,7 @@ import {
   type TerminalContextMenuRequest,
   type TerminalSessionId,
 } from "../shared/terminal-contract";
-import { isValidExternalLink } from "./external-link";
+import { isValidExternalLink } from "../shared/external-link";
 import type { OperationalEventLog } from "./operational-events";
 import type { TerminalOutputFlow } from "./terminal-output-flow";
 

@@ -7,6 +7,7 @@ import { valid, validRange } from "semver";
 import { packageCompatible } from "./compatibility.js";
 import { fromBufferPromise, type Entry, type ZipFile } from "yauzl";
 import { isExtensionResource } from "../shared/extensions.js";
+import { isValidExternalLink } from "../shared/external-link.js";
 
 export class PackageError extends Error {
   cleanupFailed = false;
@@ -39,8 +40,11 @@ export type PackageManifest = {
     | "terminal.mirrorTyping.v1"
     | "terminal.semanticInput.v1"
     | "terminal.insertPath.v1"
+    | "links.open.v1"
     | "state.v1"
   )[];
+  /** Exact HTTPS destinations a view may open by id (`links.open.v1`). */
+  links?: Record<string, string>;
   view?: { entry: string; action: string; title: string; context?: "window" };
 };
 export type PackageRuntime = { appVersion: string; apiVersion: string };
@@ -99,8 +103,7 @@ export function parseManifest(value: unknown): PackageManifest {
       "name",
       "engines",
       "backend",
-      ...("view" in value ? ["view"] : []),
-      ...("capabilities" in value ? ["capabilities"] : []),
+      ...["view", "capabilities", "links"].filter((key) => key in value),
     ]) ||
     value.format !== 1 ||
     !validId(value.id) ||
@@ -123,6 +126,7 @@ export function parseManifest(value: unknown): PackageManifest {
   )
     throw new PackageError("invalid-package");
   validateCapabilities(value);
+  validateLinks(value);
   packagePath(value.backend);
   if ("view" in value) validateView(value.view, value.id);
   return value as PackageManifest;
@@ -132,7 +136,7 @@ function validateCapabilities(value: Record<string, unknown>): void {
     "capabilities" in value &&
     (!Array.isArray(value.capabilities) ||
       value.capabilities.length < 1 ||
-      value.capabilities.length > 7 ||
+      value.capabilities.length > 8 ||
       new Set(value.capabilities).size !== value.capabilities.length ||
       value.capabilities.some(
         (capability) =>
@@ -144,9 +148,35 @@ function validateCapabilities(value: Record<string, unknown>): void {
             "terminal.mirrorTyping.v1",
             "terminal.semanticInput.v1",
             "terminal.insertPath.v1",
+            "links.open.v1",
             "state.v1",
           ].includes(capability),
       ))
+  )
+    throw new PackageError("invalid-package");
+}
+
+// A small fixed map of exact HTTPS destinations, present exactly when the
+// package declares `links.open.v1`. Views name an id; they never send a URL.
+function validateLinks(value: Record<string, unknown>): void {
+  const declared =
+    Array.isArray(value.capabilities) &&
+    value.capabilities.includes("links.open.v1");
+  if (!declared && !("links" in value)) return;
+  const links = value.links;
+  if (
+    !declared ||
+    !isRecord(links) ||
+    Object.keys(links).length < 1 ||
+    Object.keys(links).length > 8 ||
+    Object.entries(links).some(
+      ([id, url]) =>
+        !/^[a-z][a-z0-9-]{0,31}$/.test(id) ||
+        typeof url !== "string" ||
+        url.length > 2048 ||
+        !url.startsWith("https://") ||
+        !isValidExternalLink(url),
+    )
   )
     throw new PackageError("invalid-package");
 }

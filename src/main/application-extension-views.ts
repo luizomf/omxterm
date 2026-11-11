@@ -7,6 +7,8 @@ import { ipcMain, type BrowserWindow } from "electron";
 import type { HostedContentDescriptor } from "../shared/extension-view";
 import path from "node:path";
 import { PackageError } from "../installed-packages/installed-packages";
+import type { PackageManifest } from "../installed-packages/archive";
+import type { ExtensionViewRequestContext } from "./extension-view-host";
 import type { Value } from "../extension-runtime/protocol";
 import type {
   createExtensionManager,
@@ -125,6 +127,8 @@ export function applicationViews(
           return layoutRequest(value, signal);
         if (value.operation === "terminal.mirrorTyping.v1")
           return mirrorRequest(value, signal);
+        if (value.operation === "links.open.v1")
+          return openDeclaredLink(pin.manifest, options, value, context);
         if (value.operation === "terminal.openSsh.v1") {
           if (
             !pin.manifest.capabilities?.includes("terminal.openSsh.v1") ||
@@ -257,4 +261,31 @@ export function applicationViews(
     },
     retire: host.retire,
   };
+}
+
+// The view names a link id; the URL comes only from this pinned manifest.
+function openDeclaredLink(
+  manifest: PackageManifest,
+  options: Pick<ApplicationExtensionsOptions, "openExternalLink">,
+  value: Record<string, Value>,
+  context: ExtensionViewRequestContext,
+) {
+  const links = manifest.links;
+  const url =
+    manifest.capabilities?.includes("links.open.v1") &&
+    links &&
+    Object.keys(value).sort().join() === "link,operation" &&
+    typeof value.link === "string" &&
+    Object.hasOwn(links, value.link)
+      ? links[value.link]
+      : undefined;
+  if (
+    !url ||
+    !url.startsWith("https://") ||
+    !options.openExternalLink ||
+    !context.isCurrentVisible()
+  )
+    return Promise.reject(new PackageError("unavailable"));
+  options.openExternalLink(url);
+  return Promise.resolve({ ok: true });
 }

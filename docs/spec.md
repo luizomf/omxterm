@@ -1448,7 +1448,8 @@ paths open a Local Image Preview
   over application mouse reporting and sends no duplicate PTY mouse report;
   other gestures keep ordinary selection or application-mouse routing.
 - For HTTP(S), main parses and validates the exact URL before asking the
-  operating system to open it.
+  operating system to open it. Extension views reach the same route only with
+  a manifest-declared link id (`links.open.v1`).
 - For `file:///`, main requires the literal lowercase scheme, no remote or
   `localhost` authority, no query or fragment, and a platform-absolute local
   path.
@@ -2377,6 +2378,13 @@ and terminal panes are unaffected.
   should be inspected before retrying.
 - Neither capability lets a caller pick a terminal or reach the raw PTY. Older
   hosts reject unknown capabilities.
+- `links.open.v1` opens a docs link from a visible view. The manifest declares
+  up to eight ids, each mapped to one exact `https://` URL; the view sends only
+  an id. Main checks the capability, the id against that installed version's
+  manifest and current visibility, then opens the URL through the
+  [External Link route](#links-and-local-paths). Anything else, including a
+  URL in the request, is refused without reaching the backend
+  ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)).
 - The optional Snippets package (`extensions/snippets`) shares the Snippets UI
   and bounded catalog client; its separate action is withheld from production.
   On the extension targets the Snippets command opens the installed optional
@@ -2574,8 +2582,8 @@ implementation; there is no renderer selector or registry
   below an entry's range keep local or link installation of an older archive
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](extension-installation-foundation.md#archive-contract)
-  let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, or
-  `0.26.1-dev.N` host admit a range only when ordinary semver admits both stable
+  let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
+  `0.26.1-dev.N` or `0.27.0-dev.N` host admit a range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.
 
