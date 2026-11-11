@@ -504,3 +504,50 @@ it("serializes Refresh and ignores a result invalidated by hiding", async () => 
   expect(document.querySelector('[data-alias="stale"]')).toBeNull();
   expect(button.disabled).toBe(false);
 });
+it.each([false, true])(
+  "offers the docs link only when the host opens declared links (offered=%s)",
+  async (offered) => {
+    let language!: (value: "en-US" | "pt-BR") => void;
+    const request = vi.fn<SshBridge["request"]>(async (value) =>
+      (value as { operation: string }).operation === "host.capabilities"
+        ? {
+            capabilities: offered
+              ? ["terminal.openSsh.v1", "links.open.v1"]
+              : ["terminal.openSsh.v1"],
+          }
+        : { ok: true, aliases: [], incomplete: false, reasons: {} },
+    );
+    const page = mountSshPage(document, {
+      onAppearance: () => () => {},
+      onLanguage(listener) {
+        language = listener;
+        listener("en-US");
+        return () => {};
+      },
+      onVisibility(listener) {
+        listener(true);
+        return () => {};
+      },
+      request,
+    });
+    dispose = page.dispose;
+    await page.ready;
+    const hint = document.querySelector<HTMLElement>(".ui-hint")!;
+    const link = hint.querySelector<HTMLButtonElement>("button.ui-link")!;
+    expect(link.hidden).toBe(!offered);
+    expect(link.textContent).toBe("Learn more");
+    language("pt-BR");
+    expect(hint.textContent).toBe(
+      "Conecta com o OpenSSH e a sua configuração SSH. Saiba mais",
+    );
+    expect(hint.contains(link)).toBe(true);
+    if (offered) link.click();
+    const opened = request.mock.calls.filter(
+      ([value]) =>
+        (value as { operation: string }).operation === "links.open.v1",
+    );
+    expect(opened).toEqual(
+      offered ? [[{ operation: "links.open.v1", link: "docs" }]] : [],
+    );
+  },
+);

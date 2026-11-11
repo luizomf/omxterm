@@ -29,9 +29,21 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const unsubscribeAppearance = mountHostedAppearance(document, bridge);
   const window = document.defaultView!;
   const lifetime = new window.AbortController();
-  // One sentence of guidance; details live in docs/ssh-connect.md.
+  // One sentence of guidance; the link opens docs/ssh-connect.md when the host
+  // offers links.open.v1.
   const hint = document.createElement("p");
   hint.className = "ui-hint";
+  const hintText = document.createTextNode("");
+  const learnMore = document.createElement("button");
+  learnMore.type = "button";
+  learnMore.className = "ui-link";
+  learnMore.hidden = true;
+  learnMore.addEventListener("click", () => {
+    void bridge
+      .request({ operation: "links.open.v1", link: "docs" })
+      .catch(() => {});
+  });
+  hint.append(hintText, " ", learnMore);
   const notice = document.createElement("div");
   notice.hidden = true;
   notice.setAttribute("role", "status");
@@ -103,7 +115,8 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   function relabel() {
     const m = sshMessages(language);
     document.documentElement.lang = language;
-    hint.textContent = m.hint;
+    hintText.data = m.hint;
+    learnMore.textContent = m.learnMore;
     quickText.data = m.quick;
     quick.placeholder = m.placeholder;
     connectButton.textContent = m.connect;
@@ -343,6 +356,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
       const reply = await bridge.request({ operation: "host.capabilities" });
       if (disposed) return;
       available = reply.capabilities?.includes("terminal.openSsh.v1") === true;
+      learnMore.hidden = reply.capabilities?.includes("links.open.v1") !== true;
       if (!available) message("unavailable", "warning");
     } catch {
       if (!disposed) message("capabilities", "error");

@@ -14,8 +14,9 @@ It is not an SDK, an SSH broker, a credential vault or a reconnect service.
 
 ## Where the code lives
 
-- `extensions/ssh/extension.json`: id `omxterm.ssh`, version, host range, API and
-  the `terminal.openSsh.v1` capability.
+- `extensions/ssh/extension.json`: id `omxterm.ssh`, version, host range, API,
+  the `terminal.openSsh.v1` and `links.open.v1` capabilities and the `docs`
+  link.
 - `extensions/ssh/page.ts`, `view.ts`, `index.html`, `ssh.css`: the panel page.
   It follows the host theme and interface language (`en-US`, `pt-BR`) through
   read-only subscriptions; strings live in `messages.ts`.
@@ -50,9 +51,15 @@ It is not an SDK, an SSH broker, a credential vault or a reconnect service.
 [ADR 0041](adr/0041-transfer-ssh-launches-to-core.md) records why launches move to
 core.
 
-- The manifest declares `"capabilities": ["terminal.openSsh.v1"]`; unknown
-  declarations are rejected. The view can ask
+- The manifest declares `"capabilities": ["terminal.openSsh.v1", "links.open.v1"]`;
+  unknown declarations are rejected. The view can ask
   `{operation: "host.capabilities"}` for the available selectors.
+- The page's **Learn more** link sends `{operation: "links.open.v1", link: "docs"}`;
+  main opens the manifest's `docs` URL (this project's
+  [user guide](ssh-connect.md))
+  ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)). Source from
+  0.4.0 on needs host `>=0.27.0-dev.0`; the published 0.3.2 archive keeps its
+  range.
 - The request is `{operation: "terminal.openSsh.v1", target: {host, user?, port?}}`
   with exact keys.
 - Main validates the target, then looks for an executable regular `ssh` file
