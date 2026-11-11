@@ -145,6 +145,19 @@ async function files({ archive, directory, fileName, marker }) {
     row.click();
     row.focus();
   })()`);
+  // Watch the notices from before the keypress: the insertion always shows
+  // one (pending, or a refusal), even if it clears between two polls.
+  await view.executeJavaScript(`(() => {
+    const notices = [...document.querySelectorAll('[role=status], [role=alert]')];
+    let answered = false;
+    const observer = new MutationObserver(() => {
+      if (notices.some(n => !n.hidden)) answered = true;
+    });
+    for (const notice of notices)
+      observer.observe(notice, { subtree: true, childList: true, characterData: true, attributes: true });
+    window.__insertionSettled = () =>
+      answered && !notices.some(n => !n.hidden && n.textContent.startsWith('Inserting path'));
+  })()`);
   view.focus();
   view.sendInputEvent({
     type: "keyDown",
@@ -156,11 +169,10 @@ async function files({ archive, directory, fileName, marker }) {
     keyCode: "Enter",
     modifiers: ["shift"],
   });
+  // Settled: the insertion started and its pending status cleared, or it was
+  // refused up front with a notice.
   await until(
-    () =>
-      view.executeJavaScript(
-        "![...document.querySelectorAll('[role=status]')].some(n => !n.hidden && n.textContent.startsWith('Inserting path'))",
-      ),
+    () => view.executeJavaScript("window.__insertionSettled()"),
     "insertion settled",
   );
   const notices = await view.executeJavaScript(
