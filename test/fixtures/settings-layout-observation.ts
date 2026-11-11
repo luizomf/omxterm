@@ -330,7 +330,7 @@ function assertShortcutProportions(
       Math.abs(observation.shortcutIntro.right - panel.box.right) <= 2,
     "Settings shortcut introduction misses the common content boundary",
   );
-  if (observation.contentWidth >= 760)
+  if (observation.contentWidth >= 600)
     for (const row of observation.shortcuts)
       assert.ok(
         row.binding.width <= 202 && row.actions.right <= row.box.right + 1,
@@ -374,7 +374,7 @@ export function assertSettingsLayout(
         "Settings rendered panel has no geometry",
       );
       assert.ok(
-        Math.abs(panel.box.width - Math.min(contentWidth, 880)) <= 2,
+        Math.abs(panel.box.width - Math.min(contentWidth, 720)) <= 2,
         "Settings categories do not share a content boundary",
       );
     }
@@ -444,10 +444,10 @@ export function assertSettingsLayout(
     );
     assert.equal(
       row.columns,
-      contentWidth < 760 ? 2 : 3,
+      contentWidth < 600 ? 2 : 3,
       "Settings shortcuts did not follow content breakpoint",
     );
-    if (contentWidth < 760)
+    if (contentWidth < 600)
       assert.ok(
         row.actions.top >= Math.max(row.name.bottom, row.binding.bottom) &&
           Math.abs(row.actions.left - row.name.left) <= 1,

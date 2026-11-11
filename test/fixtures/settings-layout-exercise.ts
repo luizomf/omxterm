@@ -352,7 +352,7 @@ export async function exerciseSettingsLayout(
     }
     context = { phase: "minimum" };
     assertMinimum();
-    for (const target of [559, 560, 759, 760]) {
+    for (const target of [559, 560, 599, 600]) {
       context = { phase: "breakpoint", contentTarget: target };
       const panelWidth =
         "(() => { const e = document.querySelector('.settings-panels'); const s = getComputedStyle(e); return e.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight); })()";

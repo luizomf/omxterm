@@ -206,7 +206,7 @@ export function renderSettingsPage(
   },
 ): HTMLElement {
   const panel = document.createElement("div");
-  panel.className = "settings-panel";
+  panel.className = "settings-panel settings-form";
   if (page.id === "appearance")
     panel.append(renderSettingsThemes(document, options.bridge, options));
   for (const control of page.controls) {

@@ -82,7 +82,8 @@ these conventions do not establish universal accessibility or compositor parity.
 - **Primary:** explicit JSON Save, foreground fill/background text.
 - **Quiet:** Record/Cancel, Close and ordinary actions, raised fill.
 - **Text:** Unbind/Default, always visible with hover and keyboard focus.
-- Default/Custom/Unbound is visible text, not color alone. Disabled operations
+- Custom/Unbound is visible text, not color alone; an unmarked binding is the
+  default. Disabled operations
   remain recognizable and retain their action-specific accessible names.
 
 ## Settings layout
@@ -90,10 +91,10 @@ these conventions do not establish universal accessibility or compositor parity.
 The full-area workspace caps at 1440 px. Sidebar width is 168 px below 900 px
 and 192 px above; outer padding is 24 px, growing to 32 px at 1200 px.
 The title and Close share a ruled in-flow header that ends at the same edge as
-the 880 px content boundary.
+the 720 px content boundary.
 These outer breakpoints use viewport media queries; `.application-page-content`
 (the Settings panels slot) is the only size-query container. Every category uses
-the same 880 px content boundary, aligning form rows, theme cards, Extension
+the same 720 px content boundary, aligning form rows, theme cards, Extension
 cards and Shortcuts separators. Ordinary fields remain at most 384 px; prose
 stays near 72 characters, except the Shortcuts introduction which shares the
 list edge. Content and navigation scroll
@@ -102,12 +103,13 @@ independently, with wrapped translated labels and diagnostics.
 Container width, not viewport width, controls density: below 560 px labels sit
 above their fields; number inputs cap at 112 px and other fields at 384 px.
 Shortcut rows have action name, binding plus state, and visible actions; below
-760 px the actions wrap onto their own line; at wider sizes the binding column
+600 px the actions wrap onto their own line; at wider sizes the binding column
 is at most 200 px to prevent over-spread rows. This changes layout without
-replacing controls or recording focus. Rows have 16/20 px vertical padding,
-12 px internal row gaps and 8 px between actions; the recording button gains an
-explicit border while its binding displays the recording prompt. Ordinary form
-rows are separated by 24 px.
+replacing controls or recording focus. Shortcut rows are at least 48 px tall
+with 6 px vertical padding; the binding is a monospace key chip and the compact
+row actions sit 4 px apart; the recording button gains an explicit border while
+its binding displays the recording prompt. Form pages read as one list: each
+row has 12 px vertical padding and a hairline below it.
 
 File problems and operation results use the same notice presentation. Raw saves
 retain error severity for rejected writes and saved-but-not-applied outcomes;
@@ -138,7 +140,7 @@ covers seven categories after a native-minimum window-size request, then at eigh
 exact renderer viewports: 600×320, 600×480, 640×480, 800×600, 960×320,
 960×640, 1280×800 and 1920×1080. Both Interface Languages and representative
 light/dark palettes retain 252 matrix cases plus four exact panel-container edges
-(559/560/759/760 px at viewport
+(559/560/599/600 px at viewport
 height 640). Opening Settings separately preserves native outer bounds and
 minimum before deliberate configuration edits.
 

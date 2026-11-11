@@ -194,7 +194,9 @@ export function renderShortcuts(
             ? t("shortcuts.none")
             : (displayAccelerator(keybind.effective, context.platform) ??
               keybind.effective);
-      state.textContent = keybind ? t(STATES[keybind.state]) : "";
+      // A binding without a mark is the default; only changes are labelled.
+      state.textContent =
+        keybind && keybind.state !== "inherit" ? t(STATES[keybind.state]) : "";
       recordButton.textContent = t(
         recording === action ? "common.cancel" : "shortcuts.record",
       );
