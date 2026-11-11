@@ -53,6 +53,9 @@ export function extensionsPage(...args: Parameters<typeof renderExtensions>) {
   };
 }
 
+const TRUST_DOCS =
+  "https://github.com/luizomf/omxterm/blob/main/docs/extension-distribution.md#trust";
+
 const statusWords = [
   "enabled",
   "disabled",
@@ -109,8 +112,22 @@ export function renderExtensions(
   panel.className = "settings-panel extensions-panel";
   const heading = document.createElement("h2");
   bind(heading, () => t("extensions.heading"));
+  // One plain trust sentence; the details live in the docs.
   const explanation = document.createElement("p");
-  bind(explanation, () => t("extensions.explanation"));
+  explanation.className = "extensions-trust";
+  const trust = document.createElement("span");
+  bind(trust, () => `${t("extensions.explanation")} `);
+  explanation.append(trust);
+  const terminal = document.defaultView?.omxterm?.terminal;
+  if (terminal) {
+    const learnMore = createPageButton(document, "text");
+    learnMore.classList.add("extensions-learn-more");
+    bind(learnMore, () => t("extensions.learnMore"));
+    learnMore.addEventListener("click", () =>
+      terminal.openExternalLink(TRUST_DOCS),
+    );
+    explanation.append(learnMore);
+  }
   const controls = document.createElement("div");
   controls.className = "application-page-actions";
   const notice = document.createElement("div");
@@ -182,14 +199,10 @@ export function renderExtensions(
         ? t("extensions.error", {
             reason: term(last.error ?? "outcome-unknown"),
           })
-        : (last.pendingCleanup === undefined
+        : // A successful refresh is quiet; only cleanup problems speak up.
+          (last.pendingCleanup === undefined
             ? t("extensions.cleanupUnchecked")
-            : "") +
-          t(
-            last.pendingCleanup
-              ? "extensions.cleanupPending"
-              : "extensions.refreshed",
-          ),
+            : "") + (last.pendingCleanup ? t("extensions.cleanupPending") : ""),
       severity: !last.ok || last.pendingCleanup ? "warning" : "info",
     });
   }

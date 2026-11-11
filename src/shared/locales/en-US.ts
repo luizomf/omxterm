@@ -237,16 +237,16 @@ export const englishMessages = {
   "settings.page.window": "Window",
   "settings.page.file": "Config File",
   "settings.page.extensions": "Extensions",
-  "extensions.heading": "Local extensions · development preview",
+  "extensions.heading": "Extensions",
   "extensions.snippetsOptional":
-    "Snippets is an optional extension. Use the existing installation controls to install it, or Enable if it is installed but disabled. Opening this page does not install or enable it. Your snippets.yaml catalog stays unchanged. Check the extension status below for availability.",
+    "Snippets is an optional extension; install or enable it below.",
   "extensions.explanation":
-    "Install a separately downloaded .omxext package. Trusted extension code has your user permissions; it is not sandboxed. Installed packages stay dormant until invoked. Platform support depends on the extension; check its requirements before installing.",
+    "Extensions run with your user permissions and aren't sandboxed or signed.",
+  "extensions.learnMore": "Learn more",
   "extensions.install": "Install local .omxext…",
   "extensions.url": "HTTPS archive link",
   "extensions.installLink": "Install from link",
-  "extensions.downloading":
-    "Downloading and validating the archive… Review the trust dialog before installation. Cancel stops work before installation is approved.",
+  "extensions.downloading": "Downloading and checking the archive…",
   "extensions.invalid-url":
     "Use an HTTPS link without credentials or a fragment",
   "extensions.download-failed":
@@ -273,10 +273,6 @@ export const englishMessages = {
     "Catalog unavailable. If extension management is available, you can still install local files and manage installed extensions offline.",
   "extensions.catalogManagementUnavailable":
     "Catalog and installation are unavailable because extension management is unavailable.",
-  "extensions.catalogIdle":
-    "The catalog connects only when you choose Browse or Refresh. No automatic updates.",
-  "extensions.catalogLoaded":
-    "Catalog loaded. Choose a release to verify its bytes and review trust before installation.",
   "extensions.catalogEmpty": "The catalog has no published extensions yet.",
   "extensions.catalogInstalled": "Installed: {version}",
   "extensions.catalogNotInstalled": "Not installed",
@@ -302,8 +298,6 @@ export const englishMessages = {
     "Retained-byte cleanup has not been inspected. ",
   "extensions.cleanupPending":
     "Pending Cleanup: a package is still pinned or cleanup has not settled. Other app instances: unknown.",
-  "extensions.refreshed":
-    "Registry snapshot refreshed. Local activity belongs to this app instance; activity in other instances is unknown.",
   "extensions.state":
     "{id} · generation {generation} · {installed} · local {local} · other instances unknown",
   "extensions.enabled": "enabled",
@@ -370,7 +364,7 @@ export const englishMessages = {
   "settings.transparency": "Background transparency",
   "settings.blur": "Blur desktop background",
   "settings.backgroundHint":
-    "0% is opaque; 100% is transparent. Blur needs transparency and desktop support; Windows needs both controls. Text stays sharp. About and Command Palette blur content behind them independently of desktop blur.",
+    "0% is opaque; blur needs transparency and desktop support.",
   "settings.fontFamily": "Font family",
   "settings.fontSize": "Font size",
   "settings.lineHeight": "Line height",
@@ -464,8 +458,7 @@ export const englishMessages = {
   "settings.applicationError":
     "Unexpected application failure. Some settings may already be active; choose View -> Reload User Configuration again.",
   "settings.page.shortcuts": "Shortcuts",
-  "shortcuts.hint":
-    "These rows are remappable application actions. Default follows the built-in shortcut. Unbound keeps the action in the menu without a key. Application shortcuts take their key before terminal programs see it. Operating-system shortcuts, ordinary text editing, and fixed context-specific gestures, such as Escape to hide the auxiliary panel or arrow keys on its separator, are not listed here.",
+  "shortcuts.hint": "App shortcuts get the key before terminal programs do.",
   "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",
   "shortcuts.promptMac":
     "Press the new shortcut, or Escape to cancel. Option-only letters and top-row digits may work with supported layouts. Some dead keys may not be recordable; input methods or missing native support can also prevent recording. Option as Alt affects terminal input only.",

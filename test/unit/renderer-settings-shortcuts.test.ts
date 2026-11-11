@@ -319,10 +319,7 @@ describe("Shortcuts page", () => {
     }
     expect(
       document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
-    ).toContain("ações remapeáveis do aplicativo");
-    expect(
-      document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
-    ).toContain("não aparecem aqui");
+    ).toBe("Atalhos do app recebem a tecla antes dos programas do terminal.");
     expect(view.cells("quit")).toEqual(["Nenhum", ""]);
     expect(view.cells("toggleAuxiliaryPanel")).toEqual(["Nenhum", ""]);
     expect(view.cells("moveAuxiliaryPanel")).toEqual(["Ctrl+Alt+Shift+P", ""]);
@@ -338,10 +335,7 @@ describe("Shortcuts page", () => {
     language.set("en-US");
     expect(
       document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
-    ).toContain("remappable application actions");
-    expect(
-      document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
-    ).toContain("are not listed here");
+    ).toBe("App shortcuts get the key before terminal programs do.");
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
     expect(view.button("find", "record").textContent).toBe("Record");
   });

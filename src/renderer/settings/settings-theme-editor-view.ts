@@ -166,8 +166,6 @@ function buildThemeEditorView(
     },
   );
   specimen.append(line, selection, cursor, ansiText);
-  const previewHint = document.createElement("p");
-  previewHint.className = "settings-hint";
   const filename = document.createElement("input");
   filename.type = "text";
   filename.spellcheck = false;
@@ -193,11 +191,9 @@ function buildThemeEditorView(
   exportHint.id = "settings-theme-export-hint";
   exportButton.setAttribute("aria-describedby", exportHint.id);
   const use = createPageButton(document);
-  const useHint = document.createElement("p");
-  useHint.className = "settings-hint";
   const useRow = document.createElement("div");
   useRow.className = "settings-theme-use";
-  useRow.append(use, useHint);
+  useRow.append(use);
   const message = document.createElement("p");
   message.setAttribute("role", "status");
   panel.append(
@@ -212,7 +208,6 @@ function buildThemeEditorView(
     specimen,
     samplesHint,
     samples,
-    previewHint,
     appearance,
     copyFields,
     actions,
@@ -247,7 +242,6 @@ function buildThemeEditorView(
     hexField,
     invalid,
     previewTitle,
-    previewHint,
     samplesHint,
     specimen,
     selection,
@@ -258,7 +252,6 @@ function buildThemeEditorView(
     filenameField,
     filenameHint,
     exportHint,
-    useHint,
   };
 }
 
@@ -276,7 +269,6 @@ function paintSpecimen(
   t: Translate,
 ) {
   view.previewTitle.textContent = t("settings.author.preview");
-  view.previewHint.textContent = t("settings.author.previewHint");
   view.samplesHint.textContent = t("settings.author.samplesHint");
   view.selection.textContent = t("settings.author.selection");
   view.cursor.setAttribute("aria-label", t("settings.author.cursor"));
@@ -369,7 +361,6 @@ function paintThemeEditor(
   view.reload.disabled = pending;
   view.exportHint.textContent = t("settings.author.exportHint");
   view.use.textContent = t("settings.author.use");
-  view.useHint.textContent = t("settings.author.useHint");
   view.use.disabled = pending || dirty || !base || !valid;
   paintNotice(view, state.notice, t);
 }

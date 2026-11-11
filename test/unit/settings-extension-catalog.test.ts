@@ -157,7 +157,11 @@ it("clears manager-unavailable status when an explicit shared snapshot succeeds"
   expect(document.body.textContent).not.toContain(
     "Catalog and installation are unavailable",
   );
-  expect(document.body.textContent).toContain("Catalog loaded.");
+  // A loaded catalog speaks through its cards, not a notice.
+  expect(
+    document.querySelector<HTMLElement>(".extension-catalog [role=status]")!
+      .hidden,
+  ).toBe(true);
 });
 it("keeps local controls usable during cold offline loading and failure, with owned cancellation", async () => {
   let finish!: (result: ExtensionsResult) => void;

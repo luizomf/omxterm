@@ -249,16 +249,16 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.page.window": "Janela",
   "settings.page.file": "Arquivo de Configuração",
   "settings.page.extensions": "Extensões",
-  "extensions.heading": "Extensões locais · prévia de desenvolvimento",
+  "extensions.heading": "Extensões",
   "extensions.snippetsOptional":
-    "Snippets é uma extensão opcional. Use os controles de instalação existentes para instalá-la, ou Ativar se estiver instalada, mas desativada. Abrir esta página não instala nem ativa a extensão. Seu catálogo snippets.yaml permanece inalterado. Consulte o estado da extensão abaixo para verificar a disponibilidade.",
+    "Snippets é uma extensão opcional; instale ou ative abaixo.",
   "extensions.explanation":
-    "Instale um pacote .omxext baixado separadamente. O código da extensão tem as permissões do seu usuário; não há isolamento de segurança. Pacotes instalados ficam inativos até serem acionados. As plataformas compatíveis dependem da extensão; confira os requisitos antes de instalá-la.",
+    "Extensões rodam com as suas permissões de usuário e não são isoladas nem assinadas.",
+  "extensions.learnMore": "Saiba mais",
   "extensions.install": "Instalar .omxext local…",
   "extensions.url": "Link HTTPS do arquivo",
   "extensions.installLink": "Instalar pelo link",
-  "extensions.downloading":
-    "Baixando e validando o arquivo… Revise o aviso de confiança antes de instalar. Cancelar interrompe o processo antes da aprovação.",
+  "extensions.downloading": "Baixando e verificando o arquivo…",
   "extensions.invalid-url": "Use um link HTTPS sem credenciais ou fragmento",
   "extensions.download-failed":
     "Falha no download. Verifique o link, a rede e o certificado; páginas de login não são compatíveis",
@@ -284,10 +284,6 @@ export const brazilianPortugueseMessages: Readonly<
     "Catálogo indisponível. Se o gerenciamento de extensões estiver disponível, você ainda pode instalar arquivos locais e gerenciar extensões instaladas offline.",
   "extensions.catalogManagementUnavailable":
     "O catálogo e a instalação estão indisponíveis porque o gerenciamento de extensões está indisponível.",
-  "extensions.catalogIdle":
-    "O catálogo se conecta apenas ao escolher Explorar ou Atualizar. Sem atualizações automáticas.",
-  "extensions.catalogLoaded":
-    "Catálogo carregado. Escolha uma versão para verificar seus bytes e revisar a confiança antes de instalar.",
   "extensions.catalogEmpty": "O catálogo ainda não tem extensões publicadas.",
   "extensions.catalogInstalled": "Instalada: {version}",
   "extensions.catalogNotInstalled": "Não instalada",
@@ -314,8 +310,6 @@ export const brazilianPortugueseMessages: Readonly<
     "A limpeza dos dados retidos ainda não foi verificada. ",
   "extensions.cleanupPending":
     "Limpeza pendente: um pacote ainda está em uso ou a limpeza não terminou. Outras instâncias: desconhecidas.",
-  "extensions.refreshed":
-    "Registro atualizado. A atividade local pertence a esta instância; a atividade em outras instâncias é desconhecida.",
   "extensions.state":
     "{id} · geração {generation} · {installed} · local {local} · outras instâncias desconhecidas",
   "extensions.enabled": "habilitada",
@@ -383,7 +377,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.transparency": "Transparência do fundo",
   "settings.blur": "Desfocar o fundo da área de trabalho",
   "settings.backgroundHint":
-    "0% é opaco; 100% é transparente. O desfoque requer transparência e suporte da área de trabalho; no Windows, ative os dois controles. O texto fica nítido. Sobre o OMXTerm e a Paleta de comandos desfocam o conteúdo ao fundo independentemente do desfoque da área de trabalho.",
+    "0% é opaco; o desfoque precisa de transparência e suporte da área de trabalho.",
   "settings.fontFamily": "Família da fonte",
   "settings.fontSize": "Tamanho da fonte",
   "settings.lineHeight": "Altura da linha",
@@ -479,7 +473,7 @@ export const brazilianPortugueseMessages: Readonly<
     "Falha inesperada ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir -> Recarregar Configuração novamente.",
   "settings.page.shortcuts": "Atalhos",
   "shortcuts.hint":
-    "Estas linhas são ações remapeáveis do aplicativo. Padrão segue o atalho embutido. Sem atalho mantém a ação no menu sem tecla. Atalhos do aplicativo recebem a tecla antes dos programas do terminal. Atalhos do sistema operacional, edição de texto comum e gestos fixos de contexto, como Escape para ocultar o painel auxiliar ou as setas no separador, não aparecem aqui.",
+    "Atalhos do app recebem a tecla antes dos programas do terminal.",
   "shortcuts.prompt": "Pressione o novo atalho, ou Escape para cancelar.",
   "shortcuts.promptMac":
     "Pressione o novo atalho, ou Escape para cancelar. Option sem outros modificadores com letras e dígitos da fileira superior pode funcionar em layouts compatíveis. Algumas teclas mortas podem não ser graváveis; métodos de entrada ou suporte nativo indisponível também podem impedir a gravação. A opção de usar Option como Alt afeta apenas a entrada no terminal.",

@@ -2070,8 +2070,8 @@ Theme editor (inline, retained):
   portable OS-safe leaf name, no path or shell expansion) and never replaces an
   existing file; a successful copy becomes the base for later Saves.
 - Export publishes the captured valid draft through a window-owned native save
-  chooser without replacing anything; the UI explains the choose-a-new-name rule
-  first, even if the platform dialog offers replacement. Export returns no
+  chooser without replacing anything; the UI says first that export never
+  replaces an existing file, even if the platform dialog offers replacement. Export returns no
   writable base, changes no configuration and does not mark edits as saved.
 - Copy and export fail rather than clobber when no-replace linking is
   unavailable. Publication followed by a cleanup failure still counts as saved
@@ -2186,8 +2186,8 @@ Controls:
   percentage readout) and a desktop-blur checkbox. Pointer and keyboard input
   save while adjusting, updating the real windows rather than a preview;
   release adds no extra request and no view timer delays the final choice. A
-  compact hint explains the endpoints and desktop/Windows requirements. Native
-  blur stays distinct from the modal underlay blur.
+  one-line hint says 0% is opaque and blur needs transparency and desktop
+  support. Native blur stays distinct from the modal underlay blur.
 
 Shortcuts page:
 
@@ -2321,7 +2321,10 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   development-host bridges in the
   [archive contract](extension-installation-foundation.md#archive-contract).
   Update, Reinstall and downgrade never activate code automatically. Official
-  means project-maintained, not sandboxed or signed.
+  means project-maintained, not sandboxed or signed. Settings says so in one
+  plain sentence with a link to the
+  [trust notes](extension-distribution.md#trust); idle and loaded catalogs and
+  successful refreshes show no notice.
 - Main registers an early spellcheck policy for owned sessions: every core and
   hosted session disables the unused spellchecker, and Linux and Windows also
   clear the selected dictionary list. No dictionary is acquired or prewarmed,

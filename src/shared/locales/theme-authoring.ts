@@ -12,26 +12,19 @@ export const englishThemeAuthoringMessages = {
   "settings.author.hex": "{color} hex",
   "settings.author.well": "{color} color picker",
   "settings.author.filename": "New filename",
-  "settings.author.filenameHint":
-    "Create a new JSON file in themes/. Existing entries are never replaced.",
+  "settings.author.filenameHint": "Saved as a new file in themes/.",
   "settings.author.copy": "Save copy",
   "settings.author.export": "Export JSON…",
   "settings.author.exportTitle": "Export theme to a new file",
   "settings.author.exportNew": "Export new file",
-  "settings.author.exportHint":
-    "Choose a new filename when exporting. Existing files are never replaced, even if the system dialog offers replacement.",
+  "settings.author.exportHint": "Export never replaces an existing file.",
   "settings.author.jsonFilter": "JSON theme",
   "settings.author.use": "Use saved theme",
-  "settings.author.useHint":
-    "Use saves the theme path and reloads settings. See the Settings status for the result.",
   "settings.author.draftHint":
-    "Draft only until saved. Switching tabs keeps edits; closing Settings discards unsaved edits. Cancel does not undo completed saves.",
+    "Unsaved edits are discarded when Settings closes.",
   "settings.author.copySource": "New copy — no source file will be changed",
-  "settings.author.appearance":
-    "Additional pane and panel appearance values are preserved unchanged.",
-  "settings.author.preview": "Palette preview — draft only",
-  "settings.author.previewHint":
-    "Illustrative text, selection, cursor and ANSI samples, not a live terminal or desktop-effects preview.",
+  "settings.author.appearance": "Extra pane and panel colors are kept.",
+  "settings.author.preview": "Preview",
   "settings.author.samplesHint":
     "Normal on the left, bright on the right. Click a color to edit it.",
   "settings.author.selection": "Selected text",
@@ -107,27 +100,22 @@ export const brazilianPortugueseThemeAuthoringMessages = {
   "settings.author.hex": "Hexadecimal de {color}",
   "settings.author.well": "Seletor de cor: {color}",
   "settings.author.filename": "Novo nome de arquivo",
-  "settings.author.filenameHint":
-    "Crie um JSON novo em themes/. Nenhuma entrada existente será substituída.",
+  "settings.author.filenameHint": "Salvo como um novo arquivo em themes/.",
   "settings.author.copy": "Salvar cópia",
   "settings.author.export": "Exportar JSON…",
   "settings.author.exportTitle": "Exportar tema para um arquivo novo",
   "settings.author.exportNew": "Exportar arquivo novo",
   "settings.author.exportHint":
-    "Escolha um nome novo ao exportar. Arquivos existentes nunca são substituídos, mesmo que a janela do sistema ofereça essa opção.",
+    "Exportar nunca substitui um arquivo existente.",
   "settings.author.jsonFilter": "Tema JSON",
   "settings.author.use": "Usar tema salvo",
-  "settings.author.useHint":
-    "Usar salva o caminho do tema e recarrega as configurações. Veja o resultado no status das Configurações.",
   "settings.author.draftHint":
-    "Rascunho até salvar. Trocar de aba mantém as edições; fechar Configurações descarta o que não foi salvo. Cancelar não desfaz salvamentos concluídos.",
+    "Edições não salvas são descartadas ao fechar as Configurações.",
   "settings.author.copySource":
     "Nova cópia — nenhum arquivo de origem será alterado",
   "settings.author.appearance":
-    "Os valores adicionais de aparência de painéis e divisórias são preservados sem alterações.",
-  "settings.author.preview": "Prévia da paleta — apenas rascunho",
-  "settings.author.previewHint":
-    "Amostras ilustrativas de texto, seleção, cursor e cores ANSI, não um terminal ativo nem uma prévia de efeitos da área de trabalho.",
+    "Cores extras de painéis e divisórias são mantidas.",
+  "settings.author.preview": "Prévia",
   "settings.author.samplesHint":
     "Normal à esquerda, clara à direita. Clique em uma cor para editá-la.",
   "settings.author.selection": "Texto selecionado",
