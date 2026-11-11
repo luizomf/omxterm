@@ -7,10 +7,10 @@ not install SSH or store your keys.
 
 ## Availability
 
-The official extension catalog offers SSH Connect 0.3.1 on **Linux with ARM64
+The official extension catalog offers SSH Connect 0.3.2 on **Linux with ARM64
 (64-bit Arm) processors** and **Macs with Apple silicon**. This is a preview; other operating
 systems and processor types are not qualified. The documented checks used OMXTerm
-0.24.0. An installer compatibility check does not mean every app version or
+0.26.0. An installer compatibility check does not mean every app version or
 connection setup has been tested. See the [developer notes](ssh-connect-development.md)
 for how it is built and its current limits.
 
@@ -18,7 +18,7 @@ for how it is built and its current limits.
 
 1. In OMXTerm, open **Settings → Extensions** and choose **Browse official
    extensions**.
-2. Find **SSH Connect**. Check that the card offers version **0.3.1**, then
+2. Find **SSH Connect**. Check that the card offers version **0.3.2**, then
    choose **Install** and review the trust warning. Extensions run with your
    account's permissions; the warning is not a sandbox.
 3. Return to a terminal tab (open one if needed); the panel is suspended while

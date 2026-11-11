@@ -5,55 +5,55 @@
       "id": "omxterm.files",
       "name": "Files — ARM64 preview",
       "description": "Browse your files and folders: create, rename, move, trash and delete them, and insert their paths into the terminal.",
-      "version": "0.8.0",
+      "version": "0.8.1",
       "engines": {
         "omxterm": ">=0.26.0",
         "api": "0.1.x"
       },
       "targets": ["darwin-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.8.0/files-0.8.0.omxext",
-        "sha256": "88f3deb79e3b574a6ae4aa71d56ff74eb17fdd6c25b6123b30a519a4cc827563",
-        "bytes": 24682
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.8.1/files-0.8.1.omxext",
+        "sha256": "649e3b1b2419a67131dd7e11c94b79cb538fe82ffc8e6134440e9028865a644b",
+        "bytes": 25707
       },
-      "sourceCommit": "bf2f0678b748043baa19d514889159bc3c632223",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.8.0"
+      "sourceCommit": "56162970a92760da31b141d1e74af82cfff5d961",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.8.1"
     },
     {
       "id": "omxterm.ssh",
       "name": "SSH Connect",
       "description": "Pick a server from your SSH config, or type an address, and connect in a new terminal tab.",
-      "version": "0.3.1",
+      "version": "0.3.2",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64", "darwin-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.1/ssh-0.3.1.omxext",
-        "sha256": "be7589f44a65c8ab763b85e78863deeb487094bd33a936923988fe41bd846b0b",
-        "bytes": 11606
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.2/ssh-0.3.2.omxext",
+        "sha256": "f1fad689f8204ce69fb62d126d406c837a7ac4ac88471418abe5b5346d0f3095",
+        "bytes": 12595
       },
-      "sourceCommit": "8717d47327eeab14f522b1b2a448216860d0923d",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.1"
+      "sourceCommit": "56162970a92760da31b141d1e74af82cfff5d961",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.2"
     },
     {
       "id": "omxterm.snippets",
       "name": "Snippets — Linux, macOS and Windows ARM64 preview",
       "description": "Search your saved text snippets, preview the exact text, then insert it into the terminal or run it.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.1/snippets-0.1.1.omxext",
-        "sha256": "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b",
-        "bytes": 82635
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.2/snippets-0.1.2.omxext",
+        "sha256": "03a3d2eabf44809e5a840c808da5d4456f28e7ab726375c32312358319a3ab45",
+        "bytes": 82921
       },
-      "sourceCommit": "12c54a09060364982de4e9833d112167a4e21d26",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1"
+      "sourceCommit": "56162970a92760da31b141d1e74af82cfff5d961",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.2"
     }
   ]
 }

@@ -182,15 +182,15 @@ trust prompt:
    Update on the Snippets card. Browsing is explicit; opening Settings does not
    fetch the catalog.
 2. **Settings → Extensions → Install local .omxext…** with an archive
-   downloaded from the [release](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.1).
+   downloaded from the [release](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.2).
    This works offline once downloaded. Verify it first:
 
    ```sh
-   shasum -a 256 -c snippets-0.1.1.omxext.sha256      # macOS
-   sha256sum --check snippets-0.1.1.omxext.sha256     # Linux
+   shasum -a 256 -c snippets-0.1.2.omxext.sha256      # macOS
+   sha256sum --check snippets-0.1.2.omxext.sha256     # Linux
    ```
 
-   On Windows, compare `Get-FileHash .\snippets-0.1.1.omxext -Algorithm SHA256`
+   On Windows, compare `Get-FileHash .\snippets-0.1.2.omxext -Algorithm SHA256`
    with the sidecar. A checksum identifies bytes, not a verified publisher.
 
 Approving the install enables the package but does not start its backend.
