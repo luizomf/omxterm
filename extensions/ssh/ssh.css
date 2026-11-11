@@ -1,10 +1,6 @@
 @import "../shared/appearance.css";
 
-.ssh-subtitle {
-  margin: 0 0 12px;
-  color: var(--ui-secondary);
-  font-size: 11px;
-}
+/* Layout only; components come from the design system (ui.css). */
 .quick-connect,
 .alias-toolbar {
   display: flex;
@@ -13,7 +9,7 @@
 }
 label {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   flex: 1;
   min-width: 0;
 }
@@ -22,35 +18,16 @@ input {
 }
 .quick-connect input,
 .alias-row {
-  font-family: ui-monospace, monospace;
-}
-.aliases {
-  display: grid;
-  gap: 3px;
+  font-family: var(--ui-font-mono);
 }
 .alias-row {
-  text-align: left;
   overflow-wrap: anywhere;
-  border-color: transparent;
-  background: transparent;
-}
-.alias-row.selected {
-  box-shadow: inset 2px 0 var(--ui-text);
-  background: var(--tool-hover);
 }
 .index-warning {
-  color: var(--ui-secondary);
   overflow-wrap: anywhere;
 }
 .index-warning:empty {
   display: none;
-}
-.ssh-explanation {
-  color: var(--ui-secondary);
-  font-size: 12px;
-  border-top: 1px solid var(--ui-decoration);
-  padding-top: 12px;
-  margin-top: 16px;
 }
 @media (max-width: 420px) {
   .quick-connect,

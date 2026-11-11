@@ -8,24 +8,25 @@ import type { StateDocument } from "./document.js";
 
 export function createRestorationPage(document: Document) {
   const title = document.createElement("div");
-  const eyebrow = document.createElement("p");
-  eyebrow.textContent = "ONE WINDOW · FRESH SHELLS · LINUX ARM64 PREVIEW";
-  const heading = document.createElement("h1");
+  const heading = document.createElement("h2");
   heading.textContent = "Saved Layout";
-  title.append(eyebrow, heading);
+  const eyebrow = document.createElement("p");
+  eyebrow.className = "ui-meta";
+  eyebrow.textContent = "One window · fresh shells · Linux ARM64 preview";
+  title.append(heading, eyebrow);
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
   notice.setAttribute("aria-live", "polite");
   const content = document.createElement("section");
   const introduction = document.createElement("p");
-  introduction.className = "introduction";
+  introduction.className = "introduction ui-hint";
   introduction.textContent =
     "Save this window's terminal tabs, splits and available local folders. Opening starts new shells in a new window; current work stays open.";
   const summary = document.createElement("section");
-  summary.className = "snapshot";
+  summary.className = "snapshot ui-card";
   summary.setAttribute("aria-label", "Saved snapshot");
   const actions = document.createElement("div");
-  actions.className = "layout-actions";
+  actions.className = "layout-actions ui-actions";
   const buttons = {
     open: createPageButton(document, "primary"),
     save: createPageButton(document),
@@ -43,7 +44,7 @@ export function createRestorationPage(document: Document) {
     actions.append(button);
   }
   const explanation = document.createElement("section");
-  explanation.className = "layout-explanation";
+  explanation.className = "layout-explanation ui-hint";
   const explanationHeading = document.createElement("h2");
   explanationHeading.textContent = "A snapshot, not a running session";
   explanation.append(explanationHeading);

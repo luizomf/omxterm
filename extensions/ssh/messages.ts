@@ -2,7 +2,7 @@ import type { SupportedLanguage } from "../../src/shared/i18n.js";
 import type { AliasIndex } from "./discovery.js";
 
 const english = {
-  subtitle: "OpenSSH connections",
+  hint: "Connects with OpenSSH and your SSH config.",
   quick: "Quick connect",
   placeholder: "user@host:port or user@[::1]:port",
   connect: "Connect",
@@ -10,8 +10,6 @@ const english = {
   search: "Search aliases",
   filter: "Filter the listed aliases",
   refresh: "Refresh",
-  explanation:
-    "Uses your current OpenSSH configuration; configured commands and forwards still apply. OpenSSH handles authentication and may update known_hosts. This incomplete, read-only alias index does not evaluate Match conditions. Use quick connect for omitted aliases. ASCII names only; IPv6 requires brackets and does not support zone identifiers.",
   opening: "Opening terminal…",
   accepted: "Terminal accepted. Authentication continues in the terminal.",
   missing:
@@ -42,7 +40,7 @@ type Messages = {
     : (typeof english)[K];
 };
 const portuguese: Messages = {
-  subtitle: "Conexões OpenSSH",
+  hint: "Conecta com o OpenSSH e a sua configuração SSH.",
   quick: "Conexão rápida",
   placeholder: "usuário@host:porta ou usuário@[::1]:porta",
   connect: "Conectar",
@@ -50,8 +48,6 @@ const portuguese: Messages = {
   search: "Buscar aliases",
   filter: "Filtrar os aliases listados",
   refresh: "Atualizar",
-  explanation:
-    "Usa sua configuração atual do OpenSSH; comandos e encaminhamentos configurados continuam ativos. O OpenSSH gerencia a autenticação e pode atualizar known_hosts. Este índice incompleto e somente leitura não avalia condições Match. Use a conexão rápida para aliases omitidos. Somente nomes ASCII; IPv6 exige colchetes e não aceita identificadores de zona.",
   opening: "Abrindo terminal…",
   accepted: "Terminal aceito. A autenticação continua no terminal.",
   missing:

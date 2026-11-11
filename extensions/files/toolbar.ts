@@ -1,5 +1,3 @@
-import { createPageButton } from "../../src/renderer/application-page.js";
-
 type Icon = "home" | "up" | "refresh" | "new-folder" | "actions" | "go";
 type Hint = {
   wrapper: HTMLElement;
@@ -135,8 +133,9 @@ export function createFilesToolbar(document: Document) {
   function create(icon: Icon): Hint {
     const wrapper = document.createElement("span");
     wrapper.className = "toolbar-control";
-    const button = createPageButton(document);
-    button.classList.add("toolbar-button");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "toolbar-button ui-icon-button";
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
     svg.setAttribute("class", `toolbar-icon-${icon}`);
@@ -152,7 +151,7 @@ export function createFilesToolbar(document: Document) {
     }
     button.append(svg);
     const tooltip = document.createElement("span");
-    tooltip.className = "toolbar-tooltip";
+    tooltip.className = "toolbar-tooltip ui-popover";
     tooltip.id = `files-toolbar-${icon}-tooltip`;
     tooltip.setAttribute("role", "tooltip");
     tooltip.hidden = true;

@@ -46,6 +46,11 @@ Choose one connection method:
   `alice@[2001:db8::1]:2222`. Replace these placeholders with your own configured
   alias, account, server address and port; they are not real connection details.
 
+The alias list is read-only and may be incomplete: it doesn't evaluate `Match`
+conditions and skips entries it can't read. Use Quick connect for any alias it
+leaves out. Names must be ASCII; IPv6 addresses need brackets and can't carry a
+zone identifier.
+
 OMXTerm opens a new terminal tab before the connection necessarily succeeds.
 OpenSSH may use an existing key or SSH agent, or ask for the remote account's
 password or your private key's passphrase in that terminal. Password/passphrase

@@ -100,10 +100,11 @@ export function mountFilesPage(
   const location = document.createElement("form");
   location.className = "location";
   const address = document.createElement("input");
+  address.className = "page-control";
   label(address, (m) => m.directory, "aria-label");
   address.spellcheck = false;
   const filter = document.createElement("input");
-  filter.className = "entry-filter";
+  filter.className = "entry-filter page-control";
   filter.type = "text";
   filter.spellcheck = false;
   const updateFilterLabel = () => {
@@ -119,20 +120,20 @@ export function mountFilesPage(
   label(entries, (m) => m.localFiles, "aria-label");
   entries.tabIndex = 0;
   const status = document.createElement("p");
-  status.className = "summary";
+  status.className = "summary ui-meta";
   const dragFeedback = document.createElement("p");
-  dragFeedback.className = "drag-feedback";
+  dragFeedback.className = "drag-feedback ui-popover";
   dragFeedback.hidden = true;
   dragFeedback.setAttribute("role", "status");
   const filterHint = document.createElement("p");
-  filterHint.className = "filter-hint";
+  filterHint.className = "filter-hint ui-meta";
   filterHint.setAttribute("aria-live", "polite");
   filterHint.hidden = true;
   const editor = document.createElement("form");
-  editor.className = "operation-editor";
+  editor.className = "operation-editor ui-popover";
   editor.hidden = true;
   const menu = document.createElement("div");
-  menu.className = "file-menu";
+  menu.className = "file-menu ui-popover";
   menu.setAttribute("role", "menu");
   label(menu, (m) => m.fileActions, "aria-label");
   menu.hidden = true;
@@ -321,7 +322,7 @@ export function mountFilesPage(
     focusPath ??= selected?.path ?? state.rows[0]?.path;
     for (const [index, item] of state.rows.entries()) {
       const row = document.createElement("div");
-      row.className = "file-row";
+      row.className = "file-row ui-row";
       row.draggable = true;
       row.dataset.path = item.path;
       row.setAttribute("role", "treeitem");
@@ -341,7 +342,7 @@ export function mountFilesPage(
       name.className = "file-name";
       name.textContent = item.name;
       const detail = document.createElement("span");
-      detail.className = "kind";
+      detail.className = "kind ui-meta";
       label(detail, (m) =>
         item.kind === "directory"
           ? m.folder
@@ -417,7 +418,7 @@ export function mountFilesPage(
           filteredChildren)
       ) {
         const hint = document.createElement("div");
-        hint.className = "tree-hint";
+        hint.className = "tree-hint ui-meta";
         label(hint, (m) =>
           item.loading
             ? m.readingFolder
@@ -673,6 +674,7 @@ export function mountFilesPage(
     label(captionElement, caption);
     text.append(captionElement);
     const input = document.createElement("input");
+    input.className = "page-control";
     input.value = initial;
     input.required = true;
     input.spellcheck = false;
@@ -1087,7 +1089,7 @@ export function mountFilesPage(
       if (action.shortcut && action.checked === undefined) {
         const caption = document.createElement("span");
         const shortcut = document.createElement("span");
-        shortcut.className = "menu-shortcut";
+        shortcut.className = "menu-shortcut ui-meta";
         shortcut.id = `files-menu-shortcut-${menu.childElementCount}`;
         labels.delete(item);
         item.classList.add("menu-with-shortcut");
@@ -1117,7 +1119,7 @@ export function mountFilesPage(
         item.replaceChildren(indicator, caption);
         if (action.shortcut) {
           const shortcut = document.createElement("span");
-          shortcut.className = "menu-shortcut";
+          shortcut.className = "menu-shortcut ui-meta";
           shortcut.id = "files-dotfiles-shortcut";
           label(shortcut, (m) => m.shortcut(action.shortcut!.display));
           item.setAttribute("aria-describedby", shortcut.id);
