@@ -5,37 +5,37 @@
       "id": "omxterm.files",
       "name": "Files — ARM64 preview",
       "description": "Browse your files and folders: create, rename, move, trash and delete them, and insert their paths into the terminal.",
-      "version": "0.8.1",
+      "version": "0.8.2",
       "engines": {
         "omxterm": ">=0.26.0",
         "api": "0.1.x"
       },
       "targets": ["darwin-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.8.1/files-0.8.1.omxext",
-        "sha256": "649e3b1b2419a67131dd7e11c94b79cb538fe82ffc8e6134440e9028865a644b",
-        "bytes": 25707
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.8.2/files-0.8.2.omxext",
+        "sha256": "bb4c496763252d7614c122de532c7954ce0373d640c852ac6d17c583950f1196",
+        "bytes": 25680
       },
-      "sourceCommit": "56162970a92760da31b141d1e74af82cfff5d961",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.8.1"
+      "sourceCommit": "5eef4477ea01afeb25ada9402a54542cf2a92a34",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.8.2"
     },
     {
       "id": "omxterm.ssh",
       "name": "SSH Connect",
       "description": "Pick a server from your SSH config, or type an address, and connect in a new terminal tab.",
-      "version": "0.3.2",
+      "version": "0.4.0",
       "engines": {
-        "omxterm": ">=0.24.0-dev.8",
+        "omxterm": ">=0.27.0-dev.0",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64", "darwin-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.3.2/ssh-0.3.2.omxext",
-        "sha256": "f1fad689f8204ce69fb62d126d406c837a7ac4ac88471418abe5b5346d0f3095",
-        "bytes": 12595
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.4.0/ssh-0.4.0.omxext",
+        "sha256": "57e2a8d8ce28632a16519598bef5078c7d5c664866ffe0847aa2e31a3a2ff081",
+        "bytes": 12783
       },
-      "sourceCommit": "56162970a92760da31b141d1e74af82cfff5d961",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.2"
+      "sourceCommit": "5eef4477ea01afeb25ada9402a54542cf2a92a34",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.4.0"
     },
     {
       "id": "omxterm.snippets",

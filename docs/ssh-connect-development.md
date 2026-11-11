@@ -162,8 +162,9 @@ install the newer archive themselves.
 
 ## Current limits
 
-- The official catalogs offer SSH Connect 0.3.2 for Linux ARM64 and macOS ARM64
-  only. Windows and x64 aren't offered or tested.
+- The official catalogs offer SSH Connect 0.4.0 (host `>=0.27.0-dev.0`) for
+  Linux ARM64 and macOS ARM64 only; 0.26 hosts lose the catalog offer and can
+  install 0.3.2 by link. Windows and x64 aren't offered or tested.
 - OpenSSH owns authentication, host-key prompts and network access. The user's
   OpenSSH configuration still applies, including configured commands, forwards,
   agent access and sockets, and connecting can write `known_hosts`.

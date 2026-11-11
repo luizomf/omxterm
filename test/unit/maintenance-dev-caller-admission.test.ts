@@ -43,14 +43,14 @@ const runtime = { appVersion, apiVersion: "0.1.0" };
 // Verbatim extension.json bytes extracted from the published archives.
 const releases = [
   {
-    name: "Files 0.8.1",
+    name: "Files 0.8.2",
     id: "omxterm.files",
-    manifest: `{"format":1,"id":"omxterm.files","version":"0.8.1","name":"Files — ARM64 preview","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
+    manifest: `{"format":1,"id":"omxterm.files","version":"0.8.2","name":"Files — ARM64 preview","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
   },
   {
-    name: "SSH 0.3.2",
+    name: "SSH 0.4.0",
     id: "omxterm.ssh",
-    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.3.2","name":"SSH Connect","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1"],"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
+    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.4.0","name":"SSH Connect","engines":{"omxterm":">=0.27.0-dev.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1","links.open.v1"],"links":{"docs":"https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md"},"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
   },
   {
     name: "Snippets 0.1.2",
@@ -409,8 +409,8 @@ it("does not revive an old pin after disable, enable or same-byte reinstall", as
 });
 
 it("opens an existing stable-host installation at the current runtime without reinstalling", async () => {
-  // SSH 0.3.2 also admits the 0.24.0 host; Files 0.8 does not.
-  const fixture = releases[1];
+  // Snippets 0.1.2 also admits the 0.24.0 host; Files 0.8 and SSH 0.4 do not.
+  const fixture = releases[2];
   const bytes = archive(fixture.manifest);
   // This historical host only seeds the pre-upgrade store; the open below uses
   // the real current runtime, not a version substitute for admission.
