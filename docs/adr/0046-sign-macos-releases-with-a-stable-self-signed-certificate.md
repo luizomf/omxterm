@@ -38,8 +38,9 @@ permissions across updates.
   secret enters the repository. The fingerprint is public.
 - `package:verify` accepts either seal. `package:verify -- --release` requires
   the release DR, and the macOS release procedure uses it.
-- Nothing else changes for users: the certificate is not Apple-issued and the
-  app is not notarized, so Gatekeeper's first-launch review stays as it is.
+- The certificate is not Apple-issued and the app is not notarized, so
+  Gatekeeper's first-launch review is expected to stay as it is. That hasn't
+  been checked yet with a quarantined download.
 
 ## Consequences
 

@@ -47,10 +47,10 @@ Apple has not verified this app. You must allow OMXTerm once.
 Later, macOS may also ask before OMXTerm opens protected folders such as
 Documents or Downloads.
 
-Releases after 0.27.0 are signed with OMXTerm's own certificate, so
-permissions you grant (folders, Accessibility, Input Monitoring, Automation)
-stay granted when you update. The first time you update from 0.27.0 or older,
-macOS asks once more; after that, updates keep them.
+Releases after 0.27.0 are signed with OMXTerm's own certificate, so privacy
+permissions you grant, such as folder access, stay granted when you update. The
+first time you update from 0.27.0 or older, macOS asks once more; after that,
+updates keep them. Local Network permission is handled separately (see below).
 
 <details>
 <summary>Optional: verify the download</summary>
@@ -222,8 +222,7 @@ local address times out, but works with `sudo` or over SSH.
 This isn't OMXTerm, and it happens with other terminals too. Since macOS 15,
 apps need **Local Network** permission, and macOS checks it against the app
 that started the tmux server. Once that app is gone or replaced, the server is
-left without it. Because OMXTerm isn't signed with an Apple developer ID, each
-update counts as a new app, so this shows up after every update.
+left without it, so this can show up after any update.
 
 To fix it, restart the tmux server from the new OMXTerm: save your sessions if
 you use a tool for that, run `tmux kill-server`, then start tmux again.

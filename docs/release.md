@@ -317,7 +317,7 @@ Once every target of a version is published, publish one complete release so
 
 Write release notes in plain words for people who use the terminal: new features, fixes, configuration changes, SHA-256 checksums, the frozen cut SHA, and first-launch notes:
 
-- **macOS Gatekeeper:** OMXTerm uses an ad-hoc signature without Apple Developer ID signing or notarization. Verify the SHA-256 checksum and use **System Settings → Privacy & Security → Open Anyway** on first launch.
+- **macOS Gatekeeper:** OMXTerm is signed with its own certificate, not an Apple Developer ID, and is not notarized. Verify the SHA-256 checksum and use **System Settings → Privacy & Security → Open Anyway** on first launch.
 - **Windows SmartScreen:** OMXTerm for Windows ARM64 and x64 is unsigned. Verify the SHA-256 checksum and choose **More info → Run anyway** on first launch.
 
 Mark x64 releases as build-only and untested on a desktop. Record accepted test failures and missing coverage with a short reason.
