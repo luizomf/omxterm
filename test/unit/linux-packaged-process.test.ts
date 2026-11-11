@@ -17,6 +17,10 @@ import {
   verifyLinuxWrapperPropagation,
 } from "../../scripts/linux-packaged-process.mjs";
 import { verifyPackagedStartupWithCleanup } from "../../scripts/verify-packaged-app.mjs";
+import {
+  controlReachedIn,
+  holdDeadlineUntil,
+} from "../fixtures/linux-control-deadline";
 
 const fixture = path.resolve("test/fixtures/linux-packaged-process.mjs");
 const roots: string[] = [];
@@ -71,7 +75,10 @@ async function pythonFault(root: string, mutation: string) {
   vi.stubEnv("PATH", tools);
   return python;
 }
-async function wrapperFailure(launcher: string) {
+// Expire the 250 ms control only after the fixture reached the state it cuts
+// off, not while a busy machine is still starting its processes.
+async function wrapperFailure(launcher: string, root: string, mode = "") {
+  const clock = holdDeadlineUntil(controlReachedIn(root, mode), 250);
   try {
     await verifyLinuxWrapperPropagation(launcher, 250);
   } catch (cause) {
@@ -86,6 +93,8 @@ async function wrapperFailure(launcher: string) {
       { recursive: true },
     );
     return { error, directory };
+  } finally {
+    clock.restore();
   }
   throw new Error("Expected a failing wrapper control");
 }
@@ -347,7 +356,7 @@ describe.skipIf(process.platform !== "linux")(
       "acquires the ready actor before wrapper release and retains timeout diagnostics after %s recovery",
       async (mode) => {
         const { root, launcher } = await setup(true, mode);
-        const { error, directory } = await wrapperFailure(launcher);
+        const { error, directory } = await wrapperFailure(launcher, root, mode);
         const witness = JSON.parse(
           await readFile(path.join(root, "control-ready.json"), "utf8"),
         ) as { leader: ProcessIdentity; worker: ProcessIdentity };
@@ -394,7 +403,7 @@ describe.skipIf(process.platform !== "linux")(
       vi.stubEnv("PATH", `${path.join(root, "tools")}:${originalPath}`);
       let targets: ProcessIdentity[] = [];
       try {
-        const { error, directory } = await wrapperFailure(launcher);
+        const { error, directory } = await wrapperFailure(launcher, root);
         expect(error.message).toContain("control did not settle");
         expect(error.message).toContain("synthetic recovery denial");
         const result = JSON.parse(
@@ -430,8 +439,8 @@ describe.skipIf(process.platform !== "linux")(
     });
 
     it("keeps the primary wrapper timeout when recording its post-cleanup evidence fails", async () => {
-      const { launcher } = await setup(true, "control-recording");
-      const { error } = await wrapperFailure(launcher);
+      const { root, launcher } = await setup(true, "control-recording");
+      const { error } = await wrapperFailure(launcher, root);
       expect(error.message).toContain("control did not settle");
       expect(error.errors as unknown[]).toEqual(
         expect.arrayContaining([expect.objectContaining({ code: "EISDIR" })]),
