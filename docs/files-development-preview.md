@@ -218,7 +218,7 @@ Downloading never activates code.
 Refresh. Main picks one endpoint by target:
 `distribution/official-extensions-darwin-arm64-v1.json` on macOS ARM64 and
 `distribution/official-extensions-v1.json` everywhere else. Both select Files
-0.8.2. Downloaded length, SHA-256 and manifest strings must match the entry
+0.8.3. Downloaded length, SHA-256 and manifest strings must match the entry
 before trust. Installation stays dormant until Files is opened.
 
 The schema allows one release per extension ID, so hosts excluded by the
@@ -280,7 +280,7 @@ The AppImage is extracted, not modified.
 
 - Files runs only on Linux ARM64 and macOS ARM64. Windows, Linux x64 and other
   targets have no move addon and no catalog offer.
-- Files 0.8.2 passed the packaged smoke on the 0.27.0 Linux and macOS ARM64
+- Files 0.8.3 passed the packaged smoke on the 0.27.0 Linux and macOS ARM64
   hosts. Native drag onto the terminal is covered by headless tests only.
 - Native checks used synthetic Chromium input and controlled consent. They don't
   establish physical keyboard, IME or drag input, native dialogs,
