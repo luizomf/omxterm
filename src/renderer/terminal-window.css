@@ -43,7 +43,7 @@ body {
   border-bottom: 1px solid var(--terminal-chrome-neutral);
   color: var(--terminal-foreground, #eee);
   background: var(--terminal-background, #111);
-  font: 13px/1.4 sans-serif;
+  font: 13px/1.4 var(--ui-font);
 }
 .mirror-typing-status[hidden] {
   display: none;
@@ -76,7 +76,7 @@ body {
   text-overflow: ellipsis;
   pointer-events: none;
   color: var(--terminal-foreground, #eee);
-  font: 11px/18px sans-serif;
+  font: 11px/18px var(--ui-font);
 }
 
 .terminal-exit-notice {
@@ -89,7 +89,7 @@ body {
   color: var(--terminal-foreground, #eee);
   background: var(--terminal-background, #111);
   border: 1px solid currentColor;
-  font: 13px/1.5 sans-serif;
+  font: 13px/1.5 var(--ui-font);
 }
 .terminal-exit-notice button {
   color: inherit;
@@ -269,9 +269,7 @@ body {
   border-radius: 4px;
   background: var(--terminal-background);
   color: var(--terminal-foreground);
-  font:
-    12px/1.4 system-ui,
-    sans-serif;
+  font: 12px/1.4 var(--ui-font);
   overflow-wrap: anywhere;
   pointer-events: none;
 }
@@ -339,10 +337,7 @@ body.tabs-visible .terminal-tab {
   margin-top: var(--native-title-inset);
   padding: 4px 8px;
   overflow: hidden;
-  font:
-    12px/1.3 -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font: 12px/1.3 var(--ui-font);
   background: transparent;
   app-region: no-drag;
 }
@@ -410,10 +405,7 @@ body.tabs-visible .terminal-tab {
   padding: calc(var(--native-title-inset) + 8px) 12px 12px;
   overflow: hidden;
   app-region: no-drag;
-  font:
-    13px/1.45 -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font: 13px/1.45 var(--ui-font);
   color: var(--terminal-foreground, #e6e6e6);
   background: color-mix(
     in srgb,
@@ -452,7 +444,7 @@ body.tabs-visible .terminal-tab {
   width: 28px;
   height: 28px;
   padding: 0;
-  font: 22px/1 sans-serif;
+  font: 22px/1 var(--ui-font);
   color: inherit;
   cursor: pointer;
   background: transparent;
@@ -503,8 +495,19 @@ body.tabs-visible .terminal-tab {
   cursor: pointer;
 }
 
+.auxiliary-tools button:hover,
 .auxiliary-tools button[aria-pressed="true"] {
-  border-color: currentColor;
+  /* Over the panel's 15% overlay, this matches the snippets row hover. */
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--terminal-chrome-neutral)
+      calc(35.294118% * var(--terminal-background-opacity, 1))
+  );
+}
+
+.auxiliary-tools button[aria-pressed="true"] {
+  font-weight: 600;
 }
 
 .auxiliary-tools button:focus-visible {
@@ -536,7 +539,7 @@ body.tabs-visible .terminal-tab {
   max-width: calc(100% - 24px);
   margin: 0;
   padding: 8px 12px;
-  font: 13px/1.4 sans-serif;
+  font: 13px/1.4 var(--ui-font);
   color: var(--terminal-background, #000000);
   background: var(--terminal-foreground, #e6e6e6);
   border-radius: 6px;
@@ -546,9 +549,7 @@ body.tabs-visible .terminal-tab {
 .terminal-layout-status {
   flex: none;
   padding: 6px 16px;
-  font:
-    13px/1.5 system-ui,
-    sans-serif;
+  font: 13px/1.5 var(--ui-font);
   color: var(--terminal-foreground, #eee);
   background: var(--terminal-background, #111);
   user-select: text;
@@ -561,10 +562,7 @@ body.tabs-visible .terminal-tab {
   margin: 0;
   padding: 10px 16px;
   overflow-y: auto;
-  font:
-    13px/1.5 -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font: 13px/1.5 var(--ui-font);
   color: #ffffff;
   background: #8c1d18;
   user-select: text;
@@ -651,10 +649,7 @@ body.tabs-visible .auxiliary-separator {
   width: 30px;
   height: 30px;
   padding: 0;
-  font:
-    22px/28px -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font: 22px/28px var(--ui-font);
   color: inherit;
   cursor: pointer;
   background: transparent;
@@ -676,10 +671,7 @@ body.tabs-visible .auxiliary-separator {
   max-width: 520px;
   margin: 0;
   padding: 12px;
-  font:
-    13px/1.5 -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font: 13px/1.5 var(--ui-font);
   color: #ffffff;
   background: #8c1d18;
   border-radius: 6px;
@@ -696,9 +688,7 @@ body.tabs-visible .auxiliary-separator {
   border-radius: 12px;
   background: var(--terminal-background, #101218);
   color: var(--terminal-foreground, #f4f4f4);
-  font:
-    14px/1.4 system-ui,
-    sans-serif;
+  font: 14px/1.4 var(--ui-font);
 }
 
 .snippet-preview::backdrop {

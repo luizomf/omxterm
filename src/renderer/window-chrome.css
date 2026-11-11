@@ -11,9 +11,7 @@
     transparent,
     var(--terminal-foreground) calc(10% * var(--terminal-background-opacity, 1))
   );
-  font:
-    13px system-ui,
-    sans-serif;
+  font: 13px var(--ui-font);
   user-select: none;
   app-region: drag;
 }

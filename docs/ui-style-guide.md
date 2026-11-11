@@ -40,8 +40,11 @@ outline, independent of nullable pane appearance. No card/border around every
 shortcut row or category; spacing and subdued rules organize content.
 
 Settings leaves its page layers transparent: the window body owns the base
-Terminal Theme tint once. Navigation and catalog-card fills use alpha-scaled
-raised tint; fields, selection and focus keep their readable foreground treatment.
+Terminal Theme tint once. Navigation is flat: only the selected category gets a
+fill, and the active auxiliary-panel tool is marked the same way (a fill, not
+a border). Catalog cards use alpha-scaled raised tint, and quiet buttons on a card
+step up to the hover tint so they still read as buttons; fields, selection and
+focus keep their readable foreground treatment.
 About and Command Palette use `--ui-overlay` at the effective window background
 opacity, with shared spacing, quiet controls and low-contrast outer hairlines.
 Their backdrop is clear, not an independently forced dark scrim. While About
@@ -61,9 +64,20 @@ these conventions do not establish universal accessibility or compositor parity.
 
 ## Typography, spacing and controls
 
+- One interface face, `--ui-font` (`system-ui`), for every DOM surface: Settings,
+  tabs, title bar, auxiliary panel, overlays, notices and banners. Don't add
+  `-apple-system` or bare `sans-serif` stacks; they resolve to different faces
+  on Linux and Windows.
 - System UI, 14 px / 1.5 body; 12 px metadata; 22 px heading (18 px compact).
 - Monospace only for effective shortcut bindings and the 13 px JSON editor.
 - Spacing vocabulary: 4, 8, 12, 16, 24 and 32 px; 6 px control radius.
+- Button groups (`.settings-actions`, `.application-page-actions`) wrap with an
+  8 px gap; buttons never touch.
+- Application surfaces (Settings, Command Palette, auxiliary panel, previews)
+  use thin scrollbars in the input-border color on a transparent track. The
+  terminal Surface keeps its own scrollbar.
+- Command Palette opens straight to its search field; its title is visually
+  hidden and still names the dialog.
 - Ordinary controls have a 36 px minimum height. Checkboxes stay native.
 - **Primary:** explicit JSON Save, foreground fill/background text.
 - **Quiet:** Record/Cancel, Close and ordinary actions, raised fill.

@@ -122,33 +122,50 @@ function buildThemeEditorView(
   const cursor = document.createElement("span");
   cursor.className = "settings-theme-cursor";
   cursor.textContent = " ";
+  // Terminal-style text rows: each normal color sits directly above its bright
+  // counterpart on the draft background, so contrast reads like real output.
+  const ansiText = document.createElement("div");
+  ansiText.className = "settings-theme-ansi-text";
+  const ansiLines = [
+    TERMINAL_THEME_COLOR_KEYS.slice(5, 13),
+    TERMINAL_THEME_COLOR_KEYS.slice(13),
+  ].flatMap((keys) =>
+    keys.map((key, index) => {
+      const span = document.createElement("span");
+      span.textContent = TERMINAL_THEME_COLOR_KEYS[5 + index]!;
+      ansiText.append(span);
+      return { key, span };
+    }),
+  );
   const samplesHint = document.createElement("p");
   samplesHint.className = "settings-hint";
   const samples = document.createElement("ul");
   samples.className = "settings-theme-ansi";
+  // One row per color: normal and bright swatches side by side. Picking one
+  // edits that role, the same as choosing it in the role list.
   const ansi = TERMINAL_THEME_COLOR_KEYS.slice(5, 13).flatMap(
     (normal, index) => {
       const pair = document.createElement("li");
       pair.className = "settings-theme-ansi-pair";
+      const name = document.createElement("span");
+      name.className = "settings-theme-ansi-name";
+      pair.append(name);
       samples.append(pair);
       return [normal, TERMINAL_THEME_COLOR_KEYS[13 + index]!].map((key) => {
-        const sample = document.createElement("div");
-        sample.className = "settings-theme-ansi-sample";
-        const label = document.createElement("span");
-        const text = document.createElement("span");
-        text.className = "settings-theme-ansi-text";
-        text.textContent = "Aa";
-        text.setAttribute("aria-hidden", "true");
-        const swatch = document.createElement("span");
-        swatch.className = "settings-theme-ansi-swatch";
-        swatch.setAttribute("aria-hidden", "true");
-        sample.append(label, text, swatch);
-        pair.append(sample);
-        return { key, label, text, swatch };
+        const swatch = document.createElement("button");
+        swatch.type = "button";
+        swatch.className = "settings-theme-swatch";
+        swatch.dataset.role = key;
+        swatch.addEventListener("click", () => {
+          role.value = key;
+          role.dispatchEvent(new Event("change"));
+        });
+        pair.append(swatch);
+        return { key, name: key === normal ? name : undefined, swatch };
       });
     },
   );
-  specimen.append(line, selection, cursor);
+  specimen.append(line, selection, cursor, ansiText);
   const previewHint = document.createElement("p");
   previewHint.className = "settings-hint";
   const filename = document.createElement("input");
@@ -236,6 +253,7 @@ function buildThemeEditorView(
     selection,
     cursor,
     signals,
+    ansiLines,
     ansi,
     filenameField,
     filenameHint,
@@ -270,11 +288,17 @@ function paintSpecimen(
   view.signals.forEach(({ key, span }) => {
     span.style.color = theme.colors[key];
   });
-  view.ansi.forEach(({ key, label, text, swatch }) => {
+  view.ansiLines.forEach(({ key, span }) => {
+    span.style.color = theme.colors[key];
+  });
+  const selected = view.role.value;
+  view.ansi.forEach(({ key, name, swatch }) => {
     // Names stay in interface colors; only the samples show draft contrast.
-    label.textContent = t(`settings.author.color.${key}`);
-    text.style.color = theme.colors[key];
-    text.style.backgroundColor = theme.colors.background;
+    const label = t(`settings.author.color.${key}`);
+    if (name) name.textContent = label;
+    swatch.setAttribute("aria-label", label);
+    swatch.title = `${label} ${theme.colors[key]}`;
+    swatch.setAttribute("aria-pressed", String(key === selected));
     swatch.style.backgroundColor = theme.colors[key];
   });
 }

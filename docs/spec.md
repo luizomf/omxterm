@@ -2055,12 +2055,14 @@ Theme editor (inline, retained):
   category or tab changes. Save, copy and export stay disabled until every
   visible or retained input is valid; the specimen uses the last valid colors.
 - The DOM preview shows foreground/background text, cursor, both selection
-  colors and the eight normal/bright ANSI pairs (normal above bright, kept
-  together as the grid reflows), each with a readable name, an `Aa` sample on
-  the draft background and a solid swatch, plus a translated hint. Only sample
-  paint reflects draft contrast. It is not a live Surface, PTY or
-  desktop-effects simulation and never paints the document root or live
-  configuration.
+  colors and the 16 ANSI colors as two terminal-style text lines on the draft
+  background (each normal color directly above its bright variant). Below it,
+  one row per named color shows the normal and bright swatches side by side,
+  kept together as the grid reflows, plus a translated hint. Picking a swatch
+  selects that role for editing, like the role selector. Names stay in
+  interface colors; only sample paint reflects draft contrast. It is not a live
+  Surface, PTY or desktop-effects simulation and never paints the document root
+  or live configuration.
 - An omitted or empty `appearance`, hex and `null` values, and untouched color
   spellings survive every operation, even without dedicated controls.
 - Save guard-replaces the resolved target by revision, keeping links. Save copy

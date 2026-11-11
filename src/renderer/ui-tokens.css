@@ -33,6 +33,9 @@
     var(--ui-hover) calc(var(--terminal-background-opacity, 1) * 100%),
     transparent
   );
+  /* One interface face everywhere; -apple-system or bare sans-serif resolve
+     to different faces on Linux and Windows. */
+  --ui-font: system-ui, sans-serif;
   --ui-radius: 6px;
   --ui-space-1: 4px;
   --ui-space-2: 8px;
@@ -48,4 +51,12 @@
 body:has(> :is(.about-dialog, .command-palette):modal)
   > :not(dialog, script, style, link) {
   filter: blur(12px);
+}
+
+/* Quiet, theme-colored scrollbars on application surfaces (not the terminal,
+   whose Surface owns its own scrollback presentation). */
+:is(.application-page, .command-palette, .auxiliary-panel, .snippet-preview),
+:is(.application-page, .command-palette, .auxiliary-panel, .snippet-preview) * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-input-border) transparent;
 }

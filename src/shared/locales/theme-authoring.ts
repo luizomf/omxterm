@@ -33,7 +33,7 @@ export const englishThemeAuthoringMessages = {
   "settings.author.previewHint":
     "Illustrative text, selection, cursor and ANSI samples, not a live terminal or desktop-effects preview.",
   "settings.author.samplesHint":
-    "Aa: color as text on the draft background. Square: color as fill. Each normal color is paired with its Bright variant below.",
+    "Normal on the left, bright on the right. Click a color to edit it.",
   "settings.author.selection": "Selected text",
   "settings.author.cursor": "Cursor sample",
   "settings.author.invalid":
@@ -129,7 +129,7 @@ export const brazilianPortugueseThemeAuthoringMessages = {
   "settings.author.previewHint":
     "Amostras ilustrativas de texto, seleção, cursor e cores ANSI, não um terminal ativo nem uma prévia de efeitos da área de trabalho.",
   "settings.author.samplesHint":
-    "Aa: cor como texto sobre o fundo do rascunho. Quadrado: cor de preenchimento. Cada cor normal fica junto da sua variante clara abaixo.",
+    "Normal à esquerda, clara à direita. Clique em uma cor para editá-la.",
   "settings.author.selection": "Texto selecionado",
   "settings.author.cursor": "Amostra de cursor",
   "settings.author.invalid":

@@ -42,14 +42,14 @@ body.tabs-visible .settings-tab {
     grid-template-columns: 192px minmax(0, 880px);
   }
 }
+/* Flat navigation: only the selected category gets a fill. */
 .settings-tabs {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   align-self: stretch;
+  /* Room for the focus ring inside the scrolling track. */
   padding: 4px;
-  background: var(--ui-raised-tint);
-  border-radius: var(--ui-radius);
 }
 .settings-tabs [role="tab"] {
   flex: none;
@@ -89,6 +89,17 @@ body.tabs-visible .settings-tab {
   border-radius: var(--ui-radius);
   background: var(--ui-raised-tint);
   align-items: flex-start;
+}
+/* Installed rows place their actions inline after the text. */
+.extension-installed-list .page-button + .page-button {
+  margin-inline-start: 8px;
+}
+/* Quiet buttons keep a visible fill on the raised card. */
+.extension-catalog-card .page-button-quiet {
+  background: var(--ui-hover-tint);
+}
+.extension-catalog-card .page-button-quiet:hover:not(:disabled) {
+  background: var(--ui-selected);
 }
 .extension-catalog h3,
 .extension-catalog h4,
@@ -279,44 +290,52 @@ body.tabs-visible .settings-tab {
   vertical-align: middle;
   margin-inline: 12px;
 }
+.settings-theme-ansi-text {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 4px 1ch;
+  margin-block-start: 4px;
+}
+.settings-theme-ansi-text span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .settings-theme-ansi {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 184px), 1fr));
+  gap: 4px 24px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .settings-theme-ansi-pair {
   display: grid;
-  grid-template-rows: repeat(2, 1fr);
-  gap: 8px;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid var(--ui-decoration);
-  border-radius: var(--ui-radius);
-}
-.settings-theme-ansi-sample {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 40px 20px;
+  /* Name, then both swatches right beside it: the eye never travels far. */
+  grid-template-columns: minmax(0, 8em) 32px 32px;
+  justify-content: start;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
   min-width: 0;
+  min-height: 32px;
+}
+.settings-theme-ansi-name {
   overflow-wrap: anywhere;
 }
-.settings-theme-ansi-text {
-  padding: 4px;
-  border-radius: 2px;
-  text-align: center;
-  font:
-    bold 14px/1.5 ui-monospace,
-    monospace;
-}
-.settings-theme-ansi-swatch {
-  width: 20px;
-  height: 20px;
-  border-radius: 2px;
+.settings-theme-swatch {
+  width: 32px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
   outline: 1px solid var(--ui-decoration);
+  outline-offset: -1px;
+  cursor: pointer;
+}
+.settings-theme-swatch[aria-pressed="true"],
+.settings-theme-swatch:focus-visible {
+  outline: 2px solid var(--ui-text);
+  outline-offset: 2px;
 }
 .settings-theme-use {
   align-items: flex-start;
