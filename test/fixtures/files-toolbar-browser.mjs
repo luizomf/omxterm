@@ -192,6 +192,22 @@ try {
           : {}),
       });
   }
+  // Opens the focused row's menu with Shift+F10, walks it with ArrowDown to
+  // the item labeled `label` and activates it with Enter.
+  async function chooseMenuItem(label) {
+    await key("F10", "F10", 121, 8);
+    for (let step = 0; step < 20; step++) {
+      const reached = await evaluate(
+        (label) =>
+          !!document.activeElement?.closest(".file-menu") &&
+          document.activeElement.textContent.startsWith(label),
+        label,
+      );
+      if (reached) return key("Enter", "Enter", 13);
+      await key("ArrowDown", "ArrowDown", 40);
+    }
+    throw new Error(`Menu item not reached: ${label}`);
+  }
   async function screenshot(name) {
     const destination = process.env.OMXTERM_TOOLBAR_EVIDENCE;
     if (!destination) return;
@@ -1260,10 +1276,7 @@ try {
     await key("Tab", "Tab", 9);
     await key("Enter", "Enter", 13);
     await evaluate("filesFixture.holdNextDelete()");
-    await key("F10", "F10", 121, 8);
-    for (let index = 0; index < 5; index++)
-      await key("ArrowDown", "ArrowDown", 40);
-    await key("Enter", "Enter", 13);
+    await chooseMenuItem("Delete permanently…");
     await until(
       async () => await evaluate("filesFixture.deleteHeld()"),
       "delete preparation held",
@@ -1603,10 +1616,7 @@ try {
       await evaluate(
         "document.querySelector('[data-path=\"/root/source\"]').focus(); filesFixture.holdNextMove()",
       );
-      await key("F10", "F10", 121, 8);
-      for (let index = 0; index < 3; index++)
-        await key("ArrowDown", "ArrowDown", 40);
-      await key("Enter", "Enter", 13);
+      await chooseMenuItem("Move to folder…");
       await send("Input.insertText", { text: "/root/folder" });
       await key("Enter", "Enter", 13);
       await until(
@@ -1740,19 +1750,23 @@ try {
       "move-keyboard",
     ].includes(scenario),
   );
+  // Pin the platform where the scenario depends on it; `keyboard` presses
+  // the Linux dotfile shortcut (Ctrl+H).
   if (
     scenario.startsWith("shortcut-") ||
     scenario === "short-menu" ||
-    scenario === "resize-menu"
+    scenario === "resize-menu" ||
+    scenario === "keyboard"
   ) {
+    const platform =
+      scenario === "shortcut-linux" || scenario === "keyboard"
+        ? "Linux aarch64"
+        : "MacIntel";
     await send("Emulation.setUserAgentOverride", {
       userAgent: await evaluate("navigator.userAgent"),
-      platform: scenario === "shortcut-linux" ? "Linux aarch64" : "MacIntel",
+      platform,
     });
-    assert.equal(
-      await evaluate("navigator.platform"),
-      scenario === "shortcut-linux" ? "Linux aarch64" : "MacIntel",
-    );
+    assert.equal(await evaluate("navigator.platform"), platform);
   }
   const sizes =
     scenario === "short-menu"
