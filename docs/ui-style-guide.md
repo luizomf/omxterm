@@ -70,6 +70,8 @@ take `color-scheme` from background luminance (light above 0.179).
 | `ui-actions` (`ui-actions-dense`)   | A group of buttons: wraps with an 8 px (4 px) gap. Buttons never touch.                                                   |
 | `ui-list` + `ui-row`                | Lists people pick from (snippets, aliases, files, palette results). Hover and selection are fills, never borders or bars. |
 | `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.           |
+| `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency.     |
+| `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                        |
 | `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                  |
 | `ui-chip`                           | A key binding or short literal value.                                                                                     |
 | `ui-dialog`                         | Modal overlays (About, Command Palette, previews). Clear backdrop; the rest of the window softens.                        |
@@ -90,12 +92,10 @@ compact page from `extensions/shared/appearance.css` and add
 
 ## Surfaces
 
-**Window chrome and tabs.** Tabs use 12 px text and neutral alpha fills (10 %,
-25 % on hover, 40 % selected); the selected tab keeps a 1 px underline when
-transparency removes its fill. Pane dividers are 1 px hairlines; the focused
-pane in a split gets a 1 px accent line on top. Default terminal padding is
-12 px. Tab and title-bar styles live in `terminal-window.css` and
-`window-chrome.css`; nothing else uses them.
+**Window chrome and tabs.** Tabs are `ui-tab` buttons in a 12 px strip. The
+Linux/Windows title bar (`window-chrome.css`) uses 13 px text. Pane dividers
+are 1 px hairlines; the focused pane in a split gets a 1 px accent line on top.
+Default terminal padding is 12 px.
 
 **Settings.** An 18 px title and Close above a hairline. A flat `ui-nav`.
 Every category shares a 720 px content boundary; the sidebar is 168 px below

@@ -333,49 +333,11 @@ body.tabs-visible .terminal-tab {
 #tab-strip button {
   flex: 1 1 0;
   min-width: 36px;
-  padding: 4px 12px;
-  overflow: hidden;
-  font: inherit;
-  color: var(--terminal-foreground, #e6e6e6);
-  text-overflow: ellipsis;
-  white-space: nowrap;
   cursor: grab;
-  background: color-mix(
-    in srgb,
-    transparent,
-    var(--terminal-chrome-neutral)
-      calc(10% * var(--terminal-background-opacity, 1))
-  );
-  border: none;
-  border-radius: 6px;
 }
 
 #tab-strip button:active {
   cursor: grabbing;
-}
-
-#tab-strip button:hover {
-  background: color-mix(
-    in srgb,
-    transparent,
-    var(--terminal-chrome-neutral)
-      calc(25% * var(--terminal-background-opacity, 1))
-  );
-}
-
-#tab-strip button[aria-selected="true"] {
-  /* Keep selection identifiable when its background tint is removed. */
-  box-shadow: inset 0 -1px
-    rgb(
-      from var(--terminal-foreground, #e6e6e6) r g b /
-        calc(1 - var(--terminal-background-opacity, 1))
-    );
-  background: color-mix(
-    in srgb,
-    transparent,
-    var(--terminal-chrome-neutral)
-      calc(40% * var(--terminal-background-opacity, 1))
-  );
 }
 
 .auxiliary-panel {
@@ -404,14 +366,6 @@ body.tabs-visible .terminal-tab {
   display: none;
 }
 
-.auxiliary-header {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-}
-
 /* Hide collapses the panel toward its edge; Close (×) ends the tool. */
 .auxiliary-header > .auxiliary-hide {
   font-size: 0;
@@ -423,17 +377,6 @@ body.tabs-visible .terminal-tab {
 #terminal-window-content[data-auxiliary-panel-side="left"]
   .auxiliary-hide::before {
   content: "‹";
-}
-
-.auxiliary-header h2 {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font: inherit;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .auxiliary-body {

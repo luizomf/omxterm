@@ -358,7 +358,7 @@ function createPanelElements(root: HTMLElement) {
   separator.setAttribute("role", "separator");
   separator.setAttribute("aria-orientation", "vertical");
   const header = document.createElement("header");
-  header.className = "auxiliary-header";
+  header.className = "auxiliary-header ui-panel-header";
   const title = document.createElement("h2");
   const close = document.createElement("button");
   close.type = "button";

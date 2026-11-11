@@ -115,7 +115,7 @@
 .page-button:hover:not(:disabled) {
   background: var(--ui-control-hover);
 }
-.page-button:disabled {
+.page-control:disabled {
   opacity: 0.55;
   cursor: default;
 }
@@ -240,6 +240,63 @@
   background: var(--ui-control-selected);
 }
 
+/* Tab and panel header ---------------------------------------------------- */
+
+/* A window tab: neutral alpha fills over the window tint. The selected tab
+   keeps an underline when transparency removes its fill. */
+.ui-tab {
+  padding: 4px 12px;
+  overflow: hidden;
+  font: inherit;
+  color: var(--ui-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--ui-neutral) calc(10% * var(--terminal-background-opacity, 1))
+  );
+  border: none;
+  border-radius: var(--ui-radius);
+}
+.ui-tab:hover {
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--ui-neutral) calc(25% * var(--terminal-background-opacity, 1))
+  );
+}
+.ui-tab[aria-selected="true"] {
+  box-shadow: inset 0 -1px
+    rgb(
+      from var(--ui-text) r g b /
+        calc(1 - var(--terminal-background-opacity, 1))
+    );
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--ui-neutral) calc(40% * var(--terminal-background-opacity, 1))
+  );
+}
+/* A side panel's header: a truncating title, then icon buttons. */
+.ui-panel-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.ui-panel-header > h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font: inherit;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Card and chip ------------------------------------------------------------ */
 
 /* A raised block. Quiet buttons inside step up one fill so they still read
@@ -333,6 +390,13 @@
   background: var(--ui-raised);
 }
 
+/* The panel tint already sits at about the raised level; step solid
+   surfaces up one so they still separate from it. */
+.ui-on-tint .ui-popover {
+  --ui-control-hover: var(--ui-selected);
+  background: var(--ui-hover);
+}
+
 /* Notice ------------------------------------------------------------------
    setPageNotice(element, { text, severity }). A tinted block with a colored
    start edge; success, warning and error add a centered glyph so color is
@@ -399,5 +463,32 @@
   border-inline-start-color: var(--ui-success-accent, #509c78);
 }
 .page-notice[hidden] {
+  display: none;
+}
+.ui-on-tint
+  .page-notice:not(
+    [data-severity="error"],
+    [data-severity="warning"],
+    [data-severity="success"]
+  ) {
+  background: var(--ui-hover);
+}
+
+/* Components set display; the hidden attribute must still win. */
+:is(
+  .ui-row,
+  .ui-list,
+  .ui-nav,
+  .ui-actions,
+  .ui-icon-button,
+  .ui-chip,
+  .ui-card,
+  .ui-tab,
+  .ui-panel-header,
+  .ui-overlay,
+  .ui-dialog,
+  .ui-popover,
+  .page-control
+)[hidden] {
   display: none;
 }

@@ -55,6 +55,7 @@ export function createApplicationTabStrip<Tab>(
           ? tabs.map((tab, index) => {
               const button = strip.ownerDocument.createElement("button");
               button.type = "button";
+              button.className = "ui-tab";
               button.textContent = options.label(tab, index);
               button.setAttribute("role", "tab");
               button.setAttribute(
