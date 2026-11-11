@@ -207,12 +207,13 @@ Update and uninstall never touch your settings, themes, snippets, or logs. See
 [Configuration](configuration.md) and
 [Local diagnostics](usage.md#local-diagnostics) for where they live.
 
-### macOS: tmux can't reach your local network after an update
+### macOS: `ping` inside tmux stops reaching your local network after an update
 
-If you keep a tmux server running and then update or quit OMXTerm, commands
+If you keep a tmux server running and then update or quit OMXTerm, `ping` from
 inside tmux may stop reaching devices on your local network (your router, a
-NAS, another computer), while the internet and VPNs still work. `ping` to a
-local address times out, but works with `sudo` or over SSH.
+NAS, another computer), while pinging internet and VPN addresses still works.
+The same `ping` works with `sudo` or over SSH. Other tools, like `ssh` to the
+same machine, may keep working.
 
 This isn't OMXTerm, and it happens with other terminals too. Since macOS 15,
 apps need **Local Network** permission, and macOS checks it against the app
