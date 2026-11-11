@@ -266,9 +266,9 @@ Headless Settings tests cover ownership, retained identity and palette choice,
 not visual quality. The `settings-only` Window Chrome case checks real layout:
 
 - Seven categories after a native-minimum window request, then at 600×320,
-  600×480, 640×480, 800×600, 960×320, 960×640, 1280×800 and 1920×1080, in both
-  Interface Languages with light and dark palettes, plus the panel-container
-  edges at 559/560/599/600 px (viewport height 640).
+  600×480, 640×480, 800×600, 960×320, 960×640 and 1280×640, in both Interface
+  Languages with light and dark palettes, plus the panel-container edges at
+  559/560/599/600 px (viewport height 640).
 - The minimum slot records the requested minimum and the actual outer, content
   and viewport sizes. It needs a compact viewport (at most 639×360) smaller than
   the desktop one; the runtime minimum is never lowered.
@@ -284,10 +284,12 @@ not visual quality. The `settings-only` Window Chrome case checks real layout:
 #### Settings layout display requirement
 
 The Window Chrome `settings-only` case checks the Settings editor at viewports up
-to **1920×1080 CSS px**. The selected display's usable work area, in logical
-DIPs, must fit that viewport plus the window's native frame. Physical resolution
-isn't what counts: display scaling and panels or docks can make a high-resolution
-screen too small.
+to **1280×640 CSS px**. Nothing in the Settings layout changes past that: the
+widest step is the 900 px navigation width and the 720 px content cap, and the
+only height step is at 360 px. The selected display's usable work area, in
+logical DIPs, must fit that viewport plus the window's native frame (about
+1300×700 DIPs). Physical resolution isn't what counts: display scaling and
+panels or docks can make a high-resolution screen too small.
 
 The fixture checks this before anything else. If the display is too small, the
 case fails (it doesn't skip) and prints the required and observed sizes. Enlarge

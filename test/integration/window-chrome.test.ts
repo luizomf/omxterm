@@ -215,7 +215,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
               deliveredAfterCapture: ["find"],
               focusReturned: true,
               layout: {
-                cases: 252,
+                cases: 224,
                 breakpoints: 4,
                 synthetic: true,
                 physicalKeyboard: false,

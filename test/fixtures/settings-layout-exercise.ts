@@ -3,6 +3,7 @@ import { screen, type BrowserWindow } from "electron";
 import {
   assertSettingsDisplayGeometry,
   settingsExactViewports,
+  settingsWideViewport,
 } from "./settings-layout-display";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -93,7 +94,7 @@ function inspectThemeEditor(
 ) {
   return (
     category === "appearance" &&
-    width === 1920 &&
+    width === settingsWideViewport[0] &&
     language === "en-US" &&
     !light
   );
@@ -118,7 +119,10 @@ async function checkThemeEditor(
   );
   if (evidence)
     await writeFile(
-      path.join(evidence, "en-US-dark-1920x1080-appearance-editor.png"),
+      path.join(
+        evidence,
+        `en-US-dark-${settingsWideViewport.join("x")}-appearance-editor.png`,
+      ),
       (await contents.capturePage()).toPNG(),
     );
   await contents.executeJavaScript(
