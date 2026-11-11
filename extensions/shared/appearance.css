@@ -24,6 +24,10 @@ body {
   width: 100%;
   padding: var(--ui-space-3);
 }
+/* The page's one sentence of guidance sits apart from the first control. */
+.application-page-content > .ui-hint:first-child {
+  margin-bottom: var(--ui-space-3);
+}
 h1 {
   margin: 0;
   font-size: var(--ui-text-title);
