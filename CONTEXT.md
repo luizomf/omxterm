@@ -196,35 +196,18 @@ suspend it. It is independent of the opening terminal's lifetime. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 geometry, view retention and retirement rules.
 
-**Snippets Sidebar** — The Auxiliary Panel view of the user's
-`snippets.yaml` catalog, reread on activation with retained search/scroll.
-Insert, Run and read-only preview deliver exact text through Protected Paste to
-a captured live Surface, never a replacement target. See
-[interaction behavior](docs/spec.md#window-and-session-behavior) and
-[catalog configuration](docs/spec.md#configuration-and-local-state).
-Published stable `0.25.0` and current source support optional Snippets on
-Linux ARM64/x64, macOS ARM64 and Windows ARM64. Windows x64 and unchanged
-`0.23.0` hosts retain built-in Snippets. Existing profiles choose official-catalog
-or verified local/offline installation; positively new packaged profiles get the
-[removable one-time default](docs/default-snippets.md), enabled but dormant.
-Windows ARM64's unrun graphical suite and unresolved public-install failures are
-accepted [for 0.25.0 only](docs/snippets-migration.md#known-limits).
-The migration guide retains historical preview/0.24.0 receipts. Published Snippets
-`0.1.1` fixes the [home override limitation](docs/snippets-migration.md#catalog-file-and-shortcuts)
-through a deliberate official-catalog or local update. The bundled default remains
-`0.1.0`, and existing installations are not automatically updated.
-Each remaining cutover requires matching host/package qualification,
-migration guidance and compatible package publication/verification before distributed removal
-([ADR 0044](docs/adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+**Snippets Sidebar** — The Auxiliary Panel view for browsing and searching the user's
+`snippets.yaml` catalog. Insert and Run send exact text through core-owned
+Protected Paste to a captured live Terminal Surface; preview shows the text
+without sending it. Most hosts use an optional extension, while Windows x64
+keeps the built-in sidebar. See [Snippets availability](docs/snippets-availability.md)
+and the [extension guide](docs/snippets-migration.md).
 
-**Default Snippets Attempt** — The host-owned one-time grant for positively new
-packaged optional-target profiles, independent of configuration-kit creation.
-Early default/config/state absence and later identity matching precede a permanent,
-version-independent consumed witness. Exact pinned public bytes enter Installed
-Packages enabled+dormant with generation0, without provisioning acquisition, YAML
-or code activation. Existing profiles, disabled entries and tombstones never enroll;
-uninstall/collection cannot restore the default. Developer startup and Windows x64
-are excluded. Shipped in 0.25.0; see [Default Snippets](docs/default-snippets.md).
+**Default Snippets Attempt** — The host's one-time installation of bundled
+Snippets for a new packaged profile on an optional-extension target. It leaves
+the package enabled but inactive until opened, without fetching it or creating
+`snippets.yaml`. Existing profiles and removed or disabled packages keep the
+user's choices. See [Default Snippets](docs/default-snippets.md).
 
 ## Terminal data and interaction
 
@@ -299,46 +282,28 @@ continuations remain refused; see the [terminal contract](docs/spec.md#terminal-
 
 ## Extensions
 
-**Mirror Typing** — Optional separately installed Linux ARM64 preview that copies
-final genuine keyboard bytes, in source mode, to an inspected fixed group of 2–16
-live panes in one tab. The originally focused live pane is required. Core owns
-visible Stop, native/renderer generation fencing and revocable memory-only
-authority; extension code receives no keyboard payloads. Paste, snippets and
-drops stop mirroring before ordinary single-target delivery. No persistence,
-autostart, semantic per-target encoding or atomic multi-PTY transaction is implied.
-See [Mirror Typing](docs/mirror-typing-development.md).
+**Mirror Typing** — An optional extension preview that copies the source pane's encoded
+keyboard input to a fixed group of live panes in one Terminal Tab. Core owns input delivery and the
+visible Stop control; extension code receives no keyboard payloads. Paste,
+snippets and drops stop mirroring before delivery to their original target.
+See [Mirror Typing](docs/mirror-typing-development.md) for setup and limits.
 
-**Saved Layout** — One explicitly saved current-window terminal arrangement:
-terminal order, weighted splits, focused panes and local-folder provenance.
-The separately installed Linux ARM64 preview opens fresh Default Shells in a new
-window, preserving current work. It is not a saved running session, command
-replay or startup restoration. Its revisioned state survives uninstall; Forget
-removes the active snapshot, not possible interrupted-write remnants. See
-[the guide](docs/saved-layout-development.md).
+**Saved Layout** — A terminal arrangement saved by an optional extension,
+including tab order, splits, focused panes and local starting folders. Opening
+it creates fresh Default Shells in a new window; it does not restore running
+processes or replay commands. Saved data survives uninstall. See
+[Saved Layout](docs/saved-layout-development.md).
 
-**SSH Connect** — A separately installed Linux and macOS ARM64 preview
-companion-panel page with an incomplete bounded OpenSSH alias index and distinct
-quick-connect field. The same published SSH0.3.1 archive is offered on both; the
-[macOS public-catalog checkpoint](docs/ssh-connect-development.md)
-is bounded to the exact stable0.24.0 host and controlled inputs.
-Its declared `terminal.openSsh.v1` capability transfers a typed target to a new
-core Terminal Tab while preserving the panel and existing sessions. Core
-owns literal system-ssh launch, PTY, Busy/close/Quit and retained nonzero
-exit output independently of extension lifetime. Separately published 0.3.0 follows
-the host Interface Language while preserving literal aliases, drafts and pending
-launches; its host range is `>=0.24.0-dev.8`, with exact native qualification on
-Linux ARM64 dev.11. Catalog promotion and bounded public packaged consumption
-passed on that exact pair.
-Historical 0.1.0 bytes remain immutable; upgrading the host does not install the
-new extension. It is not an SSH broker,
-credential vault or reconnect service. See [the development record](docs/ssh-connect-development.md).
+**SSH Connect** — An optional extension that lists OpenSSH aliases in the
+Auxiliary Panel and opens a selected alias or quick-connect target in a new
+Terminal Tab. Core launches the system `ssh` and owns the PTY and session;
+OpenSSH handles authentication and networking. See the
+[user guide](docs/ssh-connect.md) and [development guide](docs/ssh-connect-development.md).
 
-**Ended-readable Surface** — Terminal rendering/font resources retained after
-an ordinary nonzero SSH Connect exit for local copy/search/refit until pane
-removal. It owns no live native session or input authority and is not Busy.
-
-These terms cover the internal modules, Linux ARM64 Files development preview
-and broader product direction; they do not define a stable extension SDK.
+**Ended-readable Surface** — A Terminal Surface retained after an SSH Connect
+session exits with a nonzero code. It remains available for copy and search
+until the pane is removed, but has no live session, accepts no input and is not
+Busy. See [core-owned SSH tabs](docs/ssh-connect-development.md#core-owned-ssh-tabs).
 
 **Extension** — An optional, separately installed and user-enabled addition that
 keeps nonessential features outside the mandatory terminal core, including
@@ -347,58 +312,42 @@ third-party code is a trust choice, not a promise of sandboxing or protection
 from its effects.
 _Avoid_: Plugin (historical name).
 
-**Official Extension** — An Extension maintained by the OMXTerm project, which
-may also serve as a practical example for extension authors. Catalog identity
-binds an exact release ID/version/digest, never a namespace or filename. It is
-not a sandbox or independently signed publisher assertion.
+**Official Extension** — An Extension maintained by the OMXTerm project.
+Official status identifies its maintainer; installing it still requires the
+ordinary extension trust decision. See
+[extension distribution](docs/extension-distribution.md#trust).
 
-**Official Catalog** — A bounded project-controlled HTTPS release index loaded
-only by explicit Browse/Refresh. Main retains immutable selections; exact bytes
-and manifest identity must match before ordinary one-shot trust. Its in-memory
-last-successful snapshot may be stale. Hosts select one complete schema1 endpoint
-by target. At the earlier checkpoint macOS ARM64 offered Files0.5 and the legacy
-endpoint offered Linux Files0.4; the published catalogs now select Files0.8 on
-both ARM64 targets, plus the same SSH0.3.1 archive. The
-[Files0.7 macOS public-consumption checkpoint](docs/files-development-preview.md)
-passed separately from the earlier Files0.6 checkpoint.
-Common SSH/Snippets entries match; no merging or fallback occurs. Cards show the
-selected offer's platforms and distinguish target from host/API incompatibility.
-Target and shared host/API compatibility govern catalog selection, while local/link
-archive admission does not enforce catalog targets. The bounded development-family
-exceptions are described in the
-[installation contract](docs/extension-installation-foundation.md#archive-contract).
-Admission is not runtime or platform qualification. It is not a marketplace or
-update daemon.
+**Official Catalog** — The project-controlled HTTPS index of official extension
+releases, loaded when the user chooses Browse or Refresh. Settings shows
+compatible offers, and main verifies the selected archive against its catalog
+identity before asking for installation approval. Browsing does not install or
+update extensions automatically. See [extension distribution](docs/extension-distribution.md).
 
 **Third-party Extension** — An Extension maintained by its author rather than
 by the OMXTerm project. Compatibility with OMXTerm does not imply project
 review, support or a safety guarantee.
 
-**Installed Packages** — The internal module that owns local archive validation,
-immutable installed versions, aggregate registry transactions, installation
-generations and deferred cleanup. It is consumed by the Linux ARM64/x64 and
-macOS ARM64 application composition and admitted by Windows ARM64 source, but
-does not itself own management UI or execution. The bounded
-[Windows ARM64 source-composition checkpoint](docs/windows-arm64-extension-composition.md#installed-package-production-fixture)
-is distinct from the bounded [unpacked-package inspection](docs/windows-arm64-extension-composition.md#packaging-and-verification)
-and a later [packaged-GUI checkpoint](docs/windows-arm64-extension-composition.md#packaging-and-verification)
-on that retained package. A separate [exact-NSIS checkpoint](docs/windows-arm64-extension-composition.md#packaging-and-verification)
-verified a new installer built from an independent copy of that package. See the
-[foundation contract](docs/extension-installation-foundation.md).
+**Installed Packages** — The internal module for validating extension archives,
+tracking installed versions and retaining immutable package files while they are
+in use. Settings uses it for installation and management; the Backend Runtime
+uses it to open installed backends. It does not run code or provide UI. See
+[extension installation](docs/extension-installation-foundation.md).
 
-**Backend Runtime** — An internal app-owned authority that lazily activates an
-installed prebuilt backend in a directly owned bundled-Node child, binds requests
-to a captured version/epoch and distinguishes actual process exit from channel
-or stream settlement. It is not a public SDK or a descendant sandbox. See the
-[runtime contract](docs/extension-backend-runtime.md).
+**Backend Runtime** — The internal module that starts an installed extension's
+backend in an app-owned Node child process. It binds requests to a captured
+package version and activation lifetime, and tracks the child until it exits.
+It does not sandbox extension code or its descendants. See the
+[runtime guide](docs/extension-backend-runtime.md).
 
-**Version Use Lease** — An independently held native shared lease retaining one
-immutable installed version while its owner may read package files. It does not
-prove code stopped, serialize external side effects or contain descendants.
+**Version Use Lease** — A native shared lease that keeps one immutable installed
+package version available while an owner reads its files. Cleanup waits for
+these leases to end; a lease does not prove extension code has stopped. See
+[extension installation](docs/extension-installation-foundation.md).
 
-**Pending Cleanup** — Managed bytes remain because they are pinned, busy or not
-yet collected. Admission can already be disabled/tombstoned; unrelated extension
-management need not stop.
+**Pending Cleanup** — Installed package files that remain on disk because an
+owner still holds them or collection has not removed them yet. Disabling or
+uninstalling an extension can take effect before its files disappear. See
+[extension installation](docs/extension-installation-foundation.md).
 
 ## Diagnostics and distribution
 
@@ -406,134 +355,34 @@ management need not stop.
 validation, IPC, PTY control or failures. Local logs exclude Terminal Payload,
 clipboard, configuration and environment contents, commands and titles.
 
-**Files Development Preview** — Separately installed, precompiled Linux and macOS ARM64
-extension consumed through Settings captured-byte trust and shared namespaced
-actions. It browses expandable local folders with contextual and
-keyboard-accessible actions, captured operation targets and automatic refresh
-after successful mutations; manual refresh handles external changes without
-watchers. Current source additionally offers a view-local checked Actions item
-for dot-prefixed names, hidden by default relative to the browsing root; it does
-not classify other platform hidden metadata. Its scoped child shortcut leaves
-editing and core shortcut ownership intact. Current source also provides a
-focused loaded-entry filter and keyboard-selectable tree; filtering is not a
-recursive search and does not retarget an open operation. Current source also
-supports a confirmed internal entry-to-folder drag and a keyboard-accessible
-Move to folder action. Their fixed source and folder are rechecked before a
-no-replace move; external drags, same-directory, self/descendant and final
-symlink destinations are refused. Cross-volume moves do not copy/delete and
-symlink sources move as links. Files-to-terminal drag remains separate. These
-source UI changes are included in the published Files0.7 Linux ARM64 link-first
-preview with host dev.19. Its bounded [actual public Settings-link checkpoint](docs/files-development-preview.md)
-passed using fresh anonymous downloads. A separate macOS stable0.25.0 / Files0.7
-[local checkpoint](docs/files-development-preview.md)
-passed filtering and confirmed directory movement; a separate public-catalog
-checkpoint passed. Broader macOS qualification remains separate. Hide/reveal retains the dotfile choice;
-Close/new view resets it. Published archives are unchanged. Host-language
-updates relabel retained controls and notices without changing drafts, captured
-paths or pending operations. In current host source, the explicit Use terminal
-directory action captures the selected live pane's last local OSC7 report when
-requested, not the retained view's initial context. Main confirms the selection
-with the core renderer before opening a fixed reported path locally without a modal;
-no usable report is explained without navigating. Reports can be stale or produced
-by arbitrary output, and ordinary shell-launched SSH may be indistinguishable.
-Current Files source labels the action as the last reported path and explains those
-limits in an inline hint, tooltip and accessible description. There is no automatic follow or
-retargeting of started operations. Compatible installed archives use this host
-behavior without modification; the renamed action, inline hint, tooltip and
-relocalizable host-coded notices are included in the Files0.7 preview and its
-separate Linux packaged/public-link checkpoints, not published
-Files0.6. The host/archive build and public release tags bind source
-`0cb89accd61f1f5d5263c60773454882793e2e99`; public qualification used test/docs
-source `ed84ce729e03656018eb2e1b971dd8f458123df3`. The macOS local checkpoint
-is separate from that Linux public-link result and broader qualification.
-Current source also inserts one selected file/folder/link path through the core's
-lexical quoting and Protected Paste into the action-time captured Surface; its
-visible menu action and Shift+Enter row shortcut add no Enter. Focus returns
-only while the captured target remains selected. Incomplete or unknown delivery
-is not automatically retried. Files0.8.0 declares `terminal.insertPath.v1` and
-minimum host `>=0.26.0` / API `0.1.x`, the first published host with the protected
-consumer; lower hosts are neither offered nor admitted. Published Files0.6/0.7 archive
-bytes remain unchanged. Prior native UI used production modules with inert
-session/backend/package dependencies, not a real PTY or shipping pair; its timeout
-was the Surface receipt timeout, not the ten-second transport deadline. Its composed
-terminal drop offers copy only over the selected tab's focused live terminal area,
-with a bounded localized candidate. One path-free, single-use main ticket binds
-the authenticated Files gesture to the exact drop-turn pane/Surface and selection
-revision. Shared Protected Paste stops Mirror Typing and adds no Enter; stale,
-mixed/native/tab and blocked input is refused. Source hide/retirement revokes
-unaccepted authority; dragend alone cannot revoke a claimed drop. Local notices
-and successful still-current captured-input focus use the existing owners, not
-a second PTY/focus route. Native/product/package qualification remains separate.
-Its application owner composes independent
-backend/view version pins, per-invocation context for other extension requests,
-local management and bounded Quit retirement.
-Its separately built archive/checksum/receipt are not bundled into the host;
-a build receipt identifies bytes and inputs, not completed qualification or shipment.
-macOS host source provides no-clobber move and optional Foundation trash in its
-owned Node-child service. Bounded exact-package trash semantics passed on macOS
-ARM64. A separate Files0.5.0/dev.21 exact-pair consumer checkpoint passed real
-operations, retained companion state, management and active-backend normal Quit.
-Host dev.21 and Files0.5.0 are published as separate immutable, non-Latest
-prereleases; a separate actual Settings HTTPS-link installation checkpoint passed.
-This is [macOS link-first distribution](docs/files-development-preview.md),
-not macOS catalog discovery or broader platform qualification. Current source
-adds a separate macOS catalog endpoint; existing dev.21 binaries still use the
-legacy URL. Published dev.26 passed its separate exact-package
-[public catalog checkpoint](docs/files-development-preview.md),
-including three Official consents and normal joined Quit; prior link evidence
-is not relabeled.
-The corrected archive requires host dev.21; its neutral ARM64 preview name is
-display metadata, not a manifest platform fence or blanket native qualification.
-The earlier Linux catalog selected Files0.4.0; the later promotion selected
-Files0.6.0 on both ARM64 endpoints, then macOS Files0.7. Both endpoints now
-select Files0.8 (host `>=0.26.0`).
-A separate [macOS public-catalog checkpoint](docs/files-development-preview.md)
-passed with a retained locally built 0.24.0 DMG, not a downloaded-public host.
-The host's optional `toggleFiles` shortcut is unbound
-by default and reuses the existing tool entry point; unavailable tools do not
-consume it. No startup code activation, default shortcut or stable SDK is implied;
-see [the preview contract](docs/files-development-preview.md) for qualification limits.
+**Files Development Preview** — An optional extension for browsing and managing
+local files in the Auxiliary Panel. It can create, rename, move, trash and delete
+entries, and ask core to insert a selected path through Protected Paste. Paths
+refer to the OMXTerm host, including when terminal output comes from SSH.
+See [Files availability](docs/files-availability.md) and the
+[development guide](docs/files-development-preview.md) for supported targets,
+operations and limits.
 
-**Files Terminal Drag Ticket** — A path-free, single-gesture transport identity
-owned by main for one installed Files view/epoch/window, not a path or terminal
-input capability. Core claims it synchronously once before asynchronous handoff;
-canceled/internal-move dragend revokes only unclaimed tickets. A completed native
-copy retains its original deadline while awaiting the core claim, which can reach
-main after child dragend; completion alone grants no input. View/window/epoch
-loss and the ten-second deadline revoke both phases. Without a protected consumer the source
-stays move-only. Current source composes the shared captured-pane Protected Paste
-owner for one eligible terminal-area drop; see the [transport seam](docs/files-development-preview.md#inserting-paths-into-the-terminal).
+**Files Terminal Drag Ticket** — A one-use identity issued by main for a path
+drag from an installed Files view. Core claims it to bind an eligible terminal
+drop to the captured pane and Protected Paste flow; the ticket alone grants no
+terminal input access. See
+[path insertion](docs/files-development-preview.md#inserting-paths-into-the-terminal).
 
-**Extension View Host** — Internal owner of lazy native packaged-content views
-and their reads in a nonpersistent epoch, retaining an immutable package-version
-pin. Shared window presentation composes tab/panel slots, focus and overlays;
-retirement does not terminate core PTYs. Presentation rejection racing retirement
-is reconciled only by exact main-issued retirement notifications plus an
-acknowledged native hide; unrelated or failed retirement cannot restore usability.
-It is not a public SDK or activation UI,
-and main-death disk-read exclusion remains unqualified. See
-[ADR 0039](docs/adr/0039-own-packaged-web-content-by-epoch.md) for resource and
-presentation ownership, and the
-[hosted-content contract](docs/spec.md#configuration-and-local-state) for
-appearance, language and declared own-view semantic input. Semantic input
-transfers exact text to a core-captured Surface, not a PTY handle or raw key route;
-retirement revokes unaccepted interactions, not accepted Surface-owned delivery.
+**Extension View Host** — The internal owner of an extension's packaged-content
+views and their resources for one view lifetime, called an epoch. It retains the
+package version while in use and coordinates presentation in tabs or the
+Auxiliary Panel; retiring a view does not end core terminal sessions. See
+[ADR 0039](docs/adr/0039-own-packaged-web-content-by-epoch.md) and the
+[hosted-content contract](docs/spec.md#configuration-and-local-state).
 
-**Application Network Boundary** — OMXTerm requests remote bytes only for explicit
-official-catalog browsing and HTTPS extension archive installation on Linux ARM64/x64
-and macOS/Windows ARM64, through bounded main-owned acquisition and
-captured-byte trust. The published Windows ARM64 dev.36 capability is separate
-from its pending [installed public-consumption checkpoint](docs/snippets-migration.md#known-limits). No startup/reopen catalog, telemetry or background update
-requests are made. macOS composition alone does not broaden published catalog
-targets or qualify Files. The published Snippets dev.16 preview now offers the
-same immutable archive through the official catalog on `darwin-arm64`, alongside
-`linux-arm64`, while retaining local/offline installation. Exact public catalog
-readback and a separate bounded macOS packaged public-HTTPS checkpoint passed;
-see [the delivery scope](docs/snippets-migration.md#publish-and-install).
-This does not add Files/SSH qualification.
-Internal hosted content remains
-restricted to its owned epoch-local packaged-resource protocol. Child processes
-retain normal network access; explicitly activated terminal web links open through the OS.
+**Application Network Boundary** — The rules for network requests made by
+OMXTerm itself. Main fetches catalogs and extension archives only after explicit
+user actions, with no telemetry, startup catalog fetches or background updates.
+Terminal programs and extension backends retain their own network access;
+activated terminal links open through the OS. See
+[extension distribution](docs/extension-distribution.md) and the
+[installation guide](docs/extension-installation-foundation.md).
 
 **Release Artifact** — An exact native package (ARM64, or x64 on Linux/Windows)
 (DMG, AppImage or NSIS) published with its source tag, checksum and verification
