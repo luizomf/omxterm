@@ -25,8 +25,10 @@ those lanes. Intel macOS and other package formats remain outside support.
 
 Stable targets may ship independently from one reviewed frozen application cut,
 with immutable target tags and separate asset verification. The README is the
-per-target download index; GitHub global Latest is the legacy complete bundle,
-not that index. A later target does not require a version bump or rebuild of an
+per-target download index. Once every target of a version has shipped, a
+complete `vX.Y.Z` release with the same verified assets becomes GitHub's global
+Latest (amended 2026-11-11: leaving the old 0.25.0 bundle as Latest sent
+visitors to an outdated version). A later target does not require a version bump or rebuild of an
 unchanged shipped target. Corrections to product, dependency or build inputs
 after shipment require a new application version and cut. This changes cadence,
 not test-execution safety or the target's verification scope.

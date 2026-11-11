@@ -51,6 +51,10 @@ _macOS, with background transparency and blur._
 
 ## Platforms and downloads
 
+**Easiest way:** open the [latest release](https://github.com/luizomf/omxterm/releases/latest).
+Its notes start with a short table that tells you which file to download for
+your computer.
+
 OMXTerm runs on Apple Silicon Macs and on Linux and Windows PCs with ARM64 or
 Intel/AMD processors. The x64 (Intel/AMD) builds are **untested**: they build
 and pass automated checks, but nobody has used them on a real desktop yet.
