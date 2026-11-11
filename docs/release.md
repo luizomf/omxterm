@@ -87,10 +87,13 @@ npm run package:verify      # Windows: -- --disposable-vm-allow-omxterm-replacem
 ### macOS ARM64
 
 On Apple Silicon macOS with Xcode Command Line Tools (see
-[side effects on your desktop](development.md#side-effects-on-your-desktop)),
-run the verifier on both the staged app and the mounted DMG:
+[side effects on your desktop](development.md#side-effects-on-your-desktop))
+and the [signing keychain](#macos-signing-keychain), run the verifier on both
+the staged app and the mounted DMG:
 
 ```sh
+export OMXTERM_MACOS_SIGNING_KEYCHAIN="$HOME/.omxterm-signing/omxterm-signing.keychain-db"
+export OMXTERM_MACOS_SIGNING_KEYCHAIN_PASSWORD_FILE="$HOME/.omxterm-signing/password.txt"
 npm ci
 npm run check
 ```
@@ -115,11 +118,68 @@ the final `.dmg` image:
   }
   trap cleanup EXIT
   hdiutil attach -readonly -nobrowse -mountpoint "$mount_dir" "$dmg"
-  npm run package:verify -- "$mount_dir/OMXTerm.app"
+  npm run package:verify -- "$mount_dir/OMXTerm.app" --release
 )
 ```
 
-The macOS app bundle uses an ad-hoc signature (`codesign --verify --deep --strict`) without Apple Developer ID signing or notarization.
+`--release` requires the stable release signature and fails on an ad-hoc
+build. The app is not Developer ID signed or notarized, and the DMG itself is
+unsigned.
+
+#### macOS signing keychain
+
+macOS release builds are signed with OMXTerm's stable self-signed certificate,
+`OMXTerm Release Signing` (SHA-1 `7208E52002B019F6F948788CE6D095C117405ED3`),
+so macOS keeps privacy permissions across updates
+([ADR 0046](adr/0046-sign-macos-releases-with-a-stable-self-signed-certificate.md)).
+Without the two variables above, `scripts/sign-macos.mjs` signs ad-hoc, which
+is what contributors and CI get. Setting only one of them fails the build.
+
+The key travels as `omxterm-signing.p12`, encrypted with a password the
+maintainer keeps in a password manager. To set up a build machine, put both in
+a private folder and import them into a dedicated keychain file, never the
+login keychain:
+
+```sh
+(
+  set -eu
+  dir="$HOME/.omxterm-signing"
+  mkdir -p "$dir" && chmod 700 "$dir"
+  # Copy omxterm-signing.p12 here and save its password, alone, in password.txt.
+  chmod 600 "$dir/omxterm-signing.p12" "$dir/password.txt"
+  kc="$dir/omxterm-signing.keychain-db"
+  pw="$(cat "$dir/password.txt")"
+  security create-keychain -p "$pw" "$kc"
+  security set-keychain-settings "$kc" # no automatic lock
+  security unlock-keychain -p "$pw" "$kc"
+  security import "$dir/omxterm-signing.p12" -k "$kc" -f pkcs12 -P "$pw" \
+    -T /usr/bin/codesign
+  security set-key-partition-list -S apple-tool:,apple:,codesign: -s \
+    -k "$pw" "$kc" >/dev/null
+  security find-identity -p codesigning "$kc"
+)
+```
+
+The last command lists `OMXTerm Release Signing` as `CSSMERR_TP_NOT_TRUSTED`.
+That's expected: the designated requirement doesn't need the certificate to be
+trusted, so don't add trust settings. The partition list lets `codesign` use
+the key without a dialog. The sign hook unlocks the keychain from
+`password.txt` before signing. Run other `security` commands against this
+keychain only after `security unlock-keychain -p`, because a locked keychain can
+ask for its password in a dialog.
+
+**Backup and restore.** The `.p12` and its password are the backup. Keep the
+`.p12` in two private places and the password in a password manager, never in
+the repository, logs or release assets. Restoring is the setup above on any
+Mac.
+
+**Lost or leaked key.** Create a new long-lived self-signed code-signing
+certificate (for example `openssl req -x509 -newkey rsa:3072 -days 10950` with
+`extendedKeyUsage = critical, codeSigning`), export it as a `.p12`, and update
+`releaseCertificateSHA1` in `scripts/sign-macos.mjs` and ADR 0046. The
+designated requirement changes, so the release notes tell macOS users to grant
+permissions once more after that update. A leaked key also lets others sign
+apps that inherit OMXTerm's permissions, so replace it right away.
 
 ### Linux ARM64
 

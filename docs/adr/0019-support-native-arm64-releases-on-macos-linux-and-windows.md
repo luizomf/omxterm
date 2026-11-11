@@ -8,9 +8,11 @@ package formats are DMG, AppImage and NSIS. Linux also provides the optional
 [ADR 0031](0031-keep-linux-installer-choices-small-and-local.md). Direct AppImage
 use is supported; the helper is not another application package format.
 
-Artifacts carry no verified publisher identity. The macOS ad-hoc code seal
-provides bundle integrity, not Developer ID signing or notarization
-([ADR 0015](0015-publish-tested-unsigned-arm64-releases.md)). Windows release
+Artifacts carry no verified publisher identity. The macOS self-signed code
+seal provides bundle integrity and stable privacy permissions, not Developer ID
+signing or notarization
+([ADR 0015](0015-publish-tested-unsigned-arm64-releases.md),
+[ADR 0046](0046-sign-macos-releases-with-a-stable-self-signed-certificate.md)). Windows release
 notes explain SmartScreen's unknown-publisher warning without recommending
 system-wide security changes. No application auto-update mechanism is present.
 

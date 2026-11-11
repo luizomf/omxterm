@@ -47,6 +47,11 @@ Apple has not verified this app. You must allow OMXTerm once.
 Later, macOS may also ask before OMXTerm opens protected folders such as
 Documents or Downloads.
 
+Releases after 0.27.0 are signed with OMXTerm's own certificate, so
+permissions you grant (folders, Accessibility, Input Monitoring, Automation)
+stay granted when you update. The first time you update from 0.27.0 or older,
+macOS asks once more; after that, updates keep them.
+
 <details>
 <summary>Optional: verify the download</summary>
 

@@ -395,6 +395,7 @@ evidence: native by default, explicitly approved Windows x64 emulation under
 [ADR 0034](docs/adr/0034-support-native-windows-x64-packages.md), or native x64
 build-only CI under [ADR 0036](docs/adr/0036-distribute-build-only-x64-ci-artifacts.md),
 with limitations recorded.
-Artifacts have no verified publisher identity; the macOS app has an ad-hoc
-integrity seal, not Developer ID signing or notarization. See the
+Artifacts have no verified publisher identity; the macOS app is sealed with
+OMXTerm's stable self-signed certificate (ad-hoc without the release key), not
+Developer ID signing or notarization. See the
 [release procedure](docs/release.md).

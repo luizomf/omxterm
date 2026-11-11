@@ -4,6 +4,7 @@ export function windowsVerificationOptions(
   platform?: string,
 ): {
   inspectionOnly?: boolean;
+  release?: boolean;
   windowsUnpackedOnly: boolean;
   disposableVm: boolean;
 };

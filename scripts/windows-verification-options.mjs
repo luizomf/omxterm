@@ -3,9 +3,17 @@ export const disposableVmFlag = "--disposable-vm-allow-omxterm-replacement";
 export function windowsVerificationOptions(args, platform = process.platform) {
   const options = { windowsUnpackedOnly: false, disposableVm: false };
   let inspectionOnly = false;
+  let release = false;
   for (const argument of args) {
     if (argument === "--inspection-only" && !inspectionOnly) {
       inspectionOnly = true;
+      continue;
+    }
+    // macOS release verification requires the stable release certificate.
+    if (argument === "--release" && !release) {
+      if (platform !== "darwin")
+        throw new Error("--release verification requires macOS");
+      release = true;
       continue;
     }
     if (platform !== "win32")
@@ -25,5 +33,9 @@ export function windowsVerificationOptions(args, platform = process.platform) {
     throw new Error(
       "Unpacked diagnostics cannot authorize installer replacement",
     );
-  return inspectionOnly ? { ...options, inspectionOnly } : options;
+  return {
+    ...options,
+    ...(inspectionOnly ? { inspectionOnly } : {}),
+    ...(release ? { release } : {}),
+  };
 }
