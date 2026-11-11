@@ -17,7 +17,7 @@ input owner. At invocation, the app-owned child preload privately stamps the
 latest observed core-selection revision and main-issued visible-admission
 generation. Main validates them at receipt and commit, and core checks its own
 selection before capture; missing or stale stamps fail closed, without a
-caller-selected target or a global cross-process ordering guarantee. Files0.8.0
+caller-selected target or a global cross-process ordering guarantee. Files 0.8
 declares `terminal.insertPath.v1`, minimum host `>=0.26.0` (the first published
 host with the consumer) and API `0.1.x`. Archive admission and the catalog refuse
 lower hosts. Published Files0.6/0.7 archives are unchanged. Its path-only tracked

@@ -43,19 +43,19 @@ const runtime = { appVersion, apiVersion: "0.1.0" };
 // Verbatim extension.json bytes extracted from the published archives.
 const releases = [
   {
-    name: "Files 0.8.0",
+    name: "Files 0.8.1",
     id: "omxterm.files",
-    manifest: `{"format":1,"id":"omxterm.files","version":"0.8.0","name":"Files — ARM64 preview","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
+    manifest: `{"format":1,"id":"omxterm.files","version":"0.8.1","name":"Files — ARM64 preview","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
   },
   {
-    name: "SSH 0.3.1",
+    name: "SSH 0.3.2",
     id: "omxterm.ssh",
-    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.3.1","name":"SSH Connect","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1"],"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
+    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.3.2","name":"SSH Connect","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1"],"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
   },
   {
-    name: "Snippets 0.1.1",
+    name: "Snippets 0.1.2",
     id: "omxterm.snippets",
-    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.1","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
+    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.2","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
   },
 ] as const;
 type ReleaseFixture = (typeof releases)[number];
@@ -409,7 +409,7 @@ it("does not revive an old pin after disable, enable or same-byte reinstall", as
 });
 
 it("opens an existing stable-host installation at the current runtime without reinstalling", async () => {
-  // SSH 0.3.1 also admits the 0.24.0 host; Files 0.8 does not.
+  // SSH 0.3.2 also admits the 0.24.0 host; Files 0.8 does not.
   const fixture = releases[1];
   const bytes = archive(fixture.manifest);
   // This historical host only seeds the pre-upgrade store; the open below uses

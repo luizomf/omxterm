@@ -1,7 +1,7 @@
 # Transfer explicit SSH launches to core
 
 Status: Accepted for the optional SSH Connect preview (#671). The published
-catalogs offer the same original SSH0.3.1 archive for Linux and macOS ARM64;
+catalogs offer the same SSH 0.3.2 archive for Linux and macOS ARM64;
 bounded local and public-catalog checks are described in the [SSH guide](../ssh-connect-development.md).
 
 ## Decision

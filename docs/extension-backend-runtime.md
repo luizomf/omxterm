@@ -61,7 +61,7 @@ passed for local/distinct APFS volumes and final symlinks; see the
 [recorded evidence and limits](files-development-preview.md#platform-limits).
 This is not full Files qualification or native-I/O cancellation evidence. The separate [SSH Connect](ssh-connect-development.md) consumer uses a declared, own-view
 main capability (`terminal.openSsh.v1`), not a backend-owned PTY. Its package
-has a declared minimum host version of 0.24.0-dev.8 for SSH0.3.1; this does not
+has a declared minimum host version of 0.24.0-dev.8 for SSH 0.3.2; this does not
 qualify every newer host or platform. API0.1.x and existing Files manifests remain
 compatible.
 The separate [Mirror Typing](mirror-typing-development.md#capability-and-lifetime) consumer

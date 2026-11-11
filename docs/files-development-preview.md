@@ -23,9 +23,9 @@ or the terminal renderer; it ships only as a `.omxext` archive.
 - `view.ts`, `page.ts`, `tree.ts`, `toolbar.ts`, `messages.ts`, `index.html`,
   `files.css` — the view page shown in the companion panel.
 
-Files 0.8.0 declares host `>=0.26.0`, API `0.1.x` and the
+Files 0.8.1 declares host `>=0.26.0`, API `0.1.x` and the
 `terminal.insertPath.v1` capability. Host 0.26.0 is the first published host
-with the protected path consumer, so older hosts neither offer nor admit 0.8.0.
+with the protected path consumer, so older hosts neither offer nor admit Files 0.8.
 The narrow [development bridges](extension-installation-foundation.md#archive-contract)
 admit some archives on matching prerelease hosts. Admission checks host, API and
 capability grammar, not platform qualification.
@@ -218,7 +218,7 @@ Downloading never activates code.
 Refresh. Main picks one endpoint by target:
 `distribution/official-extensions-darwin-arm64-v1.json` on macOS ARM64 and
 `distribution/official-extensions-v1.json` everywhere else. Both select Files
-0.8.0. Downloaded length, SHA-256 and manifest strings must match the entry
+0.8.1. Downloaded length, SHA-256 and manifest strings must match the entry
 before trust. Installation stays dormant until Files is opened.
 
 The schema allows one release per extension ID, so hosts excluded by the
@@ -280,7 +280,7 @@ The AppImage is extracted, not modified.
 
 - Files runs only on Linux ARM64 and macOS ARM64. Windows, Linux x64 and other
   targets have no move addon and no catalog offer.
-- Files 0.8.0 passed the packaged smoke on the 0.26.0 Linux and macOS ARM64
+- Files 0.8.1 passed the packaged smoke on the 0.26.0 Linux and macOS ARM64
   hosts. Native drag onto the terminal is covered by headless tests only.
 - Native checks used synthetic Chromium input and controlled consent. They don't
   establish physical keyboard, IME or drag input, native dialogs,
