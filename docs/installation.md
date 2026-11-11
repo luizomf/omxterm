@@ -207,6 +207,22 @@ Update and uninstall never touch your settings, themes, snippets, or logs. See
 [Configuration](configuration.md) and
 [Local diagnostics](usage.md#local-diagnostics) for where they live.
 
+### macOS: tmux can't reach your local network after an update
+
+If you keep a tmux server running and then update or quit OMXTerm, commands
+inside tmux may stop reaching devices on your local network (your router, a
+NAS, another computer), while the internet and VPNs still work. `ping` to a
+local address times out, but works with `sudo` or over SSH.
+
+This isn't OMXTerm, and it happens with other terminals too. Since macOS 15,
+apps need **Local Network** permission, and macOS checks it against the app
+that started the tmux server. Once that app is gone or replaced, the server is
+left without it. Because OMXTerm isn't signed with an Apple developer ID, each
+update counts as a new app, so this shows up after every update.
+
+To fix it, restart the tmux server from the new OMXTerm: save your sessions if
+you use a tool for that, run `tmux kill-server`, then start tmux again.
+
 ## Optional tools
 
 Snippets comes with the app. On a new installation, OMXTerm tries to add it once
