@@ -84,8 +84,7 @@ const english = {
   prepareDelete: "Delete permanently…",
   delete: "Delete permanently",
   terminalDirectory: "Use last reported path",
-  terminalDirectoryHint:
-    "Active terminal; local folder. Unverified; may be stale or remote.",
+  terminalDirectoryHint: "May be stale or from a remote session.",
   terminalDirectoryTooltip:
     "Open the active terminal's last reported path as a local folder. It is unverified and may be stale or come from a remote session.",
   terminalDirectoryUnavailable:
@@ -215,7 +214,7 @@ const portuguese: FilesMessages = {
   delete: "Excluir permanentemente",
   terminalDirectory: "Usar último caminho informado",
   terminalDirectoryHint:
-    "Terminal ativo; pasta local. Não verificado; pode ser antigo ou remoto.",
+    "Pode estar desatualizado ou vir de uma sessão remota.",
   terminalDirectoryTooltip:
     "Abra o último caminho informado pelo terminal ativo como pasta local. O caminho não verificado pode estar desatualizado ou vir de uma sessão remota.",
   terminalDirectoryUnavailable:
