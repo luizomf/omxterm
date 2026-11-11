@@ -9,17 +9,21 @@
   background: var(--ui-overlay);
   color: var(--ui-text);
   color-scheme: var(--ui-color-scheme, dark);
-  font:
-    14px/1.5 system-ui,
-    sans-serif;
+  font: 14px/1.5 var(--ui-font);
 }
 .command-palette::backdrop {
   background: transparent;
 }
+/* The search field is the first thing people see; the title stays for
+   assistive technology only. */
 .command-palette h2 {
-  margin: 0 0 var(--ui-space-3);
-  font-size: 1rem;
-  font-weight: 600;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .command-palette input {
   box-sizing: border-box;

@@ -10,9 +10,7 @@
   background: var(--ui-overlay);
   color: var(--ui-text);
   color-scheme: var(--ui-color-scheme, dark);
-  font:
-    14px/1.5 system-ui,
-    sans-serif;
+  font: 14px/1.5 var(--ui-font);
   text-align: center;
   overflow-wrap: anywhere;
 }

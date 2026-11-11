@@ -13,9 +13,7 @@
   color: var(--ui-text);
   background: var(--ui-surface);
   color-scheme: var(--ui-color-scheme, dark);
-  font:
-    14px/1.5 system-ui,
-    sans-serif;
+  font: 14px/1.5 var(--ui-font);
 }
 .application-page.has-navigation {
   grid-template-columns: 168px minmax(0, 1fr);
@@ -91,6 +89,11 @@
 .page-button:disabled {
   opacity: 0.55;
   cursor: default;
+}
+.application-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .page-button-text {
   background: transparent;

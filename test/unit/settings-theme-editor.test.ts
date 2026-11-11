@@ -66,55 +66,57 @@ it("creates a complete draft, previews it locally and saves before explicit use"
   view.dialog.dispose();
 });
 
+const ANSI_PAIRS = [
+  ["black", "brightBlack"],
+  ["red", "brightRed"],
+  ["green", "brightGreen"],
+  ["yellow", "brightYellow"],
+  ["blue", "brightBlue"],
+  ["magenta", "brightMagenta"],
+  ["cyan", "brightCyan"],
+  ["white", "brightWhite"],
+] as const;
+const css = (color: string) => {
+  const probe = document.createElement("span");
+  probe.style.color = color;
+  return probe.style.color;
+};
+const swatch = (label: string) =>
+  document.querySelector<HTMLButtonElement>(
+    `.settings-theme-ansi button[aria-label="${label}"]`,
+  )!;
+
 it.each(["en-US", "pt-BR"] as const)(
-  "keeps all eight named ANSI pairs together with explicit text/fill samples in %s",
+  "shows each normal color next to its bright variant and edits the one picked in %s",
   async (locale) => {
     const language = createRendererLanguage(locale);
     const view = await open({ themeDocuments: documents() }, language);
     button(language.t("settings.page.appearance")).click();
     button(language.t("settings.author.new")).click();
-    const palette = view.query(".settings-theme-ansi");
-    expect(palette.closest(".settings-theme-specimen")).toBeNull();
-    expect(palette.previousElementSibling?.textContent).toBe(
-      language.t("settings.author.samplesHint"),
-    );
-    const pairs = [...palette.children];
-    expect(pairs).toHaveLength(8);
-    const keys = [
-      ["black", "brightBlack"],
-      ["red", "brightRed"],
-      ["green", "brightGreen"],
-      ["yellow", "brightYellow"],
-      ["blue", "brightBlue"],
-      ["magenta", "brightMagenta"],
-      ["cyan", "brightCyan"],
-      ["white", "brightWhite"],
-    ] as const;
-    keys.forEach((pair, index) => {
-      const rows = [...pairs[index]!.children];
-      expect(rows).toHaveLength(2);
-      pair.forEach((key, row) => {
-        const [label, text, swatch] = [...rows[row]!.children] as HTMLElement[];
-        expect(label!.textContent).toBe(
-          language.t(`settings.author.color.${key}`),
-        );
-        expect(label!.style.cssText).toBe("");
-        expect(text!.textContent).toBe("Aa");
-        const color = document.createElement("span");
-        color.style.color = DEFAULT_TERMINAL_THEME.colors[key];
-        expect(text!.style.color).toBe(color.style.color);
-        expect(text!.style.backgroundColor).toBe("rgb(0, 0, 0)");
-        expect(swatch!.style.backgroundColor).toBe(color.style.color);
-        expect(swatch!.textContent).toBe("");
-        expect(text!.getAttribute("aria-hidden")).toBe("true");
-        expect(swatch!.getAttribute("aria-hidden")).toBe("true");
-      });
-    });
+    const role = view.query<HTMLSelectElement>(".settings-theme-editor select");
+    const hex = view.query<HTMLInputElement>(".settings-theme-hex");
+    for (const [normal, bright] of ANSI_PAIRS) {
+      const first = swatch(language.t(`settings.author.color.${normal}`));
+      const second = swatch(language.t(`settings.author.color.${bright}`));
+      // Side by side in the same row, normal first.
+      expect(first.nextElementSibling).toBe(second);
+      expect(first.style.backgroundColor).toBe(
+        css(DEFAULT_TERMINAL_THEME.colors[normal]),
+      );
+      expect(second.style.backgroundColor).toBe(
+        css(DEFAULT_TERMINAL_THEME.colors[bright]),
+      );
+      second.click();
+      expect(role.value).toBe(bright);
+      expect(hex.value).toBe(DEFAULT_TERMINAL_THEME.colors[bright]);
+      expect(second.getAttribute("aria-pressed")).toBe("true");
+      expect(first.getAttribute("aria-pressed")).toBe("false");
+    }
     view.dialog.dispose();
   },
 );
 
-it("updates exact sample contrast and context without recoloring names or replacing retained rows", async () => {
+it("updates exact sample contrast without recoloring names or replacing retained swatches", async () => {
   const docs = documents();
   const language = createRendererLanguage("en-US");
   const view = await open({ themeDocuments: docs }, language);
@@ -123,9 +125,10 @@ it("updates exact sample contrast and context without recoloring names or replac
   const original = document.documentElement.style.cssText;
   const role = view.query<HTMLSelectElement>(".settings-theme-editor select");
   const hex = view.query<HTMLInputElement>(".settings-theme-hex");
-  const rows = [
-    ...document.querySelectorAll<HTMLElement>(".settings-theme-ansi-sample"),
+  const swatches = [
+    ...document.querySelectorAll<HTMLElement>(".settings-theme-ansi button"),
   ];
+  expect(swatches).toHaveLength(16);
   const change = (key: string, color: string) => {
     role.value = key;
     role.dispatchEvent(new Event("change"));
@@ -134,16 +137,20 @@ it("updates exact sample contrast and context without recoloring names or replac
   };
   // Deliberately invisible samples must remain honest, not contrast-corrected.
   for (const key of TERMINAL_THEME_COLOR_KEYS) change(key, "#123456");
-  for (const row of rows) {
-    const [label, text, swatch] = [...row.children] as HTMLElement[];
-    expect(label!.style.cssText).toBe("");
-    expect(text!.style.color).toBe("rgb(18, 52, 86)");
-    expect(text!.style.backgroundColor).toBe("rgb(18, 52, 86)");
-    expect(swatch!.style.backgroundColor).toBe("rgb(18, 52, 86)");
-  }
+  for (const element of swatches)
+    expect(element.style.backgroundColor).toBe("rgb(18, 52, 86)");
   const specimen = view.query<HTMLElement>(".settings-theme-specimen");
   expect(specimen.style.backgroundColor).toBe("rgb(18, 52, 86)");
   expect(specimen.style.color).toBe("rgb(18, 52, 86)");
+  const text = [
+    ...specimen.querySelectorAll<HTMLElement>(".settings-theme-ansi-text span"),
+  ];
+  expect(text).toHaveLength(16);
+  for (const span of text) expect(span.style.color).toBe("rgb(18, 52, 86)");
+  for (const name of document.querySelectorAll<HTMLElement>(
+    ".settings-theme-ansi-name",
+  ))
+    expect(name.style.cssText).toBe("");
   const selection = view.query<HTMLElement>(".settings-theme-selection");
   expect(selection.style.backgroundColor).toBe("rgb(18, 52, 86)");
   expect(selection.style.color).toBe("rgb(18, 52, 86)");
@@ -152,16 +159,11 @@ it("updates exact sample contrast and context without recoloring names or replac
   ).toBe("rgb(18, 52, 86)");
   change("brightWhite", "#12");
   language.set("pt-BR");
-  document
-    .querySelectorAll(".settings-theme-ansi-sample")
-    .forEach((row, index) => {
-      expect(row).toBe(rows[index]);
-    });
-  expect(rows.at(-1)!.firstElementChild!.textContent).toBe("Branco claro");
-  expect(
-    rows.at(-1)!.querySelector<HTMLElement>(".settings-theme-ansi-text")!.style
-      .color,
-  ).toBe("rgb(18, 52, 86)");
+  expect([...document.querySelectorAll(".settings-theme-ansi button")]).toEqual(
+    swatches,
+  );
+  expect(swatches.at(-1)!.getAttribute("aria-label")).toBe("Branco claro");
+  expect(swatches.at(-1)!.style.backgroundColor).toBe("rgb(18, 52, 86)");
   expect(hex.value).toBe("#12");
   expect(view.bridge.change).not.toHaveBeenCalled();
   expect(docs.saveTheme).not.toHaveBeenCalled();
