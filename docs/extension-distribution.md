@@ -111,8 +111,8 @@ same-version bytes are never rebuilt or replaced.
 
 Check `distribution/` for the exact entries. At the time of writing, both
 catalogs offer Files, SSH Connect and Snippets. Files requires host `>=0.26.0`
-and SSH Connect 0.4.0 requires `>=0.27.0-dev.0`, so older hosts install the
-older archive (Files 0.7, SSH Connect 0.3.2) by link or local file.
+and SSH Connect 0.4.0 requires `>=0.27.0-dev.0`, so older hosts install an
+older archive (for SSH Connect, 0.3.2) by link or local file.
 Evidence for specific extension and host pairs lives in each extension's
 development record, for example
 [Files](files-development-preview.md), [SSH Connect](ssh-connect-development.md)
