@@ -72,10 +72,10 @@ export function mountMirrorTypingPage(
   const legend = document.createElement("legend");
   legend.textContent = "Panes to mirror";
   const list = document.createElement("div");
-  list.className = "mirror-targets";
+  list.className = "mirror-targets ui-list";
   targets.append(legend, list);
   const actions = document.createElement("div");
-  actions.className = "mirror-actions";
+  actions.className = "mirror-actions ui-actions";
   const start = createPageButton(document, "primary");
   start.textContent = "Start mirroring";
   start.dataset.action = "start";
@@ -84,7 +84,7 @@ export function mountMirrorTypingPage(
   refresh.dataset.action = "refresh";
   actions.append(start, refresh);
   const help = document.createElement("p");
-  help.className = "mirror-help";
+  help.className = "mirror-help ui-hint";
   help.textContent =
     "Linux ARM64 preview · Nothing is saved. Start returns to the original pane. Use the visible Stop in the terminal to end mirroring without closing programs. Keys follow the source pane's terminal mode; different programs may interpret the same bytes differently.";
   content.append(introduction, warning, targets, actions, help);
@@ -161,6 +161,7 @@ export function mountMirrorTypingPage(
       setup = reply;
       inputs = reply.panes.map((pane) => {
         const label = document.createElement("label");
+        label.className = "ui-card";
         const input = document.createElement("input");
         input.type = "checkbox";
         input.className = "page-control";

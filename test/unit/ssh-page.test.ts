@@ -101,9 +101,9 @@ it("replays the initial language and preserves keyboard selection across relabel
   search.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
   );
-  const selected = document.querySelector(".alias-row.selected");
+  const selected = document.querySelector(".alias-row.is-selected");
   language("en-US");
-  expect(document.querySelector(".alias-row.selected")).toBe(selected);
+  expect(document.querySelector(".alias-row.is-selected")).toBe(selected);
   expect(selected?.textContent).toBe("beta");
   key(search, "keydown");
   key(search, "keyup");

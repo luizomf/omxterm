@@ -1,22 +1,13 @@
+/* Base for official extension views hosted in the Auxiliary Panel. The host
+   paints the panel tint; the view stays transparent and builds its UI from
+   the design system. Add class="ui-on-tint" to the view's <html>. */
 @import "../../src/renderer/ui.css";
 
 :root {
   color-scheme: dark;
-  font:
-    13px/1.45 system-ui,
-    sans-serif;
+  font: var(--ui-text-chrome) / 1.45 var(--ui-font);
   color: var(--ui-text);
   background: transparent;
-  --tool-raised: color-mix(
-    in srgb,
-    var(--ui-raised) calc(var(--terminal-background-opacity, 1) * 100%),
-    transparent
-  );
-  --tool-hover: color-mix(
-    in srgb,
-    var(--ui-hover) calc(var(--terminal-background-opacity, 1) * 100%),
-    transparent
-  );
 }
 * {
   box-sizing: border-box;
@@ -25,74 +16,27 @@ body {
   margin: 0;
   background: transparent;
 }
+/* A compact page whose 12 px padding lines up with the panel title. */
 .application-page {
-  width: 100%;
-  max-width: 1040px;
-  margin: auto;
-  padding: 12px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--ui-space-3);
+  width: 100%;
+  padding: var(--ui-space-3);
 }
-.application-page-header p {
-  margin: 3px 0 0;
-  color: var(--ui-secondary);
-  font-size: 11px;
+/* The page's one sentence of guidance sits apart from the first control. */
+.application-page-content > .ui-hint:first-child {
+  margin-bottom: var(--ui-space-3);
 }
 h1 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--ui-text-title);
   font-weight: 600;
 }
 h2 {
-  margin: 20px 0 10px;
-  font-size: 13px;
+  margin: var(--ui-space-4) 0 var(--ui-space-2);
+  font-size: var(--ui-text-chrome);
   font-weight: 600;
-}
-.page-control,
-input {
-  min-width: 0;
-  padding: 5px 8px;
-  font: inherit;
-  color: inherit;
-  background: var(--tool-raised);
-  border: 1px solid var(--ui-decoration);
-  border-radius: 4px;
-}
-.page-control {
-  cursor: pointer;
-}
-.page-control:hover:not(:disabled) {
-  background: var(--tool-hover);
-}
-.page-button-primary {
-  border-color: var(--ui-input-border);
-  font-weight: 600;
-}
-input {
-  border-color: var(--ui-input-border);
-}
-:focus-visible {
-  outline: 2px solid var(--ui-text);
-  outline-offset: 2px;
-}
-:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-.page-notice {
-  margin: 0;
-  padding: 8px 10px;
-  border-left: 2px solid var(--ui-text);
-  background: var(--tool-raised);
-  overflow-wrap: anywhere;
-}
-.page-notice:empty {
-  display: none;
-}
-.page-notice[data-severity="error"],
-.page-notice[data-severity="warning"] {
-  border-left-width: 4px;
 }
 [hidden] {
   display: none !important;

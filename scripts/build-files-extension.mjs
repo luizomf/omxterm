@@ -94,20 +94,16 @@ export async function buildExtension(
       format: "iife",
       outfile: path.join(stage, "view.js"),
     });
-    if (name !== "restoration")
-      await build({
-        absWorkingDir: root,
-        entryPoints: [`extensions/${name}/${name}.css`],
-        bundle: true,
-        outfile: path.join(stage, `${name}.css`),
-      });
-    for (const resource of name === "restoration"
-      ? ["index.html", `${name}.css`]
-      : ["index.html"])
-      await cp(
-        path.join(root, "extensions", name, resource),
-        path.join(stage, resource),
-      );
+    await build({
+      absWorkingDir: root,
+      entryPoints: [`extensions/${name}/${name}.css`],
+      bundle: true,
+      outfile: path.join(stage, `${name}.css`),
+    });
+    await cp(
+      path.join(root, "extensions", name, "index.html"),
+      path.join(stage, "index.html"),
+    );
     await cp(path.join(root, "LICENSE"), path.join(stage, "LICENSE"));
     if (name === "snippets") {
       for (const resource of ["README.md", "snippets.example.yaml"])

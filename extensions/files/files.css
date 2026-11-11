@@ -1,14 +1,12 @@
 @import "../shared/appearance.css";
 
-.application-page {
-  max-width: none;
-}
+/* Layout only; components come from the design system (ui.css). */
 .toolbar,
 .location {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .toolbar {
   flex-wrap: wrap;
@@ -23,21 +21,9 @@
   display: inline-flex;
   flex: none;
 }
-.toolbar-button.page-control {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  padding: 7px;
-  background: transparent;
-  border-color: transparent;
-}
-.toolbar-button.page-control:hover:not(:disabled):not([aria-disabled="true"]) {
-  background: var(--tool-hover);
-}
-.toolbar-button[aria-disabled="true"] {
-  opacity: 0.5;
-  cursor: default;
+.toolbar-button {
+  width: 32px;
+  height: 32px;
 }
 .toolbar-button:focus-visible {
   outline-offset: -2px;
@@ -59,28 +45,19 @@
   position: fixed;
   z-index: 4;
   width: max-content;
-  max-width: calc(100vw - 8px);
-  max-height: calc(100vh - 8px);
-  overflow: auto;
-  overflow-wrap: anywhere;
-  padding: 5px 8px;
-  color: var(--ui-text);
-  background: var(--ui-raised);
-  border: 1px solid var(--ui-input-border);
-  border-radius: 4px;
-  box-shadow: 0 3px 12px #0004;
-  font-size: 12px;
+  padding: 4px 8px;
+  font-size: var(--ui-text-meta);
   line-height: 1.35;
   pointer-events: none;
 }
 .location input {
   flex: 1 1 0;
   width: 0;
-  font-family: ui-monospace, monospace;
+  font-family: var(--ui-font-mono);
 }
 .entry-filter {
   width: 100%;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 .entries {
   min-height: 100px;
@@ -90,42 +67,29 @@
   z-index: 2;
   inset: auto 8px 8px;
   max-height: calc(100vh - 16px);
-  overflow: auto;
   padding: 12px;
-  border: 1px solid var(--ui-input-border);
-  border-radius: 6px;
-  background: var(--ui-raised);
-  color: var(--ui-text);
-  overflow-wrap: anywhere;
-  box-shadow: 0 4px 16px #0004;
 }
 .operation-editor label {
   display: grid;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: 4px;
+  margin-bottom: 12px;
 }
 .operation-editor button {
-  margin-right: 6px;
+  margin-right: 8px;
 }
 .file-row {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto;
   gap: 4px;
-  align-items: center;
-  width: 100%;
-  min-height: 29px;
-  border-radius: 3px;
-  padding: 4px 6px 4px calc(4px + var(--depth) * 12px);
+  min-height: 28px;
+  padding: 4px 8px 4px calc(4px + var(--depth) * 12px);
   cursor: default;
   user-select: none;
-}
-.file-row:hover {
-  background: var(--tool-hover);
 }
 .file-row[data-drop="valid"] {
   outline: 2px solid var(--ui-text);
   outline-offset: -2px;
-  background: var(--tool-hover);
+  background: var(--ui-control-hover);
 }
 .file-row[data-drop="invalid"] {
   outline: 1px dashed var(--ui-secondary);
@@ -136,10 +100,7 @@
   z-index: 2;
   inset: auto 8px 8px;
   margin: 0;
-  padding: 6px 8px;
-  border: 1px solid var(--ui-input-border);
-  border-left: 3px solid var(--ui-text);
-  background: var(--ui-raised);
+  padding: 4px 8px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -153,17 +114,6 @@
 .disclosure {
   cursor: pointer;
   text-align: center;
-}
-.file-row[aria-selected="true"] {
-  background: var(--tool-hover);
-  box-shadow: inset 2px 0 var(--ui-text);
-}
-.kind,
-.summary,
-.tree-hint,
-.filter-hint {
-  color: var(--ui-secondary);
-  font-size: 11px;
 }
 .tree-hint {
   padding: 4px 12px;
@@ -179,23 +129,14 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   padding: 4px;
-  max-width: calc(100vw - 8px);
-  max-height: calc(100vh - 8px);
-  overflow: auto;
-  background: var(--ui-raised);
-  border: 1px solid var(--ui-input-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px #0004;
 }
 .file-menu button {
-  border: 0;
-  background: transparent;
-  text-align: left;
+  text-align: start;
 }
 .menu-action-hint {
   display: block;
-  margin-top: 3px;
-  font-size: 0.85em;
+  margin-top: 4px;
+  font-size: var(--ui-text-meta);
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -203,7 +144,7 @@
   display: grid;
   grid-template-columns: 1em minmax(0, 1fr);
   align-items: start;
-  column-gap: 6px;
+  column-gap: 8px;
   row-gap: 2px;
 }
 .file-menu .menu-with-shortcut {
@@ -229,8 +170,6 @@
   grid-column: 2;
   grid-row: 2;
   min-width: 0;
-  color: var(--ui-secondary);
-  font-size: 11px;
   overflow-wrap: anywhere;
 }
 @media (max-width: 300px) {

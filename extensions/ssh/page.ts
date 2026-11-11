@@ -29,8 +29,9 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const unsubscribeAppearance = mountHostedAppearance(document, bridge);
   const window = document.defaultView!;
   const lifetime = new window.AbortController();
-  const subtitle = document.createElement("p");
-  subtitle.className = "ssh-subtitle";
+  // One sentence of guidance; details live in docs/ssh-connect.md.
+  const hint = document.createElement("p");
+  hint.className = "ui-hint";
   const notice = document.createElement("div");
   notice.hidden = true;
   notice.setAttribute("role", "status");
@@ -41,6 +42,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const quickText = document.createTextNode("");
   quickLabel.append(quickText);
   const quick = document.createElement("input");
+  quick.className = "page-control";
   quick.maxLength = 384;
   quick.spellcheck = false;
   quickLabel.append(quick);
@@ -52,6 +54,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   const searchText = document.createTextNode("");
   searchLabel.append(searchText);
   const search = document.createElement("input");
+  search.className = "page-control";
   search.type = "search";
   search.spellcheck = false;
   searchLabel.append(search);
@@ -60,21 +63,19 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   toolbar.className = "alias-toolbar";
   toolbar.append(searchLabel, refresh);
   const summary = document.createElement("p");
+  summary.className = "ui-meta";
   const rows = document.createElement("div");
-  rows.className = "aliases";
+  rows.className = "aliases ui-list";
   const warning = document.createElement("p");
-  warning.className = "index-warning";
-  const explanation = document.createElement("p");
-  explanation.className = "ssh-explanation";
+  warning.className = "index-warning ui-meta";
   content.append(
-    subtitle,
+    hint,
     quickSection,
     aliasHeading,
     toolbar,
     summary,
     warning,
     rows,
-    explanation,
   );
   // The host supplies the visible tool identity; retain a named child region.
   const page = createApplicationPage(document, { notice, content });
@@ -102,7 +103,7 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   function relabel() {
     const m = sshMessages(language);
     document.documentElement.lang = language;
-    subtitle.textContent = m.subtitle;
+    hint.textContent = m.hint;
     quickText.data = m.quick;
     quick.placeholder = m.placeholder;
     connectButton.textContent = m.connect;
@@ -110,7 +111,6 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     searchText.data = m.search;
     search.placeholder = m.filter;
     refresh.textContent = m.refresh;
-    explanation.textContent = m.explanation;
     summary.textContent = reading
       ? m.reading
       : m.summary(filtered().length, aliases.length);
@@ -201,10 +201,11 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     rows.replaceChildren();
     const current = revision;
     list.forEach((alias, index) => {
-      const row = createPageButton(document);
+      const row = document.createElement("button");
+      row.type = "button";
       row.dataset.alias = alias;
-      row.className += " alias-row";
-      row.classList.toggle("selected", index === selected);
+      row.className = "alias-row ui-row";
+      row.classList.toggle("is-selected", index === selected);
       row.textContent = alias;
       row.setAttribute("aria-label", sshMessages(language).connectTo(alias));
       row.addEventListener("click", () => {

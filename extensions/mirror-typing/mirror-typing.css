@@ -1,6 +1,8 @@
 @import "../../src/renderer/ui.css";
 @import "../../src/renderer/application-page.css";
 
+/* Layout only; components come from the design system (ui.css). */
+
 * {
   box-sizing: border-box;
 }
@@ -30,28 +32,16 @@ legend {
   margin-bottom: 12px;
   font-weight: 600;
 }
-.mirror-targets {
-  display: grid;
-  gap: 4px;
-}
 .mirror-targets label {
   display: flex;
   align-items: baseline;
   gap: 12px;
   padding: 12px;
-  border-radius: var(--ui-radius);
-  background: var(--ui-raised);
   overflow-wrap: anywhere;
 }
 .mirror-targets input {
   flex: none;
 }
-.mirror-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .mirror-help {
   margin-top: 24px;
-  color: var(--ui-secondary);
 }
