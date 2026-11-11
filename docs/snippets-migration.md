@@ -145,10 +145,24 @@ extension host; see the [macOS](macos-extension-composition.md),
 [Linux x64](linux-x64-extension-composition.md) and
 [Windows ARM64](windows-arm64-extension-composition.md) notes.
 
-Before publishing a new version, install the exact archive on a published host
-of each target and check: trust prompt and dormant install, Toggle Snippets
-with an existing catalog, Insert and Run of one entry, preview Cancel, and
-disable/uninstall with `snippets.yaml` unchanged and the terminal still usable.
+### Packaged Snippets smoke
+
+`test/integration/snippets-smoke-packaged.test.ts` checks an archive on a
+packaged host, on Linux ARM64 and macOS ARM64. It launches the app with an
+isolated home that has a two-entry `snippets.yaml`, installs the archive through
+**Install local .omxext…** (one consent), opens **Toggle Snippets**, then
+Inserts one entry and Runs the other. The shell writes what it received, and the
+test checks it and that `snippets.yaml` is unchanged. It runs in seconds:
+
+```sh
+OMXTERM_SNIPPETS_SMOKE_APP=/absolute/OMXTerm-X.Y.Z-arm64.AppImage \
+OMXTERM_SNIPPETS_SMOKE_ARCHIVE=/absolute/snippets-X.Y.Z.omxext \
+npx vitest run test/integration/snippets-smoke-packaged.test.ts
+```
+
+On macOS, point the app variable at an `OMXTerm.app` copied out of the DMG and
+run it from a logged-in desktop session. The test skips on Windows and when
+either variable is unset.
 
 ## Publish and install
 

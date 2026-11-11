@@ -278,7 +278,10 @@ platform from those exact bytes. For Files, that is the
 installs the archive, lists a directory and inserts a path into the terminal.
 For SSH Connect, it is the
 [packaged SSH smoke](ssh-connect-development.md#packaged-ssh-smoke): it installs
-the archive, picks an alias and checks what the ssh client received.
+the archive, picks an alias and checks what the ssh client received. For
+Snippets, it is the
+[packaged Snippets smoke](snippets-migration.md#packaged-snippets-smoke): it
+installs the archive, then inserts and runs a snippet in the terminal.
 
 ### Publishing an extension archive
 

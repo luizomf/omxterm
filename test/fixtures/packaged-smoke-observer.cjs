@@ -199,30 +199,42 @@ async function ssh({ archive, alias, marker }) {
   };
 }
 
-async function snippets({ archive, name, marker }) {
+// `insert` and `run` name two snippets whose bodies write `marker` and
+// `marker + ".run"`.
+async function snippets({ archive, insert, run, marker }) {
   const { type, read, consents } = await install(
     archive,
     "omxterm.snippets",
     marker,
   );
-  menu("Snippets");
+  menu("Toggle Snippets");
   await until(() => !!extensionView(), "Snippets view");
   const view = extensionView();
-  const row = `[...document.querySelectorAll('.snippet-activate')].find(row => row.querySelector('.snippet-name')?.textContent === ${JSON.stringify(name)})`;
-  await until(() => view.executeJavaScript(`!!${row}`), "snippet row");
-  // An Insert snippet types its body at the prompt; Enter is ours to press.
-  await view.executeJavaScript(`${row}.click()`);
+  const row = (name) =>
+    `[...document.querySelectorAll('.snippet-activate')].find(row => row.querySelector('.snippet-name')?.textContent === ${JSON.stringify(name)})`;
+  await until(() => view.executeJavaScript(`!!${row(insert)}`), "snippet rows");
+  const written = (file) =>
+    until(async () => (await read(file)) !== undefined, file, 10000).catch(
+      () => {},
+    );
+
+  // Insert types the body at the prompt; Enter is ours to press.
+  await view.executeJavaScript(`${row(insert)}.click()`);
   await new Promise((resolve) => setTimeout(resolve, 500));
+  await type("", true);
+  await written(marker);
+  // Run types the body and presses Enter itself.
+  await view.executeJavaScript(`${row(run)}.click()`);
+  await written(marker + ".run");
   const notices = await view.executeJavaScript(
     "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
   );
-  await type("", true);
-  await until(
-    async () => (await read(marker)) !== undefined,
-    "marker",
-    10000,
-  ).catch(() => {});
-  return { consents, notices, inserted: await read(marker) };
+  return {
+    consents,
+    notices,
+    inserted: await read(marker),
+    ran: await read(marker + ".run"),
+  };
 }
 
 function quit() {
