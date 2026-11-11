@@ -178,9 +178,16 @@ export async function exerciseTheme(
   await search.retain();
   const directory = path.join(root, "appearance-xdg", "omxterm");
   await mkdir(directory, { recursive: true });
+  // The accent case proves the 1px line paints over first-row cell paint,
+  // which only touches the pane's top edge without top padding (the default
+  // is 12 px since #932).
   await writeFile(
     path.join(directory, "config.json"),
-    JSON.stringify({ version: 1, theme: { path: "theme.json" } }),
+    JSON.stringify({
+      version: 1,
+      theme: { path: "theme.json" },
+      terminal: { padding: { top: 0 } },
+    }),
   );
   const reloader = createUserConfigurationReloader({
     initial: { configuration: DEFAULT_USER_CONFIGURATION, userFileErrors: [] },
