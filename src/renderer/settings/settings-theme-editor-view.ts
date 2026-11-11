@@ -43,7 +43,7 @@ function buildThemeEditorView(
   const element = document.createElement("section");
   element.className = "settings-theme-authoring";
   const toolbar = document.createElement("div");
-  toolbar.className = "settings-actions";
+  toolbar.className = "settings-actions ui-actions";
   const create = createPageButton(document);
   const importButton = createPageButton(document);
   toolbar.append(create, importButton);
@@ -54,9 +54,9 @@ function buildThemeEditorView(
   const source = document.createElement("p");
   source.className = "settings-path";
   const hint = document.createElement("p");
-  hint.className = "settings-hint";
+  hint.className = "ui-hint settings-hint";
   const appearance = document.createElement("p");
-  appearance.className = "settings-hint";
+  appearance.className = "ui-hint settings-hint";
   const field = (input: HTMLElement) => {
     const row = document.createElement("label");
     row.className = "settings-row";
@@ -138,7 +138,7 @@ function buildThemeEditorView(
     }),
   );
   const samplesHint = document.createElement("p");
-  samplesHint.className = "settings-hint";
+  samplesHint.className = "ui-hint settings-hint";
   const samples = document.createElement("ul");
   samples.className = "settings-theme-ansi";
   // One row per color: normal and bright swatches side by side. Picking one
@@ -172,7 +172,7 @@ function buildThemeEditorView(
   filename.maxLength = 128;
   const filenameField = field(filename);
   const filenameHint = document.createElement("p");
-  filenameHint.className = "settings-hint";
+  filenameHint.className = "ui-hint settings-hint";
   const copyFields = document.createElement("div");
   copyFields.className = "settings-theme-copy-fields";
   copyFields.append(filenameField.row, filenameHint);
@@ -184,10 +184,10 @@ function buildThemeEditorView(
   const reload = createPageButton(document, "text");
   reload.hidden = true;
   const actions = document.createElement("div");
-  actions.className = "settings-actions";
+  actions.className = "settings-actions ui-actions";
   actions.append(save, copy, exportButton, cancel, reload);
   const exportHint = document.createElement("p");
-  exportHint.className = "settings-hint";
+  exportHint.className = "ui-hint settings-hint";
   exportHint.id = "settings-theme-export-hint";
   exportButton.setAttribute("aria-describedby", exportHint.id);
   const use = createPageButton(document);

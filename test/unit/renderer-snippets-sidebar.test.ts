@@ -240,10 +240,7 @@ describe("Snippets auxiliary view", () => {
       .click();
     const [, returnFocus] = f.preview.mock.calls[0] as [unknown, () => boolean];
     expect(returnFocus()).toBe(true);
-    expect(document.activeElement).toHaveProperty(
-      "className",
-      "snippet-preview-open",
-    );
+    expect(document.activeElement!.matches(".snippet-preview-open")).toBe(true);
     f.input("brew");
     expect(returnFocus()).toBe(true);
     expect(document.activeElement).toBe(f.search);

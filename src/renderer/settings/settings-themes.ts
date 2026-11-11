@@ -52,13 +52,13 @@ export function renderSettingsThemes(
   heading.id = "settings-themes-title";
   const refresh = createPageButton(document);
   const hint = document.createElement("p");
-  hint.className = "settings-hint";
+  hint.className = "ui-hint settings-hint";
   const grid = document.createElement("div");
   grid.className = "settings-themes-grid";
   grid.setAttribute("role", "radiogroup");
   grid.setAttribute("aria-labelledby", heading.id);
   const message = document.createElement("p");
-  message.className = "settings-hint settings-themes-message";
+  message.className = "ui-hint settings-hint settings-themes-message";
   message.setAttribute("role", "status");
   const invalid = document.createElement("div");
   invalid.className = "settings-themes-invalid";

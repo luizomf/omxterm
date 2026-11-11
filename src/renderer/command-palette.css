@@ -1,78 +1,35 @@
 .command-palette {
-  box-sizing: border-box;
   width: min(620px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
   margin: 24px auto auto;
   padding: var(--ui-space-4);
-  border: 1px solid var(--ui-decoration);
-  border-radius: var(--ui-radius-overlay);
-  background: var(--ui-overlay);
-  color: var(--ui-text);
-  color-scheme: var(--ui-color-scheme, dark);
-  font: 14px/1.5 var(--ui-font);
-}
-.command-palette::backdrop {
-  background: transparent;
-}
-/* The search field is the first thing people see; the title stays for
-   assistive technology only. */
-.command-palette h2 {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 .command-palette input {
-  box-sizing: border-box;
   width: 100%;
-  min-height: 36px;
-  padding: 7px 12px;
-  border: 1px solid var(--ui-input-border);
-  border-radius: var(--ui-radius);
-  background: var(--ui-raised-tint);
-  color: var(--ui-text);
-  font: inherit;
-}
-.command-palette input:focus-visible {
-  outline: 2px solid var(--ui-text);
-  outline-offset: 2px;
 }
 .command-palette [role="listbox"] {
-  margin-top: var(--ui-space-3);
   max-height: min(400px, calc(100vh - 200px));
+  margin-top: var(--ui-space-3);
   overflow-y: auto;
 }
 .command-palette [role="option"] {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: var(--ui-space-4);
   min-height: 36px;
   padding: var(--ui-space-2) var(--ui-space-3);
-  border-radius: var(--ui-radius);
   cursor: default;
 }
 .command-palette [role="option"] span {
   overflow-wrap: anywhere;
 }
-.command-palette [role="option"]:hover {
-  background: var(--ui-hover-tint);
-}
-.command-palette [aria-selected="true"] {
-  background: var(--ui-selected);
-  outline: 1px solid var(--ui-input-border);
-  outline-offset: -1px;
-}
 .command-palette kbd {
-  color: var(--ui-secondary);
-  font-size: 12px;
   white-space: nowrap;
 }
+.command-palette kbd:empty {
+  display: none;
+}
 .command-palette [role="status"] {
-  color: var(--ui-secondary);
   margin: 0;
   padding: var(--ui-space-3);
+  color: var(--ui-secondary);
 }

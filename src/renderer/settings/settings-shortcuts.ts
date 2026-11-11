@@ -93,7 +93,7 @@ export function renderShortcuts(
   const panel = document.createElement("div");
   panel.className = "settings-panel settings-shortcuts";
   const hint = document.createElement("p");
-  hint.className = "settings-hint";
+  hint.className = "ui-hint settings-hint";
   context.labels.push((t) => {
     hint.textContent = t("shortcuts.hint");
   });
@@ -156,7 +156,7 @@ export function renderShortcuts(
     const name = document.createElement("span");
     name.className = "settings-shortcut-name";
     const value = document.createElement("span");
-    value.className = "settings-shortcut-value";
+    value.className = "settings-shortcut-value ui-chip";
     const state = document.createElement("span");
     state.className = "settings-shortcut-state";
     const button = (className: string, onClick: () => void) => {
@@ -164,7 +164,7 @@ export function renderShortcuts(
         document,
         className === "settings-shortcut-record" ? "quiet" : "text",
       );
-      element.classList.add(className);
+      element.classList.add(className, "page-button-compact");
       element.addEventListener("click", onClick);
       return element;
     };

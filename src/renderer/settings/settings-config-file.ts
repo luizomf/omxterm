@@ -41,7 +41,7 @@ export function renderConfigFile(
   const save = createPageButton(document, "primary");
   const revert = createPageButton(document);
   const actions = document.createElement("div");
-  actions.className = "settings-actions";
+  actions.className = "settings-actions ui-actions";
   actions.append(save, revert);
   let draftRevision: string | undefined;
   let dirty = false;

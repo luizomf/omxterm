@@ -1,15 +1,5 @@
+@import "../shared/appearance.css";
 @import "../../src/renderer/snippets-view.css";
-
-:root {
-  color-scheme: dark;
-  --terminal-chrome-neutral: #808090;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
 
 html,
 body {
@@ -19,18 +9,10 @@ body {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  margin: 0;
   overflow: hidden;
-  /* The host owns the panel tint; the child must not composite it again. */
-  background: transparent;
 }
 
 body {
   gap: 8px;
   padding: 12px;
-  font:
-    13px/1.45 -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
-  color: var(--terminal-foreground, #e6e6e6);
 }

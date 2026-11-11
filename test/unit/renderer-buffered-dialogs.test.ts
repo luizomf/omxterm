@@ -144,7 +144,7 @@ it.each([
         ...document.querySelectorAll<HTMLDialogElement>("dialog[open]"),
       ];
       expect(open).toHaveLength(1);
-      expect(open[0]!.className).toBe("about-dialog");
+      expect(open[0]!.classList.contains("about-dialog")).toBe(true);
       expect(
         document.querySelector<HTMLElement>(".window-drag-handle")!.hidden,
       ).toBe(true);

@@ -116,7 +116,7 @@ export function createAboutDialog(
       }
       const current = document.createElement("dialog");
       dialog = current;
-      current.className = "about-dialog";
+      current.className = "about-dialog ui-dialog";
       current.setAttribute("aria-labelledby", "about-title");
       const title = document.createElement("h2");
       title.id = "about-title";
@@ -145,6 +145,7 @@ export function createAboutDialog(
       ] satisfies [MessageKey, AboutLink][]) {
         const button = document.createElement("button");
         button.type = "button";
+        button.className = "ui-link";
         button.addEventListener("click", () => {
           if (dialog !== current) return;
           void options.openLink(link).catch(() => {
@@ -158,7 +159,7 @@ export function createAboutDialog(
       }
       const done = document.createElement("button");
       done.type = "button";
-      done.className = "about-close";
+      done.className = "about-close page-control page-button page-button-quiet";
       relabel = (t) => {
         title.textContent = t("about.title");
         version.textContent =

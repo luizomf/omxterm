@@ -1,8 +1,9 @@
+// The design system comes first; surface sheets add layout only.
+import "./ui.css";
 import "./terminal-window.css";
 import "./command-palette.css";
 import "./window-chrome.css";
 import "./about/about-dialog.css";
-import "./ui-tokens.css";
 import "./settings/settings-dialog.css";
 import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";

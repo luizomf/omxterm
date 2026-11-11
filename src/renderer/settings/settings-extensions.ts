@@ -111,6 +111,8 @@ export function renderExtensions(
   const panel = document.createElement("section");
   panel.className = "settings-panel extensions-panel";
   const heading = document.createElement("h2");
+  // The nav already names the page; keep the heading for assistive tech.
+  heading.className = "ui-visually-hidden";
   bind(heading, () => t("extensions.heading"));
   // One plain trust sentence; the details live in the docs.
   const explanation = document.createElement("p");
@@ -120,8 +122,9 @@ export function renderExtensions(
   explanation.append(trust);
   const terminal = document.defaultView?.omxterm?.terminal;
   if (terminal) {
-    const learnMore = createPageButton(document, "text");
-    learnMore.classList.add("extensions-learn-more");
+    const learnMore = document.createElement("button");
+    learnMore.type = "button";
+    learnMore.className = "extensions-learn-more ui-link";
     bind(learnMore, () => t("extensions.learnMore"));
     learnMore.addEventListener("click", () =>
       terminal.openExternalLink(TRUST_DOCS),
@@ -129,7 +132,7 @@ export function renderExtensions(
     explanation.append(learnMore);
   }
   const controls = document.createElement("div");
-  controls.className = "application-page-actions";
+  controls.className = "ui-actions";
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
   const list = document.createElement("div");

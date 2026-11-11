@@ -1,3 +1,4 @@
+import "../../src/renderer/ui.css";
 import "../../src/renderer/terminal-window.css";
 import "../../src/renderer/window-chrome.css";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";

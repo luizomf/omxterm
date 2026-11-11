@@ -317,7 +317,7 @@ function createPanelTools(
 ) {
   const document = header.ownerDocument;
   const switcher = document.createElement("nav");
-  switcher.className = "auxiliary-tools";
+  switcher.className = "auxiliary-tools ui-nav";
   title.after(switcher);
   const buttons = new Map<string, HTMLButtonElement>();
   return (selected: string | undefined, t: Translate) => {
@@ -350,7 +350,7 @@ function createPanelTools(
 function createPanelElements(root: HTMLElement) {
   const document = root.ownerDocument;
   root.hidden = true;
-  root.classList.add("auxiliary-panel");
+  root.classList.add("auxiliary-panel", "ui-on-tint");
   const separator = document.createElement("div");
   separator.className = "auxiliary-separator";
   separator.tabIndex = 0;
@@ -358,15 +358,15 @@ function createPanelElements(root: HTMLElement) {
   separator.setAttribute("role", "separator");
   separator.setAttribute("aria-orientation", "vertical");
   const header = document.createElement("header");
-  header.className = "auxiliary-header";
+  header.className = "auxiliary-header ui-panel-header";
   const title = document.createElement("h2");
   const close = document.createElement("button");
   close.type = "button";
   close.textContent = "×";
-  close.className = "auxiliary-close";
+  close.className = "auxiliary-close ui-icon-button";
   const hideButton = document.createElement("button");
   hideButton.type = "button";
-  hideButton.className = "auxiliary-hide";
+  hideButton.className = "auxiliary-hide ui-icon-button";
   hideButton.textContent = "−";
   header.append(title, hideButton, close);
   const body = document.createElement("div");
