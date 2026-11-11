@@ -2575,7 +2575,7 @@ implementation; there is no renderer selector or registry
 
 - Files archive versions and compatibility are maintained separately from the
   host. Files `0.8.3` declares `terminal.insertPath.v1`, minimum host `>=0.26.0`,
-  and API `0.1.x`; both ARM64 catalogs offer `0.8.2`. Production admission and the
+  and API `0.1.x`; both ARM64 catalogs offer `0.8.3`. Production admission and the
   catalog refuse lower hosts.
 - Published archives are immutable; older Files releases keep their own host
   ranges and labels. Each catalog offers one release per extension ID, so hosts
