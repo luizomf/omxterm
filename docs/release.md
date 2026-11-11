@@ -86,21 +86,25 @@ npm run package:verify      # Windows: -- --disposable-vm-allow-omxterm-replacem
 
 ### macOS ARM64
 
-On Apple Silicon macOS with Xcode Command Line Tools (see
-[side effects on your desktop](development.md#side-effects-on-your-desktop))
-and the [signing keychain](#macos-signing-keychain), run the verifier on both
-the staged app and the mounted DMG:
+macOS takes two machines, so the signing key never enters a disposable VM:
 
-```sh
-export OMXTERM_MACOS_SIGNING_KEYCHAIN="$HOME/.omxterm-signing/omxterm-signing.keychain-db"
-export OMXTERM_MACOS_SIGNING_KEYCHAIN_PASSWORD_FILE="$HOME/.omxterm-signing/password.txt"
-npm ci
-npm run check
-```
+1. **Build and sign** on a persistent Apple Silicon Mac that holds the
+   [signing keychain](#macos-signing-keychain). Packaging is headless; it opens
+   no windows:
 
-`npm run check` runs `check:portable`, builds the staged app
-(`release/mac-arm64/OMXTerm.app`) and verifies it. Afterwards, mount and verify
-the final `.dmg` image:
+   ```sh
+   export OMXTERM_MACOS_SIGNING_KEYCHAIN="$HOME/.omxterm-signing/omxterm-signing.keychain-db"
+   export OMXTERM_MACOS_SIGNING_KEYCHAIN_PASSWORD_FILE="$HOME/.omxterm-signing/password.txt"
+   npm ci
+   npm run package:mac
+   ```
+
+2. **Test** on a macOS test machine (a VM is fine) with Xcode Command Line
+   Tools (see
+   [side effects on your desktop](development.md#side-effects-on-your-desktop)),
+   at the same cut and without the signing variables. `npm run check` runs
+   `check:portable`, builds an ad-hoc staged app and verifies it. Then copy the
+   signed `.dmg` from step 1 into `release/` there, mount it and verify it:
 
 ```sh
 (
@@ -123,7 +127,7 @@ the final `.dmg` image:
 ```
 
 `--release` requires the stable release signature and fails on an ad-hoc
-build. The app is not Developer ID signed or notarized, and the DMG itself is
+build, so it also proves you're testing the DMG from step 1. Publish that DMG. The app is not Developer ID signed or notarized, and the DMG itself is
 unsigned.
 
 #### macOS signing keychain
@@ -136,9 +140,10 @@ Without the two variables above, `scripts/sign-macos.mjs` signs ad-hoc, which
 is what contributors and CI get. Setting only one of them fails the build.
 
 The key travels as `omxterm-signing.p12`, encrypted with a password the
-maintainer keeps in a password manager. To set up a build machine, put both in
-a private folder and import them into a dedicated keychain file, never the
-login keychain:
+maintainer keeps privately. Set it up only on persistent Macs that build
+releases, never on disposable VMs or shared machines. Put both in a private
+folder and import them into a dedicated keychain file, never the login
+keychain:
 
 ```sh
 (
