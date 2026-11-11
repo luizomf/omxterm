@@ -66,13 +66,13 @@ export function createSnippetPreview(
         return;
       const current = document.createElement("dialog");
       dialog = current;
-      current.className = "snippet-preview";
+      current.className = "snippet-preview ui-dialog";
       current.setAttribute("aria-labelledby", "snippet-preview-title");
       const title = document.createElement("h2");
       title.id = "snippet-preview-title";
       title.textContent = snippet.name;
       const description = document.createElement("p");
-      description.className = "snippet-preview-description";
+      description.className = "snippet-preview-description ui-hint";
       description.textContent = snippet.description ?? "";
       description.hidden = !snippet.description;
       // The stored string as-is: never trimmed, normalized or read back.
@@ -84,11 +84,11 @@ export function createSnippetPreview(
       closed.className = "snippet-preview-closed";
       closed.setAttribute("role", "status");
       const actions = document.createElement("div");
-      actions.className = "snippet-preview-actions";
+      actions.className = "snippet-preview-actions ui-actions";
       const button = (text: string, className: string) => {
         const element = document.createElement("button");
         element.type = "button";
-        element.className = className;
+        element.className = `${className} page-control page-button page-button-quiet`;
         element.textContent = text;
         actions.append(element);
         return element;

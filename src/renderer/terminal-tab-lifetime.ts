@@ -33,11 +33,13 @@ export function terminalPaneEnded(
 ) {
   if (exit.retained) {
     const notice = pane.container.ownerDocument.createElement("div");
-    notice.className = "terminal-exit-notice";
+    notice.className = "terminal-exit-notice ui-overlay";
     notice.setAttribute("role", "status");
     notice.dataset.exitCode = String(exit.exitCode);
     notice.append(pane.container.ownerDocument.createElement("span"));
     const close = pane.container.ownerDocument.createElement("button");
+    close.className =
+      "page-control page-button page-button-quiet page-button-compact";
     close.addEventListener("keydown", (event) => keyboard.track(event, close));
     close.addEventListener("click", () => panes.closePane(pane));
     notice.append(close);

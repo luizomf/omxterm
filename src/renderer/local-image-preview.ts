@@ -24,16 +24,17 @@ export function createLocalImagePreview(
 ): LocalImagePreview {
   const language = options.language ?? englishLanguage;
   const dialog = document.createElement("dialog");
-  dialog.className = "local-image-preview";
+  dialog.className = "local-image-preview ui-dialog";
 
   const closeButton = document.createElement("button");
   closeButton.type = "button";
-  closeButton.className = "local-image-preview-close";
+  closeButton.className = "local-image-preview-close ui-icon-button";
   closeButton.textContent = "×";
 
   const image = document.createElement("img");
   const error = document.createElement("p");
-  error.className = "local-image-preview-error";
+  error.className = "local-image-preview-error page-notice";
+  error.dataset.severity = "error";
   error.setAttribute("role", "alert");
   error.hidden = true;
   dialog.append(closeButton, image, error);

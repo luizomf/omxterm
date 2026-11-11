@@ -83,13 +83,16 @@ export function createCommandPalette(
     const previous = document.activeElement;
     const current = document.createElement("dialog");
     dialog = current;
-    current.className = "command-palette";
+    current.className = "command-palette ui-dialog";
     const heading = document.createElement("h2");
     heading.id = "command-palette-title";
+    // The search field comes first; the title only names the dialog.
+    heading.className = "ui-visually-hidden";
     current.setAttribute("aria-labelledby", heading.id);
     const query = document.createElement("input");
     input = query;
     query.type = "text";
+    query.className = "page-control";
     query.autocomplete = "off";
     query.spellcheck = false;
     query.setAttribute("role", "combobox");
@@ -174,10 +177,12 @@ export function createCommandPalette(
         const row = document.createElement("div");
         row.id = `command-palette-option-${index}`;
         row.setAttribute("role", "option");
+        row.className = "ui-row";
         row.setAttribute("aria-selected", String(index === selected));
         const label = document.createElement("span");
         label.textContent = action.label;
         const key = document.createElement("kbd");
+        key.className = "ui-chip";
         key.textContent = action.accelerator ?? "";
         row.append(label, key);
         row.addEventListener("mousedown", (event) => event.preventDefault());

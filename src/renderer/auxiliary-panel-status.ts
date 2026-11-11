@@ -8,7 +8,7 @@ export function createAuxiliaryPanelStatus(
 ) {
   const page = document.defaultView!;
   const status = document.createElement("p");
-  status.className = "auxiliary-status";
+  status.className = "auxiliary-status ui-overlay";
   status.setAttribute("role", "status");
   status.hidden = true;
   document.body.append(status);

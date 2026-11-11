@@ -24,7 +24,7 @@ export function createFilesTerminalDropTarget(
   let area: HTMLElement | undefined;
   let refusal: ReturnType<typeof setTimeout> | undefined;
   const hint = document.createElement("div");
-  hint.className = "files-terminal-drop-hint";
+  hint.className = "files-terminal-drop-hint ui-overlay";
   hint.setAttribute("role", "status");
   const label = () => {
     hint.textContent = language.t(

@@ -223,7 +223,7 @@ export function renderSettingsPage(
     if (control.path === "window.blur") {
       const hint = document.createElement("p");
       hint.id = "settings-background-hint";
-      hint.className = "settings-hint settings-background-hint";
+      hint.className = "ui-hint settings-hint settings-background-hint";
       options.labels.push((t) => {
         hint.textContent = t("settings.backgroundHint");
       });

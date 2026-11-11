@@ -1,0 +1,403 @@
+/* OMXTerm design system: tokens and shared components.
+
+   Every official surface (the core renderer and the packages in extensions/)
+   imports this file and builds its UI from these classes. Surface CSS keeps
+   only layout. Rules and usage: docs/ui-style-guide.md. */
+
+/* Tokens ------------------------------------------------------------------ */
+
+:root {
+  /* Color derives from the active Terminal Theme. */
+  --ui-surface: var(--terminal-background, #101218);
+  --ui-text: var(--terminal-foreground, #f4f4f4);
+  --ui-neutral: var(--terminal-chrome-neutral, #808090);
+  --ui-raised: color-mix(in srgb, var(--ui-surface), var(--ui-neutral) 12%);
+  --ui-hover: color-mix(in srgb, var(--ui-surface), var(--ui-neutral) 25%);
+  --ui-selected: color-mix(in srgb, var(--ui-surface), var(--ui-neutral) 35%);
+  --ui-decoration: color-mix(in srgb, var(--ui-surface), var(--ui-text) 18%);
+  --ui-input-border: color-mix(in srgb, var(--ui-surface), var(--ui-text) 55%);
+  --ui-secondary: color-mix(in srgb, var(--ui-surface), var(--ui-text) 75%);
+  /* Paint alpha belongs to backgrounds, never text or whole controls. */
+  --ui-overlay: rgb(
+    from var(--ui-surface) r g b / var(--terminal-background-opacity, 1)
+  );
+  --ui-raised-tint: color-mix(
+    in srgb,
+    var(--ui-raised) calc(var(--terminal-background-opacity, 1) * 100%),
+    transparent
+  );
+  --ui-hover-tint: color-mix(
+    in srgb,
+    var(--ui-hover) calc(var(--terminal-background-opacity, 1) * 100%),
+    transparent
+  );
+  /* Control fills. Contexts below swap them; components only read these. */
+  --ui-control: var(--ui-raised);
+  --ui-control-hover: var(--ui-hover);
+  --ui-control-selected: var(--ui-selected);
+
+  /* One interface face everywhere; -apple-system or bare sans-serif resolve
+     to different faces on Linux and Windows. */
+  --ui-font: system-ui, sans-serif;
+  --ui-font-mono: ui-monospace, monospace;
+  /* Type scale: metadata, chrome, body, title. Nothing else. */
+  --ui-text-meta: 12px;
+  --ui-text-chrome: 13px;
+  --ui-text-body: 14px;
+  --ui-text-title: 18px;
+
+  --ui-radius: 6px;
+  --ui-radius-overlay: 8px;
+  --ui-radius-chip: 4px;
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-6: 24px;
+  --ui-space-8: 32px;
+}
+
+/* On the window tint (the Auxiliary Panel and the views it hosts) fills are
+   neutral alpha layers: they stack over the panel and fade with
+   transparency. */
+.ui-on-tint {
+  --ui-control: color-mix(
+    in srgb,
+    transparent,
+    var(--ui-neutral) calc(15% * var(--terminal-background-opacity, 1))
+  );
+  /* Over the panel's 15% layer this matches an opaque 45%. */
+  --ui-control-hover: color-mix(
+    in srgb,
+    transparent,
+    var(--ui-neutral) calc(35.294118% * var(--terminal-background-opacity, 1))
+  );
+  --ui-control-selected: var(--ui-control-hover);
+}
+
+/* Quiet, theme-colored scrollbars on application surfaces (not the terminal,
+   whose Surface owns its own scrollback presentation). */
+:is(.application-page, .ui-dialog, .ui-on-tint),
+:is(.application-page, .ui-dialog, .ui-on-tint) * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ui-input-border) transparent;
+}
+
+/* Button and field ---------------------------------------------------------
+   createPageButton(document, variant) gives page-control page-button
+   page-button-<variant>; native fields take page-control. */
+
+.page-control {
+  box-sizing: border-box;
+  min-height: 36px;
+  max-width: 100%;
+  padding: 7px 12px;
+  font: inherit;
+  color: inherit;
+  background: var(--ui-control);
+  border: 1px solid var(--ui-input-border);
+  border-radius: var(--ui-radius);
+}
+.page-control option {
+  background: var(--ui-surface);
+}
+.page-control[type="checkbox"] {
+  min-height: auto;
+  accent-color: var(--ui-text);
+}
+.page-control::placeholder {
+  color: var(--ui-secondary);
+}
+.page-button {
+  border-color: transparent;
+  cursor: pointer;
+}
+.page-button:hover:not(:disabled) {
+  background: var(--ui-control-hover);
+}
+.page-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.page-button-primary {
+  color: var(--ui-surface);
+  background: var(--ui-text);
+}
+.page-button-primary:hover:not(:disabled) {
+  background: var(--ui-secondary);
+}
+.page-button-text {
+  background: transparent;
+}
+/* Dense rows: 28 px, chrome-size text. */
+.page-button-compact {
+  min-height: 28px;
+  padding: 2px 10px;
+  font-size: var(--ui-text-chrome);
+}
+.ui-icon-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font: 20px/1 var(--ui-font);
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ui-radius);
+  cursor: pointer;
+}
+.ui-icon-button:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--ui-control-hover);
+}
+.ui-icon-button:is(:disabled, [aria-disabled="true"]) {
+  opacity: 0.55;
+  cursor: default;
+}
+/* A text link: one quiet line, never a row of buttons. */
+.ui-link {
+  min-height: auto;
+  padding: 2px 4px;
+  font: inherit;
+  color: var(--ui-secondary);
+  background: transparent;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ui-link:hover {
+  color: var(--ui-text);
+}
+.ui-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.ui-actions-dense {
+  gap: var(--ui-space-1);
+}
+:is(.application-page, .ui-dialog, .ui-overlay, .ui-on-tint) :focus-visible {
+  outline: 2px solid var(--ui-text);
+  outline-offset: 1px;
+}
+
+/* Row, list and nav -------------------------------------------------------- */
+
+.ui-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* One interactive line in a list: hover and selection are fills. */
+.ui-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ui-radius);
+  cursor: pointer;
+}
+.ui-row:hover {
+  background: var(--ui-control-hover);
+}
+.ui-row:is([aria-selected="true"], [aria-pressed="true"], .is-selected) {
+  background: var(--ui-control-selected);
+}
+.ui-row:focus-visible {
+  outline-offset: -2px;
+}
+/* Navigation: only the selected item gets a fill. */
+.ui-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ui-nav > button {
+  background: transparent;
+}
+.ui-nav > button:hover:not(:disabled) {
+  background: var(--ui-control-hover);
+}
+.ui-nav > :is([aria-selected="true"], [aria-pressed="true"]),
+.ui-nav
+  > :is([aria-selected="true"], [aria-pressed="true"]):hover:not(:disabled) {
+  font-weight: 600;
+  background: var(--ui-control-selected);
+}
+
+/* Card and chip ------------------------------------------------------------ */
+
+/* A raised block. Quiet buttons inside step up one fill so they still read
+   as buttons. */
+.ui-card {
+  --ui-control: var(--ui-hover-tint);
+  --ui-control-hover: var(--ui-selected);
+  padding: var(--ui-space-4);
+  background: var(--ui-raised-tint);
+  border-radius: var(--ui-radius);
+}
+.ui-on-tint .ui-card {
+  --ui-control: var(--ui-control-hover);
+  background: color-mix(
+    in srgb,
+    transparent,
+    var(--ui-neutral) calc(15% * var(--terminal-background-opacity, 1))
+  );
+}
+/* A key binding or short literal value. */
+.ui-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  font: var(--ui-text-meta) / 1.5 var(--ui-font-mono);
+  background: var(--ui-raised-tint);
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius-chip);
+}
+
+/* Text --------------------------------------------------------------------- */
+
+/* One short sentence of guidance. */
+.ui-hint {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--ui-secondary);
+}
+.ui-meta {
+  color: var(--ui-secondary);
+  font-size: var(--ui-text-meta);
+}
+.ui-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Overlay, dialog and popover ---------------------------------------------- */
+
+/* The shared floating surface: theme surface that follows window
+   transparency, a hairline, the overlay radius, no shadow. */
+.ui-overlay,
+.ui-dialog,
+.ui-popover {
+  --ui-control: var(--ui-raised-tint);
+  --ui-control-hover: var(--ui-hover-tint);
+  box-sizing: border-box;
+  color: var(--ui-text);
+  color-scheme: var(--ui-color-scheme, dark);
+  background: var(--ui-overlay);
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius-overlay);
+  font: var(--ui-text-chrome) / 1.5 var(--ui-font);
+}
+/* Modal: centered, padded, over a clear backdrop (the underlay softens). */
+.ui-dialog {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  margin: auto;
+  padding: var(--ui-space-6);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  font-size: var(--ui-text-body);
+}
+.ui-dialog::backdrop {
+  background: transparent;
+}
+/* Menus and tooltips sit over readable content in the same view, so their
+   surface is solid. */
+.ui-popover {
+  --ui-control: transparent;
+  --ui-control-hover: var(--ui-hover);
+  max-width: calc(100vw - 8px);
+  max-height: calc(100vh - 8px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  background: var(--ui-raised);
+}
+
+/* Notice ------------------------------------------------------------------
+   setPageNotice(element, { text, severity }). A tinted block with a colored
+   start edge; success, warning and error add a centered glyph so color is
+   never the only signal. */
+
+.page-notice {
+  margin: 0;
+  padding: 12px 16px;
+  color: var(--ui-text);
+  background: var(--ui-raised);
+  border: 0;
+  border-inline-start: 4px solid var(--ui-secondary);
+  border-radius: var(--ui-radius);
+  overflow-wrap: anywhere;
+}
+.page-notice[data-severity="success"]::before,
+.page-notice[data-severity="error"]::before,
+.page-notice[data-severity="warning"]::before {
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  margin-inline-end: 8px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  vertical-align: -3px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.page-notice[data-severity="success"]::before {
+  content: "✓";
+}
+.page-notice[data-severity="error"]::before {
+  content: "×";
+}
+.page-notice[data-severity="warning"]::before {
+  content: "!";
+}
+.page-notice[data-severity="error"] {
+  font-weight: 600;
+  background: color-mix(
+    in srgb,
+    var(--ui-surface),
+    var(--ui-error-accent, #e35d6a) 16%
+  );
+  border-inline-start-color: var(--ui-error-accent, #e35d6a);
+}
+.page-notice[data-severity="warning"] {
+  background: color-mix(
+    in srgb,
+    var(--ui-surface),
+    var(--ui-warning-accent, #c59028) 16%
+  );
+  border-inline-start-color: var(--ui-warning-accent, #c59028);
+}
+.page-notice[data-severity="success"] {
+  background: color-mix(
+    in srgb,
+    var(--ui-surface),
+    var(--ui-success-accent, #509c78) 16%
+  );
+  border-inline-start-color: var(--ui-success-accent, #509c78);
+}
+.page-notice[hidden] {
+  display: none;
+}

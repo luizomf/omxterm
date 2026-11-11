@@ -35,14 +35,17 @@ export function createSnippetsView(
   let rowLabels: ((t: RendererLanguage["t"]) => void)[] = [];
   const search = document.createElement("input");
   search.type = "search";
+  search.className = "page-control";
   const results = document.createElement("div");
   results.className = "snippets-results";
   const list = document.createElement("ul");
+  list.className = "ui-list";
   const status = document.createElement("p");
-  status.className = "snippets-empty";
+  status.className = "snippets-empty ui-hint";
   status.setAttribute("role", "status");
   const error = document.createElement("p");
-  error.className = "snippets-error";
+  error.className = "snippets-error page-notice";
+  error.dataset.severity = "error";
   error.setAttribute("role", "alert");
   error.hidden = true;
   results.append(error, status, list);
@@ -68,7 +71,7 @@ export function createSnippetsView(
         const item = document.createElement("li");
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "snippet-activate";
+        button.className = "snippet-activate ui-row";
         const name = document.createElement("span");
         name.className = "snippet-name";
         name.textContent = snippet.name;
@@ -81,14 +84,15 @@ export function createSnippetsView(
         }
         // The default action is visible before activation: Run adds Enter.
         const intent = document.createElement("span");
-        intent.className = "snippet-intent";
+        intent.className = "snippet-intent ui-meta";
         button.append(intent);
         button.addEventListener("click", () => {
           if (usable()) options.inject(snippet);
         });
         const preview = document.createElement("button");
         preview.type = "button";
-        preview.className = "snippet-preview-open";
+        preview.className =
+          "snippet-preview-open page-control page-button page-button-text page-button-compact";
         const relabel = (t: RendererLanguage["t"]) => {
           intent.textContent = t(
             snippet.execute ? "snippets.run" : "snippets.insert",

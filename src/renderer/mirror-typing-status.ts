@@ -15,6 +15,8 @@ export function createMirrorTypingStatus(
   text.setAttribute("role", "status");
   const button = document.createElement("button");
   button.type = "button";
+  button.className =
+    "page-control page-button page-button-quiet page-button-compact";
   const limitation = document.createElement("small");
   row.append(text, button, limitation);
   (parent.closest("#terminal-window-content") ?? parent).before(row);

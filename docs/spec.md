@@ -2277,7 +2277,7 @@ While Settings is selected:
   main user-file banner keeps its rendered-text contract. Settings diagnostics
   never enter operational logs.
 
-Layout follows the [UI style guide](ui-style-guide.md#settings): a
+Layout follows the [design system](ui-style-guide.md#surfaces): a
 full-area, theme-aware page with six core categories plus Extensions, sized for
 640×480 without changing native window minimums, scrolling instead of
 clipping. Core notices use theme green, red and yellow for success, error and

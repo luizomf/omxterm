@@ -33,7 +33,7 @@ export function renderExtensionCatalog(
   section.className = "extension-catalog";
   const heading = document.createElement("h3");
   const actions = document.createElement("div");
-  actions.className = "application-page-actions";
+  actions.className = "ui-actions";
   const browse = createPageButton(document);
   const cancel = createPageButton(document);
   const notice = document.createElement("div");
@@ -94,7 +94,7 @@ export function renderExtensionCatalog(
     list.replaceChildren();
     for (const entry of snapshot.entries) {
       const card = document.createElement("section");
-      card.className = "extension-catalog-card";
+      card.className = "extension-catalog-card ui-card";
       const title = document.createElement("h4");
       title.textContent = `${entry.name} · ${entry.version}`;
       const description = document.createElement("p");

@@ -1,138 +1,139 @@
-# OMXTerm UI style guide
+# OMXTerm design system
 
-Short rules for every DOM surface OMXTerm draws: window chrome, tabs, Settings,
-the auxiliary panel, overlays and notices. The terminal canvas, native OS
-dialogs and installed extension views style themselves.
+Every DOM surface OMXTerm draws uses this system: window chrome, tabs, Settings,
+the auxiliary panel, overlays, notices and the official extensions in
+`extensions/`. The terminal canvas and native OS dialogs style themselves.
+Third-party extensions may follow it but aren't required to.
 
-## Principles
+The whole system is one stylesheet, [`src/renderer/ui.css`](../src/renderer/ui.css):
+tokens plus a few component classes. The core renderer imports it first;
+official extensions get it through `extensions/shared/appearance.css` (panel
+views) or by importing it directly (full-page views). esbuild inlines it into
+each bundle, so packages stay self-contained.
+
+## Rules
 
 - **The terminal comes first.** Chrome is quiet: thin rules, soft fills, no
   shadows, no decoration that competes with terminal output.
-- **Few words.** At most one short sentence of guidance per page or section.
-  Details live in the docs. A successful action needs no notice.
-- **Few buttons.** Prefer one clear action per row. Secondary actions are text
-  buttons; destructive or rare ones stay out of the way.
-- **One system.** Every surface uses the same tokens below. Don't add local
-  fonts, radii, colors or button styles.
+- **Use a component, not a local style.** Surface CSS holds layout only (grid,
+  gaps, widths, positions). Colors, fonts, radii, borders and hover or
+  selection fills come from `ui.css`. If two surfaces need the same new thing,
+  add it to `ui.css` and to this page.
+- **Use tokens, never literals.** No hex colors, font stacks or off-scale sizes
+  in surface CSS.
+- **Few words, few buttons.** One short sentence of guidance per page. One
+  primary action per view at most.
 
 ## Tokens
 
-All tokens live in `src/renderer/ui-tokens.css` and derive from the active
-Terminal Theme, so light and dark themes need no separate rules.
+All tokens derive from the active Terminal Theme, so light and dark themes need
+no separate rules.
 
-- **Color.** `--ui-surface` and `--ui-text` come from the theme. Neutral chrome
-  (`#808090`) mixes into the surface at 12% (`--ui-raised`), 25% (`--ui-hover`)
-  and 35% (`--ui-selected`). Foreground mixes at 18% for hairlines
-  (`--ui-decoration`), 55% for input borders and 75% for secondary text. The
-  `-tint` variants scale with window transparency.
-- **Font.** `--ui-font` (`system-ui`) everywhere. Never `-apple-system` or a
-  bare `sans-serif`: they resolve to other faces on Linux and Windows.
-  Monospace only for shortcut bindings, terminal samples and the JSON editor.
-- **Type scale.** 12 px metadata and chrome labels, 13 px chrome text (tabs,
-  panel, banners, JSON editor), 14 px body and section titles (600 weight),
-  18 px page titles. Nothing else.
-- **Spacing.** 4, 8, 12, 16, 24 and 32 px.
-- **Radius.** `--ui-radius` (6 px) for controls, `--ui-radius-overlay` (8 px)
-  for overlays and floating notices, 4 px for chips and swatches.
-- **Focus.** A 2 px foreground outline. Decoration is never focus.
-- **Native controls** take `color-scheme` from background luminance (light
-  above 0.179), not the OS appearance.
+| Token                                                         | Value                                     | Use                                     |
+| ------------------------------------------------------------- | ----------------------------------------- | --------------------------------------- |
+| `--ui-surface`, `--ui-text`                                   | theme background and foreground           | page background and text                |
+| `--ui-raised`, `--ui-hover`, `--ui-selected`                  | neutral mixed into the surface 12/25/35 % | opaque fills                            |
+| `--ui-raised-tint`, `--ui-hover-tint`                         | the same, faded by window transparency    | fills on overlays and cards             |
+| `--ui-control`, `--ui-control-hover`, `--ui-control-selected` | set by context (below)                    | what components read for their fills    |
+| `--ui-decoration`                                             | text at 18 %                              | hairlines                               |
+| `--ui-input-border`                                           | text at 55 %                              | field borders, scrollbars               |
+| `--ui-secondary`                                              | text at 75 %                              | secondary text                          |
+| `--ui-overlay`                                                | surface at window opacity                 | overlay surface                         |
+| `--ui-font`, `--ui-font-mono`                                 | `system-ui`, `ui-monospace`               | all chrome; mono only for keys and code |
+| `--ui-text-meta/chrome/body/title`                            | 12 / 13 / 14 / 18 px                      | metadata, chrome, body, page titles     |
+| `--ui-space-1…8`                                              | 4, 8, 12, 16, 24, 32 px                   | the only spacing values                 |
+| `--ui-radius`, `--ui-radius-overlay`, `--ui-radius-chip`      | 6 / 8 / 4 px                              | controls, overlays, chips and swatches  |
 
-## Controls
+**Contexts** swap the control fills so the same component reads right
+anywhere:
 
-Application pages compose with `createApplicationPage(document, { title,
-actions, navigation, notice, content, status })` from
-`src/renderer/application-page.ts`. Create buttons with
-`createPageButton(document, variant)` and apply `page-control` to native
-fields, keeping their labels and keyboard behavior.
+- default (pages, Settings): opaque `--ui-raised` / `--ui-hover` / `--ui-selected`;
+- `.ui-on-tint` (the auxiliary panel and the extension views it hosts):
+  neutral alpha layers that stack over the panel and fade with transparency;
+- `.ui-overlay`, `.ui-dialog`: the `-tint` fills;
+- `.ui-card`: one step up, so a quiet button still reads on a card.
 
-- **Primary:** foreground fill. One per view at most (for example, Save).
-- **Quiet:** raised fill. Ordinary actions. On a raised card, step up to the
-  hover tint so the button still reads as one.
-- **Text:** no fill, secondary color in dense lists. Always visible.
-- Controls are at least 36 px tall; compact row actions are 28 px.
-- Button groups wrap with an 8 px gap (4 px in dense rows). Buttons never
-  touch.
-- Checkboxes stay native. Disabled controls stay recognizable and keep their
-  accessible names.
-- Application surfaces use thin scrollbars in the input-border color on a
-  transparent track. The terminal keeps its own scrollbar.
+Focus is a 2 px `--ui-text` outline, never a fill or border. Native controls
+take `color-scheme` from background luminance (light above 0.179).
 
-## Window chrome and tabs
+## Components
 
-- Tabs use 12 px text, a 10% neutral fill, and a 40% fill for the selected
-  tab, which also keeps a 1 px underline when transparency removes the fill.
-- The Linux/Windows title bar uses 13 px text and the same hover fill as tabs.
-- Pane dividers are 1 px hairlines that strengthen on hover; the focused pane
-  in a split gets a 1 px accent line on top.
-- Default terminal padding is 12 px on every side.
+| Class                               | Use it for                                                                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `page-button` + `-primary`          | The one main action of a view (Save, Connect). Foreground fill.                                                           |
+| `page-button` + `-quiet`            | Ordinary actions. Control fill, no border.                                                                                |
+| `page-button` + `-text`             | Secondary actions in dense lists and navigation. No fill until hover.                                                     |
+| `page-button-compact`               | Add to any button in a dense row: 28 px tall, 13 px text.                                                                 |
+| `ui-icon-button`                    | A 28 px square glyph or icon button (close, hide, toolbars). Always give it an accessible name and a tooltip.             |
+| `ui-link`                           | A text link, such as "Learn more" or About's links.                                                                       |
+| `page-control`                      | Native text fields, selects and textareas. 36 px, control fill, input border. Checkboxes stay native.                     |
+| `ui-actions` (`ui-actions-dense`)   | A group of buttons: wraps with an 8 px (4 px) gap. Buttons never touch.                                                   |
+| `ui-list` + `ui-row`                | Lists people pick from (snippets, aliases, files, palette results). Hover and selection are fills, never borders or bars. |
+| `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.           |
+| `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                  |
+| `ui-chip`                           | A key binding or short literal value.                                                                                     |
+| `ui-dialog`                         | Modal overlays (About, Command Palette, previews). Clear backdrop; the rest of the window softens.                        |
+| `ui-overlay`                        | Non-modal floating notices (the exit notice, the panel status, drop hints).                                               |
+| `ui-popover`                        | Menus and tooltips over content in the same view. Solid surface.                                                          |
+| `page-notice` via `setPageNotice()` | Info, success, warning or error. Tinted block with a colored start edge; non-info severities add a glyph.                 |
+| `ui-hint`                           | The one sentence of guidance on a page. Secondary color, about 72 characters wide.                                        |
+| `ui-meta`                           | Small secondary text: counts, kinds, states.                                                                              |
+| `ui-visually-hidden`                | A heading or label that only assistive technology needs.                                                                  |
 
-## Settings
+Build pages with `createApplicationPage(document, { title, actions,
+navigation, notice, content, status })` and buttons with
+`createPageButton(document, variant)` from `src/renderer/application-page.ts`.
+Full-page surfaces (Settings, window-context extensions) also import
+`src/renderer/application-page.css` for the page grid. Panel views use the
+compact page from `extensions/shared/appearance.css` and add
+`class="ui-on-tint"` to their `<html>`.
 
-- Header: an 18 px title and Close above a hairline.
-- Navigation is flat: only the selected category gets a fill.
-- Every category shares a 720 px content boundary. The sidebar is 168 px below
-  900 px viewport width and 192 px above; outer padding is 24 px, 32 px from
-  1200 px.
-- Form pages read as one list: each row has 12 px vertical padding and a
-  hairline below it. Labels sit left, fields end at the content edge. Fields
-  are at most 384 px wide (number inputs 112 px). Below 560 px of content
-  width, labels sit above their fields.
-- Shortcut rows are at least 48 px tall: name, binding as a monospace key chip
-  (at most 200 px wide), and compact actions. Only Custom and Unbound are
-  labelled; an unmarked binding is the default. Below 600 px of content width
-  the actions take their own line.
-- Prose stays near 72 characters wide. Content and navigation scroll
-  independently. `.application-page-content` is the only size-query container.
-- Settings is comfortable at 640×480. Below 640 px the sidebar stays while
-  there's room (480–639 px); below 480 px categories become a two-column
-  scrolling grid. Short windows scroll instead of clipping.
-- The theme editor shows each normal ANSI color next to its bright variant and
-  lets a swatch pick the role to edit.
+## Surfaces
 
-## Auxiliary panel
+**Window chrome and tabs.** Tabs use 12 px text and neutral alpha fills (10 %,
+25 % on hover, 40 % selected); the selected tab keeps a 1 px underline when
+transparency removes its fill. Pane dividers are 1 px hairlines; the focused
+pane in a split gets a 1 px accent line on top. Default terminal padding is
+12 px. Tab and title-bar styles live in `terminal-window.css` and
+`window-chrome.css`; nothing else uses them.
 
-- 13 px text on a 15% neutral fill, separated from the terminal by a hairline.
-- The header holds the tool name, or a single-line switcher when several tools
-  are open. Long names truncate; the active tool gets a fill.
-- Hide is a chevron toward the panel's edge; Close (×) ends the tool. Both have
-  tooltips.
-- Extension views span the panel width so their own padding lines up with the
-  panel title.
+**Settings.** An 18 px title and Close above a hairline. A flat `ui-nav`.
+Every category shares a 720 px content boundary; the sidebar is 168 px below
+900 px viewport width and 192 px above; outer padding is 24 px, 32 px from
+1200 px. Form rows have 12 px vertical padding and a hairline; labels sit left,
+fields end at the content edge (fields at most 384 px, numbers 112 px); below
+560 px of content width labels sit above fields. Shortcut rows are at least
+48 px with the binding as a `ui-chip` and compact actions; only Custom and
+Unbound are labelled. Settings is comfortable at 640×480; below 480 px
+categories become a two-column grid.
 
-## Overlays
+**Auxiliary panel.** 13 px text on a 15 % neutral layer, separated from the
+terminal by a hairline. The header holds the tool name, or a single-line
+`ui-nav` switcher when several tools are open. Hide is a chevron toward the
+panel's edge; Close (×) ends the tool. Extension views span the panel width so
+their 12 px padding lines up with the panel title.
 
-About, Command Palette, Local Image Preview and the Snippets preview share one
-recipe:
+**Overlays.** One recipe: `--ui-overlay` surface, 1 px hairline, 8 px radius, no
+shadow, quiet buttons. While a `ui-dialog` is modal a fixed 12 px CSS filter
+softens the other body children; it's independent of the native `window.blur`
+preference. The startup configuration banner is the one exception: a
+full-width red strip, because OMXTerm fell back to defaults.
 
-- `--ui-overlay` surface (follows window transparency), a 1 px
-  `--ui-decoration` hairline, `--ui-radius-overlay`, no shadow.
-- A clear backdrop. While any of them is modal, a fixed 12 px CSS filter
-  softens the other body children; it restores itself on dismissal and is
-  independent of the native `window.blur` preference.
-- Quiet filled buttons; About's links are one line of text links.
-- The Command Palette opens straight to its search field; its title is
-  visually hidden but still names the dialog.
-
-The SSH exit notice uses the same surface as a small floating card.
-
-## Notices
-
-- `setPageNotice(element, { text, severity })` with `info`, `success`,
-  `warning` or `error`. The caller supplies `role="status"` or `role="alert"`.
-  Empty notices hide; updates never take focus.
-- A notice is a tinted block with a 4 px colored start edge and no outer
-  border. Success, warning and error add a centered glyph in a circle, so
-  color is never the only signal. Text keeps the theme foreground.
-- Keep user data literal, never HTML.
-- The startup configuration banner stays a full-width red strip: it means
-  OMXTerm fell back to defaults.
+**Extension views.** Panel views (Files, SSH Connect, Snippets) are
+transparent: the host paints the panel tint. They don't repeat the tool name;
+the panel header shows it. Window-context views (Saved Layout, Mirror Typing)
+are full pages with an 18 px title.
 
 ## Wording
 
 - Short, plain sentences. Name what happens, not how it's implemented.
-- No notices for success or idle states.
-- Put limitations, trust details and edge cases in the docs and link to them.
+- At most one sentence of guidance per page. Put limitations, trust details
+  and edge cases in the docs and link to them where the surface can open
+  links.
+- No notices for success or idle states. A notice says what happened and,
+  if needed, what to do next, in one or two sentences.
+- Buttons are verbs ("Connect", "Save"), not "OK". Sentence case everywhere.
+- Keep user data literal, never HTML.
 - Interface Languages ship together: update English and Portuguese in the same
   change.
 

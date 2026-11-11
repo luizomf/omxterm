@@ -74,6 +74,7 @@ When changing application behavior, consult the [product specification](docs/spe
 - **Test coverage:** add unit tests (`test/unit/`) with mocked external I/O and scoped integration tests (`test/integration/`) for real PTY, filesystem, or GUI behavior.
 - **Documentation in sync:** update affected user guides, `docs/spec.md`, `CONTEXT.md`, and ADRs in the same commit as behavior changes.
 - **Security boundaries:** keep privileged operations in Electron `main`, expose a minimal typed `preload` bridge, and maintain renderer context isolation with Node integration disabled. Chromium sandboxing stays enabled on macOS and Windows (Linux follows [ADR 0024](docs/adr/0024-disable-the-chromium-sandbox-on-linux.md)). The portable Terminal Surface receives an Adapter rather than importing Electron or `node-pty`.
+- **UI:** build official surfaces (core and `extensions/`) from the [design system](docs/ui-style-guide.md): tokens and components from `src/renderer/ui.css`, layout-only CSS per surface, few words.
 - **Input and log safety:** validate external inputs at IPC and PTY boundaries, pass untrusted arguments as literal argv arrays (never shell-interpolated strings), and follow the [safe logging contract](docs/spec.md#configuration-and-local-state) (never log terminal payloads, commands, clipboard data, or private paths).
 
 ## Verification

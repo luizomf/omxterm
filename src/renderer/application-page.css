@@ -1,3 +1,5 @@
+/* Full-page layout for application pages (Settings and window-context
+   extension pages). Components come from ui.css. */
 .application-page {
   display: grid;
   flex: 1 1 auto;
@@ -65,117 +67,6 @@
   overflow: auto;
   container-type: inline-size;
   scrollbar-gutter: stable;
-}
-.page-control {
-  box-sizing: border-box;
-  font: inherit;
-  color: inherit;
-  background: var(--ui-raised);
-  border: 1px solid var(--ui-input-border);
-  border-radius: var(--ui-radius);
-  padding: 7px 12px;
-  min-height: 36px;
-  max-width: 100%;
-}
-.page-control option {
-  background: var(--ui-surface);
-}
-.page-control[type="checkbox"] {
-  accent-color: var(--ui-text);
-  min-height: auto;
-}
-.page-button {
-  cursor: pointer;
-  border-color: transparent;
-}
-.page-button:hover:not(:disabled) {
-  background: var(--ui-hover);
-}
-.page-button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-.application-page-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.page-button-text {
-  background: transparent;
-}
-.page-button-primary {
-  background: var(--ui-text);
-  color: var(--ui-surface);
-}
-.page-button-primary:hover:not(:disabled) {
-  background: var(--ui-secondary);
-}
-.application-page :focus-visible {
-  outline: 2px solid var(--ui-text);
-  outline-offset: 1px;
-}
-.page-notice {
-  margin: 0;
-  padding: 12px 16px;
-  border: 0;
-  border-inline-start: 4px solid var(--ui-secondary);
-  border-radius: var(--ui-radius);
-  background: var(--ui-raised);
-  color: var(--ui-text);
-  overflow-wrap: anywhere;
-}
-.page-notice[data-severity="success"]::before,
-.page-notice[data-severity="error"]::before,
-.page-notice[data-severity="warning"]::before {
-  display: inline-grid;
-  place-items: center;
-  box-sizing: border-box;
-  width: 18px;
-  height: 18px;
-  margin-inline-end: 8px;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  vertical-align: -3px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-}
-.page-notice[data-severity="success"]::before {
-  content: "✓";
-}
-.page-notice[data-severity="error"]::before {
-  content: "×";
-}
-.page-notice[data-severity="warning"]::before {
-  content: "!";
-}
-.page-notice[data-severity="error"] {
-  border-inline-start-color: var(--ui-error-accent, #e35d6a);
-  background: color-mix(
-    in srgb,
-    var(--ui-surface),
-    var(--ui-error-accent, #e35d6a) 16%
-  );
-  font-weight: 600;
-}
-.page-notice[data-severity="warning"] {
-  border-inline-start-color: var(--ui-warning-accent, #c59028);
-  background: color-mix(
-    in srgb,
-    var(--ui-surface),
-    var(--ui-warning-accent, #c59028) 16%
-  );
-}
-.page-notice[data-severity="success"] {
-  border-inline-start-color: var(--ui-success-accent, #509c78);
-  background: color-mix(
-    in srgb,
-    var(--ui-surface),
-    var(--ui-success-accent, #509c78) 16%
-  );
-}
-.page-notice[hidden] {
-  display: none;
 }
 @media (min-width: 900px) {
   .application-page.has-navigation {

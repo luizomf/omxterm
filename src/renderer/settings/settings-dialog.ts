@@ -291,7 +291,7 @@ function buildSettingsView(
   problem.setAttribute("role", "alert");
   problem.hidden = true;
   const tabs = document.createElement("div");
-  tabs.className = "settings-tabs";
+  tabs.className = "settings-tabs ui-nav";
   tabs.setAttribute("role", "tablist");
   const panels = document.createElement("div");
   panels.className = "settings-panels";
