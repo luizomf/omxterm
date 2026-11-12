@@ -137,8 +137,8 @@ it.each(["en-US", "pt-BR"] as const)(
       "menu.focusPaneBelow",
       "menu.swapPaneLeft",
       "menu.swapPaneRight",
-      "menu.swapPaneUp",
-      "menu.swapPaneDown",
+      "menu.swapPaneAbove",
+      "menu.swapPaneBelow",
       "menu.equalizePanes",
       "menu.closePane",
     ] as const;

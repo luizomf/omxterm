@@ -299,8 +299,8 @@ describe("View -> Pane", () => {
         "Focus Pane Below",
         "Swap Pane Left",
         "Swap Pane Right",
-        "Swap Pane Up",
-        "Swap Pane Down",
+        "Swap Pane Above",
+        "Swap Pane Below",
         "Equalize Panes",
         "Close Pane",
       ]);

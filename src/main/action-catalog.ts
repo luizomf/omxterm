@@ -170,10 +170,10 @@ export function createCoreActionCatalog(
     swapPaneRight: action(t("menu.swapPaneRight"), () =>
       actions.swapSelectedPane("right"),
     ),
-    swapPaneUp: action(t("menu.swapPaneUp"), () =>
+    swapPaneUp: action(t("menu.swapPaneAbove"), () =>
       actions.swapSelectedPane("up"),
     ),
-    swapPaneDown: action(t("menu.swapPaneDown"), () =>
+    swapPaneDown: action(t("menu.swapPaneBelow"), () =>
       actions.swapSelectedPane("down"),
     ),
     equalizePanes: action(

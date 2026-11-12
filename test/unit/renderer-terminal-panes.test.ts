@@ -342,27 +342,28 @@ describe("Terminal Panes", () => {
   });
 });
 
+// Three panes side by side; each reports a rectangle from its DOM position.
+async function rowOfThree(harness: ReturnType<typeof createTabsHarness>) {
+  await harness.tabs.ready;
+  harness.sessionAdapters[0]!.resize({ cols: 120, rows: 40 });
+  await split(harness, "right");
+  await split(harness, "right");
+  const panes = () => [...tab(harness).querySelectorAll<HTMLElement>("main")];
+  for (const pane of panes())
+    vi.spyOn(pane, "getBoundingClientRect").mockImplementation(() => {
+      const left = panes().indexOf(pane) * 100;
+      return { left, right: left + 96, top: 0, bottom: 100 } as DOMRect;
+    });
+  return panes;
+}
+
 describe("Terminal Pane swap", () => {
   it("swaps the focused pane with its neighbor, keeping sessions, shares and focus", async () => {
-    const harness = await splitHarness();
-    await split(harness, "right");
-    await split(harness, "right");
-    const panes = () => [...tab(harness).querySelectorAll<HTMLElement>("main")];
+    const harness = createTabsHarness({
+      tabSize: { width: 1200, height: 800 },
+    });
+    const panes = await rowOfThree(harness);
     const [first, second, third] = panes();
-    // Panes sit side by side in their current DOM order.
-    const original = HTMLElement.prototype.getBoundingClientRect;
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
-      function (this: HTMLElement) {
-        const index = panes().indexOf(this);
-        if (index < 0) return original.call(this);
-        return {
-          left: index * 100,
-          right: index * 100 + 96,
-          top: 0,
-          bottom: 100,
-        } as DOMRect;
-      },
-    );
     const shares = () =>
       panes().map((element) => Number(element.style.flexGrow));
     harness.surfaces[2]!.focus.mockClear();
@@ -395,6 +396,23 @@ describe("Terminal Pane swap", () => {
       expect(surface.dispose).not.toHaveBeenCalled();
     for (const adapter of harness.adapters)
       expect(adapter.close).not.toHaveBeenCalled();
+    harness.tabs.dispose();
+  });
+
+  it("does not swap while the window cannot take pane input", async () => {
+    let interactive = true;
+    const harness = createTabsHarness({
+      tabSize: { width: 1200, height: 800 },
+      tabsOptions: { canFocus: () => interactive },
+    });
+    const panes = await rowOfThree(harness);
+    const order = panes();
+    interactive = false;
+    harness.tabs.handleCommand({ action: "swap-pane", direction: "left" });
+    expect(panes()).toEqual(order);
+    interactive = true;
+    harness.tabs.handleCommand({ action: "swap-pane", direction: "left" });
+    expect(panes()).not.toEqual(order);
     harness.tabs.dispose();
   });
 });
