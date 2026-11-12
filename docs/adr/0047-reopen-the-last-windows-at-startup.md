@@ -51,7 +51,8 @@ Core owns reopening; an extension only switches it on.
   `layout-session/session.lock` lease reopens and remembers; the OS releases it
   if OMXTerm crashes. Windows of a second process aren't remembered.
 - **No crash loop.** A `reopening` marker is written before reopening and
-  removed after the first successful save once the reopened windows run. If it
+  removed after the first successful save once the reopened windows run, or
+  when OMXTerm starts quitting normally. If it
   is still there at the next start, the remembered windows are dropped and that
   start opens one ordinary window.
 - **Turning it off.** The remembered windows are deleted when reopening goes

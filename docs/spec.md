@@ -1029,8 +1029,8 @@ back with fresh shells
   opens as asked and neither reopens nor remembers.
 - Only the process holding `layout-session/session.lock` reopens and
   remembers. A `reopening` marker left by a start whose reopened windows were
-  never saved drops the remembered windows; that start opens one ordinary
-  window.
+  never saved and that didn't quit normally drops the remembered windows; that
+  start opens one ordinary window.
 - Window position and size are not remembered.
 
 ### Saving a window

@@ -293,3 +293,19 @@ it("keeps reopening possible once the reopened windows were saved", async () => 
   expect(await next.session.start(true)).toEqual([layout(1)]);
   next.session.dispose();
 });
+
+it("keeps the reopened windows after a normal quit before the first save", async () => {
+  const first = await setup();
+  await first.session.start(true);
+  first.state.windows = [layout(1)];
+  await first.session.flush();
+  first.session.dispose();
+
+  const quick = await setup(leases(), first.directory);
+  expect(await quick.session.start(true)).toHaveLength(1);
+  quick.session.quitting(); // Cmd+Q right after reopening
+  quick.session.dispose();
+  const next = await setup(leases(), first.directory);
+  expect(await next.session.start(true)).toEqual([layout(1)]);
+  next.session.dispose();
+});

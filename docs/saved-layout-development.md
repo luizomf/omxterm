@@ -76,7 +76,8 @@ arrangement changed, skipping quits, empty window sets and failed captures;
 windows without a terminal tab are skipped. A plain start passes each
 remembered window through the same plan as Open; a start with `-e` takes no
 part. Only the process holding `session.lock` takes part, and a `reopening`
-marker that survives until the next start (it's removed after the first save)
+marker that survives until the next start (it's removed after the first save
+or on a normal quit)
 drops the remembered windows so a bad layout can't loop. A reopened pane whose
 folder was missing keeps that folder until its shell reports another. Disabling the extension deletes `last.json`. Change the
 interval or limits there.

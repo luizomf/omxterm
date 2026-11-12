@@ -237,6 +237,10 @@ export function createTerminalTabs(
       reorder();
       selectedIndex = selected ? tabs.indexOf(selected) : -1;
       renderStrip();
+      // Tell main the order changed so Saved Layout remembers it. Action
+      // targets stay valid: the selected tab and pane didn't change.
+      const tab = selectedTab();
+      if (tab) notifyFocus(tab);
     },
   });
   const renderStrip = () => strip.render(selectedIndex, tabBarEnabled);

@@ -125,6 +125,18 @@ describe("renderer Terminal Tabs", () => {
       expect(surface.dispose).not.toHaveBeenCalled();
   });
 
+  it("reports the selection again after a reorder", async () => {
+    const notifySelection = vi.fn();
+    const harness = createTabsHarness({ tabsOptions: { notifySelection } });
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    const before = notifySelection.mock.calls.length;
+    dragTabTo(harness.strip, 0, 275);
+    expect(notifySelection.mock.calls.length).toBeGreaterThan(before);
+    expect(notifySelection).toHaveBeenLastCalledWith("s2", ["s2"]);
+  });
+
   it("uses reordered positions for cycling and literal selection", async () => {
     const harness = createTabsHarness();
     await harness.tabs.ready;

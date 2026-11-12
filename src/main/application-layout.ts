@@ -86,6 +86,7 @@ export function startLayoutSession(options: {
     quitting: () => options.application()?.isQuitting() === true,
   });
   const resolve = createLayoutDirectoryResolver();
+  app.on("before-quit", () => session.quitting());
   return {
     /** Opens the remembered windows, or one ordinary window. */
     async openWindows(reopen: boolean) {

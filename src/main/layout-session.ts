@@ -1,3 +1,4 @@
+import { rmSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
 import type { LeaseAdapter } from "../installed-packages/native-leases";
@@ -228,6 +229,20 @@ export function createLayoutSession<Window>(options: {
     },
     /** Reopening was turned on or off (an extension changed). */
     refresh,
+    /**
+     * OMXTerm is quitting normally. That isn't a crash: the reopened windows
+     * stay remembered even if no save happened yet. Synchronous, because the
+     * process may exit right after.
+     */
+    quitting() {
+      if (!reopening) return;
+      reopening = false;
+      try {
+        rmSync(marker, { force: true });
+      } catch {
+        // A marker that can't be removed only skips one reopening.
+      }
+    },
     /** Activity that may change a layout or a folder; the next tick saves. */
     touch() {
       dirty = true;

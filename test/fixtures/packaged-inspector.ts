@@ -255,7 +255,8 @@ export async function launchPackaged(
       await Promise.race([
         exited,
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("normal Quit")), 15000),
+          // Extension cleanup alone may take 15 s, plus the PTY drain.
+          setTimeout(() => reject(new Error("normal Quit")), 30000),
         ),
       ]);
     },
