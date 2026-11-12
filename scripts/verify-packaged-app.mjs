@@ -790,6 +790,46 @@ async function stopProcessGroup(child) {
     throw new Error(`Packaged process group ${processGroupId} did not exit`);
 }
 
+// taskkill returns before Windows has torn the whole tree down, and Chromium's
+// GPU process can outlive the main process by seconds. Wait for every process
+// of the executable this verifier started, so the installer's later process
+// check sees only processes it did not start. Nothing is stopped here.
+async function waitForWindowsExecutableExit(executable, timeoutMs = 30_000) {
+  const script = `
+$deadline = [DateTime]::UtcNow.AddMilliseconds([int]$env:OMXTERM_VERIFY_TIMEOUT_MS)
+while (@(Get-CimInstance -ClassName Win32_Process -ErrorAction Stop | Where-Object { [string]::Equals($_.ExecutablePath, $env:OMXTERM_VERIFY_EXECUTABLE, [StringComparison]::OrdinalIgnoreCase) }).Count) {
+  if ([DateTime]::UtcNow -ge $deadline) { exit 3 }
+  Start-Sleep -Milliseconds 200
+}`;
+  try {
+    await execFile(
+      path.win32.join(
+        process.env.SystemRoot ?? "C:\\Windows",
+        "System32",
+        "WindowsPowerShell",
+        "v1.0",
+        "powershell.exe",
+      ),
+      ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script],
+      {
+        env: {
+          ...process.env,
+          OMXTERM_VERIFY_EXECUTABLE: executable,
+          OMXTERM_VERIFY_TIMEOUT_MS: String(timeoutMs),
+        },
+        timeout: timeoutMs + 30_000,
+      },
+    );
+  } catch (cause) {
+    throw new Error(
+      cause?.code === 3
+        ? `Packaged OMXTerm processes were still running ${timeoutMs / 1000} s after being stopped`
+        : "Could not confirm that packaged OMXTerm processes exited",
+      { cause },
+    );
+  }
+}
+
 export async function provisionLinuxHelper(
   helper,
   arguments_,
@@ -1636,6 +1676,10 @@ export async function verifyPackagedApplication(
           return records.length;
         },
         async stop() {
+          if (platform === "win32") {
+            await stopProcessGroup(child);
+            return waitForWindowsExecutableExit(launchPath);
+          }
           if (!linuxProcess) return stopProcessGroup(child);
           const outcome = await linuxProcess.stop();
           console.log(
