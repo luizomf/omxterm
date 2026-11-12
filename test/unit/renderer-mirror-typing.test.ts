@@ -156,6 +156,57 @@ it("captures exact original focus, hands off only after native hide, and sends o
   expect(h.surfaces[1]!.focus).toHaveBeenCalledTimes(focusCount);
 });
 
+it("waits for focus to come back after the setup view hides, then focuses the original pane", async () => {
+  const h = await harness();
+  const snapshot = await h.setup();
+  vi.mocked(document.hasFocus).mockReturnValue(false);
+  await h.prepare(snapshot.panes!.map((pane) => pane.handle));
+  expect(h.reply()).toEqual({ request: "prepare", ok: true });
+  expect(h.bridge.stop).not.toHaveBeenCalled();
+  const focusCount = h.surfaces[1]!.focus.mock.calls.length;
+  vi.mocked(document.hasFocus).mockReturnValue(true);
+  window.dispatchEvent(new Event("focus"));
+  expect(h.reply()).toEqual({ request: "handoff", ok: true });
+  expect(h.surfaces[1]!.focus.mock.calls.length).toBeGreaterThan(focusCount);
+  h.activate();
+  expect(h.reply().ok).toBe(true);
+  expect(h.mountedSurfaceOptions[1]!.routeKeyInput!("x")).toBe(true);
+  expect(h.bridge.input).toHaveBeenCalledOnce();
+});
+
+it("cancels a Start waiting for focus on blur, and a later focus does not arm it", async () => {
+  const h = await harness();
+  const snapshot = await h.setup();
+  vi.mocked(document.hasFocus).mockReturnValue(false);
+  await h.prepare(snapshot.panes!.map((pane) => pane.handle));
+  window.dispatchEvent(new Event("blur"));
+  expect(h.reply()).toEqual({ request: "handoff", ok: false });
+  expect(h.bridge.stop).toHaveBeenCalledWith("context", "unavailable");
+  vi.mocked(document.hasFocus).mockReturnValue(true);
+  window.dispatchEvent(new Event("focus"));
+  expect(h.reply()).toEqual({ request: "handoff", ok: false });
+  h.activate();
+  expect(h.reply().ok).toBe(false);
+  expect(h.mountedSurfaceOptions[1]!.routeKeyInput!("x")).toBe(false);
+});
+
+it("refuses Start when focus never comes back after the setup view hides", async () => {
+  const h = await harness();
+  const snapshot = await h.setup();
+  vi.useFakeTimers();
+  vi.mocked(document.hasFocus).mockReturnValue(false);
+  await h.prepare(snapshot.panes!.map((pane) => pane.handle));
+  vi.advanceTimersByTime(5000);
+  expect(h.reply()).toEqual({ request: "handoff", ok: false });
+  expect(h.bridge.stop).toHaveBeenCalledWith("context", "unavailable");
+  vi.mocked(document.hasFocus).mockReturnValue(true);
+  window.dispatchEvent(new Event("focus"));
+  expect(h.reply()).toEqual({ request: "handoff", ok: false });
+  h.activate();
+  expect(h.reply().ok).toBe(false);
+  expect(h.mountedSurfaceOptions[1]!.routeKeyInput!("x")).toBe(false);
+});
+
 it("owns cancellable Preparing before store admission and rejects leave-and-return", async () => {
   const h = await harness();
   const snapshot = await h.setup();

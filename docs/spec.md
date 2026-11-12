@@ -1039,11 +1039,11 @@ and runs wherever extensions do.
 
 ## Mirror Typing
 
-The separately installed Linux ARM64
-[Mirror Typing extension](mirror-typing-development.md) copies typing to a fixed
-set of panes in one tab
-([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)). Its preview
-targets older hosts and does not install on current releases.
+The separately installed
+[Mirror Typing extension](mirror-typing.md) copies typing to a fixed set of
+panes in one tab
+([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)). Version 0.2.0
+needs host 0.27.0 or later.
 
 - An explicit action captures one terminal tab and its live, mounted focused
   pane before setup opens. An ineligible original focus refuses, even with live
@@ -1051,7 +1051,8 @@ targets older hosts and does not install on current releases.
 - Setup inspects a fixed subset of 2–16 live panes that always includes the
   original focus. Start consumes fresh setup authority and returns only to that
   exact tab and source, after acknowledged native setup hide and focus/lifetime
-  revalidation.
+  revalidation. If keyboard focus returns to the window a moment after the
+  hide, Start waits for it, bounded by the prepare timer; blur still cancels.
 - In source mode, core mirrors final genuine keyboard bytes exactly once per
   member. Any selected member can become the source; new panes never join.
   Mouse, pointer-origin prompt reports, focus/program/parser replies, and

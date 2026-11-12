@@ -48,9 +48,6 @@ body {
 .mirror-typing-status[hidden] {
   display: none;
 }
-.mirror-typing-status small {
-  flex-basis: 100%;
-}
 .terminal-tab .pane-mirroring.restty-terminal-surface {
   padding-top: calc(22px + var(--terminal-padding-top, 12px));
 }

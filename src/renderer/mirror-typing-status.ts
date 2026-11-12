@@ -17,8 +17,7 @@ export function createMirrorTypingStatus(
   button.type = "button";
   button.className =
     "page-control page-button page-button-quiet page-button-compact";
-  const limitation = document.createElement("small");
-  row.append(text, button, limitation);
+  row.append(text, button);
   (parent.closest("#terminal-window-content") ?? parent).before(row);
   const keyboard = retainDismissalGesture(document);
   // The Start gesture originated in another WebContents. Retain both possible
@@ -39,8 +38,6 @@ export function createMirrorTypingStatus(
     button.textContent = language.t(
       state === "preparing" ? "mirrorTyping.cancel" : "mirrorTyping.stop",
     );
-    limitation.textContent = language.t("mirrorTyping.limitation");
-    limitation.hidden = state !== "active" && state !== "preparing";
     for (const [pane, marker] of markers) {
       marker.textContent = `↔ ${language.t(pane === source ? "mirrorTyping.source" : "mirrorTyping.member")}`;
     }

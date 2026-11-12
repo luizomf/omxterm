@@ -331,8 +331,6 @@ export const englishMessages = {
     "Mirroring stopped — paste/insertion goes to one pane.",
   "mirrorTyping.failed":
     "Mirroring stopped — input may have reached only some panes. Check them before typing again. Nothing will be retried automatically.",
-  "mirrorTyping.limitation":
-    "Typing is copied exactly in the source terminal's mode. Use matching terminal programs/modes. Input already sent cannot be undone.",
   "mirrorTyping.focusLivePane": "Focus a live pane, then open Mirror Typing.",
   "mirrorTyping.needTwoPanes":
     "Open at least two live panes in one tab, then open Mirror Typing.",

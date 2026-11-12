@@ -217,7 +217,7 @@ needs them. Known runtime limits the tests account for are in the
 [Restty guide](restty-development.md#current-runtime-limitations). Extension
 work has its own build and tests: see the
 [extension backend runtime](extension-backend-runtime.md) (`npm run build:extension-runtime`)
-and the [Mirror Typing build](mirror-typing-development.md#build-from-source).
+and the [Mirror Typing build](mirror-typing-development.md#build-and-test).
 
 | Subsystem                                      | Command                                                                                                                                                          |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |

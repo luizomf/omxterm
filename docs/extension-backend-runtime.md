@@ -64,8 +64,8 @@ main capability (`terminal.openSsh.v1`), not a backend-owned PTY. Its package
 has a declared minimum host version of 0.27.0-dev.0 for SSH 0.4.0; this does not
 qualify every newer host or platform. API0.1.x and existing Files manifests remain
 compatible.
-The separate [Mirror Typing](mirror-typing-development.md#capability-and-lifetime) consumer
-requires host 0.24.0-dev.2 and declares `terminal.mirrorTyping.v1`. Core owns
+The separate [Mirror Typing](mirror-typing-development.md#how-it-works) consumer
+requires host 0.27.0 and declares `terminal.mirrorTyping.v1`. Core owns
 its visible revocable input lease; no keyboard bytes or per-key calls enter the
 backend. Backend lifetime loss revokes its views and input authority before
 settlement. One settled-replacement setup per extension/window is specific to

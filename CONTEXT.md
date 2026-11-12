@@ -282,11 +282,11 @@ continuations remain refused; see the [terminal contract](docs/spec.md#terminal-
 
 ## Extensions
 
-**Mirror Typing** — An optional extension preview that copies the source pane's encoded
+**Mirror Typing** — An optional extension that copies the source pane's encoded
 keyboard input to a fixed group of live panes in one Terminal Tab. Core owns input delivery and the
 visible Stop control; extension code receives no keyboard payloads. Paste,
 snippets and drops stop mirroring before delivery to their original target.
-See [Mirror Typing](docs/mirror-typing-development.md) for setup and limits.
+See [Mirror Typing](docs/mirror-typing.md) for setup and limits.
 
 **Saved Layout** — A terminal arrangement saved by an optional extension,
 including tab order, splits, focused panes and local starting folders. Opening

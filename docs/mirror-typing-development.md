@@ -1,129 +1,112 @@
-# Mirror Typing
+# Mirror Typing development
 
-Mirror Typing is an optional, separately installed **Linux ARM64 preview** for
-copying typing to a fixed selection of live panes in one terminal tab. It requires
-OMXTerm **0.24.0-dev.2 or newer within 0.24.x** and extension API **0.1.x**.
-It is not bundled with the terminal; no catalog or release availability is implied.
+Mirror Typing is an optional extension that copies typing from one pane to a
+fixed group of panes in the same tab. It ships as a separate `.omxext` archive.
+The [user guide](mirror-typing.md) covers installing and using it.
 
-## Install and start
+The extension is only the setup page. Core owns everything that touches input:
+the route from one pane's keyboard to the others, the visible Stop, and every
+stop condition ([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)).
+Extension code never sees keyboard bytes.
 
-1. Obtain a separately built `mirror-typing-0.1.0.omxext` archive from a trusted
-   source. Open **Settings → Extensions**, install the local archive and review
-   the normal trust prompt before enabling it. Extension trust is not sandboxing.
-2. Open at least two live panes in one terminal tab. Focus the pane you want to
-   start from, then invoke **Mirror Typing** through its installed extension action
-   in the Command Palette.
-3. Inspect the pane checkboxes. All eligible panes are initially selected; the
-   originally focused pane is required and cannot be unchecked. Select at least
-   two panes, counting that original pane. Titles are labels, not identities.
-4. Choose **Start mirroring**. There is no extra confirmation. Core returns to the
-   original tab and focused pane after hiding setup. Typing begins mirroring only
-   when the core-owned **Mirroring typing · N panes · Stop** indicator is active.
+## Where the code lives
 
-Use **Refresh targets** to take a fresh snapshot of the original captured tab.
-This replaces pending setup authority; it does not silently capture another tab.
-A retained setup page refreshes when shown again. If its original source is gone,
-focus a live pane and invoke the action again. A refused or lost Start result is
-not retried automatically: check the terminal's status, then Refresh before
-another deliberate Start.
+- `extensions/mirror-typing/extension.json`: id `omxterm.mirror-typing`,
+  version, host range, the `terminal.mirrorTyping.v1` and `links.open.v1`
+  capabilities and the `docs` link. `"context": "window"` opens the page as a
+  full-page tab.
+- `extensions/mirror-typing/page.ts`, `view.ts`, `index.html`,
+  `mirror-typing.css`: the setup page. It follows the host theme and interface
+  language (`en-US`, `pt-BR`); strings live in `messages.ts`. `backend.ts` does
+  nothing on purpose.
+- `src/main/mirror-typing-ipc.ts`, `mirror-input-lease.ts`: capture, Start,
+  the native input lease and its revocation.
+- `src/renderer/mirror-typing.ts`, `mirror-typing-status.ts`: the renderer
+  group, the Stop bar and the pane marks.
+- `src/preload/mirror-typing-bridge.ts`, `src/shared/mirror-typing.ts`: the
+  typed route between them.
 
-## What gets copied
+## How it works
 
-**Typing is copied exactly. Use matching terminal programs/modes. Paste, snippets
-and drops stop mirroring and go only to their original pane. Input already sent
-cannot be undone.**
+1. The **Mirror Typing** action (File menu, terminal context menu, Command
+   Palette) captures the selected tab and its focused pane, then opens the
+   page. It refuses unless the focused pane is live and the tab has another
+   live pane.
+2. The page asks `{operation: "terminal.mirrorTyping.v1", action: "describe"}`
+   and gets a one-use setup token plus opaque pane handles, ordinals and titles.
+   The focused pane is required. The page renders titles as text.
+3. **Start** sends the token and the checked handles (2–16). Core hides the
+   page, returns to the original tab and pane, rechecks them and only then arms
+   the route. The token is spent even if the reply is lost, so the page never
+   resends it; it asks for a fresh setup (Refresh, or showing the page again).
+4. While armed, the Surface hands each pane's final keyboard bytes to core,
+   which writes them once to every member. Paste, snippet Insert/Run and drops
+   call the Surface's semantic-input hook first, which stops the group before
+   the text goes to the one pane.
 
-Core copies the source pane's final encoded keyboard bytes, including typing,
-composition commits, repeats, control/navigation/function keys and any emitted
-key-release sequences. Encoding follows the **source mode**, not each recipient's
-mode. Application-cursor, keypad or Kitty keyboard modes can interpret identical
-bytes differently. Use similar interactive shells/programs with matching modes;
-this does not synchronize shell state or guarantee equivalent behavior in arbitrary
-SSH, tmux or TUI sessions. A terminal key such as bare Ctrl+V may cause each local
-program to read its own clipboard; typing-only does not prevent program effects.
-Mouse reports, focus reports, terminal replies and typing in graphical fields are
-not mirrored. Extension code never receives keyboard payloads.
+Start fires on key release, and only for a press that began on the Start
+button. The Enter that ran the palette action and held-key repeats can't start
+mirroring, and Start's release can't leak into a pane. The button has focus
+when setup is ready, so opening the action and pressing Enter is enough.
 
-Any selected pane can become the source. New splits never join automatically.
-Focusing an unselected pane or switching tabs stops the group. To change members,
-open setup again, inspect the fresh selection and explicitly Start.
+## Build and test
 
-## Stop and recover
-
-Use the always-visible **Stop** in core terminal content, including when title/tab
-chrome is hidden. It does not depend on the extension page responding. Opening
-setup or Settings, a selected pane ending/closing, window hiding/minimizing, or
-local extension disable/update/uninstall also stops mirroring. Ordinary native
-window blur does not end an active group, but no typing is admitted while unfocused;
-blur during Start cancels that pending start.
-
-A terminal Paste gesture, snippet Insert/Run or dropped path **stops first**, before
-clipboard reads, confirmation or single-pane delivery. Existing Protected Paste
-still applies. Cancelling paste leaves mirroring stopped; nothing resumes
-automatically. Paste in a search or extension field is unrelated to terminal input.
-
-Stop does not close shells, terminate programs, undo input already sent, or send
-synthetic key releases. Writes to several PTYs are not an atomic transaction;
-a write failure may occur after some panes received bytes. There is no replay or
-rollback. A program that received a key press may not receive its later release.
-
-Selections, setup tokens and active authority are memory-only: nothing is saved,
-restored at startup or included in Saved Layout. Disabling in another application
-instance does not promise instantaneous revocation here; local core Stop remains
-available.
-
-## Capability and lifetime
-
-The manifest declares `terminal.mirrorTyping.v1` and `view.context: "window"`.
-Own-view requests describe captured candidates, start an inspected selection or
-stop that view's authority. Describe returns opaque setup/pane handles and display
-labels, not raw session IDs, cwd, output or keyboard bytes. Start consumes a fresh
-token and requires 2–16 unique live members including the original focused pane;
-foreign, stale or replaced targets refuse. Discovery is declaration-gated, not a
-stable public SDK or permission for arbitrary PTY writes.
-
-Only one setup per extension/window is retained. A fresh action revokes the old
-route and waits for actual prior-view retirement before replacement; uncertainty
-refuses rather than stacking obsolete views. Backend lifetime loss revokes views
-before settlement, so input does not wait for backend or native-view cleanup.
-Main/native and renderer generation checks independently reject delayed Start
-acknowledgements and old input. The extension backend performs no per-key work.
-See [ADR0043](adr/0043-revoke-visible-mirror-typing-routes.md) for the core boundary.
-
-These describe the implementation contract, not completed portable/native
-qualification. A separate archive, built host and installed-host observation
-remain distinct inputs; no release or catalog publication is selected here.
-Headless preparation is not native qualification.
-
-## Build from source
-
-From a clean, committed checkout with installed locked dependencies:
+Unit tests cover the page, the IPC, the lease and the renderer group:
 
 ```sh
-node scripts/build-mirror-typing-extension.mjs
+npx vitest run test/unit/mirror-*.test.ts test/unit/renderer-mirror-typing.test.ts
 ```
 
-The builder needs the repository's supported Node.js version, installed `esbuild`,
-Git and `python3` on PATH. Python uses only its standard library. It requires no
-terminal, credentials, network service, native addon or Electron window. It bundles
-the actual shared Settings page/control styles and UI tokens, rather than shipping
-a separate visual kit. This preview uses the tokens' default palette; it does not
-claim live host-theme propagation.
+To build an archive, follow
+[Building an extension archive](release.md#building-an-extension-archive) with
+`node scripts/build-mirror-typing-extension.mjs`. It writes
+`dist/extensions/mirror-typing-<version>.omxext` with `.sha256` and `.json`
+sidecars and refuses a dirty checkout. `OMXTERM_MIRROR_TYPING_BUILD=1` also
+runs the archive check in `test/unit/mirror-typing-build.test.ts`.
 
-Outputs are `dist/extensions/mirror-typing-0.1.0.omxext`, `.omxext.sha256` and
-`.omxext.json`. All refuse replacement. The receipt records source/tool identities
-and archive digest; `qualification.status: "not-run"` is not installation or native
-qualification. An optional output path and full source commit may be supplied as
-literal positional arguments for a transported Git archive; that source identity
-is explicitly recorded as `supplied-commit`, not a verified clean checkout.
+### Packaged Mirror Typing smoke
 
-Maintainers can exercise archive validation after the host capability is integrated:
+`test/integration/mirror-typing-smoke-packaged.test.ts` checks an archive on a
+packaged host. It installs the archive through **Install local .omxext…**,
+splits the tab, finds Mirror Typing in the Command Palette and starts it with
+Enter (stray Enter releases and repeats must not start it). Then it checks that
+one typed command runs in both shells, and that Stop, each paste route, a native
+file drop and (with a Snippets archive) a snippet Insert leave the next command
+in one shell only:
 
 ```sh
-OMXTERM_MIRROR_TYPING_BUILD=1 npm test -- test/unit/mirror-typing-build.test.ts
+OMXTERM_MIRROR_SMOKE_APP=/absolute/OMXTerm-X.Y.Z-arm64.AppImage \
+OMXTERM_MIRROR_SMOKE_ARCHIVE=/absolute/mirror-typing-X.Y.Z.omxext \
+OMXTERM_MIRROR_SMOKE_SNIPPETS=/absolute/snippets-X.Y.Z.omxext \
+npx vitest run test/integration/mirror-typing-smoke-packaged.test.ts
 ```
 
-The archive includes the OMXTerm MIT license, its own `NOTICE`, and the full
-AshyTerm MIT license. The workflow credits Rafael Ruscher (@ruscher), Community Big
-and BigLinux for the broadcast-input contribution in PR #622; this is a narrower
-adaptation, not a wholesale merge.
+On macOS, point the app variable at an `OMXTerm.app` copied out of the DMG. On
+Windows, point it at the installed `OMXTerm.exe`; the shells are PowerShell
+instead of `/bin/sh`. Run it from a logged-in desktop session (on Windows, an
+SSH session isn't one: start it through a scheduled task in the console
+session). It opens real windows and writes the clipboard, so use a test
+machine. The test skips when either required variable is unset.
+
+### Publishing
+
+Follow [Publishing an extension archive](release.md#publishing-an-extension-archive).
+Published archives are immutable, so changed bytes need a new version in
+`extension.json`.
+
+## Limits
+
+- Typing only: per-pane encoding and multi-pane paste would need a different
+  contract.
+- Bytes follow the source pane's terminal modes, so mismatched programs can read
+  them differently.
+- Writes to several PTYs aren't atomic. A failed write stops the group with a
+  notice; nothing is retried or rolled back.
+- Nothing is saved or restored, and Saved Layout doesn't include it.
+
+## Credits
+
+The workflow adapts the broadcast-input proposal by Rafael Ruscher (@ruscher)
+in PR #622, with attribution to Community Big and BigLinux. AshyTerm's MIT
+notice ships in `extensions/mirror-typing/licenses/ashyterm.txt`; see
+`extensions/mirror-typing/NOTICE`.
