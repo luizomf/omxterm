@@ -506,6 +506,26 @@ are the job of a session manager such as tmux.
   windows and restarts use `window.showTabBar` (default enabled). Title-bar
   visibility and fullscreen are independent.
 
+### State Marks
+
+One core system shows pane and window state
+([ADR 0050](adr/0050-show-ongoing-states-as-quiet-state-marks.md)), in the
+quietest form that works:
+
+- Idle or success shows nothing.
+- An ongoing state is a State Mark: one small glyph at the pane's top-right
+  edge, in its top padding, with a tooltip and an accessible name and no
+  on-screen text. With the tab strip visible, the tab shows each state's glyph
+  once before its title.
+- A surprise is one transient overlay sentence that disappears after four
+  seconds.
+- Something that needs the user is one overlay sentence without counts that
+  stays until dismissed. A newer sentence replaces the previous one.
+- None of these enters the layout flow: showing, changing or removing one never
+  refits a Surface or resizes a PTY, with or without the title bar or tab
+  strip. Stopping an ongoing state uses existing actions (shortcut, Command
+  Palette, menu), never a permanent button.
+
 ### About dialog
 
 - `About OMXTerm` in the application menu opens one compact in-window dialog on
@@ -1070,6 +1090,10 @@ back with fresh shells
   shell. Every pane starts through normal Surface initialization using the
   Default Shell, never consuming a pending `-e`. Current work is untouched;
   partial failures keep healthy panes. The page reports folder fallbacks.
+- The window shows nothing while restored panes open or when they all opened.
+  When some panes couldn't open, it leaves one dismissible
+  [State Marks](#state-marks) notice without counts. Panes closed meanwhile and
+  shells that exit cleanly aren't failures.
 - Core owns tokens, status, cancellation, and native shutdown independently of
   extension retirement. Keyboard Open waits for the Enter release; delayed
   presentation respects newer focus intent.
@@ -1116,10 +1140,15 @@ needs host 0.27.0 or later.
   unsupported terminal paste, and before clipboard reads or Protected Paste
   confirmation. Cancelled paste stays stopped; delayed local approval cannot fan
   out or restart mirroring.
-- A persistent core content row and source/member marks expose Stop even with
-  hidden chrome, whether or not the extension responds. Preparing is
-  input-inert and cancellable; Start/Stop key releases cannot leak into terminal
-  input.
+- While the route is armed, every member carries a core
+  [State Mark](#state-marks) whose name says source or member and that the
+  Command Palette stops mirroring. Opening the Command Palette (a modal entry)
+  is the keyboard-reachable Stop, even with hidden chrome and whether or not
+  the extension responds. Preparing shows nothing, is input-inert and
+  cancellable; Start key releases cannot leak into terminal input.
+- An ordinary stop removes the marks and shows nothing. A paste, snippet or
+  drop stop flashes one transient sentence; a failed write leaves one
+  dismissible sentence warning that some panes may have missed input.
 - Selecting an unselected pane or tab, modal entry, member loss, view/backend
   loss, local disable/update/uninstall, renderer/window teardown, and
   hide/minimize revoke the whole group. Active-window blur blocks input but keeps

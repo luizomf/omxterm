@@ -7,6 +7,8 @@ export function createApplicationTabStrip<Tab>(
   tabs: Tab[],
   options: {
     readonly label: (tab: Tab, index: number) => string;
+    /** State marks shown before the label (see state-marks.ts). */
+    readonly marks?: (tab: Tab) => readonly HTMLElement[];
     readonly select: (tab: Tab) => void;
     readonly canInteract: () => boolean;
     readonly reordered: (reorder: () => void) => void;
@@ -56,7 +58,10 @@ export function createApplicationTabStrip<Tab>(
               const button = strip.ownerDocument.createElement("button");
               button.type = "button";
               button.className = "ui-tab";
-              button.textContent = options.label(tab, index);
+              button.replaceChildren(
+                ...(options.marks?.(tab) ?? []),
+                options.label(tab, index),
+              );
               button.setAttribute("role", "tab");
               button.setAttribute(
                 "aria-selected",

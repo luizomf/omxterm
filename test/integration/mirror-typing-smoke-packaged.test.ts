@@ -6,7 +6,7 @@ import { launchPackaged } from "../fixtures/packaged-inspector.js";
 
 // Packaged Mirror Typing smoke on a published host: install a local archive,
 // split the tab, start mirroring with Enter, then check that typing reaches
-// both shells and that Stop, paste, a file drop and (optionally) a snippet
+// both shells and that the Command Palette, paste, a file drop and (optionally) a snippet
 // Insert each leave the next command in one shell only.
 //
 //   OMXTERM_MIRROR_SMOKE_APP       .AppImage, .app bundle or packaged executable
@@ -79,10 +79,12 @@ it.skipIf(!app || !archive)(
       );
       expect(result.strayKeysStarted).toBe(false);
       expect(result.panes).toHaveLength(2);
-      expect(result.active).toBe("Mirroring typing · 2 panes");
+      expect(result.active).toBe(
+        "Mirroring typing from this pane. Open the Command Palette to stop.",
+      );
       // Two different shells ran the one typed command.
       expect(new Set(steps.typing).size).toBe(2);
-      expect(steps.stopStatus).toBe("Mirroring stopped");
+      expect(steps.stopStatus).toBe("");
       expect(steps.stopped).toHaveLength(1);
       for (const [status, lines] of [
         ...Object.values(result.paste).map(({ status, lines }) => [
@@ -93,7 +95,7 @@ it.skipIf(!app || !archive)(
         ...(snippetsArchive ? [[steps.snippetStatus, steps.snippet]] : []),
       ]) {
         expect(status).toBe(
-          "Mirroring stopped — paste/insertion goes to one pane.",
+          "Mirroring stopped, so this went to one pane only.",
         );
         expect(lines).toHaveLength(1);
       }

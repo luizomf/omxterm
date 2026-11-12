@@ -56,7 +56,8 @@ guide describes the published targets and bounded macOS evidence.
 [ADR0042: Save layouts without restoring sessions](0042-save-layouts-without-restoring-sessions.md)
 adds explicit optional Saved Layout capture/open and extension-scoped CAS state.
 [ADR0043: Revoke visible Mirror Typing routes](0043-revoke-visible-mirror-typing-routes.md)
-adds the optional fixed same-tab keyboard route with core-owned Stop.
+adds the optional fixed same-tab keyboard route with core-owned Stop; ADR 0050
+replaces its status row with State Marks.
 
 [ADR0044: Migrate Snippets without changing terminal input](0044-migrate-snippets-without-changing-terminal-input.md)
 records the accepted optional-extension migration design and platform cutover
@@ -90,9 +91,14 @@ window there, `-e` included.
 builds both Linux AppImages on hosted Ubuntu 22.04 runners so they run on
 glibc 2.35 or newer; ARM64 is still fully verified on a desktop.
 
+[ADR0050: Show ongoing states as quiet State Marks](0050-show-ongoing-states-as-quiet-state-marks.md)
+gives every pane state one quiet system (nothing, a glyph mark, a transient
+overlay or a dismissible notice) that never changes the terminal grid, and
+amends ADR 0043's Stop row.
+
 ## Related boundaries
 
-- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033.
+- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045.

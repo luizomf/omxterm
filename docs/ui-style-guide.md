@@ -75,7 +75,8 @@ take `color-scheme` from background luminance (light above 0.179).
 | `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                  |
 | `ui-chip`                           | A key binding or short literal value.                                                                                     |
 | `ui-dialog`                         | Modal overlays (About, Command Palette, previews). Clear backdrop; the rest of the window softens.                        |
-| `ui-overlay`                        | Non-modal floating notices (the exit notice, the panel status, drop hints).                                               |
+| `ui-overlay`                        | Non-modal floating notices (the exit notice, the panel status, drop hints, state notices).                                |
+| `ui-mark` via `createStateMarks()`  | An ongoing state on a pane and its tab: one 12 px secondary glyph with a tooltip and accessible name, no text on screen.  |
 | `ui-popover`                        | Menus and tooltips over content in the same view. Solid surface.                                                          |
 | `page-notice` via `setPageNotice()` | Info, success, warning or error. Tinted block with a colored start edge; non-info severities add a glyph.                 |
 | `ui-hint`                           | The one sentence of guidance on a page. Secondary color, about 72 characters wide.                                        |
@@ -119,6 +120,25 @@ softens the other body children; it's independent of the native `window.blur`
 preference. The startup configuration banner is the one exception: a
 full-width red strip, because OMXTerm fell back to defaults.
 
+**State marks.** One system for state, from `src/renderer/state-marks.ts`
+([ADR 0050](adr/0050-show-ongoing-states-as-quiet-state-marks.md)); never add
+a strip, badge or color of your own. Pick the quietest tier that works:
+
+- idle or success: nothing;
+- something ongoing (mirroring, later an SSH session or an attached agent): a
+  `ui-mark` glyph in the pane's top-right padding, repeated once before the
+  title on its tab when the tab strip shows;
+- a surprise (paste stopped mirroring): `flash()`, one `ui-overlay` sentence at
+  the bottom right that goes away after 4 s;
+- something that needs the user: `notify()`, one sentence without counts and a
+  close button.
+
+Marks and notices float over the terminal, out of the layout flow, so they
+never change the grid. Stopping a state goes through existing actions
+(shortcut, Command Palette, menu), never a permanent button. A new state adds
+its glyph to `stateGlyphs`; reporters pass a glyph name and a label, never
+their own visuals.
+
 **Extension views.** Panel views (Files, SSH Connect, Snippets) are
 transparent: the host paints the panel tint. They don't repeat the tool name;
 the panel header shows it. Window-context views (Saved Layout, Mirror Typing)
@@ -133,7 +153,8 @@ are full pages with an 18 px title.
   their manifest and open it by id with `links.open.v1`
   ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)).
 - No notices for success or idle states. A notice says what happened and,
-  if needed, what to do next, in one or two sentences.
+  if needed, what to do next, in one or two sentences. State notices (see
+  State marks) take one.
 - Buttons are verbs ("Connect", "Save"), not "OK". Sentence case everywhere.
 - Keep user data literal, never HTML.
 - Interface Languages ship together: update English and Portuguese in the same

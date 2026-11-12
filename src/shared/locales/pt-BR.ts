@@ -165,12 +165,7 @@ export const brazilianPortugueseMessages: Readonly<
   "terminal.filesDropRefused":
     "Caminho não inserido. Arraste de novo pelo Files desta janela.",
   "terminal.sshExit": "SSH encerrou (código {code}).",
-  "layout.initializing":
-    "Abrindo layout salvo: {settled}/{total} painéis; {fallbacks} pastas substituídas pela pasta pessoal; {failed} painéis indisponíveis.",
-  "layout.completed":
-    "Layout salvo aberto: {settled}/{total} painéis; {fallbacks} pastas substituídas pela pasta pessoal; {failed} painéis indisponíveis.",
-  "layout.partial":
-    "Layout salvo parcialmente aberto: {settled}/{total} painéis; {fallbacks} pastas substituídas pela pasta pessoal; {failed} painéis indisponíveis.",
+  "layout.partial": "Alguns painéis do layout salvo não abriram.",
   "terminal.tabs": "Abas do terminal",
   "terminal.userFileErrors": "Erros nos arquivos do usuário",
   "terminal.surfaceFailure": "Falha na superfície do terminal",
@@ -332,17 +327,13 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.unsupported":
     "O gerenciamento de extensões não está disponível nesta plataforma",
   "mirrorTyping.title": "Espelhar digitação",
-  "mirrorTyping.preparing": "Iniciando espelhamento…",
-  "mirrorTyping.active": "Espelhando digitação · {count} painéis",
-  "mirrorTyping.stop": "Parar",
-  "mirrorTyping.cancel": "Cancelar",
-  "mirrorTyping.source": "Origem da digitação espelhada",
-  "mirrorTyping.member": "Destino da digitação espelhada",
-  "mirrorTyping.stopped": "Espelhamento parado",
-  "mirrorTyping.semantic":
-    "Espelhamento parado — colagem/inserção vai para um painel.",
+  "mirrorTyping.source":
+    "Espelhando a digitação deste painel. Abra a paleta de comandos para parar.",
+  "mirrorTyping.member":
+    "Espelhando a digitação para este painel. Abra a paleta de comandos para parar.",
+  "mirrorTyping.semantic": "Espelhamento parado: isto foi só para um painel.",
   "mirrorTyping.failed":
-    "Espelhamento parado — a entrada pode ter chegado a apenas alguns painéis. Confira antes de digitar novamente. Nada será reenviado automaticamente.",
+    "Espelhamento parado, e alguns painéis podem não ter recebido o que você digitou.",
   "mirrorTyping.focusLivePane":
     "Foque um painel ativo e abra Espelhar digitação.",
   "mirrorTyping.needTwoPanes":

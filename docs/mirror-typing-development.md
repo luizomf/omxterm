@@ -5,8 +5,9 @@ fixed group of panes in the same tab. It ships as a separate `.omxext` archive.
 The [user guide](mirror-typing.md) covers installing and using it.
 
 The extension is only the setup page. Core owns everything that touches input:
-the route from one pane's keyboard to the others, the visible Stop, and every
-stop condition ([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)).
+the route from one pane's keyboard to the others, the pane marks, and every
+stop condition ([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md),
+[ADR 0050](adr/0050-show-ongoing-states-as-quiet-state-marks.md)).
 Extension code never sees keyboard bytes.
 
 ## Where the code lives
@@ -21,8 +22,8 @@ Extension code never sees keyboard bytes.
   nothing on purpose.
 - `src/main/mirror-typing-ipc.ts`, `mirror-input-lease.ts`: capture, Start,
   the native input lease and its revocation.
-- `src/renderer/mirror-typing.ts`, `mirror-typing-status.ts`: the renderer
-  group, the Stop bar and the pane marks.
+- `src/renderer/mirror-typing.ts`: the renderer group. It reports its pane
+  marks and stop notices through the core State Marks in `state-marks.ts`.
 - `src/preload/mirror-typing-bridge.ts`, `src/shared/mirror-typing.ts`: the
   typed route between them.
 
@@ -70,7 +71,8 @@ runs the archive check in `test/unit/mirror-typing-build.test.ts`.
 packaged host. It installs the archive through **Install local .omxext…**,
 splits the tab, finds Mirror Typing in the Command Palette and starts it with
 Enter (stray Enter releases and repeats must not start it). Then it checks that
-one typed command runs in both shells, and that Stop, each paste route, a native
+one typed command runs in both shells, and that opening the Command Palette,
+each paste route, a native
 file drop and (with a Snippets archive) a snippet Insert leave the next command
 in one shell only:
 

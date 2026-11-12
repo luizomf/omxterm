@@ -1,5 +1,8 @@
 # Revoke visible Mirror Typing routes
 
+Amended by [ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md): State
+Marks replace the in-flow status row and its Stop button.
+
 ## Decision
 
 The optional, separately installed [Mirror Typing extension](../mirror-typing-development.md)
@@ -37,14 +40,16 @@ confirmation or ordinary original-target delivery, including empty/unsupported
 terminal paste. Cancellation leaves mirroring stopped. Protected Paste remains
 Surface-owned and single-target; a late local approval cannot arm a group.
 
-Core shows an in-flow status and keyboard-reachable Stop independent of hidden
-title/tab chrome or extension responsiveness, plus distinct source/member marks.
-Preparing is input-inert and cancellable before the first asynchronous package
-admission. Only then may the acknowledged native hide handoff begin; Start
+Core marks the source and members with State Marks
+([ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md)) whose names
+tell them apart. Stop stays keyboard-reachable independent of hidden title/tab
+chrome or extension responsiveness: opening the Command Palette is a modal
+entry, which revokes the group. Preparing is input-inert and cancellable before
+the first asynchronous package admission. Only then may the acknowledged native hide handoff begin; Start
 revalidates original focus/context before arming. Keyboard focus can return to
 the core document shortly after the hide, so Start waits for it, bounded by the
 prepare timer, and a blur in between still cancels. Leave-and-return navigation
-invalidates the attempt rather than merely checking its final selected page. Start/Stop
+invalidates the attempt rather than merely checking its final selected page. Start
 activation keys, repeats and releases must not leak to terminals. Escape remains
 terminal input, not a new global Stop shortcut.
 

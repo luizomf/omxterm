@@ -2,6 +2,7 @@
 import { createMirrorTyping } from "./mirror-typing";
 import type { MirrorTypingBridge } from "../shared/mirror-typing";
 import { createTerminalTabsLayout } from "./terminal-tabs-layout";
+import { createStateMarks } from "./state-marks";
 import type {
   InitialLayout,
   TerminalLayoutBridge,
@@ -210,6 +211,11 @@ export function createTerminalTabs(
   };
 
   const selectedApplicationTab = () => tabs[selectedIndex];
+  const marks = createStateMarks(
+    elements.container.ownerDocument,
+    language,
+    () => renderStrip(),
+  );
   const layout = createTerminalTabsLayout(
     elements.container,
     tabs,
@@ -230,6 +236,7 @@ export function createTerminalTabs(
   });
   const strip = createApplicationTabStrip(elements.strip, tabs, {
     label: (tab, index) => tabLabel(tab, index, language),
+    marks: (tab) => (tab.kind === "terminal" ? marks.tab(tab) : []),
     select: (tab) => select(tabs.indexOf(tab)),
     canInteract: () => !disposed && options.canFocus?.() !== false,
     reordered(reorder) {
@@ -430,7 +437,7 @@ export function createTerminalTabs(
     mirror = createMirrorTyping({
       bridge: options.mirrorTyping,
       parent: elements.container,
-      language,
+      marks,
       selected: selectedApplicationTab,
       available: () => !disposed && !closing && canFocus?.() !== false,
       handoff(tab, pane, ready, current) {
@@ -444,6 +451,7 @@ export function createTerminalTabs(
     select,
     mount: mountPane,
     disposed: () => disposed,
+    notify: marks.notify,
   });
   return {
     ready: initialReady ?? createTab(),
@@ -558,6 +566,7 @@ export function createTerminalTabs(
       contextMenu.dispose();
       removeLanguage();
       strip.dispose();
+      marks.dispose();
       keyboard.dispose();
       disposeTabContent(tabs);
     },

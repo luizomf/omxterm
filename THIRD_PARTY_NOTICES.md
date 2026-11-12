@@ -70,7 +70,7 @@ controller or grant extensions raw terminal access.
 Mirror Typing also adapts the visible status/Stop and focused-source fanout
 concepts from `src/renderer/broadcast-indicator.ts` and
 `src/renderer/terminal-pane-lifecycle.ts` at that same Rafael Ruscher (@ruscher)
-source commit. The implementation uses `src/renderer/mirror-typing.ts`, `src/renderer/mirror-typing-status.ts`
+source commit. The implementation uses `src/renderer/mirror-typing.ts`
 and a separate `extensions/mirror-typing` setup, with fixed inspected members,
 core revocation and stop-before-local-paste rather than dynamic enrollment.
 The separate archive retains its own NOTICE, OMXTerm MIT license and the full

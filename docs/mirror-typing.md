@@ -28,13 +28,16 @@ to retry). Other platforms aren't tested yet. See the
    mirror them all. To leave some out, uncheck them first, then choose **Start
    mirroring**.
 
-OMXTerm returns to your tab. A bar above the panes reads **Mirroring typing ·
-N panes** and has a **Stop** button, and each mirrored pane is marked. Type in
-any of them and the others follow.
+OMXTerm returns to your tab. Each mirrored pane shows a small **↔** at its
+top-right corner (and so does the tab, when the tab bar is showing); hover it to
+see whether that pane is the source or a member. Type in any of them and the
+others follow.
 
 ## Stop
 
-Choose **Stop** in that bar. Mirroring also stops on its own when you:
+Open the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux and
+Windows); press `Esc` to close it again. The marks go away. Mirroring also stops
+on its own when you:
 
 - paste, insert a snippet or drop a file: the text goes only to the pane you're
   in;
@@ -56,5 +59,5 @@ open Mirror Typing and start a new group. New panes never join on their own.
   handles it on its own, for example by reading its own clipboard.
 - Nothing is saved. Mirroring ends when OMXTerm quits and never starts on its
   own.
-- If a pane can't receive input, mirroring stops and the bar says some panes may
-  have missed it. Check them before typing again.
+- If a pane can't receive input, mirroring stops and a notice says some panes
+  may have missed what you typed. Check them before typing again.

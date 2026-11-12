@@ -240,6 +240,21 @@
   background: var(--ui-control-selected);
 }
 
+/* State mark ------------------------------------------------------------- */
+
+/* One quiet glyph for an ongoing state. Its tooltip and accessible name say
+   what is going on; it never carries text on screen. */
+.ui-mark {
+  display: inline-block;
+  font: var(--ui-text-meta) / 1 var(--ui-font);
+  color: var(--ui-secondary);
+  cursor: default;
+  user-select: none;
+}
+.ui-tab .ui-mark {
+  margin-inline-end: var(--ui-space-1);
+}
+
 /* Tab and panel header ---------------------------------------------------- */
 
 /* A window tab: neutral alpha fills over the window tint. The selected tab

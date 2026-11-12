@@ -497,9 +497,10 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
       core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
     }
   };
+  // The focused pane's state mark while mirroring, else the visible notice.
   const status = () =>
     js(
-      "(() => { const row = document.querySelector('.mirror-typing-status'); return row && !row.hidden ? row.querySelector('[role=status]').textContent : ''; })()",
+      "(() => { const mark = document.querySelector('.terminal-surface.pane-focused [role=img]') ?? document.querySelector('.terminal-surface [role=img]'); if (mark) return mark.getAttribute('aria-label'); return document.querySelector('.state-notice:not([hidden]) > span')?.textContent ?? ''; })()",
     );
   if (snippetsArchive) {
     menu("Settings");
@@ -662,8 +663,19 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
   await settle();
   result.steps.typing = await lines(typed);
 
-  // 2. Stop: the next command runs in one shell only.
-  await js("document.querySelector('.mirror-typing-status button').click()");
+  // 2. Stop by opening the Command Palette: the marks go away quietly and the
+  // next command runs in one shell only.
+  menu("Command Palette");
+  await until(
+    () => js("!!document.querySelector('.command-palette [role=combobox]')"),
+    "Command Palette",
+  );
+  core.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
+  core.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
+  await until(
+    () => js("!document.querySelector('.command-palette')"),
+    "palette closed",
+  );
   result.steps.stopStatus = await status();
   core.focus();
   const stopped = marker + ".stopped";
@@ -713,7 +725,7 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
       clipboard.writeText(line(pasted), "selection");
     await paste();
     await until(
-      async () => !(await status()).startsWith("Mirroring typing"),
+      async () => !(await status()).startsWith("Mirroring typing from"),
       `${route} paste stop`,
     );
     const pasteStatus = await status();
@@ -752,7 +764,7 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     core.debugger.detach();
   }
   await until(
-    async () => !(await status()).startsWith("Mirroring typing"),
+    async () => !(await status()).startsWith("Mirroring typing from"),
     "drop stop",
   );
   result.steps.dropStatus = await status();
@@ -788,7 +800,7 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     }, "snippet row");
     await view.executeJavaScript(`${row}.click()`);
     await until(
-      async () => !(await status()).startsWith("Mirroring typing"),
+      async () => !(await status()).startsWith("Mirroring typing from"),
       "snippet stop",
     );
     result.steps.snippetStatus = await status();

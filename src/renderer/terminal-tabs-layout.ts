@@ -10,7 +10,7 @@ import {
   type LayoutTab,
 } from "../shared/terminal-layout";
 import { layoutPanes, type PaneLayout } from "./pane-layout";
-import { englishLanguage } from "./renderer-language";
+import type { StateText } from "./state-marks";
 import {
   appendTab,
   createPane,
@@ -131,6 +131,8 @@ type InitialLayoutOwner = {
   select(index: number, passive?: boolean): void;
   mount(pane: TerminalPane): Promise<void>;
   disposed(): boolean;
+  /** A one-sentence notice the user dismisses. */
+  notify(text: StateText): void;
 };
 
 /** Retained terminal selection and capture lifetime belong to this window. */
@@ -217,48 +219,29 @@ export function mountInitialLayout(
     ...tabPanes(selected).filter((pane) => pane !== selected.focused),
     ...restored.filter((tab) => tab !== selected).flatMap(tabPanes),
   ];
-  const status = parent.ownerDocument.createElement("div");
-  status.className = "terminal-layout-status";
-  status.setAttribute("role", "status");
-  (parent.closest("#terminal-window-content") ?? parent).before(status);
+  // Opening everything is success and shows nothing. Panes the user closed
+  // meanwhile are not failures; only panes that couldn't open earn a notice.
   let disposed = false;
   let settled = 0;
   let failed = 0;
-  const update = () => {
-    if (disposed || owner.disposed()) return;
-    status.dataset.phase =
-      settled < queue.length
-        ? "initializing"
-        : failed
-          ? "partial"
-          : "completed";
-    status.textContent = (options.language ?? englishLanguage).t(
-      settled < queue.length
-        ? "layout.initializing"
-        : failed
-          ? "layout.partial"
-          : "layout.completed",
-      { settled, total: queue.length, fallbacks: plan.fallbacks, failed },
-    );
+  const settle = () => {
+    settled++;
+    if (settled === queue.length && failed && !disposed && !owner.disposed())
+      owner.notify((t) => t("layout.partial"));
   };
-  const removeLanguage = (options.language ?? englishLanguage).bind(update);
-  update();
   let next = 0;
   const mount = async (pane: TerminalPane) => {
     try {
-      if (disposed || owner.disposed() || pane.removed || pane.tab.removed) {
-        failed++;
+      if (disposed || owner.disposed() || pane.removed || pane.tab.removed)
         return;
-      }
       await owner.mount(pane);
-      if (pane.ended || pane.removed) failed++;
+      if (pane.ended && !pane.removed) failed++;
     } catch (error) {
       if (pane.adapter.sessionId() === undefined) pane.adapter.close();
-      failed++;
+      if (!pane.mountAbort.signal.aborted) failed++;
       throw error;
     } finally {
-      settled++;
-      update();
+      settle();
     }
   };
   // The first selected pane alone owns host readiness. Failures of later panes
@@ -276,8 +259,6 @@ export function mountInitialLayout(
     ready,
     dispose() {
       disposed = true;
-      removeLanguage();
-      status.remove();
     },
   };
 }
