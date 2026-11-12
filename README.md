@@ -70,6 +70,8 @@ Not sure which one you have?
 - **Windows:** **Settings → System → About → System type**. "x64-based" →
   x64; "ARM-based" → arm64.
 - **Linux:** run `uname -m` in a terminal. `x86_64` → x64, `aarch64` → arm64.
+  Needs glibc 2.35 or newer (Ubuntu 22.04, Debian 12, Fedora 36 or later); the
+  ARM64 AppImage up to 0.28.0 needs 2.42.
 
 The Intel/AMD builds (Windows and Linux x64) are new and **untested on real
 desktops**. If one misbehaves,

@@ -86,10 +86,14 @@ structure and reopens it at startup.
 gives packaged OMXTerm one process per profile: launching it again opens a new
 window there, `-e` included.
 
+[ADR0049: Build Linux packages on Ubuntu 22.04](0049-build-linux-packages-on-ubuntu-22-04.md)
+builds both Linux AppImages on hosted Ubuntu 22.04 runners so they run on
+glibc 2.35 or newer; ARM64 is still fully verified on a desktop.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045.
-- Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046.
+- Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046, 0049.

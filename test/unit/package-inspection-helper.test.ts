@@ -39,6 +39,21 @@ it("release verification is a macOS-only option", () => {
   ).toThrow();
 });
 
+it("hosted-build verification is a Linux-only option", () => {
+  expect(windowsVerificationOptions(["--hosted-build"], "linux")).toEqual({
+    windowsUnpackedOnly: false,
+    disposableVm: false,
+    hostedBuild: true,
+  });
+  for (const platform of ["darwin", "win32"])
+    expect(() =>
+      windowsVerificationOptions(["--hosted-build"], platform),
+    ).toThrow();
+  expect(() =>
+    windowsVerificationOptions(["--hosted-build", "--hosted-build"], "linux"),
+  ).toThrow();
+});
+
 it.each(["win32", "linux"])(
   "the actual %s inspection helper uses only its target addons and native resize contract",
   async (platform) => {

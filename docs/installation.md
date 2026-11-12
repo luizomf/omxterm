@@ -65,6 +65,9 @@ opens protected folders such as Documents or Downloads.
 
 ## Linux
 
+Needs glibc 2.35 or newer: Ubuntu 22.04, Debian 12, Fedora 36 or later. Check
+with `getconf GNU_LIBC_VERSION`. (Up to 0.28.0, the ARM64 AppImage needed 2.42.)
+
 The AppImage is a single file you run without installing. Open a terminal, go to
 the folder with the download, then:
 
@@ -81,18 +84,7 @@ To add OMXTerm to your application menu, download `linux_install.sh` from the
 same release and follow the [Linux installer guide](linux-installer.md). For
 blur, HiDPI, or VM graphics, see [Linux desktop tips](linux-desktop.md).
 
-### Requirements
-
-The ARM64 AppImage needs **glibc 2.42 or newer** (the core system library of
-your distribution). Check with:
-
-```sh
-getconf GNU_LIBC_VERSION
-```
-
-Ubuntu 24.04 LTS and older releases are too old: upgrade, or
-[build from source](../CONTRIBUTING.md#development-environment) (a development
-path, not a supported install).
+### X11 and XWayland
 
 OMXTerm uses X11. Wayland desktops run it through XWayland, which most already
 have. If something is missing:
