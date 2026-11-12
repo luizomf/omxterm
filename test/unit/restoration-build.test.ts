@@ -50,7 +50,7 @@ it.skipIf(process.env.OMXTERM_RESTORATION_BUILD !== "1")(
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: "0.27.0",
+        appVersion: "0.28.0",
         apiVersion: "0.1.0",
       });
       expect(validated.manifest).toEqual(receipt.manifest);

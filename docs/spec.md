@@ -63,7 +63,7 @@ session management, and IDE features are outside the product scope.
 OMXTerm:
 
 - opens the Default Shell in the user's home directory, except for a split
-  pane's OSC 7 directory inheritance and explicit Saved Layout opening
+  pane's OSC 7 directory inheritance and Saved Layout opening or reopening
   (described below):
   - on macOS and Linux, the operating-system-configured shell as an interactive
     login shell;
@@ -111,9 +111,9 @@ Optional, separately installed previews:
 - [SSH Connect](ssh-connect.md) (Linux and macOS ARM64): an incomplete read-only
   alias index and a quick-connect page request a typed, main-owned literal
   system `ssh` launch. It does not broker authentication or add reconnect.
-- [Saved Layout](#saved-layout) (optional extension) saves one window's layout
-  and reopens it with fresh Default Shells. It never restores running sessions,
-  commands, or output, and there is no startup restore or autosave.
+- [Saved Layout](#saved-layout) (optional extension) reopens the last windows at
+  startup and saves one window's layout to open later, always with fresh
+  Default Shells. It never restores running sessions, commands, or output.
 - [Mirror Typing](#mirror-typing): a narrow same-tab keyboard-byte exception, not
   unrestricted broadcast or multi-pane paste.
 
@@ -243,7 +243,8 @@ are the job of a session manager such as tmux.
   local directory when one was reported and still exists, otherwise in the home
   directory. Main reads the report from PTY output, rejects non-local host names
   and UNC/device paths, and never logs the directory. It is persisted only
-  through explicit Saved Layout saving.
+  through Saved Layout (an explicit save, or remembered windows while the
+  extension reopens them).
 - OSC 7 is not authenticated or current-process inspection. An empty or local
   host name from a remote shell looks the same as a local report, any program
   can emit one, and reports may be stale. Either can
@@ -998,11 +999,41 @@ Both routes below share these rules:
 
 ## Saved Layout
 
-The optional [Saved Layout extension](saved-layout.md) explicitly saves and
-reopens one window's terminal layout
+The optional [Saved Layout extension](saved-layout.md) brings window structure
+back with fresh shells
 ([ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md),
-[developer notes](saved-layout-development.md)). It needs host 0.27.0 or later
-and runs wherever extensions do.
+[ADR 0047](adr/0047-reopen-the-last-windows-at-startup.md),
+[developer notes](saved-layout-development.md)). Version 0.2.0 needs host
+0.27.0 or later; reopening at startup needs 0.3.0 and a host that knows
+`terminal.reopenLayout.v1`.
+
+### Reopening at startup
+
+- Reopening is on while an installed, enabled extension declares
+  `terminal.reopenLayout.v1`. No extension code runs at startup. Disabling or
+  uninstalling it while OMXTerm runs deletes the remembered windows; an
+  extension runtime that fails to load doesn't.
+- A 3 s tick captures every terminal window only after layout or PTY activity
+  (pane start, close or exit, input, output, resize, tab selection), and a
+  closing window saves right away. Main writes
+  `<profile>/layout-session/last.json` only when the arrangement changed. It
+  never writes while quitting, for zero windows, or when a capture fails.
+  Closing one of several windows forgets it; Quit and closing the last window
+  keep the arrangement. Windows without a terminal tab are skipped; tabs past
+  16 tabs or 32 panes count as omitted; at most 16 windows.
+- A reopened pane whose saved folder was unavailable keeps that folder until
+  its shell reports another.
+- A start without `-e` opens each remembered window from the same plan as Open
+  (folders checked, home fallback, fresh Default Shells), skipping windows saved
+  on another OS; if none open, one ordinary window opens. A start with `-e`
+  opens as asked and neither reopens nor remembers.
+- Only the process holding `layout-session/session.lock` reopens and
+  remembers. A `reopening` marker left by a start whose reopened windows were
+  never saved and that didn't quit normally drops the remembered windows; that
+  start opens one ordinary window.
+- Window position and size are not remembered.
+
+### Saving a window
 
 - The page shows the saved snapshot (tab and pane counts, save time) with Open,
   Save/Replace and Forget. Open is the primary action when a snapshot exists,
@@ -2586,7 +2617,8 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N` or `0.27.1-dev.N` host admit a range only when ordinary semver admits both stable
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N` or `0.28.0-dev.N` host admit a
+  range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.
 

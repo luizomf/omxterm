@@ -57,6 +57,18 @@ type ExtensionTargetCapture = (
   context?: "window",
 ) => ExtensionTarget;
 
+/** An enabled, installed extension declares this capability. */
+function declares(installations: Installation[], capability: string) {
+  return installations.some(
+    (entry) =>
+      entry.enabled &&
+      entry.digest !== null &&
+      (entry.manifest?.capabilities as string[] | undefined)?.includes(
+        capability,
+      ) === true,
+  );
+}
+
 function managementEntry(entry: Installation) {
   return {
     id: entry.id,
@@ -226,6 +238,7 @@ function supportsExtensionPreview() {
 // Startup creates infrastructure, never activates installed code. Unsupported
 // platforms retain Settings with an explicit preview-unavailable result. Broken
 // infrastructure must not prevent terminal startup.
+// eslint-disable-next-line max-lines-per-function -- one owner wires every extension surface; splitting it only moves the closures around
 export async function startApplicationExtensions(
   options: ApplicationExtensionsOptions,
 ) {
@@ -427,6 +440,7 @@ export async function startApplicationExtensions(
   return {
     actions,
     capture,
+    declares: (capability: string) => declares(installations, capability),
     toggleSnippets(window: BrowserWindow) {
       if (stopping || BrowserWindow.getFocusedWindow() !== window) return;
       const target = capture(window);

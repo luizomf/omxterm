@@ -1,7 +1,10 @@
 import { EventEmitter } from "node:events";
 import type { BrowserWindow } from "electron";
 import { expect, it, vi } from "vitest";
-import { registerTerminalLayoutIpc } from "../../src/main/terminal-layout-ipc";
+import {
+  EmptyLayoutError,
+  registerTerminalLayoutIpc,
+} from "../../src/main/terminal-layout-ipc";
 import { layoutIpc } from "../../src/shared/terminal-layout";
 import type { TerminalIpcController } from "../../src/main/terminal-ipc-types";
 import { createIpcHarness } from "../fixtures/terminal-ipc-harness";
@@ -176,3 +179,42 @@ it.each(["abort", "loss", "quit"])(
     test.service.dispose();
   },
 );
+it("shares one renderer capture between concurrent callers", async () => {
+  const test = setup();
+  const first = test.service.capture(test.window, new AbortController().signal);
+  const second = test.service.capture(
+    test.window,
+    new AbortController().signal,
+  );
+  expect(test.contents.send).toHaveBeenCalledTimes(1);
+  const id: unknown = test.contents.send.mock.calls[0]![1];
+  test.ipc.listeners.get(layoutIpc.captured)!(test.event, { id, layout });
+  expect(await second).toEqual(await first);
+  expect(test.service.windows()).toEqual([test.window]);
+  test.service.dispose();
+});
+it("tells a window without a terminal tab apart from a failed capture", async () => {
+  const test = setup();
+  const pending = test.service.capture(
+    test.window,
+    new AbortController().signal,
+  );
+  const id: unknown = test.contents.send.mock.calls[0]![1];
+  test.ipc.listeners.get(layoutIpc.captured)!(test.event, {
+    id,
+    layout: null,
+    empty: true,
+  });
+  await expect(pending).rejects.toBeInstanceOf(EmptyLayoutError);
+  const failed = test.service.capture(
+    test.window,
+    new AbortController().signal,
+  );
+  const next: unknown = test.contents.send.mock.calls[1]![1];
+  test.ipc.listeners.get(layoutIpc.captured)!(test.event, {
+    id: next,
+    layout: null,
+  });
+  await expect(failed).rejects.not.toBeInstanceOf(EmptyLayoutError);
+  test.service.dispose();
+});

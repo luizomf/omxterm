@@ -37,7 +37,7 @@ function plan(): InitialLayout {
   };
 }
 function captureBridge() {
-  let capture!: () => CapturedLayout;
+  let capture!: () => CapturedLayout | null;
   const remove = vi.fn();
   const bridge: TerminalLayoutBridge = {
     initial: async () => null,
@@ -70,7 +70,7 @@ describe("initial saved-window layout ownership", () => {
     expect(h.mount).toHaveBeenCalledTimes(2);
     const panes = h.container.querySelectorAll(".terminal-surface");
     expect(h.mount.mock.calls[0]![0]).toBe(panes[3]);
-    expect(captured.capture().tabs.map((tab) => tab.panes)).toEqual([
+    expect(captured.capture()!.tabs.map((tab) => tab.panes)).toEqual([
       [null, null],
       [null, null],
     ]);
@@ -97,8 +97,8 @@ describe("initial saved-window layout ownership", () => {
     expect(
       document.querySelector(".terminal-layout-status")?.textContent,
     ).toContain("2 folder fallbacks");
-    expect(captured.capture().selected).toBe(1);
-    expect(captured.capture().tabs[1]!.focused).toBe(1);
+    expect(captured.capture()!.selected).toBe(1);
+    expect(captured.capture()!.tabs[1]!.focused).toBe(1);
   });
 
   it("closes pending owners without starting queued panes and observes late mounts", async () => {
@@ -206,11 +206,25 @@ describe("initial saved-window layout ownership", () => {
     expect(captured.capture()).toMatchObject({ selected: 2, omitted: 1 });
     h.tabs.handleCommand({ action: "close-session", sessionId: "s3" });
     expect(captured.capture()).toMatchObject({ selected: 1, omitted: 1 });
-    expect(captured.capture().tabs.map((tab) => tab.panes)).toEqual([
+    expect(captured.capture()!.tabs.map((tab) => tab.panes)).toEqual([
       ["s1"],
       ["s2"],
     ]);
     h.tabs.dispose();
     expect(captured.remove).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the first 16 terminal tabs and counts the rest as omitted", async () => {
+    const captured = captureBridge();
+    const h = createTabsHarness({ tabsOptions: { layout: captured.bridge } });
+    owners.push(h.tabs);
+    await h.tabs.ready;
+    for (let i = 0; i < 17; i++) h.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(h.surfaces).toHaveLength(18));
+    const layout = captured.capture()!;
+    expect(layout.tabs).toHaveLength(16);
+    expect(layout.omitted).toBe(2);
+    expect(layout.selected).toBe(0);
+    h.tabs.dispose();
   });
 });

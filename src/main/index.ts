@@ -33,7 +33,11 @@ import { startApplicationExtensions } from "./application-extensions";
 import { requestExternalLink } from "./terminal-ipc-boundaries";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
 import { registerSemanticInputIpc } from "./semantic-input-ipc";
-import { startApplicationLayout } from "./application-layout";
+import {
+  startApplicationLayout,
+  startLayoutSession,
+} from "./application-layout";
+import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import {
@@ -157,6 +161,7 @@ let extensions:
   Awaited<ReturnType<typeof startApplicationExtensions>> | undefined;
 let sshLaunch: ReturnType<typeof registerSshTerminalLaunch>;
 let layouts: ReturnType<typeof startApplicationLayout>;
+let layoutSession: ReturnType<typeof startLayoutSession> | undefined;
 let mirrors: ReturnType<typeof registerMirrorTypingIpc>;
 let semanticInput: ReturnType<typeof registerSemanticInputIpc>;
 const shutdown = registerTerminalShutdown(app, {
@@ -190,11 +195,15 @@ app
       () => app.getPath("userData"),
       process.resourcesPath,
     );
-    const { account, consumeLaunchRequest, configurationLoadOptions } =
-      prepareStartup(
-        developmentApplicationIconPath,
-        packagedApplicationIconPath,
-      );
+    const {
+      account,
+      consumeLaunchRequest,
+      explicitCommand,
+      configurationLoadOptions,
+    } = prepareStartup(
+      developmentApplicationIconPath,
+      packagedApplicationIconPath,
+    );
     operationalEvents = createOperationalEventLog({
       environment: process.env,
       homeDirectory: account.homedir,
@@ -280,7 +289,10 @@ app
                   reason,
                 }),
             ),
-          changed: () => rebuildMenu(),
+          changed: () => {
+            rebuildMenu();
+            layoutSession?.refresh();
+          },
           keybind: (event, input, owner, companionOnly) =>
             deliverExtensionKeybind(
               actionCatalog,
@@ -379,7 +391,10 @@ app
               },
               app.dock,
             );
-            window.once("closed", () => titleController.dispose());
+            window.once("closed", () => {
+              titleController.dispose();
+              layoutSession?.windowClosed();
+            });
             sshLaunch.register(window);
             const invocationTarget = extensionInvocationTarget(window);
             const controller = terminalIpcRouter.registerController({
@@ -408,6 +423,8 @@ app
               homeDirectory: account.homedir,
               initialLayout: () => layouts.initial(window),
               consumeLayoutLaunch: (token) => layouts.consume(window, token),
+              rememberedLayoutFolder: (token) =>
+                layouts.remembered(window, token),
               createSession(callbacks, workingDirectory, ssh, restored) {
                 return shutdown.createSession(nodePty.spawn, {
                   shell: resolveCurrentDefaultShell(),
@@ -454,6 +471,7 @@ app
               onTitleRequest: titleController.requestTitle,
               onBell: titleController.ringBell,
               onUserInteraction: titleController.resetAttention,
+              onLayoutActivity: () => layoutSession?.touch(),
               openExternalLink: (url) => shell.openExternal(url),
               onExternalLinkOpenError: nativeDialogs.externalLinkError,
               writeClipboardText: (text) => clipboard.writeText(text),
@@ -630,7 +648,15 @@ app
         });
         app.once("will-quit", palette.dispose);
 
-        await terminalApplication.newWindow();
+        layoutSession = startLayoutSession({
+          layouts,
+          applicationRoot,
+          home: account.homedir,
+          enabled: () =>
+            extensions?.declares(REOPEN_LAYOUT_CAPABILITY) === true,
+          application: () => terminalApplication,
+        });
+        await layoutSession.openWindows(!explicitCommand);
       },
     );
   })

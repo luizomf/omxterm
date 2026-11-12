@@ -105,12 +105,15 @@ The manifest is strict and small:
   instead of a source session's directory.
 - An optional, nonempty, unique `capabilities` array may use only the names the
   host knows: `terminal.openSsh.v1`, `terminal.captureLayout.v1`,
-  `terminal.openLayout.v1`, `terminal.mirrorTyping.v1`,
-  `terminal.semanticInput.v1`, `terminal.insertPath.v1`, `links.open.v1` and
-  `state.v1`. Unknown names are refused, so an older host rejects a package
-  that needs a newer capability instead of half-activating it. The first seven
-  are host operations on the extension's own view; `state.v1` is backend bootstrap support, not
-  browser filesystem access. A capability grants nothing beyond its contract:
+  `terminal.openLayout.v1`, `terminal.reopenLayout.v1`,
+  `terminal.mirrorTyping.v1`, `terminal.semanticInput.v1`,
+  `terminal.insertPath.v1`, `links.open.v1` and `state.v1`. Unknown names are
+  refused, so an older host rejects a package that needs a newer capability
+  instead of half-activating it. `terminal.reopenLayout.v1` only turns on core's
+  reopening of windows at startup
+  ([ADR 0047](../adr/0047-reopen-the-last-windows-at-startup.md)), and `state.v1`
+  is backend bootstrap support, not browser filesystem access. The rest are
+  host operations on the extension's own view. A capability grants nothing beyond its contract:
   for example, `terminal.semanticInput.v1` sends text through Protected Paste
   and never exposes the PTY or key injection
   ([ADR 0044](../adr/0044-migrate-snippets-without-changing-terminal-input.md)).
@@ -135,7 +138,8 @@ development hosts keep accepting the same archives.
   The bridges are `0.24.1-dev.N` (needs `0.24.0` and `0.24.1`), `0.25.0-dev.N`
   (`0.24.0` and `0.25.0`), `0.26.0-dev.N` (`0.25.0` and `0.26.0`),
   `0.26.1-dev.N` (`0.26.0` and `0.26.1`), `0.27.0-dev.N` (`0.26.0` and
-  `0.27.0`) and `0.27.1-dev.N` (`0.27.0` and `0.27.1`). They do not rewrite the
+  `0.27.0`), `0.27.1-dev.N` (`0.27.0` and `0.27.1`) and `0.28.0-dev.N`
+  (`0.27.0` and `0.28.0`). They do not rewrite the
   range, and a
   range with an upper bound that excludes the required stable versions gains
   nothing. Other development families need ordinary admission or a reviewed

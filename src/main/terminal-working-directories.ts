@@ -98,8 +98,16 @@ export function createWorkingDirectoryTracker(
         from = end.index + end.length;
       }
     },
-    launched(sessionId: TerminalSessionId, directory: string | undefined) {
-      if (directory !== undefined) launches.set(sessionId, directory);
+    // `remembered` is a reopened pane's saved folder that was unavailable: it
+    // stays the pane's folder until the shell reports another one, so a
+    // missing mount doesn't overwrite the remembered layout.
+    launched(
+      sessionId: TerminalSessionId,
+      directory: string | undefined,
+      remembered?: string,
+    ) {
+      if (directory !== undefined)
+        launches.set(sessionId, remembered ?? directory);
     },
     provenance(
       sessionId: TerminalSessionId,

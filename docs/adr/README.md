@@ -78,6 +78,10 @@ main's validated external-link route.
 keeps macOS privacy permissions across updates without a Developer ID; builds
 without the release key stay ad-hoc.
 
+[ADR0047: Reopen the last windows at startup](0047-reopen-the-last-windows-at-startup.md)
+amends ADR 0042: while Saved Layout declares it, core remembers every window's
+structure and reopens it at startup.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033.

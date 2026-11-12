@@ -53,13 +53,11 @@ export function parseLaunchRequest(
   });
 }
 
-export function startupLaunchRequest(
-  processArguments: readonly string[],
-  isPackaged: boolean,
+/** Window 1 consumes the startup request once; later windows start the shell. */
+export function launchRequestConsumer(
+  request: LaunchRequest,
 ): (windowId: number) => () => LaunchRequest {
-  const processRequest = consumeLaunchRequestOnce(
-    parseLaunchRequest(applicationArguments(processArguments, isPackaged)),
-  );
+  const processRequest = consumeLaunchRequestOnce(request);
   return (windowId) => requestForTerminalWindow(windowId, processRequest);
 }
 

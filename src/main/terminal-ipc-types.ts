@@ -76,6 +76,8 @@ export interface TerminalIpcControllerOptions {
   readonly initialLayout?: () =>
     import("../shared/terminal-layout").InitialLayout | null;
   readonly consumeLayoutLaunch?: (token: string) => string;
+  /** A reopened pane's saved folder that was unavailable (it started at home). */
+  readonly rememberedLayoutFolder?: (token: string) => string | undefined;
   readonly backgroundTransparency?: () => number;
   // workingDirectory is an inherited, already validated local directory.
   readonly createSession: (
@@ -119,6 +121,8 @@ export interface TerminalIpcControllerOptions {
   ) => void;
   readonly onBell: (sessionId: TerminalSessionId) => void;
   readonly onUserInteraction: () => void;
+  /** Something that can change the saved layout happened (ADR 0047). */
+  readonly onLayoutActivity?: () => void;
   readonly openExternalLink: (url: string) => Promise<void>;
   readonly onExternalLinkOpenError: () => void;
   readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
@@ -126,7 +126,16 @@ export async function inspector(url: string) {
 
 const execute = promisify(execFile);
 
-async function executable(root: string, target: string) {
+async function executable(
+  root: string,
+  target: string,
+): Promise<[string, ...string[]]> {
+  // A built checkout runs on its own Electron, like `npm run dev`.
+  if ((await stat(target)).isDirectory() && !target.endsWith(".app"))
+    return [
+      (await import("electron")).default as unknown as string,
+      path.resolve(target),
+    ];
   if (target.endsWith(".AppImage")) {
     // Extracting avoids a FUSE dependency; the bytes are unchanged.
     await execute(path.resolve(target), ["--appimage-extract"], {
@@ -134,26 +143,28 @@ async function executable(root: string, target: string) {
       timeout: 120000,
       maxBuffer: 64 * 1024 * 1024,
     });
-    return path.join(root, "squashfs-root/omxterm");
+    return [path.join(root, "squashfs-root/omxterm")];
   }
   if (target.endsWith(".app")) {
     const [name] = await readdir(path.join(target, "Contents/MacOS"));
-    return path.join(target, "Contents/MacOS", name!);
+    return [path.join(target, "Contents/MacOS", name!)];
   }
-  return target;
+  return [target];
 }
 
 /**
- * Launches a packaged OMXTerm (.AppImage, .app bundle or executable) with
+ * Launches a packaged OMXTerm (.AppImage, .app bundle or executable), or a
+ * built checkout directory, with
  * `root/home` as HOME and a private profile, then loads the smoke observer
  * into its main process. `call` evaluates `observer.<expression>`. The first
- * tab runs `/bin/sh` unless `defaultShell` asks for the Default Shell.
+ * tab runs `/bin/sh` unless `defaultShell` asks for the Default Shell; launch
+ * waits for `windows` windows (more when OMXTerm reopens remembered ones).
  */
 export async function launchPackaged(
   app: string,
   root: string,
   env: NodeJS.ProcessEnv = {},
-  { defaultShell = false } = {},
+  { defaultShell = false, windows = 1 } = {},
 ) {
   const home = path.join(root, "home");
   await mkdir(path.join(home, ".config/omxterm"), { recursive: true });
@@ -161,9 +172,11 @@ export async function launchPackaged(
     path.join(home, ".config/omxterm/config.json"),
     JSON.stringify({ version: 1, language: "en-US", confirmClose: false }),
   );
+  const [command, ...prefix] = await executable(root, app);
   const child = spawn(
-    await executable(root, app),
+    command,
     [
+      ...prefix,
       ...(process.platform === "linux" ? ["--no-sandbox"] : []),
       "--inspect=127.0.0.1:0",
       `--user-data-dir=${path.join(root, "profile")}`,
@@ -218,7 +231,7 @@ export async function launchPackaged(
       async () =>
         (last = await call("windows()").catch(
           (error: Error) => error.message,
-        )) === 1,
+        )) === windows,
       "application window",
       60000,
     ).catch((error: Error) => {
@@ -242,7 +255,8 @@ export async function launchPackaged(
       await Promise.race([
         exited,
         new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("normal Quit")), 15000),
+          // Extension cleanup alone may take 15 s, plus the PTY drain.
+          setTimeout(() => reject(new Error("normal Quit")), 30000),
         ),
       ]);
     },

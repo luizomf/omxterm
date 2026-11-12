@@ -1,7 +1,11 @@
 import { app } from "electron";
 import { userInfo } from "node:os";
 import { configureApplicationAbout } from "./application-about";
-import { startupLaunchRequest } from "./launch-request";
+import {
+  applicationArguments,
+  launchRequestConsumer,
+  parseLaunchRequest,
+} from "./launch-request";
 import { installedFontFamilyMetrics } from "./installed-font-family";
 
 export function prepareStartup(developmentIcon: string, packagedIcon: string) {
@@ -9,12 +13,16 @@ export function prepareStartup(developmentIcon: string, packagedIcon: string) {
     app,
     app.isPackaged ? packagedIcon : developmentIcon,
   );
-  const launch = startupLaunchRequest(process.argv, app.isPackaged);
+  const request = parseLaunchRequest(
+    applicationArguments(process.argv, app.isPackaged),
+  );
   if (!app.isPackaged) app.dock?.setIcon(developmentIcon);
   const account = userInfo();
   return {
     account,
-    consumeLaunchRequest: launch,
+    consumeLaunchRequest: launchRequestConsumer(request),
+    /** Started with `-e`: open as asked, never the remembered windows. */
+    explicitCommand: request.kind === "explicit-command",
     configurationLoadOptions: {
       environment: process.env,
       homeDirectory: account.homedir,

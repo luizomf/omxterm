@@ -10,6 +10,8 @@ import {
 export type PreparedLayout = {
   initial: InitialLayout;
   directories: ReadonlyMap<string, string>;
+  /** Saved folders that were unavailable, by token; the pane starts at home. */
+  remembered?: ReadonlyMap<string, string>;
 };
 
 export interface RestorationWindowOptions {
@@ -52,6 +54,46 @@ export function createLayoutDirectoryResolver(
   };
 }
 
+/**
+ * Replaces each saved folder with a single-use pane token. Missing or
+ * unavailable folders become home and are counted; checks run two at a time.
+ */
+export async function prepareSavedLayout(
+  saved: SavedLayout,
+  home: string,
+  resolve: (directory: string) => Promise<boolean>,
+): Promise<PreparedLayout> {
+  const directories = new Map<string, string>();
+  const remembered = new Map<string, string>();
+  const initial: InitialLayout = {
+    selected: saved.selected,
+    tabs: [],
+    fallbacks: 0,
+  };
+  // Bounded two-operation windows, not Promise.all over the full plan.
+  for (const tab of saved.tabs) {
+    const panes: string[] = [];
+    for (let start = 0; start < tab.panes.length; start += 2) {
+      const values = await Promise.all(
+        tab.panes.slice(start, start + 2).map(async (pane) => {
+          if (pane.kind === "home") return [home] as const;
+          if (await resolve(pane.path)) return [pane.path] as const;
+          initial.fallbacks++;
+          return [home, pane.path] as const;
+        }),
+      );
+      for (const [directory, unavailable] of values) {
+        const token = randomUUID();
+        panes.push(token);
+        directories.set(token, directory);
+        if (unavailable !== undefined) remembered.set(token, unavailable);
+      }
+    }
+    initial.tabs.push({ ...tab, panes });
+  }
+  return { initial, directories, remembered };
+}
+
 export function createTerminalLayoutTransfer<Owner extends object>(options: {
   platform: string;
   home: string;
@@ -86,34 +128,12 @@ export function createTerminalLayoutTransfer<Owner extends object>(options: {
       busy = true;
       let transferred = false;
       try {
-        const directories = new Map<string, string>();
-        let fallbacks = 0;
-        const initial: InitialLayout = {
-          selected: saved.selected,
-          tabs: [],
-          fallbacks: 0,
-        };
-        // Bounded two-operation windows, not Promise.all over the full plan.
-        for (const tab of saved.tabs) {
-          const panes: string[] = [];
-          for (let start = 0; start < tab.panes.length; start += 2) {
-            const values = await Promise.all(
-              tab.panes.slice(start, start + 2).map(async (pane) => {
-                if (pane.kind === "home") return options.home;
-                if (await resolve(pane.path)) return pane.path;
-                fallbacks++;
-                return options.home;
-              }),
-            );
-            for (const directory of values) {
-              const token = randomUUID();
-              panes.push(token);
-              directories.set(token, directory);
-            }
-          }
-          initial.tabs.push({ ...tab, panes });
-        }
-        initial.fallbacks = fallbacks;
+        const { initial, directories } = await prepareSavedLayout(
+          saved,
+          options.home,
+          resolve,
+        );
+        const fallbacks = initial.fallbacks;
         let created!: Promise<void>;
         let accept!: () => void;
         const accepted = new Promise<void>((done) => {

@@ -12,6 +12,8 @@ export type PageView = {
   /** Undefined until the saved state has been read (or after a failed read). */
   state?: StateDocument | undefined;
   available: boolean;
+  /** The host reopens the last windows at startup. */
+  reopens?: boolean;
   /** The last read failed; offer Try again instead of the other actions. */
   failed: boolean;
   pending: boolean;
@@ -80,7 +82,7 @@ export function createRestorationPage(document: Document) {
     const m = restorationMessages(language);
     document.documentElement.lang = language;
     heading.textContent = "Saved Layout";
-    hintText.textContent = m.hint;
+    hintText.textContent = view.reopens ? m.reopenHint : m.hint;
     learnMore.textContent = m.learnMore;
     learnMore.hidden = !docs;
     const { state, available, failed, pending, visible } = view;

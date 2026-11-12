@@ -11,7 +11,8 @@ version and publish as **non-Latest prereleases**, following the Files/SSH lanes
 in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
-`0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N` and `0.27.1-dev.N` bridges have distinct
+`0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N`,
+`0.27.1-dev.N` and `0.28.0-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
@@ -26,8 +27,12 @@ admits ranges that accept both stable `0.27.0` and `0.27.1`, so the pinned
 Snippets and current Files/SSH ranges (Files' `>=0.26.0`, SSH Connect 0.4's
 `>=0.27.0-dev.0`) stay installable without changing archive bytes, engine
 ranges, API or capability validation. Upper bounds still apply, including Saved
-Layout's `<0.26.0`; admission is not native qualification. The first feature in
-this cycle moves `main` to `0.28.0-dev.0`, which needs its own reviewed bridge.
+Layout's `<0.26.0`; admission is not native qualification.
+
+The first feature in this cycle, reopening windows at startup (#969), moved
+`main` to `0.28.0-dev.0`. Its bridge admits ranges that accept both `0.27.0` and
+`0.28.0`, so the same archives stay installable; Saved Layout 0.3.0 needs
+`>=0.28.0-dev.0`.
 
 ## Public contract
 

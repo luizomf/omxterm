@@ -475,6 +475,7 @@ function createTerminalIpcController(
       options.mirrorWindowAvailable?.() === true,
     write(session, data) {
       options.onUserInteraction();
+      options.onLayoutActivity?.();
       session.write(data);
     },
     stopped: (lease, reason) => options.onMirrorStopped?.(lease, reason),
@@ -509,8 +510,14 @@ function createTerminalIpcController(
     );
     const { ssh } = launch;
     const restored = launch.restoreToken !== undefined;
+    // Read before consuming: the saved folder a reopened pane couldn't use.
+    const remembered =
+      launch.restoreToken === undefined
+        ? undefined
+        : options.rememberedLayoutFolder?.(launch.restoreToken);
     const restoredCwd = restoredDirectory(launch, options.consumeLayoutLaunch);
     if (launch.surfaceId !== undefined) surfaceFonts.start(launch.surfaceId);
+    options.onLayoutActivity?.();
     const workingDirectory =
       restoredCwd ?? workingDirectories.inherited(launch.workingDirectoryOf);
 
@@ -536,6 +543,7 @@ function createTerminalIpcController(
               return;
             }
             if (!ssh) workingDirectories.observe(sessionId, data);
+            options.onLayoutActivity?.();
             const outputEnd = outputFlow.record(data);
             if (outputEnd === undefined) {
               closeSession(sessionId);
@@ -554,6 +562,7 @@ function createTerminalIpcController(
           },
           onExit(exit, reportedLaunchKind) {
             if (disposed) return;
+            options.onLayoutActivity?.();
             const state = sessions.get(sessionId);
             if (state) state.exited = true;
             else exitedBeforeRegistration = true;
@@ -618,6 +627,7 @@ function createTerminalIpcController(
         !ssh && createdSession.launchKind !== "explicit-command"
           ? (workingDirectory ?? options.homeDirectory)
           : undefined,
+        remembered,
       );
       sessions.set(sessionId, {
         session: createdSession,
@@ -662,6 +672,7 @@ function createTerminalIpcController(
     const state = routedSession(payload.sessionId);
     if (!state) return;
     options.onUserInteraction();
+    options.onLayoutActivity?.();
     state.session.write(payload.data);
   };
   const trackedInput = (payload?: unknown): TerminalWriteReceipt => {
@@ -672,6 +683,7 @@ function createTerminalIpcController(
     const state = routedSession(payload.sessionId);
     if (!state || !state.session.writeTracked) return "rejected";
     options.onUserInteraction();
+    options.onLayoutActivity?.();
     const receipt = state.session.writeTracked(payload.data);
     return isTerminalWriteReceipt(receipt) ? receipt : "unknown";
   };
@@ -690,6 +702,7 @@ function createTerminalIpcController(
         cols: payload.cols,
         rows: payload.rows,
       });
+    options.onLayoutActivity?.();
     state.session.resize({ cols: payload.cols, rows: payload.rows });
   };
   const acknowledgeOutput = (payload?: unknown) =>
@@ -704,6 +717,7 @@ function createTerminalIpcController(
       return;
     }
     if (!routedSession(payload.sessionId)) return;
+    options.onLayoutActivity?.();
     if (windowId !== undefined)
       writeWindowEvent({
         name: "pty.control",
@@ -775,6 +789,7 @@ function createTerminalIpcController(
     acknowledgeOutput,
     close,
     tabSelected(payload) {
+      options.onLayoutActivity?.();
       selection.tabSelected(payload);
       mirrorTyping.recheck();
       contextMenu.selectionChanged();

@@ -2,16 +2,20 @@
 
 Saved Layout is an optional extension (`omxterm.restoration`) that saves one
 window's terminal tabs, splits, focus and pane folders, and later opens them in
-a new window with fresh Default Shells. It ships as a separate `.omxext`
+a new window with fresh Default Shells. From 0.3.0 it also switches on core's
+reopening of the last windows at startup. It ships as a separate `.omxext`
 archive. The [user guide](saved-layout.md) covers installing and using it;
 [ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md) records why it
-restores structure and never sessions.
+restores structure and never sessions, and
+[ADR 0047](adr/0047-reopen-the-last-windows-at-startup.md) why core, not the
+extension, reopens windows.
 
 ## Where the code lives
 
 - `extensions/restoration/extension.json`: id, version, host range, the
-  `terminal.captureLayout.v1`, `terminal.openLayout.v1`, `state.v1` and
-  `links.open.v1` capabilities, the `docs` link and the window-context view.
+  `terminal.captureLayout.v1`, `terminal.openLayout.v1`,
+  `terminal.reopenLayout.v1`, `state.v1` and `links.open.v1` capabilities, the
+  `docs` link and the window-context view.
 - `extensions/restoration/page.ts`, `ui.ts`, `messages.ts`, `restoration.css`:
   the page. It follows the host theme and interface language (`en-US`,
   `pt-BR`).
@@ -24,6 +28,8 @@ restores structure and never sessions.
   `terminal-working-directories.ts`, `application-extension-views.ts`: capture,
   folder provenance, and opening the new window.
 - `src/extension-runtime/state.ts`: the `state.v1` adapter.
+- `src/main/layout-session.ts`, `application-layout.ts`: remembering and
+  reopening windows.
 
 ## How it works
 
@@ -61,13 +67,28 @@ whose outcome is unknown is never retried: the page reads the saved state again
 and shows it. Reads never repair or migrate a file; an unreadable one shows
 **Try again**.
 
+**Reopening.** Declaring `terminal.reopenLayout.v1` turns it on; the extension
+runs no code for it. `layout-session.ts` ticks every 3 s but captures only after
+`touch()` (the terminal controller's `onLayoutActivity`: pane start, close or
+exit, PTY input, output or resize, tab selection), and saves right after a
+window closes. It writes `<profile>/layout-session/last.json` when the
+arrangement changed, skipping quits, empty window sets and failed captures;
+windows without a terminal tab are skipped. A plain start passes each
+remembered window through the same plan as Open; a start with `-e` takes no
+part. Only the process holding `session.lock` takes part, and a `reopening`
+marker that survives until the next start (it's removed after the first save
+or on a normal quit)
+drops the remembered windows so a bad layout can't loop. A reopened pane whose
+folder was missing keeps that folder until its shell reports another. Disabling the extension deletes `last.json`. Change the
+interval or limits there.
+
 ## Build and test
 
 Unit tests cover the layout format, capture and folder provenance, the transfer,
 the state adapter, the backend and the page:
 
 ```sh
-npx vitest run test/unit/restoration-*.test.ts test/unit/terminal-layout-*.test.ts test/unit/extension-state.test.ts
+npx vitest run test/unit/restoration-*.test.ts test/unit/terminal-layout-*.test.ts test/unit/extension-state.test.ts test/unit/layout-session.test.ts
 ```
 
 To build an archive, follow
@@ -92,8 +113,14 @@ npx vitest run test/integration/restoration-smoke-packaged.test.ts
 ```
 
 On macOS, point the app variable at an `OMXTerm.app` copied out of the DMG; on
-Windows, at the installed `OMXTerm.exe`. Run it from a logged-in desktop
-session. The test skips when either variable is unset.
+Windows, at the installed `OMXTerm.exe`; or at a built checkout directory to
+use its own Electron. Run it from a logged-in desktop session. The test skips
+when either variable is unset.
+
+`test/integration/restoration-reopen-smoke-packaged.test.ts` checks reopening
+(0.3.0 and a host that supports it): it arranges one window, opens a second,
+quits, starts again and checks both windows and the arranged pane's folder.
+Add `OMXTERM_RESTORATION_SMOKE_REOPEN=1` to the same variables.
 
 ### Publishing
 
@@ -107,7 +134,8 @@ Published archives are immutable, so changed bytes need a new version in
   inspects a process's working directory or adds shell integration
   ([ADR 0013](adr/0013-do-not-inject-shell-integration.md)); most shells need a
   few lines of setup, shown in the user guide.
-- One saved layout for one window. Opening is always explicit.
+- One saved layout for one window, opened only when chosen. Reopening at
+  startup doesn't keep window positions or sizes.
 - Windows x64 hosts don't run extensions.
 
 ## Credits

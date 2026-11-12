@@ -74,8 +74,9 @@ const commands =
           `Set-Content -NoNewline -LiteralPath ${psQuote(file)} -Value ${psQuote(text)}`,
         reportFolder: String.raw`function prompt { $location = $ExecutionContext.SessionState.Path.CurrentLocation; if ($location.Provider.Name -eq 'FileSystem') { $path = $location.ProviderPath -replace '\\', '/'; [Console]::Write("$([char]27)]7;file://$([System.Net.Dns]::GetHostName())/$path$([char]27)\") }; "PS $location> " }`,
         cd: (folder) => `Set-Location -LiteralPath ${psQuote(folder)}`,
+        // UTF-8 without BOM; Windows PowerShell's Set-Content writes ANSI.
         pwd: (file) =>
-          `Set-Content -NoNewline -LiteralPath ${psQuote(file)} -Value (Get-Location).ProviderPath`,
+          `[IO.File]::WriteAllText(${psQuote(file)}, (Get-Location).ProviderPath)`,
       }
     : {
         write: (text, file) =>
@@ -292,13 +293,10 @@ async function snippets({ archive, insert, run, marker }) {
 }
 
 // Saved Layout, first launch: a reported folder, a split that inherits it and
-// a home tab; tab 1 stays selected with the split focused. Save the window.
-async function layoutSave({ archive, folder, marker }) {
-  const { core, type, read, consents } = await install(
-    archive,
-    "omxterm.restoration",
-    marker,
-  );
+// a home tab; tab 1 stays selected with the split focused.
+async function arrangeLayout({ archive, folder, marker }) {
+  const installed = await install(archive, "omxterm.restoration", marker);
+  const { core, type, read } = installed;
   const js = (code) => core.executeJavaScript(code);
   const surfaces = (count) =>
     until(
@@ -323,6 +321,12 @@ async function layoutSave({ archive, folder, marker }) {
   menu("Show Previous Tab");
   menu("Split Right");
   await surfaces(3);
+  return installed;
+}
+
+// Save that window from the Saved Layout page.
+async function layoutSave(options) {
+  const { consents } = await arrangeLayout(options);
   menu("Saved Layout");
   await until(() => !!extensionView(), "Saved Layout view");
   const view = extensionView();
@@ -373,21 +377,63 @@ async function layoutOpen({ marker }) {
   const panes = await js(
     "document.querySelectorAll('.terminal-surface').length",
   );
-  restored.focus();
+  // The restored shell may still be starting; askFolder retries.
+  const pwd = await askFolder(restored, marker + ".pwd");
+  return { notices, windows: windows(), tabs, panes, pwd };
+}
+
+// Reopening, first launch: arrange one window, open a second one, and give
+// the host time to remember both.
+async function layoutRemember(options) {
+  await arrangeLayout(options);
+  menu("New Window");
+  await until(() => windows() === 2, "second window");
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+  return { windows: windows() };
+}
+
+// Reopening, second launch: count each reopened window's panes, then check
+// the arranged window's tabs and ask its focused pane where it started.
+async function layoutReopened({ marker }) {
+  const panes = [];
+  let arranged;
+  for (const window of BrowserWindow.getAllWindows()) {
+    const js = (code) => window.webContents.executeJavaScript(code);
+    await until(
+      () => js("!!document.querySelector('.terminal-surface canvas')"),
+      "reopened surfaces",
+    ).catch(() => {});
+    const count = await js(
+      "document.querySelectorAll('.terminal-surface').length",
+    );
+    panes.push(count);
+    if (count === 3) arranged = window;
+  }
+  panes.sort();
+  if (!arranged) return { panes };
+  return {
+    panes,
+    // The tab strip only shows tabs when there are two or more.
+    tabs: await arranged.webContents.executeJavaScript(
+      "document.querySelectorAll('.ui-tab').length",
+    ),
+    pwd: await askFolder(arranged, marker + ".reopened"),
+  };
+}
+
+// Types a command that writes the focused pane's folder, until the shell reads it.
+async function askFolder(window, file) {
+  const contents = window.webContents;
+  window.focus();
   contents.focus();
   await new Promise((resolve) => setTimeout(resolve, 1000));
-  const active = await js(
-    "!!document.activeElement?.closest('.terminal-surface')",
-  );
-  // The restored shell may still be starting; type once it reads input.
-  const file = marker + ".pwd";
   for (let attempt = 0; attempt < 10; attempt++) {
     await contents.insertText(commands.pwd(file));
     contents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
     contents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
     const done = await until(
       async () => (await readFile(file, "utf8").catch(() => "")) !== "",
-      "restored pwd",
+      "folder",
       3000,
     ).then(
       () => true,
@@ -395,14 +441,7 @@ async function layoutOpen({ marker }) {
     );
     if (done) break;
   }
-  return {
-    notices,
-    windows: windows(),
-    tabs,
-    panes,
-    active,
-    pwd: await readFile(file, "utf8").catch(() => undefined),
-  };
+  return readFile(file, "utf8").catch(() => undefined);
 }
 
 // Two panes, one Start, then typing, Stop, paste, a native file drop and
@@ -757,6 +796,8 @@ module.exports = {
   snippets,
   layoutSave,
   layoutOpen,
+  layoutRemember,
+  layoutReopened,
   mirror,
   quit,
   windows,
