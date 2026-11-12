@@ -211,8 +211,16 @@ export async function launchPackaged(
     "test/fixtures/packaged-smoke-observer.cjs",
   );
   const observer = `process.getBuiltinModule('module').createRequire(${JSON.stringify(observerFile)})(${JSON.stringify(observerFile)})`;
+  // The inspector may run a request in the middle of whatever JavaScript the
+  // app is executing, including Node's own module loading during startup.
+  // Loading the observer there can break both, so each call runs from the
+  // event loop instead, after the app's current work. Before Node defines
+  // setImmediate, the call just fails and `until` retries it.
   const call = (expression: string, timeout = 5000) =>
-    client!.evaluate(`${observer}.${expression}`, timeout);
+    client!.evaluate(
+      `new Promise((resolve, reject) => setImmediate(() => { try { resolve(${observer}.${expression}); } catch (error) { reject(error); } }))`,
+      timeout,
+    );
   try {
     await until(
       () => /Debugger listening on ws:\/\/127\.0\.0\.1:/.test(stderr),
@@ -222,10 +230,6 @@ export async function launchPackaged(
     client = await inspector(
       /Debugger listening on (ws:\/\/\S+)/.exec(stderr)![1]!,
     );
-    // On Windows, loading the observer while a reused profile is still
-    // starting can leave that inspector request unanswered.
-    if (process.platform === "win32")
-      await new Promise((resolve) => setTimeout(resolve, 3000));
     let last: unknown;
     await until(
       async () =>
