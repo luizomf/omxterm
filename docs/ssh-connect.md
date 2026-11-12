@@ -8,9 +8,8 @@ not install SSH or store your keys.
 ## Availability
 
 SSH Connect 0.4.0 runs on macOS (Apple silicon) and Linux with OMXTerm 0.27.0
-or later. Windows support ships with the next OMXTerm host (0.28.0); earlier
-Windows versions can't find `ssh.exe`. A real Windows connection hasn't been
-tested yet. On OMXTerm 0.26,
+or later, and on Windows with OMXTerm 0.28.0 or later (earlier Windows versions
+can't find `ssh.exe`). A real Windows connection hasn't been tested yet. On OMXTerm 0.26,
 install [SSH Connect 0.3.2](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.2)
 from its release link instead. See the [developer notes](dev/ssh-connect-development.md)
 for how it is built and its current limits.

@@ -3,21 +3,27 @@
   "entries": [
     {
       "id": "omxterm.files",
-      "name": "Files — ARM64 preview",
+      "name": "Files",
       "description": "Browse your files and folders: create, rename, move, trash and delete them, and insert their paths into the terminal.",
-      "version": "0.8.3",
+      "version": "0.9.0",
       "engines": {
         "omxterm": ">=0.26.0",
         "api": "0.1.x"
       },
-      "targets": ["linux-arm64"],
+      "targets": [
+        "linux-arm64",
+        "darwin-arm64",
+        "linux-x64",
+        "win32-arm64",
+        "win32-x64"
+      ],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.8.3/files-0.8.3.omxext",
-        "sha256": "09f932a98d8a79b62dc98d20d34ff0274c7f219595a36846f48bcfd553c261c3",
-        "bytes": 25698
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.9.0/files-0.9.0.omxext",
+        "sha256": "b743635c1595902dcfaa96a2461db6546ccdce78f855ea762ce795ba5e241e2f",
+        "bytes": 26172
       },
-      "sourceCommit": "35006299527767e7626570a7f3e7a143e4715738",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.8.3"
+      "sourceCommit": "ed0ed9e100f5b1065ba08704c2476a2d7971e58c",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.9.0"
     },
     {
       "id": "omxterm.ssh",
@@ -28,7 +34,13 @@
         "omxterm": ">=0.27.0-dev.0",
         "api": "0.1.x"
       },
-      "targets": ["linux-arm64", "darwin-arm64"],
+      "targets": [
+        "linux-arm64",
+        "darwin-arm64",
+        "linux-x64",
+        "win32-arm64",
+        "win32-x64"
+      ],
       "archive": {
         "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.4.0/ssh-0.4.0.omxext",
         "sha256": "57e2a8d8ce28632a16519598bef5078c7d5c664866ffe0847aa2e31a3a2ff081",
@@ -39,7 +51,7 @@
     },
     {
       "id": "omxterm.snippets",
-      "name": "Snippets — Linux, macOS and Windows ARM64 preview",
+      "name": "Snippets",
       "description": "Search your saved text snippets, preview the exact text, then insert it into the terminal or run it.",
       "version": "0.1.2",
       "engines": {
@@ -59,19 +71,25 @@
       "id": "omxterm.restoration",
       "name": "Saved Layout",
       "description": "Save a window's tabs, splits and folders, then open them again with fresh shells.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "engines": {
-        "omxterm": ">=0.27.0",
+        "omxterm": ">=0.28.0-dev.0",
         "api": "0.1.x"
       },
-      "targets": ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
+      "targets": [
+        "linux-arm64",
+        "darwin-arm64",
+        "linux-x64",
+        "win32-arm64",
+        "win32-x64"
+      ],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-restoration-v0.2.0/restoration-0.2.0.omxext",
-        "sha256": "4d951b28251d09fce888fd2539553b5b8b920c50e4b79887e398ada270bd392d",
-        "bytes": 14971
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-restoration-v0.3.0/restoration-0.3.0.omxext",
+        "sha256": "edb93d611186588d94b62d4b94855371a8e1bcb554c5988b180266c24d495ded",
+        "bytes": 15093
       },
-      "sourceCommit": "53400958a878c88491cc91f47c2ea65cc0beac43",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.2.0"
+      "sourceCommit": "ed0ed9e100f5b1065ba08704c2476a2d7971e58c",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.3.0"
     },
     {
       "id": "omxterm.mirror-typing",
@@ -82,7 +100,7 @@
         "omxterm": ">=0.27.0",
         "api": "0.1.x"
       },
-      "targets": ["darwin-arm64", "win32-arm64"],
+      "targets": ["linux-arm64", "darwin-arm64", "win32-arm64"],
       "archive": {
         "url": "https://github.com/luizomf/omxterm/releases/download/ext-mirror-typing-v0.2.0/mirror-typing-0.2.0.omxext",
         "sha256": "9914eb27c1aafec232ec1bf1097763875923bb1c4ad4413920d48f3e84653ee7",

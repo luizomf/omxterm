@@ -21,7 +21,7 @@ OMXTerm than 0.27.
 
 ## Your windows come back
 
-With Saved Layout 0.3.0 or later on a newer OMXTerm, there's nothing to do:
+With Saved Layout 0.3.0 or later on OMXTerm 0.28.0 or later, there's nothing to do:
 quit OMXTerm (or let it update, or even crash) and the next start reopens the
 same windows, tabs, splits, focused panes and folders. Closing one of several
 windows forgets that one. Window positions and sizes aren't kept, and starting
@@ -48,8 +48,8 @@ can have at most 16 tabs and 32 panes.
 
 ## Folders
 
-On macOS and Linux, OMXTerm finds each pane's folder on its own, in OMXTerm
-newer than 0.27: it reads where the pane's shell is, the same way tmux does,
+On macOS and Linux, OMXTerm 0.28.0 and later find each pane's folder on their
+own: they read where the pane's shell is, the same way tmux does,
 without changing your shell. A program that changes its own folder (or an
 `ssh` session) doesn't move the pane's folder. Splits use the same folder.
 
