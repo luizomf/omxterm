@@ -5,6 +5,7 @@ import {
   mkdtemp,
   readFile,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import os from "node:os";
@@ -74,5 +75,19 @@ it.runIf(process.platform === "win32")(
     expect(() => addon.trash!(path.parse(root).root)).toThrow(
       expect.objectContaining({ code: "EINVAL" }),
     );
+  },
+);
+
+it.runIf(process.platform === "win32")(
+  "recycles a junction itself, never the folder it points to",
+  async () => {
+    const target = path.join(root, "junction target");
+    const link = path.join(root, "junction link");
+    await mkdir(target);
+    await writeFile(path.join(target, "kept.txt"), "kept");
+    await symlink(target, link, "junction");
+    await addon.trash!(link);
+    await expect(access(link)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readFile(path.join(target, "kept.txt"), "utf8")).toBe("kept");
   },
 );
