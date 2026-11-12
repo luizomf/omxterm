@@ -136,6 +136,16 @@ function releaseResttyResources(releases: ReadonlyArray<() => void>): void {
     throw new AggregateError(failures, "Terminal Surface cleanup failed");
 }
 
+// Hosts place quiet overlays (State Marks) against the first text row.
+function paintFontMetrics(
+  container: HTMLElement,
+  fontSize: number,
+  lineHeight: number,
+) {
+  container.style.setProperty("--terminal-font-size", `${fontSize}px`);
+  container.style.setProperty("--terminal-line-height", `${lineHeight}`);
+}
+
 export async function mountResttyTerminalSurface(
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
@@ -176,17 +186,9 @@ export async function mountResttyTerminalSurface(
     revealInput,
   );
 
-  // Hosts place quiet overlays (State Marks) against the first text row.
-  const paintFontMetrics = () => {
-    container.style.setProperty("--terminal-font-size", `${currentFontSize}px`);
-    container.style.setProperty(
-      "--terminal-line-height",
-      `${initialLineHeight}`,
-    );
-  };
   const applyContainerAppearance = () => {
     paintContainer(container, padding, terminalTheme, options.background);
-    paintFontMetrics();
+    paintFontMetrics(container, currentFontSize, initialLineHeight);
   };
   const applyRuntimeTheme = (theme: TerminalTheme, labels?: Labels) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
@@ -196,7 +198,7 @@ export async function mountResttyTerminalSurface(
     !isInactive() && !container.hidden && container.isConnected;
   const applyRuntimeSize = (fontSize: number) => {
     currentFontSize = fontSize;
-    paintFontMetrics();
+    paintFontMetrics(container, fontSize, initialLineHeight);
     pane?.runtime.terminal.setFontSize(fontSize);
   };
   const refit = () => {
