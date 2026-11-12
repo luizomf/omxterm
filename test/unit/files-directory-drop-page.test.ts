@@ -207,7 +207,11 @@ it.each([false, true])(
   },
 );
 it("keeps the original ticket for a completed native copy whose core claim is queued after child dragend", async () => {
-  const root = process.platform === "win32" ? "C:/synthetic" : "/root";
+  // The view joins a drive path with the drive's own separator.
+  const [root, alpha] =
+    process.platform === "win32"
+      ? ["C:\\synthetic", "C:\\synthetic\\alpha"]
+      : ["/root", "/root/alpha"];
   const transport = createFilesTerminalDrag({
     webContents: { isDestroyed: () => false },
     isDestroyed: () => false,
@@ -227,16 +231,16 @@ it("keeps the original ticket for a completed native copy whose core claim is qu
     root,
   );
   const data = transfer();
-  dragEvent(row(`${root}/alpha`), "dragstart", data);
+  dragEvent(row(alpha), "dragstart", data);
   const ticket = data.getData("application/x-omxterm-files-terminal");
   data.dropEffect = "copy";
-  dragEvent(row(`${root}/alpha`), "dragend", data);
+  dragEvent(row(alpha), "dragend", data);
   expect(transport.claim({ ticket, entryToken: "1" })).toBe(true);
   expect(end).not.toHaveBeenCalled();
   expect(await transport.handoff(ticket, 1)).toEqual({ status: "accepted" });
   expect(consume).toHaveBeenCalledExactlyOnceWith(
     expect.objectContaining({
-      entry: { path: `${root}/alpha`, kind: "file", entryToken: "1" },
+      entry: { path: alpha, kind: "file", entryToken: "1" },
     }),
   );
   expect(transport.claim({ ticket, entryToken: "1" })).toBe(false);
