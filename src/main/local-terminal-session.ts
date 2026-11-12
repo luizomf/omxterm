@@ -32,6 +32,8 @@ export interface TerminalOutputFlowMetrics {
 export interface LocalTerminalSession {
   readonly launchKind?: TerminalSessionLaunchKind;
   readonly fallbackTitle?: string;
+  /** The PTY's direct child (the shell), for reading its working directory. */
+  readonly processId?: number;
   write(data: string): void;
   writeTracked?(data: string): TerminalWriteReceipt;
   resize(size: TerminalSize): void;
@@ -193,6 +195,7 @@ export function createLocalTerminalSession(
 
   return {
     launchKind: explicitCommand ? "explicit-command" : "default-shell",
+    processId: pty.pid,
     fallbackTitle:
       options.fallbackTitle ??
       (options.platform === "win32"

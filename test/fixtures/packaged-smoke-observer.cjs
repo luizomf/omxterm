@@ -64,9 +64,9 @@ const shellQuote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
 const psQuote = (text) => "'" + text.replaceAll("'", "''") + "'";
 
 // Commands typed into the shell under test: PowerShell, the Windows Default
-// Shell, or a POSIX shell elsewhere. `reportFolder` is the one-line form of the
-// startup lines in docs/saved-layout.md, so the smoke checks them too.
-const shell = path.basename(require("node:os").userInfo().shell ?? "");
+// Shell, or a POSIX shell elsewhere. On Windows `reportFolder` is the one-line
+// form of the prompt in docs/saved-layout.md, so the smoke checks it too; macOS
+// and Linux need no setup because OMXTerm reads the shell's own folder.
 const commands =
   process.platform === "win32"
     ? {
@@ -81,10 +81,7 @@ const commands =
     : {
         write: (text, file) =>
           `printf %s ${shellQuote(text)} > ${shellQuote(file)}`,
-        reportFolder:
-          shell === "zsh"
-            ? '_report_folder() { printf \'\\033]7;file://%s%s\\033\\\\\' "$HOST" "$PWD"; }; autoload -Uz add-zsh-hook; add-zsh-hook precmd _report_folder'
-            : '_report_folder() { printf \'\\033]7;file://%s%s\\033\\\\\' "$HOSTNAME" "$PWD"; }; PROMPT_COMMAND="_report_folder${PROMPT_COMMAND:+;$PROMPT_COMMAND}"',
+        reportFolder: undefined,
         cd: (folder) => `cd ${shellQuote(folder)}`,
         pwd: (file) => `printf %s "$PWD" > ${shellQuote(file)}`,
       };
@@ -306,15 +303,15 @@ async function arrangeLayout({ archive, folder, marker }) {
         ),
       `${count} terminal surfaces`,
     );
-  // Report the folder from the prompt as the user guide shows, then change to
-  // it; the next prompt reports it.
-  await type(commands.reportFolder, true);
+  // On Windows, report the folder from the prompt as the user guide shows;
+  // the prompt after the cd reports it.
+  if (commands.reportFolder) await type(commands.reportFolder, true);
   await type(
     `${commands.cd(folder)}; ${commands.write("ok", marker + ".cd")}`,
     true,
   );
   await until(async () => (await read(marker + ".cd")) === "ok", "cd");
-  // The prompt that follows carries the report.
+  // Let the prompt that follows arrive.
   await new Promise((resolve) => setTimeout(resolve, 1000));
   menu("New Tab");
   await surfaces(2);

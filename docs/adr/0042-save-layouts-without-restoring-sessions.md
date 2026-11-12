@@ -48,8 +48,9 @@ intent prevents delayed completion from raising a window over newer activity.
 
 Main tracks reported-local, launch-local and home provenance. Invalidating OSC7
 removes both a previous report and eligibility for launch fallback. Known SSH
-and explicit commands are always home slots. No process probing or shell hooks
-are added. Directory validation does not prove locality or exclude OS mounts.
+and explicit commands are always home slots. No shell hooks are added; since
+#972, macOS and Linux also read the shell process's cwd when a pane has no
+usable report ([ADR 0013](0013-do-not-inject-shell-integration.md)). Directory validation does not prove locality or exclude OS mounts.
 
 ## State adapter
 

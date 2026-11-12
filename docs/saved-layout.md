@@ -46,31 +46,17 @@ There's one saved layout. **Replace with this window** overwrites it, and
 **Forget** removes it. Settings and extension tabs aren't saved, and a window
 can have at most 16 tabs and 32 panes.
 
-## Bring folders back
+## Folders
 
-OMXTerm only knows a pane's folder when the shell reports it (a standard signal
-called OSC 7), and most shells don't do that out of the box. Without it, panes
-reopen in the folder they started in, usually your home folder, and the Saved
-Layout page says so. Splits work the same way: a new split starts in the folder
-its pane last reported.
+On macOS and Linux, OMXTerm finds each pane's folder on its own, in OMXTerm
+newer than 0.27: it reads where the pane's shell is, the same way tmux does,
+without changing your shell. A program that changes its own folder (or an
+`ssh` session) doesn't move the pane's folder. Splits use the same folder.
 
-To turn it on, add a few lines to your shell's startup file, then open a new
-tab.
-
-**zsh** (`~/.zshrc`, the macOS default):
-
-```zsh
-_report_folder() { printf '\033]7;file://%s%s\033\\' "$HOST" "$PWD"; }
-autoload -Uz add-zsh-hook
-add-zsh-hook precmd _report_folder
-```
-
-**bash** (`~/.bashrc`, the default on most Linux systems):
-
-```bash
-_report_folder() { printf '\033]7;file://%s%s\033\\' "$HOSTNAME" "$PWD"; }
-PROMPT_COMMAND="_report_folder${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
-```
+On Windows, PowerShell has to report its folder (a standard signal called
+OSC 7), which it doesn't do out of the box. Without it, panes reopen where they
+started, usually your home folder, and the Saved Layout page says so. To turn
+it on, add this to your profile, then open a new tab.
 
 **PowerShell** (the file named by `$PROFILE`, the Windows default):
 
@@ -86,8 +72,8 @@ function prompt {
 }
 ```
 
-On Windows, PowerShell only runs `$PROFILE` if scripts are allowed; if it
-doesn't, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. Many
+PowerShell only runs `$PROFILE` if scripts are allowed; if it doesn't, run
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once. Many
 prompt tools (such as Starship or Oh My Posh) can report the folder too; check
 their documentation.
 

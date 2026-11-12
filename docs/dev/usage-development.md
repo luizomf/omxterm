@@ -14,7 +14,8 @@ cases behind those features that matter when you change them. The
 ## Split panes
 
 - A new pane starts in the directory the focused shell last reported through
-  OSC 7, or in the home directory. Non-local host names and missing directories
+  OSC 7, or, without a report on macOS and Linux, in that shell's working
+  directory; otherwise in the home directory. Non-local host names and missing directories
   fall back to home. An empty or local host name sent over SSH looks the same as
   a local report, and program output can send it too. The report only selects an
   existing local directory; it never runs shell text.

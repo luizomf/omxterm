@@ -201,7 +201,10 @@ export function registerTerminalLayoutIpc(options: {
           fail();
         }
       };
-      send();
+      // Folders first: one batched read of the shells' working directories.
+      const refreshing = owner.controller.refreshDirectories?.();
+      if (refreshing) void refreshing.catch(() => {}).then(send);
+      else send();
       return promise;
     },
     /** Registered terminal windows, oldest first. */

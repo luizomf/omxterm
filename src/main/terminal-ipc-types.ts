@@ -143,6 +143,8 @@ export interface TerminalIpcController {
   layoutDirectory?(
     sessionId: TerminalSessionId,
   ): import("../shared/terminal-layout").LayoutDirectory;
+  /** Reads the shells' working directories before a layout capture. */
+  refreshDirectories?(): Promise<void>;
   claimContextMenuTarget(target: TerminalContextMenuTarget): boolean;
   hasBusyFocusedSession(): boolean;
   hasBusySession(): boolean;
