@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import {
   access,
@@ -10,7 +12,9 @@ import {
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { afterAll, beforeAll, expect, it } from "vitest";
+import { activate } from "../../extensions/files/backend";
 import { buildFilesMove } from "../../scripts/build-files-move.mjs";
 
 // Builds and loads the real Files addon headlessly. Trash runs only on Windows,
@@ -88,6 +92,91 @@ it.runIf(process.platform === "win32")(
     await symlink(target, link, "junction");
     await addon.trash!(link);
     await expect(access(link)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(await readFile(path.join(target, "kept.txt"), "utf8")).toBe("kept");
+  },
+);
+
+it.runIf(process.platform === "win32")(
+  "refuses Windows spellings that name a different entry",
+  async () => {
+    await writeFile(path.join(root, "kept"), "kept");
+    for (const spelling of ["kept.", "kept ", "kept:stream", "..."]) {
+      expect(() => addon.trash!(path.join(root, spelling))).toThrow(
+        expect.objectContaining({ code: "EINVAL" }),
+      );
+      expect(() =>
+        addon.moveNoReplace(path.join(root, spelling), path.join(root, "x")),
+      ).toThrow(expect.objectContaining({ code: "EINVAL" }));
+    }
+    expect(await readFile(path.join(root, "kept"), "utf8")).toBe("kept");
+  },
+);
+
+it.runIf(process.platform === "win32")(
+  "moves entries past the 260-character path limit",
+  async () => {
+    const deep = path.join(
+      root,
+      ...Array.from({ length: 6 }, () => "d".repeat(50)),
+    );
+    await mkdir(deep, { recursive: true });
+    const source = path.join(deep, "long.txt");
+    await writeFile(source, "long");
+    await addon.moveNoReplace(source, path.join(deep, "moved.txt"));
+    expect(await readFile(path.join(deep, "moved.txt"), "utf8")).toBe("long");
+  },
+);
+
+it.runIf(process.platform === "win32")(
+  "refuses, without deleting, an item on a drive with no Recycle Bin",
+  async () => {
+    // A subst drive has no Recycle Bin; the shell would delete permanently.
+    const letter = [..."PQRSTUVWXY"].find(
+      (candidate) => !existsSync(`${candidate}:\\`),
+    );
+    expect(letter).toBeDefined();
+    const folder = path.join(root, "no bin");
+    await mkdir(folder);
+    await writeFile(path.join(folder, "kept.txt"), "kept");
+    const run = promisify(execFile);
+    await run("subst.exe", [`${letter}:`, folder]);
+    try {
+      await expect(addon.trash!(`${letter}:\\kept.txt`)).rejects.toMatchObject({
+        code: "ENOTRASH",
+      });
+    } finally {
+      await run("subst.exe", [`${letter}:`, "/D"]);
+    }
+    expect(await readFile(path.join(folder, "kept.txt"), "utf8")).toBe("kept");
+  },
+);
+
+it.runIf(process.platform === "win32")(
+  "deletes a folder holding a junction without touching the junction's target",
+  async () => {
+    const target = path.join(root, "delete target");
+    const folder = path.join(root, "delete me");
+    await mkdir(target);
+    await writeFile(path.join(target, "kept.txt"), "kept");
+    await mkdir(folder);
+    await symlink(target, path.join(folder, "link"), "junction");
+    const signal = new AbortController().signal;
+    const backend = activate({
+      signal,
+      files: { moveNoReplace: (from, to) => addon.moveNoReplace(from, to) },
+    });
+    const prepared = (await backend.invoke(
+      { operation: "prepare-delete", path: folder },
+      signal,
+    )) as { ok: boolean; token: string };
+    expect(prepared.ok).toBe(true);
+    expect(
+      await backend.invoke(
+        { operation: "delete", token: prepared.token },
+        signal,
+      ),
+    ).toEqual({ ok: true });
+    await expect(access(folder)).rejects.toMatchObject({ code: "ENOENT" });
     expect(await readFile(path.join(target, "kept.txt"), "utf8")).toBe("kept");
   },
 );

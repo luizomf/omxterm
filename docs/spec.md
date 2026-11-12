@@ -2613,10 +2613,12 @@ implementation; there is no renderer selector or registry
   missing results stay fixed and path-free. There is no permanent-delete
   fallback, automatic retry, Finder automation, or new main RPC.
 - Windows trash uses the shell's `IFileOperation` with the Recycle Bin, no UI,
-  in the same addon and with the same admission. It takes drive-absolute paths
-  only and refuses the same ambiguous spellings plus alternate data streams. An
-  item the shell can't recycle (too large, or on a drive without a Recycle Bin)
-  aborts instead of being deleted permanently.
+  in the same addon and with the same admission. Windows move and trash take
+  drive-absolute paths only and refuse the same ambiguous spellings, alternate
+  data streams, and any part ending in a dot or space (Windows would act on the
+  trimmed name). Moves use the `\\?\` long-path form. An item the shell can't
+  recycle (too large, or on a drive without a Recycle Bin) is refused with
+  `ENOTRASH` and left untouched, never deleted permanently.
 - Linux trash runs the literal `gio` trash command.
 
 **Files archive compatibility**

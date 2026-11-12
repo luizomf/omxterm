@@ -38,6 +38,29 @@ napi_value Error(napi_env env, const char* code) {
   Check(napi_create_error(env, text, text, &result));
   return result;
 }
+#ifdef _WIN32
+// Drive-absolute paths with at least one entry, and no part Windows would
+// rewrite: empty, dot, trailing dot or space (`x.` names `x`), or a colon
+// (alternate data stream). No UNC, device or drive-relative spellings.
+bool WindowsPath(const std::string& value) {
+  const char drive = value[0];
+  if (value.size() < 4 ||
+      !((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) ||
+      value[1] != ':' || (value[2] != '\\' && value[2] != '/'))
+    return false;
+  size_t start = 3;
+  while (start <= value.size()) {
+    size_t end = value.find_first_of("\\/", start);
+    if (end == std::string::npos) end = value.size();
+    const auto part = value.substr(start, end - start);
+    if (part.empty() || part.back() == '.' || part.back() == ' ' ||
+        part.find(':') != std::string::npos)
+      return false;
+    start = end + 1;
+  }
+  return true;
+}
+#endif
 bool Path(napi_env env, napi_value value, std::string& result) {
   size_t length = 0;
   if (napi_get_value_string_utf8(env, value, nullptr, 0, &length) != napi_ok ||
@@ -48,40 +71,29 @@ bool Path(napi_env env, napi_value value, std::string& result) {
   result.resize(length);
   if (result.find('\0') != std::string::npos) return false;
 #ifdef _WIN32
-  // Drive-absolute only: no UNC, device or drive-relative spellings.
-  const char drive = result[0];
-  return result.size() >= 3 &&
-         ((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) &&
-         result[1] == ':' && (result[2] == '\\' || result[2] == '/');
+  return WindowsPath(result);
 #else
   return result[0] == '/';
 #endif
 }
-#ifdef _WIN32
-constexpr const char* separators = "\\/";
-constexpr size_t rootLength = 3;
-#else
-constexpr const char* separators = "/";
-constexpr size_t rootLength = 1;
-#endif
 bool TrashPath(const std::string& value) {
+#ifdef _WIN32
+  (void)value;
+  return true;  // Path() already refused every ambiguous Windows spelling.
+#else
   // A trailing separator or dot component can turn a final symlink into its
   // referent. Refuse these spellings, including root, rather than resolve them.
-  if (std::string(separators).find(value.back()) != std::string::npos)
-    return false;
-#ifdef _WIN32
-  // A colon past the drive names an alternate data stream, not an entry.
-  if (value.find(':', 2) != std::string::npos) return false;
-#endif
-  size_t start = rootLength;
+  if (value.back() == '/') return false;
+  size_t start = 1;
   while (start < value.size()) {
-    size_t end = value.find_first_of(separators, start);
+    size_t end = value.find('/', start);
     if (end == std::string::npos) end = value.size();
     const auto component = value.substr(start, end - start);
     if (component.empty() || component == "." || component == "..") return false;
     start = end + 1;
   }
   return true;
+#endif
 }
 void Execute(napi_env, void* data) {
   auto* move = static_cast<Work*>(data);
@@ -111,6 +123,10 @@ void Execute(napi_env, void* data) {
 #endif
 }
 const char* Code(int error) {
+#ifdef _WIN32
+  // The shell would have deleted it permanently, so nothing was done.
+  if (error == FILES_NOT_RECYCLED) return "ENOTRASH";
+#endif
   // ENOTSUP and EOPNOTSUPP may alias; keep them out of duplicate case labels.
   if (error == ENOTSUP || error == EOPNOTSUPP) return "ENOTSUP";
   switch (error) {

@@ -118,18 +118,31 @@ int Recycle(const std::wstring& path) {
     result = operation->SetOperationFlags(
         FOF_NO_UI | FOF_ALLOWUNDO | FOFX_EARLYFAILURE | FOFX_RECYCLEONDELETE);
   if (SUCCEEDED(result)) result = operation->DeleteItem(item, &sink);
-  if (SUCCEEDED(result)) result = operation->PerformOperations();
-  if (SUCCEEDED(result)) result = operation->GetAnyOperationsAborted(&aborted);
+  if (SUCCEEDED(result)) {
+    result = operation->PerformOperations();
+    // A single item aborted in PreDeleteItem was left untouched.
+    if (FAILED(operation->GetAnyOperationsAborted(&aborted))) aborted = FALSE;
+  }
   if (operation) operation->Release();
   item->Release();
-  if (FAILED(result) || aborted) return EIO;
-  return 0;
+  if (aborted) return FILES_NOT_RECYCLED;
+  return FAILED(result) ? EIO : 0;
 }
 }  // namespace
 
+// Long-path form: no 260-character limit and no further name rewriting. The
+// caller already refused every part Windows would otherwise normalize.
+bool LongPath(const std::string& value, std::wstring& result) {
+  if (!Wide(value, result)) return false;
+  for (auto& unit : result)
+    if (unit == L'/') unit = L'\\';
+  result.insert(0, L"\\\\?\\");
+  return true;
+}
+
 int MoveWindows(const std::string& source, const std::string& destination) {
   std::wstring from, to;
-  if (!Wide(source, from) || !Wide(destination, to)) return EINVAL;
+  if (!LongPath(source, from) || !LongPath(destination, to)) return EINVAL;
   // No MOVEFILE_REPLACE_EXISTING or MOVEFILE_COPY_ALLOWED: the filesystem
   // refuses an existing destination, and another volume stays EXDEV.
   if (!MoveFileExW(from.c_str(), to.c_str(), 0))
@@ -140,6 +153,8 @@ int MoveWindows(const std::string& source, const std::string& destination) {
 int TrashWindows(const std::string& source) {
   std::wstring path;
   if (!Wide(source, path)) return EINVAL;
+  for (auto& unit : path)
+    if (unit == L'/') unit = L'\\';
   const HRESULT initialized =
       CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
   if (FAILED(initialized)) return EIO;

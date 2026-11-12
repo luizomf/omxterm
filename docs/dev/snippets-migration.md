@@ -20,8 +20,8 @@ policy:
 
 On extension hosts, an install or runtime failure never falls back to the
 built-in sidebar. Fresh configuration kits on those hosts omit the starter
-`snippets.yaml`; Windows x64 still creates it. Windows x64 has no extension
-management at all.
+`snippets.yaml`; Windows x64 still creates it. Windows x64 manages extensions
+from 0.28.0 but keeps built-in Snippets.
 
 New packaged profiles on extension hosts get Snippets 0.1.0 installed once,
 enabled but inactive until opened. See [Default Snippets](default-snippets.md).

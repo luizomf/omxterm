@@ -5,18 +5,10 @@ type NativeFiles = {
   moveNoReplace(source: string, destination: string): Promise<void>;
   trash?(target: string): Promise<string>;
 };
-function supported() {
-  const { platform, arch } = process;
-  return (
-    (platform === "linux" && (arch === "arm64" || arch === "x64")) ||
-    (platform === "darwin" && arch === "arm64") ||
-    (platform === "win32" && (arch === "arm64" || arch === "x64"))
-  );
-}
-
 // Reject root, trailing separators and dot/empty components rather than
 // converting a final symlink spelling into its referent. Windows takes only
-// drive-absolute paths and no alternate data streams.
+// drive-absolute paths, no alternate data streams, and no part ending in a dot
+// or space (Windows would act on the trimmed name instead).
 function trashPath(target: unknown): target is string {
   if (
     typeof target !== "string" ||
@@ -31,7 +23,13 @@ function trashPath(target: unknown): target is string {
   if (windows && rest.includes(":")) return false;
   return rest
     .split(windows ? /[\\/]/ : "/")
-    .every((part) => part && part !== "." && part !== "..");
+    .every(
+      (part) =>
+        part &&
+        part !== "." &&
+        part !== ".." &&
+        !(windows && /[. ]$/.test(part)),
+    );
 }
 
 export function createFilesServices() {
@@ -43,8 +41,9 @@ export function createFilesServices() {
     return native;
   }
   return {
-    // Omit on Linux: existing archives keep their literal gio implementation.
-    ...(process.platform !== "linux" && supported()
+    // Every packaged target ships the addon. Linux omits trash: existing
+    // archives keep their literal gio implementation.
+    ...(process.platform !== "linux"
       ? {
           async trash(target: string, signal: AbortSignal): Promise<void> {
             if (signal.aborted)
@@ -68,8 +67,6 @@ export function createFilesServices() {
         }
       : {}),
     async moveNoReplace(source: string, destination: string): Promise<void> {
-      if (!supported())
-        throw Object.assign(new Error("unsupported"), { code: "ENOTSUP" });
       await load().moveNoReplace(source, destination);
     },
   };

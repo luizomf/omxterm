@@ -6,16 +6,11 @@ import { resolveMsvcEnvironment } from "./windows-msvc-environment.mjs";
 
 const native = (file) => path.resolve(import.meta.dirname, "../native", file);
 
-// Native no-replace moves on every supported target. macOS and Windows also
-// supply their system trash; Linux keeps the extension's literal gio call.
+// Native no-replace moves wherever build.mjs builds the extension runtime.
+// macOS and Windows also supply their system trash; Linux keeps the
+// extension's literal gio call.
 export async function buildFilesMove(outputDirectory) {
   const { platform, arch } = process;
-  if (!(
-    (platform === "linux" && ["arm64", "x64"].includes(arch)) ||
-    (platform === "darwin" && arch === "arm64") ||
-    (platform === "win32" && ["arm64", "x64"].includes(arch))
-  ))
-    return;
   const { include_dir } = createRequire(import.meta.url)("node-api-headers");
   const output = path.resolve(outputDirectory);
   await mkdir(output, { recursive: true });

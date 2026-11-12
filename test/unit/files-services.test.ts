@@ -51,19 +51,6 @@ it.each([
   ]);
 });
 
-it.each([
-  ["darwin", "x64"],
-  ["linux", "arm"],
-])("refuses %s %s before native loading", async (os, cpu) => {
-  Object.defineProperty(process, "platform", { value: os });
-  Object.defineProperty(process, "arch", { value: cpu });
-  await expect(
-    createFilesServices().moveNoReplace("/source", "/destination"),
-  ).rejects.toMatchObject({ code: "ENOTSUP" });
-  expect(calls.load).not.toHaveBeenCalled();
-  expect(calls.moveNoReplace).not.toHaveBeenCalled();
-});
-
 it.each(["EEXIST", "EXDEV", "ENOTSUP", "EACCES", "EBUSY"])(
   "propagates %s without retry",
   async (code) => {
@@ -85,7 +72,6 @@ function macServices() {
 }
 
 it.each([
-  ["darwin", "x64"],
   ["linux", "arm64"],
   ["linux", "x64"],
 ])("omits trash on %s %s without loading native code", (os, cpu) => {
@@ -236,6 +222,10 @@ it.each([
   "/item",
   "relative",
   "C:\\file.txt:stream",
+  "C:\\Users\\me\\x.",
+  "C:\\Users\\me\\x ",
+  "C:\\Users\\...",
+  "C:\\dir. \\x",
 ])(
   "refuses ambiguous Windows trash input before loading (%j)",
   async (target) => {

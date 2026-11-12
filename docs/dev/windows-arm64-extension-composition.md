@@ -16,11 +16,11 @@ Windows ARM64 uses the optional [Snippets extension](snippets-migration.md).
   symlink access; see [Windows prerequisites](../development.md#windows). The MSVC
   `.lib` and `.exp` files are build intermediates and stay in the native output
   directory.
-- **Files move.** The `files-move.node` primitive is not built on Windows. A
-  Files move gets the explicit unsupported-operation refusal, with no
-  overwrite fallback.
-- **Windows x64.** x64 builds and packages the same runtime and lease addon but
-  admits no extension management, and keeps built-in Snippets.
+- **Files move and trash.** From 0.28.0, `files-move.node` is built on Windows
+  too: `MoveFileExW` without replace, and Recycle Bin trash that refuses rather
+  than deleting permanently. Earlier hosts refuse Files moves as unsupported.
+- **Windows x64.** From 0.28.0, x64 admits extension management like ARM64 but
+  keeps built-in Snippets.
 
 ## Packaging and verification
 
