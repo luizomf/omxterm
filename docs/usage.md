@@ -135,7 +135,6 @@ See the [installation guide](installation.md) for platform-specific steps.
 | Linux reports FUSE or mount errors    | Try `./OMXTerm-*.AppImage --appimage-extract-and-run` or use `linux_install.sh`.                                                   |
 | Linux reports `GLIBC_2.42 not found`  | Check [architecture-specific requirements](installation.md#requirements).                                                          |
 | Linux reports executable format error | Run `uname -m` and choose the matching AppImage architecture.                                                                      |
-| Windows reports a missing runtime DLL | Install the Microsoft Visual C++ Redistributable for your architecture.                                                            |
 | Checksum verification fails           | Download the installer and `.sha256` file from the same release.                                                                   |
 
 If the problem persists, [open a bug report](../CONTRIBUTING.md#report-a-problem) with your OS, OMXTerm version, and the error.

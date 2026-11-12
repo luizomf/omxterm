@@ -63,10 +63,6 @@ opens protected folders such as Documents or Downloads.
    anyway**.
 3. Open **OMXTerm** from the Start menu.
 
-If it won't start, install the
-[Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
-for your architecture.
-
 ## Linux
 
 The AppImage is a single file you run without installing. Open a terminal, go to

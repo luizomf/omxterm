@@ -23,6 +23,8 @@ export async function buildExtensionLeases(outputDirectory) {
     // Supply an architecture-matched node.exe import library explicitly; no
     // downloads or implicit caches. Delay loading binds Node-API to the running
     // Node/Electron executable rather than trying to load another node.exe.
+    // /MT links the C and C++ runtimes statically, so users need no Visual
+    // C++ Redistributable.
     const library = process.env.OMXTERM_NODE_IMPORT_LIBRARY;
     if (!library || !path.isAbsolute(library)) {
       throw new Error(
@@ -38,7 +40,7 @@ export async function buildExtensionLeases(outputDirectory) {
       "/nologo",
       "/std:c++17",
       "/EHsc",
-      "/MD",
+      "/MT",
       "/LD",
       "/W4",
       "/WX",
