@@ -72,6 +72,24 @@
       },
       "sourceCommit": "53400958a878c88491cc91f47c2ea65cc0beac43",
       "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.2.0"
+    },
+    {
+      "id": "omxterm.mirror-typing",
+      "name": "Mirror Typing",
+      "description": "Type into several panes of one tab at once. Paste, snippets and drops stop mirroring and go to one pane.",
+      "version": "0.2.0",
+      "engines": {
+        "omxterm": ">=0.27.0",
+        "api": "0.1.x"
+      },
+      "targets": ["darwin-arm64", "win32-arm64"],
+      "archive": {
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-mirror-typing-v0.2.0/mirror-typing-0.2.0.omxext",
+        "sha256": "9914eb27c1aafec232ec1bf1097763875923bb1c4ad4413920d48f3e84653ee7",
+        "bytes": 9619
+      },
+      "sourceCommit": "3e103eaed6dac768b9e77f351196159442538c99",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-mirror-typing-v0.2.0"
     }
   ]
 }
