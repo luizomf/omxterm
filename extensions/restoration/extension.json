@@ -3,7 +3,7 @@
   "id": "omxterm.restoration",
   "version": "0.3.0",
   "name": "Saved Layout",
-  "engines": { "omxterm": ">=0.27.1-dev.1", "api": "0.1.x" },
+  "engines": { "omxterm": ">=0.28.0-dev.0", "api": "0.1.x" },
   "backend": "backend.mjs",
   "capabilities": [
     "terminal.captureLayout.v1",

@@ -16,6 +16,14 @@ import type {
 } from "./terminal-ipc-types";
 import type { PreparedLayout } from "./terminal-layout-transfer";
 
+/** The window has no terminal tab to capture. */
+export class EmptyLayoutError extends Error {
+  constructor() {
+    super("No terminal tab");
+    this.name = "EmptyLayoutError";
+  }
+}
+
 /** Window-lifetime capture correlation and single-use pane allocations. */
 export function registerTerminalLayoutIpc(options: {
   ipc: IpcMainPort;
@@ -27,7 +35,7 @@ export function registerTerminalLayoutIpc(options: {
     id: string;
     promise: Promise<SavedLayout>;
     resolve(value: SavedLayout): void;
-    reject(): void;
+    reject(error?: Error): void;
     dispose(): void;
   };
   type Owner = {
@@ -37,6 +45,7 @@ export function registerTerminalLayoutIpc(options: {
     plan?: PreparedLayout;
     initialRead: boolean;
     tokens: Map<string, string>;
+    remembered: Map<string, string>;
     capture?: Capture;
     cleanup(): void;
   };
@@ -62,7 +71,12 @@ export function registerTerminalLayoutIpc(options: {
     const owner = ownerFor(event);
     if (
       !owner ||
-      !exactLayoutKeys(value, ["id", "layout"]) ||
+      !(
+        exactLayoutKeys(value, ["id", "layout"]) ||
+        (exactLayoutKeys(value, ["id", "layout", "empty"]) &&
+          value.empty === true &&
+          value.layout === null)
+      ) ||
       value.id !== owner.capture?.id
     )
       return;
@@ -71,7 +85,7 @@ export function registerTerminalLayoutIpc(options: {
     delete owner.capture;
     capture.dispose();
     if (!isCapturedLayout(value.layout)) {
-      capture.reject();
+      capture.reject("empty" in value ? new EmptyLayoutError() : undefined);
       return;
     }
     try {
@@ -134,6 +148,7 @@ export function registerTerminalLayoutIpc(options: {
         controller,
         initialRead: false,
         tokens: new Map(plan?.directories),
+        remembered: new Map(plan?.remembered),
         ...(plan ? { plan } : {}),
         cleanup() {
           unsubscribeLoss();
@@ -152,33 +167,41 @@ export function registerTerminalLayoutIpc(options: {
       // A capture already in flight answers the same question; share it.
       if (owner.capture) return owner.capture.promise;
       const id = randomUUID();
-      const promise = new Promise<SavedLayout>((resolve, reject) => {
-        const fail = () => {
-          owner.capture?.dispose();
+      let resolve!: (value: SavedLayout) => void;
+      let reject!: (error: Error) => void;
+      const promise = new Promise<SavedLayout>((done, failed) => {
+        resolve = done;
+        reject = failed;
+      });
+      const fail = (error = new Error("Layout capture unavailable")) => {
+        if (owner.capture?.id === id) {
+          owner.capture.dispose();
           delete owner.capture;
-          reject(new Error("Layout capture unavailable"));
-        };
-        const timer = setTimeout(fail, 5000);
-        signal.addEventListener("abort", fail, { once: true });
-        owner.capture = {
-          id,
-          // Assigned below, once the promise exists.
-          promise: undefined as unknown as Promise<SavedLayout>,
-          resolve,
-          reject: fail,
-          dispose() {
-            clearTimeout(timer);
-            signal.removeEventListener("abort", fail);
-          },
-        };
+        }
+        reject(error);
+      };
+      const abort = () => fail();
+      const timer = setTimeout(abort, 5000);
+      signal.addEventListener("abort", abort, { once: true });
+      owner.capture = {
+        id,
+        promise,
+        resolve,
+        reject: fail,
+        dispose() {
+          clearTimeout(timer);
+          signal.removeEventListener("abort", abort);
+        },
+      };
+      const send = () => {
+        if (owner.capture?.id !== id) return;
         try {
           window.webContents.send(layoutIpc.capture, id);
         } catch {
           fail();
         }
-      });
-      const pending = owner.capture as Capture | undefined;
-      if (pending?.id === id) pending.promise = promise;
+      };
+      send();
       return promise;
     },
     /** Registered terminal windows, oldest first. */
@@ -189,7 +212,12 @@ export function registerTerminalLayoutIpc(options: {
       if (!owner || directory === undefined || options.quitting())
         throw new Error("Unavailable restored pane");
       owner.tokens.delete(token);
+      owner.remembered.delete(token);
       return directory;
+    },
+    /** The saved folder an unconsumed pane couldn't start in, if any. */
+    remembered(window: BrowserWindow, token: string): string | undefined {
+      return owners.get(window.webContents)?.remembered.get(token);
     },
     dispose() {
       for (const owner of owners.values()) remove(owner);

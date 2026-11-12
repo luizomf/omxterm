@@ -68,13 +68,17 @@ and shows it. Reads never repair or migrate a file; an unreadable one shows
 **Try again**.
 
 **Reopening.** Declaring `terminal.reopenLayout.v1` turns it on; the extension
-runs no code for it. `layout-session.ts` captures every window every 3 s (and
-right after one closes) and writes `<profile>/layout-session/last.json` when the
-arrangement changed, skipping quits, empty window sets and failed captures. A
-plain start passes each remembered window through the same plan as Open; a
-start with `-e` takes no part. Only the process holding `session.lock` takes
-part, and a leftover `reopening` marker drops the remembered windows so a bad
-layout can't loop. Disabling the extension deletes `last.json`. Change the
+runs no code for it. `layout-session.ts` ticks every 3 s but captures only after
+`touch()` (the terminal controller's `onLayoutActivity`: pane start, close or
+exit, PTY input, output or resize, tab selection), and saves right after a
+window closes. It writes `<profile>/layout-session/last.json` when the
+arrangement changed, skipping quits, empty window sets and failed captures;
+windows without a terminal tab are skipped. A plain start passes each
+remembered window through the same plan as Open; a start with `-e` takes no
+part. Only the process holding `session.lock` takes part, and a `reopening`
+marker that survives until the next start (it's removed after the first save)
+drops the remembered windows so a bad layout can't loop. A reopened pane whose
+folder was missing keeps that folder until its shell reports another. Disabling the extension deletes `last.json`. Change the
 interval or limits there.
 
 ## Build and test

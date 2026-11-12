@@ -10,6 +10,8 @@ import {
 export type PreparedLayout = {
   initial: InitialLayout;
   directories: ReadonlyMap<string, string>;
+  /** Saved folders that were unavailable, by token; the pane starts at home. */
+  remembered?: ReadonlyMap<string, string>;
 };
 
 export interface RestorationWindowOptions {
@@ -62,6 +64,7 @@ export async function prepareSavedLayout(
   resolve: (directory: string) => Promise<boolean>,
 ): Promise<PreparedLayout> {
   const directories = new Map<string, string>();
+  const remembered = new Map<string, string>();
   const initial: InitialLayout = {
     selected: saved.selected,
     tabs: [],
@@ -73,21 +76,22 @@ export async function prepareSavedLayout(
     for (let start = 0; start < tab.panes.length; start += 2) {
       const values = await Promise.all(
         tab.panes.slice(start, start + 2).map(async (pane) => {
-          if (pane.kind === "home") return home;
-          if (await resolve(pane.path)) return pane.path;
+          if (pane.kind === "home") return [home] as const;
+          if (await resolve(pane.path)) return [pane.path] as const;
           initial.fallbacks++;
-          return home;
+          return [home, pane.path] as const;
         }),
       );
-      for (const directory of values) {
+      for (const [directory, unavailable] of values) {
         const token = randomUUID();
         panes.push(token);
         directories.set(token, directory);
+        if (unavailable !== undefined) remembered.set(token, unavailable);
       }
     }
     initial.tabs.push({ ...tab, panes });
   }
-  return { initial, directories };
+  return { initial, directories, remembered };
 }
 
 export function createTerminalLayoutTransfer<Owner extends object>(options: {

@@ -98,9 +98,9 @@ page tells you how many did.
 
 - A saved window opens only when you choose it.
 - Both the saved window and the remembered windows live in OMXTerm's profile
-  folder, not in your configuration file. Disabling, updating or removing the
-  extension keeps the saved window (use **Forget** first if you don't want to
-  keep it) and deletes the remembered ones.
+  folder, not in your configuration file. Updating the extension keeps both.
+  Disabling or removing it keeps the saved window (use **Forget** first if you
+  don't want to keep it) and deletes the remembered ones.
 - A pane running SSH Connect or a command started with `-e` reopens as a plain
   shell in your home folder.
 - Folder reports aren't checked: a program, or a remote shell over a plain

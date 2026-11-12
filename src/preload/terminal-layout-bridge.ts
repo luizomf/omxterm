@@ -30,13 +30,18 @@ export function createTerminalLayoutBridge(ipc: {
       const listener = (_event: unknown, id: unknown) => {
         if (!isLayoutToken(id)) return;
         let layout: CapturedLayout | null = null;
+        let empty = false;
         try {
           const captured = capture();
-          if (isCapturedLayout(captured)) layout = captured;
+          if (captured === null) empty = true;
+          else if (isCapturedLayout(captured)) layout = captured;
         } catch {
-          /* Refuse failed/empty/over-budget capture without repair. */
+          /* Refuse failed/over-budget capture without repair. */
         }
-        ipc.send(layoutIpc.captured, { id, layout });
+        ipc.send(
+          layoutIpc.captured,
+          empty ? { id, layout, empty } : { id, layout },
+        );
       };
       ipc.on(layoutIpc.capture, listener);
       return () => {

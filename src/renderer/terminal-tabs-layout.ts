@@ -2,6 +2,8 @@ import {
   isCapturedLayout,
   isInitialLayout,
   isLayoutTab,
+  LAYOUT_MAX_PANES,
+  LAYOUT_MAX_TABS,
   type CapturedLayout,
   type InitialLayout,
   type LayoutNode,
@@ -77,24 +79,37 @@ export function deserializePaneLayout<Pane>(
   return visit(tab.root);
 }
 
+/**
+ * The window's terminal tabs within the layout limits: tabs past 16 tabs or
+ * 32 panes are left out and counted in `omitted`, like graphical tabs. Null
+ * when the window has no terminal tab at all.
+ */
 export function captureTerminalLayout(
   tabs: readonly ApplicationTab[],
   selected: ApplicationTab | undefined,
   remembered: TerminalTab | undefined,
-): CapturedLayout {
-  const terminals = tabs.filter(
-    (tab): tab is TerminalTab => tab.kind === "terminal" && !tab.removed,
-  );
+): CapturedLayout | null {
+  const open = tabs.filter((tab) => !tab.removed);
+  const terminals: TerminalTab[] = [];
+  let panes = 0;
+  for (const tab of open) {
+    if (tab.kind !== "terminal") continue;
+    const count = tabPanes(tab).length;
+    if (terminals.length >= LAYOUT_MAX_TABS || panes + count > LAYOUT_MAX_PANES)
+      continue;
+    terminals.push(tab);
+    panes += count;
+  }
+  if (terminals.length === 0) return null;
   const selectedTerminal =
     selected?.kind === "terminal" && terminals.includes(selected)
       ? selected
       : remembered && terminals.includes(remembered)
         ? remembered
-        : terminals[0];
+        : terminals[0]!;
   const result: CapturedLayout = {
-    selected: selectedTerminal ? terminals.indexOf(selectedTerminal) : -1,
-    omitted: tabs.filter((tab) => !tab.removed && tab.kind !== "terminal")
-      .length,
+    selected: terminals.indexOf(selectedTerminal),
+    omitted: open.length - terminals.length,
     tabs: terminals.map((tab) => {
       const flat = serializePaneLayout(tab.layout, tab.focused);
       return {

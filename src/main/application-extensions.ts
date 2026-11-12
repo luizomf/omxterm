@@ -32,7 +32,6 @@ import { startExtensionViewHost } from "./extension-view-ipc";
 import {
   extensionsIpc,
   isExtensionsRequest,
-  type ExtensionsRequest,
   type ExtensionsResult,
 } from "../shared/extensions";
 import type { IpcEvent } from "./terminal-ipc-types";
@@ -57,23 +56,6 @@ type ExtensionTargetCapture = (
   sessionId?: string,
   context?: "window",
 ) => ExtensionTarget;
-
-/** Uninstall, enable or disable; other requests change nothing here. */
-async function changeInstallation(
-  manager: NonNullable<
-    Awaited<ReturnType<typeof applicationManager>>
-  >["manager"],
-  request: ExtensionsRequest,
-) {
-  if (request.operation === "uninstall")
-    await manager.uninstall(request.id, request.generation);
-  else if (request.operation === "enable" || request.operation === "disable")
-    await manager.setEnabled(
-      request.id,
-      request.generation,
-      request.operation === "enable",
-    );
-}
 
 /** An enabled, installed extension declares this capability. */
 function declares(installations: Installation[], capability: string) {
@@ -256,6 +238,7 @@ function supportsExtensionPreview() {
 // Startup creates infrastructure, never activates installed code. Unsupported
 // platforms retain Settings with an explicit preview-unavailable result. Broken
 // infrastructure must not prevent terminal startup.
+// oxlint-disable-next-line max-lines-per-function -- one owner wires every extension surface; splitting it only moves the closures around
 export async function startApplicationExtensions(
   options: ApplicationExtensionsOptions,
 ) {
@@ -364,7 +347,17 @@ export async function startApplicationExtensions(
             () => stopping,
             options.translator,
           );
-        else await changeInstallation(manager, request);
+        else if (request.operation === "uninstall")
+          await manager.uninstall(request.id, request.generation);
+        else if (
+          request.operation === "enable" ||
+          request.operation === "disable"
+        )
+          await manager.setEnabled(
+            request.id,
+            request.generation,
+            request.operation === "enable",
+          );
         return await refresh();
       } catch (error) {
         return managementFailure(error);

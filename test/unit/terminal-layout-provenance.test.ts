@@ -96,3 +96,33 @@ it("consumes a restored token once, explicitly selects Default Shell and keeps p
   expect(() => controller.layoutDirectory!("s999")).toThrow();
   router.dispose();
 });
+it("keeps a reopened pane's unavailable folder until the shell reports another", async () => {
+  const { prepareSavedLayout } =
+    await import("../../src/main/terminal-layout-transfer");
+  const { savedLayout } = await import("../fixtures/restoration-layout");
+  const plan = await prepareSavedLayout(
+    savedLayout(),
+    "/home/test",
+    async (directory) => directory !== "/synthetic/reported",
+  );
+  const [missing] = plan.initial.tabs[0]!.panes;
+  expect(plan.directories.get(missing!)).toBe("/home/test");
+  expect([...plan.remembered!.entries()]).toEqual([
+    [missing, "/synthetic/reported"],
+  ]);
+
+  const tracker = createWorkingDirectoryTracker({
+    platform: "linux",
+    hostName: () => "local",
+  });
+  tracker.launched("s1", "/home/test", "/synthetic/reported");
+  expect(tracker.provenance("s1")).toEqual({
+    kind: "launch-local",
+    path: "/synthetic/reported",
+  });
+  tracker.observe("s1", "\u001b]7;file://localhost/moved\u0007");
+  expect(tracker.provenance("s1")).toEqual({
+    kind: "reported-local",
+    path: "/moved",
+  });
+});

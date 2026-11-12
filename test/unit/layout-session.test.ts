@@ -1,8 +1,9 @@
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { createLayoutSession } from "../../src/main/layout-session";
+import { EmptyLayoutError } from "../../src/main/terminal-layout-ipc";
 import type { SavedLayout } from "../../src/shared/terminal-layout";
 import { savedLayout } from "../fixtures/restoration-layout";
 
@@ -35,6 +36,10 @@ async function setup(shared = leases(), existing?: string) {
     quitting: false,
     windows: [] as SavedLayout[],
     failing: false,
+    empty: new Set<SavedLayout>(),
+    captures: 0,
+    // Holds captures until released, to save while a save is in flight.
+    gate: undefined as Promise<void> | undefined,
   };
   const session = createLayoutSession<SavedLayout>({
     directory,
@@ -43,7 +48,10 @@ async function setup(shared = leases(), existing?: string) {
     enabled: () => state.enabled,
     windows: () => [...state.windows],
     capture: async (window) => {
+      state.captures++;
+      await state.gate;
       if (state.failing) throw new Error("unavailable");
+      if (state.empty.has(window)) throw new EmptyLayoutError();
       return window;
     },
     quitting: () => state.quitting,
@@ -59,7 +67,7 @@ async function setup(shared = leases(), existing?: string) {
 it("remembers every window and reopens them on the next start", async () => {
   const first = await setup();
   expect(await first.session.start(true)).toEqual([]);
-  await first.session.reopened();
+  first.session.started();
   first.state.windows = [layout(1), layout(2)];
   await first.session.flush();
   expect((await first.saved()).windows).toEqual([layout(1), layout(2)]);
@@ -67,7 +75,7 @@ it("remembers every window and reopens them on the next start", async () => {
 
   const next = await setup(leases(), first.directory);
   expect(await next.session.start(true)).toEqual([layout(1), layout(2)]);
-  await next.session.reopened();
+  next.session.started();
   next.session.dispose();
 });
 
@@ -137,7 +145,7 @@ it("leaves the windows alone for an explicit command", async () => {
 
   const command = await setup(leases(), test.directory);
   expect(await command.session.start(false)).toEqual([]);
-  await command.session.reopened();
+  command.session.started();
   command.state.windows = [layout(9)];
   await command.session.flush();
   expect((await command.saved()).windows).toEqual([layout(1)]);
@@ -159,13 +167,13 @@ it("forgets the windows only when reopening is turned off", async () => {
   const unloaded = await setup(leases(), test.directory);
   unloaded.state.enabled = false;
   expect(await unloaded.session.start(true)).toEqual([]);
-  await unloaded.session.reopened();
+  unloaded.session.started();
   expect((await unloaded.saved()).windows).toEqual([layout(1)]);
   unloaded.session.dispose();
 
   const off = await setup(leases(), test.directory);
   expect(await off.session.start(true)).toEqual([layout(1)]);
-  await off.session.reopened();
+  off.session.started();
   off.state.enabled = false;
   off.session.refresh();
   await expect
@@ -203,4 +211,85 @@ it("ignores an unreadable file or one saved on another platform", async () => {
   const other = await setup(leases(), test.directory);
   expect(await other.session.start(true)).toEqual([]);
   other.session.dispose();
+});
+
+it("skips windows without a terminal tab and keeps at most 16 windows", async () => {
+  const test = await setup();
+  await test.session.start(true);
+  const settings = layout(99);
+  test.state.empty.add(settings);
+  test.state.windows = [
+    layout(1),
+    settings,
+    ...Array.from({ length: 20 }, (_, i) => layout(i + 2)),
+  ];
+  await test.session.flush();
+  const { windows } = await test.saved();
+  expect(windows).toHaveLength(15);
+  expect(windows[0]).toEqual(layout(1));
+  expect(windows).not.toContainEqual(settings);
+  test.session.dispose();
+});
+
+it("captures only after activity", async () => {
+  vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+  try {
+    const test = await setup();
+    await test.session.start(true);
+    test.state.windows = [layout(1)];
+    test.session.started();
+    // Let each tick's real file I/O finish before the next one.
+    const ticks = async (count: number) => {
+      for (let i = 0; i < count; i++) {
+        vi.advanceTimersByTime(60_000);
+        await new Promise((done) => setTimeout(done, 20));
+      }
+    };
+    await ticks(1);
+    expect(test.state.captures).toBe(1);
+    await ticks(3);
+    expect(test.state.captures).toBe(1);
+    test.session.touch();
+    await ticks(1);
+    expect(test.state.captures).toBe(2);
+    test.session.dispose();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("saves a closed window's absence even while a save is in flight", async () => {
+  const test = await setup();
+  await test.session.start(true);
+  test.state.windows = [layout(1), layout(2)];
+  await test.session.flush();
+  let release!: () => void;
+  test.state.gate = new Promise((done) => (release = done));
+  test.session.touch();
+  const inFlight = test.session.flush();
+  test.state.windows = [layout(1)]; // closed while capturing
+  const afterClose = test.session.flush();
+  test.state.gate = undefined;
+  release();
+  await inFlight;
+  await afterClose;
+  expect((await test.saved()).windows).toEqual([layout(1)]);
+  test.session.dispose();
+});
+
+it("keeps reopening possible once the reopened windows were saved", async () => {
+  const first = await setup();
+  await first.session.start(true);
+  first.state.windows = [layout(1)];
+  await first.session.flush();
+  first.session.dispose();
+
+  const reopened = await setup(leases(), first.directory);
+  expect(await reopened.session.start(true)).toHaveLength(1);
+  reopened.state.windows = [layout(1)];
+  await reopened.session.flush(); // first save after startup clears the marker
+  reopened.session.dispose();
+  const next = await setup(leases(), first.directory);
+  expect(await next.session.start(true)).toEqual([layout(1)]);
+  next.session.dispose();
 });

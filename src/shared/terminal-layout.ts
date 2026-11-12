@@ -211,6 +211,7 @@ export const layoutIpc = {
 } as const;
 export interface TerminalLayoutBridge {
   initial(): Promise<InitialLayout | null>;
-  onCapture(capture: () => CapturedLayout): () => void;
+  /** `capture` returns null for a window with no terminal tab. */
+  onCapture(capture: () => CapturedLayout | null): () => void;
   cancel(token: string): void;
 }

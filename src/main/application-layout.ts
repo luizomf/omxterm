@@ -43,6 +43,7 @@ export function startApplicationLayout(options: {
     open: transfer.open,
     register: ipc.register,
     consume: ipc.consume,
+    remembered: ipc.remembered,
     dispose() {
       transfer.dispose();
       ipc.dispose();
@@ -104,10 +105,11 @@ export function startLayoutSession(options: {
         }
       }
       if (opened === 0) await application.newWindow();
-      await session.reopened();
+      session.started();
     },
     refresh: session.refresh,
-    /** Remembers the remaining windows soon after one closes. */
+    touch: session.touch,
+    /** Remembers the remaining windows right after one closes. */
     windowClosed() {
       setImmediate(() => void session.flush());
     },

@@ -1013,18 +1013,24 @@ back with fresh shells
   `terminal.reopenLayout.v1`. No extension code runs at startup. Disabling or
   uninstalling it while OMXTerm runs deletes the remembered windows; an
   extension runtime that fails to load doesn't.
-- Main captures every terminal window every 3 s and after a window closes,
-  and writes `<profile>/layout-session/last.json` only when the arrangement
-  changed. It never writes while quitting, for zero windows, or when a capture
-  fails. Closing one of several windows forgets it; Quit and closing the last
-  window keep the arrangement. At most 16 windows.
+- A 3 s tick captures every terminal window only after layout or PTY activity
+  (pane start, close or exit, input, output, resize, tab selection), and a
+  closing window saves right away. Main writes
+  `<profile>/layout-session/last.json` only when the arrangement changed. It
+  never writes while quitting, for zero windows, or when a capture fails.
+  Closing one of several windows forgets it; Quit and closing the last window
+  keep the arrangement. Windows without a terminal tab are skipped; tabs past
+  16 tabs or 32 panes count as omitted; at most 16 windows.
+- A reopened pane whose saved folder was unavailable keeps that folder until
+  its shell reports another.
 - A start without `-e` opens each remembered window from the same plan as Open
   (folders checked, home fallback, fresh Default Shells), skipping windows saved
   on another OS; if none open, one ordinary window opens. A start with `-e`
   opens as asked and neither reopens nor remembers.
 - Only the process holding `layout-session/session.lock` reopens and
-  remembers. A `reopening` marker left by a start that never finished drops
-  the remembered windows; that start opens one ordinary window.
+  remembers. A `reopening` marker left by a start whose reopened windows were
+  never saved drops the remembered windows; that start opens one ordinary
+  window.
 - Window position and size are not remembered.
 
 ### Saving a window
@@ -2611,7 +2617,8 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N` or `0.27.1-dev.N` host admit a range only when ordinary semver admits both stable
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N` or `0.28.0-dev.N` host admit a
+  range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.
 

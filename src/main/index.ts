@@ -54,11 +54,7 @@ import {
 import { createKeybindCapture } from "./keybind-capture";
 import { loadMacOSOptionShortcut } from "./macos-option-shortcut";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
-import {
-  applicationArguments,
-  MalformedLaunchRequestError,
-  parseLaunchRequest,
-} from "./launch-request";
+import { MalformedLaunchRequestError } from "./launch-request";
 import { prepareStartup } from "./application-startup";
 import { registerTerminalShutdown } from "./terminal-shutdown";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
@@ -199,11 +195,15 @@ app
       () => app.getPath("userData"),
       process.resourcesPath,
     );
-    const { account, consumeLaunchRequest, configurationLoadOptions } =
-      prepareStartup(
-        developmentApplicationIconPath,
-        packagedApplicationIconPath,
-      );
+    const {
+      account,
+      consumeLaunchRequest,
+      explicitCommand,
+      configurationLoadOptions,
+    } = prepareStartup(
+      developmentApplicationIconPath,
+      packagedApplicationIconPath,
+    );
     operationalEvents = createOperationalEventLog({
       environment: process.env,
       homeDirectory: account.homedir,
@@ -423,6 +423,8 @@ app
               homeDirectory: account.homedir,
               initialLayout: () => layouts.initial(window),
               consumeLayoutLaunch: (token) => layouts.consume(window, token),
+              rememberedLayoutFolder: (token) =>
+                layouts.remembered(window, token),
               createSession(callbacks, workingDirectory, ssh, restored) {
                 return shutdown.createSession(nodePty.spawn, {
                   shell: resolveCurrentDefaultShell(),
@@ -469,6 +471,7 @@ app
               onTitleRequest: titleController.requestTitle,
               onBell: titleController.ringBell,
               onUserInteraction: titleController.resetAttention,
+              onLayoutActivity: () => layoutSession?.touch(),
               openExternalLink: (url) => shell.openExternal(url),
               onExternalLinkOpenError: nativeDialogs.externalLinkError,
               writeClipboardText: (text) => clipboard.writeText(text),
@@ -653,11 +656,7 @@ app
             extensions?.declares(REOPEN_LAYOUT_CAPABILITY) === true,
           application: () => terminalApplication,
         });
-        // An explicit `-e` command opens as asked, never the remembered windows.
-        await layoutSession.openWindows(
-          parseLaunchRequest(applicationArguments(process.argv, app.isPackaged))
-            .kind !== "explicit-command",
-        );
+        await layoutSession.openWindows(!explicitCommand);
       },
     );
   })
