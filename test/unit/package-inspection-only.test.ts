@@ -43,6 +43,13 @@ function fixtureNativeMetadata(member: string, unpacked: boolean) {
   return { unpacked };
 }
 
+const probeChecks = (platform: string) => [
+  "packaged-store-and-lease",
+  ...(platform === "linux" ? [] : ["native-trash-export-and-root-refusal"]),
+  "native-move-and-conflict",
+  "bootstrap-missing-IPC-refusal",
+];
+
 async function tinyRuntimeArchive(
   root: string,
   name: string,
@@ -246,10 +253,7 @@ function inspectionCommands(
                     target: `${platform}-${arch}`,
                     hostVersion: "1.2.3",
                     runtime: { electron: "43.8.1" },
-                    checks: [
-                      "packaged-store-and-lease",
-                      "bootstrap-missing-IPC-refusal",
-                    ],
+                    checks: probeChecks(platform),
                   },
                 ),
               ),
@@ -554,7 +558,7 @@ it.each([
         target: `${platform}-${arch}`,
         hostVersion: "1.2.3",
         runtime: { electron: "43.8.1" },
-        checks: ["packaged-store-and-lease", "bootstrap-missing-IPC-refusal"],
+        checks: probeChecks(platform),
       };
       for (const report of [
         { ...validReport, target: "wrong-target" },
