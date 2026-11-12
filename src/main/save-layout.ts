@@ -82,9 +82,11 @@ type SaveLayoutContext = {
     "layout" | "sendAction" | "translator"
   >;
   readonly manager: ReturnType<typeof createExtensionManager> | undefined;
-  readonly capture: (
-    window: BrowserWindow | undefined,
-  ) => ExtensionTarget | undefined;
+  // Each terminal window's target capture; Save layout uses its window context.
+  readonly windows: ReadonlyMap<
+    BrowserWindow,
+    (sessionId?: string, context?: "window") => ExtensionTarget
+  >;
   readonly stopping: () => boolean;
   running?: boolean;
 };
@@ -128,8 +130,11 @@ export function saveLayoutEntry(
       extension: true,
       shortcut: "saveLayout",
       invoke() {
-        const window = BrowserWindow.getFocusedWindow() ?? undefined;
-        const target = context.capture(window);
+        // The window, not its selected pane: a Settings tab or an exited
+        // pane doesn't stop the window from being saved.
+        const window = BrowserWindow.getFocusedWindow();
+        const target =
+          window && context.windows.get(window)?.(undefined, "window");
         if (!window || !target || target.signal.aborted) return;
         if (context.running || stopping()) return;
         context.running = true;

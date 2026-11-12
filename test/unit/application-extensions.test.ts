@@ -2315,6 +2315,14 @@ it("saves the focused window through Saved Layout's backend without opening its 
     return backend;
   });
   adapters.sendOpen.mockImplementation(() => {});
+  // The selected pane has exited (or Settings is selected): only the window
+  // context is live, and that is what Save layout saves.
+  service.registerWindow(window, (_session, context) => ({
+    owner: window,
+    signal:
+      context === "window" ? new AbortController().signal : AbortSignal.abort(),
+    terminalDirectory: null,
+  }));
   await installTool("omxterm.restoration", "Saved Layout", [
     "terminal.captureLayout.v1",
     "state.v1",

@@ -395,7 +395,7 @@ export async function startApplicationExtensions(
   );
   const capture = (window: BrowserWindow | undefined, sessionId?: string) =>
     window ? windows.get(window)?.(sessionId) : undefined;
-  const saving = { options, manager, capture, stopping: () => stopping };
+  const saving = { options, manager, windows, stopping: () => stopping };
   function actions(
     target?: ExtensionTarget,
     claim?: () => boolean,
