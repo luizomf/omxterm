@@ -71,9 +71,9 @@
       "id": "omxterm.restoration",
       "name": "Saved Layout",
       "description": "Save a window's tabs, splits and folders, then open them again with fresh shells.",
-      "version": "0.3.0",
+      "version": "0.3.1",
       "engines": {
-        "omxterm": ">=0.28.0-dev.0",
+        "omxterm": ">=0.29.1-dev.0",
         "api": "0.1.x"
       },
       "targets": [
@@ -84,30 +84,30 @@
         "win32-x64"
       ],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-restoration-v0.3.0/restoration-0.3.0.omxext",
-        "sha256": "edb93d611186588d94b62d4b94855371a8e1bcb554c5988b180266c24d495ded",
-        "bytes": 15093
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-restoration-v0.3.1/restoration-0.3.1.omxext",
+        "sha256": "888b3ab3801ab0b953f8d0bf47f7651d623db5b44d2bbab7bae2ce5e8a139543",
+        "bytes": 15326
       },
-      "sourceCommit": "ed0ed9e100f5b1065ba08704c2476a2d7971e58c",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.3.0"
+      "sourceCommit": "980c2e27c74db3f76ee81bf80831147bef3183d5",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.3.1"
     },
     {
       "id": "omxterm.mirror-typing",
       "name": "Mirror Typing",
       "description": "Type into several panes of one tab at once. Paste, snippets and drops stop mirroring and go to one pane.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "engines": {
-        "omxterm": ">=0.27.0",
+        "omxterm": ">=0.29.1-dev.0",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64", "darwin-arm64", "win32-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-mirror-typing-v0.2.0/mirror-typing-0.2.0.omxext",
-        "sha256": "9914eb27c1aafec232ec1bf1097763875923bb1c4ad4413920d48f3e84653ee7",
-        "bytes": 9619
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-mirror-typing-v0.3.0/mirror-typing-0.3.0.omxext",
+        "sha256": "68e4495443800c0ceffe85cc2681149a776740be72511e5149daf65ce8cb00db",
+        "bytes": 9692
       },
-      "sourceCommit": "3e103eaed6dac768b9e77f351196159442538c99",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-mirror-typing-v0.2.0"
+      "sourceCommit": "980c2e27c74db3f76ee81bf80831147bef3183d5",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-mirror-typing-v0.3.0"
     }
   ]
 }
