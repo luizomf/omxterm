@@ -1,3 +1,5 @@
+import { join } from "./paths.js";
+
 export type FilesTreeRequest =
   | { operation: "list"; path: string }
   | { operation: "list-next" | "list-close"; cursor: string };
@@ -42,8 +44,6 @@ type Directory = ListingStatus & {
   pending?: { generation: number; promise: Promise<boolean> } | undefined;
 };
 type Node = Directory & FilesTreeEntry & { expanded: boolean };
-const join = (base: string, name: string) =>
-  `${base.replace(/\/$/, "")}/${name}`;
 const directory = (path: string): Directory => ({
   path,
   children: [],

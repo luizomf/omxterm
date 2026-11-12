@@ -851,7 +851,7 @@ Connect share it; no per-tool placement or second panel exists.
 
 ### Files panel
 
-Files is a separately installed ARM64 preview
+Files is a separately installed extension
 ([availability](files-availability.md)). Its archive version and host range are
 maintained separately; see [Architecture boundaries](#architecture-boundaries).
 
@@ -2624,9 +2624,11 @@ implementation; there is no renderer selector or registry
 **Files archive compatibility**
 
 - Files archive versions and compatibility are maintained separately from the
-  host. Files `0.8.3` declares `terminal.insertPath.v1`, minimum host `>=0.26.0`,
-  and API `0.1.x`; both ARM64 catalogs offer `0.8.3`. Production admission and the
-  catalog refuse lower hosts.
+  host. Files `0.9.0` declares `terminal.insertPath.v1`, minimum host `>=0.26.0`,
+  and API `0.1.x`. It reads POSIX and Windows drive paths (`C:\...`) alike and
+  needs the host's move and trash services; hosts without them (Windows and
+  Linux x64 before 0.28.0) refuse rename, move and Windows trash as unsupported.
+  Production admission and the catalog refuse hosts below `0.26.0`.
 - Published archives are immutable; older Files releases keep their own host
   ranges and labels. Each catalog offers one release per extension ID, so hosts
   below an entry's range keep local or link installation of an older archive
