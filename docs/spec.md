@@ -2627,7 +2627,8 @@ implementation; there is no renderer selector or registry
   host. Files `0.9.0` declares `terminal.insertPath.v1`, minimum host `>=0.26.0`,
   and API `0.1.x`. It reads POSIX and Windows drive paths (`C:\...`) alike and
   needs the host's move and trash services; hosts without them (Windows and
-  Linux x64 before 0.28.0) refuse rename, move and Windows trash as unsupported.
+  Linux x64 before 0.28.0) refuse rename and move as unsupported, and Windows
+  trash fails with an unknown outcome; nothing is deleted.
   Production admission and the catalog refuse hosts below `0.26.0`.
 - Published archives are immutable; older Files releases keep their own host
   ranges and labels. Each catalog offers one release per extension ID, so hosts

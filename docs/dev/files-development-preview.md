@@ -282,12 +282,13 @@ The AppImage is extracted, not modified.
 
 - Files 0.9.0 browses POSIX and Windows drive paths. Rename, move and Windows
   trash need the host's native Files services, which every target has from
-  OMXTerm 0.28.0; older Windows and Linux x64 hosts report them as unsupported.
+  OMXTerm 0.28.0. On older Windows and Linux x64 hosts rename and move report
+  unsupported, and Windows trash fails with an unknown outcome.
   UNC and other non-drive Windows paths aren't supported.
 - Files 0.9.0 passed the packaged smoke (list, insert, rename, trash) on the
   published 0.27.0 Linux and macOS ARM64 hosts and on a 0.28.0-dev Windows ARM64
-  build. On 0.27.0 Windows ARM64 it lists and inserts, but rename and trash
-  report unsupported. Linux x64 and Windows x64 are build-only: hosted CI runs
+  build. On 0.27.0 Windows ARM64 it lists and inserts, but rename reports
+  unsupported. Linux x64 and Windows x64 are build-only: hosted CI runs
   the native move and Recycle Bin tests, never a desktop. Native drag onto the
   terminal is covered by headless tests only.
 - Native checks used synthetic Chromium input and controlled consent. They don't
