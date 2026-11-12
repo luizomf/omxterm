@@ -36,9 +36,14 @@ others follow.
 
 ## Stop
 
-Click the **↔** on any mirrored pane. From the keyboard, open the Command
-Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux and Windows) and press
-`Esc` to close it again. The marks go away. Mirroring also stops on its own
+Click the **↔** on any mirrored pane, or press `Cmd+Shift+M` on macOS
+(`Ctrl+Shift+M` on Linux and Windows). Opening the Command Palette also stops
+it. The marks go away. Hover a mark to see your current shortcut; change it in
+**Settings → Shortcuts** (**Toggle Mirror Typing**).
+
+The shortcut only touches the window you're in: mirroring in another window
+keeps going. Press it again when nothing is mirrored and Mirror Typing opens
+for the tab you're in. Mirroring also stops on its own
 when you:
 
 - paste, insert a snippet or drop a file: the text goes only to the pane you're

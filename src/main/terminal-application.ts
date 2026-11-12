@@ -110,6 +110,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     context: TerminalExportContext,
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
+  readonly toggleMirrorTyping?: (window: Window) => void;
   readonly sendFind: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
   readonly sendAuxiliaryPanelToggle: (window: Window) => void;
@@ -157,6 +158,7 @@ export interface TerminalApplication<
   exportPane(window: Window, context: TerminalExportContext): void;
   findInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
+  toggleSelectedMirrorTyping(): void;
   toggleSelectedTabBar(): void;
   toggleSelectedAuxiliaryPanel(): void;
   moveSelectedAuxiliaryPanel(): void;
@@ -422,6 +424,9 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     ),
     toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
     toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
+    toggleSelectedMirrorTyping: selectedWindowAction((window) =>
+      options.toggleMirrorTyping?.(window),
+    ),
     openLocalImageInSelectedWindow: selectedWindowAction(
       options.sendLocalImageOpen,
     ),

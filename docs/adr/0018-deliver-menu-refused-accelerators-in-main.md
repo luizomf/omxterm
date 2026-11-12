@@ -112,6 +112,11 @@ allowing repeated close/reopen or terminal input. Shortcut recording retains
 priority; unrelated repeatable actions are unchanged. Native qualification must
 exercise this route, not infer it from Escape or semantic Enter evidence.
 
+`toggleMirrorTyping` is a core action, not a slot: it keeps its own entry beside
+Mirror Typing's, defaults to `CommandOrControl+Shift+M` (`Control+Shift+M` on
+Linux/Windows), follows the same availability and collision rules, and also
+invokes once per physical press.
+
 ## Maintenance boundary
 
 Matcher and duplicate-detection tests cover effective native identity, logical

@@ -56,8 +56,9 @@ guide describes the published targets and bounded macOS evidence.
 [ADR0042: Save layouts without restoring sessions](0042-save-layouts-without-restoring-sessions.md)
 adds explicit optional Saved Layout capture/open and extension-scoped CAS state.
 [ADR0043: Revoke visible Mirror Typing routes](0043-revoke-visible-mirror-typing-routes.md)
-adds the optional fixed same-tab keyboard route with core-owned Stop; ADR 0050
-replaces its status row with State Marks.
+adds the optional fixed same-tab keyboard route with core-owned Stop, including
+a focused-window-only Toggle Mirror Typing shortcut; ADR 0050 replaces its
+status row with State Marks.
 
 [ADR0044: Migrate Snippets without changing terminal input](0044-migrate-snippets-without-changing-terminal-input.md)
 records the accepted optional-extension migration design and platform cutover

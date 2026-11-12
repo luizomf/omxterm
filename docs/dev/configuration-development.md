@@ -115,6 +115,11 @@ read.
   consume the key, but the binding still counts for conflicts. A held key acts
   once: it closes a selected visible tool, reveals a hidden or unselected one and
   opens a closed one.
+- `toggleMirrorTyping` defaults to `Cmd+Shift+M` (`Ctrl+Shift+M` on Linux and
+  Windows). Like the tool slots, it consumes its key only while Mirror Typing is
+  installed and enabled, still counts for conflicts and acts once per press. It
+  stops the focused window's running or preparing group, or opens setup when
+  there is none; other windows' groups are never touched.
 - `toggleAuxiliaryPanel` hides and reveals without closing tools. With no tools
   open it lazily opens installed, enabled Snippets (built in on Windows x64). If
   Snippets is unavailable, it shows one four-second notice per process; it never

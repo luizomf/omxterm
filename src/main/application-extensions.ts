@@ -27,6 +27,7 @@ import { applicationViews } from "./application-extension-views";
 import {
   companionToolShortcut,
   extensionPresentation,
+  MIRROR_TYPING_ACTION,
 } from "./extension-presentation";
 import { MirrorSetupError } from "./mirror-typing-ipc";
 import { startExtensionViewHost } from "./extension-view-ipc";
@@ -238,6 +239,24 @@ function supportsExtensionPreview() {
       ["arm64", "x64"].includes(process.arch)) ||
     (process.platform === "darwin" && process.arch === "arm64")
   );
+}
+
+// Acts only on this window: a running or preparing group stops; otherwise
+// Mirror Typing opens for the selected tab, as its own entry would.
+export function toggleMirrorTyping(
+  window: BrowserWindow,
+  mirrorTyping: Pick<
+    NonNullable<ApplicationExtensionsOptions["mirrorTyping"]>,
+    "toggleStop"
+  >,
+  actions: () => readonly CoreAction[],
+) {
+  if (BrowserWindow.getFocusedWindow() !== window) return;
+  if (mirrorTyping.toggleStop(window)) return;
+  // Without a target, the action captures the focused window's selected tab.
+  actions()
+    .find((entry) => entry.id === MIRROR_TYPING_ACTION)
+    ?.invoke();
 }
 
 // Startup creates infrastructure, never activates installed code. Unsupported

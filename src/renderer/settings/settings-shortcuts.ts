@@ -47,6 +47,7 @@ const MENU_KEYS: Readonly<
   toggleSnippets: "menu.toggleSnippets",
   toggleFiles: "menu.toggleFiles",
   toggleSshConnect: "menu.toggleSshConnect",
+  toggleMirrorTyping: "menu.toggleMirrorTyping",
   toggleTabBar: "menu.toggleTabBar",
   toggleAuxiliaryPanel: "menu.toggleAuxiliaryPanel",
   moveAuxiliaryPanel: "menu.moveAuxiliaryPanel",

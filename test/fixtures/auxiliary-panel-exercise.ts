@@ -107,6 +107,7 @@ function createScenario(options: PanelOptions) {
       application.clipboardSelectedWindow("select-all"),
     findInSelectedTerminal: unexpected,
     toggleSelectedSnippets: () => application.toggleSelectedSnippets(),
+    toggleSelectedMirrorTyping: () => application.toggleSelectedMirrorTyping(),
     toggleSelectedTabBar: () => application.toggleSelectedTabBar(),
     toggleSelectedAuxiliaryPanel: () =>
       application.toggleSelectedAuxiliaryPanel(),

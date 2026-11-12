@@ -29,7 +29,10 @@ import { startCommandPalette } from "./command-palette";
 import { terminalMenuActions } from "./terminal-menu-actions";
 import { extensionInvocationTarget } from "./extension-invocation-target";
 import { usesOptionalSnippets } from "../shared/snippets-mode";
-import { startApplicationExtensions } from "./application-extensions";
+import {
+  startApplicationExtensions,
+  toggleMirrorTyping,
+} from "./application-extensions";
 import { requestExternalLink } from "./terminal-ipc-boundaries";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
 import { registerSemanticInputIpc } from "./semantic-input-ipc";
@@ -39,6 +42,7 @@ import {
 } from "./application-layout";
 import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
+import { displayAccelerator } from "../shared/terminal-keybinds";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import {
   saveTerminalExport,
@@ -268,10 +272,17 @@ app
           home: account.homedir,
           application: () => terminalApplication,
         });
+        let actionCatalog: CoreActionCatalog;
         mirrors = registerMirrorTypingIpc({
           ipc: ipcMain,
           trusted: terminalIpcRouter.isTrustedSender,
           quitting: () => terminalApplication?.isQuitting() === true,
+          shortcut: () => {
+            const binding = actionCatalog.toggleMirrorTyping.accelerator;
+            return binding
+              ? displayAccelerator(binding, process.platform)
+              : undefined;
+          },
         });
         semanticInput = registerSemanticInputIpc({
           ipc: ipcMain,
@@ -279,7 +290,6 @@ app
           quitting: () => terminalApplication?.isQuitting() === true,
         });
         let rebuildMenu = () => {};
-        let actionCatalog: CoreActionCatalog;
         extensions = await startApplicationExtensions({
           ...(provisioning.seed ? { defaultSnippets: provisioning.seed } : {}),
           onDefaultSnippetsWarning(warning) {
@@ -613,6 +623,12 @@ app
               extensions?.toggleSnippets(window);
             else notifyWindow(terminalIpc.snippetsToggle)(window);
           },
+          toggleMirrorTyping: (window) =>
+            toggleMirrorTyping(
+              window,
+              mirrors,
+              () => extensions?.actions() ?? [],
+            ),
           sendLocalImageOpen: notifyWindow(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
           sendTabCommand: (window, command) =>

@@ -36,6 +36,7 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.toggleSnippets": "Alternar Snippets",
   "menu.toggleFiles": "Alternar Files",
   "menu.toggleSshConnect": "Alternar SSH Connect",
+  "menu.toggleMirrorTyping": "Alternar espelhamento da digitação",
   "menu.toggleTabBar": "Alternar Barra de Abas",
   "menu.toggleAuxiliaryPanel": "Alternar Painel Auxiliar",
   "menu.moveAuxiliaryPanel": "Mover Painel Auxiliar para o Outro Lado",
@@ -311,6 +312,7 @@ export const brazilianPortugueseMessages: Readonly<
   "mirrorTyping.source": "Espelhando a digitação deste painel.",
   "mirrorTyping.member": "Espelhando a digitação para este painel.",
   "mirrorTyping.clickToStop": "Clique para parar.",
+  "mirrorTyping.pressToStop": "Clique ou pressione {shortcut} para parar.",
   "mirrorTyping.semantic": "Espelhamento parado: isto foi só para um painel.",
   "mirrorTyping.failed":
     "Espelhamento parado, e alguns painéis podem não ter recebido o que você digitou.",

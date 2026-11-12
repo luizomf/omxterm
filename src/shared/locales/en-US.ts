@@ -33,6 +33,7 @@ export const englishMessages = {
   "menu.toggleSnippets": "Toggle Snippets",
   "menu.toggleFiles": "Toggle Files",
   "menu.toggleSshConnect": "Toggle SSH Connect",
+  "menu.toggleMirrorTyping": "Toggle Mirror Typing",
   "menu.toggleTabBar": "Toggle Tab Bar",
   "menu.toggleAuxiliaryPanel": "Toggle Auxiliary Panel",
   "menu.moveAuxiliaryPanel": "Move Auxiliary Panel to Other Side",
@@ -298,6 +299,7 @@ export const englishMessages = {
   "mirrorTyping.source": "Mirroring typing from this pane.",
   "mirrorTyping.member": "Mirroring typing to this pane.",
   "mirrorTyping.clickToStop": "Click to stop.",
+  "mirrorTyping.pressToStop": "Click or press {shortcut} to stop.",
   "mirrorTyping.semantic": "Mirroring stopped, so this went to one pane only.",
   "mirrorTyping.failed":
     "Mirroring stopped, and some panes may have missed what you typed.",

@@ -45,15 +45,19 @@ Surface-owned and single-target; a late local approval cannot arm a group.
 Core marks the source and members with State Marks
 ([ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md)) whose names
 tell them apart; clicking a mark stops the group. Stop stays keyboard-reachable
-independent of hidden title/tab chrome or extension responsiveness: opening the
-Command Palette is a modal entry, which revokes the group. Preparing is input-inert and cancellable before
+independent of hidden title/tab chrome or extension responsiveness: the core
+`toggleMirrorTyping` action (a rebindable shortcut, menu and palette entry)
+stops a running or preparing group in the focused window only, never another
+window's, and opens setup when there is none; opening the Command Palette is a
+modal entry, which also revokes the group. Preparing is input-inert and cancellable before
 the first asynchronous package admission. Only then may the acknowledged native hide handoff begin; Start
 revalidates original focus/context before arming. Keyboard focus can return to
 the core document shortly after the hide, so Start waits for it, bounded by the
 prepare timer, and a blur in between still cancels. Leave-and-return navigation
 invalidates the attempt rather than merely checking its final selected page. Start
 activation keys, repeats and releases must not leak to terminals. Escape remains
-terminal input, not a new global Stop shortcut.
+terminal input; the toggle is an ordinary configurable window action, not a
+system-wide shortcut.
 
 ## Lifetime and process boundaries
 

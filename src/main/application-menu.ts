@@ -16,6 +16,7 @@ import {
   type CoreActionId,
   type TerminalApplicationMenuActions,
 } from "./action-catalog";
+import { MIRROR_TYPING_ACTION } from "./extension-presentation";
 
 // Compatibility entry point. Production can construct a catalog once and pass
 // that snapshot to coreActionMenuTemplate, palette and key-delivery helpers.
@@ -77,11 +78,16 @@ export function coreActionMenuTemplate(
         item("openLocalImage"),
         ...Object.values(catalog)
           .filter((action) => action.extension)
-          .map((action) => ({
-            label: action.label,
-            ...accelerator(action.accelerator),
-            click: action.invoke,
-          })),
+          .flatMap((action) => [
+            {
+              label: action.label,
+              ...accelerator(action.accelerator),
+              click: action.invoke,
+            },
+            ...(action.id === MIRROR_TYPING_ACTION
+              ? [item("toggleMirrorTyping")]
+              : []),
+          ]),
         { type: "separator" },
         item("closeTab"),
         item("closeWindow"),

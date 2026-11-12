@@ -19,8 +19,14 @@ import {
   createIpcHarness,
 } from "../fixtures/terminal-ipc-harness";
 
-function fixture() {
-  const ipc = createIpcHarness();
+type Shared = {
+  ipc: ReturnType<typeof createIpcHarness>;
+  router: ReturnType<typeof registerTerminalIpcRouter>;
+  service: ReturnType<typeof registerMirrorTypingIpc>;
+};
+// A second window passes the first one's main-process services.
+function fixture(shared?: Shared) {
+  const ipc = shared?.ipc ?? createIpcHarness();
   const frame = {};
   const panes: MirrorPane[] = [1, 2, 3].map((ordinal) => ({
     handle: randomUUID(),
@@ -44,12 +50,15 @@ function fixture() {
     isFocused: () => focused,
   });
   const window = native as unknown as BrowserWindow;
-  const router = registerTerminalIpcRouter(ipc.ipcMain);
-  const service = registerMirrorTypingIpc({
-    ipc: ipc.ipcMain,
-    trusted: router.isTrustedSender,
-    quitting: () => false,
-  });
+  const router = shared?.router ?? registerTerminalIpcRouter(ipc.ipcMain);
+  const service =
+    shared?.service ??
+    registerMirrorTypingIpc({
+      ipc: ipc.ipcMain,
+      trusted: router.isTrustedSender,
+      quitting: () => false,
+      shortcut: () => "Ctrl+Shift+M",
+    });
   const writes = [vi.fn(), vi.fn(), vi.fn()];
   let index = 0;
   const controller = router.registerController({
@@ -88,6 +97,7 @@ function fixture() {
   let holdPrepare = false;
   let prepared: string | undefined;
   let lease: string | undefined;
+  let shortcut: string | undefined;
   send.mockImplementation((channel, value) => {
     if (channel !== mirrorTypingIpc.command) return;
     const command = value as MirrorCommand;
@@ -103,6 +113,7 @@ function fixture() {
     }
     if (command.kind === "activate") {
       lease = command.lease;
+      shortcut = command.shortcut;
       reply(command.request);
     }
   });
@@ -126,6 +137,7 @@ function fixture() {
     );
   return {
     ipc,
+    router,
     event,
     service,
     window,
@@ -144,6 +156,7 @@ function fixture() {
     },
     prepared: () => prepared!,
     lease: () => lease!,
+    shortcut: () => shortcut,
     key(sequence = 1, sender = event) {
       ipc.listeners.get(mirrorTypingIpc.input)!(sender, {
         lease,
@@ -370,4 +383,57 @@ it("invalidates original selection during activation and rejects stale refresh t
   ).toMatchObject({ ok: false });
   expect(f.lease()).toBeUndefined();
   f.dispose();
+});
+
+it("toggles off only a running or preparing group, and names the binding to the marks", async () => {
+  const f = fixture();
+  expect(f.service.toggleStop(f.window)).toBe(false);
+  const { context, start } = await setup(f);
+  // An open setup is not a group: the toggle reopens setup instead.
+  expect(f.service.toggleStop(f.window)).toBe(false);
+  await f.request(context, start);
+  expect(f.shortcut()).toBe("Ctrl+Shift+M");
+  f.key();
+  expect(f.writes[0]).toHaveBeenCalledTimes(1);
+  expect(f.service.toggleStop(f.window)).toBe(true);
+  f.key(2);
+  expect(f.writes[0]).toHaveBeenCalledTimes(1);
+  expect(f.service.toggleStop(f.window)).toBe(false);
+  const fresh = (await f.request(context, { action: "describe" })) as {
+    setupToken: string;
+  };
+  f.hold();
+  const starting = f.request(context, {
+    ...start,
+    setupToken: fresh.setupToken,
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(f.service.toggleStop(f.window)).toBe(true);
+  f.reply(f.prepared());
+  expect(await starting).toMatchObject({ ok: false });
+  f.dispose();
+});
+
+it("toggling in one window never stops another window's group", async () => {
+  const a = fixture();
+  const b = fixture({ ipc: a.ipc, router: a.router, service: a.service });
+  const groupA = await setup(a);
+  await a.request(groupA.context, groupA.start);
+  a.blur();
+  // B is focused and has no group: the toggle does nothing to A.
+  expect(a.service.toggleStop(b.window)).toBe(false);
+  const groupB = await setup(b);
+  await b.request(groupB.context, groupB.start);
+  expect(a.service.toggleStop(b.window)).toBe(true);
+  b.key();
+  expect(b.writes[0]).not.toHaveBeenCalled();
+  a.focus();
+  a.key();
+  expect(a.writes.map((write) => write.mock.calls)).toEqual([
+    [["typed"]],
+    [["typed"]],
+    [],
+  ]);
+  a.dispose();
 });

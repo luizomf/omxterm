@@ -117,18 +117,19 @@ async function harness(showTabBar = false) {
       });
     await settle();
   };
-  const activate = (prepared = "prepare") =>
+  const activate = (prepared = "prepare", shortcut?: string) =>
     command({
       kind: "activate",
       context: "context",
       request: "activate",
       prepared,
       lease: "lease",
+      ...(shortcut ? { shortcut } : {}),
     });
-  const start = async () => {
+  const start = async (shortcut?: string) => {
     const result = await setup();
     await prepare(result.panes!.map((pane) => pane.handle));
-    activate();
+    activate("prepare", shortcut);
     expect(reply().ok).toBe(true);
   };
   return {
@@ -506,4 +507,18 @@ it("main stop does not echo and retired setup cannot describe again", async () =
   h.command({ kind: "retire", context: "context" });
   h.command({ kind: "describe", context: "context", request: "retired" });
   expect(h.reply().ok).toBe(false);
+});
+
+it("names the toggle's binding in each mark's tooltip and accessible name", async () => {
+  const h = await harness();
+  await h.start("Ctrl+Shift+M");
+  const mark = document.querySelectorAll<HTMLElement>(".ui-mark")[1]!;
+  expect(mark.getAttribute("aria-label")).toBe(
+    "Mirroring typing from this pane. Click or press Ctrl+Shift+M to stop.",
+  );
+  expect(mark.dataset.tip).toBe(mark.getAttribute("aria-label"));
+  h.language.set("pt-BR");
+  expect(paneMarks()[1]).toContain(
+    "Clique ou pressione Ctrl+Shift+M para parar.",
+  );
 });

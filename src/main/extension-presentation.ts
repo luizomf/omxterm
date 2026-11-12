@@ -2,6 +2,9 @@ import type { CompanionToolAction } from "../shared/terminal-keybinds";
 import type { HostedPresentationKind } from "../shared/extension-view";
 import type { PackageManifest } from "../installed-packages/installed-packages";
 
+// Core's Mirror Typing toggle reuses this official open action.
+export const MIRROR_TYPING_ACTION = "omxterm.mirror-typing.open";
+
 export function companionToolShortcut(
   manifest: Pick<PackageManifest, "id" | "view">,
 ): CompanionToolAction | undefined {

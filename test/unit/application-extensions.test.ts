@@ -44,7 +44,10 @@ type Host = {
   claimActivation: ReturnType<typeof vi.fn>;
   retire: ReturnType<typeof vi.fn<() => Promise<{ status: "settled" }>>>;
 };
-import { startApplicationExtensions } from "../../src/main/application-extensions";
+import {
+  startApplicationExtensions,
+  toggleMirrorTyping,
+} from "../../src/main/application-extensions";
 import * as extensionManager from "../../src/main/extension-manager";
 import type { ExtensionRuntime } from "../../src/extension-runtime/runtime";
 import { createTerminalContextMenuTarget } from "../../src/main/terminal-context-menu";
@@ -2246,4 +2249,30 @@ it("actions capture separate contexts; disable revokes both views and callbacks"
       { id: "hosted-view", isCurrentVisible: () => true },
     ),
   ).rejects.toThrow("unavailable");
+});
+
+it("toggles Mirror Typing for the focused window only: stop first, otherwise open setup", async () => {
+  const mirrors = { toggleStop: vi.fn(() => false) };
+  const toggle = () => toggleMirrorTyping(window, mirrors, service.actions);
+  adapters.sendOpen.mockImplementation(() => {});
+  // Not installed: nothing visible happens.
+  toggle();
+  expect(adapters.sendOpen).not.toHaveBeenCalled();
+  await installTool("omxterm.mirror-typing", "Mirror Typing", [
+    "terminal.mirrorTyping.v1",
+  ]);
+  toggle();
+  expect(mirrors.toggleStop).toHaveBeenCalledWith(window);
+  expect(adapters.sendOpen).toHaveBeenCalledExactlyOnceWith(
+    window.webContents,
+    expect.any(String),
+    expect.objectContaining({ action: "open-extension" }),
+  );
+  mirrors.toggleStop.mockReturnValue(true);
+  toggle();
+  expect(adapters.sendOpen).toHaveBeenCalledOnce();
+  adapters.selected = undefined;
+  toggle();
+  expect(mirrors.toggleStop).toHaveBeenCalledTimes(3);
+  expect(adapters.sendOpen).toHaveBeenCalledOnce();
 });

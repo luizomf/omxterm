@@ -39,6 +39,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleSnippets",
   "toggleFiles",
   "toggleSshConnect",
+  "toggleMirrorTyping",
   "toggleTabBar",
   "toggleAuxiliaryPanel",
   "moveAuxiliaryPanel",
@@ -56,12 +57,13 @@ export function isCompanionToolAction(
   return action === "toggleFiles" || action === "toggleSshConnect";
 }
 
-// A window preference, not a companion-tool slot. Delivery owns one physical
-// press separately from the extension-only classifier above.
+// Window actions that are not companion-tool slots. A held key must not run
+// them again (moving the panel back, or stopping and reopening Mirror Typing),
+// so delivery owns one physical press separately from the classifier above.
 export function isDiscreteWindowAction(
   action: string,
-): action is "moveAuxiliaryPanel" {
-  return action === "moveAuxiliaryPanel";
+): action is "moveAuxiliaryPanel" | "toggleMirrorTyping" {
+  return action === "moveAuxiliaryPanel" || action === "toggleMirrorTyping";
 }
 
 // null disables an action's shortcut; the action stays in the menu.
@@ -114,6 +116,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     toggleSnippets: "CommandOrControl+Shift+S",
     toggleFiles: null,
     toggleSshConnect: null,
+    toggleMirrorTyping: "CommandOrControl+Shift+M",
     toggleTabBar: "CommandOrControl+Shift+B",
     toggleAuxiliaryPanel: null,
     moveAuxiliaryPanel: "CommandOrControl+Shift+Alt+P",
@@ -163,6 +166,7 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   toggleSnippets: "Control+Shift+S",
   toggleFiles: null,
   toggleSshConnect: null,
+  toggleMirrorTyping: "Control+Shift+M",
   toggleTabBar: "Control+Shift+B",
   toggleAuxiliaryPanel: null,
   moveAuxiliaryPanel: "Control+Shift+Alt+P",

@@ -16,6 +16,7 @@ import type {
   TerminalPaneFocusTarget,
   TerminalSplitDirection,
 } from "../shared/terminal-panes";
+import { MIRROR_TYPING_ACTION } from "./extension-presentation";
 
 export interface TerminalApplicationMenuActions {
   readonly newWindow: () => void;
@@ -37,6 +38,7 @@ export interface TerminalApplicationMenuActions {
   readonly selectAllSelectedTerminal: () => void;
   readonly findInSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
+  readonly toggleSelectedMirrorTyping: () => void;
   readonly toggleSelectedTabBar: () => void;
   readonly toggleSelectedAuxiliaryPanel: () => void;
   readonly moveSelectedAuxiliaryPanel: () => void;
@@ -119,6 +121,10 @@ export function createCoreActionCatalog(
     actualSize: action(t("menu.actualSize"), actions.resetSelectedWindowZoom),
     toggleFiles: action(t("menu.toggleFiles"), () => {}, false),
     toggleSshConnect: action(t("menu.toggleSshConnect"), () => {}, false),
+    toggleMirrorTyping: action(
+      t("menu.toggleMirrorTyping"),
+      actions.toggleSelectedMirrorTyping,
+    ),
     toggleSnippets: action(
       t("menu.toggleSnippets"),
       actions.toggleSelectedSnippets,
@@ -211,6 +217,7 @@ export function createCoreActionCatalog(
         Object.freeze({ ...entry, accelerator: null }),
       ]),
   );
+  const mirrorTyping = Object.hasOwn(contributed, MIRROR_TYPING_ACTION);
   return Object.freeze({
     ...contributed,
     ...(Object.fromEntries(
@@ -219,18 +226,23 @@ export function createCoreActionCatalog(
         const installed = companion
           ? extensions.find((entry) => entry.extension && entry.shortcut === id)
           : undefined;
+        // The toggle sits beside Mirror Typing's own entry and exists only
+        // while that entry does, so a missing extension leaves the key free.
+        const absent =
+          (companion && !installed) ||
+          (id === "toggleMirrorTyping" && !mirrorTyping);
         return [
           id,
           Object.freeze({
             ...definition,
             ...(installed ?? {}),
             id,
-            accelerator:
-              companion && !installed
-                ? null
-                : Object.hasOwn(keybinds, id)
-                  ? keybinds[id as TerminalActionName]
-                  : null,
+            ...(absent ? { palette: false } : {}),
+            accelerator: absent
+              ? null
+              : Object.hasOwn(keybinds, id)
+                ? keybinds[id as TerminalActionName]
+                : null,
           }),
         ];
       }),
