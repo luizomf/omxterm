@@ -239,3 +239,75 @@ it.each([
     expect(corePaletteActions(absent)).not.toContain(absent.toggleMirrorTyping);
   },
 );
+
+it.each([
+  ["darwin", "CommandOrControl+Shift+L", { meta: true, control: false }],
+  ["linux", "Control+Shift+L", { meta: false, control: true }],
+  ["win32", "Control+Shift+L", { meta: false, control: true }],
+] as const)(
+  "gives Save layout its own entry beside the Saved Layout page on %s",
+  (platform, binding, modifiers) => {
+    const { t } = translatorFor("en-US");
+    const save = vi.fn();
+    const open = vi.fn();
+    const defaults = terminalDefaultKeybinds(platform);
+    expect(defaults.saveLayout).toBe(binding);
+    const actions = new Proxy({} as TerminalApplicationMenuActions, {
+      get: () => vi.fn(),
+    });
+    const entries = [
+      {
+        id: "omxterm.restoration.save",
+        shortcut: "saveLayout" as const,
+        extension: true,
+        label: "Save Layout",
+        accelerator: null,
+        palette: true,
+        invoke: save,
+      },
+      {
+        id: "omxterm.restoration.open",
+        extension: true,
+        label: "Saved Layout",
+        accelerator: null,
+        palette: true,
+        invoke: open,
+      },
+    ];
+    const catalog = createCoreActionCatalog(
+      "OMXTerm",
+      actions,
+      defaults,
+      t,
+      entries,
+    );
+    expect(catalog.saveLayout).toMatchObject({
+      label: "Save Layout",
+      invoke: save,
+      accelerator: binding,
+    });
+    // The page keeps its own entry, without a shortcut.
+    expect(catalog["omxterm.restoration.open"]).toMatchObject({
+      invoke: open,
+      accelerator: null,
+    });
+    const palette = corePaletteActions(catalog);
+    expect(palette).toContain(catalog.saveLayout);
+    expect(palette).toContain(catalog["omxterm.restoration.open"]);
+    expect(
+      flatten(coreActionMenuTemplate("OMXTerm", catalog, t))
+        .filter((item) => item.click === save || item.click === open)
+        .map((item) => item.label),
+    ).toEqual(["Saved Layout", "Save Layout"]);
+    expect(
+      coreActionForKeyboardInput(
+        catalog,
+        { key: "L", alt: false, shift: true, ...modifiers },
+        platform,
+      ),
+    ).toBe(catalog.saveLayout);
+    const absent = createCoreActionCatalog("OMXTerm", actions, defaults, t);
+    expect(absent.saveLayout.accelerator).toBeNull();
+    expect(corePaletteActions(absent)).not.toContain(absent.saveLayout);
+  },
+);

@@ -40,6 +40,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleFiles",
   "toggleSshConnect",
   "toggleMirrorTyping",
+  "saveLayout",
   "toggleTabBar",
   "toggleAuxiliaryPanel",
   "moveAuxiliaryPanel",
@@ -57,15 +58,20 @@ export function isCompanionToolAction(
   return action === "toggleFiles" || action === "toggleSshConnect";
 }
 
-// Core shortcut slots an official extension's own entry fills: the companion
-// tools above, and Mirror Typing, whose entry toggles its group.
+// Core shortcut slots an official extension's entry fills: the companion
+// tools above, Mirror Typing, whose entry toggles its group, and Saved
+// Layout's Save layout, which saves the window without opening its page.
 export type ExtensionShortcutAction =
-  CompanionToolAction | "toggleMirrorTyping";
+  CompanionToolAction | "toggleMirrorTyping" | "saveLayout";
 
 export function isExtensionShortcutAction(
   action: string,
 ): action is ExtensionShortcutAction {
-  return isCompanionToolAction(action) || action === "toggleMirrorTyping";
+  return (
+    isCompanionToolAction(action) ||
+    action === "toggleMirrorTyping" ||
+    action === "saveLayout"
+  );
 }
 
 // A window preference, not an extension slot. Delivery owns one physical
@@ -127,6 +133,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     toggleFiles: null,
     toggleSshConnect: null,
     toggleMirrorTyping: "CommandOrControl+Shift+M",
+    saveLayout: "CommandOrControl+Shift+L",
     toggleTabBar: "CommandOrControl+Shift+B",
     toggleAuxiliaryPanel: null,
     moveAuxiliaryPanel: "CommandOrControl+Shift+Alt+P",
@@ -177,6 +184,7 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   toggleFiles: null,
   toggleSshConnect: null,
   toggleMirrorTyping: "Control+Shift+M",
+  saveLayout: "Control+Shift+L",
   toggleTabBar: "Control+Shift+B",
   toggleAuxiliaryPanel: null,
   moveAuxiliaryPanel: "Control+Shift+Alt+P",

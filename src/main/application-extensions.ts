@@ -29,6 +29,7 @@ import {
   extensionPresentation,
 } from "./extension-presentation";
 import { MirrorSetupError } from "./mirror-typing-ipc";
+import { saveLayoutEntry } from "./save-layout";
 import { startExtensionViewHost } from "./extension-view-ipc";
 import {
   extensionsIpc,
@@ -394,6 +395,7 @@ export async function startApplicationExtensions(
   );
   const capture = (window: BrowserWindow | undefined, sessionId?: string) =>
     window ? windows.get(window)?.(sessionId) : undefined;
+  const saving = { options, manager, capture, stopping: () => stopping };
   function actions(
     target?: ExtensionTarget,
     claim?: () => boolean,
@@ -413,6 +415,7 @@ export async function startApplicationExtensions(
         digest: entry.digest!,
       });
       return [
+        ...(target ? [] : saveLayoutEntry(entry, saving)),
         {
           id: view.action,
           label: view.title,

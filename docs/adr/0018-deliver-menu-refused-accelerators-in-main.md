@@ -118,6 +118,12 @@ and once-per-press rules, and defaults to `CommandOrControl+Shift+M`
 (`Control+Shift+M` on Linux/Windows). Its entry toggles the window's group
 ([ADR 0043](0043-revoke-visible-mirror-typing-routes.md)).
 
+Saved Layout gets a fourth slot, `saveLayout`, on the same terms, defaulting to
+`CommandOrControl+Shift+L` (`Control+Shift+L` on Linux/Windows). Unlike the
+others it doesn't take over the extension's entry: core adds a second entry,
+**Save Layout**, beside the page's, and leaves it out of the context menu
+([ADR 0042](0042-save-layouts-without-restoring-sessions.md)).
+
 ## Maintenance boundary
 
 Matcher and duplicate-detection tests cover effective native identity, logical

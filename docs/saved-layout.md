@@ -39,6 +39,11 @@ also deletes the remembered windows.
 2. Open **Saved Layout** from the **File** menu or the Command Palette.
 3. Choose **Save this window**.
 
+Or skip the page: choose **Save Layout** from the **File** menu or the Command
+Palette, or press `Cmd+Shift+L` (`Ctrl+Shift+L` on Linux and Windows). It saves
+the window you're in and says "Layout saved." for a moment. Change the shortcut
+in **Settings → Shortcuts**.
+
 Later, open **Saved Layout** again and choose **Open in a new window**. The new
 window gets the same tabs, splits, focused pane and folders, each with a new
 shell. Your current windows stay as they are.

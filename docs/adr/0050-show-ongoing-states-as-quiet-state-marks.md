@@ -19,7 +19,9 @@ color, the window stops being a clean terminal.
 Core owns one system, `src/renderer/state-marks.ts`, and every feature reports
 its state through it. Each state takes the quietest form that works:
 
-1. Idle or success: nothing.
+1. Idle or success: nothing. One exception: an explicit action with no other
+   visible result (Save layout) confirms itself with tier 3's transient
+   sentence ("Layout saved."), since otherwise the user can't tell it ran.
 2. Something ongoing: a **State Mark**, one glyph, no chip or background,
    inset from the pane's top and right edges by the terminal padding and
    centered on the first text row, in the secondary color at about the
@@ -64,7 +66,9 @@ a semantic-input stop flashes, and a failed write leaves a notice.
 Preparing is brief and input-inert, so it shows nothing.
 
 Saved Layout shows nothing while panes open or when they all opened, including
-folder fallbacks. When some panes couldn't open, it leaves one notice. Panes
+folder fallbacks. When some panes couldn't open, it leaves one notice. Save
+layout flashes "Layout saved." and leaves a notice when it couldn't save or
+couldn't confirm the save; the next save clears that notice. Panes
 the user closed meanwhile and shells that exit cleanly aren't failures.
 
 ## Tradeoffs

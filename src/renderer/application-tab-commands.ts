@@ -60,7 +60,10 @@ export function createApplicationTabCommands<Tab>(
       .catch(() => {});
   };
   return {
-    handle(command: TerminalTabCommand) {
+    // Save layout's result is the window's notice, handled by its owner.
+    handle(
+      command: Exclude<TerminalTabCommand, { action: "layout-save-result" }>,
+    ) {
       if (!options.available()) {
         if (command.action === "open-ssh") options.refuseSsh?.(command.token);
         return;

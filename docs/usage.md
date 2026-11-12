@@ -53,6 +53,7 @@ The application menu displays active shortcuts, including custom bindings.
 | Toggle Tab Bar / Title Bar | `Cmd+Shift+B` / `Cmd+Shift+D` | `Ctrl+Shift+B` / `Ctrl+Shift+D` |
 | Toggle Snippets            | `Cmd+Shift+S`                 | `Ctrl+Shift+S`                  |
 | Mirror Typing (add-on)     | `Cmd+Shift+M`                 | `Ctrl+Shift+M`                  |
+| Save Layout (add-on)       | `Cmd+Shift+L`                 | `Ctrl+Shift+L`                  |
 | Reload Configuration       | `Cmd+Shift+,`                 | `Ctrl+Shift+,`                  |
 
 If `+` shares a key with `=`, press Shift as well. On Linux and Windows, press and release **Alt** to open the application menu; on macOS use the system menu bar. Customize shortcuts in [Settings](configuration.md#keybinds).

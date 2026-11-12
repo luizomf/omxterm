@@ -54,6 +54,8 @@ import { subscribeNativeSemanticInput } from "../../src/renderer/native-semantic
 import { createSemanticInputBridge } from "../../src/preload/semantic-input-bridge";
 import { semanticInputIpc } from "../../src/shared/semantic-input";
 import { createIpcHarness } from "../fixtures/terminal-ipc-harness";
+import { savedLayout } from "../fixtures/restoration-layout";
+import type { Value } from "../../src/extension-runtime/protocol";
 const adapters = vi.hoisted(() => ({
   root: "",
   appVersion: "0.23.0-dev.5",
@@ -343,6 +345,7 @@ async function startService(
       | "onDefaultSnippetsWarning"
       | "isTrustedSender"
       | "mirrorTyping"
+      | "layout"
     >
   > = {},
   semanticOwner = true,
@@ -373,7 +376,7 @@ async function startService(
             },
           }
         : {}),
-      layout: {
+      layout: provisioning.layout ?? {
         capture: vi.fn(() => Promise.reject(new Error("unavailable"))),
         open: vi.fn(async () => ({ ok: false, error: "unavailable" })),
       },
@@ -2280,4 +2283,99 @@ it("makes Mirror Typing's entry a toggle for its own window: stop, else open or 
   entry.invoke();
   expect(toggleStop).toHaveBeenCalledTimes(2);
   expect(adapters.sendOpen).toHaveBeenCalledOnce();
+});
+
+it("saves the focused window through Saved Layout's backend without opening its page", async () => {
+  const layout = savedLayout();
+  const capture = vi.fn(async () => layout);
+  await service.dispose();
+  await startService("linux", {
+    layout: {
+      capture,
+      open: vi.fn(async () => ({ ok: false, error: "unavailable" })),
+    },
+  });
+  const calls: unknown[] = [];
+  adapters.activate.mockImplementation(async () => {
+    const backend = await applicationBackend(
+      adapters.root,
+      adapters.backendLifetime.signal,
+    );
+    backend.call = vi.fn(async (value) => {
+      calls.push(value);
+      return (value as { operation: string }).operation === "read"
+        ? { ok: true, revision: "absent", status: "empty", value: null }
+        : {
+            ok: true,
+            revision: "00000000-0000-4000-8000-000000000001",
+            status: "saved",
+            value: layout as unknown as Value,
+          };
+    });
+    return backend;
+  });
+  adapters.sendOpen.mockImplementation(() => {});
+  await installTool("omxterm.restoration", "Saved Layout", [
+    "terminal.captureLayout.v1",
+    "state.v1",
+  ]);
+  const actions = service.actions();
+  expect(actions.map(({ id, shortcut }) => ({ id, shortcut }))).toEqual([
+    { id: "omxterm.restoration.save", shortcut: "saveLayout" },
+    { id: "omxterm.restoration.open", shortcut: undefined },
+  ]);
+  expect(actions[0]!.label).toBe("Save Layout");
+  // The right-click menu keeps only the page.
+  expect(
+    service.contextMenu(window, "s1", () => true).map(({ label }) => label),
+  ).toEqual(["Saved Layout"]);
+  actions[0]!.invoke();
+  actions[0]!.invoke(); // A second press while saving does nothing.
+  await vi.waitFor(() =>
+    expect(adapters.sendOpen).toHaveBeenCalledExactlyOnceWith(
+      window.webContents,
+      expect.any(String),
+      { action: "layout-save-result", outcome: "saved" },
+    ),
+  );
+  expect(capture).toHaveBeenCalledExactlyOnceWith(window, expect.anything());
+  expect(calls).toEqual([
+    { operation: "read" },
+    { operation: "replace", expectedRevision: "absent", value: layout },
+  ]);
+  expect(adapters.hosts).toHaveLength(0);
+});
+
+it("revokes a held Save layout entry when Saved Layout is disabled", async () => {
+  const capture = vi.fn(async () => savedLayout());
+  await service.dispose();
+  await startService("linux", {
+    layout: {
+      capture,
+      open: vi.fn(async () => ({ ok: false, error: "unavailable" })),
+    },
+  });
+  adapters.sendOpen.mockImplementation(() => {});
+  await installTool("omxterm.restoration", "Saved Layout", [
+    "terminal.captureLayout.v1",
+    "state.v1",
+  ]);
+  const save = service.actions()[0]!;
+  expect(
+    await request({
+      operation: "disable",
+      id: "omxterm.restoration",
+      generation: 1,
+    }),
+  ).toMatchObject({ ok: true });
+  expect(service.actions()).toEqual([]);
+  save.invoke();
+  await vi.waitFor(() =>
+    expect(adapters.sendOpen).toHaveBeenCalledExactlyOnceWith(
+      window.webContents,
+      expect.any(String),
+      { action: "layout-save-result", outcome: "failed" },
+    ),
+  );
+  expect(adapters.activate).not.toHaveBeenCalled();
 });

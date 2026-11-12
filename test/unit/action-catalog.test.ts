@@ -44,10 +44,11 @@ it("projects a namespaced extension through the same menu and palette without ad
   );
   const contributed = catalog["omxterm.files.open"]!;
   expect(contributed.accelerator).toBeNull();
-  // Without Mirror Typing installed, its slot holds no key.
+  // Without Mirror Typing or Saved Layout installed, their slots hold no key.
   expect(coreActionKeybinds(catalog)).toEqual({
     ...bindings,
     toggleMirrorTyping: null,
+    saveLayout: null,
   });
   expect(catalog.quit.label).not.toBe("Forged");
   expect(corePaletteActions(catalog)).toContain(contributed);
@@ -123,6 +124,7 @@ it.each(["en-US", "pt-BR"] as const)(
     expect(coreActionKeybinds(catalog)).toEqual({
       ...bindings,
       toggleMirrorTyping: null,
+      saveLayout: null,
     });
     for (const id of TERMINAL_ACTION_NAMES) {
       expect(invocations[id]).toBe(catalog[id].invoke);
@@ -133,7 +135,8 @@ it.each(["en-US", "pt-BR"] as const)(
       if (
         action.id === "toggleFiles" ||
         action.id === "toggleSshConnect" ||
-        action.id === "toggleMirrorTyping"
+        action.id === "toggleMirrorTyping" ||
+        action.id === "saveLayout"
       ) {
         expect(item).toBeUndefined();
         expect(action.accelerator).toBeNull();
@@ -159,6 +162,7 @@ it.each(["en-US", "pt-BR"] as const)(
         "toggleFiles",
         "toggleSshConnect",
         "toggleMirrorTyping",
+        "saveLayout",
         ...Array.from({ length: 9 }, (_, index) => `selectTab${index + 1}`),
       ].sort(),
     );

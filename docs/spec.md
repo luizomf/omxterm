@@ -512,13 +512,14 @@ One core system shows pane and window state
 ([ADR 0050](adr/0050-show-ongoing-states-as-quiet-state-marks.md)), in the
 quietest form that works:
 
-- Idle or success shows nothing.
+- Idle or success shows nothing, except that an explicit action with no other
+  visible result (Save layout) confirms itself with one transient sentence.
 - An ongoing state is a State Mark: one small glyph at the pane's top-right
   edge, in its top padding, with a tooltip and an accessible name and no
   on-screen text. With the tab strip visible, the tab shows each state's glyph
   once before its title.
-- A surprise is one transient overlay sentence that disappears after four
-  seconds.
+- A surprise, or that confirmation, is one transient overlay sentence that
+  disappears after four seconds.
 - Something that needs the user is one overlay sentence without counts that
   stays until dismissed. A newer sentence replaces the previous one, but a
   surprise never hides a notice that is still waiting.
@@ -1084,6 +1085,17 @@ back with fresh shells
 - The page shows the saved snapshot (tab and pane counts, save time) with Open,
   Save/Replace and Forget. Open is the primary action when a snapshot exists,
   otherwise Save. **Try again** appears only after a failed read.
+- **Save layout** (`saveLayout`, `Cmd+Shift+L` on macOS, `Ctrl+Shift+L` on
+  Linux and Windows) saves the focused window without opening the page: one
+  entry in the File menu and Command Palette, not the context menu, present
+  only while the extension is installed and enabled and declares
+  `terminal.captureLayout.v1` and `state.v1`. Main captures the window, then
+  asks the extension's backend to read and replace its snapshot at the revision
+  it just read, like the page's Save. Success flashes "Layout saved."; a
+  refused or failed save leaves one dismissible notice; a write whose outcome
+  is unknown says it couldn't confirm the save. Nothing is retried, one save
+  runs at a time, and disabling, updating or uninstalling the extension revokes
+  a held entry. An open page shows the new snapshot once it's shown again.
 - Saving captures only the original window's terminal tabs, weighted flat pane
   trees, focus and selection, and reported-local/launch-local/home directory
   provenance. Graphical tabs are excluded and counted. When no pane has a
@@ -1964,7 +1976,7 @@ Vocabulary:
   `moveAuxiliaryPanel`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
   `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`,
   `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`, `focusPaneDown`,
-  `equalizePanes`, `commandPalette`, `toggleMirrorTyping`. New actions, global shortcuts, chords and
+  `equalizePanes`, `commandPalette`, `toggleMirrorTyping`, `saveLayout`. New actions, global shortcuts, chords and
   per-platform maps are unsupported.
 - A value is `null` or a case-insensitive Electron accelerator with exactly one
   key and at least one non-Shift modifier. Only `F1`–`F24` may be bare or
@@ -1973,8 +1985,9 @@ Vocabulary:
   for Find and `F11` for full screen; macOS uses `Cmd+F` and `Ctrl+Cmd+F`.
   Command Palette is `CommandOrControl+Shift+P` on macOS and `Control+Shift+P`
   elsewhere; Mirror Typing is `CommandOrControl+Shift+M` on macOS and
-  `Control+Shift+M` elsewhere. An existing custom binding on either combination
-  gets the standard collision error, never a rewrite.
+  `Control+Shift+M` elsewhere; Save layout is `CommandOrControl+Shift+L` on
+  macOS and `Control+Shift+L` elsewhere. An existing custom binding on any of
+  these combinations gets the standard collision error, never a rewrite.
 - `null` removes only that shortcut: the menu item stays, and OMXTerm stops
   consuming the key (the OS or another binding may still take it). A `null`
   entry holds no shortcut and cannot collide.
@@ -1982,12 +1995,14 @@ Vocabulary:
   matcher; the menu shows the effective accelerator. PTY control sequences are
   untouched.
 
-Files, SSH Connect and Mirror Typing slots:
+Files, SSH Connect, Mirror Typing and Saved Layout slots:
 
 - `toggleFiles` and `toggleSshConnect` default to `null` everywhere;
-  `toggleMirrorTyping` has the defaults above. They reuse the installed
-  extension's action and guards and its single File-menu and palette entry.
-  Other extension contributions get no configurable shortcuts.
+  `toggleMirrorTyping` and `saveLayout` have the defaults above. The first
+  three reuse the installed extension's action and guards and its single
+  File-menu and palette entry. `saveLayout` is a second entry beside Saved
+  Layout's page entry (see [Saved Layout](#saved-layout)). Other extension
+  contributions get no configurable shortcuts.
 - A missing, disabled or unsupported tool keeps its configuration but has no
   entry or active shortcut, so its key is not consumed. Collision checks ignore
   installation state, and nothing is activated, installed or enabled to check

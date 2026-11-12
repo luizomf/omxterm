@@ -50,6 +50,15 @@ Settings and extension tabs are left out and counted. Limits are 16 tabs, 16
 panes per tab, 32 panes and 256 KiB; a larger window is refused, never
 truncated. The backend writes the document with `state.v1`.
 
+**Save layout.** The `saveLayout` slot does the same without the page.
+`src/main/save-layout.ts` adds a second entry beside the page's, captures the
+focused window through the same core capture, then calls the extension's own
+backend with `read` and `replace` at the revision it just read, through
+`ExtensionManager.backendCall` (no view; disable, update or uninstall revoke a
+held entry). It never retries. The window's renderer flashes "Layout saved." or
+leaves a notice (`src/renderer/layout-save-notice.ts`). It needs no extension
+change, so any published Saved Layout works with it.
+
 **Open.** The page sends the saved document back. Main checks it, refuses one
 saved on another OS, checks each folder (two at a time, 1.5 s each) and uses
 home for missing ones. Then it creates one new window that owns every pane from

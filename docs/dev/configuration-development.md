@@ -121,6 +121,11 @@ read.
   conflicts and acts once per press. It stops the window's running or
   preparing group, else closes a shown setup dialog, else opens setup; other
   windows' groups are never touched.
+- `saveLayout` is Saved Layout's slot and defaults to `Cmd+Shift+L`
+  (`Ctrl+Shift+L` on Linux and Windows). It is a second entry beside the
+  page's, on the same terms: it consumes its key only while Saved Layout is
+  installed and enabled, still counts for conflicts and acts once per press.
+  It saves the focused window without opening the page.
 - `toggleAuxiliaryPanel` hides and reveals without closing tools. With no tools
   open it lazily opens installed, enabled Snippets (built in on Windows x64). If
   Snippets is unavailable, it shows one four-second notice per process; it never

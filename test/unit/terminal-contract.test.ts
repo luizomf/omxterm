@@ -173,6 +173,8 @@ describe("terminal IPC payload contract", () => {
       { action: "select", position: 1 },
       { action: "select", position: 9 },
       { action: "close-session", sessionId: "s7" },
+      { action: "layout-save-result", outcome: "saved" },
+      { action: "layout-save-result", outcome: "unknown" },
     ])
       expect(isTerminalTabCommand(accepted)).toBe(true);
     for (const rejected of [
@@ -191,6 +193,9 @@ describe("terminal IPC payload contract", () => {
       { action: "close-session" },
       { action: "close-session", sessionId: "session-1" },
       { action: "new", extra: true },
+      { action: "layout-save-result" },
+      { action: "layout-save-result", outcome: "Layout saved." },
+      { action: "layout-save-result", outcome: "saved", text: "x" },
     ])
       expect(isTerminalTabCommand(rejected)).toBe(false);
   });
