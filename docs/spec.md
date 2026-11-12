@@ -691,7 +691,7 @@ Connect share it; no per-tool placement or second panel exists.
   ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md);
   [migration guide](dev/snippets-migration.md)).
 - Without an enabled installation, Toggle Snippets opens Extensions management
-  with an optional-tool explanation and the actual installation/runtime status,
+  with an optional-tool explanation and the actual installed state,
   without installing, enabling, or running code. Settings and modal owners stay
   no-op targets. A runtime failure never brings back a competing built-in view.
 - Installed Files and SSH Connect join the panel through their own actions.
@@ -2378,7 +2378,13 @@ full-area, theme-aware page with six core categories plus Extensions, sized for
 640×480 without changing native window minimums, scrolling instead of
 clipping. Core notices use theme green, red and yellow for success, error and
 warning (informational ones stay neutral) and repaint on theme changes;
-installed extension notices keep their own styling. Native control
+installed extension notices keep their own styling. The Extensions page lists
+installed extensions as quiet rows: name, version and a state only when it
+isn't the normal one (Off, Update available), with Disable or Enable and
+Uninstall. Uninstalled extensions leave the list. Official extensions load only
+on Browse, and installing from a file or an HTTPS link sits on one quiet line
+below. Errors are one short sentence; Refresh appears only after an error that
+may leave the page out of date. Native control
 color-scheme follows palette luminance. None of this guarantees accessibility
 for arbitrary custom palettes.
 
@@ -2409,8 +2415,11 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
 - Main selects the macOS ARM64 catalog for `darwin-arm64` and the general one
   for every other target, without merge or fallback. It fetches only on Browse
   or Refresh; the bounded, versioned JSON supplies plain-text release cards.
-  Cards show the selected offer's platforms and distinguish target
-  from host/API incompatibility. A failed refresh keeps a visibly stale
+  A card offers Install, or Update when its release is newer than the
+  installed version. Otherwise it says Installed, or that the offer isn't
+  available on this system or doesn't work with this OMXTerm version. Settings
+  never offers an older version, a reinstall or different bytes of the
+  installed version. A failed refresh keeps a visibly stale
   snapshot; a cold failure is unavailable, not empty. Local management works
   offline. See [extension distribution](extension-distribution.md).
 - Installs require exact archive size, SHA-256 and manifest identity, version
@@ -2420,9 +2429,12 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   not catalog targets. Host compatibility is semver plus the narrow
   development-host bridges in the
   [archive contract](dev/extension-installation-foundation.md#archive-contract).
-  Update, Reinstall and downgrade never activate code automatically. Official
-  means project-maintained, not sandboxed or signed. Settings says so in one
-  plain sentence with a link to the
+  Install and Update never activate code automatically. A catalog selection
+  that would downgrade or swap the installed bytes, such as one from a stale
+  card in another window, still gets a replacement warning in the native trust
+  prompt. Official
+  means project-maintained, not sandboxed or signed. Settings says what
+  extensions can do in one plain sentence with a link to the
   [trust notes](extension-distribution.md#trust); idle and loaded catalogs and
   successful refreshes show no notice.
 - Main registers an early spellcheck policy for owned sessions: every core and

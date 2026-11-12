@@ -150,7 +150,7 @@ extension host; see the [macOS](macos-extension-composition.md),
 `test/integration/snippets-smoke-packaged.test.ts` checks an archive on a
 packaged host, on Linux ARM64 and macOS ARM64. It launches the app with an
 isolated home that has a two-entry `snippets.yaml`, installs the archive through
-**Install local .omxext…** (one consent), opens **Toggle Snippets**, then
+**Install from file…** (one consent), opens **Toggle Snippets**, then
 Inserts one entry and Runs the other. The shell writes what it received, and the
 test checks it and that `snippets.yaml` is unchanged. It runs in seconds:
 
@@ -181,7 +181,7 @@ trust prompt:
 1. **Settings → Extensions → Browse official extensions**, then Install or
    Update on the Snippets card. Browsing is explicit; opening Settings does not
    fetch the catalog.
-2. **Settings → Extensions → Install local .omxext…** with an archive
+2. **Settings → Extensions → Install from file…** with an archive
    downloaded from the [release](https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.2).
    This works offline once downloaded. Verify it first:
 

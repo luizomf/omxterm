@@ -45,8 +45,8 @@ entries, unique IDs, strict known fields, bounded text lengths, and at most
   "Official" claim cannot authorize an installation. Refreshing invalidates old
   selections but does not change a descriptor an installation already captured.
 - Main checks the entry's `targets` and the shared host/API compatibility.
-  Cards show the offer's targets and tell target incompatibility apart from
-  host/API incompatibility. Local and link installs check host/API only, not
+  A card tells an offer for another platform apart from one that doesn't work
+  with this OMXTerm version. Local and link installs check host/API only, not
   catalog targets.
 - Host admission follows the
   [archive contract](dev/extension-installation-foundation.md#archive-contract);
@@ -66,9 +66,12 @@ stale; a cold offline failure shows the catalog as unavailable, not as an empty
 list. Catalog problems never block managing installed or local extensions, and
 reopening Settings does not hit the network.
 
-A newer compatible release offers Update. The same ID, version and digest offers
-Reinstall. An older version, or the same version with different bytes, asks for
-an explicit replacement warning, including in the native trust prompt.
+A newer compatible release offers Update. When the installed version is the same
+or newer, for example one installed from a local file, the card just says
+Installed: Settings never offers an older version or different bytes of the same
+version. If a stale selection still asks for one, the native trust prompt warns
+that it replaces the installed version. To go back to an older release on
+purpose, install its archive from a file or link.
 
 ## Trust
 

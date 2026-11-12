@@ -248,84 +248,65 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.snippetsOptional":
     "Snippets é uma extensão opcional; instale ou ative abaixo.",
   "extensions.explanation":
-    "Extensões rodam com as suas permissões de usuário e não são isoladas nem assinadas.",
+    "Extensões podem ler seus arquivos e executar programas. Instale apenas extensões confiáveis.",
   "extensions.learnMore": "Saiba mais",
-  "extensions.install": "Instalar .omxext local…",
-  "extensions.url": "Link HTTPS do arquivo",
-  "extensions.installLink": "Instalar pelo link",
-  "extensions.downloading": "Baixando e verificando o arquivo…",
-  "extensions.invalid-url": "Use um link HTTPS sem credenciais ou fragmento",
-  "extensions.download-failed":
-    "Falha no download. Verifique o link, a rede e o certificado; páginas de login não são compatíveis",
-  "extensions.download-limit":
-    "O download excede o limite de 64 MiB ou cinco redirecionamentos",
-  "extensions.download-timeout": "O download excedeu o limite de 60 segundos",
-  "extensions.cancelled": "Instalação cancelada antes da aprovação",
-  "extensions.invalid-catalog": "O catálogo é inválido ou excede seus limites",
-  "extensions.catalog-mismatch":
-    "Os bytes ou o manifesto do arquivo não correspondem à versão selecionada no catálogo",
-  "extensions.catalog-selection":
-    "A seleção do catálogo expirou; selecione a versão novamente",
-  "extensions.catalogHeading": "Extensões oficiais",
-  "extensions.catalogTrust":
-    "Oficial significa mantida pelo projeto, não isolada ou inofensiva. Extensões executam código confiado com acesso a arquivos, programas e redes. HTTPS e o hash do catálogo vinculam os bytes selecionados; não são uma assinatura independente do autor. Autores terceiros continuam responsáveis por suas extensões.",
-  "extensions.catalogBrowse": "Explorar extensões oficiais",
-  "extensions.catalogRefresh": "Atualizar catálogo",
-  "extensions.catalogRetry": "Tentar catálogo novamente",
-  "extensions.catalogLoading": "Carregando o catálogo oficial…",
-  "extensions.catalogStale":
-    "Não foi possível atualizar o catálogo. Exibindo a última consulta bem-sucedida; as versões podem estar desatualizadas.",
-  "extensions.catalogUnavailable":
-    "Catálogo indisponível. Se o gerenciamento de extensões estiver disponível, você ainda pode instalar arquivos locais e gerenciar extensões instaladas offline.",
-  "extensions.catalogManagementUnavailable":
-    "O catálogo e a instalação estão indisponíveis porque o gerenciamento de extensões está indisponível.",
-  "extensions.catalogEmpty": "O catálogo ainda não tem extensões publicadas.",
-  "extensions.catalogInstalled": "Instalada: {version}",
-  "extensions.catalogNotInstalled": "Não instalada",
-  "extensions.catalogPlatforms":
-    "Plataformas desta oferta do catálogo: {platforms}",
-  "extensions.catalogPlatformIncompatible":
-    "Não oferecida por este catálogo para esta plataforma",
-  "extensions.catalogEngineIncompatible":
-    "Incompatível com esta versão do OMXTerm ou da API de extensões",
-  "extensions.catalogInstall": "Instalar",
-  "extensions.catalogUpdate": "Atualizar",
-  "extensions.catalogReinstall": "Reinstalar",
-  "extensions.catalogReplace": "Substituir versão instalada",
-  "extensions.catalogReplaceWarning":
-    "Isso substitui a extensão instalada por uma versão anterior ou por bytes diferentes da mesma versão. Revise a versão e o resumo antes de aprovar.",
-  "extensions.refresh": "Atualizar",
+  "extensions.installedHeading": "Instaladas",
+  "extensions.empty": "Nenhuma extensão instalada.",
+  "extensions.off": "Desabilitada",
+  "extensions.updateAvailable": "Atualização disponível",
   "extensions.enable": "Habilitar",
   "extensions.disable": "Desabilitar",
   "extensions.uninstall": "Desinstalar",
-  "extensions.empty": "Nenhuma extensão local instalada.",
-  "extensions.error":
-    "{reason}. Sem repetição automática. Atualize para consultar o estado atual.",
-  "extensions.cleanupUnchecked":
-    "A limpeza dos dados retidos ainda não foi verificada. ",
-  "extensions.cleanupPending":
-    "Limpeza pendente: um pacote ainda está em uso ou a limpeza não terminou. Outras instâncias: desconhecidas.",
-  "extensions.state":
-    "{id} · geração {generation} · {installed} · local {local} · outras instâncias desconhecidas",
-  "extensions.enabled": "habilitada",
-  "extensions.disabled": "desabilitada",
-  "extensions.uninstalled": "desinstalada",
-  "extensions.dormant": "inativa",
-  "extensions.starting": "iniciando",
-  "extensions.active": "ativa",
-  "extensions.stopping": "encerrando",
-  "extensions.failed": "falhou",
-  "extensions.unknown": "desconhecida",
-  "extensions.busy": "Uma operação já está em andamento",
-  "extensions.invalid-package": "Pacote de extensão inválido",
-  "extensions.incompatible": "Pacote de extensão incompatível",
-  "extensions.invalid-store": "Armazenamento de extensões inválido",
-  "extensions.conflict": "A geração instalada mudou",
-  "extensions.outcome-unknown": "Resultado da operação desconhecido",
+  "extensions.refresh": "Recarregar",
+  "extensions.install": "Instalar de um arquivo…",
+  "extensions.installLink": "Instalar de um link…",
+  "extensions.url": "Link HTTPS",
+  "extensions.downloading": "Baixando a extensão…",
+  "extensions.catalogHeading": "Extensões oficiais",
+  "extensions.catalogTrust":
+    "Extensões oficiais são mantidas pelo projeto OMXTerm. Elas não rodam isoladas.",
+  "extensions.catalogBrowse": "Explorar extensões oficiais",
+  "extensions.catalogRefresh": "Recarregar",
+  "extensions.catalogRetry": "Tentar de novo",
+  "extensions.catalogLoading": "Carregando extensões oficiais…",
+  "extensions.catalogStale":
+    "Não foi possível recarregar. Esta lista pode estar desatualizada.",
+  "extensions.catalogUnavailable":
+    "Não foi possível carregar as extensões oficiais. Verifique sua conexão.",
+  "extensions.catalogManagementUnavailable":
+    "Não é possível instalar extensões agora.",
+  "extensions.catalogEmpty": "Ainda não há extensões oficiais.",
+  "extensions.catalogInstalled": "Instalada",
+  "extensions.catalogPlatformIncompatible": "Indisponível neste sistema",
+  "extensions.catalogEngineIncompatible":
+    "Não funciona com esta versão do OMXTerm",
+  "extensions.catalogInstall": "Instalar",
+  "extensions.catalogUpdate": "Atualizar",
+  "extensions.catalogReplaceWarning":
+    "Isso substitui a versão instalada por uma mais antiga ou por outra compilação.",
+  "extensions.invalid-url": "Digite um link HTTPS.",
+  "extensions.download-failed":
+    "Não foi possível baixar. Verifique o link e sua conexão.",
+  "extensions.download-limit":
+    "O download é grande demais ou redireciona vezes demais.",
+  "extensions.download-timeout": "O download demorou demais.",
+  "extensions.cancelled": "Instalação cancelada.",
+  "extensions.invalid-catalog": "Não foi possível ler o catálogo.",
+  "extensions.catalog-mismatch":
+    "O download não corresponde ao catálogo, então nada foi instalado.",
+  "extensions.catalog-selection": "O catálogo mudou. Tente de novo.",
+  "extensions.busy": "Aguarde a alteração atual terminar.",
+  "extensions.invalid-package": "Este não é um arquivo de extensão válido.",
+  "extensions.incompatible":
+    "Esta extensão não funciona com esta versão do OMXTerm.",
+  "extensions.invalid-store": "Não foi possível ler as extensões instaladas.",
+  "extensions.conflict":
+    "As extensões mudaram nesse meio-tempo. Recarregue e tente de novo.",
+  "extensions.outcome-unknown":
+    "Não foi possível confirmar a alteração. Recarregue para conferir.",
   "extensions.runtime-unavailable":
-    "Armazenamento ou execução de extensões indisponível. Os terminais continuam utilizáveis",
-  "extensions.unsupported":
-    "O gerenciamento de extensões não está disponível nesta plataforma",
+    "Extensões não estão disponíveis agora. Seus terminais continuam funcionando.",
+  "extensions.unsupported": "Extensões não são compatíveis com este sistema.",
   "mirrorTyping.title": "Espelhar digitação",
   "mirrorTyping.source": "Espelhando a digitação deste painel.",
   "mirrorTyping.member": "Espelhando a digitação para este painel.",
@@ -345,7 +326,7 @@ export const brazilianPortugueseMessages: Readonly<
     "Uma solicitação de diretório do terminal já está em andamento. Tente novamente",
   "extensions.unavailable": "Extensão indisponível",
   "extensions.unavailableDetail":
-    "Atualize Extensões nas Configurações para consultar a instalação. Nenhuma operação foi repetida automaticamente.",
+    "Abra Configurações → Extensões para conferir.",
   "extensions.chooserTitle": "Instalar extensão local",
   "extensions.chooserType": "Extensão OMXTerm",
   "extensions.trustTitle": "Confiar no código da extensão?",

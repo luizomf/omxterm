@@ -74,7 +74,7 @@ runs the archive check in `test/unit/mirror-typing-build.test.ts`.
 ### Packaged Mirror Typing smoke
 
 `test/integration/mirror-typing-smoke-packaged.test.ts` checks an archive on a
-packaged host. It installs the archive through **Install local .omxext…**,
+packaged host. It installs the archive through **Install from file…**,
 splits the tab, finds Mirror Typing in the Command Palette and starts it with
 Enter (stray Enter releases and repeats must not start it). Then it checks that
 one typed command runs in both shells, and that clicking a pane's mark,

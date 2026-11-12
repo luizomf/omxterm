@@ -29,6 +29,19 @@ function menu(label) {
   item.click(item, BrowserWindow.getAllWindows()[0], {});
 }
 
+// Settings → Extensions controls carry stable data hooks, so the smoke
+// doesn't depend on their wording.
+function clickAction(contents, action) {
+  return contents.executeJavaScript(`(() => {
+    const button = document.querySelector('.extensions-panel [data-action=${JSON.stringify(action)}]');
+    if (!button || button.disabled || button.closest('[hidden]')) return false;
+    button.click();
+    return true;
+  })()`);
+}
+const installedRow = (id) =>
+  `!!document.querySelector('.extension-installed-list [data-extension-id=${JSON.stringify(id)}]')`;
+
 function click(contents, label) {
   return contents.executeJavaScript(`(() => {
     const button = [...document.querySelectorAll('button')].find(b => (b.textContent === ${JSON.stringify(label)} || b.getAttribute('aria-label') === ${JSON.stringify(label)}) && !b.closest('[hidden]'));
@@ -132,14 +145,8 @@ async function install(archive, id, marker) {
     "Settings",
   );
   await js("document.querySelector('#settings-tab-extensions').click()");
-  await until(() => click(core, "Install local .omxext…"), "install button");
-  await until(
-    () =>
-      js(
-        `document.querySelector('.extensions-panel')?.textContent.includes(${JSON.stringify(`${id} · generation 1`)})`,
-      ),
-    "extension installed",
-  );
+  await until(() => clickAction(core, "install-file"), "install button");
+  await until(() => js(installedRow(id)), "extension installed");
   assert.equal(consents.length, 1, "one trust prompt");
   await js("document.querySelector('.settings-close')?.click()");
   await until(
@@ -513,12 +520,9 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
       filePaths: [snippetsArchive],
     });
     await js("document.querySelector('#settings-tab-extensions').click()");
-    await until(() => click(core, "Install local .omxext…"), "install button");
+    await until(() => clickAction(core, "install-file"), "install button");
     await until(
-      () =>
-        js(
-          "document.querySelector('.extensions-panel')?.textContent.includes('omxterm.snippets · generation 1')",
-        ),
+      () => js(installedRow("omxterm.snippets")),
       "Snippets installed",
     );
     await js("document.querySelector('.settings-close')?.click()");

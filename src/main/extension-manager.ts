@@ -235,17 +235,10 @@ export function createExtensionManager(options: Options) {
     start,
     () => opening.size + groups.size < 32,
   );
-  let pendingCleanup: boolean | undefined;
   let disposed = false;
   let disposal: Promise<boolean> | undefined;
   async function collect() {
-    try {
-      const cleanup = await options.packages.collect();
-      pendingCleanup = cleanup.more || cleanup.pending.length > 0;
-    } catch (error) {
-      pendingCleanup = true;
-      throw error;
-    }
+    await options.packages.collect();
   }
   const revision = (id: string) => revisions.get(id) ?? 0;
   const alive = (id: string, captured: number, target: ExtensionTarget) =>
@@ -378,7 +371,6 @@ export function createExtensionManager(options: Options) {
       await collect();
       return published;
     } catch {
-      pendingCleanup = true;
       state.set(id, "unknown");
       throw new PackageError("outcome-unknown");
     } finally {
@@ -412,7 +404,6 @@ export function createExtensionManager(options: Options) {
     return work;
   }
   return {
-    pendingCleanup: () => pendingCleanup,
     collect,
     snapshot: () => installationSnapshot(options.packages, state, backends),
     async prepare(

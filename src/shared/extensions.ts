@@ -30,11 +30,11 @@ export type CatalogCard = {
   name: string;
   description: string;
   version: string;
-  installedVersion: string | null;
   compatible: boolean;
-  targets: string[];
   incompatibility: "platform" | "engine" | "platform-and-engine" | null;
-  action: "install" | "update" | "reinstall" | "replace";
+  // What Settings offers. Null means installed with nothing newer to offer:
+  // Settings never offers a reinstall, an older version or different bytes.
+  action: "install" | "update" | null;
 };
 export type CatalogSnapshot = {
   loaded: boolean;
@@ -46,7 +46,6 @@ export type ExtensionsResult = {
   ok: boolean;
   error?: string;
   entries?: ExtensionEntry[];
-  pendingCleanup?: boolean | undefined;
   openToken?: string;
   noticeEmpty?: boolean;
 };

@@ -132,14 +132,14 @@ To build an archive, follow
 `node scripts/build-ssh-extension.mjs`. It writes
 `dist/extensions/ssh-<version>.omxext` with `.sha256` and `.json` sidecars and
 refuses a dirty checkout. To try it, install the archive through
-**Settings → Extensions → Install local .omxext…**.
+**Settings → Extensions → Install from file…**.
 
 ### Packaged SSH smoke
 
 `test/integration/ssh-smoke-packaged.test.ts` checks an archive on a packaged
 host, on Linux ARM64 and macOS ARM64. It launches the app with an isolated home
 that has one alias in `~/.ssh/config` and a fake `ssh` first on `PATH`. It
-installs the archive through **Install local .omxext…**, picks the alias and
+installs the archive through **Install from file…**, picks the alias and
 checks the argv the fake client received. Nothing touches the network, and it
 runs in seconds:
 
