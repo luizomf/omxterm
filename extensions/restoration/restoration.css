@@ -14,6 +14,10 @@ body {
   display: flex;
   background: var(--ui-surface);
 }
+/* The host draws the title and Close row above this page. */
+.application-page {
+  padding-top: var(--ui-space-4);
+}
 .application-page-content > section {
   max-width: 720px;
 }

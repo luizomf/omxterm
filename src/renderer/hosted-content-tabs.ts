@@ -35,7 +35,7 @@ export function createHostedContentTabs(
     owner ?? createHostedContentPresentation(parent, bridge, language);
   const removeLanguage = language.bind(() => {
     for (const button of parent.querySelectorAll(
-      ".hosted-content-tab > button",
+      ".hosted-content-tab > header > button",
     ))
       button.textContent = language.t("hosted.close");
   });
@@ -61,7 +61,12 @@ export function createHostedContentTabs(
       if (event.key === "Enter") keyboard.track(event, close);
     });
     close.addEventListener("click", () => callbacks.close(tab));
-    container.append(close, slot);
+    // Title and Close share one row, as on the Settings page.
+    const header = parent.ownerDocument.createElement("header");
+    const heading = parent.ownerDocument.createElement("h2");
+    heading.textContent = descriptor.title;
+    header.append(heading, close);
+    container.append(header, slot);
     parent.append(container);
     callbacks.open(tab);
   });

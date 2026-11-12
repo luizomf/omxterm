@@ -258,6 +258,7 @@ export function createCompanionContent(
     )
       panel.dismiss();
   });
+  const removeContentHeight = bridge?.onContentHeight?.(dialogs.fit);
   function retire(id: string) {
     if (dialogs.retire(id)) return;
     const slot = slots.get(id);
@@ -370,6 +371,7 @@ export function createCompanionContent(
       removeOpen?.();
       removeRetired?.();
       removeDismiss?.();
+      removeContentHeight?.();
       panel?.dispose();
       slots.clear();
       dialogs.dispose();

@@ -1,6 +1,7 @@
 import {
   extensionViewIpc,
   isHostedContentDescriptor,
+  isHostedContentHeight,
   isHostedContentId,
   isHostedContentPresentation,
   type HostedContentBridge,
@@ -50,6 +51,24 @@ export function createHostedContentBridge(ipc: Transport): HostedContentBridge {
       ipc.on(extensionViewIpc.dismissPanel, handler);
       return () => {
         ipc.removeListener(extensionViewIpc.dismissPanel, handler);
+      };
+    },
+    onContentHeight(listener) {
+      const handler: Listener = (_event, value) => {
+        if (
+          value &&
+          typeof value === "object" &&
+          isHostedContentId((value as { id?: unknown }).id) &&
+          isHostedContentHeight((value as { height?: unknown }).height)
+        )
+          listener(
+            (value as { id: string }).id,
+            (value as { height: number }).height,
+          );
+      };
+      ipc.on(extensionViewIpc.contentHeight, handler);
+      return () => {
+        ipc.removeListener(extensionViewIpc.contentHeight, handler);
       };
     },
     onFailure(listener) {

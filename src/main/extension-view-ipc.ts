@@ -213,6 +213,10 @@ export function startExtensionViewHost(
         }
       : undefined,
     onFocusChange: reportFocus,
+    onContentHeight(id, height) {
+      if (ownerRoute.issued.get(id) === host && !contents.isDestroyed())
+        contents.send(extensionViewIpc.contentHeight, { id, height });
+    },
     interceptInput(event, input, sourceId) {
       const id = host.focusedId();
       return ownerRoute.dismissal.handle(

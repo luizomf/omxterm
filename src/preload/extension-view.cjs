@@ -185,6 +185,12 @@ if (process.isMainFrame) {
         pending--;
       }
     },
+    // A dialog-presented view tells core how tall its content is, so the
+    // dialog can fit it. Core clamps it to the dialog's maximum.
+    reportContentHeight(height) {
+      if (Number.isInteger(height) && height >= 0 && height <= 10000)
+        ipcRenderer.send("extension-view:content-height", height);
+    },
     onAppearance(listener) {
       if (typeof listener !== "function" || appearanceListeners.size >= 32)
         throw new TypeError("Invalid appearance subscription");

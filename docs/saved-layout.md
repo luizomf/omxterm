@@ -13,7 +13,8 @@ had opened the tab yourself and changed to that folder.
 
 Saved Layout needs OMXTerm 0.27.0 or later on macOS, Linux, or Windows on ARM.
 Reopening windows at startup needs Saved Layout 0.3.0, which needs a newer
-OMXTerm than 0.27.
+OMXTerm than 0.27. Version 0.3.1, which draws no title of its own, needs
+OMXTerm 0.29.1-dev.0 or later.
 
 1. Open **Settings → Extensions** and choose **Browse official extensions**.
 2. Find **Saved Layout**, choose **Install** and review the trust warning.

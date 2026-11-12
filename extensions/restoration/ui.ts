@@ -24,7 +24,7 @@ export type PageNotice = {
   severity: NoticeSeverity;
 };
 
-/** One title, one sentence of guidance, the saved snapshot and its actions. */
+/** One sentence of guidance, the saved snapshot and its actions. */
 export function createRestorationPage(document: Document) {
   let language: SupportedLanguage = "en-US";
   let view: PageView = {
@@ -37,7 +37,6 @@ export function createRestorationPage(document: Document) {
   let docs = false;
   let onLearnMore = () => {};
 
-  const heading = document.createElement("h2");
   const hint = document.createElement("p");
   hint.className = "ui-hint";
   const hintText = document.createTextNode("");
@@ -72,7 +71,6 @@ export function createRestorationPage(document: Document) {
   const content = document.createElement("section");
   content.append(hint, card, actions);
   const page = createApplicationPage(document, {
-    title: heading,
     notice: status,
     content,
   });
@@ -81,7 +79,6 @@ export function createRestorationPage(document: Document) {
   function render() {
     const m = restorationMessages(language);
     document.documentElement.lang = language;
-    heading.textContent = "Saved Layout";
     hintText.textContent = view.reopens ? m.reopenHint : m.hint;
     learnMore.textContent = m.learnMore;
     learnMore.hidden = !docs;

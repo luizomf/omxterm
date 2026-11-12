@@ -23,6 +23,7 @@ import {
 } from "electron";
 import {
   extensionViewIpc,
+  isHostedContentHeight,
   isHostedContentPresentation,
   isHostedContentTitle,
   type HostedAppearance,
@@ -78,6 +79,8 @@ export interface ExtensionViewHostOptions {
   contentSlot(): Rectangle;
   onRetired?(id: string): void;
   onFocusChange?(): void;
+  // The view's own report of its content height; main validates the sender.
+  onContentHeight?(id: string, height: number): void;
   // Admission loss precedes native/resource settlement, including failed closes.
   onViewRevoked?(id: string): void;
   onState?(state: ExtensionViewState, outcome?: ExtensionViewOutcome): void;
@@ -629,6 +632,19 @@ class NativeExtensionViewHost {
       )
         this.options.filesDrag?.end(entry.descriptor.id, args[0]);
     });
+    contents.ipc.on(
+      extensionViewIpc.contentHeight,
+      (event, ...args: unknown[]) => {
+        if (
+          event.sender === contents &&
+          event.senderFrame === contents.mainFrame &&
+          !entry.closing &&
+          args.length === 1 &&
+          isHostedContentHeight(args[0])
+        )
+          this.options.onContentHeight?.(entry.descriptor.id, args[0]);
+      },
+    );
     if (this.options.onRequest) {
       let pending = 0;
       contents.ipc.handle(

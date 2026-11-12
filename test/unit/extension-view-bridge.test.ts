@@ -194,6 +194,31 @@ describe("hosted application-tab contract", () => {
     );
   });
 
+  it("validates reported content heights", () => {
+    let handler!: (event: Electron.IpcRendererEvent, value: unknown) => void;
+    const bridge = createHostedContentBridge({
+      invoke: vi.fn(),
+      on: vi.fn((_channel: string, listener: typeof handler) => {
+        handler = listener;
+      }),
+      removeListener: vi.fn(),
+    });
+    const heights = vi.fn();
+    bridge.onContentHeight!(heights);
+    for (const value of [
+      { id: "setup", height: 180 },
+      { id: "setup", height: -1 },
+      { id: "setup", height: 1.5 },
+      { id: "setup", height: 20_000 },
+      { id: "../bad", height: 10 },
+      { height: 10 },
+      null,
+      180,
+    ])
+      handler({} as Electron.IpcRendererEvent, value);
+    expect(heights.mock.calls).toEqual([["setup", 180]]);
+  });
+
   it("validates incoming events and acknowledgments, with removable listeners", async () => {
     const handlers = new Map<
       string,
@@ -316,6 +341,7 @@ describe("hosted child preload subscriptions and requests", () => {
       "onFocusIntent",
       "onLanguage",
       "onVisibility",
+      "reportContentHeight",
       "request",
     ]);
     const subscriptions = [

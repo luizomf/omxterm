@@ -150,13 +150,14 @@ Pick the smallest presentation that fits:
   transparent: the host paints the panel tint. They don't repeat the tool
   name; the panel header shows it.
 - Dialog views (Mirror Typing setup) are a short task over the terminal. The
-  host shows a `ui-dialog` at a fixed 440×320 px with a `ui-panel-header`
-  (the view's title, then Close ×) and the view below. The view is
-  transparent, doesn't repeat the title and scrolls inside. A dialog isn't a
+  host shows a `ui-dialog` (440 px wide, up to 480 px tall) with a
+  `ui-panel-header` (the view's title, then Close ×) and the view below. The
+  view is transparent, doesn't repeat the title, reports its content height
+  (`reportContentHeight`) so the dialog fits it, and scrolls past the maximum. A dialog isn't a
   tab, so opening one never changes the terminal grid
   ([ADR 0051](adr/0051-present-short-extension-setup-as-a-hosted-dialog.md)).
-- Full-page views (Saved Layout) need room. They are tabs with an 18 px title;
-  the host adds a compact Close row on the same page surface above them.
+- Full-page views (Saved Layout) need room. They are tabs. The host draws the 18 px title and Close on one row, as
+  Settings does, on the same page surface; the view draws no title.
 
 ## Wording
 

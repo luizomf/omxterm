@@ -171,6 +171,10 @@
 .ui-link:hover {
   color: var(--ui-text);
 }
+/* Inline in a sentence: no side padding, so a wrapped link isn't indented. */
+.ui-hint .ui-link {
+  padding-inline: 0;
+}
 .ui-actions {
   display: flex;
   flex-wrap: wrap;
