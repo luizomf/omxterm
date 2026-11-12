@@ -97,6 +97,17 @@ describe("bounded static index", () => {
     expect(await readFile(path.join(ssh, "config"), "utf8")).toBe(config);
     expect((await stat(path.join(ssh, "config"))).mtimeMs).toBe(before.mtimeMs);
   });
+  it("reads a Windows-edited config with CRLF lines and skips backslash includes", async () => {
+    const home = await fixture();
+    await writeFile(
+      path.join(home, ".ssh/config"),
+      "Include conf.d\\extra\r\nHost work\r\n  HostName 192.0.2.1\r\nHost home-box\r\n",
+    );
+    const result = await discoverAliases(home, signal());
+    expect(result.aliases).toEqual(["work", "home-box"]);
+    // Backslashes aren't parsed; the list just reports itself incomplete.
+    expect(result.incomplete).toBe(true);
+  });
   it("sorts globs, permits symlink configs and detects active-stack cycles", async () => {
     const home = await fixture();
     const ssh = path.join(home, ".ssh");
