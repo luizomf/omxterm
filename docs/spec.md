@@ -2713,7 +2713,9 @@ uploads, and download checks. This section states only the contract it follows.
   its designated requirement (`identifier "com.otaviomiranda.omxterm" and
 certificate root = H"7208e5…"`) is the same in every release and macOS
   privacy permissions survive updates; builds without the release key are
-  ad-hoc. It is not Developer ID signed or notarized
+  ad-hoc. Every macOS build gives its executables their own Mach-O UUID, so
+  Local Network privacy never mistakes OMXTerm for Electron or another app on
+  the same Electron version. It is not Developer ID signed or notarized
   ([ADR 0046](adr/0046-sign-macos-releases-with-a-stable-self-signed-certificate.md));
   Windows NSIS is unsigned. Installation guidance explains
   Gatekeeper and SmartScreen without recommending disabling system-wide

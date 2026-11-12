@@ -136,11 +136,12 @@ and replace the old one. Settings, themes, snippets and logs are kept.
 <summary>macOS: <code>ping</code> inside tmux stops reaching your local network</summary>
 
 Since macOS 15, apps need **Local Network** permission, and macOS checks it
-against the app that started the tmux server. After you update or quit that
-app, `ping` and similar tools inside the old tmux server may stop reaching
-devices on your network. This isn't OMXTerm and happens with other terminals
-too. Fix it by restarting tmux: save your sessions, run `tmux kill-server`,
-then start tmux again from the new OMXTerm.
+against the app that started the tmux server. After you quit that app, `ping`
+inside the old tmux server may stop reaching devices on your network, while
+`ssh` and other TCP connections keep working. This isn't OMXTerm and happens
+with other terminals too. Updating OMXTerm brings `ping` back; otherwise,
+restart tmux: save your sessions, run `tmux kill-server`, then start tmux
+again from OMXTerm.
 
 </details>
 
