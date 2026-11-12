@@ -500,7 +500,7 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
   // The focused pane's state mark while mirroring, else the visible notice.
   const status = () =>
     js(
-      "(() => { const mark = document.querySelector('.terminal-surface.pane-focused [role=img]') ?? document.querySelector('.terminal-surface [role=img]'); if (mark) return mark.getAttribute('aria-label'); return document.querySelector('.state-notice:not([hidden]) > span')?.textContent ?? ''; })()",
+      "(() => { const mark = document.querySelector('.terminal-surface.pane-focused .ui-mark') ?? document.querySelector('.terminal-surface .ui-mark'); if (mark) return mark.getAttribute('aria-label'); return document.querySelector('.state-notice:not([hidden]) > span')?.textContent ?? ''; })()",
     );
   if (snippetsArchive) {
     menu("Settings");
@@ -654,10 +654,17 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     menu("Focus Next Pane");
     await settle();
   };
-  // 1. Typing reaches both shells. This start comes from the palette.
+  // 1. Typing reaches both shells. This start comes from the palette. The
+  // marks float over the panes: mirroring never changes the terminal grid.
+  const canvases = () =>
+    js(
+      "[...document.querySelectorAll('.terminal-surface canvas')].map(c => { const r = c.getBoundingClientRect(); return [r.width, r.height]; })",
+    );
+  result.grid = { before: await canvases() };
   const typed = marker + ".typed";
   result.panes = await start("palette");
   result.active = await status();
+  result.grid.active = await canvases();
   await keys(line(typed));
   await until(async () => (await lines(typed)).length >= 2, "mirrored typing");
   await settle();
@@ -669,6 +676,9 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
   await until(
     () => js("!!document.querySelector('.command-palette [role=combobox]')"),
     "Command Palette",
+  );
+  await js(
+    "document.querySelector('.command-palette [role=combobox]').focus()",
   );
   core.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
   core.sendInputEvent({ type: "keyUp", keyCode: "Escape" });

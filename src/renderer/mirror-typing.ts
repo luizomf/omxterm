@@ -178,6 +178,7 @@ export function createMirrorTyping(deps: {
   const document = deps.parent.ownerDocument;
   const startGuard = guardStartRelease(document);
   const mark = markMembers(marks);
+  let dismissFailure = () => {};
   const clear = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
@@ -193,7 +194,7 @@ export function createMirrorTyping(deps: {
     if (reason === "semantic-input")
       marks.flash((t) => t("mirrorTyping.semantic"));
     if (reason === "write-failed")
-      marks.notify((t) => t("mirrorTyping.failed"));
+      dismissFailure = marks.notify((t) => t("mirrorTyping.failed"));
     if (previous.handoff && !previous.ready)
       bridge.reply({ request: previous.handoff, ok: false });
     if (echo) bridge.stop(previous.context, reason);
@@ -277,7 +278,7 @@ export function createMirrorTyping(deps: {
       sequence: 0,
     };
     attempt = current;
-    marks.clearNotice();
+    dismissFailure();
     startGuard.settle();
     unsubscribers.push(
       ...observeMembers(current.members, () => stop("unavailable")),

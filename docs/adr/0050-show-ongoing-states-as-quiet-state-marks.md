@@ -27,7 +27,8 @@ its state through it. Each state takes the quietest form that works:
 3. A surprise (paste stopped mirroring): a one-sentence `ui-overlay` that goes
    away by itself after four seconds.
 4. Something that needs the user: a one-sentence `ui-overlay` notice, without
-   counts, that stays until they dismiss it. A newer notice replaces it.
+   counts, that stays until they dismiss it. A newer notice replaces it; a
+   surprise never hides it.
 
 Nothing in the system enters the layout flow, so no state changes the terminal
 grid or resizes a PTY, in any window mode. Stopping an ongoing state never
@@ -37,7 +38,8 @@ needs a permanent button; it goes through the existing action surfaces
 The API is plain data: `set(pane, owner, { glyph, label })` with a glyph from a
 small core-owned vocabulary (`stateGlyphs`) and a label that is literal text or
 a core string resolver; `undefined` removes the owner's mark. `flash(text)` and
-`notify(text)` show the overlay tiers. Reporters never supply colors, HTML or
+`notify(text)` show the overlay tiers; `notify` returns a function that clears
+only its own sentence. Reporters never supply colors, HTML or
 their own glyphs, so an extension capability can later forward the same data
 (a pane handle, a glyph name, a literal label) without reshaping the API.
 

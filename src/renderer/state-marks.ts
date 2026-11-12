@@ -10,7 +10,7 @@ import {
  * Core owns the glyphs so every state looks the same whoever reports it. A
  * new state adds a glyph here; reporters never bring their own visuals.
  */
-export const stateGlyphs = { mirror: "↔" } as const;
+export const stateGlyphs = { mirror: "↔\uFE0E" } as const;
 export type StateGlyph = keyof typeof stateGlyphs;
 
 /** Literal text (never HTML), or a resolver for core strings. */
@@ -78,7 +78,10 @@ export function createStateMarks(
   notice.append(message, dismiss);
   document.body.append(notice);
   const keyboard = retainDismissalGesture(document);
-  let current: StateText | undefined;
+  // One slot: the latest sentence wins, except that a surprise never hides a
+  // notice still waiting for the user.
+  let current:
+    { readonly text: StateText; readonly transient: boolean } | undefined;
   let timer: number | undefined;
   const clear = () => {
     if (timer !== undefined) page.clearTimeout(timer);
@@ -87,16 +90,22 @@ export function createStateMarks(
     notice.hidden = true;
   };
   const show = (value: StateText, transient: boolean) => {
+    if (transient && current && !current.transient) return () => {};
     if (timer !== undefined) page.clearTimeout(timer);
-    current = value;
+    const shown = { text: value, transient };
+    current = shown;
     message.textContent = text(value);
     dismiss.hidden = transient;
     notice.classList.toggle("state-notice-transient", transient);
     notice.hidden = false;
     timer = transient ? page.setTimeout(clear, NOTICE_TIMEOUT) : undefined;
+    // Clears this sentence only, never a newer one from another owner.
+    return () => {
+      if (current === shown) clear();
+    };
   };
   const unbindNotice = language.bind((t) => {
-    if (current !== undefined) message.textContent = text(current, t);
+    if (current) message.textContent = text(current.text, t);
     dismiss.setAttribute("aria-label", t("common.close"));
     dismiss.title = t("common.close");
   });
@@ -128,10 +137,11 @@ export function createStateMarks(
       return [...owners.values()].map((mark) => glyph(mark, language.t));
     },
     /** A surprise: a one-sentence overlay that goes away by itself. */
-    flash: (value: StateText) => show(value, true),
-    /** Something needs the user: one sentence they dismiss. */
+    flash(value: StateText) {
+      show(value, true);
+    },
+    /** Something needs the user: one sentence they dismiss. Returns a clear. */
     notify: (value: StateText) => show(value, false),
-    clearNotice: clear,
     dispose() {
       clear();
       unbind();

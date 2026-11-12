@@ -382,7 +382,8 @@ Layout, it is the
 it saves a window, restarts the app and opens the layout again. For
 Mirror Typing, it is the
 [packaged Mirror Typing smoke](mirror-typing-development.md#packaged-mirror-typing-smoke):
-it mirrors a command into two shells and checks Stop, paste, drop and snippets.
+it mirrors a command into two shells and checks that the Command Palette, paste,
+drop and snippets stop it.
 
 ### Publishing an extension archive
 

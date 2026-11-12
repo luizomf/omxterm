@@ -67,6 +67,7 @@ it.skipIf(!app || !archive)(
         otherPaneReached: boolean;
         panes: string[];
         active: string;
+        grid: { before: number[][]; active: number[][] };
         steps: Record<string, string | string[]>;
         paste: Record<string, { status: string; lines: string[] }>;
       };
@@ -79,6 +80,7 @@ it.skipIf(!app || !archive)(
       );
       expect(result.strayKeysStarted).toBe(false);
       expect(result.panes).toHaveLength(2);
+      expect(result.grid.active).toEqual(result.grid.before);
       expect(result.active).toBe(
         "Mirroring typing from this pane. Open the Command Palette to stop.",
       );

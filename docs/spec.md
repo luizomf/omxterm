@@ -520,7 +520,8 @@ quietest form that works:
 - A surprise is one transient overlay sentence that disappears after four
   seconds.
 - Something that needs the user is one overlay sentence without counts that
-  stays until dismissed. A newer sentence replaces the previous one.
+  stays until dismissed. A newer sentence replaces the previous one, but a
+  surprise never hides a notice that is still waiting.
 - None of these enters the layout flow: showing, changing or removing one never
   refits a Surface or resizes a PTY, with or without the title bar or tab
   strip. Stopping an ongoing state uses existing actions (shortcut, Command

@@ -36,8 +36,10 @@ settlement. The new window receives complete initial ownership, not repeated
 Split commands or a temporary default tab. Window-bound single-use tokens carry
 cwd only in main; starts explicitly select Default Shell, independently of a
 pending original `-e`. All owners exist before at most two concurrent ordinary
-Surface mounts. First selected-pane settlement remains host readiness; the core
-status separately tracks layout mount settlement and fallbacks/partial failure.
+Surface mounts. First selected-pane settlement remains host readiness; core
+separately tracks layout mount settlement and, only when some panes couldn't
+open, leaves one State Marks notice
+([ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md)).
 
 Pretransfer revocation has no window/shell effect. After transfer, extension
 retirement cannot stop core terminals; ordinary pane/window/Quit lifetimes own

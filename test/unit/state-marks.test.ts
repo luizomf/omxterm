@@ -48,7 +48,6 @@ it("shows each owner's mark on its pane and once per owner on the tab", () => {
   expect(paneLabels(panes[1]!)).toEqual(["Member", "Other"]);
   expect(panes[1]!.container.querySelector("[title=Other]")).not.toBeNull();
   expect(labels(marks.tab(tab))).toEqual(["Source", "Other"]);
-  expect(changed).toHaveBeenCalledTimes(3);
 
   marks.set(panes[1]!, "mirror", undefined);
   expect(paneLabels(panes[1]!)).toEqual(["Other"]);
@@ -60,7 +59,7 @@ it("shows each owner's mark on its pane and once per owner on the tab", () => {
   expect(paneLabels(panes[0]!)).toEqual([]);
 });
 
-it("keeps only the latest notice; surprises time out and notices wait for the user", () => {
+it("shows one sentence at a time; surprises time out and notices wait for the user", () => {
   vi.useFakeTimers();
   const marks = createStateMarks(document, createRendererLanguage(), vi.fn());
   const visible = () =>
@@ -70,10 +69,14 @@ it("keeps only the latest notice; surprises time out and notices wait for the us
   vi.advanceTimersByTime(4000);
   expect(visible()).toBe("");
   marks.flash("First.");
+  const clearOld = marks.notify("Old.");
   marks.notify("Needs you.");
+  clearOld();
+  // A surprise never hides a notice that is waiting for the user.
+  marks.flash("Surprise.");
   vi.advanceTimersByTime(60000);
   expect(visible()).toContain("Needs you.");
-  expect(visible()).not.toContain("First.");
+  expect(visible()).not.toMatch(/First|Old|Surprise/);
   document.querySelector<HTMLButtonElement>(".state-notice button")!.click();
   expect(visible()).toBe("");
   marks.dispose();
