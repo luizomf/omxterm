@@ -39,9 +39,23 @@ napi_value Error(napi_env env, const char* code) {
   return result;
 }
 #ifdef _WIN32
+// CON, PRN, AUX, NUL, COM1-9 and LPT1-9 name devices, with or without an
+// extension and in any case.
+bool DeviceName(const std::string& part) {
+  std::string base = part.substr(0, part.find('.'));
+  while (!base.empty() && base.back() == ' ') base.pop_back();
+  for (auto& unit : base)
+    if (unit >= 'a' && unit <= 'z') unit = static_cast<char>(unit - 'a' + 'A');
+  if (base == "CON" || base == "PRN" || base == "AUX" || base == "NUL")
+    return true;
+  return base.size() == 4 && (base.rfind("COM", 0) == 0 || base.rfind("LPT", 0) == 0) &&
+         base[3] >= '1' && base[3] <= '9';
+}
 // Drive-absolute paths with at least one entry, and no part Windows would
-// rewrite: empty, dot, trailing dot or space (`x.` names `x`), or a colon
-// (alternate data stream). No UNC, device or drive-relative spellings.
+// rewrite or treat specially: empty, dot, trailing dot or space (`x.` names
+// `x`), a colon (alternate data stream), wildcards and other reserved
+// characters, control characters, or a device name. No UNC, device or
+// drive-relative spellings.
 bool WindowsPath(const std::string& value) {
   const char drive = value[0];
   if (value.size() < 4 ||
@@ -54,8 +68,11 @@ bool WindowsPath(const std::string& value) {
     if (end == std::string::npos) end = value.size();
     const auto part = value.substr(start, end - start);
     if (part.empty() || part.back() == '.' || part.back() == ' ' ||
-        part.find(':') != std::string::npos)
+        part.find_first_of(":<>\"|?*") != std::string::npos ||
+        DeviceName(part))
       return false;
+    for (const char unit : part)
+      if (static_cast<unsigned char>(unit) < 0x20) return false;
     start = end + 1;
   }
   return true;

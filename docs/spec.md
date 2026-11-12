@@ -2615,8 +2615,10 @@ implementation; there is no renderer selector or registry
 - Windows trash uses the shell's `IFileOperation` with the Recycle Bin, no UI,
   in the same addon and with the same admission. Windows move and trash take
   drive-absolute paths only and refuse the same ambiguous spellings, alternate
-  data streams, and any part ending in a dot or space (Windows would act on the
-  trimmed name). Moves use the `\\?\` long-path form. An item the shell can't
+  data streams, any part ending in a dot or space (Windows would act on the
+  trimmed name), reserved or control characters (`<>"|?*` would act as
+  wildcards in the shell), and device names such as `CON` or `lpt1.txt`. Files
+  refuses the same names when creating entries. Moves use the `\\?\` long-path form. An item the shell can't
   recycle (too large, or on a drive without a Recycle Bin) is refused with
   `ENOTRASH` and left untouched, never deleted permanently.
 - Linux trash runs the literal `gio` trash command.
