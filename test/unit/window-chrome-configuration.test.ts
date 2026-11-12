@@ -32,7 +32,7 @@ describe("Window Chrome configuration", () => {
     },
   );
   it.each(["darwin", "linux", "win32"])(
-    "adds a remappable title toggle on %s with collision checking",
+    "adds a remappable title toggle on %s with collision handling",
     (platform) => {
       const defaults = terminalDefaultKeybinds(platform);
       expect(defaults.toggleTitleBar).toBe(
@@ -49,9 +49,15 @@ describe("Window Chrome configuration", () => {
       expect(
         validate({ toggleTitleBar: "Control+Alt+D" }).keybinds.toggleTitleBar,
       ).toBe("Control+Alt+D");
-      expect(() => validate({ toggleTitleBar: defaults.toggleTabBar })).toThrow(
-        "conflicts",
-      );
+      const onTabBar = validate({ toggleTitleBar: defaults.toggleTabBar });
+      expect(onTabBar.keybinds.toggleTitleBar).toBe(defaults.toggleTabBar);
+      expect(onTabBar.keybinds.toggleTabBar).toBeNull();
+      expect(() =>
+        validate({
+          toggleTitleBar: defaults.toggleTabBar,
+          toggleTabBar: defaults.toggleTabBar,
+        }),
+      ).toThrow("conflicts");
     },
   );
 });

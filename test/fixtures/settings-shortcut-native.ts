@@ -90,7 +90,7 @@ export function createShortcutPtyObservation() {
 export function assertShortcutCollision(status: string) {
   assert.match(
     status,
-    /at "keybinds\.find": conflicts with the "(?:toggleFullScreen|quit)" keybind/u,
+    /at "keybinds\.(?:find": conflicts with the "quit|toggleFullScreen": conflicts with the "find)" keybind/u,
   );
 }
 
@@ -124,7 +124,9 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
   const directory = path.join(options.root, "shortcut-xdg", "omxterm");
   await mkdir(directory, { recursive: true });
   const file = path.join(directory, "config.json");
-  const original = '{ "version": 1 }\n';
+  // Explicit holders keep recording F11 or Quit a collision.
+  const { quit, toggleFullScreen } = terminalDefaultKeybinds(process.platform);
+  const original = `${JSON.stringify({ version: 1, keybinds: { quit, toggleFullScreen } })}\n`;
   await writeFile(file, original);
   const loadOptions = {
     environment: { XDG_CONFIG_HOME: path.dirname(directory) },

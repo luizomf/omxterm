@@ -317,38 +317,29 @@ describe("strict version 1 User Configuration", () => {
   });
 
   it.each(["darwin", "linux", "win32"])(
-    "remaps toggleTabBar and rejects effective default collisions on %s",
+    "remaps toggleTabBar and lets an explicit entry win over another default on %s",
     (platform) => {
       const defaults = terminalDefaultKeybinds(platform);
-      const configuration = validateUserConfiguration(
-        { version: 1, keybinds: { toggleTabBar: "Control+Alt+B" } },
-        configPath,
-        installedFonts,
-        defaults,
-        platform,
+      const validate = (keybinds: Record<string, unknown>) =>
+        validateUserConfiguration(
+          { version: 1, keybinds },
+          configPath,
+          installedFonts,
+          defaults,
+          platform,
+        ).keybinds;
+      expect(validate({ toggleTabBar: "Control+Alt+B" }).toggleTabBar).toBe(
+        "Control+Alt+B",
       );
-      expect(configuration.keybinds.toggleTabBar).toBe("Control+Alt+B");
+      const onSnippets = validate({ toggleTabBar: defaults.toggleSnippets });
+      expect(onSnippets.toggleTabBar).toBe(defaults.toggleSnippets);
+      expect(onSnippets.toggleSnippets).toBeNull();
+      const onTabBar = validate({ newWindow: "CommandOrControl+Shift+B" });
+      expect(onTabBar.newWindow).toBe("CommandOrControl+Shift+B");
+      expect(onTabBar.toggleTabBar).toBeNull();
       expect(() =>
-        validateUserConfiguration(
-          {
-            version: 1,
-            keybinds: { toggleTabBar: defaults.toggleSnippets },
-          },
-          configPath,
-          installedFonts,
-          defaults,
-          platform,
-        ),
-      ).toThrow('conflicts with the "toggleSnippets" keybind');
-      expect(() =>
-        validateUserConfiguration(
-          { version: 1, keybinds: { newWindow: "CommandOrControl+Shift+B" } },
-          configPath,
-          installedFonts,
-          defaults,
-          platform,
-        ),
-      ).toThrow('conflicts with the "toggleTabBar" keybind');
+        validate({ newWindow: "Control+Alt+B", toggleTabBar: "Control+Alt+B" }),
+      ).toThrow('conflicts with the "newWindow" keybind');
     },
   );
 
@@ -362,18 +353,18 @@ describe("strict version 1 User Configuration", () => {
     expect(configuration.keybinds.newWindow).toBe("Alt+N");
     expect(configuration.keybinds.copy).toBe("Control+Shift+C");
     expect(configuration.keybinds.closeWindow).toBe("Control+Shift+Q");
-    expect(() =>
-      validateUserConfiguration(
-        {
-          version: 1,
-          keybinds: { newWindow: "CommandOrControl+Shift+C" },
-        },
-        configPath,
-        installedFonts,
-        terminalDefaultKeybinds("linux"),
-        "linux",
-      ),
-    ).toThrow('conflicts with the "copy" keybind');
+    const onCopy = validateUserConfiguration(
+      {
+        version: 1,
+        keybinds: { newWindow: "CommandOrControl+Shift+C" },
+      },
+      configPath,
+      installedFonts,
+      terminalDefaultKeybinds("linux"),
+      "linux",
+    ).keybinds;
+    expect(onCopy.newWindow).toBe("CommandOrControl+Shift+C");
+    expect(onCopy.copy).toBeNull();
   });
 
   it.each([
@@ -433,21 +424,15 @@ describe("strict version 1 User Configuration", () => {
     expect((failure as Error).message).not.toContain("CommandOrControl+G");
   });
 
-  it("judges duplicates on the effective map: a remap colliding with a remaining default is an error", () => {
+  it("judges duplicates on the effective map: a remap on another action's default keeps the remap and unbinds that action", () => {
     for (const accelerator of ["CommandOrControl+W", "Cmd+W"]) {
-      expect(() =>
-        validateUserConfiguration(
-          { version: 1, keybinds: { newWindow: accelerator } },
-          configPath,
-          installedFonts,
-        ),
-      ).toThrow(
-        expect.objectContaining({
-          location: "keybinds.newWindow",
-          reason:
-            'conflicts with the "closeTab" keybind on Cmd+W. Choose another shortcut for one of them, or set one of them to null to disable its shortcut',
-        }),
-      );
+      const keybinds = validateUserConfiguration(
+        { version: 1, keybinds: { newWindow: accelerator } },
+        configPath,
+        installedFonts,
+      ).keybinds;
+      expect(keybinds.newWindow).toBe(accelerator);
+      expect(keybinds.closeTab).toBeNull();
     }
   });
 
@@ -606,9 +591,9 @@ describe("isolated User Configuration loading", () => {
     ],
     [
       "a conflicting keybind",
-      '{"version":1,"keybinds":{"newWindow":"CommandOrControl+W"}}',
-      "keybinds.newWindow",
-      'conflicts with the "closeTab" keybind on Cmd+W. Choose another shortcut for one of them, or set one of them to null to disable its shortcut',
+      '{"version":1,"keybinds":{"newWindow":"CommandOrControl+W","closeTab":"Cmd+W"}}',
+      "keybinds.closeTab",
+      'conflicts with the "newWindow" keybind on Cmd+W. Choose another shortcut for one of them, or set one of them to null to disable its shortcut',
     ],
   ])(
     "starts with full defaults and a precise diagnostic for %s",
@@ -634,6 +619,26 @@ describe("isolated User Configuration loading", () => {
       expect(await readFile(file)).toEqual(original);
     },
   );
+
+  it("loads a custom binding that a newer default now uses, unbinding that default", async () => {
+    const { xdg, home } = await roots();
+    const file = path.join(xdg, "omxterm", "config.json");
+    await mkdir(path.dirname(file), { recursive: true });
+    const original = Buffer.from(
+      '{"version":1,"keybinds":{"nextTab":"Command+Shift+L"}}',
+    );
+    await writeFile(file, original);
+    const load = await loadUserConfiguration({
+      environment: { XDG_CONFIG_HOME: xdg },
+      homeDirectory: home,
+      platform: "darwin",
+      getInstalledFontFamilyMetrics: vi.fn(getInstalledFontFamilyMetrics),
+    });
+    expect(load.fallback).toBeUndefined();
+    expect(load.configuration.keybinds.nextTab).toBe("Command+Shift+L");
+    expect(load.configuration.keybinds.saveLayout).toBeNull();
+    expect(await readFile(file)).toEqual(original);
+  });
 
   it("starts with defaults, leaves invalid bytes untouched, and emits content-free diagnostics", async () => {
     const { xdg, home } = await roots();

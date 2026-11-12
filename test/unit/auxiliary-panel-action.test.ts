@@ -119,17 +119,24 @@ it.each(["darwin", "linux", "win32"])(
       }
       expect(invoke).toHaveBeenCalledTimes(2);
     }
-    expect(() =>
+    const validate = (keybinds: Record<string, unknown>) =>
       validateUserConfiguration(
-        {
-          version: 1,
-          keybinds: { toggleAuxiliaryPanel: defaults.toggleSnippets },
-        },
+        { version: 1, keybinds },
         "/synthetic/config.json",
         new Set(["SF Mono"]),
         defaults,
         platform,
-      ),
+      ).keybinds;
+    const onSnippets = validate({
+      toggleAuxiliaryPanel: defaults.toggleSnippets,
+    });
+    expect(onSnippets.toggleAuxiliaryPanel).toBe(defaults.toggleSnippets);
+    expect(onSnippets.toggleSnippets).toBeNull();
+    expect(() =>
+      validate({
+        toggleAuxiliaryPanel: defaults.toggleSnippets,
+        toggleSnippets: defaults.toggleSnippets,
+      }),
     ).toThrow("conflicts");
   },
 );

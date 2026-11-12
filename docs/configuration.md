@@ -185,7 +185,7 @@ Use **Settings → Shortcuts** to record, reset or unbind application shortcuts.
 }
 ```
 
-Every shortcut needs a key and at least one modifier other than Shift. Function keys F1–F24 can stand alone. Set an action to `null` to unbind it; omit the action to keep its default. Conflicting shortcuts are rejected. A shortcut used by a terminal program, such as Ctrl+C, will be handled by OMXTerm instead of reaching the shell.
+Every shortcut needs a key and at least one modifier other than Shift. Function keys F1–F24 can stand alone. Set an action to `null` to unbind it; omit the action to keep its default. A shortcut you set wins over another action's default, which then has no shortcut; two shortcuts you set on the same key are rejected. A shortcut used by a terminal program, such as Ctrl+C, will be handled by OMXTerm instead of reaching the shell.
 
 | Action                                | macOS default                                                         | Linux/Windows default                      |
 | ------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------ |
@@ -214,7 +214,7 @@ Every shortcut needs a key and at least one modifier other than Shift. Function 
 | `toggleTabBar` / `toggleTitleBar`     | `Cmd+Shift+B` / `Cmd+Shift+D`                                         | `Ctrl+Shift+B` / `Ctrl+Shift+D`            |
 | `reloadConfig`                        | `Cmd+Shift+,`                                                         | `Ctrl+Shift+,`                             |
 
-The Command Palette is also available from **View → Command Palette…** when its shortcut is unbound. `toggleMirrorTyping` works only while the [Mirror Typing](mirror-typing.md) extension is installed and enabled, and `saveLayout` only while [Saved Layout](saved-layout.md) is; otherwise their keys reach the terminal. On Linux and Windows, Find uses Ctrl+Shift+F and full screen uses F11; remove conflicting custom bindings if upgrading an older configuration.
+The Command Palette is also available from **View → Command Palette…** when its shortcut is unbound. `toggleMirrorTyping` works only while the [Mirror Typing](mirror-typing.md) extension is installed and enabled, and `saveLayout` only while [Saved Layout](saved-layout.md) is; otherwise their keys reach the terminal. On Linux and Windows, Find uses Ctrl+Shift+F and full screen uses F11.
 
 ## Snippets
 

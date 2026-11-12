@@ -140,20 +140,21 @@ it("retains absent-tool configuration and collision validation without runtime a
       ),
     ).toBe(false);
   }
-  for (const binding of [defaults.toggleSnippets, "Control+Alt+K"]) {
-    expect(() =>
-      validateUserConfiguration(
-        {
-          version: 1,
-          keybinds: { toggleFiles: binding, toggleSshConnect: "Control+Alt+K" },
-        },
-        "/synthetic/config.json",
-        new Set(["SF Mono"]),
-        defaults,
-        "linux",
-      ),
-    ).toThrow("conflicts");
-  }
+  const validate = (toggleFiles: string) =>
+    validateUserConfiguration(
+      {
+        version: 1,
+        keybinds: { toggleFiles, toggleSshConnect: "Control+Alt+K" },
+      },
+      "/synthetic/config.json",
+      new Set(["SF Mono"]),
+      defaults,
+      "linux",
+    ).keybinds;
+  const onSnippets = validate(defaults.toggleSnippets!);
+  expect(onSnippets.toggleFiles).toBe(defaults.toggleSnippets);
+  expect(onSnippets.toggleSnippets).toBeNull();
+  expect(() => validate("Control+Alt+K")).toThrow("conflicts");
 });
 
 it("does not assign core shortcut slots by title, unrelated package or mismatched action", () => {

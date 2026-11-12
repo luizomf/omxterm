@@ -42,9 +42,24 @@ this decision.
 A native macOS menu control observed `Alt+9` and `Alt+num9` alias regardless of
 registration order. Duplicate validation conservatively treats every Option-only
 top-row/keypad digit pair as one identity on macOS, without changing matching
-priority or other modifier/platform policies. Previously accepted conflicting
-files now use the existing actionable resilient rejection, without rewriting.
-Only 9 was directly observed, not all ten keypad pairs.
+priority or other modifier/platform policies. Files that relied on the two
+identities being distinct now follow the collision rule below, without
+rewriting. Only 9 was directly observed, not all ten keypad pairs.
+
+## Explicit entries win over defaults
+
+Duplicates are judged on the effective map. Defaults are canonically
+conflict-free, so every collision involves at least one explicit entry. An
+explicit entry wins over another action's default: that default is dropped and
+the action is unbound (`null`) in the effective map. Two explicit entries on one
+key keep the actionable resilient rejection. OMXTerm never moves an action to
+another key and never rewrites the file.
+
+This replaces the earlier rule that a remap colliding with a remaining default
+was an error. Each new default (Command Palette, Mirror Typing, Saved Layout,
+the macOS companion-tool slots) turned someone's working custom binding into a
+whole-file fallback to defaults. The cost of the new rule is that the dropped
+default is silent: the action simply has no shortcut until the user binds it.
 
 Logical Plus delivery is an additional convenience: without explicit Shift it
 accepts unshifted `+`, including keypad input. Logical keypad delivery follows
@@ -63,10 +78,10 @@ The native View menu exposes Command Palette on every Supported Platform.
 `commandPalette` is part of the ordinary remappable Settings/keybind vocabulary,
 with `CommandOrControl+Shift+P` on macOS and `Control+Shift+P` on Linux/Windows.
 This maintainer-selected convention supersedes the initial unbound default.
-The defaults are canonically conflict-free; explicit remaps and `null` remain
-unchanged. Existing custom mappings can conflict with the new default and use
-the ordinary actionable collision rejection: remap either action or disable its
-shortcut. No silent reassignment, automatic rewrite or migration is introduced.
+Explicit remaps and `null` remain unchanged. An existing custom mapping on the
+new default keeps its key, and Command Palette is then unbound
+([above](#explicit-entries-win-over-defaults)). No automatic rewrite or
+migration is introduced.
 
 The catalog is rebuilt for effective binding/language changes. The palette reads
 one localized snapshot per opening, shows current accelerator labels, and uses
