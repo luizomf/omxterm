@@ -56,8 +56,13 @@ class RecycleOnly final : public IFileOperationProgressSink {
   IFACEMETHODIMP_(ULONG) AddRef() override { return 1; }
   IFACEMETHODIMP_(ULONG) Release() override { return 1; }
   IFACEMETHODIMP PreDeleteItem(DWORD flags, IShellItem*) override {
-    return flags & TSF_DELETE_RECYCLE_IF_POSSIBLE ? S_OK : E_ABORT;
+    if (flags & TSF_DELETE_RECYCLE_IF_POSSIBLE) return S_OK;
+    refused = true;
+    return E_ABORT;
   }
+  // Set when the shell would have deleted permanently; the operation then
+  // fails with E_ABORT and leaves the item untouched.
+  bool refused = false;
   IFACEMETHODIMP StartOperations() override { return S_OK; }
   IFACEMETHODIMP FinishOperations(HRESULT) override { return S_OK; }
   IFACEMETHODIMP PreRenameItem(DWORD, IShellItem*, LPCWSTR) override {
@@ -113,19 +118,14 @@ int Recycle(const std::wstring& path) {
   result = CoCreateInstance(__uuidof(FileOperation), nullptr, CLSCTX_ALL,
                             IID_PPV_ARGS(&operation));
   RecycleOnly sink;
-  BOOL aborted = FALSE;
   if (SUCCEEDED(result))
     result = operation->SetOperationFlags(
         FOF_NO_UI | FOF_ALLOWUNDO | FOFX_EARLYFAILURE | FOFX_RECYCLEONDELETE);
   if (SUCCEEDED(result)) result = operation->DeleteItem(item, &sink);
-  if (SUCCEEDED(result)) {
-    result = operation->PerformOperations();
-    // A single item aborted in PreDeleteItem was left untouched.
-    if (FAILED(operation->GetAnyOperationsAborted(&aborted))) aborted = FALSE;
-  }
+  if (SUCCEEDED(result)) result = operation->PerformOperations();
   if (operation) operation->Release();
   item->Release();
-  if (aborted) return FILES_NOT_RECYCLED;
+  if (sink.refused) return FILES_NOT_RECYCLED;
   return FAILED(result) ? EIO : 0;
 }
 }  // namespace
