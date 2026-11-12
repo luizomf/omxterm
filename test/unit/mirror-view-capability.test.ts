@@ -38,6 +38,7 @@ it.each([false, true])(
       bind,
       request,
       register: vi.fn(),
+      toggleStop: vi.fn(),
       stopped: vi.fn(),
       retire: vi.fn<(window: BrowserWindow, context?: string) => void>(),
       selectionChanged: vi.fn(),

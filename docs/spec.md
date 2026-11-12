@@ -1150,11 +1150,21 @@ title, needs 0.29.1-dev.0 or later.
   confirmation. Cancelled paste stays stopped; delayed local approval cannot fan
   out or restart mirroring.
 - While the route is armed, every member carries a core
-  [State Mark](#state-marks) whose name says source or member and "Click to
-  stop." Clicking any member's mark stops the group, and opening the Command
-  Palette (a modal entry) is the keyboard-reachable Stop, even with hidden
-  chrome and whether or not the extension responds. Preparing shows nothing, is input-inert and
-  cancellable; Start key releases cannot leak into terminal input.
+  [State Mark](#state-marks) whose name says source or member and "Click or
+  press Cmd+Shift+M to stop." with the binding in effect at Start (just "Click
+  to stop." when `toggleMirrorTyping` is unbound). Clicking any member's mark,
+  pressing that binding, or opening the Command Palette (a modal entry) stops
+  the group, even with hidden chrome and whether or not the
+  extension responds. Preparing shows nothing, is input-inert and cancellable;
+  Start key releases cannot leak into terminal input.
+- The one **Mirror Typing** entry (File menu, terminal context menu, Command
+  Palette, and its `toggleMirrorTyping` shortcut) is a toggle that acts only on
+  its window: a running or preparing group there stops; otherwise a shown setup
+  dialog closes; otherwise setup opens for the selected tab. It never stops or
+  changes a group in another window; each window keeps its own group. One
+  press acts once; repeats and release never reach the terminal. Because
+  opening the Command Palette already stops the group, choosing the entry there
+  opens setup.
 - An ordinary stop removes the marks and shows nothing. A paste, snippet or
   drop stop flashes one transient sentence; a failed write leaves one
   dismissible sentence warning that some panes may have missed input.
@@ -1954,7 +1964,7 @@ Vocabulary:
   `moveAuxiliaryPanel`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
   `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`,
   `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`, `focusPaneDown`,
-  `equalizePanes`, `commandPalette`. New actions, global shortcuts, chords and
+  `equalizePanes`, `commandPalette`, `toggleMirrorTyping`. New actions, global shortcuts, chords and
   per-platform maps are unsupported.
 - A value is `null` or a case-insensitive Electron accelerator with exactly one
   key and at least one non-Shift modifier. Only `F1`–`F24` may be bare or
@@ -1962,7 +1972,9 @@ Vocabulary:
 - Omitted actions keep platform defaults. Linux and Windows use `Ctrl+Shift+F`
   for Find and `F11` for full screen; macOS uses `Cmd+F` and `Ctrl+Cmd+F`.
   Command Palette is `CommandOrControl+Shift+P` on macOS and `Control+Shift+P`
-  elsewhere.
+  elsewhere; Mirror Typing is `CommandOrControl+Shift+M` on macOS and
+  `Control+Shift+M` elsewhere. An existing custom binding on either combination
+  gets the standard collision error, never a rewrite.
 - `null` removes only that shortcut: the menu item stays, and OMXTerm stops
   consuming the key (the OS or another binding may still take it). A `null`
   entry holds no shortcut and cannot collide.
@@ -1970,11 +1982,12 @@ Vocabulary:
   matcher; the menu shows the effective accelerator. PTY control sequences are
   untouched.
 
-Files and SSH Connect slots:
+Files, SSH Connect and Mirror Typing slots:
 
-- `toggleFiles` and `toggleSshConnect` default to `null` everywhere. They reuse
-  the installed tool's action and guards and its single File-menu and palette
-  entry. Other extension contributions get no configurable shortcuts.
+- `toggleFiles` and `toggleSshConnect` default to `null` everywhere;
+  `toggleMirrorTyping` has the defaults above. They reuse the installed
+  extension's action and guards and its single File-menu and palette entry.
+  Other extension contributions get no configurable shortcuts.
 - A missing, disabled or unsupported tool keeps its configuration but has no
   entry or active shortcut, so its key is not consumed. Collision checks ignore
   installation state, and nothing is activated, installed or enabled to check
@@ -1984,7 +1997,7 @@ Files and SSH Connect slots:
   One press invokes once; its repeats and release stay owned across focus
   transfer and never reach the terminal. Recording takes priority.
   `moveAuxiliaryPanel` is also once-per-press; other actions keep their repeat
-  behavior.
+  behavior. Mirror Typing toggles as described in [Mirror Typing](#mirror-typing).
 
 Validation:
 

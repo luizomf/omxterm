@@ -39,6 +39,7 @@ import {
 } from "./application-layout";
 import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
+import { displayAccelerator } from "../shared/terminal-keybinds";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import {
   saveTerminalExport,
@@ -268,10 +269,17 @@ app
           home: account.homedir,
           application: () => terminalApplication,
         });
+        let actionCatalog: CoreActionCatalog;
         mirrors = registerMirrorTypingIpc({
           ipc: ipcMain,
           trusted: terminalIpcRouter.isTrustedSender,
           quitting: () => terminalApplication?.isQuitting() === true,
+          shortcut: () => {
+            const binding = actionCatalog.toggleMirrorTyping.accelerator;
+            return binding
+              ? displayAccelerator(binding, process.platform)
+              : undefined;
+          },
         });
         semanticInput = registerSemanticInputIpc({
           ipc: ipcMain,
@@ -279,7 +287,6 @@ app
           quitting: () => terminalApplication?.isQuitting() === true,
         });
         let rebuildMenu = () => {};
-        let actionCatalog: CoreActionCatalog;
         extensions = await startApplicationExtensions({
           ...(provisioning.seed ? { defaultSnippets: provisioning.seed } : {}),
           onDefaultSnippetsWarning(warning) {

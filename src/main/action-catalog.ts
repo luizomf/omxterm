@@ -7,8 +7,8 @@ import {
   TERMINAL_ACTION_NAMES,
   terminalActionForKeyboardInput,
   type AcceleratorKeyboardInput,
-  type CompanionToolAction,
-  isCompanionToolAction,
+  type ExtensionShortcutAction,
+  isExtensionShortcutAction,
   type TerminalActionName,
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
@@ -61,8 +61,8 @@ export type CoreActionId =
 export interface CoreAction {
   readonly id: string;
   readonly extension?: boolean;
-  // Assigned only by core composition for the two recognized companion tools.
-  readonly shortcut?: CompanionToolAction;
+  // Assigned only by core composition for the recognized official extensions.
+  readonly shortcut?: ExtensionShortcutAction;
   readonly label: string;
   readonly accelerator: string | null;
   // These existing guarded callbacks own availability, target selection and
@@ -119,6 +119,7 @@ export function createCoreActionCatalog(
     actualSize: action(t("menu.actualSize"), actions.resetSelectedWindowZoom),
     toggleFiles: action(t("menu.toggleFiles"), () => {}, false),
     toggleSshConnect: action(t("menu.toggleSshConnect"), () => {}, false),
+    toggleMirrorTyping: action(t("mirrorTyping.title"), () => {}, false),
     toggleSnippets: action(
       t("menu.toggleSnippets"),
       actions.toggleSelectedSnippets,
@@ -215,7 +216,7 @@ export function createCoreActionCatalog(
     ...contributed,
     ...(Object.fromEntries(
       Object.entries(definitions).map(([id, definition]) => {
-        const companion = isCompanionToolAction(id);
+        const companion = isExtensionShortcutAction(id);
         const installed = companion
           ? extensions.find((entry) => entry.extension && entry.shortcut === id)
           : undefined;

@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import type { MenuItemConstructorOptions } from "electron";
 import {
   createCoreActionCatalog,
+  coreActionForKeyboardInput,
   coreActionKeybinds,
   corePaletteActions,
   type TerminalApplicationMenuActions,
@@ -156,6 +157,8 @@ it("does not assign core shortcut slots by title, unrelated package or mismatche
     ["omxterm.files", "omxterm.files.other"],
     ["example.ssh", "omxterm.ssh.open"],
     ["omxterm.snippets", "omxterm.snippets.open"],
+    ["example.mirror", "omxterm.mirror-typing.open"],
+    ["omxterm.mirror-typing", "omxterm.mirror-typing.setup"],
   ]) {
     expect(
       companionToolShortcut({
@@ -166,3 +169,73 @@ it("does not assign core shortcut slots by title, unrelated package or mismatche
   }
   expect(companionToolShortcut({ id: "omxterm.files" })).toBeUndefined();
 });
+
+it.each([
+  ["darwin", "CommandOrControl+Shift+M", { meta: true, control: false }],
+  ["linux", "Control+Shift+M", { meta: false, control: true }],
+  ["win32", "Control+Shift+M", { meta: false, control: true }],
+] as const)(
+  "makes Mirror Typing's one entry its rebindable toggle on %s",
+  (platform, binding, modifiers) => {
+    const { t } = translatorFor("en-US");
+    const invoke = vi.fn();
+    const metadata = {
+      id: "omxterm.mirror-typing",
+      view: {
+        action: "omxterm.mirror-typing.open",
+        title: "Mirror Typing",
+        entry: "index.html",
+      },
+    };
+    expect(companionToolShortcut(metadata)).toBe("toggleMirrorTyping");
+    const defaults = terminalDefaultKeybinds(platform);
+    expect(defaults.toggleMirrorTyping).toBe(binding);
+    const actions = new Proxy({} as TerminalApplicationMenuActions, {
+      get: () => vi.fn(),
+    });
+    const entry = {
+      id: metadata.view.action,
+      shortcut: "toggleMirrorTyping" as const,
+      extension: true,
+      label: "Mirror Typing",
+      accelerator: null,
+      palette: true,
+      invoke,
+    };
+    const catalog = createCoreActionCatalog("OMXTerm", actions, defaults, t, [
+      entry,
+    ]);
+    const toggle = catalog.toggleMirrorTyping;
+    expect(toggle).toMatchObject({ label: "Mirror Typing", invoke });
+    expect(toggle.accelerator).toBe(binding);
+    expect(catalog[metadata.view.action]).toBeUndefined();
+    expect(
+      corePaletteActions(catalog).filter((action) => action.invoke === invoke),
+    ).toEqual([toggle]);
+    const items = flatten(coreActionMenuTemplate("OMXTerm", catalog, t)).filter(
+      (item) => item.click === invoke,
+    );
+    expect(items).toEqual([
+      expect.objectContaining({ label: "Mirror Typing", accelerator: binding }),
+    ]);
+    expect(
+      coreActionForKeyboardInput(
+        catalog,
+        { key: "M", alt: false, shift: true, ...modifiers },
+        platform,
+      ),
+    ).toBe(toggle);
+    const rebound = createCoreActionCatalog(
+      "OMXTerm",
+      actions,
+      { ...defaults, toggleMirrorTyping: "Control+Alt+M" },
+      t,
+      [entry],
+    );
+    expect(rebound.toggleMirrorTyping.accelerator).toBe("Control+Alt+M");
+    // Missing or disabled: no entry, and the key stays with the terminal.
+    const absent = createCoreActionCatalog("OMXTerm", actions, defaults, t);
+    expect(absent.toggleMirrorTyping.accelerator).toBeNull();
+    expect(corePaletteActions(absent)).not.toContain(absent.toggleMirrorTyping);
+  },
+);

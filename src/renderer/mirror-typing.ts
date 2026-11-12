@@ -31,6 +31,8 @@ interface Attempt {
   handoff?: string;
   ready: boolean;
   lease?: string;
+  // The toggle's displayed binding at Start, named in the marks' Stop hint.
+  shortcut?: string;
   sequence: number;
 }
 function member(pane: TerminalPane): Member | undefined {
@@ -131,11 +133,15 @@ function guardStartRelease(document: Document) {
 }
 
 // While the route is armed, members and the source carry a State Mark;
-// clicking any of them stops the group.
+// clicking any of them, or pressing the toggle's binding, stops the group.
 // Preparing is input-inert and brief, so it shows nothing.
 function markMembers(marks: StateMarks, stop: () => void) {
   let marked: readonly TerminalPane[] = [];
-  return (panes: readonly TerminalPane[] = [], source?: TerminalPane) => {
+  return (
+    panes: readonly TerminalPane[] = [],
+    source?: TerminalPane,
+    shortcut?: string,
+  ) => {
     for (const pane of marked)
       if (!panes.includes(pane)) marks.set(pane, "mirror", undefined);
     for (const pane of panes)
@@ -143,7 +149,13 @@ function markMembers(marks: StateMarks, stop: () => void) {
         glyph: "mirror",
         label: (t) =>
           t(pane === source ? "mirrorTyping.source" : "mirrorTyping.member"),
-        action: { label: (t) => t("mirrorTyping.clickToStop"), run: stop },
+        action: {
+          label: (t) =>
+            shortcut
+              ? t("mirrorTyping.pressToStop", { shortcut })
+              : t("mirrorTyping.clickToStop"),
+          run: stop,
+        },
       });
     marked = panes;
   };
@@ -215,6 +227,7 @@ export function createMirrorTyping(deps: {
       mark(
         attempt.members.map((item) => item.pane),
         attempt.snapshot.tab.focused,
+        attempt.shortcut,
       );
   };
   const describe = (
@@ -341,6 +354,7 @@ export function createMirrorTyping(deps: {
         selectedMember(current);
       if (ok) {
         current.lease = command.lease;
+        if (command.shortcut) current.shortcut = command.shortcut;
         if (timer) clearTimeout(timer);
         timer = undefined;
         changed();

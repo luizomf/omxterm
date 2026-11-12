@@ -240,6 +240,29 @@ function supportsExtensionPreview() {
   );
 }
 
+const focusedWindow = () => BrowserWindow.getFocusedWindow() ?? undefined;
+
+// Mirror Typing's entry is its window's toggle. It stops a running or
+// preparing group in that window only, never another window's.
+function stopsMirrorGroup(
+  options: ApplicationExtensionsOptions,
+  shortcut: string | undefined,
+  source: ExtensionTarget,
+) {
+  return (
+    shortcut === "toggleMirrorTyping" &&
+    options.mirrorTyping?.toggleStop(source.owner as BrowserWindow) === true
+  );
+}
+
+// Otherwise the renderer closes a shown setup dialog, or accepts the open.
+function tabAction(shortcut: string | undefined, snippets: boolean) {
+  if (snippets) return "toggle-snippets-extension";
+  return shortcut === "toggleMirrorTyping"
+    ? "toggle-extension-dialog"
+    : "open-extension";
+}
+
 // Startup creates infrastructure, never activates installed code. Unsupported
 // platforms retain Settings with an explicit preview-unavailable result. Broken
 // infrastructure must not prevent terminal startup.
@@ -399,8 +422,8 @@ export async function startApplicationExtensions(
           ...(shortcut ? { shortcut } : {}),
           invoke() {
             if (claim && !claim()) return;
-            const source =
-              target ?? capture(BrowserWindow.getFocusedWindow() ?? undefined);
+            const source = target ?? capture(focusedWindow());
+            if (source && stopsMirrorGroup(options, shortcut, source)) return;
             const captured =
               source &&
               captureExtensionTarget(
@@ -430,9 +453,7 @@ export async function startApplicationExtensions(
                 ),
             });
             options.sendAction(window.webContents, terminalIpc.tabCommand, {
-              action: snippetsCompatibility
-                ? "toggle-snippets-extension"
-                : "open-extension",
+              action: tabAction(shortcut, snippetsCompatibility),
               token,
             });
           },

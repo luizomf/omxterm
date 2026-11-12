@@ -234,6 +234,7 @@ export function mountTerminalWindowPage(
       selectContent: companion.select,
       isSshSourceForeground: companion.isSourceForeground,
       isDialogShown: companion.dialogShown,
+      closeDialog: companion.closeDialog,
       createAdapter: (...intent) =>
         options.createAdapter(fontConfigurationId, ...intent),
       sshPane: options.sshPane,

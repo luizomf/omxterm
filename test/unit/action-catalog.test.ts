@@ -44,7 +44,11 @@ it("projects a namespaced extension through the same menu and palette without ad
   );
   const contributed = catalog["omxterm.files.open"]!;
   expect(contributed.accelerator).toBeNull();
-  expect(coreActionKeybinds(catalog)).toEqual(bindings);
+  // Without Mirror Typing installed, its slot holds no key.
+  expect(coreActionKeybinds(catalog)).toEqual({
+    ...bindings,
+    toggleMirrorTyping: null,
+  });
   expect(catalog.quit.label).not.toBe("Forged");
   expect(corePaletteActions(catalog)).toContain(contributed);
   expect(
@@ -116,14 +120,21 @@ it.each(["en-US", "pt-BR"] as const)(
     const catalog = createCoreActionCatalog("OMXTerm", actions, bindings, t);
     const items = flatten(coreActionMenuTemplate("OMXTerm", catalog, t));
     const invocations = coreActionInvocations(catalog);
-    expect(coreActionKeybinds(catalog)).toEqual(bindings);
+    expect(coreActionKeybinds(catalog)).toEqual({
+      ...bindings,
+      toggleMirrorTyping: null,
+    });
     for (const id of TERMINAL_ACTION_NAMES) {
       expect(invocations[id]).toBe(catalog[id].invoke);
     }
     for (const action of Object.values(catalog)) {
       expect(catalog[action.id]).toBe(action);
       const item = items.find((item) => item.click === action.invoke);
-      if (action.id === "toggleFiles" || action.id === "toggleSshConnect") {
+      if (
+        action.id === "toggleFiles" ||
+        action.id === "toggleSshConnect" ||
+        action.id === "toggleMirrorTyping"
+      ) {
         expect(item).toBeUndefined();
         expect(action.accelerator).toBeNull();
         continue;
@@ -147,6 +158,7 @@ it.each(["en-US", "pt-BR"] as const)(
         "commandPalette",
         "toggleFiles",
         "toggleSshConnect",
+        "toggleMirrorTyping",
         ...Array.from({ length: 9 }, (_, index) => `selectTab${index + 1}`),
       ].sort(),
     );

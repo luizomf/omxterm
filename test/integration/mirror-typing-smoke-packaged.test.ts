@@ -93,8 +93,11 @@ it.skipIf(!app || !archive)(
       expect(result.setup.grid).toEqual(result.grid.before);
       expect(result.grid.active).toEqual(result.grid.before);
       expect(result.grid.stopped).toEqual(result.grid.active);
+      // The mark names the default toggle shortcut.
       expect(result.active).toBe(
-        "Mirroring typing from this pane. Click to stop.",
+        `Mirroring typing from this pane. Click or press ${
+          process.platform === "darwin" ? "Cmd" : "Ctrl"
+        }+Shift+M to stop.`,
       );
       // Two different shells ran the one typed command.
       expect(new Set(steps.typing).size).toBe(2);

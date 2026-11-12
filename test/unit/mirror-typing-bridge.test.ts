@@ -39,6 +39,14 @@ it("validates both admission phases and removes the exact command listener", () 
       prepared: randomUUID(),
       lease: randomUUID(),
     },
+    {
+      kind: "activate",
+      context,
+      request,
+      prepared: randomUUID(),
+      lease: randomUUID(),
+      shortcut: "Cmd+Shift+M",
+    },
     { kind: "stop", context, reason: "write-failed" },
     { kind: "retire", context },
   ];
@@ -47,6 +55,8 @@ it("validates both admission phases and removes the exact command listener", () 
     deliver({}, { ...command, extra: true });
     deliver({}, { ...command, context: "foreign-shaped" });
   }
+  for (const shortcut of ["", "Cmd+\nM", "x".repeat(65), 1])
+    deliver({}, { ...commands[4], shortcut });
   expect(receive.mock.calls.map(([value]) => value)).toEqual(commands);
   remove();
   expect(ipc.removeListener).toHaveBeenCalledWith(

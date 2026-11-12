@@ -311,6 +311,7 @@ export const brazilianPortugueseMessages: Readonly<
   "mirrorTyping.source": "Espelhando a digitação deste painel.",
   "mirrorTyping.member": "Espelhando a digitação para este painel.",
   "mirrorTyping.clickToStop": "Clique para parar.",
+  "mirrorTyping.pressToStop": "Clique ou pressione {shortcut} para parar.",
   "mirrorTyping.semantic": "Espelhamento parado: isto foi só para um painel.",
   "mirrorTyping.failed":
     "Espelhamento parado, e alguns painéis podem não ter recebido o que você digitou.",

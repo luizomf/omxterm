@@ -159,6 +159,12 @@ export function createHostedDialogs(
     fit(id: string, height: number) {
       if (current?.id === id && !current.removed) current.fit(height);
     },
+    // Closes the shown dialog, as its Close does. False when none is shown.
+    closeShown() {
+      if (!current || !shown()) return false;
+      close(current);
+      return true;
+    },
     // Escape in the view, routed through main.
     dismiss(id: string) {
       if (current?.id !== id) return false;

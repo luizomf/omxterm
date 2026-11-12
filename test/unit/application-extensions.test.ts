@@ -339,7 +339,10 @@ async function startService(
   provisioning: Partial<
     Pick<
       Parameters<typeof startApplicationExtensions>[0],
-      "defaultSnippets" | "onDefaultSnippetsWarning" | "isTrustedSender"
+      | "defaultSnippets"
+      | "onDefaultSnippetsWarning"
+      | "isTrustedSender"
+      | "mirrorTyping"
     >
   > = {},
   semanticOwner = true,
@@ -2246,4 +2249,35 @@ it("actions capture separate contexts; disable revokes both views and callbacks"
       { id: "hosted-view", isCurrentVisible: () => true },
     ),
   ).rejects.toThrow("unavailable");
+});
+
+it("makes Mirror Typing's entry a toggle for its own window: stop, else open or close setup", async () => {
+  const toggleStop = vi.fn(() => false);
+  await service.dispose();
+  await startService("linux", {
+    mirrorTyping: { toggleStop } as unknown as NonNullable<
+      Parameters<typeof startApplicationExtensions>[0]["mirrorTyping"]
+    >,
+  });
+  adapters.sendOpen.mockImplementation(() => {});
+  await installTool("omxterm.mirror-typing", "Mirror Typing", [
+    "terminal.mirrorTyping.v1",
+  ]);
+  const entry = service.actions()[0]!;
+  expect(entry).toMatchObject({
+    id: "omxterm.mirror-typing.open",
+    shortcut: "toggleMirrorTyping",
+  });
+  entry.invoke();
+  expect(toggleStop).toHaveBeenCalledExactlyOnceWith(window);
+  // The renderer closes a shown setup dialog, or accepts to open one.
+  expect(adapters.sendOpen).toHaveBeenCalledExactlyOnceWith(
+    window.webContents,
+    expect.any(String),
+    expect.objectContaining({ action: "toggle-extension-dialog" }),
+  );
+  toggleStop.mockReturnValue(true);
+  entry.invoke();
+  expect(toggleStop).toHaveBeenCalledTimes(2);
+  expect(adapters.sendOpen).toHaveBeenCalledOnce();
 });

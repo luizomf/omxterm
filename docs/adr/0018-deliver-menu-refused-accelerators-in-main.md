@@ -112,6 +112,12 @@ allowing repeated close/reopen or terminal input. Shortcut recording retains
 priority; unrelated repeatable actions are unchanged. Native qualification must
 exercise this route, not infer it from Escape or semantic Enter evidence.
 
+Mirror Typing gets a third slot, `toggleMirrorTyping`, on the same terms: it
+reuses the extension's single entry, follows the same availability, collision
+and once-per-press rules, and defaults to `CommandOrControl+Shift+M`
+(`Control+Shift+M` on Linux/Windows). Its entry toggles the window's group
+([ADR 0043](0043-revoke-visible-mirror-typing-routes.md)).
+
 ## Maintenance boundary
 
 Matcher and duplicate-detection tests cover effective native identity, logical

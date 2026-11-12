@@ -25,6 +25,7 @@ export function createApplicationTabCommands<Tab>(
     readonly openSnippetsManagement?: () => void;
     readonly refuseSsh?: (token: string) => void;
     readonly canFocus?: (() => boolean) | undefined;
+    readonly closeDialog?: (() => boolean) | undefined;
   },
 ) {
   let pendingClose: Tab | undefined;
@@ -35,13 +36,20 @@ export function createApplicationTabCommands<Tab>(
         action:
           | "snippets-management"
           | "toggle-snippets-extension"
+          | "toggle-extension-dialog"
           | "open-extension";
       }
     >,
   ) => {
+    // A toggle closes the shown dialog instead of opening another.
+    const closed =
+      command.action === "toggle-extension-dialog" &&
+      options.closeDialog?.() === true;
     const accepted =
+      !closed &&
       options.canFocus?.() !== false &&
       (command.action === "open-extension" ||
+        command.action === "toggle-extension-dialog" ||
         options.canOpenSnippets?.() === true);
     if (command.action === "snippets-management") {
       if (accepted) options.openSnippetsManagement?.();
@@ -65,6 +73,7 @@ export function createApplicationTabCommands<Tab>(
           return;
         case "snippets-management":
         case "toggle-snippets-extension":
+        case "toggle-extension-dialog":
         case "open-extension":
           extensionCommand(command);
           return;

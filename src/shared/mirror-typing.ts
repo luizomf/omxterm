@@ -36,6 +36,8 @@ export type MirrorCommand =
       context: string;
       prepared: string;
       lease: string;
+      // The Mirror Typing toggle's display binding, for the marks' Stop hint.
+      shortcut?: string;
     }
   | { kind: "stop"; context: string; reason: MirrorStopReason }
   | { kind: "retire"; context: string };
@@ -102,6 +104,14 @@ export function isMirrorReply(value: unknown): value is MirrorReply {
           value.error === "need-two-panes")))
   );
 }
+function isShortcutText(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 64 &&
+    !/[\u0000-\u001f\u007f]/u.test(value)
+  );
+}
 export function isMirrorCommand(value: unknown): value is MirrorCommand {
   if (!value || typeof value !== "object") return false;
   const command = value as Record<string, unknown>;
@@ -139,15 +149,15 @@ export function isMirrorCommand(value: unknown): value is MirrorCommand {
       command.sourceView.length > 0 &&
       command.sourceView.length <= 128
     );
+  return command.kind === "activate" && isActivateCommand(command);
+}
+function isActivateCommand(command: Record<string, unknown>) {
+  const keys = ["kind", "context", "request", "prepared", "lease"];
+  const shortcut = command.shortcut;
   return (
-    command.kind === "activate" &&
-    exactLayoutKeys(command, [
-      "kind",
-      "context",
-      "request",
-      "prepared",
-      "lease",
-    ]) &&
+    (exactLayoutKeys(command, keys) ||
+      (exactLayoutKeys(command, [...keys, "shortcut"]) &&
+        isShortcutText(shortcut))) &&
     isLayoutToken(command.prepared) &&
     isLayoutToken(command.lease)
   );

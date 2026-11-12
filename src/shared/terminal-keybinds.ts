@@ -39,6 +39,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleSnippets",
   "toggleFiles",
   "toggleSshConnect",
+  "toggleMirrorTyping",
   "toggleTabBar",
   "toggleAuxiliaryPanel",
   "moveAuxiliaryPanel",
@@ -56,8 +57,19 @@ export function isCompanionToolAction(
   return action === "toggleFiles" || action === "toggleSshConnect";
 }
 
-// A window preference, not a companion-tool slot. Delivery owns one physical
-// press separately from the extension-only classifier above.
+// Core shortcut slots an official extension's own entry fills: the companion
+// tools above, and Mirror Typing, whose entry toggles its group.
+export type ExtensionShortcutAction =
+  CompanionToolAction | "toggleMirrorTyping";
+
+export function isExtensionShortcutAction(
+  action: string,
+): action is ExtensionShortcutAction {
+  return isCompanionToolAction(action) || action === "toggleMirrorTyping";
+}
+
+// A window preference, not an extension slot. Delivery owns one physical
+// press separately from the extension classifier above.
 export function isDiscreteWindowAction(
   action: string,
 ): action is "moveAuxiliaryPanel" {
@@ -114,6 +126,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     toggleSnippets: "CommandOrControl+Shift+S",
     toggleFiles: null,
     toggleSshConnect: null,
+    toggleMirrorTyping: "CommandOrControl+Shift+M",
     toggleTabBar: "CommandOrControl+Shift+B",
     toggleAuxiliaryPanel: null,
     moveAuxiliaryPanel: "CommandOrControl+Shift+Alt+P",
@@ -163,6 +176,7 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   toggleSnippets: "Control+Shift+S",
   toggleFiles: null,
   toggleSshConnect: null,
+  toggleMirrorTyping: "Control+Shift+M",
   toggleTabBar: "Control+Shift+B",
   toggleAuxiliaryPanel: null,
   moveAuxiliaryPanel: "Control+Shift+Alt+P",

@@ -53,6 +53,7 @@ class MirrorWindow {
     readonly window: BrowserWindow,
     readonly controller: TerminalIpcController,
     private quitting: () => boolean,
+    private shortcut: () => string | undefined = () => undefined,
   ) {
     this.contents = window.webContents;
     const listen = (
@@ -164,6 +165,13 @@ class MirrorWindow {
     } catch {
       /* Native teardown remains independent. */
     }
+  }
+  // The toggle's Stop: only a group that is running or preparing counts.
+  stopGroup() {
+    const context = this.context;
+    if (!context || (!context.lease && !context.starting)) return false;
+    this.stop();
+    return true;
   }
   stopped(lease: string, reason: MirrorStopReason) {
     if (this.context?.lease === lease) this.stop(reason);
@@ -381,6 +389,7 @@ class MirrorWindow {
         context.lifetime.signal,
       );
     });
+    const shortcut = this.shortcut();
     const active = await this.ask(
       {
         kind: "activate",
@@ -388,6 +397,7 @@ class MirrorWindow {
         context: context.id,
         prepared,
         lease: context.lease!,
+        ...(shortcut ? { shortcut } : {}),
       },
       pendingSignal,
     );
@@ -408,6 +418,8 @@ export function registerMirrorTypingIpc(options: {
   ipc: IpcMainPort;
   trusted(event: IpcEvent): boolean;
   quitting(): boolean;
+  /** The toggle's effective binding as displayed, if it has one. */
+  shortcut?(): string | undefined;
 }) {
   const owners = new Map<object, MirrorWindow>();
   const ownerFor = (event: IpcEvent) =>
@@ -430,7 +442,12 @@ export function registerMirrorTypingIpc(options: {
   };
   return {
     register(window: BrowserWindow, controller: TerminalIpcController) {
-      const value = new MirrorWindow(window, controller, options.quitting);
+      const value = new MirrorWindow(
+        window,
+        controller,
+        options.quitting,
+        options.shortcut,
+      );
       owners.set(value.contents, value);
       window.once("closed", () => owners.delete(value.contents));
     },
@@ -446,6 +463,9 @@ export function registerMirrorTypingIpc(options: {
       signal: AbortSignal,
       admit: Admission,
     ) => owner(window).request(context, view, value, signal, admit),
+    /** Stops this window's running or preparing group; never another window's. */
+    toggleStop: (window: BrowserWindow) =>
+      owners.get(window.webContents)?.stopGroup() === true,
     stopped: (window: BrowserWindow, lease: string, reason: MirrorStopReason) =>
       owner(window).stopped(lease, reason),
     retire: (window: BrowserWindow, context?: string) =>
