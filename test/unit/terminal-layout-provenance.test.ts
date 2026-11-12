@@ -115,7 +115,7 @@ it("keeps a reopened pane's unavailable folder until the shell reports another",
     platform: "linux",
     hostName: () => "local",
   });
-  tracker.launched("s1", "/home/test", "/synthetic/reported");
+  tracker.launched("s1", "/home/test", { remembered: "/synthetic/reported" });
   expect(tracker.provenance("s1")).toEqual({
     kind: "launch-local",
     path: "/synthetic/reported",

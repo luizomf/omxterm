@@ -239,13 +239,21 @@ are the job of a session manager such as tmux.
   transparency/blur changes the visible background, and the marker is 1 px high.
 - Clicking a pane focuses it. Switching tabs restores each tab's focused pane.
   Hidden tabs hide their pane Surfaces and keep their layout.
-- A new pane starts the Default Shell in its source pane's last OSC 7-reported
-  local directory when one was reported and still exists, otherwise in the home
-  directory. Main reads the report from PTY output, rejects non-local host names
-  and UNC/device paths, and never logs the directory. It is persisted only
+- A new pane starts the Default Shell in its source pane's folder when it still
+  exists, otherwise in the home directory. The folder is the source pane's last
+  local OSC 7 report; without a usable report, on macOS and Linux, it is the
+  working directory of the pane's shell process (the PTY's direct child, not
+  the foreground program), read just before the split. Windows uses only OSC 7.
+  Main reads reports from PTY output, rejects non-local host names and
+  UNC/device paths, and never logs the directory. It is persisted only
   through Saved Layout (an explicit save, or remembered windows while the
   extension reopens them).
-- OSC 7 is not authenticated or current-process inspection. An empty or local
+- Reading the shell's cwd is read-only: it changes nothing in the shell or its
+  startup ([ADR 0013](adr/0013-do-not-inject-shell-integration.md)). Linux reads
+  `/proc/<pid>/cwd`; macOS runs one `lsof` for all panes being looked up at once.
+  It follows the shell itself, so a program the shell started with its own cwd
+  (or a manual `ssh`) doesn't change it.
+- OSC 7 is not authenticated. An empty or local
   host name from a remote shell looks the same as a local report, any program
   can emit one, and reports may be stale. Either can
   only select an existing local directory, never execute shell text. Known SSH
@@ -1061,9 +1069,10 @@ back with fresh shells
   active snapshot, not possible interrupted-write temp copies.
 - No terminal payload, command, environment, title, process, or SSH target is
   stored.
-- Directory provenance has the same [OSC 7 limits](#terminal-panes) as split
-  panes. Invalid, remote, or overlong reports revoke launch fallback. Known SSH,
-  explicit-command, ended, and pending panes use home slots.
+- Directory provenance uses the same folder as split panes, read right before
+  each capture: `reported-local` is an OSC 7 report or the shell's cwd. Without
+  either, an invalid, remote, or overlong report revokes launch fallback. Known
+  SSH, explicit-command, ended, and pending panes use home slots.
 - Directory checks are asynchronous and fall back to home on missing or
   unavailable paths, without creating folders or retrying a failed PTY launch.
   OS-mounted folders and ordinary shell startup may access the network.

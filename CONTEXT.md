@@ -55,8 +55,9 @@ that Terminal Tab, not any surviving Settings tab.
 
 **Terminal Pane** — One Terminal Surface and, after initialization succeeds, one
 Live Terminal Session inside a tab's split layout. Removing a tab's last pane
-removes the tab. A split pane may start in its source pane's last OSC 7-reported
-local directory; otherwise in the home directory.
+removes the tab. A split pane may start in its source pane's folder (its last
+local OSC 7 report or, on macOS and Linux, its shell's working directory);
+otherwise in the home directory.
 
 **Live Terminal Session** — A running shell or explicitly launched program and
 its terminal state. Closing its pane or tab ends its processes; application quit waits
@@ -72,7 +73,7 @@ first tab. The program and literal argument list go directly to the PTY.
 
 **Initial Working Directory** — The operating-system account's home directory,
 where new tabs and an explicit Launch Request start. Split panes instead use
-an available, still-existing local OSC 7-reported directory, with home as fallback.
+their source pane's still-existing folder, with home as fallback.
 
 **Busy Session** — A session whose PTY foreground process differs from the idle
 Default Shell. An unreadable foreground name, any live explicit command, and all

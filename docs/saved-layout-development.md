@@ -37,7 +37,10 @@ extension, reopens windows.
 renderer sends the tab order, the flat split tree with weights, the focused pane
 and the selected tab; main replaces each session with a folder:
 
-- `reported-local`: the pane's last local OSC 7 report;
+- `reported-local`: the pane's last local OSC 7 report or, without a usable
+  one on macOS and Linux, its shell process's working directory, read right
+  before the capture (`process-working-directory.ts`, one batched `lsof` on
+  macOS, `/proc/<pid>/cwd` on Linux);
 - `launch-local`: the folder the Default Shell started in, when the shell never
   reported one;
 - `home`: SSH Connect and `-e` panes, ended or pending panes, and panes whose
@@ -101,8 +104,10 @@ sidecars and refuses a dirty checkout. To try it, install the archive through
 ### Packaged Saved Layout smoke
 
 `test/integration/restoration-smoke-packaged.test.ts` checks an archive on a
-packaged host, on macOS, Linux and Windows. It installs the archive, reports a
-folder with OSC 7 from the Default Shell, adds a tab and a split, and saves.
+packaged host, on macOS, Linux and Windows. It installs the archive, changes
+the Default Shell's folder (on Windows with the guide's OSC 7 prompt; on macOS
+and Linux with no setup on hosts that read the shell's folder), adds a tab and
+a split, and saves.
 Then it quits, starts the app again, opens the saved layout and asks the
 restored shell where it started. It runs in seconds:
 
@@ -130,10 +135,9 @@ Published archives are immutable, so changed bytes need a new version in
 
 ## Current limits
 
-- Folders come only from OSC 7 reports and launch folders. OMXTerm never
-  inspects a process's working directory or adds shell integration
-  ([ADR 0013](adr/0013-do-not-inject-shell-integration.md)); most shells need a
-  few lines of setup, shown in the user guide.
+- On Windows, folders come only from OSC 7 reports and launch folders;
+  PowerShell needs the prompt shown in the user guide. OMXTerm never adds shell
+  integration ([ADR 0013](adr/0013-do-not-inject-shell-integration.md)).
 - One saved layout for one window, opened only when chosen. Reopening at
   startup doesn't keep window positions or sizes.
 - Windows x64 hosts don't run extensions.

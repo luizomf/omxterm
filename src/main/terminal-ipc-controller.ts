@@ -98,6 +98,7 @@ interface RoutedTerminalIpcController
   configuration(payload?: unknown): TerminalRendererConfiguration;
   initialLayout(payload?: unknown): InitialLayout | null;
   start(payload?: unknown): TerminalSessionId;
+  prepareStart(payload?: unknown): Promise<void> | undefined;
   input(payload?: unknown): void;
   trackedInput(payload?: unknown): TerminalWriteReceipt;
   resize(payload?: unknown): void;
@@ -148,7 +149,10 @@ export function registerTerminalIpcRouter(
       rejectSender();
       throw new Error("Rejected terminal IPC from an untrusted sender");
     }
-    return controller.start(payload);
+    const preparing = controller.prepareStart(payload);
+    return preparing
+      ? preparing.then(() => controller.start(payload))
+      : controller.start(payload);
   };
   const configuration: IpcHandler = (event, payload) => {
     const controller = controllerFor(event);
@@ -627,7 +631,7 @@ function createTerminalIpcController(
         !ssh && createdSession.launchKind !== "explicit-command"
           ? (workingDirectory ?? options.homeDirectory)
           : undefined,
-        remembered,
+        { remembered, processId: createdSession.processId },
       );
       sessions.set(sessionId, {
         session: createdSession,
@@ -800,6 +804,21 @@ function createTerminalIpcController(
     reportedWorkingDirectory(sessionId) {
       return routedSession(sessionId)
         ? workingDirectories.reported(sessionId)
+        : undefined;
+    },
+    refreshDirectories: () => workingDirectories.refresh(),
+    // A split starts in its source pane's folder; read the shell's cwd first
+    // when that pane never reported one. Synchronous when nothing to read.
+    prepareStart(payload) {
+      const source =
+        payload &&
+        typeof payload === "object" &&
+        "workingDirectoryOf" in payload &&
+        typeof payload.workingDirectoryOf === "string"
+          ? payload.workingDirectoryOf
+          : undefined;
+      return source && workingDirectories.readsProcess(source)
+        ? workingDirectories.refresh([source])
         : undefined;
     },
     layoutDirectory: (id) =>

@@ -1,6 +1,10 @@
-import { statSync } from "node:fs";
+import { realpathSync, statSync } from "node:fs";
 import { hostname } from "node:os";
 import { isLayoutPath } from "../shared/terminal-layout";
+import {
+  createProcessDirectoryReader,
+  type ProcessDirectories,
+} from "./process-working-directory";
 import type { TerminalSessionId } from "../shared/terminal-contract";
 import {
   isWorkingDirectoryUri,
@@ -10,18 +14,36 @@ import {
 
 const INTRODUCER = "\u001b]7;";
 
-// The last local directory reported through OSC 7 in each session's output.
-// It can inform split-pane startup and an explicit extension directory request;
-// OMXTerm injects nothing into shells to make them report (ADR 0013).
+// One reader for the whole application, so lookups from every window batch.
+let sharedProcessDirectories: ProcessDirectories | undefined;
+
+// The last local directory reported through OSC 7 in each session's output,
+// or, without a usable report, the shell process's own working directory read
+// on demand (macOS and Linux). It informs split-pane startup, Saved Layout and
+// an explicit extension directory request; OMXTerm injects nothing into shells
+// (ADR 0013).
 export function createWorkingDirectoryTracker(
   options: {
     readonly platform?: string;
     readonly hostName?: () => string;
     readonly isDirectory?: (path: string) => boolean;
+    readonly processDirectories?: ProcessDirectories;
   } = {},
 ) {
   const directories = new Map<TerminalSessionId, string>();
   const launches = new Map<TerminalSessionId, string>();
+  const processIds = new Map<TerminalSessionId, number>();
+  // The shell's cwd from the last lookup, for sessions without a usable report.
+  const processDirectories = new Map<TerminalSessionId, string>();
+  // Where a pane with a remembered folder actually started (home).
+  const startedIn = new Map<TerminalSessionId, string>();
+  // The shell's cwd, unless it is still where a remembered pane started.
+  const moved = (sessionId: TerminalSessionId) => {
+    const directory = processDirectories.get(sessionId);
+    return directory !== undefined && directory !== startedIn.get(sessionId)
+      ? directory
+      : undefined;
+  };
   const reported = new Set<TerminalSessionId>();
   // An unterminated report, or a possibly split introducer, per session.
   const carries = new Map<TerminalSessionId, string>();
@@ -30,6 +52,9 @@ export function createWorkingDirectoryTracker(
   const platform = options.platform ?? process.platform;
   const hostName = options.hostName ?? hostname;
   const isDirectory = options.isDirectory ?? existingDirectory;
+  const readProcessDirectories =
+    options.processDirectories ??
+    (sharedProcessDirectories ??= createProcessDirectoryReader());
 
   const record = (sessionId: TerminalSessionId, uri: string) => {
     const candidate = isWorkingDirectoryUri(uri)
@@ -99,20 +124,59 @@ export function createWorkingDirectoryTracker(
       }
     },
     // `remembered` is a reopened pane's saved folder that was unavailable: it
-    // stays the pane's folder until the shell reports another one, so a
-    // missing mount doesn't overwrite the remembered layout.
+    // stays the pane's folder until the shell reports or moves somewhere else,
+    // so a missing mount doesn't overwrite the remembered layout. Windows
+    // shells' processes aren't looked up (PowerShell's location isn't its cwd).
     launched(
       sessionId: TerminalSessionId,
       directory: string | undefined,
-      remembered?: string,
+      launch: {
+        remembered?: string | undefined;
+        processId?: number | undefined;
+      } = {},
     ) {
-      if (directory !== undefined)
-        launches.set(sessionId, remembered ?? directory);
+      if (directory === undefined) return;
+      launches.set(sessionId, launch.remembered ?? directory);
+      // The shell's cwd comes back resolved (e.g. /var/home on Silverblue).
+      if (launch.remembered !== undefined)
+        startedIn.set(sessionId, resolvedDirectory(directory));
+      if (launch.processId !== undefined && platform !== "win32")
+        processIds.set(sessionId, launch.processId);
+    },
+    /** The shell's cwd would be read: a known process and no usable report. */
+    readsProcess: (sessionId: TerminalSessionId) =>
+      processIds.has(sessionId) && !directories.has(sessionId),
+    /**
+     * Looks up the shell process's cwd for sessions without a usable OSC 7
+     * report; all of them in one batched call. A failed lookup keeps the
+     * previous folders. Never throws.
+     */
+    async refresh(sessionIds?: readonly TerminalSessionId[]) {
+      const wanted = (sessionIds ?? [...processIds.keys()]).filter(
+        (id) => processIds.has(id) && !directories.has(id),
+      );
+      if (wanted.length === 0) return;
+      let found: ReadonlyMap<number, string>;
+      try {
+        found = await readProcessDirectories(
+          wanted.map((id) => processIds.get(id)!),
+        );
+      } catch {
+        return;
+      }
+      for (const id of wanted) {
+        const processId = processIds.get(id);
+        if (processId === undefined) continue; // ended meanwhile
+        const directory = found.get(processId);
+        if (directory === undefined) processDirectories.delete(id);
+        else processDirectories.set(id, directory);
+      }
     },
     provenance(
       sessionId: TerminalSessionId,
     ): import("../shared/terminal-layout").LayoutDirectory {
-      const directory = directories.get(sessionId);
+      // OSC 7 wins; the shell's own cwd is the same kind of observation.
+      const directory = directories.get(sessionId) ?? moved(sessionId);
       if (directory !== undefined)
         return { kind: "reported-local", path: directory };
       const launch = launches.get(sessionId);
@@ -130,7 +194,9 @@ export function createWorkingDirectoryTracker(
     // A reported directory may have been removed since; home is the fallback.
     inherited(sessionId: TerminalSessionId | undefined): string | undefined {
       const directory =
-        sessionId === undefined ? undefined : directories.get(sessionId);
+        sessionId === undefined
+          ? undefined
+          : (directories.get(sessionId) ?? processDirectories.get(sessionId));
       return directory !== undefined && isDirectory(directory)
         ? directory
         : undefined;
@@ -138,6 +204,9 @@ export function createWorkingDirectoryTracker(
     forget(sessionId: TerminalSessionId) {
       directories.delete(sessionId);
       launches.delete(sessionId);
+      processIds.delete(sessionId);
+      processDirectories.delete(sessionId);
+      startedIn.delete(sessionId);
       reported.delete(sessionId);
       carries.delete(sessionId);
       discarding.delete(sessionId);
@@ -181,5 +250,13 @@ function existingDirectory(path: string): boolean {
     return statSync(path).isDirectory();
   } catch {
     return false;
+  }
+}
+
+function resolvedDirectory(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch {
+    return path;
   }
 }
