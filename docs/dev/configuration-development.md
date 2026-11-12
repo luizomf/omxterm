@@ -99,9 +99,10 @@ read.
 
 ### Validation
 
-- A collision is rejected with the same message in Settings and in `config.json`,
-  and the file stays unchanged. OMXTerm never reassigns another action's key or
-  rewrites the file.
+- An explicit entry wins over another action's default: that action becomes
+  unbound in the effective map. Two explicit entries on one key are rejected
+  with the same message in Settings and in `config.json`, and the file stays
+  unchanged. OMXTerm never moves an action to another key or rewrites the file.
 - On macOS, Option-only top-row and keypad shortcuts for the same digit (`Alt+9`
   and `Alt+num9`) collide. A file that has both fails validation.
 - On Linux and Windows, binding a bare `Ctrl+<key>` that terminal programs use

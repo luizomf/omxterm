@@ -634,7 +634,8 @@ function validateTerminalKeybinds(
   // explicit entries on one key are an error. Diagnostics name actions and the
   // parsed key identity, never raw accelerator contents. A null entry holds no
   // shortcut.
-  const explicit = (action: TerminalActionName) => action in keybinds;
+  const explicit = (action: TerminalActionName) =>
+    keybinds[action] !== undefined;
   const actionsByAccelerator = new Map<string, TerminalActionName>();
   for (const action of TERMINAL_ACTION_NAMES) {
     const value = effective[action];
@@ -648,9 +649,11 @@ function validateTerminalKeybinds(
       continue;
     }
     if (explicit(action) !== explicit(holder)) {
-      const yielding = explicit(action) ? holder : action;
-      effective[yielding] = null;
-      actionsByAccelerator.set(canonical, explicit(action) ? action : holder);
+      const [winner, loser] = explicit(action)
+        ? [action, holder]
+        : [holder, action];
+      effective[loser] = null;
+      actionsByAccelerator.set(canonical, winner);
       continue;
     }
     // Defaults never collide with each other, so both entries are explicit.

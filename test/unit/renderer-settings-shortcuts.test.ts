@@ -40,7 +40,12 @@ const snapshot = (
   values: {},
   keybinds: {
     find,
-    newTab: { effective: "Control+Shift+T", state: "inherit" },
+    // Like main: an explicit binding drops another action's default.
+    newTab: {
+      effective:
+        find.effective === "Control+Shift+T" ? null : "Control+Shift+T",
+      state: "inherit",
+    },
     toggleAuxiliaryPanel: { effective: null, state: "inherit" },
     moveAuxiliaryPanel: {
       effective:
@@ -269,6 +274,23 @@ describe("Shortcuts page", () => {
     expect(view.status()).toContain("teclas mortas podem não ser graváveis");
     language.set("en-US");
     expect(view.status()).toContain("dead keys may not be recordable");
+  });
+
+  it("shows a default taken by another binding as unbound and keeps it recordable", async () => {
+    const view = await open();
+    view.button("find", "record").click();
+    view.deliver({ accelerator: "Control+Shift+T" });
+    await view.settle();
+    expect(view.cells("find")).toEqual(["Ctrl+Shift+T", "Custom"]);
+    expect(view.cells("newTab")).toEqual(["None", ""]);
+    expect(view.button("newTab", "record").disabled).toBe(false);
+    view.button("newTab", "record").click();
+    view.deliver({ accelerator: "Control+Alt+T" });
+    await view.settle();
+    expect(view.changeKeybind).toHaveBeenLastCalledWith({
+      action: "newTab",
+      choice: { state: "custom", accelerator: "Control+Alt+T" },
+    });
   });
 
   it("cancels recording without saving and unbinds or restores the default", async () => {

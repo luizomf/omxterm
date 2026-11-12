@@ -40,8 +40,8 @@ command is running. `"confirmClose": false` turns the prompt off.
 ## Command Palette
 
 - Remaps and `null` for `keybinds.commandPalette` are kept. A custom action on
-  the same combination raises the normal collision error; nothing rewrites the
-  config.
+  the same combination keeps it and leaves Command Palette unbound; nothing
+  rewrites the config.
 - The dialog closes before the chosen action runs, so the action keeps its normal
   guards and close confirmations. Copy, Paste and Select All edit the query while
   the palette owns input.

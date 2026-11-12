@@ -284,12 +284,54 @@ describe("saving shortcuts", () => {
     expect(file).toEqual({ version: 1, font: { size: 18 } });
   });
 
-  it("rejects a colliding shortcut with the loader's actionable message", async () => {
+  it("lets a recorded shortcut take another action's default, which stays rebindable", async () => {
     const view = await service('{ "version": 1 }\n');
+    const taken = await view.service.changeKeybind({
+      action: "find",
+      choice: { state: "custom", accelerator: "Control+Shift+T" },
+    });
+    expect(taken.status).toBe("saved");
+    expect(taken.snapshot.keybinds?.find).toEqual({
+      effective: "Control+Shift+T",
+      state: "custom",
+    });
+    expect(taken.snapshot.keybinds?.newTab).toEqual({
+      effective: null,
+      state: "inherit",
+    });
+
+    const rebound = await view.service.changeKeybind({
+      action: "newTab",
+      choice: { state: "custom", accelerator: "Control+Alt+T" },
+    });
+    expect(rebound.snapshot.keybinds?.newTab).toEqual({
+      effective: "Control+Alt+T",
+      state: "custom",
+    });
+
+    for (const action of ["find", "newTab"] as const)
+      await view.service.changeKeybind({
+        action,
+        choice: { state: "inherit" },
+      });
+    const restored = await view.service.snapshot();
+    expect(restored.keybinds?.newTab).toEqual({
+      effective: terminalDefaultKeybinds("linux").newTab,
+      state: "inherit",
+    });
+    expect(JSON.parse(await readFile(view.file, "utf8"))).toEqual({
+      version: 1,
+    });
+  });
+
+  it("rejects a shortcut another explicit entry holds with the loader's actionable message", async () => {
+    const view = await service(
+      '{ "version": 1, "keybinds": { "newTab": "Control+Alt+T" } }\n',
+    );
     const before = await readFile(view.file, "utf8");
     const result = await view.service.changeKeybind({
       action: "find",
-      choice: { state: "custom", accelerator: "Control+Shift+T" },
+      choice: { state: "custom", accelerator: "Control+Alt+T" },
     });
     expect(result.status).toBe("rejected");
     expect(result.status === "rejected" && result.message).toContain("newTab");

@@ -1987,7 +1987,8 @@ Vocabulary:
   elsewhere; Mirror Typing is `CommandOrControl+Shift+M` on macOS and
   `Control+Shift+M` elsewhere; Save layout is `CommandOrControl+Shift+L` on
   macOS and `Control+Shift+L` elsewhere. An existing custom binding on any of
-  these combinations gets the standard collision error, never a rewrite.
+  these combinations keeps its key and that default becomes unbound; nothing
+  is rewritten.
 - `null` removes only that shortcut: the menu item stays, and OMXTerm stops
   consuming the key (the OS or another binding may still take it). A `null`
   entry holds no shortcut and cannot collide.
@@ -2017,19 +2018,22 @@ Files, SSH Connect, Mirror Typing and Saved Layout slots:
 
 Validation:
 
-- Unknown actions, malformed accelerators and duplicates are errors under the
-  [resilient failure contract](#validation-errors-and-reload). A previously
-  valid file that now collides is rejected the same way, never rewritten.
+- Unknown actions, malformed accelerators and two explicit entries on one key
+  are errors under the
+  [resilient failure contract](#validation-errors-and-reload).
+- An explicit entry wins over another action's default: that action becomes
+  unbound (`null`) in the effective map. A new default therefore never
+  invalidates a previously valid file, and the file is never rewritten.
+  Defaults never collide with each other.
 - Duplicates are judged on the effective native map: `CommandOrControl` is
   `Command` on macOS and `Control` elsewhere; `Super` and `Meta` are the Command
   family; `AltGr` is distinct from `Alt` and `Control+Alt`; intrinsic Shift
   counts (`Control+!` = `Control+Shift+1`; `Control+Plus` =
   `Control+Shift+Plus` = `Control+Shift+=`); on macOS, Option-only top-row and
   keypad bindings for the same digit (`Alt+9`, `Alt+num9`) collide.
-- Colliding with another action's remaining default is the same error;
-  OMXTerm never reassigns a shortcut. The diagnostic names both actions and the
-  key as derived from the parsed accelerator (never the configured text), and
-  suggests another shortcut or `null`.
+- OMXTerm never moves an action to another key. The collision diagnostic names
+  both actions and the key as derived from the parsed accelerator (never the
+  configured text), and suggests another shortcut or `null`.
 - A binding that resolves on the current platform to a bare `Ctrl+<key>`
   shadowing a PTY control key (`Ctrl+C`, `Ctrl+D`, `Ctrl+Z`, `Ctrl+\`,
   `Ctrl+U`, `Ctrl+W`, `Ctrl+A`, `Ctrl+E`) stays active with a warning naming the
@@ -2323,6 +2327,8 @@ Shortcuts page:
 - Shows each action's effective shortcut as a key chip. Custom and unbound
   bindings are marked in text; an unmarked binding is the default. Default removes the entry (and an emptied group), Unbind writes
   `null`, and recording writes an accelerator, all through the normal save.
+  Recording another action's default takes the key; that action shows no
+  shortcut until it is recorded again or the taking entry is reset.
 - Recording is owned by main: the next candidate key is captured with the same
   identity delivery uses (including AltGr and bare F1–F24) instead of running a
   keybind or menu shortcut or reaching the terminal. Its held repeats and

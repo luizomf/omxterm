@@ -81,24 +81,26 @@ describe("disabled keybinds and bare function keys", () => {
     },
   );
   it.each(["darwin", "linux", "win32"])(
-    "reports an existing user mapping that collides with the new default on %s",
+    "keeps an existing user mapping on the new default and unbinds the default on %s",
     (platform) => {
       const occupied = platform === "darwin" ? "shift+cmd+p" : "shift+ctrl+p";
-      expect(() => validate({ newWindow: occupied }, platform)).toThrow(
+      const kept = validate({ newWindow: occupied }, platform);
+      expect(kept.newWindow).toBe(occupied);
+      expect(kept.commandPalette).toBeNull();
+      expect(() =>
+        validate({ newWindow: occupied, commandPalette: occupied }, platform),
+      ).toThrow(
         expect.objectContaining({
-          location: "keybinds.newWindow",
-          reason: `conflicts with the "commandPalette" keybind on ${platform === "darwin" ? "Cmd" : "Ctrl"}+Shift+P. Choose another shortcut for one of them, or set one of them to null to disable its shortcut`,
+          location: "keybinds.commandPalette",
+          reason: `conflicts with the "newWindow" keybind on ${platform === "darwin" ? "Cmd" : "Ctrl"}+Shift+P. Choose another shortcut for one of them, or set one of them to null to disable its shortcut`,
         }),
       );
-      expect(() => validate({ newWindow: occupied }, platform)).toThrow(
-        /Choose another shortcut.*null/,
-      );
-      for (const commandPalette of [null, "Control+Alt+P"]) {
+      for (const commandPalette of [undefined, null, "Control+Alt+P"]) {
         const resolved = validate(
           { newWindow: occupied, commandPalette },
           platform,
         );
-        expect(resolved.commandPalette).toBe(commandPalette);
+        expect(resolved.commandPalette).toBe(commandPalette ?? null);
         expect(
           terminalActionForKeyboardInput(
             resolved,
@@ -152,15 +154,23 @@ describe("disabled keybinds and bare function keys", () => {
     expect(Object.isFrozen(keybinds)).toBe(true);
   });
 
-  it("explains a previous full-screen remap that now collides with Find", () => {
-    expect(() => validate({ toggleFullScreen: "Control+Shift+F" })).toThrow(
+  it("keeps a previous full-screen remap that is now Find's default and unbinds Find", () => {
+    const kept = validate({ toggleFullScreen: "Control+Shift+F" });
+    expect(kept.toggleFullScreen).toBe("Control+Shift+F");
+    expect(kept.find).toBeNull();
+    expect(() =>
+      validate({
+        toggleFullScreen: "Control+Shift+F",
+        find: "Control+Shift+F",
+      }),
+    ).toThrow(
       expect.objectContaining({
         location: "keybinds.toggleFullScreen",
         reason:
           'conflicts with the "find" keybind on Ctrl+Shift+F. Choose another shortcut for one of them, or set one of them to null to disable its shortcut',
       }),
     );
-    // Either way out is accepted without touching the other action.
+    // Explicit choices for Find are kept as written.
     expect(
       validate({ toggleFullScreen: "Control+Shift+F", find: null }).find,
     ).toBeNull();

@@ -71,7 +71,8 @@ extension action: the disposition in #669 still holds.
   while the extension is installed and enabled and declares
   `terminal.captureLayout.v1` and `state.v1`. The page entry stays.
 - **Collisions:** the standard checks; a custom binding already on the default
-  combination gets the collision error.
+  combination keeps its key and `saveLayout` is unbound
+  ([ADR 0018](0018-deliver-menu-refused-accelerators-in-main.md#explicit-entries-win-over-defaults)).
 - **Disable, update, uninstall, owner loss:** the entry carries the issued
   generation, so any of these revokes a held entry before it reaches the
   backend, and every call is admitted against the enabled, selected version.
