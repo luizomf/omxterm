@@ -82,10 +82,14 @@ without the release key stay ad-hoc.
 amends ADR 0042: while Saved Layout declares it, core remembers every window's
 structure and reopens it at startup.
 
+[ADR0048: Open a second launch in the running process](0048-open-a-second-launch-in-the-running-process.md)
+gives packaged OMXTerm one process per profile: launching it again opens a new
+window there, `-e` included.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
-- User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035.
+- User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045.
 - Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046.

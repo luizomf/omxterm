@@ -70,9 +70,12 @@ OMXTerm:
   - on Windows, which has no login-shell concept, a configured `windowsShell`
     executable when present, otherwise Windows PowerShell, falling back to the
     ComSpec command processor, started interactively without a login flag;
-  - when startup includes `-e <program> [arguments...]`, that executable and
-    literal argument vector run directly in the first Terminal Tab, with no
-    implicit shell;
+  - when a launch includes `-e <program> [arguments...]`, that executable and
+    literal argument vector run directly in the first Terminal Tab of its
+    window, with no implicit shell;
+- runs one packaged process per profile: launching OMXTerm again while it runs
+  opens a new Terminal Window in the running process (see
+  [Launch Requests](#launch-requests));
 - targets ordinary shells, SSH started by the user, tmux, TUIs, REPLs,
   alternate-screen applications, Unicode, and bracketed paste, with the protocol
   limits under [Terminal behavior](#terminal-behavior). Emoji-presentation and
@@ -284,6 +287,15 @@ are the job of a session manager such as tmux.
   shell explicitly and pass literal arguments such as `-lc`.
 - Only the first Terminal Tab of the first Terminal Window in that process
   consumes the request; later tabs and windows use the Default Shell.
+- Packaged OMXTerm holds one single-instance lock per profile (userData
+  directory, so each `--user-data-dir` is separate). A launch while that
+  profile's process runs hands its request to it and exits at once with status
+  0, so a caller waiting on it doesn't wait for the command. The running
+  process opens a new Terminal Window whose first tab consumes the request
+  (Default Shell for a plain launch), after its own startup has finished. A
+  malformed request still fails in the new process. On macOS the running app
+  comes forward; Dock and Finder activation only activates it. Source runs
+  (`npm run dev`, test fixtures) take no lock.
 - A trailing `-e` with no program is an actionable startup failure and never
   falls back to the Default Shell.
 - An explicit command starts in the user's home directory, inherits the same
@@ -1036,7 +1048,9 @@ back with fresh shells
   on another OS; if none open, one ordinary window opens. A start with `-e`
   opens as asked and neither reopens nor remembers.
 - Only the process holding `layout-session/session.lock` reopens and
-  remembers. A `reopening` marker left by a start whose reopened windows were
+  remembers. Packaged launches share one process per profile, so this matters
+  for source runs and for a process started with `-e`: launches that join it
+  aren't remembered either. A `reopening` marker left by a start whose reopened windows were
   never saved and that didn't quit normally drops the remembered windows; that
   start opens one ordinary window.
 - Window position and size are not remembered.
