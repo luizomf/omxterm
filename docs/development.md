@@ -433,6 +433,10 @@ into `release/`, and verify the package locally without publishing:
 
 Packaged launches, including `package:verify`, have the same
 [side effects on your desktop](#side-effects-on-your-desktop) as graphical tests.
+A packaged OMXTerm runs one process per profile: if an installed OMXTerm is
+already running, launching a freshly built package without `--user-data-dir`
+just opens a window in the installed one. Quit it first, or pass a separate
+`--user-data-dir`.
 See [release procedures](release.md#resume-and-version-only-commands) for the
 standalone `package:*` and `package-built:*` commands.
 
