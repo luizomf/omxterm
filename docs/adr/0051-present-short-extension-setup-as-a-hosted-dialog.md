@@ -56,5 +56,5 @@ hidden, because a window shows one native view at a time. An installed Mirror
 Typing 0.2.0 opens in the dialog too, with its own title and opaque page;
 0.3.0 drops both and needs a host with this presentation. Mirror Typing is
 the only Hosted Dialog until a manifest value is worth adding.
-An installed Saved Layout 0.3.0 still draws its own title, so it shows the title
-twice until it ships a version without it.
+Saved Layout 0.3.1 drops its own title and needs this host
+(`>=0.29.1-dev.0`); an installed 0.3.0 keeps working but shows its title twice.

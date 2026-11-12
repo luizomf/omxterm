@@ -45,7 +45,7 @@ installable unchanged.
 
 Stable 0.29.0 uses the frozen cut `aefba704`; the next development baseline is
 `0.29.1-dev.0`. Its bridge admits ranges that accept both `0.29.0` and
-`0.29.1`.
+`0.29.1`. Saved Layout 0.3.1 and Mirror Typing 0.3.0 need `>=0.29.1-dev.0`.
 
 ## Public contract
 
