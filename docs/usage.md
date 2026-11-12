@@ -133,7 +133,7 @@ See the [installation guide](installation.md) for platform-specific steps.
 | macOS blocks the first launch         | Open **System Settings → Privacy & Security → Security → Open Anyway**. See [first launch](installation.md#first-launch-on-macos). |
 | Linux says `Permission denied`        | Run `chmod +x OMXTerm-*.AppImage`; check that the partition allows execution.                                                      |
 | Linux reports FUSE or mount errors    | Try `./OMXTerm-*.AppImage --appimage-extract-and-run` or use `linux_install.sh`.                                                   |
-| Linux reports `GLIBC_2.42 not found`  | Check [architecture-specific requirements](installation.md#requirements).                                                          |
+| Linux reports `GLIBC_2.xx not found`  | Check the [Linux requirement](installation.md#linux).                                                                              |
 | Linux reports executable format error | Run `uname -m` and choose the matching AppImage architecture.                                                                      |
 | Checksum verification fails           | Download the installer and `.sha256` file from the same release.                                                                   |
 

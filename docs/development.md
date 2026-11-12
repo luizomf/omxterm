@@ -431,6 +431,9 @@ into `release/`, and verify the package locally without publishing:
 | Windows ARM64 | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
 | Windows x64   | `npm run check:win -- --disposable-vm-allow-omxterm-replacement` |
 
+A local Linux package needs at least your system's glibc. Release AppImages come
+from the hosted Ubuntu 22.04 lane instead ([Linux ARM64 release](release.md#linux-arm64)).
+
 Packaged launches, including `package:verify`, have the same
 [side effects on your desktop](#side-effects-on-your-desktop) as graphical tests.
 A packaged OMXTerm runs one process per profile: if an installed OMXTerm is
@@ -459,7 +462,7 @@ standalone `package:*` and `package-built:*` commands.
   helper. It checks package contents and loads the packaged native addons through
   Electron's Run-as-Node mode; on Linux it also runs real PTY exec-status checks.
   Use it for x64 build-only delivery after `npm run package:linux:x64` or
-  `npm run package:win:x64` ([hosted x64 delivery](release.md#hosted-x64-build-only-artifact-delivery)).
+  `npm run package:win:x64` ([hosted build lanes](release.md#hosted-build-lanes)).
 - **`--windows-unpacked-only`:** launches the unpacked Windows app without the
   installer.
 
