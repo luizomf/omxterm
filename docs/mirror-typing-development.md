@@ -71,7 +71,7 @@ runs the archive check in `test/unit/mirror-typing-build.test.ts`.
 packaged host. It installs the archive through **Install local .omxext…**,
 splits the tab, finds Mirror Typing in the Command Palette and starts it with
 Enter (stray Enter releases and repeats must not start it). Then it checks that
-one typed command runs in both shells, and that opening the Command Palette,
+one typed command runs in both shells, and that clicking a pane's mark,
 each paste route, a native
 file drop and (with a Snippets archive) a snippet Insert leave the next command
 in one shell only:

@@ -136,9 +136,10 @@ function guardStartRelease(document: Document) {
   };
 }
 
-// While the route is armed, members and the source carry a State Mark.
+// While the route is armed, members and the source carry a State Mark;
+// clicking any of them stops the group.
 // Preparing is input-inert and brief, so it shows nothing.
-function markMembers(marks: StateMarks) {
+function markMembers(marks: StateMarks, stop: () => void) {
   let marked: readonly TerminalPane[] = [];
   return (panes: readonly TerminalPane[] = [], source?: TerminalPane) => {
     for (const pane of marked)
@@ -148,6 +149,7 @@ function markMembers(marks: StateMarks) {
         glyph: "mirror",
         label: (t) =>
           t(pane === source ? "mirrorTyping.source" : "mirrorTyping.member"),
+        action: { label: (t) => t("mirrorTyping.clickToStop"), run: stop },
       });
     marked = panes;
   };
@@ -177,7 +179,10 @@ export function createMirrorTyping(deps: {
   const { marks } = deps;
   const document = deps.parent.ownerDocument;
   const startGuard = guardStartRelease(document);
-  const mark = markMembers(marks);
+  const mark = markMembers(marks, () => {
+    stop("stopped");
+    deps.focus();
+  });
   let dismissFailure = () => {};
   const clear = () => {
     if (timer) clearTimeout(timer);

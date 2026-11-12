@@ -23,8 +23,7 @@ const settle = async () => {
 };
 const paneMarks = () =>
   [...document.querySelectorAll(".terminal-surface")].map(
-    (pane) =>
-      pane.querySelector("[role=img]")?.getAttribute("aria-label") ?? "",
+    (pane) => pane.querySelector(".ui-mark")?.getAttribute("aria-label") ?? "",
   );
 const notice = () =>
   document.querySelector<HTMLElement>(".state-notice:not([hidden])")
@@ -170,8 +169,10 @@ it("repeats the mark on the visible tab and clears every mark on an ordinary sto
   await h.start();
   const terminalTab = h.strip.querySelector("button")!;
   const mark = terminalTab.querySelector("[role=img]")!;
-  expect(mark.getAttribute("title")).toContain("Command Palette");
-  expect(mark.getAttribute("aria-label")).toBe(paneMarks()[1]);
+  expect(mark.getAttribute("title")).toBe("Mirroring typing from this pane.");
+  expect(paneMarks()[1]).toBe(
+    "Mirroring typing from this pane. Click to stop.",
+  );
   // Opening the Command Palette is a modal entry: it stops mirroring.
   h.tabs.setBlocked(true);
   expect(h.bridge.stop).toHaveBeenCalledExactlyOnceWith(
@@ -255,6 +256,31 @@ it("owns cancellable Preparing before store admission and rejects leave-and-retu
   expect(h.reply()).toEqual({ request: "late-handoff", ok: false });
   h.activate();
   expect(h.reply().ok).toBe(false);
+});
+
+it("clicking any pane's mark stops mirroring quietly and keeps terminal focus", async () => {
+  const h = await harness();
+  await h.start();
+  h.language.set("pt-BR");
+  expect(paneMarks()[0]).toBe(
+    "Espelhando a digitação para este painel. Clique para parar.",
+  );
+  const member = document
+    .querySelectorAll(".terminal-surface")[0]!
+    .querySelector<HTMLButtonElement>("button.ui-mark")!;
+  const press = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+  });
+  member.dispatchEvent(press);
+  expect(press.defaultPrevented).toBe(true);
+  const focusCount = h.surfaces[1]!.focus.mock.calls.length;
+  member.click();
+  expect(h.bridge.stop).toHaveBeenCalledExactlyOnceWith("context", "stopped");
+  expect(h.mountedSurfaceOptions[1]!.routeKeyInput!("x")).toBe(false);
+  expect(paneMarks()).toEqual(["", ""]);
+  expect(notice()).toBe("");
+  expect(h.surfaces[1]!.focus.mock.calls.length).toBeGreaterThan(focusCount);
 });
 
 it("semantic gestures synchronously stop once, then leave ordinary local delivery available", async () => {

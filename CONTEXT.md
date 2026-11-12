@@ -88,7 +88,8 @@ themed title row with native window actions.
 
 **State Mark** — A small core-owned glyph at a pane's edge (and on its tab when
 the tab strip shows) for an ongoing state such as Mirror Typing. Its tooltip
-names the state; it never changes the terminal grid. Idle and success show
+names the state; its owner may make the pane's glyph clickable (Mirror Typing:
+click to stop). It never changes the terminal grid. Idle and success show
 nothing; surprises and problems use one overlay sentence instead.
 
 **Always-on-Top Window** — A window temporarily kept above ordinary windows by
@@ -292,7 +293,8 @@ continuations remain refused; see the [terminal contract](docs/spec.md#terminal-
 
 **Mirror Typing** — An optional extension that copies the source pane's encoded
 keyboard input to a fixed group of live panes in one Terminal Tab. Core owns input delivery and the
-State Marks on mirrored panes; opening the Command Palette stops it. Extension code receives no keyboard payloads. Paste,
+State Marks on mirrored panes; clicking one, or opening the Command Palette,
+stops it. Extension code receives no keyboard payloads. Paste,
 snippets and drops stop mirroring before delivery to their original target.
 See [Mirror Typing](docs/mirror-typing.md) for setup and limits.
 

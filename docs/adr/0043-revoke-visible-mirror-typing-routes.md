@@ -42,9 +42,9 @@ Surface-owned and single-target; a late local approval cannot arm a group.
 
 Core marks the source and members with State Marks
 ([ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md)) whose names
-tell them apart. Stop stays keyboard-reachable independent of hidden title/tab
-chrome or extension responsiveness: opening the Command Palette is a modal
-entry, which revokes the group. Preparing is input-inert and cancellable before
+tell them apart; clicking a mark stops the group. Stop stays keyboard-reachable
+independent of hidden title/tab chrome or extension responsiveness: opening the
+Command Palette is a modal entry, which revokes the group. Preparing is input-inert and cancellable before
 the first asynchronous package admission. Only then may the acknowledged native hide handoff begin; Start
 revalidates original focus/context before arming. Keyboard focus can return to
 the core document shortly after the hide, so Start waits for it, bounded by the

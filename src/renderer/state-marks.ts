@@ -16,10 +16,15 @@ export type StateGlyph = keyof typeof stateGlyphs;
 /** Literal text (never HTML), or a resolver for core strings. */
 export type StateText = string | ((t: Translate) => string);
 
-/** An ongoing state on one pane: a glyph whose label is its tooltip and name. */
+/**
+ * An ongoing state on one pane: a glyph whose label is its tooltip and name.
+ * With an action, the pane's glyph becomes a button that runs it, and the
+ * action's label follows the state's in the tooltip ("Click to stop.").
+ */
 export interface StateMark {
   readonly glyph: StateGlyph;
   readonly label: StateText;
+  readonly action?: { readonly label: StateText; run(): void };
 }
 
 const NOTICE_TIMEOUT = 4000;
@@ -39,14 +44,34 @@ export function createStateMarks(
   const panes = new Map<TerminalPane, Map<string, StateMark>>();
   const text = (value: StateText, t: Translate = language.t) =>
     typeof value === "string" ? value : value(t);
-  const glyph = (mark: StateMark, t: Translate) => {
-    const element = document.createElement("span");
-    element.className = "ui-mark";
+  // Tabs are buttons already, so only a pane's glyph carries the action.
+  const glyph = (mark: StateMark, t: Translate, actionable = false) => {
+    const action = actionable ? mark.action : undefined;
+    const element = document.createElement(action ? "button" : "span");
+    const label = action
+      ? `${text(mark.label, t)} ${text(action.label, t)}`
+      : text(mark.label, t);
+    element.className = action ? "ui-mark ui-icon-button" : "ui-mark";
     element.dataset.glyph = mark.glyph;
     element.textContent = stateGlyphs[mark.glyph];
-    element.setAttribute("role", "img");
-    element.setAttribute("aria-label", text(mark.label, t));
-    element.title = text(mark.label, t);
+    if (!action) element.setAttribute("role", "img");
+    element.setAttribute("aria-label", label);
+    element.title = label;
+    if (action && element instanceof HTMLButtonElement) {
+      element.type = "button";
+      // Keep keyboard focus and pointer gestures with the terminal.
+      element.addEventListener("pointerdown", (event) =>
+        event.stopPropagation(),
+      );
+      element.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      });
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        action.run();
+      });
+    }
     return element;
   };
   const renderPane = (pane: TerminalPane, t: Translate = language.t) => {
@@ -60,7 +85,9 @@ export function createStateMarks(
       row.className = "state-marks";
       pane.container.append(row);
     }
-    row.replaceChildren(...[...marks.values()].map((mark) => glyph(mark, t)));
+    row.replaceChildren(
+      ...[...marks.values()].map((mark) => glyph(mark, t, true)),
+    );
   };
   const unbind = language.bind((t) => {
     for (const pane of panes.keys()) renderPane(pane, t);

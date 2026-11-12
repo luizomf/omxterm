@@ -315,10 +315,9 @@ export const englishMessages = {
   "extensions.unsupported":
     "Extension management is unavailable on this platform",
   "mirrorTyping.title": "Mirror Typing",
-  "mirrorTyping.source":
-    "Mirroring typing from this pane. Open the Command Palette to stop.",
-  "mirrorTyping.member":
-    "Mirroring typing to this pane. Open the Command Palette to stop.",
+  "mirrorTyping.source": "Mirroring typing from this pane.",
+  "mirrorTyping.member": "Mirroring typing to this pane.",
+  "mirrorTyping.clickToStop": "Click to stop.",
   "mirrorTyping.semantic": "Mirroring stopped, so this went to one pane only.",
   "mirrorTyping.failed":
     "Mirroring stopped, and some panes may have missed what you typed.",

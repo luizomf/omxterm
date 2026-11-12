@@ -32,12 +32,17 @@ its state through it. Each state takes the quietest form that works:
 
 Nothing in the system enters the layout flow, so no state changes the terminal
 grid or resizes a PTY, in any window mode. Stopping an ongoing state never
-needs a permanent button; it goes through the existing action surfaces
-(shortcut, Command Palette, menu).
+needs a separate button: it goes through the existing action surfaces
+(shortcut, Command Palette, menu), and the owner may also let its mark act.
+An actionable mark is the same glyph rendered as a `ui-icon-button`; its
+tooltip and accessible name add the action ("Click to stop."). Clicking it
+keeps terminal focus. The tab's copy stays a plain glyph, because a tab is
+already a button.
 
-The API is plain data: `set(pane, owner, { glyph, label })` with a glyph from a
-small core-owned vocabulary (`stateGlyphs`) and a label that is literal text or
-a core string resolver; `undefined` removes the owner's mark. `flash(text)` and
+The API is plain data plus one callback: `set(pane, owner, { glyph, label,
+action? })` with a glyph from a small core-owned vocabulary (`stateGlyphs`), a
+label that is literal text or a core string resolver, and an optional
+`action: { label, run }`; `undefined` removes the owner's mark. `flash(text)` and
 `notify(text)` show the overlay tiers; `notify` returns a function that clears
 only its own sentence. Reporters never supply colors, HTML or
 their own glyphs, so an extension capability can later forward the same data
@@ -46,11 +51,11 @@ their own glyphs, so an extension capability can later forward the same data
 ## Mirror Typing and Saved Layout
 
 Mirror Typing marks every member while its route is armed; the label says
-whether the pane is the source or a member and that opening the Command Palette
-stops mirroring. Opening the Command Palette or any modal, switching tabs,
+whether the pane is the source or a member, and clicking any member's mark
+stops the group. Opening the Command Palette or any modal, switching tabs,
 selecting an unmirrored pane, or opening Mirror Typing again stops the group,
-as before; the Command Palette is the keyboard-reachable Stop that works with
-hidden chrome and an unresponsive extension. An ordinary stop shows nothing,
+as before; the Command Palette is the keyboard-reachable Stop, and the mark the
+pointer one, both working with hidden chrome and an unresponsive extension. An ordinary stop shows nothing,
 a semantic-input stop flashes, and a failed write leaves a notice.
 Preparing is brief and input-inert, so it shows nothing.
 
@@ -62,6 +67,5 @@ the user closed meanwhile and shells that exit cleanly aren't failures.
 
 A glyph is easier to miss than a strip, on purpose: the terminal comes first.
 The mark can cover a few pixels of the top-right cell when the configured top
-padding is smaller than the glyph. Without the strip, stopping Mirror Typing
-takes a known gesture (the Command Palette shortcut) instead of a visible
-button; the mark's tooltip and the guide say so.
+padding is smaller than the glyph. Without the strip, the stop is the mark
+itself: only its tooltip says it can be clicked.

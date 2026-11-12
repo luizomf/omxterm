@@ -251,6 +251,18 @@
   cursor: default;
   user-select: none;
 }
+/* An actionable mark keeps the glyph's look; only hover reveals the button. */
+.ui-mark.ui-icon-button {
+  width: 16px;
+  height: 16px;
+  font: var(--ui-text-meta) / 1 var(--ui-font);
+  color: var(--ui-secondary);
+  border-radius: var(--ui-radius-chip);
+  cursor: pointer;
+}
+.ui-mark.ui-icon-button:hover {
+  color: var(--ui-text);
+}
 .ui-tab .ui-mark {
   margin-inline-end: var(--ui-space-1);
 }

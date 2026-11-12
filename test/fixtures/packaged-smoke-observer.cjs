@@ -670,21 +670,10 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
   await settle();
   result.steps.typing = await lines(typed);
 
-  // 2. Stop by opening the Command Palette: the marks go away quietly and the
-  // next command runs in one shell only.
-  menu("Command Palette");
-  await until(
-    () => js("!!document.querySelector('.command-palette [role=combobox]')"),
-    "Command Palette",
-  );
+  // 2. Stop by clicking a pane's mark: the marks go away quietly and the next
+  // command runs in one shell only.
   await js(
-    "document.querySelector('.command-palette [role=combobox]').focus()",
-  );
-  core.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
-  core.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
-  await until(
-    () => js("!document.querySelector('.command-palette')"),
-    "palette closed",
+    "document.querySelector('.terminal-surface button.ui-mark').click()",
   );
   result.steps.stopStatus = await status();
   core.focus();

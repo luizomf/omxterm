@@ -525,7 +525,10 @@ quietest form that works:
 - None of these enters the layout flow: showing, changing or removing one never
   refits a Surface or resizes a PTY, with or without the title bar or tab
   strip. Stopping an ongoing state uses existing actions (shortcut, Command
-  Palette, menu), never a permanent button.
+  Palette, menu), never a separate button. A state may also make its pane mark
+  clickable: the same glyph becomes a button whose tooltip and accessible name
+  add the action, and clicking it keeps terminal focus. The tab's glyph is never
+  clickable.
 
 ### About dialog
 
@@ -1142,10 +1145,10 @@ needs host 0.27.0 or later.
   confirmation. Cancelled paste stays stopped; delayed local approval cannot fan
   out or restart mirroring.
 - While the route is armed, every member carries a core
-  [State Mark](#state-marks) whose name says source or member and that the
-  Command Palette stops mirroring. Opening the Command Palette (a modal entry)
-  is the keyboard-reachable Stop, even with hidden chrome and whether or not
-  the extension responds. Preparing shows nothing, is input-inert and
+  [State Mark](#state-marks) whose name says source or member and "Click to
+  stop." Clicking any member's mark stops the group, and opening the Command
+  Palette (a modal entry) is the keyboard-reachable Stop, even with hidden
+  chrome and whether or not the extension responds. Preparing shows nothing, is input-inert and
   cancellable; Start key releases cannot leak into terminal input.
 - An ordinary stop removes the marks and shows nothing. A paste, snippet or
   drop stop flashes one transient sentence; a failed write leaves one

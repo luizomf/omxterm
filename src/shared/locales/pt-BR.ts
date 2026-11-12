@@ -327,10 +327,9 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.unsupported":
     "O gerenciamento de extensões não está disponível nesta plataforma",
   "mirrorTyping.title": "Espelhar digitação",
-  "mirrorTyping.source":
-    "Espelhando a digitação deste painel. Abra a paleta de comandos para parar.",
-  "mirrorTyping.member":
-    "Espelhando a digitação para este painel. Abra a paleta de comandos para parar.",
+  "mirrorTyping.source": "Espelhando a digitação deste painel.",
+  "mirrorTyping.member": "Espelhando a digitação para este painel.",
+  "mirrorTyping.clickToStop": "Clique para parar.",
   "mirrorTyping.semantic": "Espelhamento parado: isto foi só para um painel.",
   "mirrorTyping.failed":
     "Espelhamento parado, e alguns painéis podem não ter recebido o que você digitou.",

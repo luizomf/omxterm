@@ -35,9 +35,10 @@ others follow.
 
 ## Stop
 
-Open the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux and
-Windows); press `Esc` to close it again. The marks go away. Mirroring also stops
-on its own when you:
+Click the **↔** on any mirrored pane. From the keyboard, open the Command
+Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux and Windows) and press
+`Esc` to close it again. The marks go away. Mirroring also stops on its own
+when you:
 
 - paste, insert a snippet or drop a file: the text goes only to the pane you're
   in;

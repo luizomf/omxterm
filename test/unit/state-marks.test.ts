@@ -35,7 +35,7 @@ function tabWithPanes(count: number) {
 const labels = (elements: readonly Element[]) =>
   elements.map((element) => element.getAttribute("aria-label"));
 const paneLabels = (pane: TerminalPane) =>
-  labels([...pane.container.querySelectorAll("[role=img]")]);
+  labels([...pane.container.querySelectorAll(".ui-mark")]);
 
 it("shows each owner's mark on its pane and once per owner on the tab", () => {
   const changed = vi.fn();
@@ -57,6 +57,27 @@ it("shows each owner's mark on its pane and once per owner on the tab", () => {
 
   marks.dispose();
   expect(paneLabels(panes[0]!)).toEqual([]);
+});
+
+it("turns a pane's mark into a button when its owner gives an action", () => {
+  const marks = createStateMarks(document, createRendererLanguage(), vi.fn());
+  const { tab, panes } = tabWithPanes(1);
+  const run = vi.fn();
+  marks.set(panes[0]!, "busy", {
+    glyph: "mirror",
+    label: "Busy.",
+    action: { label: "Click to stop.", run },
+  });
+  const button = panes[0]!.container.querySelector("button")!;
+  expect(button.getAttribute("aria-label")).toBe("Busy. Click to stop.");
+  expect(button.title).toBe("Busy. Click to stop.");
+  button.click();
+  expect(run).toHaveBeenCalledOnce();
+  // A tab is already a button: its glyph only names the state.
+  const [onTab] = marks.tab(tab);
+  expect(onTab!.tagName).toBe("SPAN");
+  expect(onTab!.getAttribute("aria-label")).toBe("Busy.");
+  marks.dispose();
 });
 
 it("shows one sentence at a time; surprises time out and notices wait for the user", () => {
