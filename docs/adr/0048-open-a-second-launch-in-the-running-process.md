@@ -41,10 +41,9 @@ lock.
 - **The Linux X11 relaunch** never takes the lock: only the relaunched process
   does, so it can't hand off to the process that is exiting.
 - **Source runs skip the lock.** `npm run dev` and test fixtures keep starting
-  their own process. On macOS and Windows a development build and the installed
-  app resolve to the same profile directory (`omxterm` and `OMXTerm` differ only
-  in case), and a dev build must not hand off to the installed one. The layout
-  lease from ADR 0047 keeps covering that overlap.
+  their own process. A development build and the installed app use the same
+  profile directory (`omxterm`), and a dev build must not hand off to the
+  installed one. The layout lease from ADR 0047 keeps covering that overlap.
 
 ## Consequences
 
