@@ -13,7 +13,7 @@ Windows ARM64 uses the optional [Snippets extension](snippets-migration.md).
 - **Build.** The ordinary `npm run build` builds the backend runtime and the
   native lease addon (`extension-leases.node`). It needs native ARM64 Node,
   MSVC and the Windows SDK, an ARM64 Node import library and ordinary-user
-  symlink access; see [Windows prerequisites](development.md#windows). The MSVC
+  symlink access; see [Windows prerequisites](../development.md#windows). The MSVC
   `.lib` and `.exp` files are build intermediates and stay in the native output
   directory.
 - **Files move.** The `files-move.node` primitive is not built on Windows. A
@@ -34,7 +34,7 @@ That probe does not activate an extension or open a ConPTY.
 Use `npm run package:verify -- --windows-unpacked-only` for the unpacked app,
 or the full `npm run check:win` flow for the NSIS installer. Full NSIS
 verification installs and uninstalls the real package, so run it only in a
-disposable VM; see [Windows ARM64 and x64](release.md#windows-arm64-and-x64).
+disposable VM; see [Windows ARM64 and x64](../release.md#windows-arm64-and-x64).
 
 ## Installed-package production fixture
 

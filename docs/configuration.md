@@ -25,7 +25,7 @@ Use **Settings…** in the application menu for preferences and shortcuts. To ed
 
 Choose **Settings…** from the application menu. Preference changes are saved and applied as you make them, except theme drafts and the **Config File** editor, which require explicit saving. Use **General** for language and close confirmation, **Appearance** for fonts, themes, transparency and blur, **Terminal** for terminal preferences, **Window** for window defaults, and **Shortcuts** to record, reset or unbind application shortcuts.
 
-Stable 0.25.0 includes local theme cards and inline theme editing, font controls, and transparency and blur controls. Stable 0.24.0 has font controls and theme selection by path, but not the newer appearance controls. **Config File** provides a text editor for `config.json`; choose **Save** explicitly. Snippets are edited in `snippets.yaml`.
+Settings has local theme cards with inline editing, font controls, and transparency and blur controls. **Config File** provides a text editor for `config.json`; choose **Save** explicitly. Snippets are edited in `snippets.yaml`.
 
 Settings shows status for saved changes and errors. Some preferences apply to new tabs or windows; font family and line height require a restart to update existing tabs. If a save or reload fails, follow the status message, fix the reported problem, and reload again.
 
@@ -129,7 +129,7 @@ Terminal padding is set in CSS pixels from 0 to 128. The default is 12 on every 
 
 <a id="background-transparency-and-blur"></a>
 
-In stable 0.25.0, use **Settings → Appearance** or set `window.transparency` from 0 to 1 and `window.blur` to a boolean:
+Use **Settings → Appearance** or set `window.transparency` from 0 to 1 and `window.blur` to a boolean:
 
 ```json
 {
@@ -215,7 +215,7 @@ The Command Palette is also available from **View → Command Palette…** when 
 
 ## Snippets
 
-Snippets save reusable text or commands in `snippets.yaml`, beside `config.json`. Return from Settings to a terminal tab, then open the Snippets sidebar with `Cmd+Shift+S` or `Ctrl+Shift+S`; the shortcut does nothing in Settings. On current stable releases, Snippets is optional on Linux ARM64/x64, macOS ARM64 and Windows ARM64; it is built in on Windows x64. See the [Snippets availability note](snippets-availability.md) for support and limits, and the [migration guide](snippets-migration.md) for installation and migration details.
+Snippets save reusable text or commands in `snippets.yaml`, beside `config.json`. Return from Settings to a terminal tab, then open the Snippets sidebar with `Cmd+Shift+S` or `Ctrl+Shift+S`; the shortcut does nothing in Settings. See [Snippets availability](snippets-availability.md) for where it is offered.
 
 Create `snippets.yaml` if it is absent, and save this example:
 
@@ -236,7 +236,7 @@ Close and reopen the sidebar after saving. **Print a message** works in POSIX sh
 
 <a id="terminal-themes"></a>
 
-On first launch, OMXTerm copies its default theme to `themes/omtheme.json`. In stable 0.25.0, choose a local theme or edit one in **Settings → Appearance**. After editing, choose **Save** (or **Save copy** for a new theme), then **Use saved theme**. Saving alone does not apply the theme. See [theme authoring notes](configuration-development.md#author-a-theme) for details. You can also set `theme.path` to a relative path under the configuration folder or an absolute path, then reload:
+On first launch, OMXTerm copies its default theme to `themes/omtheme.json`. Choose a local theme or edit one in **Settings → Appearance**. After editing, choose **Save** (or **Save copy** for a new theme), then **Use saved theme**. Saving alone does not apply the theme. See [theme authoring notes](dev/configuration-development.md#author-a-theme) for details. You can also set `theme.path` to a relative path under the configuration folder or an absolute path, then reload:
 
 ```json
 {
@@ -245,9 +245,9 @@ On first launch, OMXTerm copies its default theme to `themes/omtheme.json`. In s
 }
 ```
 
-Theme JSON uses `"version": 1`, a name, and 21 required colors in `#RRGGBB` format. For transparency, use `window.transparency` rather than alpha colors. See the default [omtheme.json](omtheme.json) as a palette example. Stable 0.24.0 supports selecting a theme by path but not editing colors in Settings.
+Theme JSON uses `"version": 1`, a name, and 21 required colors in `#RRGGBB` format. For transparency, use `window.transparency` rather than alpha colors. See the default [omtheme.json](omtheme.json) as a palette example.
 
-Optional `appearance` theme fields can change pane and panel divider colors and the active pane highlight. They have no Settings controls and older app builds may reject them. See the [theme development notes](configuration-development.md#pane-and-panel-appearance) for the supported fields.
+Optional `appearance` theme fields can change pane and panel divider colors and the active pane highlight. They have no Settings controls and older app builds may reject them. See the [theme development notes](dev/configuration-development.md#pane-and-panel-appearance) for the supported fields.
 
 ## Reload and troubleshooting
 
@@ -259,4 +259,4 @@ Choose **View → Reload User Configuration** after editing `config.json` or a t
 
 If JSON is invalid, OMXTerm identifies the file and field. A failed manual reload keeps the previous valid configuration active. At startup, an invalid configuration falls back to built-in defaults without overwriting your files. A rejected theme falls back to the bundled theme.
 
-For detailed behavior and edge cases, see the [configuration development notes](configuration-development.md).
+For detailed behavior and edge cases, see the [configuration development notes](dev/configuration-development.md).

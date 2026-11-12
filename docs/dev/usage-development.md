@@ -1,8 +1,8 @@
 # Usage development notes
 
-[Everyday OMXTerm use](usage.md) covers what users do. This page lists the edge
+[Everyday OMXTerm use](../usage.md) covers what users do. This page lists the edge
 cases behind those features that matter when you change them. The
-[product contract](spec.md) is the full behavior reference.
+[product contract](../spec.md) is the full behavior reference.
 
 ## Tabs and Settings
 
@@ -104,7 +104,7 @@ initialization.
 ## Renderer
 
 The renderer needs WebGL2. On Linux, Chromium's SwiftShader software fallback is
-allowed ([ADR 0037](adr/0037-allow-the-linux-software-webgl-fallback.md)).
+allowed ([ADR 0037](../adr/0037-allow-the-linux-software-webgl-fallback.md)).
 Initialization can still fail, and the error alone doesn't identify a driver
 problem.
 

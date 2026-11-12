@@ -1,10 +1,10 @@
 # Configuration development notes
 
-[User configuration](configuration.md) covers what users set. This page lists
+[User configuration](../configuration.md) covers what users set. This page lists
 the edge cases behind those settings that matter when you change them. The
 terminal context menu and the font-read race during reload are in the
 [usage development notes](usage-development.md). The
-[product contract](spec.md) is the full behavior reference.
+[product contract](../spec.md) is the full behavior reference.
 
 ## Configuration folder
 
@@ -151,12 +151,12 @@ read.
 | Windows  | Windows 11 Acrylic needs both `window.blur: true` and transparency above `0`. With blur off, the window stays opaque.                        |
 | Linux    | Transparency uses the X11/XWayland compositor. KDE Plasma honors `window.blur` via `xprop`; GNOME and Hyprland set blur in desktop settings. |
 
-Compositor setup lives in the [Linux desktop guide](linux-desktop.md).
+Compositor setup lives in the [Linux desktop guide](../linux-desktop.md).
 
 ## Snippets
 
 Availability and installation are in the
-[Snippets availability note](snippets-availability.md) and the
+[Snippets availability note](../snippets-availability.md) and the
 [migration guide](snippets-migration.md).
 
 - New packaged profiles try once to install the
@@ -184,7 +184,7 @@ Availability and installation are in the
 A valid theme has `"version": 1`, a single-line `name` of 1–64 characters and all
 21 colors as `#RRGGBB`. Reads are limited to 256 KiB of UTF-8 JSON. Unsupported
 fields and partial palettes are rejected, never stripped. At startup, an invalid
-theme falls back to the bundled `omtheme`. [`omtheme.json`](omtheme.json) is the
+theme falls back to the bundled `omtheme`. [`omtheme.json`](../omtheme.json) is the
 canonical palette.
 
 To convert a Ghostty theme from a source checkout:

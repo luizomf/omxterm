@@ -3,8 +3,8 @@
 Since **OMXTerm 0.25.0**, new **packaged** profiles on Linux ARM64/x64, macOS ARM64
 and Windows ARM64 try once to install **Snippets 0.1.0**, enabled but inactive
 until opened. Existing profiles and disabled/removed choices stay intact; Windows
-x64 keeps built-in Snippets. The [availability note](snippets-availability.md#windows-arm64-known-issue)
-summarizes unresolved Windows ARM64 public-install failures. The policy below also applies
+x64 keeps built-in Snippets. The [availability note](../snippets-availability.md)
+is the user view. The policy below also applies
 to current source; 0.24.0 did not have this default.
 
 ## Enrollment and the permanent attempt
@@ -55,6 +55,6 @@ graph or package, select native checks for absent ordinary roots, no user-data-d
 override, packaged identity, generation1 enabled+dormant installation, acquisition/
 backend/view/YAML activity, retained PTY and normal Quit, restart and preserved
 existing-profile choices. Reuse unchanged-input results. Record any failures or
-missing coverage for the [maintainer's release decision](release.md#verification-and-release-decisions);
+missing coverage for the [maintainer's release decision](../release.md#verification-and-release-decisions);
 a blocked fixture does not by itself stop host delivery or unrelated work.
 #741's remaining qualification work stays open.

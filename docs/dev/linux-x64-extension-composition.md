@@ -31,7 +31,7 @@ OMXTERM_EXTENSION_COMPOSITION=1 \
 The shared macOS/Linux fixture imports `dist/main/index.js` unchanged. Linux uses
 X11 and the existing Linux sandbox policy; production startup applies its normal
 GPU policy. Prefer an ordinary desktop and its normal user bus (a VM is safest;
-see [side effects on your desktop](development.md#side-effects-on-your-desktop)).
+see [side effects on your desktop](../development.md#side-effects-on-your-desktop)).
 An authenticated Xvfb/Openbox display can provide bounded software-rendered
 observations, but does not isolate accounts or per-user services. A same-user
 private D-Bus is not a substitute for that boundary. Such observations are not

@@ -29,7 +29,7 @@ Linux, macOS and Windows without changing product or native-fixture behavior.
 The new successful occurrence does not overwrite the old result.
 
 Earlier reviewed fixture corrections aligned standalone Surface startup with
-[the existing Linux GPU policy](adr/0037-allow-the-linux-software-webgl-fallback.md).
+[the existing Linux GPU policy](../adr/0037-allow-the-linux-software-webgl-fallback.md).
 They retain exact rendering/input oracles, deadlines and unavailable-backend
 controls. Successful cleanup is not automatically natural Quit: retained native
 receipts preserve expected negative exits and deliberate timeout controls,

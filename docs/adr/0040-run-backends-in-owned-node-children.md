@@ -24,24 +24,24 @@ Keeping utilityProcess while silently raising the responsiveness threshold would
 
 ## Consequences and boundary
 
-The [runtime contract](../extension-backend-runtime.md) governs actual caller/export interfaces, limits, cancellation and settlement. The environment allowlist excludes app bootstrap/diagnostic variables but cannot isolate trusted code from user files or credentials. Each application establishes fresh authority; surviving orphan versions can remain Pending Cleanup while unrelated management and fresh admission continue.
+The [runtime contract](../dev/extension-backend-runtime.md) governs actual caller/export interfaces, limits, cancellation and settlement. The environment allowlist excludes app bootstrap/diagnostic variables but cannot isolate trusted code from user files or credentials. Each application establishes fresh authority; surviving orphan versions can remain Pending Cleanup while unrelated management and fresh admission continue.
 
 ### Current application consumer
 
 Linux ARM64/x64, macOS ARM64 and Windows ARM64 source application startup
 construct the runtime without activating installed code. The bounded
-[Windows ARM64 source-composition checkpoint](../windows-arm64-extension-composition.md#installed-package-production-fixture)
-passed separately from packaging. [macOS composition](../macos-extension-composition.md)
-and [Linux x64 composition](../linux-x64-extension-composition.md) retain separate
-qualification boundaries; existing package/module receipts are not production-lifecycle qualification. The [runtime reference](../extension-backend-runtime.md) covers
-current consumers and builds; [Files composition](../files-development-preview.md#host-composition)
+[Windows ARM64 source-composition checkpoint](../dev/windows-arm64-extension-composition.md#installed-package-production-fixture)
+passed separately from packaging. [macOS composition](../dev/macos-extension-composition.md)
+and [Linux x64 composition](../dev/linux-x64-extension-composition.md) retain separate
+qualification boundaries; existing package/module receipts are not production-lifecycle qualification. The [runtime reference](../dev/extension-backend-runtime.md) covers
+current consumers and builds; [Files composition](../dev/files-development-preview.md#host-composition)
 covers the application manager's separate installation/trust, backend and view
 owners. Installation and enable remain dormant; explicit actions activate code.
 Settings, catalog acquisition, action discovery and web-content hosting are not
 runtime responsibilities. Extension archives remain separate from the host;
 there is no stable SDK.
 
-[Files qualification](../files-development-preview.md#platform-limits)
+[Files qualification](../dev/files-development-preview.md#platform-limits)
 keeps product observations distinct from package inspection and module-native
 tests. Prototype evidence and historical failures retain their identities and
 limits. Surviving-browser main-death file-read exclusion remains unqualified.

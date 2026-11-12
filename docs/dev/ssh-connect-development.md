@@ -4,7 +4,7 @@ SSH Connect is an optional extension that opens OpenSSH sessions in new
 OMXTerm terminal tabs. It ships as a separate `.omxext` archive, not inside the
 host. Users install it from **Settings → Extensions** and open it from File, the
 Command Palette or the terminal context menu, or with an optional
-`toggleSshConnect` shortcut. The [SSH Connect user guide](ssh-connect.md) covers
+`toggleSshConnect` shortcut. The [SSH Connect user guide](../ssh-connect.md) covers
 installation and connecting.
 
 The extension lists `Host` aliases from `~/.ssh/config` and offers a quick-connect
@@ -48,7 +48,7 @@ It is not an SDK, an SSH broker, a credential vault or a reconnect service.
 
 ## Capability and admission
 
-[ADR 0041](adr/0041-transfer-ssh-launches-to-core.md) records why launches move to
+[ADR 0041](../adr/0041-transfer-ssh-launches-to-core.md) records why launches move to
 core.
 
 - The manifest declares `"capabilities": ["terminal.openSsh.v1", "links.open.v1"]`;
@@ -56,8 +56,8 @@ core.
   `{operation: "host.capabilities"}` for the available selectors.
 - The page's **Learn more** link sends `{operation: "links.open.v1", link: "docs"}`;
   main opens the manifest's `docs` URL (this project's
-  [user guide](ssh-connect.md))
-  ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)). Source from
+  [user guide](../ssh-connect.md))
+  ([ADR 0045](../adr/0045-open-declared-extension-links-by-id.md)). Source from
   0.4.0 on needs host `>=0.27.0-dev.0`; the published 0.3.2 archive keeps its
   range.
 - The request is `{operation: "terminal.openSsh.v1", target: {host, user?, port?}}`
@@ -128,7 +128,7 @@ npx vitest run test/unit/ssh-*.test.ts
 ```
 
 To build an archive, follow
-[Building an extension archive](release.md#building-an-extension-archive) with
+[Building an extension archive](../release.md#building-an-extension-archive) with
 `node scripts/build-ssh-extension.mjs`. It writes
 `dist/extensions/ssh-<version>.omxext` with `.sha256` and `.json` sidecars and
 refuses a dirty checkout. To try it, install the archive through
@@ -155,7 +155,7 @@ unset.
 
 ### Publishing
 
-Follow [Publishing an extension archive](release.md#publishing-an-extension-archive).
+Follow [Publishing an extension archive](../release.md#publishing-an-extension-archive).
 Published archives are immutable, so changed bytes need a new version in
 `extension.json`. Updating the host never updates an installed extension; users
 install the newer archive themselves.

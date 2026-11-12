@@ -30,7 +30,7 @@ The fixed public Snippets0.1.0 archive bundled for one-time new-profile defaults
 retains its original OMXTerm MIT license and bundled YAML ISC notice inside the
 ZIP (`LICENSE`, `licenses/yaml.txt`). It is not rebuilt from current extension
 source; [its pinned provenance](assets/default-snippets/README.md) and
-[resource policy](docs/default-snippets.md) identify the unchanged input.
+[resource policy](docs/dev/default-snippets.md) identify the unchanged input.
 
 The compact About implementation adapts text-safe rendering, named link buttons,
 runtime-version delivery, and the typed fixed-link route from

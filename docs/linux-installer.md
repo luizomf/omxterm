@@ -2,14 +2,14 @@
 
 An AppImage is a single Linux app file you can run without installing it. You can also use `linux_install.sh` to put OMXTerm in your user folder and add it to your application menu.
 
-Get the AppImage, `linux_install.sh`, and their `.sha256` files from your computer's row in the [download index](../README.md#platforms-and-downloads). ARM64 is for 64-bit Arm computers; x64 is for Intel/AMD. For system requirements, see the [Linux installation guide](installation.md#linux).
+Get the AppImage, `linux_install.sh`, and their `.sha256` files from the same [latest release](https://github.com/luizomf/omxterm/releases/latest). ARM64 is for ARM computers; x64 is for Intel/AMD. For system requirements, see the [Linux installation guide](installation.md#linux).
 
 ## Install to your application menu
 
-Download the files from the same target row. Open Terminal, go to the folder containing them (for example, `cd ~/Downloads`), and replace `VERSION` with your downloaded version. Use `x64` instead of `arm64` on Intel/AMD. The download table lists a helper for each target, but x64 helper installation has not been tested ([coverage](installation.md#linux)). Run as your normal user; you do not need `sudo`:
+Open Terminal and go to the folder with the downloads (for example, `cd ~/Downloads`). Use `x64` instead of `arm64` on Intel/AMD. Run as your normal user; you do not need `sudo`:
 
 ```sh
-appimage=./OMXTerm-VERSION-arm64.AppImage
+appimage=$(ls ./OMXTerm-*-arm64.AppImage)
 sha256sum --check "$appimage.sha256" &&
   sha256sum --check linux_install.sh.sha256 &&
   chmod +x linux_install.sh &&

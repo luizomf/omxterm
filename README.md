@@ -51,94 +51,32 @@ _macOS, with background transparency and blur._
 
 ## Platforms and downloads
 
-**Easiest way:** open the [latest release](https://github.com/luizomf/omxterm/releases/latest).
-Its notes start with a short table that tells you which file to download for
-your computer.
+Open the **[latest release](https://github.com/luizomf/omxterm/releases/latest)**
+and download the file for your computer. The file name ends with the version,
+then:
 
-OMXTerm runs on Apple Silicon Macs and on Linux and Windows PCs with ARM64 or
-Intel/AMD processors. The x64 (Intel/AMD) builds are **untested**: they build
-and pass automated checks, but nobody has used them on a real desktop yet.
-If one misbehaves,
-[report it](https://github.com/luizomf/omxterm/issues/new?template=bug-report.md).
+| Your computer                                | Download file     |
+| -------------------------------------------- | ----------------- |
+| **Mac** with an Apple chip (M1, M2, M3, M4…) | `-arm64.dmg`      |
+| **Windows** PC, most laptops and desktops    | `-x64.exe`        |
+| **Windows** PC with a Snapdragon / ARM chip  | `-arm64.exe`      |
+| **Linux** PC, most laptops and desktops      | `-x64.AppImage`   |
+| **Linux** on an ARM computer                 | `-arm64.AppImage` |
 
-### Mac with an M-series chip
+Not sure which one you have?
 
-Choose **Apple Silicon macOS**; there is no Intel Mac build. To check, choose
-Apple menu → **About This Mac** and look for an Apple M-series chip. The first
-launch needs your explicit permission; step 4 shows where.
+- **Mac:** Apple menu → **About This Mac**. "Apple M…" is right. Intel Macs
+  aren't supported.
+- **Windows:** **Settings → System → About → System type**. "x64-based" →
+  x64; "ARM-based" → arm64.
+- **Linux:** run `uname -m` in a terminal. `x86_64` → x64, `aarch64` → arm64.
 
-1. Download the DMG (the Mac app file) from the table below.
-2. Open it and drag **OMXTerm.app** to **Applications**.
-3. Open OMXTerm. macOS refuses to open it because Apple has not verified this
-   app.
-4. Verify the download using the checksum steps in the [installation
-   guide](docs/installation.md#first-launch-on-macos), then allow it in **System
-   Settings → Privacy & Security**: scroll to **Security** and click **Open
-   Anyway** next to the OMXTerm message. On macOS 12, use **System Preferences
-   → Security & Privacy → General**.
-5. Open OMXTerm again. You only do this once.
+The Intel/AMD builds (Windows and Linux x64) are new and **untested on real
+desktops**. If one misbehaves,
+[tell us](https://github.com/luizomf/omxterm/issues/new?template=bug-report.md).
 
-### Linux PC
-
-Choose **Linux ARM64** for an ARM PC or **Linux x64** for Intel/AMD. To check,
-open your app launcher, search for **Terminal**, and run `uname -m`: `aarch64`
-means ARM64 and `x86_64` means x64. Any other result has no matching download.
-
-**The ARM64 AppImage requires glibc 2.42 or newer.** glibc is the core system
-library your Linux distribution ships. Releases with an older glibc, such as
-Ubuntu 24.04 LTS, are not supported; the
-[Linux steps](docs/installation.md#requirements) show how to check and what to
-do instead. OMXTerm uses X11, a Linux window system. On Wayland desktops, a
-compatibility layer called XWayland lets X11 apps run; most desktops already
-provide it.
-
-The x64 AppImage is untested.
-
-1. Download the AppImage (a single file you run without installing) for your
-   architecture from the table below.
-2. Make it executable and run it; the [Linux
-   steps](docs/installation.md#linux) have both commands.
-
-### Windows PC
-
-Windows 11 ARM64 is tested; Windows 11 x64 and Windows 10 are untested. Choose
-**Windows ARM64** for an ARM PC (such as one with Snapdragon) or **Windows x64**
-for Intel/AMD; the x64 build is untested. If unsure, check **System type** in
-**Settings → System → About**; a Surface can be either.
-
-1. Install the
-   [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
-   if you do not have it.
-2. Download and run the installer for your architecture from the table below.
-3. The installer is unsigned, so Windows may warn about an unrecognized app.
-   Click **More info → Run anyway** after you verify the download.
-4. Open **OMXTerm** from the Start menu.
-
-### Downloads
-
-The DMG, installer, and AppImage are the app downloads. The Linux helper
-installs OMXTerm and adds a menu entry; it is not the app. `.sha256` files check
-a download.
-
-| Platform               | App version | Download                                                                                                                                                                                                                         | Checksum                                                                                                                                                                                                                                              | Notes                                                                                  |
-| ---------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Apple Silicon macOS    | 0.27.0      | [DMG](https://github.com/luizomf/omxterm/releases/download/macos-arm64-v0.27.0/OMXTerm-0.27.0-arm64.dmg)                                                                                                                         | [SHA-256](https://github.com/luizomf/omxterm/releases/download/macos-arm64-v0.27.0/OMXTerm-0.27.0-arm64.dmg.sha256)                                                                                                                                   | [Release notes](https://github.com/luizomf/omxterm/releases/tag/macos-arm64-v0.27.0)   |
-| Linux ARM64            | 0.27.0      | [AppImage](https://github.com/luizomf/omxterm/releases/download/linux-arm64-v0.27.0/OMXTerm-0.27.0-arm64.AppImage), [optional helper](https://github.com/luizomf/omxterm/releases/download/linux-arm64-v0.27.0/linux_install.sh) | [AppImage SHA-256](https://github.com/luizomf/omxterm/releases/download/linux-arm64-v0.27.0/OMXTerm-0.27.0-arm64.AppImage.sha256), [helper SHA-256](https://github.com/luizomf/omxterm/releases/download/linux-arm64-v0.27.0/linux_install.sh.sha256) | [Release notes](https://github.com/luizomf/omxterm/releases/tag/linux-arm64-v0.27.0)   |
-| Linux x64 (untested)   | 0.27.0      | [AppImage](https://github.com/luizomf/omxterm/releases/download/linux-x64-v0.27.0/OMXTerm-0.27.0-x64.AppImage), [optional helper](https://github.com/luizomf/omxterm/releases/download/linux-x64-v0.27.0/linux_install.sh)       | [AppImage SHA-256](https://github.com/luizomf/omxterm/releases/download/linux-x64-v0.27.0/OMXTerm-0.27.0-x64.AppImage.sha256), [helper SHA-256](https://github.com/luizomf/omxterm/releases/download/linux-x64-v0.27.0/linux_install.sh.sha256)       | [Release notes](https://github.com/luizomf/omxterm/releases/tag/linux-x64-v0.27.0)     |
-| Windows ARM64          | 0.27.0      | [Installer](https://github.com/luizomf/omxterm/releases/download/windows-arm64-v0.27.0/OMXTerm-0.27.0-arm64.exe)                                                                                                                 | [SHA-256](https://github.com/luizomf/omxterm/releases/download/windows-arm64-v0.27.0/OMXTerm-0.27.0-arm64.exe.sha256)                                                                                                                                 | [Release notes](https://github.com/luizomf/omxterm/releases/tag/windows-arm64-v0.27.0) |
-| Windows x64 (untested) | 0.27.0      | [Installer](https://github.com/luizomf/omxterm/releases/download/windows-x64-v0.27.0/OMXTerm-0.27.0-x64.exe)                                                                                                                     | [SHA-256](https://github.com/luizomf/omxterm/releases/download/windows-x64-v0.27.0/OMXTerm-0.27.0-x64.exe.sha256)                                                                                                                                     | [Release notes](https://github.com/luizomf/omxterm/releases/tag/windows-x64-v0.27.0)   |
-
-Platforms can ship at different times; the
-[installation guide](docs/installation.md) has requirements and checksum
-commands.
-
-Earlier OMXTerm versions were tested on Apple Silicon macOS, Windows 11 ARM64,
-and Linux ARM64 desktops: Debian 13.4 (KDE Plasma), Fedora 44 (GNOME and KDE
-Plasma), Ubuntu 26.04 GNOME, and Omarchy/Hyprland.
-
-Debian 13.4 is below the glibc requirement, so the current ARM64 package is not
-supported there. On Intel/AMD Debian, use the untested x64 build; on ARM64,
-build from source as a development path.
+Then follow the short steps in the [installation guide](docs/installation.md),
+including the one-time "Open Anyway" on macOS.
 
 ## First session
 
@@ -196,7 +134,7 @@ Windows app makes no network requests at all. Report vulnerabilities through
 Bug reports, documentation fixes, and code are welcome: read
 [CONTRIBUTING.md](CONTRIBUTING.md) and
 [open an issue](https://github.com/luizomf/omxterm/issues/new?template=bug-report.md).
-Testing the untested x64 packages is welcome in
+Testing the x64 builds is welcome in
 [Linux #223](https://github.com/luizomf/omxterm/issues/223) and
 [Windows #224](https://github.com/luizomf/omxterm/issues/224).
 

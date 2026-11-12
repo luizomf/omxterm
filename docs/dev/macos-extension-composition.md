@@ -51,7 +51,7 @@ Public host/archive/catalog distribution is not established by that checkpoint.
 ## Installed-package production fixture
 
 On a logged-in, idle macOS ARM64 desktop (a VM is safest; see
-[side effects on your desktop](development.md#side-effects-on-your-desktop)),
+[side effects on your desktop](../development.md#side-effects-on-your-desktop)),
 Then build ordinary production output and run only the opt-in integration test:
 
 ```sh

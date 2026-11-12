@@ -5,12 +5,12 @@ rename, move, trash and delete entries, and insert a path into the terminal. It
 is installed separately from OMXTerm and runs only on Linux ARM64 and macOS
 ARM64. It is a development preview, not a stable extension SDK.
 
-[Files availability](files-availability.md) covers what users do. This page
+[Files availability](../files-availability.md) covers what users do. This page
 covers how Files is built and how to change, test and ship it. The "why" lives
-in the ADRs: [immutable installed packages](adr/0038-pin-immutable-installed-packages.md),
-[packaged web content by epoch](adr/0039-own-packaged-web-content-by-epoch.md),
-[backends in owned Node children](adr/0040-run-backends-in-owned-node-children.md)
-and [protected path insertion](adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md).
+in the ADRs: [immutable installed packages](../adr/0038-pin-immutable-installed-packages.md),
+[packaged web content by epoch](../adr/0039-own-packaged-web-content-by-epoch.md),
+[backends in owned Node children](../adr/0040-run-backends-in-owned-node-children.md)
+and [protected path insertion](../adr/0021-insert-lexical-shell-quoted-paths-through-protected-paste.md).
 
 ## Package
 
@@ -223,8 +223,8 @@ before trust. Installation stays dormant until Files is opened.
 
 The schema allows one release per extension ID, so hosts excluded by the
 current entry lose the catalog offer and keep local or link installation of an
-older archive. [Extension distribution](extension-distribution.md) covers the
-catalog contract; [catalog promotion](release.md#catalog-promotion) covers
+older archive. [Extension distribution](../extension-distribution.md) covers the
+catalog contract; [catalog promotion](../release.md#catalog-promotion) covers
 publishing.
 
 ## Build, test and package
@@ -242,7 +242,7 @@ license. For an exported source tree, pass the full commit; the receipt labels
 it `supplied-commit`. `TARGET` is `linux-arm64` (default) or `darwin-arm64` and
 is only recorded in the receipt. The receipt's `qualification.status: not-run`
 is a build-time field; keep test evidence separate. Application packaging never
-includes these archives. See [building an extension archive](release.md#building-an-extension-archive).
+includes these archives. See [building an extension archive](../release.md#building-an-extension-archive).
 
 Tests:
 

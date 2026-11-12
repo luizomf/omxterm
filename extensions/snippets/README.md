@@ -3,7 +3,7 @@
 This separately built package preserves the built-in Snippets YAML v1 catalog,
 search, exact text, Insert/Run and core-owned preview. Current host source uses
 optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64; Windows x64
-retains built-in Snippets. See the [migration guide](https://github.com/luizomf/omxterm/blob/main/docs/snippets-migration.md)
+retains built-in Snippets. See the [migration guide](https://github.com/luizomf/omxterm/blob/main/docs/dev/snippets-migration.md)
 for distribution and qualification boundaries.
 
 Build committed source with `node scripts/build-snippets-extension.mjs`. The
@@ -13,7 +13,7 @@ Extensions management path. Installation does not create or change a catalog.
 Production intentionally omits the package's duplicate action: the existing
 Toggle Snippets menu, palette and shortcut command opens or closes the single
 installed companion. Absent/disabled packages open Extensions guidance instead.
-The host's [new-profile default](https://github.com/luizomf/omxterm/blob/main/docs/default-snippets.md) uses the pinned
+The host's [new-profile default](https://github.com/luizomf/omxterm/blob/main/docs/dev/default-snippets.md) uses the pinned
 `0.1.0` archive, not this package. Building this source does not publish, install
 or enable it, or change a catalog listing. Updating an installed copy requires a
 deliberate update and ordinary package trust; it is not automatic.

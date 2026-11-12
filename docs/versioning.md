@@ -13,7 +13,7 @@ advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
 `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N` and `0.27.1-dev.N` bridges have distinct
 endpoint requirements in the
-[compatibility contract](extension-installation-foundation.md#archive-contract).
+[compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
 review compatibility and capabilities deliberately at each transition. The stable
 suffix-removal rule still applies to stable cuts; stable assets now ship per target.
@@ -21,7 +21,7 @@ suffix-removal rule still applies to stable cuts; stable assets now ship per tar
 ## Post-0.27.0 development baseline
 
 Stable 0.27.0 uses a frozen cut; the next development baseline is
-`0.27.1-dev.0`. Its explicit [compatibility bridge](extension-installation-foundation.md#archive-contract)
+`0.27.1-dev.0`. Its explicit [compatibility bridge](dev/extension-installation-foundation.md#archive-contract)
 admits ranges that accept both stable `0.27.0` and `0.27.1`, so the pinned
 Snippets and current Files/SSH ranges (Files' `>=0.26.0`, SSH Connect 0.4's
 `>=0.27.0-dev.0`) stay installable without changing archive bytes, engine

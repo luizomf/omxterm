@@ -637,14 +637,14 @@ Connect share it; no per-tool placement or second panel exists.
   Snippets, including with remapped or null bindings.
 - Snippets is an optional installed extension on Linux ARM64/x64, macOS ARM64,
   and Windows ARM64. Those packages bundle Snippets `0.1.0` as a
-  [removable default](default-snippets.md), enabled but dormant only for
+  [removable default](dev/default-snippets.md), enabled but dormant only for
   positively new packaged profiles; existing users are never enrolled and
   install it through the official catalog (which offers `0.1.1`) or a verified
   local/offline archive. Updates are never automatic. Windows x64 keeps the
   built-in view and is not a default-provisioning or catalog target. Existing YAML, bindings, and
   disabled/removed choices are preserved
   ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md);
-  [migration guide](snippets-migration.md)).
+  [migration guide](dev/snippets-migration.md)).
 - Without an enabled installation, Toggle Snippets opens Extensions management
   with an optional-tool explanation and the actual installation/runtime status,
   without installing, enabling, or running code. Settings and modal owners stay
@@ -1706,7 +1706,7 @@ location and the strict, non-mutating model.
 
 Packaged builds for the extension targets try once to install the bundled,
 pinned Snippets `0.1.0` archive, enabled but dormant. Windows x64 keeps built-in
-Snippets. [One-time default Snippets](default-snippets.md) has the full policy.
+Snippets. [One-time default Snippets](dev/default-snippets.md) has the full policy.
 
 - Only a fresh profile enrolls: early main capture must prove the default
   userData, configuration and state roots absent. Existing roots, links or
@@ -1950,7 +1950,7 @@ Delivery:
   installed or bundled-default `0.1.0` can resolve a different file when XDG
   is unset or empty and the environment home is overridden. The bundled default
   stays `0.1.0`. Updating is deliberate. See the
-  [Snippets migration guide](snippets-migration.md).
+  [Snippets migration guide](dev/snippets-migration.md).
 - One UTF-8 YAML 1.2 core document (parsed with `yaml` v2): exactly
   `version: 1` and a `snippets` array of at most 512 entries. Each entry has
   `name` (non-empty, ≤128 UTF-16 code units), `body` (non-empty, ≤65,536),
@@ -2327,7 +2327,7 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   archives check host/API,
   not catalog targets. Host compatibility is semver plus the narrow
   development-host bridges in the
-  [archive contract](extension-installation-foundation.md#archive-contract).
+  [archive contract](dev/extension-installation-foundation.md#archive-contract).
   Update, Reinstall and downgrade never activate code automatically. Official
   means project-maintained, not sandboxed or signed. Settings says so in one
   plain sentence with a link to the
@@ -2520,7 +2520,7 @@ implementation; there is no renderer selector or registry
 - It owns neither extension execution, catalog/network acquisition, nor a public
   SDK. Main owns HTTPS acquisition separately; terminal ownership is unchanged.
 - Its interface and limits are in the
-  [foundation contract](extension-installation-foundation.md) and
+  [foundation contract](dev/extension-installation-foundation.md) and
   [ADR 0038](adr/0038-pin-immutable-installed-packages.md).
 
 ### Internal extension backend runtime
@@ -2554,7 +2554,7 @@ implementation; there is no renderer selector or registry
   supervisor, PID reaper, sandbox, or descendant-containment promise. Normal Quit
   retirement is bounded. The web-content host is owned separately
   ([ADR 0039](adr/0039-own-packaged-web-content-by-epoch.md)).
-- The [runtime contract](extension-backend-runtime.md) and
+- The [runtime contract](dev/extension-backend-runtime.md) and
   [ADR 0040](adr/0040-run-backends-in-owned-node-children.md) cover its internal
   interfaces and limits.
 
@@ -2584,7 +2584,7 @@ implementation; there is no renderer selector or registry
   ranges and labels. Each catalog offers one release per extension ID, so hosts
   below an entry's range keep local or link installation of an older archive
   ([extension distribution](extension-distribution.md)).
-- Narrow [development bridges](extension-installation-foundation.md#archive-contract)
+- Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
   `0.26.1-dev.N`, `0.27.0-dev.N` or `0.27.1-dev.N` host admit a range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
@@ -2694,4 +2694,4 @@ certificate root = H"7208e5…"`) is the same in every release and macOS
   later rerun. The [release procedure](release.md) records checks, limitations,
   and reuse; this specification is not an execution record.
 
-The [ADRs](adr/) explain architectural choices.
+The [ADRs](adr) explain architectural choices.

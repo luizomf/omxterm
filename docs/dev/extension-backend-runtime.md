@@ -5,14 +5,14 @@ This internal runtime lazily activates installed backends for Linux ARM64,
 [macOS ARM64 production composition](macos-extension-composition.md). A bounded
 [Windows ARM64 source-composition checkpoint](windows-arm64-extension-composition.md#installed-package-production-fixture)
 passed separately from a later bounded unpacked-package inspection. Consumers include [Files](files-development-preview.md),
-[SSH Connect](ssh-connect-development.md), [Saved Layout](saved-layout-development.md) and
-[Mirror Typing](mirror-typing-development.md). Application startup constructs infrastructure,
+[SSH Connect](ssh-connect-development.md), [Saved Layout](../saved-layout-development.md) and
+[Mirror Typing](../mirror-typing-development.md). Application startup constructs infrastructure,
 not active extension code. The application manager composes backend and view
 owners with independent generation-matched pins and bounded Quit retirement.
 
 The runtime is not a public SDK or the owner of installation UI, catalogs or
-[web-content hosting](adr/0039-own-packaged-web-content-by-epoch.md). See
-[ADR 0040](adr/0040-run-backends-in-owned-node-children.md) for its rationale and
+[web-content hosting](../adr/0039-own-packaged-web-content-by-epoch.md). See
+[ADR 0040](../adr/0040-run-backends-in-owned-node-children.md) for its rationale and
 the [Installed Packages contract](extension-installation-foundation.md) for
 archive/version ownership.
 
@@ -64,7 +64,7 @@ main capability (`terminal.openSsh.v1`), not a backend-owned PTY. Its package
 has a declared minimum host version of 0.27.0-dev.0 for SSH 0.4.0; this does not
 qualify every newer host or platform. API0.1.x and existing Files manifests remain
 compatible.
-The separate [Mirror Typing](mirror-typing-development.md#how-it-works) consumer
+The separate [Mirror Typing](../mirror-typing-development.md#how-it-works) consumer
 requires host 0.27.0 and declares `terminal.mirrorTyping.v1`. Core owns
 its visible revocable input lease; no keyboard bytes or per-key calls enter the
 backend. Backend lifetime loss revokes its views and input authority before
@@ -86,7 +86,7 @@ Errors distinguish busy, conflict, invalid-state/value and outcome-unknown.
 No retry, repair, sweep, migration, arbitrary filename or global event bus is
 provided. State survives installation management. Interrupted temp documents
 can remain; Forget removes only active data. This helper is correctness support
-for trusted code, not a filesystem sandbox. See [Saved Layout](saved-layout-development.md)
+for trusted code, not a filesystem sandbox. See [Saved Layout](../saved-layout-development.md)
 for the first concrete consumer, privacy and cleanup disclosure.
 
 ## Bootstrap and immutable-version handoff
@@ -160,7 +160,7 @@ distinguishes production, renderer-crash, module-native management and actual
 main-death observations; controlled views are not graphical recovery evidence.
 Surviving-browser file-read exclusion remains unqualified. Neither source wiring
 nor those observations establish signed distribution or a cross-platform matrix.
-[ADR 0040](adr/0040-run-backends-in-owned-node-children.md#why-change-the-utility-choice)
+[ADR 0040](../adr/0040-run-backends-in-owned-node-children.md#why-change-the-utility-choice)
 retains the failed utility-process evidence and bounded Node-child discriminator;
 neither qualifies later production code, and utilityProcess is not an alternate
 implementation.

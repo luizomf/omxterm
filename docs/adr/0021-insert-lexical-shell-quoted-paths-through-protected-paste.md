@@ -41,7 +41,7 @@ stop and no-Enter delivery. Successful still-current completion uses the existin
 native focus owner; refusal, unknown results or newer focus intent cannot focus
 a successor. Bounded localized candidate feedback is not authorization. Transport refuses control-bearing source
 paths without rewriting them; it never parses text/URI data into paths or looks
-up a file. See the [integration seam](../files-development-preview.md#inserting-paths-into-the-terminal).
+up a file. See the [integration seam](../dev/files-development-preview.md#inserting-paths-into-the-terminal).
 
 Paths are lexical only: OMXTerm never reads, resolves, normalizes, or stats a
 target. Probing the filesystem from drop or clipboard data would turn
