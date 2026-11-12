@@ -20,9 +20,11 @@ Core owns one system, `src/renderer/state-marks.ts`, and every feature reports
 its state through it. Each state takes the quietest form that works:
 
 1. Idle or success: nothing.
-2. Something ongoing: a **State Mark**, one small glyph at the pane's top-right
-   edge, in the top padding over the canvas. It has a tooltip and an
-   accessible name and no text on screen. When the tab strip is visible, the
+2. Something ongoing: a **State Mark**, one glyph, no chip or background,
+   inset from the pane's top and right edges by the terminal padding and
+   centered on the first text row, in the secondary color at about the
+   terminal's font size. It has a tooltip and an accessible name and no text
+   on screen. When the tab strip is visible, the
    tab shows each owner's glyph once, labelled from its focused pane.
 3. A surprise (paste stopped mirroring): a one-sentence `ui-overlay` that goes
    away by itself after four seconds.
@@ -66,6 +68,9 @@ the user closed meanwhile and shells that exit cleanly aren't failures.
 ## Tradeoffs
 
 A glyph is easier to miss than a strip, on purpose: the terminal comes first.
-The mark can cover a few pixels of the top-right cell when the configured top
-padding is smaller than the glyph. Without the strip, the stop is the mark
+The mark floats over the canvas and can cover the last column or two of the
+first row; that is accepted, and it never changes the grid. An actionable mark
+is a 24 px hit target with a pointer cursor, a visible hover state and a
+tooltip that appears quickly, so it is easy to find once you look for it.
+Without the strip, the stop is the mark
 itself: only its tooltip says it can be clicked.

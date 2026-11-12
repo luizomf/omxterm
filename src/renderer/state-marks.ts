@@ -56,7 +56,10 @@ export function createStateMarks(
     element.textContent = stateGlyphs[mark.glyph];
     if (!action) element.setAttribute("role", "img");
     element.setAttribute("aria-label", label);
-    element.title = label;
+    // The native tooltip waits about a second; an actionable mark must be
+    // easy to read once found, so it draws its own (see .ui-mark[data-tip]).
+    if (action) element.dataset.tip = label;
+    else element.title = label;
     if (action && element instanceof HTMLButtonElement) {
       element.type = "button";
       // Keep keyboard focus and pointer gestures with the terminal.

@@ -257,15 +257,46 @@
 }
 /* An actionable mark keeps the glyph's look; only hover reveals the button. */
 .ui-mark.ui-icon-button {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   font: var(--ui-text-meta) / 1 var(--ui-font);
   color: var(--ui-secondary);
   border-radius: var(--ui-radius-chip);
   cursor: pointer;
 }
-.ui-mark.ui-icon-button:hover {
+.ui-mark.ui-icon-button:hover,
+.ui-mark.ui-icon-button:focus-visible {
   color: var(--ui-text);
+  background: var(--ui-hover);
+}
+.ui-mark[data-tip] {
+  position: relative;
+}
+.ui-mark[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + var(--ui-space-1));
+  right: 0;
+  padding: var(--ui-space-1) var(--ui-space-2);
+  width: max-content;
+  max-width: 240px;
+  color: var(--ui-text);
+  background: var(--ui-overlay);
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius-chip);
+  font: var(--ui-text-meta) / 1.4 var(--ui-font);
+  text-align: start;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 80ms 100ms;
+}
+.ui-mark[data-tip]:hover::after,
+.ui-mark[data-tip]:focus-visible::after {
+  opacity: 1;
+}
+.state-marks .ui-mark {
+  font-size: var(--terminal-font-size, 16px);
 }
 .ui-tab .ui-mark {
   margin-inline-end: var(--ui-space-1);

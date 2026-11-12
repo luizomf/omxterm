@@ -70,7 +70,7 @@ it("turns a pane's mark into a button when its owner gives an action", () => {
   });
   const button = panes[0]!.container.querySelector("button")!;
   expect(button.getAttribute("aria-label")).toBe("Busy. Click to stop.");
-  expect(button.title).toBe("Busy. Click to stop.");
+  expect(button.dataset.tip).toBe("Busy. Click to stop.");
   button.click();
   expect(run).toHaveBeenCalledOnce();
   // A tab is already a button: its glyph only names the state.
