@@ -4,7 +4,7 @@ Mirror Typing is an optional extension that copies typing from one pane to a
 fixed group of panes in the same tab. It ships as a separate `.omxext` archive.
 The [user guide](mirror-typing.md) covers installing and using it.
 
-The extension is only the setup page. Core owns everything that touches input:
+The extension is only the setup view. Core owns everything that touches input:
 the route from one pane's keyboard to the others, the pane marks, and every
 stop condition ([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md),
 [ADR 0050](adr/0050-show-ongoing-states-as-quiet-state-marks.md)).
@@ -14,12 +14,15 @@ Extension code never sees keyboard bytes.
 
 - `extensions/mirror-typing/extension.json`: id `omxterm.mirror-typing`,
   version, host range, the `terminal.mirrorTyping.v1` and `links.open.v1`
-  capabilities and the `docs` link. `"context": "window"` opens the page as a
-  full-page tab.
+  capabilities and the `docs` link. `"context": "window"` captures the window,
+  and core presents the view as a
+  [Hosted Dialog](adr/0051-present-short-extension-setup-as-a-hosted-dialog.md)
+  over the tab (`src/main/extension-presentation.ts`).
 - `extensions/mirror-typing/page.ts`, `view.ts`, `index.html`,
-  `mirror-typing.css`: the setup page. It follows the host theme and interface
-  language (`en-US`, `pt-BR`); strings live in `messages.ts`. `backend.ts` does
-  nothing on purpose.
+  `mirror-typing.css`: the setup view, the dialog's transparent body. Core
+  draws the title and Close. It follows the host theme and interface language
+  (`en-US`, `pt-BR`); strings live in `messages.ts`. `backend.ts` does nothing
+  on purpose.
 - `src/main/mirror-typing-ipc.ts`, `mirror-input-lease.ts`: capture, Start,
   the native input lease and its revocation.
 - `src/renderer/mirror-typing.ts`: the renderer group. It reports its pane
@@ -31,15 +34,17 @@ Extension code never sees keyboard bytes.
 
 1. The **Mirror Typing** action (File menu, terminal context menu, Command
    Palette) captures the selected tab and its focused pane, then opens the
-   page. It refuses unless the focused pane is live and the tab has another
-   live pane.
-2. The page asks `{operation: "terminal.mirrorTyping.v1", action: "describe"}`
+   setup dialog. It refuses unless the focused pane is live and the tab has
+   another live pane.
+2. The view asks `{operation: "terminal.mirrorTyping.v1", action: "describe"}`
    and gets a one-use setup token plus opaque pane handles, ordinals and titles.
-   The focused pane is required. The page renders titles as text.
-3. **Start** sends the token and the checked handles (2–16). Core hides the
-   page, returns to the original tab and pane, rechecks them and only then arms
-   the route. The token is spent even if the reply is lost, so the page never
-   resends it; it asks for a fresh setup (Refresh, or showing the page again).
+   The focused pane is required. The view renders titles as text.
+3. **Start** sends the token and the checked handles (2–16). It only counts
+   while the setup dialog is shown. Core hides the dialog, returns to the
+   original tab and pane, rechecks them and only then arms the route. The
+   hidden view stays alive while mirroring, because losing it stops the group.
+   The token is spent even if the reply is lost, so the view never resends it;
+   it asks for a fresh setup (Refresh, or opening Mirror Typing again).
 4. While armed, the Surface hands each pane's final keyboard bytes to core,
    which writes them once to every member. Paste, snippet Insert/Run and drops
    call the Surface's semantic-input hook first, which stops the group before
@@ -52,10 +57,11 @@ when setup is ready, so opening the action and pressing Enter is enough.
 
 ## Build and test
 
-Unit tests cover the page, the IPC, the lease and the renderer group:
+Unit tests cover the view, the IPC, the lease, the renderer group and the
+setup dialog:
 
 ```sh
-npx vitest run test/unit/mirror-*.test.ts test/unit/renderer-mirror-typing.test.ts
+npx vitest run test/unit/mirror-*.test.ts test/unit/renderer-mirror-typing.test.ts test/unit/hosted-content-dialog.test.ts
 ```
 
 To build an archive, follow

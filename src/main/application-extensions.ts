@@ -4,6 +4,7 @@ import { createPanelDefault, type PendingExtensionOpen } from "./panel-default";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Translator } from "../shared/i18n";
+import type { HostedPresentationKind } from "../shared/extension-view";
 import { terminalIpc } from "../shared/terminal-ipc";
 import type { createWindowActionSender } from "./window-action-delivery";
 import {
@@ -214,10 +215,11 @@ async function invokeExtension(
 function captureExtensionTarget(
   source: ExtensionTarget,
   context: "window" | undefined,
-  presentation: "panel" | undefined,
+  presentation: HostedPresentationKind | undefined,
   captureWindow: ExtensionTargetCapture | undefined,
 ): ExtensionTarget | undefined {
-  if (presentation !== "panel" && context !== "window") return source;
+  if (presentation !== "panel" && context !== "window")
+    return presentation ? { ...source, presentation } : source;
   const windowTarget = captureWindow?.(source.sourceSessionId, "window");
   return presentation === "panel"
     ? windowTarget && {
@@ -225,7 +227,9 @@ function captureExtensionTarget(
         terminalDirectory: source.terminalDirectory,
         presentation,
       }
-    : windowTarget;
+    : presentation
+      ? windowTarget && { ...windowTarget, presentation }
+      : windowTarget;
 }
 
 function supportsExtensionPreview() {

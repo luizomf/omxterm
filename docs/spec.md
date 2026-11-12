@@ -174,8 +174,8 @@ are the job of a session manager such as tmux.
   Terminal Pane, Surface, Adapter, shell, or PTY.
 - One ordered collection owns selection, reordering, and positional/next/previous
   navigation for every Application Tab kind, including general hosted tabs.
-  Separately installed Files and SSH Connect open in the Auxiliary Panel instead
-  and never enter tab ordering.
+  Separately installed Files and SSH Connect open in the Auxiliary Panel instead,
+  and Mirror Typing setup in a Hosted Dialog; neither enters tab ordering.
 - Settings counts toward the strip flag and two-tab threshold. Opening it never
   reveals a disabled strip.
 - Switching away preserves its DOM, category, drafts, revisions, scroll, and
@@ -1125,15 +1125,20 @@ The separately installed
 [Mirror Typing extension](mirror-typing.md) copies typing to a fixed set of
 panes in one tab
 ([ADR 0043](adr/0043-revoke-visible-mirror-typing-routes.md)). Version 0.2.0
-needs host 0.27.0 or later.
+needs host 0.27.0 or later; 0.3.0, a transparent dialog body without its own
+title, needs 0.29.1-dev.0 or later.
 
 - An explicit action captures one terminal tab and its live, mounted focused
   pane before setup opens. An ineligible original focus refuses, even with live
-  siblings.
+  siblings. Setup is a [Hosted Dialog](#hosted-extension-content) over the tab
+  (any installed version), so opening it never changes the terminal grid.
 - Setup inspects a fixed subset of 2–16 live panes that always includes the
-  original focus. Start consumes fresh setup authority and returns only to that
-  exact tab and source, after acknowledged native setup hide and focus/lifetime
-  revalidation. If keyboard focus returns to the window a moment after the
+  original focus. Start counts only from the shown setup dialog. It consumes
+  fresh setup authority and returns only to that exact tab and source, after
+  the dialog's acknowledged native hide and focus/lifetime revalidation. The
+  hidden setup view stays alive while mirroring; main retires it when Mirror
+  Typing opens again. A tab or panel selection that hides the dialog during
+  Preparing cancels Start. If keyboard focus returns to the window a moment after the
   hide, Start waits for it, bounded by the prepare timer; blur still cancels.
 - In source mode, core mirrors final genuine keyboard bytes exactly once per
   member. Any selected member can become the source; new panes never join.
@@ -2433,13 +2438,26 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
 
 ### Hosted extension content
 
-Hosted content is optional Application Tab or companion-panel content; Settings
-and terminal panes are unaffected.
+Hosted content is optional Application Tab, companion-panel or Hosted Dialog
+content; Settings and terminal panes are unaffected.
 
-- Main picks Files and SSH panel presentation from package metadata, without
-  implying trust or extra capability. Identities and presentations are
-  owner-bound; native views hide before host overlays show, and only a current
-  owner is restored.
+- Main picks Files and SSH panel presentation, and Mirror Typing's dialog
+  presentation, from package metadata, without implying trust or extra
+  capability. Identities and presentations are owner-bound; native views hide
+  before host overlays show, and only a current owner is restored.
+- A Hosted Dialog
+  ([ADR 0051](adr/0051-present-short-extension-setup-as-a-hosted-dialog.md))
+  is a modal `ui-dialog`, 440×320 px at most, that core draws over the
+  selected tab: the view's title, a Close (×) and the view filling the body.
+  It adds no Application Tab, so the strip and the terminal grid don't change.
+  While shown it holds the window's one native presentation; an open panel
+  tool's view hides meanwhile. Close, Escape (in the frame, or in the view
+  through core) or a newer dialog closes its view. Selecting a tab or a panel
+  tool takes the presentation back and hides the dialog after the acknowledged
+  native hide, keeping its view. A dialog that arrives over a modal or before
+  any tab is closed instead.
+- A full-page hosted tab's frame paints the page surface in the design-system
+  font: a compact Close row above the view, without a tinted band.
 - Field input and clipboard stay in the child. Closing or crashing a hosted
   epoch retires its views, never core PTYs; requests racing retirement are
   refused by owner and identity checks.

@@ -8,7 +8,7 @@ Third-party extensions may follow it but aren't required to.
 The whole system is one stylesheet, [`src/renderer/ui.css`](../src/renderer/ui.css):
 tokens plus a few component classes. The core renderer imports it first;
 official extensions get it through `extensions/shared/appearance.css` (panel
-views) or by importing it directly (full-page views). esbuild inlines it into
+and dialog views) or by importing it directly (full-page views). esbuild inlines it into
 each bundle, so packages stay self-contained.
 
 ## Rules
@@ -48,8 +48,9 @@ no separate rules.
 anywhere:
 
 - default (pages, Settings): opaque `--ui-raised` / `--ui-hover` / `--ui-selected`;
-- `.ui-on-tint` (the auxiliary panel and the extension views it hosts):
-  neutral alpha layers that stack over the panel and fade with transparency;
+- `.ui-on-tint` (the auxiliary panel and the extension views it hosts, and
+  views hosted in a dialog): neutral alpha layers that stack over the panel or
+  dialog and fade with transparency;
 - `.ui-overlay`, `.ui-dialog`: the `-tint` fills;
 - `.ui-card`: one step up, so a quiet button still reads on a card.
 
@@ -74,7 +75,7 @@ take `color-scheme` from background luminance (light above 0.179).
 | `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                                                                                     |
 | `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                                                                               |
 | `ui-chip`                           | A key binding or short literal value.                                                                                                                                                  |
-| `ui-dialog`                         | Modal overlays (About, Command Palette, previews). Clear backdrop; the rest of the window softens.                                                                                     |
+| `ui-dialog`                         | Modal overlays (About, Command Palette, previews, extension setup). Clear backdrop; the rest of the window softens.                                                                    |
 | `ui-overlay`                        | Non-modal floating notices (the exit notice, the panel status, drop hints, state notices).                                                                                             |
 | `ui-mark` via `createStateMarks()`  | An ongoing state on a pane and its tab: one 12 px secondary glyph with a tooltip and accessible name, no text on screen. With an action, the pane's glyph is a 16 px `ui-icon-button`. |
 | `ui-popover`                        | Menus and tooltips over content in the same view. Solid surface.                                                                                                                       |
@@ -86,9 +87,9 @@ take `color-scheme` from background luminance (light above 0.179).
 Build pages with `createApplicationPage(document, { title, actions,
 navigation, notice, content, status })` and buttons with
 `createPageButton(document, variant)` from `src/renderer/application-page.ts`.
-Full-page surfaces (Settings, window-context extensions) also import
-`src/renderer/application-page.css` for the page grid. Panel views use the
-compact page from `extensions/shared/appearance.css` and add
+Full-page surfaces (Settings, full-page extension views) also import
+`src/renderer/application-page.css` for the page grid. Panel and dialog views
+use the compact page from `extensions/shared/appearance.css` and add
 `class="ui-on-tint"` to their `<html>`.
 
 ## Surfaces
@@ -142,10 +143,20 @@ its tooltip adds one short sentence such as "Click to stop." A new state adds
 its glyph to `stateGlyphs`; reporters pass a glyph name, a label and an
 optional action, never their own visuals.
 
-**Extension views.** Panel views (Files, SSH Connect, Snippets) are
-transparent: the host paints the panel tint. They don't repeat the tool name;
-the panel header shows it. Window-context views (Saved Layout, Mirror Typing)
-are full pages with an 18 px title.
+**Extension views.** The host draws the frame; a view draws only its content.
+Pick the smallest presentation that fits:
+
+- Panel views (Files, SSH Connect, Snippets) are companion tools. They are
+  transparent: the host paints the panel tint. They don't repeat the tool
+  name; the panel header shows it.
+- Dialog views (Mirror Typing setup) are a short task over the terminal. The
+  host shows a `ui-dialog` at a fixed 440×320 px with a `ui-panel-header`
+  (the view's title, then Close ×) and the view below. The view is
+  transparent, doesn't repeat the title and scrolls inside. A dialog isn't a
+  tab, so opening one never changes the terminal grid
+  ([ADR 0051](adr/0051-present-short-extension-setup-as-a-hosted-dialog.md)).
+- Full-page views (Saved Layout) need room. They are tabs with an 18 px title;
+  the host adds a compact Close row on the same page surface above them.
 
 ## Wording
 

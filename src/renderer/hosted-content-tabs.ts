@@ -40,11 +40,13 @@ export function createHostedContentTabs(
       button.textContent = language.t("hosted.close");
   });
   const removeOpen = bridge?.onOpen((descriptor: HostedContentDescriptor) => {
-    if (disposed || descriptor.presentation === "panel") return;
+    // Panels and dialogs belong to the companion owner, never the tab strip.
+    if (disposed || descriptor.presentation) return;
     const container = parent.ownerDocument.createElement("section");
     container.className = "hosted-content-tab";
     container.hidden = true;
     const close = createPageButton(parent.ownerDocument);
+    close.classList.add("page-button-compact");
     close.textContent = language.t("hosted.close");
     const slot = parent.ownerDocument.createElement("div");
     slot.className = "hosted-content-slot";

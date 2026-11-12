@@ -34,7 +34,7 @@ type Route = {
   issued: Map<string, Host>;
   revision: number;
   focused: string | null;
-  panels: Set<string>;
+  dismissible: Set<string>;
   dismissal: ReturnType<typeof createCompanionDismissal>;
   filesDrag: ReturnType<typeof createFilesTerminalDrag>;
 };
@@ -157,7 +157,7 @@ export function startExtensionViewHost(
       issued: new Map(),
       revision: 0,
       focused: null,
-      panels: new Set(),
+      dismissible: new Set(),
       dismissal: createCompanionDismissal(options.owner),
       filesDrag: createFilesTerminalDrag(options.owner),
     };
@@ -218,7 +218,7 @@ export function startExtensionViewHost(
       return ownerRoute.dismissal.handle(
         event,
         input,
-        id === sourceId && ownerRoute.panels.has(id) ? id : undefined,
+        id === sourceId && ownerRoute.dismissible.has(id) ? id : undefined,
         id === sourceId ? id : undefined,
         () => {
           // focusedId includes live, visible, selected child and native owner
@@ -230,7 +230,7 @@ export function startExtensionViewHost(
       );
     },
     onRetired(id) {
-      ownerRoute.panels.delete(id);
+      ownerRoute.dismissible.delete(id);
       if (ownerRoute.issued.get(id) === host) {
         ownerRoute.issued.delete(id);
         if (!contents.isDestroyed())
@@ -260,7 +260,7 @@ export function startExtensionViewHost(
     async open(input: {
       entryResource: string;
       title: string;
-      presentation?: "panel";
+      presentation?: import("../shared/extension-view").HostedPresentationKind;
       panelDefaultToken?: string;
     }) {
       const opened = await host.open(input);
@@ -270,8 +270,8 @@ export function startExtensionViewHost(
       if (!host.owns(descriptor.id) || contents.isDestroyed())
         throw new Error("Hosted owner retired");
       ownerRoute.issued.set(descriptor.id, host);
-      if (descriptor.presentation === "panel")
-        ownerRoute.panels.add(descriptor.id);
+      // Escape in a panel or dialog child dismisses it through core.
+      if (descriptor.presentation) ownerRoute.dismissible.add(descriptor.id);
       try {
         reveal(
           input.panelDefaultToken

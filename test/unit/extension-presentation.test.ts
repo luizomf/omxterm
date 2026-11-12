@@ -40,3 +40,26 @@ it("keeps general extensions as tabs regardless of their display title", () => {
   ).toBeUndefined();
   expect(extensionPresentation({ id: "omxterm.ssh" })).toBeUndefined();
 });
+
+it("floats Mirror Typing setup as a dialog over the tab", () => {
+  expect(
+    extensionPresentation({
+      id: "omxterm.mirror-typing",
+      view: {
+        entry: "index.html",
+        title: "Mirror Typing",
+        action: "omxterm.mirror-typing.open",
+      },
+    }),
+  ).toBe("dialog");
+  expect(
+    extensionPresentation({
+      id: "example.mirror-typing",
+      view: {
+        entry: "index.html",
+        title: "Mirror Typing",
+        action: "example.mirror-typing.open",
+      },
+    }),
+  ).toBeUndefined();
+});

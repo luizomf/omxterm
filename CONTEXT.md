@@ -43,8 +43,8 @@ Application Tabs, with exactly one selected. It starts with a Terminal Tab.
 **Application Tab** — A terminal, graphical Settings or internal hosted-content entry in one window's
 single ordered tab collection. Reordering and literal/next/previous navigation
 include all kinds. Separately installed Files and SSH Connect preview tools use
-the companion Auxiliary Panel through their explicit shared actions, rather than
-adding Application Tabs.
+the companion Auxiliary Panel through their explicit shared actions, and Mirror
+Typing setup opens as a Hosted Dialog, rather than adding Application Tabs.
 Removing the last Application Tab follows the window-close
 lifecycle, including pending failure acknowledgement.
 
@@ -205,6 +205,13 @@ suspend it. It is independent of the opening terminal's lifetime. See
 [window and session behavior](docs/spec.md#window-and-session-behavior) for
 geometry, view retention and retirement rules.
 
+**Hosted Dialog** — A small modal frame, drawn by core over the selected tab,
+around an extension view: title, Close (×) and the view below, at a fixed size.
+Opening it adds no Application Tab and never changes the terminal grid. Close,
+Escape or a new dialog closes the view; another tab or panel selection only
+hides it. Mirror Typing setup is the one Hosted Dialog. See
+[ADR 0051](docs/adr/0051-present-short-extension-setup-as-a-hosted-dialog.md).
+
 **Snippets Sidebar** — The Auxiliary Panel view for browsing and searching the user's
 `snippets.yaml` catalog. Insert and Run send exact text through core-owned
 Protected Paste to a captured live Terminal Surface; preview shows the text
@@ -294,7 +301,8 @@ continuations remain refused; see the [terminal contract](docs/spec.md#terminal-
 **Mirror Typing** — An optional extension that copies the source pane's encoded
 keyboard input to a fixed group of live panes in one Terminal Tab. Core owns input delivery and the
 State Marks on mirrored panes; clicking one, or opening the Command Palette,
-stops it. Extension code receives no keyboard payloads. Paste,
+stops it. Its setup is a Hosted Dialog. Extension code receives no keyboard
+payloads. Paste,
 snippets and drops stop mirroring before delivery to their original target.
 See [Mirror Typing](docs/mirror-typing.md) for setup and limits.
 
@@ -382,8 +390,8 @@ terminal input access. See
 
 **Extension View Host** — The internal owner of an extension's packaged-content
 views and their resources for one view lifetime, called an epoch. It retains the
-package version while in use and coordinates presentation in tabs or the
-Auxiliary Panel; retiring a view does not end core terminal sessions. See
+package version while in use and coordinates presentation in tabs, the
+Auxiliary Panel or a Hosted Dialog; retiring a view does not end core terminal sessions. See
 [ADR 0039](docs/adr/0039-own-packaged-web-content-by-epoch.md) and the
 [hosted-content contract](docs/spec.md#configuration-and-local-state).
 

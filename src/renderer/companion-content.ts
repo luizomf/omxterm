@@ -11,6 +11,7 @@ import {
   type HostedContentSlot,
 } from "./hosted-content-presentation";
 import type { RendererLanguage } from "./renderer-language";
+import { createHostedDialogs } from "./hosted-content-dialog";
 
 function createPanelSideController(
   panel: ReturnType<typeof createAuxiliaryPanel> | undefined,
@@ -57,8 +58,10 @@ function drainRetired(
   }
 }
 
-// Window composition for the one native presenter and the exclusive companion
-// panel. Tools never enter the application-tab collection or own core sessions.
+// Window composition for the one native presenter, the exclusive companion
+// panel and the one hosted dialog. Neither tools nor dialogs enter the
+// application-tab collection or own core sessions.
+// eslint-disable-next-line max-lines-per-function -- Tab, panel and dialog selections share one ordered presenter and selection revision.
 export function createCompanionContent(
   parent: HTMLElement,
   root: HTMLElement | undefined,
@@ -89,6 +92,57 @@ export function createCompanionContent(
     return !!activate;
   };
   let disposed = false;
+  const dialogs = createHostedDialogs(parent.ownerDocument, {
+    language: options.language,
+    canOpen: () =>
+      !disposed &&
+      !!application &&
+      !application.removed &&
+      !options.blocked() &&
+      !presentation.isBlocked(),
+    close: (id, closed) => presentation.close(id, closed),
+    forget: presentation.forget,
+    present(target) {
+      selectionRevision += 1;
+      presentation.select(
+        target,
+        () => {
+          drainRetired(slots, panel, presentation);
+          // Settle a pending tab activation without moving focus.
+          activateApplication(false);
+        },
+        target,
+        true,
+      );
+    },
+    restore(settled) {
+      const captured = ++selectionRevision;
+      const next = applicationTarget();
+      presentation.select(
+        next,
+        (focusAllowed) => {
+          settled();
+          drainRetired(slots, panel, presentation);
+          const activated = activateApplication(focusAllowed);
+          if (
+            captured === selectionRevision &&
+            focusAllowed &&
+            !activated &&
+            !options.blocked()
+          )
+            options.focusTerminal();
+        },
+        application,
+        application?.kind === "terminal" && next ? "core" : true,
+      );
+    },
+  });
+  const applicationTarget = () =>
+    application?.kind === "hosted"
+      ? application
+      : application?.kind === "terminal"
+        ? selectedPanel()
+        : undefined;
   const panel = root
     ? createAuxiliaryPanel(root, {
         content: root.parentElement!,
@@ -99,9 +153,11 @@ export function createCompanionContent(
         select(id, activate) {
           if (application?.kind !== "terminal") return;
           selectionRevision += 1;
+          dialogs.yield();
           presentation.select(
             id ? slots.get(id) : undefined,
             () => {
+              dialogs.settle();
               drainRetired(slots, panel, presentation);
               activateApplication(
                 !options.blocked() && !presentation.isBlocked(),
@@ -125,6 +181,10 @@ export function createCompanionContent(
     return slot?.removed ? undefined : slot;
   };
   const removeOpen = bridge?.onOpen((descriptor) => {
+    if (descriptor.presentation === "dialog") {
+      dialogs.open(descriptor.id, descriptor.title);
+      return;
+    }
     if (disposed || descriptor.presentation !== "panel" || !panel) return;
     if (
       descriptor.panelDefaultToken &&
@@ -181,12 +241,14 @@ export function createCompanionContent(
       application?.kind === "terminal" &&
       !application.removed &&
       !options.blocked() &&
-      !presentation.isBlocked()
+      !presentation.isBlocked() &&
+      !dialogs.shown()
     )
       if (descriptor.toggle) panel.toggle(descriptor.id);
       else panel.show(descriptor.id);
   });
   const removeDismiss = bridge?.onDismissPanel?.((id) => {
+    if (dialogs.dismiss(id)) return;
     if (
       !disposed &&
       application?.kind === "terminal" &&
@@ -197,10 +259,16 @@ export function createCompanionContent(
       panel.dismiss();
   });
   function retire(id: string) {
+    if (dialogs.retire(id)) return;
     const slot = slots.get(id);
     if (!slot || disposed || slot.removed) return;
     slot.removed = true;
-    if (application?.kind === "terminal" && panel?.requested() === id) {
+    // A shown dialog keeps the presenter; the panel just drops the tool.
+    if (
+      application?.kind === "terminal" &&
+      panel?.requested() === id &&
+      !dialogs.shown()
+    ) {
       const captured = selectionRevision;
       presentation.select(
         undefined,
@@ -241,15 +309,12 @@ export function createCompanionContent(
       application = tab;
       selectionRevision += 1;
       pendingActivation = activate;
-      const target =
-        tab.kind === "hosted"
-          ? tab
-          : tab.kind === "terminal"
-            ? selectedPanel()
-            : undefined;
+      dialogs.yield();
+      const target = applicationTarget();
       presentation.select(
         target,
         (focusAllowed) => {
+          dialogs.settle();
           drainRetired(slots, panel, presentation);
           activateApplication(focusAllowed);
         },
@@ -257,6 +322,7 @@ export function createCompanionContent(
         tab.kind === "terminal" && target ? (passive ? false : "core") : true,
       );
     },
+    dialogShown: dialogs.shown,
     ownsPanelFocus() {
       const target = selectedPanel();
       return (
@@ -306,6 +372,7 @@ export function createCompanionContent(
       removeDismiss?.();
       panel?.dispose();
       slots.clear();
+      dialogs.dispose();
       presentation.dispose();
     },
   };

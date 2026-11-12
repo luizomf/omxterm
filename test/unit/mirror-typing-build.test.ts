@@ -18,7 +18,7 @@ it("declares the mirror and docs-link capabilities and ships the AshyTerm licens
   expect(manifest).toMatchObject({
     id: "omxterm.mirror-typing",
     name: "Mirror Typing",
-    version: "0.2.0",
+    version: "0.3.0",
     capabilities: ["terminal.mirrorTyping.v1", "links.open.v1"],
     view: { context: "window", action: "omxterm.mirror-typing.open" },
   });
@@ -48,7 +48,7 @@ it.skipIf(process.env.OMXTERM_MIRROR_TYPING_BUILD !== "1")(
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: "0.27.0",
+        appVersion: "0.29.1",
         apiVersion: "0.1.0",
       });
       expect(validated.manifest).toEqual(receipt.manifest);
@@ -70,7 +70,7 @@ it.skipIf(process.env.OMXTERM_MIRROR_TYPING_BUILD !== "1")(
         path.join(extracted, "mirror-typing.css"),
         "utf8",
       );
-      expect(css).toContain(".application-page-header");
+      expect(css).toContain(".application-page");
       expect(css).toContain("--ui-input-border:");
       expect(css).not.toContain("@import");
       const view = await readFile(path.join(extracted, "view.js"), "utf8");

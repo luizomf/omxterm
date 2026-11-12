@@ -53,8 +53,9 @@ function isSetup(value: unknown): value is Setup {
   );
 }
 
-// Setup only: core owns the input route, the visible Stop and every stop
-// condition. This page picks panes and asks for one deliberate Start.
+// Setup only: core owns the input route, the pane marks that stop it and
+// every stop condition. This view picks panes and asks for one deliberate
+// Start. The host shows it as a dialog and draws its title and Close.
 export function mountMirrorTypingPage(
   document: Document,
   bridge: MirrorTypingBridge,
@@ -63,7 +64,6 @@ export function mountMirrorTypingPage(
   const window = document.defaultView!;
   const lifetime = new window.AbortController();
   const events = { signal: lifetime.signal };
-  const title = document.createElement("h2");
   const hint = document.createElement("p");
   hint.className = "ui-hint";
   const hintText = document.createTextNode("");
@@ -101,7 +101,7 @@ export function mountMirrorTypingPage(
   actions.append(start, refresh);
   const content = document.createElement("section");
   content.append(hint, targets, actions);
-  const page = createApplicationPage(document, { title, notice, content });
+  const page = createApplicationPage(document, { notice, content });
   document.body.append(page);
 
   let language: SupportedLanguage = "en-US";
@@ -123,7 +123,6 @@ export function mountMirrorTypingPage(
   function relabel() {
     const m = mirrorMessages(language);
     document.documentElement.lang = language;
-    title.textContent = m.title;
     hintText.data = m.hint;
     learnMore.textContent = m.learnMore;
     legend.textContent = m.panes;

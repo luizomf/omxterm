@@ -23,12 +23,13 @@ to retry). Other platforms aren't tested yet. See the
 1. Split a tab into two or more panes and click the pane you want to type in.
 2. Open **Mirror Typing** from the **File** menu, the terminal's right-click
    menu or the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux
-   and Windows; type `mirror`).
+   and Windows; type `mirror`). A small dialog opens over the tab; your panes
+   keep their size.
 3. Every pane is checked, and **Start mirroring** has focus: press **Enter** to
    mirror them all. To leave some out, uncheck them first, then choose **Start
-   mirroring**.
+   mirroring**. To cancel, press `Esc` or choose **×**.
 
-OMXTerm returns to your tab. Each mirrored pane shows a small **↔** at its
+The dialog closes and OMXTerm returns to your tab. Each mirrored pane shows a small **↔** at its
 top-right corner (and so does the tab, when the tab bar is showing); hover it to
 see whether that pane is the source or a member. Type in any of them and the
 others follow.

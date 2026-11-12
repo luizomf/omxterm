@@ -842,9 +842,10 @@ it.each([
   },
 );
 
-it.each([true, false])(
-  "owns native Escape only for companion content (panel=%s)",
-  async (panel) => {
+it.each(["panel", "dialog", undefined] as const)(
+  "owns native Escape only for panel and dialog content (%s)",
+  async (presentation) => {
+    const panel = presentation !== undefined;
     const f = await fixture(false);
     const ipc = {
       handle: vi.fn(),
@@ -854,7 +855,7 @@ it.each([true, false])(
     cleanups.push(() => host.retire());
     const descriptor = await host.open({
       ...opening,
-      ...(panel ? { presentation: "panel" as const } : {}),
+      ...(presentation ? { presentation } : {}),
     });
     const handler = (ipc.handle as ReturnType<typeof vi.fn>).mock.calls.find(
       ([channel]) => channel === extensionViewIpc.present,

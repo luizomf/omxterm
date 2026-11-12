@@ -64,20 +64,14 @@ function live(value: Member) {
   );
 }
 
+// Start only counts from the setup dialog the user is looking at.
 function selectedMembers(
   snapshot: Context | undefined,
   command: Extract<MirrorCommand, { kind: "prepare" }>,
-  selected: ApplicationTab | undefined,
+  setupShown: boolean,
   available: boolean,
 ): Member[] | undefined {
-  if (
-    !snapshot ||
-    !live(snapshot.original) ||
-    !available ||
-    selected?.kind !== "hosted" ||
-    selected.id !== command.sourceView ||
-    selected.removed
-  )
+  if (!snapshot || !live(snapshot.original) || !available || !setupShown)
     return;
   const members = command.handles.map((handle) =>
     snapshot.members.find((item) => item.handle === handle),
@@ -162,6 +156,8 @@ export function createMirrorTyping(deps: {
   parent: HTMLElement;
   marks: StateMarks;
   selected(): ApplicationTab | undefined;
+  // Whether this hosted setup view is the dialog currently shown.
+  setupShown(id: string): boolean;
   available(): boolean;
   handoff(
     tab: TerminalTab,
@@ -266,7 +262,7 @@ export function createMirrorTyping(deps: {
     const members = selectedMembers(
       snapshot,
       command,
-      deps.selected(),
+      deps.setupShown(command.sourceView),
       deps.available(),
     );
     if (!snapshot || !members) {
@@ -293,16 +289,13 @@ export function createMirrorTyping(deps: {
   };
   const handoff = (command: Extract<MirrorCommand, { kind: "handoff" }>) => {
     const current = attempt;
-    const selected = deps.selected();
     if (
       !current ||
       current.context !== command.context ||
       current.request !== command.prepared ||
       current.handoff ||
       !valid(current) ||
-      selected?.kind !== "hosted" ||
-      selected.id !== current.sourceView ||
-      selected.removed
+      !deps.setupShown(current.sourceView)
     ) {
       bridge.reply({ request: command.request, ok: false });
       return;
