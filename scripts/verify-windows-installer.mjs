@@ -16,6 +16,7 @@ export function inspectWindowsInstallerInputs(
   configuration,
   builderVersion,
   packageName,
+  nsisInclude,
 ) {
   // This safety inspection deliberately supports only the reviewed installer footprint.
   // Revisit identities, registry views, locations, shortcuts and NSIS templates together
@@ -56,14 +57,19 @@ export function inspectWindowsInstallerInputs(
   // registration/cache paths, templates and options are unchanged.
   // #959 adds only a macOS afterPack hook that rewrites executable UUIDs.
   // Windows payload, NSIS identity, paths, templates and options are unchanged.
-  const digest = createHash("sha256")
-    .update(configuration.replaceAll("\r\n", "\n"))
-    .digest("hex");
+  // #1018 adds an NSIS include whose customInstall deletes the installer cache
+  // copy, so a successful install leaves no omxterm-updater directory. Identity,
+  // registration and shortcuts are unchanged; the include is pinned too.
+  const digest = (text) =>
+    createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
   if (
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
-    digest !==
-      "062d193170def50a671cf0962096dfc3fb0313358a42af43d9d16e0ba63b7c30"
+    digest(configuration) !==
+      "0fed92c61e324139acd8e7c672ee9652c09e5148e1e72872dda34c23ac5b9c91" ||
+    typeof nsisInclude !== "string" ||
+    digest(nsisInclude) !==
+      "98bb5a2a43c4e4bad076c7476410a1256420dd917b5d8cd3d59a2ef2759a5aeb"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

@@ -116,8 +116,11 @@ async function transaction(
         path.join(installRoot, "Uninstall OMXTerm.exe"),
         "uninstaller bytes",
       );
-      await mkdir(cache, { recursive: true });
-      await copyFile(installer, path.join(cache, "installer.exe"));
+      if (fault === "left-cache") {
+        // Models an installer that keeps electron-builder's updater copy (#1018).
+        await mkdir(cache, { recursive: true });
+        await copyFile(installer, path.join(cache, "installer.exe"));
+      }
       registered = true;
     } else if (path.basename(file) === "Uninstall OMXTerm.exe") {
       relocatedUninstaller = file;
@@ -153,6 +156,10 @@ async function transaction(
       const canonicalInspection =
         args.includes("-TransactionRoot") &&
         [...aliases.paths.values()].includes(inspectedRoot!);
+      const cacheExists = await readdir(cache).then(
+        () => true,
+        () => false,
+      );
       const observation = {
         registrations: registered
           ? [
@@ -176,9 +183,9 @@ async function transaction(
               },
             ]
           : [],
-        paths: registered
-          ? [
-              ...["Desktop", "Programs"].map((folder) => ({
+        paths: [
+          ...(registered
+            ? ["Desktop", "Programs"].map((folder) => ({
                 path: path.win32.join(localAppData, folder, "OMXTerm.lnk"),
                 kind: "shortcut",
                 scope: "user",
@@ -186,10 +193,17 @@ async function transaction(
                   aliases.paths.get(installRoot) ?? installRoot,
                   "OMXTerm.exe",
                 ),
-              })),
-              { path: cache, kind: "cache", scope: "user", target: null },
-            ]
-          : [],
+              }))
+            : []),
+          ...(cacheExists
+            ? [{ path: cache, kind: "cache", scope: "user", target: null }]
+            : []),
+        ] as {
+          path: string;
+          kind: string;
+          scope: string;
+          target: string | null;
+        }[],
         processes: canonicalInspection && fault === "canonical-process",
       };
       if (canonicalInspection && fault === "new-cache" && !registered) {
@@ -205,7 +219,13 @@ async function transaction(
           observation.paths[0]!.target = "C:\\other\\OMXTerm.exe";
         if (fault === "machine-shortcut")
           observation.paths[0]!.scope = "machine";
-        if (fault === "foreign-cache") observation.paths[2]!.path += "-unowned";
+        if (fault === "foreign-cache")
+          observation.paths.push({
+            path: `${cache}-unowned`,
+            kind: "cache",
+            scope: "user",
+            target: null,
+          });
         if (fault === "unsafe-command")
           observation.registrations[1]!.uninstall =
             '"C:\\unrelated.exe" /currentuser';
@@ -225,6 +245,20 @@ async function transaction(
       temporaryDirectory,
       localAppData,
     });
+    if (fault === "left-cache") {
+      // Both checkpoints report the cache, and cleanup still runs and keeps it.
+      await expect(result).rejects.toThrow(
+        /cache remains after installation.*cache remains after uninstall/su,
+      );
+      expect(verifyInstalled).not.toHaveBeenCalled();
+      await expect(readdir(installRoot)).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      expect(await readFile(path.join(cache, "installer.exe"), "utf8")).toBe(
+        "controlled installer bytes",
+      );
+      return;
+    }
     if (fault) {
       const expected: Record<string, RegExp> = {
         "canonical-space": /Unsafe canonical NSIS/,
@@ -256,9 +290,6 @@ async function transaction(
         expect(
           await readFile(path.join(installRoot, "OMXTerm.exe"), "utf8"),
         ).toBe("payload bytes");
-        expect(await readFile(path.join(cache, "installer.exe"), "utf8")).toBe(
-          "controlled installer bytes",
-        );
       } else {
         expect(
           (await readdir(temporaryDirectory)).some((name) =>
@@ -271,7 +302,6 @@ async function transaction(
     if (remnant === "absent" || remnant === "empty") {
       await expect(result).resolves.toEqual({
         replacedExisting: false,
-        installerCacheRemoved: true,
         sha256: createHash("sha256")
           .update("controlled installer bytes")
           .digest("hex"),
@@ -302,7 +332,7 @@ async function transaction(
     expect(verifyInstalled).toHaveBeenCalledOnce();
     if (shortProfile) expect(installRoot).toContain("LongProfile");
     expect(cleanInspections).toBe(1);
-    // Exact owned-cache removal is independent of installed-payload proof.
+    // The installer deletes its own updater copy; nothing is left to clean up.
     await expect(readdir(cache)).rejects.toMatchObject({ code: "ENOENT" });
   } finally {
     aliases.enabled = false;
@@ -331,6 +361,9 @@ describe("exact Windows transaction installed-payload removal", () => {
     "unsafe-command",
   ])("fails closed and retains evidence for %s", async (fault) => {
     await transaction("absent", true, fault);
+  });
+  it("fails when the installer leaves its updater copy behind", async () => {
+    await transaction("absent", false, "left-cache");
   });
   it.each(["absent", "empty"] as const)(
     "accepts an %s installation root after uninstall",

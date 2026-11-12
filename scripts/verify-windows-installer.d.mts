@@ -22,6 +22,7 @@ export function inspectWindowsInstallerInputs(
   configuration: string,
   builderVersion: string,
   packageName: string,
+  nsisInclude: string,
 ): void;
 export function inspectWindowsInstallation(
   execute?: (

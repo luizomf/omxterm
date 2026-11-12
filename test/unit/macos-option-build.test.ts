@@ -87,8 +87,14 @@ it("requires the Option shortcut addon only in macOS package inventories", () =>
 
 it("retains the Windows installer's exact input guard for the new package entries", () => {
   const configuration = readFileSync("electron-builder.yml", "utf8");
+  const nsisInclude = readFileSync("scripts/nsis-installer.nsh", "utf8");
   expect(() =>
-    inspectWindowsInstallerInputs(configuration, "26.15.3", "omxterm"),
+    inspectWindowsInstallerInputs(
+      configuration,
+      "26.15.3",
+      "omxterm",
+      nsisInclude,
+    ),
   ).not.toThrow();
   for (const line of [
     "    - dist/main/macos-option-shortcut.node\n",
@@ -99,6 +105,7 @@ it("retains the Windows installer's exact input guard for the new package entrie
         configuration.replace(line, ""),
         "26.15.3",
         "omxterm",
+        nsisInclude,
       ),
     ).toThrow(/footprint/u);
 });

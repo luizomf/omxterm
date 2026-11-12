@@ -198,6 +198,8 @@ nsis:
   # unused.
   differentialPackage: false
   useZip: true
+  # Removes the installer copy electron-builder keeps for electron-updater.
+  include: scripts/nsis-installer.nsh
 dmg:
   sign: false
   title: ${productName} ${version}
