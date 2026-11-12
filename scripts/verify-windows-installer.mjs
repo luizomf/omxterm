@@ -54,6 +54,8 @@ export function inspectWindowsInstallerInputs(
   // registration/cache paths, templates and options are unchanged.
   // #964 unpacks the Files move addon on Windows too. NSIS identity,
   // registration/cache paths, templates and options are unchanged.
+  // #959 adds only a macOS afterPack hook that rewrites executable UUIDs.
+  // Windows payload, NSIS identity, paths, templates and options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -61,7 +63,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "14a5b7b703907f70e0cae08e5d93f122e4b4a1633f580f4ae692688d01b9ec2b"
+      "062d193170def50a671cf0962096dfc3fb0313358a42af43d9d16e0ba63b7c30"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

@@ -55,7 +55,10 @@ permissions across updates.
   permissions. The key is guarded like a password.
 - Local Network permission uses a separate macOS rule store. On macOS 27 the
   rule for OMXTerm has an empty DR, so this decision is not known to change it.
-  The tmux note in the [installation guide](../installation.md) still applies.
+  That store also tells apps apart by their executables' Mach-O UUID, which
+  OMXTerm used to share with stock Electron; every build now gets its own
+  (`scripts/macos-executable-uuid.mjs`, #959). The tmux note in the
+  [installation guide](../installation.md) still applies.
 
 Verified on a macOS 27 VM: a Documents-folder grant made to one signed build
 still applied, with no prompt, after replacing it with a build that had

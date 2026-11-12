@@ -23,6 +23,7 @@ import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
 import { releaseDesignatedRequirement } from "./sign-macos.mjs";
+import { bundleExecutables } from "./macos-executable-uuid.mjs";
 import { launchLinuxPackagedProcess } from "./linux-packaged-process.mjs";
 
 const execFile = promisify(execFileCallback);
@@ -522,6 +523,32 @@ async function inspectArchitecture(file, label, platform, arch = process.arch) {
     throw new Error(
       `${label} is not an ${arch}-only ${platform === "darwin" ? "Mach-O" : "ELF"}: ${stdout.trim()}`,
     );
+}
+
+// A shared Electron UUID breaks macOS Local Network privacy (see
+// scripts/macos-executable-uuid.mjs), so no executable may keep a stock one.
+async function inspectExecutableUuids(applicationRoot) {
+  const uuids = async (root, name) =>
+    Promise.all(
+      (await bundleExecutables(root, name)).map(
+        async (file) =>
+          (
+            await execFile("dwarfdump", ["--uuid", path.join(root, file)])
+          ).stdout.split(" ")[1],
+      ),
+    );
+  const stock = new Set(
+    await uuids(
+      path.join(projectRoot, "node_modules/electron/dist/Electron.app"),
+      "Electron",
+    ),
+  );
+  const packaged = await uuids(applicationRoot, "OMXTerm");
+  if (
+    packaged.length !== stock.size ||
+    packaged.some((uuid) => stock.has(uuid))
+  )
+    throw new Error("An OMXTerm executable still has Electron's Mach-O UUID");
 }
 
 /**
@@ -1341,6 +1368,7 @@ export async function verifyPackagedApplication(
         { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }, timeout: 10_000 },
       );
       await inspectApplicationIcon(applicationRoot);
+      await inspectExecutableUuids(applicationRoot);
       await inspectApplicationSignature(applicationRoot, { release });
     } else {
       if (platform === "linux")
