@@ -8,6 +8,10 @@ import path from "node:path";
 // other app on the same Electron version. When one of those reached the local
 // network first, macOS never asked about OMXTerm and kept its shells off the
 // LAN. This hook gives OMXTerm's executables their own UUIDs before signing.
+//
+// Like a linker would, it derives a new UUID for every build. The grant
+// follows the bundle ID and signature, so it survives updates, and a tmux
+// server left over from the previous build can ping the LAN again (#959).
 
 const fatMagic = 0xcafebabe;
 const machO64Magic = 0xfeedfacf;
@@ -15,13 +19,13 @@ const machO64HeaderSize = 32;
 const loadCommandUuid = 0x1b;
 
 /**
- * Derives a stable RFC 4122 name-based UUID for one executable of the app.
- * It depends only on the bundle identifier and the executable's path inside
- * the bundle, so it stays the same across OMXTerm and Electron updates.
+ * Derives an RFC 4122 name-based UUID for one executable of one build, from
+ * the bundle identifier, the executable's path inside the bundle and a digest
+ * of the build's contents.
  */
-export function executableUuid(bundleIdentifier, relativePath) {
+export function executableUuid(bundleIdentifier, relativePath, buildDigest) {
   const bytes = createHash("sha256")
-    .update(`${bundleIdentifier}\0${relativePath}`)
+    .update(`${bundleIdentifier}\0${relativePath}\0${buildDigest}`)
     .digest()
     .subarray(0, 16);
   bytes[6] = (bytes[6] & 0x0f) | 0x50;
@@ -88,13 +92,20 @@ export default async function afterPack(context) {
     context.appOutDir,
     `${productFilename}.app`,
   );
+  const buildDigest = createHash("sha256")
+    .update(
+      await readFile(
+        path.join(applicationPath, "Contents", "Resources", "app.asar"),
+      ),
+    )
+    .digest("hex");
   for (const relativePath of await bundleExecutables(
     applicationPath,
     productFilename,
   )) {
     const file = path.join(applicationPath, relativePath);
     const binary = await readFile(file);
-    replaceMachOUuid(binary, executableUuid(id, relativePath));
+    replaceMachOUuid(binary, executableUuid(id, relativePath, buildDigest));
     await writeFile(file, binary);
   }
 }

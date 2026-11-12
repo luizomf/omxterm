@@ -32,27 +32,26 @@ const uuidAt = (binary: Buffer, offset: number) =>
   binary.subarray(offset, offset + 16);
 
 describe("macOS executable UUID", () => {
-  const uuid = executableUuid(
-    "com.otaviomiranda.omxterm",
-    "Contents/MacOS/OMXTerm",
-  );
+  const omxterm = "com.otaviomiranda.omxterm";
+  const main = "Contents/MacOS/OMXTerm";
+  const uuid = executableUuid(omxterm, main, "build-a");
 
-  it("is a stable name-based UUID per bundle and executable", () => {
+  it("is a name-based UUID unique to the app, executable and build", () => {
     expect(uuid).toHaveLength(16);
     expect(uuid.readUInt8(6) >> 4).toBe(5);
     expect(uuid.readUInt8(8) >> 6).toBe(2);
-    expect(
-      executableUuid("com.otaviomiranda.omxterm", "Contents/MacOS/OMXTerm"),
-    ).toEqual(uuid);
+    expect(executableUuid(omxterm, main, "build-a")).toEqual(uuid);
+    expect(executableUuid(omxterm, main, "build-b")).not.toEqual(uuid);
     expect(
       executableUuid(
-        "com.otaviomiranda.omxterm",
+        omxterm,
         "Contents/Frameworks/OMXTerm Helper.app/Contents/MacOS/OMXTerm Helper",
+        "build-a",
       ),
     ).not.toEqual(uuid);
-    expect(
-      executableUuid("com.example.fork", "Contents/MacOS/OMXTerm"),
-    ).not.toEqual(uuid);
+    expect(executableUuid("com.example.fork", main, "build-a")).not.toEqual(
+      uuid,
+    );
   });
 
   it("replaces only the UUID of a thin Mach-O", () => {

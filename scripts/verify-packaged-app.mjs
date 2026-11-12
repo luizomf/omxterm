@@ -23,7 +23,6 @@ import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
 import { releaseDesignatedRequirement } from "./sign-macos.mjs";
-import { executableUuid } from "./macos-executable-uuid.mjs";
 import { launchLinuxPackagedProcess } from "./linux-packaged-process.mjs";
 
 const execFile = promisify(execFileCallback);
@@ -526,20 +525,16 @@ async function inspectArchitecture(file, label, platform, arch = process.arch) {
 }
 
 // A shared Electron UUID breaks macOS Local Network privacy (see
-// scripts/macos-executable-uuid.mjs), so the main executable must carry ours.
+// scripts/macos-executable-uuid.mjs), so the main executable must carry its own.
 async function inspectExecutableUuid(executable) {
-  const expected = executableUuid(
-    "com.otaviomiranda.omxterm",
-    "Contents/MacOS/OMXTerm",
-  )
-    .toString("hex")
-    .toUpperCase()
-    .replace(/^(.{8})(.{4})(.{4})(.{4})/u, "$1-$2-$3-$4-");
-  const { stdout } = await execFile("dwarfdump", ["--uuid", executable]);
-  if (!stdout.includes(`UUID: ${expected} `))
-    throw new Error(
-      `OMXTerm executable UUID is not ${expected}: ${stdout.trim()}`,
-    );
+  const uuid = async (file) =>
+    (await execFile("dwarfdump", ["--uuid", file])).stdout.split(" ")[1];
+  const electron = path.join(
+    projectRoot,
+    "node_modules/electron/dist/Electron.app/Contents/MacOS/Electron",
+  );
+  if ((await uuid(executable)) === (await uuid(electron)))
+    throw new Error("OMXTerm executable still has Electron's Mach-O UUID");
 }
 
 /**
