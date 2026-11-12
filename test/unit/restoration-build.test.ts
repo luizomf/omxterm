@@ -9,6 +9,10 @@ import {
   parseManifest,
 } from "../../src/installed-packages/archive";
 
+const hostVersion = (
+  JSON.parse(await readFile("package.json", "utf8")) as { version: string }
+).version;
+
 it("rejects non-string capability declarations rather than coercing them", async () => {
   const manifest: unknown = JSON.parse(
     await readFile("extensions/restoration/extension.json", "utf8"),
@@ -50,7 +54,7 @@ it.skipIf(process.env.OMXTERM_RESTORATION_BUILD !== "1")(
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: "0.28.0",
+        appVersion: hostVersion,
         apiVersion: "0.1.0",
       });
       expect(validated.manifest).toEqual(receipt.manifest);
