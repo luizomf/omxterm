@@ -90,7 +90,7 @@ export function createShortcutPtyObservation() {
 export function assertShortcutCollision(status: string) {
   assert.match(
     status,
-    /at "keybinds\.find": conflicts with the "(?:toggleFullScreen|quit)" keybind/u,
+    /at "keybinds\.(?:find": conflicts with the "quit|toggleFullScreen": conflicts with the "find)" keybind/u,
   );
 }
 
