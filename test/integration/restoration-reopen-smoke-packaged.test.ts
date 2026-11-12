@@ -11,6 +11,11 @@ import { launchPackaged } from "../fixtures/packaged-inspector.js";
 // restoration-smoke-packaged.test.ts plus OMXTERM_RESTORATION_SMOKE_REOPEN=1.
 const app = process.env.OMXTERM_RESTORATION_SMOKE_APP;
 const archive = process.env.OMXTERM_RESTORATION_SMOKE_ARCHIVE;
+// An app started from Finder or the Dock on macOS has no locale variables.
+const finderEnvironment =
+  process.platform === "darwin"
+    ? { LANG: undefined, LC_ALL: undefined, LC_CTYPE: undefined }
+    : {};
 const reopen = process.env.OMXTERM_RESTORATION_SMOKE_REOPEN === "1";
 
 it.skipIf(!app || !archive || !reopen)(
@@ -20,11 +25,14 @@ it.skipIf(!app || !archive || !reopen)(
     const root = await realpath(
       await mkdtemp(path.join(os.tmpdir(), "omxterm-reopen-smoke-")),
     );
-    const folder = path.join(root, "home", "project");
+    // Non-ASCII, like macOS's "Área de Trabalho" in Portuguese.
+    const folder = path.join(root, "home", "Área de Trabalho");
     await mkdir(folder, { recursive: true });
     const marker = path.join(root, "layout");
 
-    const first = await launchPackaged(app!, root, {}, { defaultShell: true });
+    const first = await launchPackaged(app!, root, finderEnvironment, {
+      defaultShell: true,
+    });
     try {
       const remembered = (await first.call(
         `layoutRemember(${JSON.stringify({
@@ -40,12 +48,10 @@ it.skipIf(!app || !archive || !reopen)(
       await first.stop();
     }
 
-    const second = await launchPackaged(
-      app!,
-      root,
-      {},
-      { defaultShell: true, windows: 2 },
-    );
+    const second = await launchPackaged(app!, root, finderEnvironment, {
+      defaultShell: true,
+      windows: 2,
+    });
     try {
       const reopened = await second.call(
         `layoutReopened(${JSON.stringify({ marker })})`,

@@ -13,6 +13,11 @@ import { launchPackaged } from "../fixtures/packaged-inspector.js";
 //   OMXTERM_RESTORATION_SMOKE_ARCHIVE  restoration-X.Y.Z.omxext
 const app = process.env.OMXTERM_RESTORATION_SMOKE_APP;
 const archive = process.env.OMXTERM_RESTORATION_SMOKE_ARCHIVE;
+// An app started from Finder or the Dock on macOS has no locale variables.
+const finderEnvironment =
+  process.platform === "darwin"
+    ? { LANG: undefined, LC_ALL: undefined, LC_CTYPE: undefined }
+    : {};
 
 it.skipIf(!app || !archive)(
   "saves a window's tabs, splits and folder and opens them after a restart",
@@ -21,11 +26,14 @@ it.skipIf(!app || !archive)(
     const root = await realpath(
       await mkdtemp(path.join(os.tmpdir(), "omxterm-layout-smoke-")),
     );
-    const folder = path.join(root, "home", "project");
+    // Non-ASCII, like macOS's "Área de Trabalho" in Portuguese.
+    const folder = path.join(root, "home", "Área de Trabalho");
     await mkdir(folder, { recursive: true });
     const marker = path.join(root, "layout");
 
-    const first = await launchPackaged(app!, root, {}, { defaultShell: true });
+    const first = await launchPackaged(app!, root, finderEnvironment, {
+      defaultShell: true,
+    });
     try {
       const saved = (await first.call(
         `layoutSave(${JSON.stringify({
@@ -43,7 +51,9 @@ it.skipIf(!app || !archive)(
       await first.stop();
     }
 
-    const second = await launchPackaged(app!, root, {}, { defaultShell: true });
+    const second = await launchPackaged(app!, root, finderEnvironment, {
+      defaultShell: true,
+    });
     try {
       const opened = (await second.call(
         `layoutOpen(${JSON.stringify({ marker })})`,
