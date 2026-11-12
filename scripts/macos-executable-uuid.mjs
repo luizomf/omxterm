@@ -10,8 +10,9 @@ import path from "node:path";
 // LAN. This hook gives OMXTerm's executables their own UUIDs before signing.
 //
 // Like a linker would, it derives a new UUID for every build. The grant
-// follows the bundle ID and signature, so it survives updates, and a tmux
-// server left over from the previous build can ping the LAN again (#959).
+// follows the bundle ID and signature, so it survives updates. In testing, a
+// tmux server left over from the previous build could ping the LAN again
+// after the update (#959).
 
 const fatMagic = 0xcafebabe;
 const machO64Magic = 0xfeedfacf;
