@@ -100,7 +100,17 @@ it.runIf(process.platform === "win32")(
   "refuses Windows spellings that name a different entry",
   async () => {
     await writeFile(path.join(root, "kept"), "kept");
-    for (const spelling of ["kept.", "kept ", "kept:stream", "..."]) {
+    for (const spelling of [
+      "kept.",
+      "kept ",
+      "kept:stream",
+      "...",
+      "kep*",
+      "kep?",
+      "CON",
+      "nul.txt",
+      "Lpt1",
+    ]) {
       expect(() => addon.trash!(path.join(root, spelling))).toThrow(
         expect.objectContaining({ code: "EINVAL" }),
       );
@@ -138,16 +148,26 @@ it.runIf(process.platform === "win32")(
     const folder = path.join(root, "no bin");
     await mkdir(folder);
     await writeFile(path.join(folder, "kept.txt"), "kept");
+    await mkdir(path.join(folder, "kept folder"));
+    await writeFile(path.join(folder, "kept folder", "inner.txt"), "inner");
     const run = promisify(execFile);
     await run("subst.exe", [`${letter}:`, folder]);
     try {
       await expect(addon.trash!(`${letter}:\\kept.txt`)).rejects.toMatchObject({
         code: "ENOTRASH",
       });
+      await expect(
+        addon.trash!(`${letter}:\\kept folder`),
+      ).rejects.toMatchObject({
+        code: "ENOTRASH",
+      });
     } finally {
       await run("subst.exe", [`${letter}:`, "/D"]);
     }
     expect(await readFile(path.join(folder, "kept.txt"), "utf8")).toBe("kept");
+    expect(
+      await readFile(path.join(folder, "kept folder", "inner.txt"), "utf8"),
+    ).toBe("inner");
   },
 );
 

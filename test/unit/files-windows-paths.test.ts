@@ -68,8 +68,17 @@ it("tells roots, descendants and valid names apart per path style", () => {
     "a|",
     "a.",
     "a ",
+    "CON",
+    "nul.txt",
+    "Com1",
+    "lpt9.log",
+    "aux .txt",
   ])
     expect(validName(name, "C:\\Users"), name).toBe(false);
+  for (const name of ["console.txt", "com10", "nullable", "CON"])
+    expect(validName(name, name === "CON" ? "/home" : "C:\\Users"), name).toBe(
+      true,
+    );
   expect(validName("a:b.", "/home")).toBe(true);
   expect(validName("a:b", "\\\\server\\share\\")).toBe(false);
   expect(validName("report.v2.txt", "C:\\Users")).toBe(true);

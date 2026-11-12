@@ -9,6 +9,11 @@ type NativeFiles = {
 // converting a final symlink spelling into its referent. Windows takes only
 // drive-absolute paths, no alternate data streams, and no part ending in a dot
 // or space (Windows would act on the trimmed name instead).
+// Trailing dot or space, reserved or control characters, or a device name
+// (CON, NUL, COM1, LPT1... with or without an extension, any case).
+const windowsSpecial =
+  /[. ]$|[<>"|?*\x00-\x1f]|^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]) *(?:\.|$)/i;
+
 function trashPath(target: unknown): target is string {
   if (
     typeof target !== "string" ||
@@ -28,7 +33,7 @@ function trashPath(target: unknown): target is string {
         part &&
         part !== "." &&
         part !== ".." &&
-        !(windows && /[. ]$/.test(part)),
+        !(windows && windowsSpecial.test(part)),
     );
 }
 

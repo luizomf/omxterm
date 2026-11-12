@@ -122,11 +122,15 @@ int Recycle(const std::wstring& path) {
     result = operation->SetOperationFlags(
         FOF_NO_UI | FOF_ALLOWUNDO | FOFX_EARLYFAILURE | FOFX_RECYCLEONDELETE);
   if (SUCCEEDED(result)) result = operation->DeleteItem(item, &sink);
+  BOOL aborted = FALSE;
   if (SUCCEEDED(result)) result = operation->PerformOperations();
+  // Never answer success for an operation the shell reports as aborted.
+  if (operation && FAILED(operation->GetAnyOperationsAborted(&aborted)))
+    aborted = TRUE;
   if (operation) operation->Release();
   item->Release();
   if (sink.refused) return FILES_NOT_RECYCLED;
-  return FAILED(result) ? EIO : 0;
+  return FAILED(result) || aborted ? EIO : 0;
 }
 }  // namespace
 

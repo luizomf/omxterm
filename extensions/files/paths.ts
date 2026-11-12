@@ -36,12 +36,17 @@ export function inside(path: string, directory: string) {
 }
 
 /** One entry name for `directory`: no separators, dot names or NUL. Windows
- * also refuses its reserved characters (a colon names a data stream) and a
- * trailing dot or space, which it would silently trim. */
+ * also refuses its reserved characters (a colon names a data stream), a
+ * trailing dot or space, which it would silently trim, and device names such
+ * as CON or LPT1.txt. */
 export const validName = (name: string, directory: string) =>
   !!name &&
   name !== "." &&
   name !== ".." &&
   !name.includes("/") &&
   !name.includes("\0") &&
-  !(windows(directory) && /[<>:"|?*\\\x00-\x1f]|[. ]$/.test(name));
+  !(
+    windows(directory) &&
+    (/[<>:"|?*\\\x00-\x1f]|[. ]$/.test(name) ||
+      /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]) *(?:\.|$)/i.test(name))
+  );

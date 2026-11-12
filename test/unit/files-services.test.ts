@@ -200,7 +200,8 @@ function windowsServices(cpu = "arm64") {
 it.each(["arm64", "x64"])(
   "forwards a literal Windows %s drive path to the Recycle Bin service",
   async (cpu) => {
-    const target = "C:\\Users\\me\\space ' \" ; $() % # café";
+    // Windows forbids `"` in names; everything else here is literal.
+    const target = "C:\\Users\\me\\space ' ; $() % # café";
     calls.trash.mockResolvedValue("");
     await expect(
       windowsServices(cpu).trash!(target, new AbortController().signal),
@@ -226,6 +227,17 @@ it.each([
   "C:\\Users\\me\\x ",
   "C:\\Users\\...",
   "C:\\dir. \\x",
+  "C:\\Users\\a*",
+  "C:\\Users\\a?b",
+  "C:\\Users\\a|b",
+  "C:\\Users\\a<b>",
+  'C:\\Users\\a"b',
+  "C:\\Users\\a\x01b",
+  "C:\\CON",
+  "C:\\Users\\nul.txt",
+  "C:\\Users\\Lpt1",
+  "C:\\Users\\com9.tar.gz",
+  "C:\\aux\\file",
 ])(
   "refuses ambiguous Windows trash input before loading (%j)",
   async (target) => {
@@ -263,3 +275,13 @@ it("refuses trash up front on a Windows host without a trash service", async () 
     await backend.invoke({ operation: "trash", path: "/item" }, signal),
   ).toEqual({ ok: false, error: "unsupported" });
 });
+
+it.each(["C:\\Users\\console.txt", "C:\\Users\\com10", "C:\\Users\\nullable"])(
+  "still forwards ordinary Windows names that start like devices (%j)",
+  async (target) => {
+    calls.trash.mockResolvedValue("");
+    await expect(
+      windowsServices().trash!(target, new AbortController().signal),
+    ).resolves.toBeUndefined();
+  },
+);
