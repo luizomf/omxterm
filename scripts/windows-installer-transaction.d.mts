@@ -36,5 +36,4 @@ export function verifyExactWindowsInstaller(options: {
 }): Promise<{
   replacedExisting: boolean;
   sha256: string;
-  installerCacheRemoved: boolean;
 }>;

@@ -18,11 +18,12 @@ Intentional replacement supports only known per-user registration; it never
 executes an arbitrary registry-supplied command itself. Inspection is necessary
 but does not eliminate host races or installer-wide effects, so the disposable
 VM requirement also applies to an apparently clean host. The pinned NSIS
-installer writes an installer cache independently of `/D=` and despite the lack
-of application auto-updates. A pre-existing cache is refused rather than assigned
-to this transaction or overwritten. A newly created cached installer is checked
-against the exact installer digest and only that unchanged file and its empty
-directory are removed; unknown or additional cache state is preserved.
+template copies the installer to `%LOCALAPPDATA%\omxterm-updater` for
+electron-updater, independently of `/D=`. OMXTerm has no auto-updater, so its
+NSIS include deletes that copy at the end of installation. A pre-existing cache
+is refused rather than assigned to this transaction or overwritten, since the
+installer would delete it. The verifier then requires the cache to be absent
+after installation and after uninstallation, and never removes one itself.
 
 Before executing NSIS, the transaction resolves only its newly created temporary
 installation directory to a native long path. Windows `TEMP` may contain an 8.3
@@ -51,8 +52,8 @@ only with non-recursive `rmdir`. Any remaining entry (including unexpected files
 or directories), non-directory root or inspection/removal error fails verification
 and preserves residual payload and the relocated-uninstaller tree for inspection.
 The verifier never recursively deletes the installation destination to make an
-uninstall pass. Exact owned-cache cleanup is separate from this proof; only after
-the proof succeeds is the relocated-uninstaller tree recursively removed.
+uninstall pass. Only after the proof succeeds is the relocated-uninstaller tree
+recursively removed.
 Failures preserve primary and cleanup errors and retain uncertain state for
 inspection. User data is never selected for deletion. The old application is
 not restored by this test; snapshot recovery is a separate environment action.

@@ -7,6 +7,14 @@ import {
   verifyWindowsInstaller,
 } from "../../scripts/verify-windows-installer.mjs";
 
+const nsisInclude = await readFile(
+  new URL("../../scripts/nsis-installer.nsh", import.meta.url),
+  "utf8",
+);
+
+const inspectInputs = (configuration: string, builder: string, name: string) =>
+  inspectWindowsInstallerInputs(configuration, builder, name, nsisInclude);
+
 function adapter() {
   return {
     inspect: vi.fn().mockResolvedValue({ existing: true, processes: false }),
@@ -53,7 +61,7 @@ describe("exact Windows installer verification", () => {
       "utf8",
     );
     expect(() =>
-      inspectWindowsInstallerInputs(configuration, "26.15.3", "omxterm"),
+      inspectInputs(configuration, "26.15.3", "omxterm"),
     ).not.toThrow();
   });
   it("keeps exact input guarding after the POSIX native addon unpacking review", async () => {
@@ -136,9 +144,7 @@ describe("exact Windows installer verification", () => {
       [configuration, "26.15.4", "omxterm"],
       [configuration, "26.15.3", "other-package"],
     ] as const) {
-      expect(() =>
-        inspectWindowsInstallerInputs(config, builder, name),
-      ).toThrow(/footprint/i);
+      expect(() => inspectInputs(config, builder, name)).toThrow(/footprint/i);
     }
   });
   it("recognizes the persistent NSIS cache as existing installation state", async () => {
@@ -176,9 +182,9 @@ describe("exact Windows installer verification", () => {
     ).resolves.toMatchObject({ processes: true });
   });
   it("rejects changed packaging identity or builder before interpreting Windows state", () => {
-    expect(() =>
-      inspectWindowsInstallerInputs("changed config", "26.15.3", "omxterm"),
-    ).toThrow(/footprint/i);
+    expect(() => inspectInputs("changed config", "26.15.3", "omxterm")).toThrow(
+      /footprint/i,
+    );
   });
   it.each([
     "{}",
@@ -315,4 +321,19 @@ describe("exact Windows installer verification", () => {
     expect(io.install).not.toHaveBeenCalled();
     expect(io.uninstall).not.toHaveBeenCalled();
   });
+});
+
+it("pins the NSIS include alongside the builder configuration", async () => {
+  const configuration = await readFile(
+    new URL("../../electron-builder.yml", import.meta.url),
+    "utf8",
+  );
+  expect(() =>
+    inspectWindowsInstallerInputs(
+      configuration,
+      "26.15.3",
+      "omxterm",
+      nsisInclude.replace("RMDir", "RMDir /r"),
+    ),
+  ).toThrow(/footprint/i);
 });

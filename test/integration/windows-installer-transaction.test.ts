@@ -73,6 +73,11 @@ describe("exact NSIS transaction side-effect refusal", () => {
         path.join(projectRoot, "electron-builder.yml"),
         path.join(root, "electron-builder.yml"),
       );
+      await mkdir(path.join(root, "scripts"));
+      await copyFile(
+        path.join(projectRoot, "scripts", "nsis-installer.nsh"),
+        path.join(root, "scripts", "nsis-installer.nsh"),
+      );
       await writeFile(
         path.join(root, "package.json"),
         JSON.stringify({ name: "other-product" }),
@@ -151,11 +156,6 @@ describe("exact NSIS transaction side-effect refusal", () => {
         await writeFile(
           path.join(installedRoot, "Uninstall OMXTerm.exe"),
           "synthetic owned uninstaller",
-        );
-        await mkdir(cacheRoot);
-        await writeFile(
-          path.join(cacheRoot, "installer.exe"),
-          "synthetic installer",
         );
         registered = true;
       } else {

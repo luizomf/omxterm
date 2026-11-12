@@ -10,7 +10,6 @@ import {
   realpath,
   rm,
   rmdir,
-  unlink,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -46,25 +45,6 @@ async function comparePayload(source, installed) {
         "Exact NSIS extracted payload differs from the bound unpacked application",
       );
   }
-}
-
-async function inspectOwnedInstallerCache(directory, installerDigest) {
-  const installer = path.join(directory, "installer.exe");
-  const [folder, file] = await Promise.all([
-    lstat(directory),
-    lstat(installer),
-  ]);
-  if (
-    !folder.isDirectory() ||
-    folder.isSymbolicLink() ||
-    !file.isFile() ||
-    file.isSymbolicLink() ||
-    (await digest(installer)) !== installerDigest
-  )
-    throw new Error(
-      "NSIS installer cache ownership or bytes differ; retain cache and transaction evidence",
-    );
-  return installer;
 }
 
 export function assertOwnedRegistration(state, root, cacheDirectory) {
@@ -129,6 +109,10 @@ export async function verifyExactWindowsInstaller({
     require("app-builder-lib/package.json").version,
     JSON.parse(await readFile(path.join(projectRoot, "package.json"), "utf8"))
       .name,
+    await readFile(
+      path.join(projectRoot, "scripts", "nsis-installer.nsh"),
+      "utf8",
+    ),
   );
   const installerDigest = await digest(installer);
   let installRoot;
@@ -243,12 +227,16 @@ export async function verifyExactWindowsInstaller({
         });
       },
       async verify() {
-        assertOwnedRegistration(
-          await inspectWindowsInstallation(execute, installRoot),
+        const installed = await inspectWindowsInstallation(
+          execute,
           installRoot,
-          cacheDirectory,
         );
-        await inspectOwnedInstallerCache(cacheDirectory, installerDigest);
+        assertOwnedRegistration(installed, installRoot, cacheDirectory);
+        // The installer deletes electron-builder's updater copy of itself (#1018).
+        if (installed.paths.some((entry) => entry.kind === "cache"))
+          throw new Error(
+            "NSIS installer cache remains after installation; retain VM evidence",
+          );
         await comparePayload(unpackedRoot, installRoot);
         await verifyInstalled(installRoot);
         if ((await digest(installer)) !== installerDigest)
@@ -261,7 +249,6 @@ export async function verifyExactWindowsInstaller({
           installRoot,
           cacheDirectory,
         );
-        await inspectOwnedInstallerCache(cacheDirectory, installerDigest);
         const uninstaller = path.join(installRoot, "Uninstall OMXTerm.exe");
         const uninstallerDigest = await digest(uninstaller);
         // NSIS's PowerShell process check would terminate an in-place uninstaller
@@ -293,16 +280,20 @@ export async function verifyExactWindowsInstaller({
           ["/S", "/currentuser", `_?=${installRoot}`],
           { timeout: 120_000 },
         );
-        // Pre-existing caches were refused. Remove only our unchanged exact copy;
-        // never recursively delete cache contents or discard newly arrived files.
-        await unlink(
-          await inspectOwnedInstallerCache(cacheDirectory, installerDigest),
-        );
-        await rmdir(cacheDirectory);
         const deadline = Date.now() + 20_000;
+        let cacheRemains = false;
         for (;;) {
           const after = await inspectWindowsInstallation(execute, installRoot);
-          if (!after.existing && !after.processes) break;
+          // The uninstaller never removes a cache, so don't wait for one.
+          const pending = after.paths.filter((entry) => entry.kind !== "cache");
+          if (
+            !after.registrations.length &&
+            !pending.length &&
+            !after.processes
+          ) {
+            cacheRemains = after.paths.length > 0;
+            break;
+          }
           if (Date.now() >= deadline)
             throw new Error(
               "NSIS cleanup incomplete: registration, shortcuts, default installation or processes remain; retain VM evidence",
@@ -331,8 +322,12 @@ export async function verifyExactWindowsInstaller({
           maxRetries: 10,
           retryDelay: 200,
         });
+        if (cacheRemains)
+          throw new Error(
+            "NSIS installer cache remains after uninstall; retain VM evidence",
+          );
       },
     },
   });
-  return { ...result, sha256: installerDigest, installerCacheRemoved: true };
+  return { ...result, sha256: installerDigest };
 }

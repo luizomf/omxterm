@@ -67,8 +67,9 @@ try {
       Assert-OmxtermInstallationTree -Root $TransactionRoot -RequireBinaries:$registered
     }
   }
-  # The pinned builder always caches its exact installer here, even without
-  # application auto-updates. Inspect the directory itself before any write.
+  # The pinned builder copies its installer here for electron-updater; OMXTerm's
+  # installer deletes that copy (#1018), so any cache is stale or foreign state.
+  # Inspect the directory itself before any write.
   $cache = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'omxterm-updater'
   try {
     $item = Get-Item -LiteralPath $cache -Force
