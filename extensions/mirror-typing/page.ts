@@ -15,6 +15,8 @@ export interface MirrorTypingBridge extends AppearanceBridge {
   onLanguage(listener: (language: SupportedLanguage) => void): () => void;
   request(value: unknown): Promise<unknown>;
   onVisibility(listener: (visible: boolean) => void): () => void;
+  // Tells the host dialog how tall the content is, so it can fit.
+  reportContentHeight?(height: number): void;
 }
 interface Pane {
   handle: string;
@@ -103,6 +105,19 @@ export function mountMirrorTypingPage(
   content.append(hint, targets, actions);
   const page = createApplicationPage(document, { notice, content });
   document.body.append(page);
+  // The page is as tall as its content whatever the dialog allows; the host
+  // fits the dialog to it, up to its maximum.
+  const ResizeObserverCtor = window.ResizeObserver;
+  let reported = -1;
+  const heights = ResizeObserverCtor
+    ? new ResizeObserverCtor(() => {
+        const height = Math.ceil(page.getBoundingClientRect().height);
+        if (height === reported) return;
+        reported = height;
+        bridge.reportContentHeight?.(height);
+      })
+    : undefined;
+  heights?.observe(page);
 
   let language: SupportedLanguage = "en-US";
   let noticeState:
@@ -367,6 +382,7 @@ export function mountMirrorTypingPage(
       unsubscribeVisibility();
       unsubscribeAppearance();
       lifetime.abort();
+      heights?.disconnect();
       page.remove();
     },
   };

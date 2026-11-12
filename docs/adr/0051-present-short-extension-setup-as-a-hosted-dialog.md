@@ -20,8 +20,9 @@ visible per window at a time.
 
 Core adds a third presentation, the **Hosted Dialog**: a `ui-dialog` that
 core draws over the selected tab. Core draws the frame (the view's title and a
-Close ×) at a fixed size; the native view fills the body and draws only its
-content, transparent and scrolling inside. It is modal like any `ui-dialog`:
+Close ×); the native view fills the body and draws only its
+content, transparent and scrolling inside. The dialog is as tall as the view's content
+(the view reports it, `extension-view:content-height`), up to a maximum. It is modal like any `ui-dialog`:
 the window behind softens and doesn't take pointer input.
 
 - **It is not a tab.** Opening it adds no Application Tab, so the strip, the
@@ -45,14 +46,15 @@ retires it when Mirror Typing opens again or the window closes. A selection
 that hides the dialog during Preparing cancels Start.
 
 Window-context views that need room (Saved Layout) stay full-page tabs. Their
-host frame now takes the design-system font and paints the page surface, so
-its Close row and the opaque view read as one page.
+host frame takes the design-system font, paints the page surface and draws the
+view's title and Close on one row, as Settings does; the view draws no title.
 
 ## Tradeoffs
 
-The dialog has a fixed size, so a long pane list scrolls inside it instead of
-growing the dialog. While it is shown, an open Auxiliary Panel tool's view is
+A long pane list scrolls inside the dialog once it reaches its maximum height. While it is shown, an open Auxiliary Panel tool's view is
 hidden, because a window shows one native view at a time. An installed Mirror
 Typing 0.2.0 opens in the dialog too, with its own title and opaque page;
 0.3.0 drops both and needs a host with this presentation. Mirror Typing is
 the only Hosted Dialog until a manifest value is worth adding.
+An installed Saved Layout 0.3.0 still draws its own title, so it shows the title
+twice until it ships a version without it.

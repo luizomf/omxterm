@@ -8,6 +8,8 @@ export interface HostedDialog extends HostedContentSlot {
   shown: boolean;
   closing: boolean;
   removed: boolean;
+  // Fits the dialog to its view's content; CSS caps it at the maximum.
+  fit(height: number): void;
   show(): void;
   hide(): void;
   dispose(): void;
@@ -58,6 +60,9 @@ export function createHostedDialogFrame(
     shown: false,
     closing: false,
     removed: false,
+    fit(height) {
+      slot.style.setProperty("--hosted-dialog-fit", `${height}px`);
+    },
     show() {
       if (!element.isConnected) document.body.append(element);
       dialog.shown = true;
@@ -149,6 +154,10 @@ export function createHostedDialogs(
       current = target;
       target.show();
       options.present(target);
+    },
+    // The view's content height; ignored unless it is the current dialog.
+    fit(id: string, height: number) {
+      if (current?.id === id && !current.removed) current.fit(height);
     },
     // Escape in the view, routed through main.
     dismiss(id: string) {

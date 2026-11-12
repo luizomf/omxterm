@@ -2447,8 +2447,10 @@ content; Settings and terminal panes are unaffected.
   before host overlays show, and only a current owner is restored.
 - A Hosted Dialog
   ([ADR 0051](adr/0051-present-short-extension-setup-as-a-hosted-dialog.md))
-  is a modal `ui-dialog`, 440×320 px at most, that core draws over the
-  selected tab: the view's title, a Close (×) and the view filling the body.
+  is a modal `ui-dialog`, 440 px wide and 480 px tall at most, that core draws
+  over the selected tab: the view's title, a Close (×) and the view filling the
+  body. The view reports its content height and the dialog fits it, scrolling
+  past the maximum.
   It adds no Application Tab, so the strip and the terminal grid don't change.
   While shown it holds the window's one native presentation; an open panel
   tool's view hides meanwhile. Close, Escape (in the frame, or in the view
@@ -2457,7 +2459,8 @@ content; Settings and terminal panes are unaffected.
   native hide, keeping its view. A dialog that arrives over a modal or before
   any tab is closed instead.
 - A full-page hosted tab's frame paints the page surface in the design-system
-  font: a compact Close row above the view, without a tinted band.
+  font and draws the view's title and Close on one row, as Settings does; the
+  view draws no title of its own.
 - Field input and clipboard stay in the child. Closing or crashing a hosted
   epoch retires its views, never core PTYs; requests racing retirement are
   refused by owner and identity checks.

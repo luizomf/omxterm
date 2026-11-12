@@ -206,7 +206,7 @@ suspend it. It is independent of the opening terminal's lifetime. See
 geometry, view retention and retirement rules.
 
 **Hosted Dialog** — A small modal frame, drawn by core over the selected tab,
-around an extension view: title, Close (×) and the view below, at a fixed size.
+around an extension view: title, Close (×) and the view below, as tall as the view reports its content, up to a maximum.
 Opening it adds no Application Tab and never changes the terminal grid. Close,
 Escape or a new dialog closes the view; another tab or panel selection only
 hides it. Mirror Typing setup is the one Hosted Dialog. See

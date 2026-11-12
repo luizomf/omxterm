@@ -31,6 +31,7 @@ async function harness(options: { blocked?: () => boolean } = {}) {
   const opens = new Set<(value: HostedContentDescriptor) => void>();
   let retired!: (id: string) => void;
   let dismiss!: (id: string) => void;
+  let contentHeight!: (id: string, height: number) => void;
   const hosted: HostedContentBridge = {
     onOpen: (listener) => {
       opens.add(listener);
@@ -43,6 +44,10 @@ async function harness(options: { blocked?: () => boolean } = {}) {
     onFailure: () => vi.fn(),
     onDismissPanel: (listener) => {
       dismiss = listener;
+      return vi.fn();
+    },
+    onContentHeight: (listener) => {
+      contentHeight = listener;
       return vi.fn();
     },
     present: vi.fn(async () => true),
@@ -86,6 +91,7 @@ async function harness(options: { blocked?: () => boolean } = {}) {
     companion,
     open,
     dismiss: (id: string) => dismiss(id),
+    contentHeight: (id: string, height: number) => contentHeight(id, height),
     presented,
   };
 }
@@ -165,4 +171,16 @@ it("replaces an older dialog and refuses one that arrives over a modal", async (
   await h.open("third");
   expect(h.hosted.close).toHaveBeenLastCalledWith("third");
   expect(frame()).toBeNull();
+});
+
+it("fits the dialog to the height its view reports", async () => {
+  const h = await harness();
+  await h.open();
+  const slot = frame()!.querySelector<HTMLElement>(
+    ".hosted-content-dialog-slot",
+  )!;
+  h.contentHeight("setup", 212);
+  expect(slot.style.getPropertyValue("--hosted-dialog-fit")).toBe("212px");
+  h.contentHeight("other", 400);
+  expect(slot.style.getPropertyValue("--hosted-dialog-fit")).toBe("212px");
 });

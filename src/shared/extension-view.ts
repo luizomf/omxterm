@@ -39,6 +39,8 @@ export interface HostedContentBridge {
   onFailure(listener: () => void): () => void;
   onFocus?(listener: (id: string | null) => void): () => void;
   onDismissPanel?(listener: (id: string) => void): () => void;
+  // A dialog-presented view's content height in CSS px, reported by the view.
+  onContentHeight?(listener: (id: string, height: number) => void): () => void;
   present(
     presentation: HostedContentPresentation,
   ): Promise<HostedContentPresentationResult>;
@@ -60,6 +62,7 @@ export const extensionViewIpc = {
   focusIntent: "extension-view:focus-intent",
   focus: "extension-view:focus",
   dismissPanel: "extension-view:dismiss-panel",
+  contentHeight: "extension-view:content-height",
 } as const;
 
 function record(
@@ -76,6 +79,14 @@ function record(
 
 export function isHostedContentId(value: unknown): value is string {
   return typeof value === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(value);
+}
+
+export function isHostedContentHeight(value: unknown): value is number {
+  return (
+    Number.isInteger(value) &&
+    (value as number) >= 0 &&
+    (value as number) <= 10_000
+  );
 }
 
 export function isHostedContentTitle(value: unknown): value is string {

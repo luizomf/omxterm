@@ -131,19 +131,33 @@ body.tabs-visible .hosted-content-tab {
 .hosted-content-tab[hidden] {
   display: none;
 }
-.hosted-content-tab > button {
-  align-self: flex-end;
-  margin: var(--ui-space-2) var(--ui-space-6) 0;
+.hosted-content-tab > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-6);
+  margin: var(--ui-space-6) var(--ui-space-6) 0;
+  padding-bottom: var(--ui-space-4);
+  border-bottom: 1px solid var(--ui-decoration);
+}
+.hosted-content-tab > header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.hosted-content-tab > header > button {
+  flex: none;
 }
 
 /* A dialog-presented view: the host draws the frame (title and Close) and
-   the native view fills the slot below. Fixed size; the view scrolls. */
+   the native view fills the slot below. The slot is as tall as the view's
+   content (it reports it), up to the dialog's maximum; then the view scrolls. */
 .hosted-content-dialog {
   display: flex;
   flex-direction: column;
   gap: var(--ui-space-2);
   width: min(440px, calc(100vw - 24px));
-  height: min(320px, calc(100vh - 24px));
+  max-height: min(480px, calc(100vh - 24px));
   padding: var(--ui-space-3) var(--ui-space-3) 0;
   overflow: hidden;
 }
@@ -151,7 +165,8 @@ body.tabs-visible .hosted-content-tab {
   display: none;
 }
 .hosted-content-dialog-slot {
-  flex: 1 1 auto;
+  /* 160 px until the view reports its height. */
+  flex: 0 1 var(--hosted-dialog-fit, 160px);
   min-height: 0;
   /* The view pads itself 12 px, so its content lines up with the title and
      its focus rings and scrollbar aren't clipped. */
