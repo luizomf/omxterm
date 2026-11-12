@@ -225,3 +225,72 @@ it("releases shortcut ownership on renderer replacement", () => {
   f.contents.emit("did-start-loading");
   expect(f.send("core", { type: "keyUp" })).not.toHaveBeenCalled();
 });
+
+it.each(["core", "child"] as const)(
+  "Toggle Mirror Typing acts once per press from %s focus; held repeats and release never reach the terminal",
+  (route) => {
+    const toggle = vi.fn();
+    const contents = Object.assign(new EventEmitter(), {
+      send: vi.fn(),
+      isDestroyed: () => false,
+    });
+    const window = Object.assign(new EventEmitter(), {
+      webContents: contents,
+      isFocused: () => true,
+    }) as unknown as BrowserWindow;
+    const capture = createKeybindCapture(process.platform);
+    const catalog = () =>
+      createCoreActionCatalog(
+        "OMXTerm",
+        new Proxy({} as TerminalApplicationMenuActions, {
+          get: (_target, name) =>
+            name === "toggleSelectedMirrorTyping" ? toggle : vi.fn(),
+        }),
+        {
+          ...terminalDefaultKeybinds(process.platform),
+          toggleMirrorTyping: "Control+Alt+J",
+        },
+        undefined,
+        [
+          {
+            id: "omxterm.mirror-typing.open",
+            extension: true,
+            label: "Mirror Typing",
+            accelerator: null,
+            palette: true,
+            invoke: vi.fn(),
+          },
+        ],
+      );
+    registerWindowActionDelivery(window, catalog, capture, () => undefined);
+    const send = (overrides: Partial<Input> = {}) => {
+      const preventDefault = vi.fn();
+      const event = {
+        get defaultPrevented() {
+          return preventDefault.mock.calls.length > 0;
+        },
+        preventDefault,
+      };
+      const input = { ...key, ...overrides } as Input;
+      if (route === "core") contents.emit("before-input-event", event, input);
+      else
+        deliverExtensionKeybind(
+          catalog(),
+          event as unknown as Event,
+          input,
+          window,
+          capture,
+          { companionOnly: true },
+        );
+      return preventDefault;
+    };
+    expect(send()).toHaveBeenCalledOnce();
+    expect(send({ isAutoRepeat: true })).toHaveBeenCalledOnce();
+    expect(send({ isAutoRepeat: true })).toHaveBeenCalledOnce();
+    expect(toggle).toHaveBeenCalledOnce();
+    if (route === "core")
+      expect(
+        send({ type: "keyUp", control: false, alt: false }),
+      ).toHaveBeenCalledOnce();
+  },
+);

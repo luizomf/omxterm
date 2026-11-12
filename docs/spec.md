@@ -1151,8 +1151,8 @@ title, needs 0.29.1-dev.0 or later.
   out or restart mirroring.
 - While the route is armed, every member carries a core
   [State Mark](#state-marks) whose name says source or member and "Click or
-  press <binding> to stop." (just "Click to stop." when `toggleMirrorTyping` is
-  unbound), using the binding in effect at Start. Clicking any member's mark,
+  press Cmd+Shift+M to stop." with the actual binding (just "Click to stop."
+  when `toggleMirrorTyping` is unbound), using the binding in effect at Start. Clicking any member's mark,
   pressing the `toggleMirrorTyping` binding, or opening the Command Palette (a
   modal entry) stops the group, even with hidden chrome and whether or not the
   extension responds. Preparing shows nothing, is input-inert and cancellable;
