@@ -23,6 +23,7 @@ import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
 import { releaseDesignatedRequirement } from "./sign-macos.mjs";
+import { executableUuid } from "./macos-executable-uuid.mjs";
 import { launchLinuxPackagedProcess } from "./linux-packaged-process.mjs";
 
 const execFile = promisify(execFileCallback);
@@ -521,6 +522,23 @@ async function inspectArchitecture(file, label, platform, arch = process.arch) {
   if (!matchesArchitecture)
     throw new Error(
       `${label} is not an ${arch}-only ${platform === "darwin" ? "Mach-O" : "ELF"}: ${stdout.trim()}`,
+    );
+}
+
+// A shared Electron UUID breaks macOS Local Network privacy (see
+// scripts/macos-executable-uuid.mjs), so the main executable must carry ours.
+async function inspectExecutableUuid(executable) {
+  const expected = executableUuid(
+    "com.otaviomiranda.omxterm",
+    "Contents/MacOS/OMXTerm",
+  )
+    .toString("hex")
+    .toUpperCase()
+    .replace(/^(.{8})(.{4})(.{4})(.{4})/u, "$1-$2-$3-$4-");
+  const { stdout } = await execFile("dwarfdump", ["--uuid", executable]);
+  if (!stdout.includes(`UUID: ${expected} `))
+    throw new Error(
+      `OMXTerm executable UUID is not ${expected}: ${stdout.trim()}`,
     );
 }
 
@@ -1341,6 +1359,7 @@ export async function verifyPackagedApplication(
         { env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }, timeout: 10_000 },
       );
       await inspectApplicationIcon(applicationRoot);
+      await inspectExecutableUuid(executable);
       await inspectApplicationSignature(applicationRoot, { release });
     } else {
       if (platform === "linux")
