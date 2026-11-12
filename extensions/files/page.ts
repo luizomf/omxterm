@@ -13,6 +13,7 @@ import {
 import type { SupportedLanguage } from "../../src/shared/i18n.js";
 import { filesMessages, type FilesMessages } from "./messages.js";
 import { createFilesToolbar } from "./toolbar.js";
+import { inside, isRoot, join, parent, validName } from "./paths.js";
 import {
   FILES_ENTRY_DRAG_TYPE,
   FILES_TERMINAL_DRAG_TYPE,
@@ -37,9 +38,6 @@ type Action = {
   checked?: boolean;
   shortcut?: { display: string; keys: string };
 };
-const join = (base: string, name: string) =>
-  `${base.replace(/\/$/, "")}/${name}`;
-const parent = (path: string) => path.slice(0, path.lastIndexOf("/")) || "/";
 
 /** The page owns interaction targets; the tree owns asynchronous listing state. */
 export function mountFilesPage(
@@ -194,6 +192,7 @@ export function mountFilesPage(
         return m.terminalDirectoryChanged;
       if (reply.reason === "terminal-directory-busy")
         return m.terminalDirectoryBusy;
+      if (reply.error === "trash-unavailable") return m.trashUnavailable;
       return reply.error === "outcome-unknown"
         ? m.unknown
         : moving
@@ -230,7 +229,8 @@ export function mountFilesPage(
   function syncControls() {
     // Reaching root must not discard focus from the just-activated Up button.
     upButton.disabled = !state.root;
-    if (state.root === "/") upButton.setAttribute("aria-disabled", "true");
+    if (state.root && isRoot(state.root))
+      upButton.setAttribute("aria-disabled", "true");
     else upButton.removeAttribute("aria-disabled");
     refreshButton.disabled = !state.root;
     newFolderButton.disabled =
@@ -701,13 +701,7 @@ export function mountFilesPage(
       (m) => m.create(operation === "create-file", directory),
       "",
       (name) => {
-        if (
-          !name ||
-          name === "." ||
-          name === ".." ||
-          name.includes("/") ||
-          name.includes("\0")
-        ) {
+        if (!validName(name, directory)) {
           message((m) => m.invalidName, "warning");
           return;
         }
@@ -1305,8 +1299,7 @@ export function mountFilesPage(
     return (
       parent(source.path) !== target.path &&
       (source.kind !== "directory" ||
-        (target.path !== source.path &&
-          !target.path.startsWith(`${source.path}/`)))
+        (target.path !== source.path && !inside(target.path, source.path)))
     );
   }
   entries.addEventListener("dragover", (event) => {
@@ -1417,9 +1410,9 @@ export function mountFilesPage(
     "up",
     (m) => m.up,
     (m) =>
-      !state.root ? m.noRootHint : state.root === "/" ? m.atRootHint : m.upHint,
+      !state.root ? m.noRootHint : isRoot(state.root) ? m.atRootHint : m.upHint,
     () => {
-      if (state.root && state.root !== "/") void navigate(parent(state.root));
+      if (state.root && !isRoot(state.root)) void navigate(parent(state.root));
     },
   );
   const refreshButton = iconButton(

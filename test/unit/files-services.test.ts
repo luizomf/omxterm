@@ -131,7 +131,7 @@ it.each([
       await backend.invoke({ operation: "trash", path: target }, signal),
     ).toEqual({
       ok: false,
-      error: "outcome-unknown",
+      error: "invalid-path",
     });
     expect(calls.load).not.toHaveBeenCalled();
     expect(calls.trash).not.toHaveBeenCalled();
@@ -235,3 +235,31 @@ it.each([
     expect(calls.load).not.toHaveBeenCalled();
   },
 );
+
+// This file mocks POSIX paths, so Windows hosts appear with POSIX spellings.
+it("reports a Recycle Bin refusal as nothing deleted, not an unknown outcome", async () => {
+  const signal = new AbortController().signal;
+  const trash = vi.fn(async () => {
+    throw Object.assign(new Error("ENOTRASH"), { code: "ENOTRASH" });
+  });
+  const backend = activate({
+    signal,
+    files: { moveNoReplace: calls.moveNoReplace, trash },
+  });
+  expect(
+    await backend.invoke({ operation: "trash", path: "/big.iso" }, signal),
+  ).toEqual({ ok: false, error: "trash-unavailable" });
+  expect(trash).toHaveBeenCalledOnce();
+});
+
+it("refuses trash up front on a Windows host without a trash service", async () => {
+  Object.defineProperty(process, "platform", { value: "win32" });
+  const signal = new AbortController().signal;
+  const backend = activate({
+    signal,
+    files: { moveNoReplace: calls.moveNoReplace },
+  });
+  expect(
+    await backend.invoke({ operation: "trash", path: "/item" }, signal),
+  ).toEqual({ ok: false, error: "unsupported" });
+});

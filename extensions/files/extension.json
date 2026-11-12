@@ -1,8 +1,8 @@
 {
   "format": 1,
   "id": "omxterm.files",
-  "version": "0.8.3",
-  "name": "Files — ARM64 preview",
+  "version": "0.9.0",
+  "name": "Files",
   "engines": { "omxterm": ">=0.26.0", "api": "0.1.x" },
   "backend": "backend.mjs",
   "capabilities": ["terminal.insertPath.v1"],
