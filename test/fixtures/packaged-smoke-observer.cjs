@@ -74,8 +74,9 @@ const commands =
           `Set-Content -NoNewline -LiteralPath ${psQuote(file)} -Value ${psQuote(text)}`,
         reportFolder: String.raw`function prompt { $location = $ExecutionContext.SessionState.Path.CurrentLocation; if ($location.Provider.Name -eq 'FileSystem') { $path = $location.ProviderPath -replace '\\', '/'; [Console]::Write("$([char]27)]7;file://$([System.Net.Dns]::GetHostName())/$path$([char]27)\") }; "PS $location> " }`,
         cd: (folder) => `Set-Location -LiteralPath ${psQuote(folder)}`,
+        // UTF-8 without BOM; Windows PowerShell's Set-Content writes ANSI.
         pwd: (file) =>
-          `Set-Content -NoNewline -LiteralPath ${psQuote(file)} -Value (Get-Location).ProviderPath`,
+          `[IO.File]::WriteAllText(${psQuote(file)}, (Get-Location).ProviderPath)`,
       }
     : {
         write: (text, file) =>
