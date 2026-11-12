@@ -4,6 +4,7 @@ export function windowsVerificationOptions(args, platform = process.platform) {
   const options = { windowsUnpackedOnly: false, disposableVm: false };
   let inspectionOnly = false;
   let release = false;
+  let hostedBuild = false;
   for (const argument of args) {
     if (argument === "--inspection-only" && !inspectionOnly) {
       inspectionOnly = true;
@@ -14,6 +15,14 @@ export function windowsVerificationOptions(args, platform = process.platform) {
       if (platform !== "darwin")
         throw new Error("--release verification requires macOS");
       release = true;
+      continue;
+    }
+    // A Linux AppImage from the hosted lane carries native addons this
+    // checkout did not build; its build evidence binds them instead.
+    if (argument === "--hosted-build" && !hostedBuild) {
+      if (platform !== "linux")
+        throw new Error("--hosted-build verification requires Linux");
+      hostedBuild = true;
       continue;
     }
     if (platform !== "win32")
@@ -37,5 +46,6 @@ export function windowsVerificationOptions(args, platform = process.platform) {
     ...options,
     ...(inspectionOnly ? { inspectionOnly } : {}),
     ...(release ? { release } : {}),
+    ...(hostedBuild ? { hostedBuild } : {}),
   };
 }

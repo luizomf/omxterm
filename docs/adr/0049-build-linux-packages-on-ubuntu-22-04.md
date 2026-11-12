@@ -23,7 +23,9 @@ later.
 The ARM64 artifact keeps full verification: the maintainer downloads it, checks
 its checksums and build evidence, places it with its helper in `release/` of the
 same cut on a Linux ARM64 desktop, and runs `npm run check:portable` and
-`npm run package:verify` there. x64 keeps the build-only scope of ADR 0036.
+`npm run package:verify -- --hosted-build` there. That option skips only the
+byte comparison of the native addons with the desktop's own build, which the
+hosted lane already made. x64 keeps the build-only scope of ADR 0036.
 
 ## Consequences
 

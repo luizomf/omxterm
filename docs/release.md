@@ -201,10 +201,10 @@ in a checkout of the same cut:
 npm ci
 npm run check:portable
 # copy the AppImage, linux_install.sh and both .sha256 files into release/
-npm run package:verify
+npm run package:verify -- --hosted-build
 ```
 
-This verifies that exact AppImage's contents, `--no-sandbox` launcher configuration, packaged startup and per-user helper installation in an isolated home directory.
+This verifies that exact AppImage's contents, `--no-sandbox` launcher configuration, packaged startup and per-user helper installation in an isolated home directory. `--hosted-build` skips only the byte comparison of the native addons with this checkout's own build; the hosted lane already made it.
 
 ### Windows ARM64 and x64
 

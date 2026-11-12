@@ -463,6 +463,9 @@ standalone `package:*` and `package-built:*` commands.
   Electron's Run-as-Node mode; on Linux it also runs real PTY exec-status checks.
   Use it for x64 build-only delivery after `npm run package:linux:x64` or
   `npm run package:win:x64` ([hosted build lanes](release.md#hosted-build-lanes)).
+- **`--hosted-build`:** Linux only. Full verification of an AppImage built by
+  the hosted lane: it skips comparing the packaged native addons with this
+  checkout's own build ([Linux ARM64 release](release.md#linux-arm64)).
 - **`--windows-unpacked-only`:** launches the unpacked Windows app without the
   installer.
 

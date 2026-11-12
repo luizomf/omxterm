@@ -207,7 +207,7 @@ export function inspectAsarEntries(
 
 // Node-mode probes do not qualify the browser/Files vertical. They do protect
 // actual packaged module/native resolution, independently of source imports.
-async function verifyPackagedExtensions(executable, asar) {
+async function verifyPackagedExtensions(executable, asar, { hostedBuild }) {
   const artifacts = [];
   for (const entry of packagedExtensionEntries(
     process.platform,
@@ -233,7 +233,10 @@ async function verifyPackagedExtensions(executable, asar) {
       if (!/\bminos 12\.0\b/u.test(stdout))
         throw new Error("Extension native module must target macOS 12.0");
       // The complete app seal is verified before this probe.
-    } else if (!prepared.equals(packaged)) {
+    } else if (
+      !(hostedBuild && entry.endsWith(".node")) &&
+      !prepared.equals(packaged)
+    ) {
       throw new Error(`Packaged extension resource differs: ${entry}`);
     }
     artifacts.push({
@@ -1023,6 +1026,7 @@ export async function verifyPackagedApplication(
     disposableVm = false,
     inspectionOnly = false,
     release = false,
+    hostedBuild = false,
   } = {},
 ) {
   if (
@@ -1222,7 +1226,8 @@ export async function verifyPackagedApplication(
       await inspectArchitecture(packaged, `node-pty ${file}`, platform);
       // macOS's final code seal can change native bytes. The complete seal is
       // checked below; record those final sealed hashes instead of raw equality.
-      if (platform !== "darwin")
+      // A hosted Linux build compared native addons with its own build there.
+      if (platform !== "darwin" && !hostedBuild)
         await assertSameFile(path.join(preparedNativeRoot, file), packaged);
       nativeArtifacts.push({
         file,
@@ -1389,7 +1394,7 @@ export async function verifyPackagedApplication(
       );
 
     if (packagedExtensionEntries(platform, process.arch).length > 0)
-      await verifyPackagedExtensions(executable, asar);
+      await verifyPackagedExtensions(executable, asar, { hostedBuild });
 
     await Promise.all([
       assertSameFile(
