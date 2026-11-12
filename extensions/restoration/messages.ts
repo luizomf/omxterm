@@ -2,6 +2,8 @@ import type { SupportedLanguage } from "../../src/shared/i18n.js";
 
 const english = {
   hint: "Save this window's tabs, splits and folders, then open them again with fresh shells.",
+  reopenHint:
+    "Your tabs, splits and folders come back when OMXTerm starts, and you can save a window to open again later.",
   learnMore: "Learn more",
   open: "Open in a new window",
   save: "Save this window",
@@ -39,6 +41,8 @@ type Messages = {
 };
 const portuguese: Messages = {
   hint: "Salve as abas, divisões e pastas desta janela e abra tudo de novo com shells novos.",
+  reopenHint:
+    "Suas abas, divisões e pastas voltam quando o OMXTerm abre, e você pode salvar uma janela para abrir de novo depois.",
   learnMore: "Saiba mais",
   open: "Abrir em uma nova janela",
   save: "Salvar esta janela",

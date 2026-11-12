@@ -32,6 +32,7 @@ import { startExtensionViewHost } from "./extension-view-ipc";
 import {
   extensionsIpc,
   isExtensionsRequest,
+  type ExtensionsRequest,
   type ExtensionsResult,
 } from "../shared/extensions";
 import type { IpcEvent } from "./terminal-ipc-types";
@@ -56,6 +57,35 @@ type ExtensionTargetCapture = (
   sessionId?: string,
   context?: "window",
 ) => ExtensionTarget;
+
+/** Uninstall, enable or disable; other requests change nothing here. */
+async function changeInstallation(
+  manager: NonNullable<
+    Awaited<ReturnType<typeof applicationManager>>
+  >["manager"],
+  request: ExtensionsRequest,
+) {
+  if (request.operation === "uninstall")
+    await manager.uninstall(request.id, request.generation);
+  else if (request.operation === "enable" || request.operation === "disable")
+    await manager.setEnabled(
+      request.id,
+      request.generation,
+      request.operation === "enable",
+    );
+}
+
+/** An enabled, installed extension declares this capability. */
+function declares(installations: Installation[], capability: string) {
+  return installations.some(
+    (entry) =>
+      entry.enabled &&
+      entry.digest !== null &&
+      (entry.manifest?.capabilities as string[] | undefined)?.includes(
+        capability,
+      ) === true,
+  );
+}
 
 function managementEntry(entry: Installation) {
   return {
@@ -334,17 +364,7 @@ export async function startApplicationExtensions(
             () => stopping,
             options.translator,
           );
-        else if (request.operation === "uninstall")
-          await manager.uninstall(request.id, request.generation);
-        else if (
-          request.operation === "enable" ||
-          request.operation === "disable"
-        )
-          await manager.setEnabled(
-            request.id,
-            request.generation,
-            request.operation === "enable",
-          );
+        else await changeInstallation(manager, request);
         return await refresh();
       } catch (error) {
         return managementFailure(error);
@@ -427,6 +447,7 @@ export async function startApplicationExtensions(
   return {
     actions,
     capture,
+    declares: (capability: string) => declares(installations, capability),
     toggleSnippets(window: BrowserWindow) {
       if (stopping || BrowserWindow.getFocusedWindow() !== window) return;
       const target = capture(window);

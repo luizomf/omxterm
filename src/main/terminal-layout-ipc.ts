@@ -25,11 +25,13 @@ export function registerTerminalLayoutIpc(options: {
 }) {
   type Capture = {
     id: string;
+    promise: Promise<SavedLayout>;
     resolve(value: SavedLayout): void;
     reject(): void;
     dispose(): void;
   };
   type Owner = {
+    window: BrowserWindow;
     contents: BrowserWindow["webContents"];
     controller: TerminalIpcController;
     plan?: PreparedLayout;
@@ -127,6 +129,7 @@ export function registerTerminalLayoutIpc(options: {
         if (mainFrame && !inPlace && owner.initialRead) remove(owner);
       };
       const owner: Owner = {
+        window,
         contents,
         controller,
         initialRead: false,
@@ -144,9 +147,12 @@ export function registerTerminalLayoutIpc(options: {
     },
     capture(window: BrowserWindow, signal: AbortSignal): Promise<SavedLayout> {
       const owner = owners.get(window.webContents);
-      if (!owner || owner.capture || signal.aborted || options.quitting())
-        return Promise.reject(new Error("Layout unavailable or busy"));
-      return new Promise((resolve, reject) => {
+      if (!owner || signal.aborted || options.quitting())
+        return Promise.reject(new Error("Layout unavailable"));
+      // A capture already in flight answers the same question; share it.
+      if (owner.capture) return owner.capture.promise;
+      const id = randomUUID();
+      const promise = new Promise<SavedLayout>((resolve, reject) => {
         const fail = () => {
           owner.capture?.dispose();
           delete owner.capture;
@@ -154,9 +160,10 @@ export function registerTerminalLayoutIpc(options: {
         };
         const timer = setTimeout(fail, 5000);
         signal.addEventListener("abort", fail, { once: true });
-        const id = randomUUID();
         owner.capture = {
           id,
+          // Assigned below, once the promise exists.
+          promise: undefined as unknown as Promise<SavedLayout>,
           resolve,
           reject: fail,
           dispose() {
@@ -170,7 +177,12 @@ export function registerTerminalLayoutIpc(options: {
           fail();
         }
       });
+      const pending = owner.capture as Capture | undefined;
+      if (pending?.id === id) pending.promise = promise;
+      return promise;
     },
+    /** Registered terminal windows, oldest first. */
+    windows: () => [...owners.values()].map((owner) => owner.window),
     consume(window: BrowserWindow, token: string): string {
       const owner = owners.get(window.webContents);
       const directory = owner?.tokens.get(token);

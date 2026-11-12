@@ -227,6 +227,7 @@ export function mountRestorationPage(
     available = ["terminal.captureLayout.v1", "terminal.openLayout.v1"].every(
       (name) => declared.includes(name),
     );
+    ui.update({ reopens: declared.includes("terminal.reopenLayout.v1") });
     if (declared.includes("links.open.v1"))
       ui.learnMore(() => {
         void bridge

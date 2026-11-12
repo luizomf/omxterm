@@ -33,7 +33,11 @@ import { startApplicationExtensions } from "./application-extensions";
 import { requestExternalLink } from "./terminal-ipc-boundaries";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
 import { registerSemanticInputIpc } from "./semantic-input-ipc";
-import { startApplicationLayout } from "./application-layout";
+import {
+  startApplicationLayout,
+  startLayoutSession,
+} from "./application-layout";
+import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import {
@@ -50,7 +54,11 @@ import {
 import { createKeybindCapture } from "./keybind-capture";
 import { loadMacOSOptionShortcut } from "./macos-option-shortcut";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
-import { MalformedLaunchRequestError } from "./launch-request";
+import {
+  applicationArguments,
+  MalformedLaunchRequestError,
+  parseLaunchRequest,
+} from "./launch-request";
 import { prepareStartup } from "./application-startup";
 import { registerTerminalShutdown } from "./terminal-shutdown";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
@@ -157,6 +165,7 @@ let extensions:
   Awaited<ReturnType<typeof startApplicationExtensions>> | undefined;
 let sshLaunch: ReturnType<typeof registerSshTerminalLaunch>;
 let layouts: ReturnType<typeof startApplicationLayout>;
+let layoutSession: ReturnType<typeof startLayoutSession> | undefined;
 let mirrors: ReturnType<typeof registerMirrorTypingIpc>;
 let semanticInput: ReturnType<typeof registerSemanticInputIpc>;
 const shutdown = registerTerminalShutdown(app, {
@@ -280,7 +289,10 @@ app
                   reason,
                 }),
             ),
-          changed: () => rebuildMenu(),
+          changed: () => {
+            rebuildMenu();
+            layoutSession?.refresh();
+          },
           keybind: (event, input, owner, companionOnly) =>
             deliverExtensionKeybind(
               actionCatalog,
@@ -379,7 +391,10 @@ app
               },
               app.dock,
             );
-            window.once("closed", () => titleController.dispose());
+            window.once("closed", () => {
+              titleController.dispose();
+              layoutSession?.windowClosed();
+            });
             sshLaunch.register(window);
             const invocationTarget = extensionInvocationTarget(window);
             const controller = terminalIpcRouter.registerController({
@@ -630,7 +645,19 @@ app
         });
         app.once("will-quit", palette.dispose);
 
-        await terminalApplication.newWindow();
+        layoutSession = startLayoutSession({
+          layouts,
+          applicationRoot,
+          home: account.homedir,
+          enabled: () =>
+            extensions?.declares(REOPEN_LAYOUT_CAPABILITY) === true,
+          application: () => terminalApplication,
+        });
+        // An explicit `-e` command opens as asked, never the remembered windows.
+        await layoutSession.openWindows(
+          parseLaunchRequest(applicationArguments(process.argv, app.isPackaged))
+            .kind !== "explicit-command",
+        );
       },
     );
   })

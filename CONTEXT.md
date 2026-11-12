@@ -291,8 +291,9 @@ See [Mirror Typing](docs/mirror-typing.md) for setup and limits.
 **Saved Layout** — A terminal arrangement saved by an optional extension,
 including tab order, splits, focused panes and local starting folders. Opening
 it creates fresh Default Shells in a new window; it does not restore running
-processes or replay commands. Saved data survives uninstall. See
-[Saved Layout](docs/saved-layout.md).
+processes or replay commands. Saved data survives uninstall. While the
+extension is enabled, OMXTerm also remembers every window's arrangement and
+reopens it at startup. See [Saved Layout](docs/saved-layout.md).
 
 **SSH Connect** — An optional extension that lists OpenSSH aliases in the
 Auxiliary Panel and opens a selected alias or quick-connect target in a new

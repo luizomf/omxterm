@@ -310,3 +310,11 @@ it("focuses the main action once the saved layout is read", async () => {
   const g = await setup(stateDocument("absent", null));
   expect(document.activeElement).toBe(g.button("save"));
 });
+it("says the windows come back at startup on a host that reopens them", async () => {
+  await setup(undefined, [
+    "terminal.captureLayout.v1",
+    "terminal.openLayout.v1",
+    "terminal.reopenLayout.v1",
+  ]);
+  expect(text()).toContain("come back when OMXTerm starts");
+});

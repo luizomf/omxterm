@@ -2,6 +2,9 @@
 
 Status: Accepted (#673). Since #962 the extension needs host 0.27.0 or later and
 runs on every platform that runs extensions.
+[ADR 0047](0047-reopen-the-last-windows-at-startup.md) amends it: core now
+reopens the last windows at startup and remembers them as they change, while
+the extension declares it.
 
 ## Decision
 

@@ -1,8 +1,9 @@
 # Saved Layout
 
-Saved Layout remembers how a window is arranged (its tabs, split panes and the
-folder each pane was in) and opens that arrangement again later, with a fresh
-shell in every pane. It's an optional add-on (an extension).
+Saved Layout remembers how your windows are arranged (their tabs, split panes
+and the folder each pane was in) and brings that back with a fresh shell in
+every pane: when OMXTerm starts, and whenever you open a window you saved. It's
+an optional add-on (an extension).
 
 It brings back the structure, nothing else: no output, no running programs, no
 command history and no SSH connections. Your shell starts normally, as if you
@@ -11,12 +12,25 @@ had opened the tab yourself and changed to that folder.
 ## Install it
 
 Saved Layout needs OMXTerm 0.27.0 or later on macOS, Linux, or Windows on ARM.
+Reopening windows at startup needs Saved Layout 0.3.0, which needs a newer
+OMXTerm than 0.27.
 
 1. Open **Settings → Extensions** and choose **Browse official extensions**.
 2. Find **Saved Layout**, choose **Install** and review the trust warning.
    Extensions run with your account's permissions; they aren't sandboxed.
 
-## Use it
+## Your windows come back
+
+With Saved Layout 0.3.0 or later on a newer OMXTerm, there's nothing to do:
+quit OMXTerm (or let it update, or even crash) and the next start reopens the
+same windows, tabs, splits, focused panes and folders. Closing one of several
+windows forgets that one. Window positions and sizes aren't kept, and starting
+OMXTerm with `-e` to run a command opens just that.
+
+To stop it, disable or remove Saved Layout in **Settings → Extensions**; that
+also deletes the remembered windows.
+
+## Save a window for later
 
 1. Arrange a window the way you like it: tabs, splits, folders.
 2. Open **Saved Layout** from the **File** menu or the Command Palette.
@@ -80,10 +94,11 @@ page tells you how many did.
 
 ## Good to know
 
-- Saving and opening only happen when you choose them. Nothing opens at startup.
-- The layout is saved in OMXTerm's profile folder, not in your configuration
-  file. Disabling, updating or removing the extension keeps it; use **Forget**
-  first if you don't want to keep it.
+- A saved window opens only when you choose it.
+- Both the saved window and the remembered windows live in OMXTerm's profile
+  folder, not in your configuration file. Disabling, updating or removing the
+  extension keeps the saved window (use **Forget** first if you don't want to
+  keep it) and deletes the remembered ones.
 - A pane running SSH Connect or a command started with `-e` reopens as a plain
   shell in your home folder.
 - Folder reports aren't checked: a program, or a remote shell over a plain

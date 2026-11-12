@@ -176,3 +176,17 @@ it.each(["abort", "loss", "quit"])(
     test.service.dispose();
   },
 );
+it("shares one renderer capture between concurrent callers", async () => {
+  const test = setup();
+  const first = test.service.capture(test.window, new AbortController().signal);
+  const second = test.service.capture(
+    test.window,
+    new AbortController().signal,
+  );
+  expect(test.contents.send).toHaveBeenCalledTimes(1);
+  const id: unknown = test.contents.send.mock.calls[0]![1];
+  test.ipc.listeners.get(layoutIpc.captured)!(test.event, { id, layout });
+  expect(await second).toEqual(await first);
+  expect(test.service.windows()).toEqual([test.window]);
+  test.service.dispose();
+});

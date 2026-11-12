@@ -37,6 +37,7 @@ export type PackageManifest = {
     | "terminal.openSsh.v1"
     | "terminal.captureLayout.v1"
     | "terminal.openLayout.v1"
+    | "terminal.reopenLayout.v1"
     | "terminal.mirrorTyping.v1"
     | "terminal.semanticInput.v1"
     | "terminal.insertPath.v1"
@@ -145,6 +146,7 @@ function validateCapabilities(value: Record<string, unknown>): void {
             "terminal.openSsh.v1",
             "terminal.captureLayout.v1",
             "terminal.openLayout.v1",
+            "terminal.reopenLayout.v1",
             "terminal.mirrorTyping.v1",
             "terminal.semanticInput.v1",
             "terminal.insertPath.v1",
