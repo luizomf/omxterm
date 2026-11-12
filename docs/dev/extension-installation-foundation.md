@@ -4,11 +4,11 @@ The installed-packages module owns everything about getting an extension archive
 onto disk safely: archive validation and extraction, the registry of what is
 installed, version pinning while code is in use, and cleanup. It does not run
 extension code, show UI, fetch from the network or define a stable SDK. See
-[ADR 0038](adr/0038-pin-immutable-installed-packages.md) for the decision.
+[ADR 0038](../adr/0038-pin-immutable-installed-packages.md) for the decision.
 
 Settings consumes it for local-file and HTTPS installs, and the
 [backend runtime](extension-backend-runtime.md) consumes it to run installed
-backends. [Extension distribution](extension-distribution.md) covers how
+backends. [Extension distribution](../extension-distribution.md) covers how
 catalog installs reach it.
 
 ## Interface
@@ -113,13 +113,13 @@ The manifest is strict and small:
   browser filesystem access. A capability grants nothing beyond its contract:
   for example, `terminal.semanticInput.v1` sends text through Protected Paste
   and never exposes the PTY or key injection
-  ([ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)).
+  ([ADR 0044](../adr/0044-migrate-snippets-without-changing-terminal-input.md)).
 - `links` is required with `links.open.v1` and refused without it: one to
   eight ids (`^[a-z][a-z0-9-]{0,31}$`), each mapped to an exact `https://` URL
   of at most 2,048 characters, for example
   `"links": { "docs": "https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md" }`.
   The view opens one with `{ "operation": "links.open.v1", "link": "docs" }`
-  ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)).
+  ([ADR 0045](../adr/0045-open-declared-extension-links-by-id.md)).
 - Other contribution fields, platform declarations and publisher metadata are
   rejected. This schema is internal, not a stable author API.
 

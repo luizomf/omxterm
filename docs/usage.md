@@ -184,4 +184,4 @@ Quit OMXTerm before replacing `OMXTerm.app` in `/Applications`, then approve fol
 
 Choose **View → Toggle Developer Tools** to inspect runtime diagnostics. Redact private paths or terminal output before sharing screenshots. Logs are stored under `~/.local/state/omxterm/logs` on macOS/Linux (or `$XDG_STATE_HOME/omxterm/logs`) and `%USERPROFILE%\.local\state\omxterm\logs` on Windows. Set `logLevel` in `config.json` to `error`, `info` (default), or `debug`. Logs exclude terminal text, commands, clipboard contents, and configuration values.
 
-For implementation details and less common edge cases, see the [usage development notes](usage-development.md).
+For implementation details and less common edge cases, see the [usage development notes](dev/usage-development.md).

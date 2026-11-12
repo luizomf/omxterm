@@ -2,7 +2,7 @@
 
 Start with [Contributing](../CONTRIBUTING.md#development-environment) to clone the repository, install dependencies, and run OMXTerm in development mode. This guide covers OS-specific prerequisites, the test layers and how to run them, the performance benchmark, and package verification.
 
-See the [Restty guide](restty-development.md) for Terminal Surface internals and [release procedures](release.md) for full release builds.
+See the [Restty guide](dev/restty-development.md) for Terminal Surface internals and [release procedures](release.md) for full release builds.
 
 ## Platform prerequisites
 
@@ -214,9 +214,9 @@ working WebGL2.
 
 Run the files for the subsystem you changed; add broader checks when the change
 needs them. Known runtime limits the tests account for are in the
-[Restty guide](restty-development.md#current-runtime-limitations). Extension
+[Restty guide](dev/restty-development.md#current-runtime-limitations). Extension
 work has its own build and tests: see the
-[extension backend runtime](extension-backend-runtime.md) (`npm run build:extension-runtime`)
+[extension backend runtime](dev/extension-backend-runtime.md) (`npm run build:extension-runtime`)
 and the [Mirror Typing build](mirror-typing-development.md#build-and-test).
 
 | Subsystem                                      | Command                                                                                                                                                          |
@@ -325,9 +325,9 @@ These suites are skipped unless you set an environment variable:
 | Performance benchmark  | `npm run perf:benchmark`                                                                                       | See [the benchmark](#performance-benchmark).                                |
 
 The extension-build, packaged Files/SSH smoke and extension-composition suites
-are also env-gated; their guides ([Files](files-development-preview.md),
-[SSH Connect](ssh-connect-development.md),
-[macOS composition](macos-extension-composition.md)) and
+are also env-gated; their guides ([Files](dev/files-development-preview.md),
+[SSH Connect](dev/ssh-connect-development.md),
+[macOS composition](dev/macos-extension-composition.md)) and
 [release procedures](release.md) describe them.
 
 Some suites can also save synthetic-only screenshots or JSON for review. Point
@@ -469,7 +469,7 @@ Windows x64 packages carry the runtime too, but the app enables extensions only
 on macOS ARM64, Linux ARM64/x64 and Windows ARM64.
 
 On supported targets, packaging also bundles the default Snippets extension; see
-[Default Snippets](default-snippets.md) for `prepare:default-snippets`.
+[Default Snippets](dev/default-snippets.md) for `prepare:default-snippets`.
 
 Headless tests for the Windows installer transaction (they mock Windows
 filesystem and command results, so they don't run NSIS):

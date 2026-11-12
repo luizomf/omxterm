@@ -9,4 +9,4 @@
 - Admission/resource descriptor: [`../default-snippets.json`](../default-snippets.json).
 - Original MIT and bundled YAML ISC notices remain inside the ZIP. It contains no native addon.
 
-The original archive/checksum/receipt were anonymously retrieved and independently compared against published digests, source-lock identity, embedded manifest and all member CRC/hashes. Its original receipt remains `not-run`; this is provenance, not new runtime qualification. Never rebuild different bytes at this filename/version or amend historical receipts. Verify/recover/package through [Default Snippets](../../docs/default-snippets.md); source development does not provision profiles.
+The original archive/checksum/receipt were anonymously retrieved and independently compared against published digests, source-lock identity, embedded manifest and all member CRC/hashes. Its original receipt remains `not-run`; this is provenance, not new runtime qualification. Never rebuild different bytes at this filename/version or amend historical receipts. Verify/recover/package through [Default Snippets](../../docs/dev/default-snippets.md); source development does not provision profiles.

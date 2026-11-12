@@ -67,7 +67,7 @@ silent; neither late settlement nor a successor receives that notice.
 Successful still-current delivery uses the existing core-focus
 presentation while keeping Files visible. No second input or focus owner is
 introduced, and no native qualification follows from this composition. See the
-[transport contract](../files-development-preview.md#inserting-paths-into-the-terminal).
+[transport contract](../dev/files-development-preview.md#inserting-paths-into-the-terminal).
 
 DOM selection and overlay opening await an acknowledged native hide. When that
 hide removes the selected, natively focused child of an already focused window,
@@ -182,10 +182,10 @@ There is no per-view process-isolation promise.
 ## Gates and consequences
 
 The host module itself does not own installation, catalogs or backend activation.
-The separately installed [Files development preview](../files-development-preview.md)
+The separately installed [Files development preview](../dev/files-development-preview.md)
 composes production Settings, shared actions, backends and this host/reader/tab seam.
-Preparatory [macOS ARM64 composition](../macos-extension-composition.md) and
-[Linux x64 composition](../linux-x64-extension-composition.md) use
+Preparatory [macOS ARM64 composition](../dev/macos-extension-composition.md) and
+[Linux x64 composition](../dev/linux-x64-extension-composition.md) use
 these same owners with a shared minimal installed-package qualification fixture, not Files.
 Its phase-specific product evidence is separate from host-module qualification;
 this host module exposes no public SDK and performs no catalog acquisition.

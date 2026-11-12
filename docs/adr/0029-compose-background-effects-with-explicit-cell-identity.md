@@ -95,5 +95,5 @@ Checksum-guarded runtime preparation and a reproducible core provide the cell
 alpha boundary. Real WebGL readback tests alpha/foreground rendering;
 `capturePage` tests page tint, not native desktop blur. Native API success is
 not visual qualification. See
-[Restty development](../restty-development.md#background-composition) and
+[Restty development](../dev/restty-development.md#background-composition) and
 [release verification](../release.md) for procedures and evidence boundaries.

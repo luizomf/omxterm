@@ -4,7 +4,7 @@ OMXTerm distributes official extensions through two small static catalogs. This
 is not a marketplace, a second installation store or a public SDK. Settings uses
 its existing extension controls, and main reuses the HTTPS acquisition and
 captured-byte trust flow described in the
-[installation contract](extension-installation-foundation.md).
+[installation contract](dev/extension-installation-foundation.md).
 
 ## Catalogs
 
@@ -49,7 +49,7 @@ entries, unique IDs, strict known fields, bounded text lengths, and at most
   host/API incompatibility. Local and link installs check host/API only, not
   catalog targets.
 - Host admission follows the
-  [archive contract](extension-installation-foundation.md#archive-contract);
+  [archive contract](dev/extension-installation-foundation.md#archive-contract);
   API admission is ordinary semver.
 - The downloaded archive's byte length, SHA-256 and parsed manifest ID, version
   and engine ranges must match the catalog entry before trust is asked.
@@ -88,7 +88,7 @@ New profiles can get the Snippets extension without the catalog: a packaged
 host installs exact bundled bytes, enabled but dormant, under a one-time grant.
 It never fetches the catalog or substitutes the catalog's mutable offer. Existing
 profiles, disabled entries and removed extensions keep their explicit choices.
-See [default Snippets](default-snippets.md).
+See [default Snippets](dev/default-snippets.md).
 
 ## Publishing and promoting
 
@@ -115,5 +115,5 @@ and SSH Connect 0.4.0 requires `>=0.27.0-dev.0`, so older hosts install an
 older archive (for SSH Connect, 0.3.2) by link or local file.
 Evidence for specific extension and host pairs lives in each extension's
 development record, for example
-[Files](files-development-preview.md), [SSH Connect](ssh-connect-development.md)
-and [Snippets](snippets-migration.md#publish-and-install).
+[Files](dev/files-development-preview.md), [SSH Connect](dev/ssh-connect-development.md)
+and [Snippets](dev/snippets-migration.md#publish-and-install).

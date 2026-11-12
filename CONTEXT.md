@@ -6,7 +6,7 @@ terminal environment its user can shape over time. **OMXTerm Web**
 
 This glossary explains terms used in the code and documentation. The
 [specification](docs/spec.md) describes behavior and limitations;
-[ADRs](docs/adr/) explain the architecture.
+[ADRs](docs/adr) explain the architecture.
 
 ## Platform and architecture
 
@@ -201,13 +201,13 @@ geometry, view retention and retirement rules.
 Protected Paste to a captured live Terminal Surface; preview shows the text
 without sending it. Most hosts use an optional extension, while Windows x64
 keeps the built-in sidebar. See [Snippets availability](docs/snippets-availability.md)
-and the [extension guide](docs/snippets-migration.md).
+and the [extension guide](docs/dev/snippets-migration.md).
 
 **Default Snippets Attempt** — The host's one-time installation of bundled
 Snippets for a new packaged profile on an optional-extension target. It leaves
 the package enabled but inactive until opened, without fetching it or creating
 `snippets.yaml`. Existing profiles and removed or disabled packages keep the
-user's choices. See [Default Snippets](docs/default-snippets.md).
+user's choices. See [Default Snippets](docs/dev/default-snippets.md).
 
 ## Terminal data and interaction
 
@@ -298,12 +298,12 @@ processes or replay commands. Saved data survives uninstall. See
 Auxiliary Panel and opens a selected alias or quick-connect target in a new
 Terminal Tab. Core launches the system `ssh` and owns the PTY and session;
 OpenSSH handles authentication and networking. See the
-[user guide](docs/ssh-connect.md) and [development guide](docs/ssh-connect-development.md).
+[user guide](docs/ssh-connect.md) and [development guide](docs/dev/ssh-connect-development.md).
 
 **Ended-readable Surface** — A Terminal Surface retained after an SSH Connect
 session exits with a nonzero code. It remains available for copy and search
 until the pane is removed, but has no live session, accepts no input and is not
-Busy. See [core-owned SSH tabs](docs/ssh-connect-development.md#core-owned-ssh-tabs).
+Busy. See [core-owned SSH tabs](docs/dev/ssh-connect-development.md#core-owned-ssh-tabs).
 
 **Extension** — An optional, separately installed and user-enabled addition that
 keeps nonessential features outside the mandatory terminal core, including
@@ -331,23 +331,23 @@ review, support or a safety guarantee.
 tracking installed versions and retaining immutable package files while they are
 in use. Settings uses it for installation and management; the Backend Runtime
 uses it to open installed backends. It does not run code or provide UI. See
-[extension installation](docs/extension-installation-foundation.md).
+[extension installation](docs/dev/extension-installation-foundation.md).
 
 **Backend Runtime** — The internal module that starts an installed extension's
 backend in an app-owned Node child process. It binds requests to a captured
 package version and activation lifetime, and tracks the child until it exits.
 It does not sandbox extension code or its descendants. See the
-[runtime guide](docs/extension-backend-runtime.md).
+[runtime guide](docs/dev/extension-backend-runtime.md).
 
 **Version Use Lease** — A native shared lease that keeps one immutable installed
 package version available while an owner reads its files. Cleanup waits for
 these leases to end; a lease does not prove extension code has stopped. See
-[extension installation](docs/extension-installation-foundation.md).
+[extension installation](docs/dev/extension-installation-foundation.md).
 
 **Pending Cleanup** — Installed package files that remain on disk because an
 owner still holds them or collection has not removed them yet. Disabling or
 uninstalling an extension can take effect before its files disappear. See
-[extension installation](docs/extension-installation-foundation.md).
+[extension installation](docs/dev/extension-installation-foundation.md).
 
 ## Diagnostics and distribution
 
@@ -360,14 +360,14 @@ local files in the Auxiliary Panel. It can create, rename, move, trash and delet
 entries, and ask core to insert a selected path through Protected Paste. Paths
 refer to the OMXTerm host, including when terminal output comes from SSH.
 See [Files availability](docs/files-availability.md) and the
-[development guide](docs/files-development-preview.md) for supported targets,
+[development guide](docs/dev/files-development-preview.md) for supported targets,
 operations and limits.
 
 **Files Terminal Drag Ticket** — A one-use identity issued by main for a path
 drag from an installed Files view. Core claims it to bind an eligible terminal
 drop to the captured pane and Protected Paste flow; the ticket alone grants no
 terminal input access. See
-[path insertion](docs/files-development-preview.md#inserting-paths-into-the-terminal).
+[path insertion](docs/dev/files-development-preview.md#inserting-paths-into-the-terminal).
 
 **Extension View Host** — The internal owner of an extension's packaged-content
 views and their resources for one view lifetime, called an epoch. It retains the
@@ -387,7 +387,7 @@ user actions, with no telemetry, startup catalog fetches or background updates.
 Terminal programs and extension backends retain their own network access;
 activated terminal links and Extension Links open through the OS. See
 [extension distribution](docs/extension-distribution.md) and the
-[installation guide](docs/extension-installation-foundation.md).
+[installation guide](docs/dev/extension-installation-foundation.md).
 
 **Release Artifact** — An exact native package (ARM64, or x64 on Linux/Windows)
 (DMG, AppImage or NSIS) published with its source tag, checksum and verification

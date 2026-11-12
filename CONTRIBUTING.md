@@ -64,7 +64,7 @@ npm run dev
 
 `npm ci` installs locked dependencies and prepares the native runtimes (`node-pty` and Restty). `npm run dev` builds and opens OMXTerm using your local configuration directory (`~/.config/omxterm`), so back up your settings before testing configuration changes.
 
-See the [native development guide](docs/development.md) for platform details and test suites, and the [Restty guide](docs/restty-development.md) when working on the Terminal Surface.
+See the [native development guide](docs/development.md) for platform details and test suites, and the [Restty guide](docs/dev/restty-development.md) when working on the Terminal Surface.
 
 ## Making a change
 

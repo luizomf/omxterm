@@ -36,7 +36,7 @@ Switching tabs leaves sessions running. Closing a pane ends its session; closing
 ## Customization and conveniences
 
 - Use **Settings** for fonts, themes, and shortcuts. If you edit a configuration or theme file yourself, choose **View → Reload User Configuration**; see [Configuration](configuration.md).
-- **Snippets** saves reusable text. A new installation adds it once from the app's own files (Windows x64 has it built in). See [Snippets setup](configuration.md#snippets) and [Snippets availability](snippets-availability.md), including a known Windows ARM64 issue.
+- **Snippets** saves reusable text. A new installation adds it once from the app's own files (Windows x64 has it built in). See [Snippets setup](configuration.md#snippets) and [Snippets availability](snippets-availability.md).
 - **Protected Paste** can ask before sending multiline text. You can also [preview local images](usage.md#previewing-local-images); see [Protected Paste](usage.md#protected-paste) for its limits.
 
 ## Privacy and local data
@@ -55,7 +55,7 @@ Use the menu bar on macOS; on Linux/Windows, press and release **Alt** to open t
 2. **Open a tab:** press `Cmd+T` on macOS or `Ctrl+Shift+T` on Linux/Windows. The new tab has its own shell session.
 3. **Split the tab:** choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) for another shell. If there is not enough space for a split, enlarge the window or reduce zoom. See [split-pane details](usage.md#split-panes).
 4. **Change the look:** open **Settings → Appearance** and change **Font size**. Once applied, it changes open panes.
-5. **Return to a terminal tab**, then choose **View → Toggle Snippets** (`Cmd+Shift+S` / `Ctrl+Shift+S`). If **Settings → Extensions** opens instead, enable Snippets if installed but disabled, or [install it](snippets-migration.md#publish-and-install). Return to a terminal tab and toggle again; if unavailable, skip to step 7.
+5. **Return to a terminal tab**, then choose **View → Toggle Snippets** (`Cmd+Shift+S` / `Ctrl+Shift+S`). If **Settings → Extensions** opens instead, enable Snippets if installed but disabled, or [install it](dev/snippets-migration.md#publish-and-install). Return to a terminal tab and toggle again; if unavailable, skip to step 7.
 6. **Try a snippet:** the panel may be empty. Add an entry to `snippets.yaml`, creating it if needed. It normally sits beside `config.json`; see [locations and exceptions](configuration.md) and the [example](configuration.md#snippets). Adapt the example to your shell: `printf` is for POSIX shells. Close and reopen the panel, then choose **Preview**. Choose **Cancel** to send nothing, or **Insert** or **Run** to send it. Insert adds no Enter, but embedded newlines or controls can still execute commands; Run adds Enter.
 7. **Preview a local image:** choose **File → Open Local Image…**, select an existing supported PNG or JPEG in the chooser, and view the preview. Press `Escape` to return. See [image previews](usage.md#previewing-local-images) for limits.
 

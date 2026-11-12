@@ -3,9 +3,9 @@
 Snippets is an optional extension (`omxterm.snippets`) on most hosts. Its source
 lives in `extensions/snippets/`. It reads the user's `snippets.yaml`, lists and
 searches entries, and asks the core to insert or run the exact text in the
-selected terminal. [ADR 0044](adr/0044-migrate-snippets-without-changing-terminal-input.md)
+selected terminal. [ADR 0044](../adr/0044-migrate-snippets-without-changing-terminal-input.md)
 records why it moved out of the core. The user-facing summary is the
-[Snippets availability note](snippets-availability.md).
+[Snippets availability note](../snippets-availability.md).
 
 ## Which hosts use the extension
 
@@ -47,7 +47,7 @@ panel next to Files and SSH Connect.
 ## Catalog file and shortcuts
 
 `snippets.yaml` lives beside `config.json` and uses the
-[documented YAML v1 format](configuration.md#snippets). Install, update,
+[documented YAML v1 format](../configuration.md#snippets). Install, update,
 disable and uninstall never create, copy, rewrite or delete it. A missing file
 is a clean empty state. To start a catalog, copy `snippets.example.yaml` from
 the package. That example uses POSIX `printf`; Windows users need commands for
@@ -134,7 +134,7 @@ The builder accepts `[OUTPUT [SOURCE_COMMIT]]`. It writes the `.omxext` archive
 and its `.sha256` and `.json` receipt; the receipt's
 `qualification.status: not-run` is a build-time field. Version, host range, API
 and capabilities come from `extensions/snippets/extension.json`. See
-[Building an extension archive](release.md#building-an-extension-archive) for
+[Building an extension archive](../release.md#building-an-extension-archive) for
 the shared rules.
 
 `npm run test:unit` covers the package and its host seam, including
@@ -167,8 +167,8 @@ either variable is unset.
 ## Publish and install
 
 Snippets ships as its own `ext-snippets-vX.Y.Z` prerelease. Follow
-[Publishing an extension archive](release.md#publishing-an-extension-archive),
-then [Catalog promotion](release.md#catalog-promotion). The Snippets entry is
+[Publishing an extension archive](../release.md#publishing-an-extension-archive),
+then [Catalog promotion](../release.md#catalog-promotion). The Snippets entry is
 edited by hand in both `distribution/official-extensions-v1.json` (every host
 except macOS) and `distribution/official-extensions-darwin-arm64-v1.json`
 (macOS), with targets `linux-arm64`, `linux-x64`, `darwin-arm64` and
@@ -200,9 +200,8 @@ sandbox.
 ## Known limits
 
 - **Windows ARM64:** installing Snippets from the public catalog failed in
-  testing when the controlled terminal child exited unexpectedly, and the cause
-  is unknown. Users who need Snippets there can stay on [0.23.0](https://github.com/luizomf/omxterm/releases/tag/v0.23.0),
-  which has it built in.
+  testing on 0.25.0 when the controlled terminal child exited unexpectedly, and
+  the cause is unknown. It has not been re-tested on 0.27.
 - **Windows network silence:** startup is not verified to stay network-silent
   on Windows; the strict test sees system-proxy discovery traffic. No Snippets
   catalog or archive download was observed.

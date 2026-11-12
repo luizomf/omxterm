@@ -2,7 +2,7 @@
 
 OMXTerm uses pinned Restty 0.3.0 and its Ghostty WASM core in development and packaged builds. There is no renderer selector or fallback Surface.
 
-For product behavior, see [`spec.md`](spec.md); for architectural rationale, see [ADR 0025](adr/0025-use-restty-as-the-terminal-surface.md). Use [native development](development.md) for platform setup and test suites.
+For product behavior, see [`spec.md`](../spec.md); for architectural rationale, see [ADR 0025](../adr/0025-use-restty-as-the-terminal-surface.md). Use [native development](../development.md) for platform setup and test suites.
 
 ## Runtime architecture
 
@@ -42,7 +42,7 @@ width changes, history, hard breaks and alternate/wrap-disabled modes. A separat
 real-Surface check covers a short primary-screen resize continuation with a
 controlled Adapter, not native PTY or OS clipboard qualification.
 
-See [resize and continued-text coverage](development.md#resize-and-continued-text-coverage)
+See [resize and continued-text coverage](../development.md#resize-and-continued-text-coverage)
 for the test command, fixture invariants and evidence boundaries. The retired
 combined native prefix/refit/continuation scenario's Windows timeouts remain
 unexplained; separate checks do not qualify that combined ordering.
@@ -252,7 +252,7 @@ These opt-in diagnostic runs inspect specific rendering and memory boundaries in
 ## Pinned inputs and WASM core rebuild
 
 `npm ci` (and `npm run postinstall`) runs checksum-guarded `node-pty` preparation
-(see the [native runtime contract](development.md#pinned-pty-runtime)) and Restty
+(see the [native runtime contract](../development.md#pinned-pty-runtime)) and Restty
 runtime preparation against `assets/restty-sources.json`:
 
 - **`node-pty` `1.2.0-beta.18`:** exact official npm archive/integrity in `package-lock.json`; JavaScript/native source guards in `scripts/prepare-node-pty-{runtime,exec-status}.mjs`
