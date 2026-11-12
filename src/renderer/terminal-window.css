@@ -111,18 +111,51 @@ body:has(> .ui-dialog:modal) > :not(dialog, script, style, link) {
   background: transparent;
 }
 
+/* The host frame around a window-context view. It paints the page surface,
+   so its Close row and the opaque view below read as one page, and it takes
+   the design-system font instead of the document default. */
 .hosted-content-tab {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  padding-top: var(--native-title-inset, 0px);
+  color: var(--ui-text);
+  background: var(--ui-surface);
+  font: var(--ui-text-body) / 1.5 var(--ui-font);
+}
+body.tabs-visible .hosted-content-tab {
+  padding-top: 0;
 }
 .hosted-content-tab[hidden] {
   display: none;
 }
 .hosted-content-tab > button {
   align-self: flex-end;
+  margin: var(--ui-space-2) var(--ui-space-6) 0;
+}
+
+/* A dialog-presented view: the host draws the frame (title and Close) and
+   the native view fills the slot below. Fixed size; the view scrolls. */
+.hosted-content-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+  width: min(440px, calc(100vw - 24px));
+  height: min(320px, calc(100vh - 24px));
+  padding: var(--ui-space-3) var(--ui-space-3) 0;
+  overflow: hidden;
+}
+.hosted-content-dialog:not([open]) {
+  display: none;
+}
+.hosted-content-dialog-slot {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* The view pads itself 12 px, so its content lines up with the title and
+     its focus rings and scrollbar aren't clipped. */
+  margin-inline: calc(-1 * var(--ui-space-3));
 }
 .hosted-content-slot {
   flex: 1 1 auto;

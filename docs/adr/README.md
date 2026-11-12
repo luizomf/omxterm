@@ -96,9 +96,14 @@ gives every pane state one quiet system (nothing, a glyph mark, a transient
 overlay or a dismissible notice) that never changes the terminal grid, and
 amends ADR 0043's Stop row.
 
+[ADR0051: Present short extension setup as a Hosted Dialog](0051-present-short-extension-setup-as-a-hosted-dialog.md)
+shows Mirror Typing setup as a small core-framed dialog over the tab instead of
+a tab, so opening it never changes the terminal grid, and amends ADR 0043's
+setup page.
+
 ## Related boundaries
 
-- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050.
+- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045.

@@ -5,11 +5,13 @@ export interface HostedAppearance {
   // Effective window tint opacity, not whole-view opacity or a blur command.
   readonly opacity: number;
 }
+// "panel" docks a companion tool; "dialog" floats over the selected tab.
+export type HostedPresentationKind = "panel" | "dialog";
 export interface HostedContentDescriptor {
   id: string;
   title: string;
   // Omission keeps the existing general application-tab presentation.
-  presentation?: "panel";
+  presentation?: HostedPresentationKind;
   // Main-issued tool toggle for an already retained companion.
   toggle?: true;
   // One-shot core empty-panel intent, never supplied by extension code.
@@ -91,7 +93,7 @@ export function isHostedContentDescriptor(
   return (
     (record(value, ["id", "title"]) ||
       (record(value, ["id", "title", "presentation"]) &&
-        value.presentation === "panel") ||
+        (value.presentation === "panel" || value.presentation === "dialog")) ||
       (record(value, ["id", "title", "presentation", "panelDefaultToken"]) &&
         value.presentation === "panel" &&
         typeof value.panelDefaultToken === "string" &&

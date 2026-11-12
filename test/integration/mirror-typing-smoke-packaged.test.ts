@@ -67,7 +67,8 @@ it.skipIf(!app || !archive)(
         otherPaneReached: boolean;
         panes: string[];
         active: string;
-        grid: { active: number[][]; stopped: number[][] };
+        setup: { dialog: boolean; strip: boolean; grid: number[][] };
+        grid: { before: number[][]; active: number[][]; stopped: number[][] };
         steps: Record<string, string | string[]>;
         paste: Record<string, { status: string; lines: string[] }>;
       };
@@ -80,12 +81,17 @@ it.skipIf(!app || !archive)(
       );
       expect(result.strayKeysStarted).toBe(false);
       expect(result.panes).toHaveLength(2);
-      // Marks never change the grid: same canvases with and without them.
+      // Setup is a dialog, not a tab, and neither it nor the marks change
+      // the grid: same canvases before, during setup, mirroring and stopped.
+      expect(result.setup.dialog).toBe(true);
+      expect(result.setup.strip).toBe(true);
       expect(result.grid.active).toHaveLength(2);
       for (const [width, height] of result.grid.active) {
         expect(width).toBeGreaterThan(0);
         expect(height).toBeGreaterThan(0);
       }
+      expect(result.setup.grid).toEqual(result.grid.before);
+      expect(result.grid.active).toEqual(result.grid.before);
       expect(result.grid.stopped).toEqual(result.grid.active);
       expect(result.active).toBe(
         "Mirroring typing from this pane. Click to stop.",

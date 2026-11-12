@@ -1,6 +1,7 @@
-/* Base for official extension views hosted in the Auxiliary Panel. The host
-   paints the panel tint; the view stays transparent and builds its UI from
-   the design system. Add class="ui-on-tint" to the view's <html>. */
+/* Base for official extension views hosted in the Auxiliary Panel or a
+   dialog. The host paints the panel tint or the dialog surface; the view
+   stays transparent and builds its UI from the design system. Add
+   class="ui-on-tint" to the view's <html>. */
 @import "../../src/renderer/ui.css";
 
 :root {

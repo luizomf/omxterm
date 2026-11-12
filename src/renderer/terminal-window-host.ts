@@ -233,12 +233,14 @@ export function mountTerminalWindowPage(
       hostedPresentation: companion.presentation,
       selectContent: companion.select,
       isSshSourceForeground: companion.isSourceForeground,
+      isDialogShown: companion.dialogShown,
       createAdapter: (...intent) =>
         options.createAdapter(fontConfigurationId, ...intent),
       sshPane: options.sshPane,
       canFocus: () => !disposed && !previewActive(),
       canAutoFocus: (unchangedFocus) =>
         !previewActive() &&
+        !companion.dialogShown() &&
         !companion.presentation.ownsFocus() &&
         (unchangedFocus || !companion.ownsPanelFocus()),
       mount,
@@ -261,7 +263,12 @@ export function mountTerminalWindowPage(
   // Native window blur revokes pending panel intent through main's command.
   // DOM blur alone also occurs when an owned child is created before publication.
   const onPageFocus = () => {
-    if (!previewActive() && !companion.ownsPanelFocus()) tabs.focusSelected();
+    if (
+      !previewActive() &&
+      !companion.dialogShown() &&
+      !companion.ownsPanelFocus()
+    )
+      tabs.focusSelected();
   };
   const chrome = options.chrome
     ? mountWindowChrome(page.document, options.chrome, onPageFocus, language)

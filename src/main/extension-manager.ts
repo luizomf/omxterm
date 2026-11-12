@@ -19,7 +19,7 @@ export type ExtensionTarget = {
   terminalDirectory: string | null;
   sourceSessionId?: string;
   mirrorContext?: string;
-  presentation?: "panel";
+  presentation?: import("../shared/extension-view").HostedPresentationKind;
   togglePanel?: boolean;
   panelDefaultToken?: string;
 };

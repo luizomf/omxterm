@@ -1,37 +1,19 @@
-@import "../../src/renderer/ui.css";
-@import "../../src/renderer/application-page.css";
+@import "../shared/appearance.css";
 
-/* Layout only; components come from the design system (ui.css). */
+/* Layout only; components come from the design system (ui.css). The host
+   draws the dialog frame and its title; this view is its transparent body. */
 
-* {
-  box-sizing: border-box;
-}
-html,
-body {
-  height: 100%;
-  margin: 0;
-}
-body {
-  display: flex;
-  background: var(--ui-surface);
-}
-.application-page-content > * {
-  max-width: 560px;
-}
 .application-page-content > .ui-hint {
-  margin: 0 0 var(--ui-space-6);
+  margin: 0 0 var(--ui-space-3);
 }
 fieldset {
   min-width: 0;
-  margin: 0 0 var(--ui-space-4);
+  margin: 0 0 var(--ui-space-3);
   padding: 0;
   border: 0;
 }
-fieldset[hidden] {
-  display: none;
-}
 legend {
-  margin-bottom: var(--ui-space-2);
+  margin-bottom: var(--ui-space-1);
   padding: 0;
 }
 .mirror-targets .ui-row {

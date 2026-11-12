@@ -93,6 +93,8 @@ export interface TerminalTabsOptions {
     passive: boolean,
   ) => void;
   readonly isSshSourceForeground?: (id: string) => boolean;
+  // The hosted dialog shown over the selected tab, if any.
+  readonly isDialogShown?: (id?: string) => boolean;
   readonly onGraphicalSelected?: () => void;
   readonly settings?: SettingsBridge;
   readonly extensions?: import("../shared/extensions").ExtensionsBridge;
@@ -275,10 +277,9 @@ export function createTerminalTabs(
     // Lifecycle selection stays deliverable; requested navigation is guarded.
     if (!tab || (!passive && canFocus?.() === false)) return;
     const changed = selectedApplicationTab() !== tab;
-    if (changed) {
-      selectionChanged();
-      if (!mirrorReady) mirror?.stop();
-    }
+    if (changed) selectionChanged();
+    // Leaving the tab, or the setup dialog shown over it, cancels a Start.
+    if ((changed || options.isDialogShown?.()) && !mirrorReady) mirror?.stop();
     selectedIndex = index;
     layout.selected(tab);
     renderStrip();
@@ -439,6 +440,7 @@ export function createTerminalTabs(
       parent: elements.container,
       marks,
       selected: selectedApplicationTab,
+      setupShown: (id) => options.isDialogShown?.(id) ?? false,
       available: () => !disposed && !closing && canFocus?.() !== false,
       handoff(tab, pane, ready, current) {
         tab.focused = pane;

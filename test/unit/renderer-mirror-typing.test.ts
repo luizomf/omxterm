@@ -9,6 +9,7 @@ import type {
   HostedContentDescriptor,
 } from "../../src/shared/extension-view";
 import { createRendererLanguage } from "../../src/renderer/renderer-language";
+import { createCompanionContent } from "../../src/renderer/companion-content";
 import { createTabsHarness } from "../fixtures/terminal-tabs-harness";
 
 const owners: { dispose(): void }[] = [];
@@ -29,8 +30,17 @@ const notice = () =>
   document.querySelector<HTMLElement>(".state-notice:not([hidden])")
     ?.textContent ?? "";
 async function harness(showTabBar = false) {
+  // jsdom has no modal dialogs; the attribute is all the host reads.
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
   let command!: (value: MirrorCommand) => void;
-  let open!: (value: HostedContentDescriptor) => void;
+  const opens = new Set<(value: HostedContentDescriptor) => void>();
+  const open = (value: HostedContentDescriptor) =>
+    opens.forEach((listener) => listener(value));
   const bridge: MirrorTypingBridge = {
     onCommand: (listener) => {
       command = listener;
@@ -42,8 +52,8 @@ async function harness(showTabBar = false) {
   };
   const hosted: HostedContentBridge = {
     onOpen: (listener) => {
-      open = listener;
-      return vi.fn();
+      opens.add(listener);
+      return () => opens.delete(listener);
     },
     onRetired: () => vi.fn(),
     onFailure: () => vi.fn(),
@@ -51,15 +61,29 @@ async function harness(showTabBar = false) {
     close: vi.fn(async () => {}),
   };
   const language = createRendererLanguage();
+  // Setup opens as a dialog owned by the window's companion content.
+  const companion = createCompanionContent(
+    document.createElement("div"),
+    undefined,
+    hosted,
+    {
+      language,
+      focusTerminal: () => h.tabs.focusSelected(),
+      blocked: () => false,
+    },
+  );
   const h = createTabsHarness({
     tabsOptions: {
       mirrorTyping: bridge,
       hostedContent: hosted,
+      hostedPresentation: companion.presentation,
+      selectContent: companion.select,
+      isDialogShown: companion.dialogShown,
       language,
       showTabBar,
     },
   });
-  owners.push(h.tabs);
+  owners.push(h.tabs, companion);
   await h.tabs.ready;
   h.sessionAdapters[0]!.resize({ cols: 120, rows: 40 });
   h.tabs.handleCommand({ action: "split", direction: "right" });
@@ -72,7 +96,7 @@ async function harness(showTabBar = false) {
   };
   const setup = async () => {
     const result = capture();
-    open({ id: "setup", title: "Mirror" });
+    open({ id: "setup", title: "Mirror", presentation: "dialog" });
     await settle();
     return result;
   };
@@ -166,7 +190,13 @@ it("captures exact original focus, hands off only after native hide, and sends o
 
 it("repeats the mark on the visible tab and clears every mark on an ordinary stop", async () => {
   const h = await harness(true);
+  // A second tab shows the strip; setup itself never adds a tab.
+  h.tabs.handleCommand({ action: "new" });
+  await settle();
+  h.tabs.handleCommand({ action: "previous" });
+  await settle();
   await h.start();
+  expect(h.strip.querySelectorAll("button")).toHaveLength(2);
   const terminalTab = h.strip.querySelector("button")!;
   const mark = terminalTab.querySelector("[role=img]")!;
   expect(mark.getAttribute("title")).toBe("Mirroring typing from this pane.");
@@ -179,7 +209,7 @@ it("repeats the mark on the visible tab and clears every mark on an ordinary sto
     "context",
     "unavailable",
   );
-  expect(paneMarks()).toEqual(["", ""]);
+  expect(paneMarks()).toEqual(["", "", ""]);
   expect(h.strip.querySelector("[role=img]")).toBeNull();
   expect(notice()).toBe("");
 });

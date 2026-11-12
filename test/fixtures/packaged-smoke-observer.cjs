@@ -609,6 +609,14 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     const panes = await view.executeJavaScript(
       "[...document.querySelectorAll('.mirror-targets label')].map(l => l.textContent)",
     );
+    // Setup floats as a dialog over the tab: no tab, no strip, same grid.
+    result.setup ??= {
+      dialog: await js(
+        "!!document.querySelector('.hosted-content-dialog[open]')",
+      ),
+      strip: await js("document.querySelector('#tab-strip').hidden"),
+      grid: await canvases(),
+    };
     view.focus();
     if (opener === "palette") {
       // A release or a held repeat that didn't start on Start must not start.
@@ -655,15 +663,14 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     await settle();
   };
   // 1. Typing reaches both shells. This start comes from the palette. The
-  // marks float over the panes, so showing or clearing them never changes the
-  // terminal grid. The setup page stays open as a tab (its tab strip is
-  // #999), and while it is selected the terminal tab is hidden, so compare the
-  // grid with marks (active) and without them (stopped), same strip.
+  // setup dialog and the marks float over the panes, so neither changes the
+  // terminal grid: compare it before setup, during it, with marks (active)
+  // and after a stop.
   const canvases = () =>
     js(
       "[...document.querySelectorAll('.terminal-surface canvas')].map(c => { const r = c.getBoundingClientRect(); return [r.width, r.height]; })",
     );
-  result.grid = {};
+  result.grid = { before: await canvases() };
   const typed = marker + ".typed";
   result.panes = await start("palette");
   result.active = await status();

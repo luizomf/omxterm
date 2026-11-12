@@ -1,7 +1,9 @@
 # Revoke visible Mirror Typing routes
 
 Amended by [ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md): State
-Marks replace the in-flow status row and its Stop button.
+Marks replace the in-flow status row and its Stop button. Amended by
+[ADR 0051](0051-present-short-extension-setup-as-a-hosted-dialog.md): setup is
+a Hosted Dialog over the tab, not a tab, so there is no page to return to.
 
 ## Decision
 
