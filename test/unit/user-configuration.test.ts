@@ -332,7 +332,7 @@ describe("strict version 1 User Configuration", () => {
         validateUserConfiguration(
           {
             version: 1,
-            keybinds: { toggleTabBar: "CommandOrControl+Shift+S" },
+            keybinds: { toggleTabBar: defaults.toggleSnippets },
           },
           configPath,
           installedFonts,

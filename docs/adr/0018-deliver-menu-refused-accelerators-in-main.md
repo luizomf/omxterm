@@ -96,7 +96,10 @@ contributions or the planned Extension architecture.
 ## Fixed companion-tool bindings
 
 Files and SSH Connect have two core-owned configurable slots, `toggleFiles` and
-`toggleSshConnect`, unbound by default. The catalog reuses their recognized,
+`toggleSshConnect`. They default to `CommandOrControl+Alt+F` and
+`CommandOrControl+Alt+O` on macOS and are unbound on Linux and Windows, where
+`Ctrl+Alt` is AltGr (Snippets likewise moved to `CommandOrControl+Alt+S` on
+macOS and keeps `Control+Shift+S` elsewhere). The catalog reuses their recognized,
 captured installed-action callbacks and preserves a single existing menu/palette
 entry. This is not an extension manifest accelerator or public registration API;
 generic contributed actions remain unbound.
@@ -117,6 +120,12 @@ reuses the extension's single entry, follows the same availability, collision
 and once-per-press rules, and defaults to `CommandOrControl+Shift+M`
 (`Control+Shift+M` on Linux/Windows). Its entry toggles the window's group
 ([ADR 0043](0043-revoke-visible-mirror-typing-routes.md)).
+
+Saved Layout gets a fourth slot, `saveLayout`, on the same terms, defaulting to
+`CommandOrControl+Shift+L` (`Control+Shift+L` on Linux/Windows). Unlike the
+others it doesn't take over the extension's entry: core adds a second entry,
+**Save Layout**, beside the page's, and leaves it out of the context menu
+([ADR 0042](0042-save-layouts-without-restoring-sessions.md)).
 
 ## Maintenance boundary
 

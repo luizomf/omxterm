@@ -33,27 +33,29 @@ These toggles affect the current window. Set defaults for new windows in [Config
 
 The application menu displays active shortcuts, including custom bindings.
 
-| Action                     | macOS                         | Linux and Windows               |
-| -------------------------- | ----------------------------- | ------------------------------- |
-| New Window / New Tab       | `Cmd+N` / `Cmd+T`             | `Ctrl+Shift+N` / `Ctrl+Shift+T` |
-| Close Tab / Close Window   | `Cmd+W` / `Cmd+Shift+W`       | `Ctrl+Shift+W` / `Ctrl+Shift+Q` |
-| Quit                       | `Cmd+Q`                       | `Ctrl+Alt+Shift+Q`              |
-| Next / Previous Tab        | `Ctrl+Tab` / `Ctrl+Shift+Tab` | `Ctrl+PageDown` / `Ctrl+PageUp` |
-| Select Tab 1–9             | `Cmd+1` … `Cmd+9`             | `Alt+1` … `Alt+9`               |
-| Split Right / Down         | `Cmd+D` / `Cmd+Shift+E`       | `Ctrl+Shift+O` / `Ctrl+Shift+E` |
-| Close Pane                 | `Cmd+Option+W`                | `Ctrl+Shift+K`                  |
-| Focus Next / Previous Pane | `Cmd+]` / `Cmd+[`             | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
-| Focus Pane by Direction    | `Cmd+Option+Arrow`            | `Alt+Shift+Arrow`               |
-| Equalize Panes             | `Cmd+Ctrl+=`                  | `Ctrl+Shift+0`                  |
-| Copy / Paste               | `Cmd+C` / `Cmd+V`             | `Ctrl+Shift+C` / `Ctrl+Shift+V` |
-| Select All / Find          | `Cmd+A` / `Cmd+F`             | `Ctrl+Shift+A` / `Ctrl+Shift+F` |
-| Zoom In / Out              | `Cmd++` / `Cmd+-`             | `Ctrl++` / `Ctrl+-`             |
-| Actual Size                | `Cmd+0`                       | `Ctrl+0`                        |
-| Full Screen                | `Ctrl+Cmd+F`                  | `F11`                           |
-| Toggle Tab Bar / Title Bar | `Cmd+Shift+B` / `Cmd+Shift+D` | `Ctrl+Shift+B` / `Ctrl+Shift+D` |
-| Toggle Snippets            | `Cmd+Shift+S`                 | `Ctrl+Shift+S`                  |
-| Mirror Typing (add-on)     | `Cmd+Shift+M`                 | `Ctrl+Shift+M`                  |
-| Reload Configuration       | `Cmd+Shift+,`                 | `Ctrl+Shift+,`                  |
+| Action                        | macOS                           | Linux and Windows               |
+| ----------------------------- | ------------------------------- | ------------------------------- |
+| New Window / New Tab          | `Cmd+N` / `Cmd+T`               | `Ctrl+Shift+N` / `Ctrl+Shift+T` |
+| Close Tab / Close Window      | `Cmd+W` / `Cmd+Shift+W`         | `Ctrl+Shift+W` / `Ctrl+Shift+Q` |
+| Quit                          | `Cmd+Q`                         | `Ctrl+Alt+Shift+Q`              |
+| Next / Previous Tab           | `Ctrl+Tab` / `Ctrl+Shift+Tab`   | `Ctrl+PageDown` / `Ctrl+PageUp` |
+| Select Tab 1–9                | `Cmd+1` … `Cmd+9`               | `Alt+1` … `Alt+9`               |
+| Split Right / Down            | `Cmd+D` / `Cmd+Shift+E`         | `Ctrl+Shift+O` / `Ctrl+Shift+E` |
+| Close Pane                    | `Cmd+Option+W`                  | `Ctrl+Shift+K`                  |
+| Focus Next / Previous Pane    | `Cmd+]` / `Cmd+[`               | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
+| Focus Pane by Direction       | `Cmd+Option+Arrow`              | `Alt+Shift+Arrow`               |
+| Equalize Panes                | `Cmd+Ctrl+=`                    | `Ctrl+Shift+0`                  |
+| Copy / Paste                  | `Cmd+C` / `Cmd+V`               | `Ctrl+Shift+C` / `Ctrl+Shift+V` |
+| Select All / Find             | `Cmd+A` / `Cmd+F`               | `Ctrl+Shift+A` / `Ctrl+Shift+F` |
+| Zoom In / Out                 | `Cmd++` / `Cmd+-`               | `Ctrl++` / `Ctrl+-`             |
+| Actual Size                   | `Cmd+0`                         | `Ctrl+0`                        |
+| Full Screen                   | `Ctrl+Cmd+F`                    | `F11`                           |
+| Toggle Tab Bar / Title Bar    | `Cmd+Shift+B` / `Cmd+Shift+D`   | `Ctrl+Shift+B` / `Ctrl+Shift+D` |
+| Toggle Snippets               | `Cmd+Option+S`                  | `Ctrl+Shift+S`                  |
+| Files / SSH Connect (add-ons) | `Cmd+Option+F` / `Cmd+Option+O` | unbound                         |
+| Mirror Typing (add-on)        | `Cmd+Shift+M`                   | `Ctrl+Shift+M`                  |
+| Save Layout (add-on)          | `Cmd+Shift+L`                   | `Ctrl+Shift+L`                  |
+| Reload Configuration          | `Cmd+Shift+,`                   | `Ctrl+Shift+,`                  |
 
 If `+` shares a key with `=`, press Shift as well. On Linux and Windows, press and release **Alt** to open the application menu; on macOS use the system menu bar. Customize shortcuts in [Settings](configuration.md#keybinds).
 

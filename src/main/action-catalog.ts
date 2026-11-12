@@ -120,6 +120,7 @@ export function createCoreActionCatalog(
     toggleFiles: action(t("menu.toggleFiles"), () => {}, false),
     toggleSshConnect: action(t("menu.toggleSshConnect"), () => {}, false),
     toggleMirrorTyping: action(t("mirrorTyping.title"), () => {}, false),
+    saveLayout: action(t("menu.saveLayout"), () => {}, false),
     toggleSnippets: action(
       t("menu.toggleSnippets"),
       actions.toggleSelectedSnippets,

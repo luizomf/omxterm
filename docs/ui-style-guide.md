@@ -126,7 +126,9 @@ full-width red strip, because OMXTerm fell back to defaults.
 ([ADR 0050](adr/0050-show-ongoing-states-as-quiet-state-marks.md)); never add
 a strip, badge or color of your own. Pick the quietest tier that works:
 
-- idle or success: nothing;
+- idle or success: nothing, except that an explicit action with no other
+  visible result may confirm itself with `flash()` (Save layout: "Layout
+  saved.");
 - something ongoing (mirroring, later an SSH session or an attached agent): a
   `ui-mark` glyph at the pane's top-right, inset by the terminal padding and
   centered on the first text row (it may cover the last column or two of row
@@ -170,9 +172,11 @@ Pick the smallest presentation that fits:
   Core surfaces open links through main; extension views declare the URL in
   their manifest and open it by id with `links.open.v1`
   ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)).
-- No notices for success or idle states. A notice says what happened and,
-  if needed, what to do next, in one or two sentences. State notices (see
-  State marks) take one.
+- No notices for success or idle states, except one: an explicit action with
+  no other visible result (Save layout) may confirm itself with one brief
+  `flash()` sentence ("Layout saved."). A notice says what happened and, if
+  needed, what to do next, in one or two sentences. State notices (see State
+  marks) take one.
 - Buttons are verbs ("Connect", "Save"), not "OK". Sentence case everywhere.
 - Keep user data literal, never HTML.
 - Interface Languages ship together: update English and Portuguese in the same
@@ -180,3 +184,15 @@ Pick the smallest presentation that fits:
 
 Verification for Settings layout lives in the
 [development reference](development.md#settings-layout-matrix).
+
+## Default shortcuts
+
+- Terminal and core actions use `Cmd/Ctrl+Shift+<letter>`, and only when the
+  letter is free on macOS, Linux and Windows; otherwise the action ships
+  unbound.
+- Side-panel and extension tools use `Cmd+Option+<letter>` on macOS only.
+  Linux and Windows leave them unbound: `Ctrl+Alt` is AltGr on Windows and
+  types characters on international layouts (on ABNT2, `Ctrl+Alt+Q` types
+  "/"), and Linux desktops reserve many `Ctrl+Alt` combinations.
+- Older defaults predate this and stay: Snippets keeps `Ctrl+Shift+S` on Linux
+  and Windows, and Mirror Typing uses `Cmd/Ctrl+Shift+M`.

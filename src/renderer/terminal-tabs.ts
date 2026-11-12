@@ -3,6 +3,7 @@ import { createMirrorTyping } from "./mirror-typing";
 import type { MirrorTypingBridge } from "../shared/mirror-typing";
 import { createTerminalTabsLayout } from "./terminal-tabs-layout";
 import { createStateMarks } from "./state-marks";
+import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
   InitialLayout,
   TerminalLayoutBridge,
@@ -437,6 +438,7 @@ export function createTerminalTabs(
     openSnippetsManagement: () =>
       settingsActions.openSettings({ page: "extensions", reason: "snippets" }),
   });
+  const layoutSaved = createLayoutSaveNotice(marks);
   if (options.mirrorTyping)
     mirror = createMirrorTyping({
       bridge: options.mirrorTyping,
@@ -480,7 +482,10 @@ export function createTerminalTabs(
     applyConfiguration(next) {
       if (!disposed) configuration.apply(next);
     },
-    handleCommand: commands.handle,
+    handleCommand: (command: TerminalTabCommand) =>
+      command.action === "layout-save-result"
+        ? layoutSaved(command.outcome)
+        : commands.handle(command),
     zoom(command) {
       if (!disposed && selectedTab()) configuration.zoom(command);
     },

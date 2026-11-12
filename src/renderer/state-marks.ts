@@ -31,7 +31,8 @@ const NOTICE_TIMEOUT = 4000;
 
 /**
  * The window's one system for quiet state (ADR 0050). Idle or success shows
- * nothing; an ongoing state is a mark at the pane edge, repeated on its tab; a
+ * nothing (an explicit action with no other visible result may flash); an
+ * ongoing state is a mark at the pane edge, repeated on its tab; a
  * surprise is a transient overlay; something that needs the user is a notice
  * they dismiss. None of them enters the layout flow, so the grid never changes.
  */
@@ -166,7 +167,10 @@ export function createStateMarks(
           if (!owners.has(owner)) owners.set(owner, mark);
       return [...owners.values()].map((mark) => glyph(mark, language.t));
     },
-    /** A surprise: a one-sentence overlay that goes away by itself. */
+    /**
+     * A surprise, or the confirmation of an explicit action with no other
+     * visible result: a one-sentence overlay that goes away by itself.
+     */
     flash(value: StateText) {
       show(value, true);
     },

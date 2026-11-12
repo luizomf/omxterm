@@ -219,6 +219,23 @@ async function installationSnapshot(
   }));
 }
 
+function viewlessCall(
+  selection: VersionSelection,
+  runtime: Pick<ExtensionRuntime, "activate">,
+  backends: Map<string, Backend>,
+  live: () => boolean,
+) {
+  const expected = { ...selection };
+  return async (value: Value, signal: AbortSignal): Promise<Value> => {
+    if (!live() || signal.aborted) throw new PackageError("unavailable");
+    const backend = await runtime.activate(expected.id, expected);
+    if (!live() || signal.aborted || backend.signal.aborted)
+      throw new PackageError("unavailable");
+    backends.set(expected.id, backend);
+    return backend.call(value, AbortSignal.any([signal, backend.signal]));
+  };
+}
+
 /** One application owner for consent, generation admission, views and backends.
  * Settings/menu/fixture callers use this same interface, never a parallel store. */
 export function createExtensionManager(options: Options) {
@@ -443,6 +460,18 @@ export function createExtensionManager(options: Options) {
         issued !== revision(expected.id)
           ? Promise.reject(new PackageError("unavailable"))
           : open(expected.id, target, expected);
+    },
+    /**
+     * A core-owned slot's backend call without a view (Save layout). It keeps
+     * the action's issued generation: disable, update or uninstall revoke it,
+     * and the runtime admits every call against the enabled, selected version.
+     */
+    backendCall(selection: VersionSelection) {
+      const issued = revision(selection.id);
+      return viewlessCall(selection, options.runtime, backends, () => {
+        const id = selection.id;
+        return !disposed && !busy.has(id) && revision(id) === issued;
+      });
     },
     dispose(): Promise<boolean> {
       if (disposal) return disposal;

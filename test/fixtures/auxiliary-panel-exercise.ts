@@ -261,7 +261,7 @@ async function exerciseClipboard(s: Scene) {
   key("A", defaults);
   key("C", defaults);
   await wait(() => clipboard.writes.at(-1) === "default", "default query copy");
-  key("S", process.platform === "darwin" ? ["meta", "shift"] : defaults);
+  key("S", process.platform === "darwin" ? ["meta", "alt"] : defaults);
   await until(`!(${shown})`);
   s.remap();
   key("S", ["control", "alt"]);

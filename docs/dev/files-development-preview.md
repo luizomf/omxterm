@@ -173,8 +173,8 @@ imports installed code.
 - Actions pin the exact installed generation and digest. An old action never
   reaches a replacement installation.
 - Files opens from the Command Palette, the File menu and the terminal context
-  menu. It has no default shortcut; `toggleFiles` in Settings → Shortcuts can bind
-  one.
+  menu. `toggleFiles` defaults to `Cmd+Option+F` on macOS and is unbound on
+  Linux and Windows; Settings → Shortcuts can change it.
 - Files, SSH Connect and Snippets each use one retained companion panel per
   window. Opening again reveals a hidden panel or closes a visible one. Closing
   the panel and reopening creates a fresh view and drops old drafts.

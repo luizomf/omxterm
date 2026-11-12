@@ -54,6 +54,33 @@ and explicit commands are always home slots. No shell hooks are added; since
 #972, macOS and Linux also read the shell process's cwd when a pane has no
 usable report ([ADR 0013](0013-do-not-inject-shell-integration.md)). Directory validation does not prove locality or exclude OS mounts.
 
+## Save layout from core
+
+Saving also has a core entry, **Save Layout** (`saveLayout`, #1008), so a
+window can be saved without opening the page. It's a fourth core-owned slot
+([ADR 0018](0018-deliver-menu-refused-accelerators-in-main.md)), not a generic
+extension action: the disposition in #669 still holds.
+
+- **Target and capture point:** the focused terminal window when the entry
+  runs. Main captures it with the same core capture the page uses.
+- **Write:** main calls the extension's own backend, with no view, using the
+  page's protocol: `read`, then `replace` at the revision it just read. The
+  extension keeps validating and writing its one document, so this needs no
+  extension change and works with every published Saved Layout.
+- **Visibility:** File menu and Command Palette, not the context menu, only
+  while the extension is installed and enabled and declares
+  `terminal.captureLayout.v1` and `state.v1`. The page entry stays.
+- **Collisions:** the standard checks; a custom binding already on the default
+  combination gets the collision error.
+- **Disable, update, uninstall, owner loss:** the entry carries the issued
+  generation, so any of these revokes a held entry before it reaches the
+  backend, and every call is admitted against the enabled, selected version.
+  A window closed mid-save cancels the capture and gets no result.
+- **Unknown outcome:** never retried and never reported as saved. Success
+  flashes one sentence, a refusal leaves a notice, and an uncertain write says
+  it couldn't confirm the save
+  ([ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md)).
+
 ## State adapter
 
 A declaration-gated bootstrap `state.v1` adapter exposes `read()` and

@@ -54,7 +54,8 @@ source/test boundaries and known limitations.
 adds the optional SSH Connect capability and ended-readable Surface; the SSH
 guide describes the published targets and bounded macOS evidence.
 [ADR0042: Save layouts without restoring sessions](0042-save-layouts-without-restoring-sessions.md)
-adds explicit optional Saved Layout capture/open and extension-scoped CAS state.
+adds explicit optional Saved Layout capture/open and extension-scoped CAS state,
+plus a core Save Layout entry and shortcut that saves without the page.
 [ADR0043: Revoke visible Mirror Typing routes](0043-revoke-visible-mirror-typing-routes.md)
 adds the optional fixed same-tab keyboard route with core-owned Stop, including
 a window-scoped Mirror Typing toggle and shortcut; ADR 0050 replaces its

@@ -90,7 +90,9 @@ themed title row with native window actions.
 the tab strip shows) for an ongoing state such as Mirror Typing. Its tooltip
 names the state; its owner may make the pane's glyph clickable (Mirror Typing:
 click to stop). It never changes the terminal grid. Idle and success show
-nothing; surprises and problems use one overlay sentence instead.
+nothing; surprises and problems use one overlay sentence instead, and so does
+the confirmation of an explicit action with no other visible result (Save
+Layout).
 
 **Always-on-Top Window** — A window temporarily kept above ordinary windows by
 its native floating behavior. The menu toggles the selected window;
@@ -312,7 +314,9 @@ including tab order, splits, focused panes and local starting folders. Opening
 it creates fresh Default Shells in a new window; it does not restore running
 processes or replay commands. Saved data survives uninstall. While the
 extension is enabled, OMXTerm also remembers every window's arrangement and
-reopens it at startup. See [Saved Layout](docs/saved-layout.md).
+reopens it at startup. **Save Layout** saves the current window from a
+shortcut, the menu or the Command Palette without opening the page. See
+[Saved Layout](docs/saved-layout.md).
 
 **SSH Connect** — An optional extension that lists OpenSSH aliases in the
 Auxiliary Panel and opens a selected alias or quick-connect target in a new

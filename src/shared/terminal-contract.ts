@@ -81,6 +81,9 @@ export const MAX_TAB_SELECT_POSITION = 9;
 // renderer-owned tab (even before it has a session id), and "resolve-close"
 // consumes that target, never the later selection. "close-session" removes
 // a failed session's tab after its native failure dialog was acknowledged.
+// What Save layout did, for the window's one transient or dismissable sentence.
+export type LayoutSaveOutcome = "saved" | "failed" | "unknown";
+
 export type TerminalTabCommand =
   | { readonly action: "new" }
   | { readonly action: "open-extension"; readonly token: string }
@@ -89,6 +92,10 @@ export type TerminalTabCommand =
   | { readonly action: "toggle-extension-dialog"; readonly token: string }
   | { readonly action: "snippets-management" }
   | { readonly action: "cancel-panel-default" }
+  | {
+      readonly action: "layout-save-result";
+      readonly outcome: LayoutSaveOutcome;
+    }
   | {
       readonly action: "open-ssh";
       readonly token: string;
@@ -242,6 +249,18 @@ export function isTerminalSessionTitle(
 export function isTerminalTabCommand(
   value: unknown,
 ): value is TerminalTabCommand {
+  return isLayoutSaveResult(value) || isTabCommandEnvelope(value);
+}
+
+function isLayoutSaveResult(value: unknown): boolean {
+  return (
+    isStrictRecord(value, ["action", "outcome"]) &&
+    value.action === "layout-save-result" &&
+    ["saved", "failed", "unknown"].includes(value.outcome as string)
+  );
+}
+
+function isTabCommandEnvelope(value: unknown): value is TerminalTabCommand {
   if (isTerminalPaneCommand(value)) return true;
   if (isStrictRecord(value, ["action", "token", "sourceView", "title"]))
     return (
