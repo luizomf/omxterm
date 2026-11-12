@@ -628,10 +628,13 @@ function validateTerminalKeybinds(
       fail(configurationPath, `keybinds.${action}`, INVALID_KEYBIND);
     effective[action] = value;
   }
-  // Duplicates are judged on the effective map: a remap that collides with
-  // another action's remaining default is the same error as two explicit
-  // entries colliding. Diagnostics name actions and the parsed key identity,
-  // never raw accelerator contents. A null entry holds no shortcut.
+  // Duplicates are judged on the effective map. An explicit entry wins over
+  // another action's default: that default is dropped (the action becomes
+  // unbound), so a new default never invalidates an existing file. Two
+  // explicit entries on one key are an error. Diagnostics name actions and the
+  // parsed key identity, never raw accelerator contents. A null entry holds no
+  // shortcut.
+  const explicit = (action: TerminalActionName) => action in keybinds;
   const actionsByAccelerator = new Map<string, TerminalActionName>();
   for (const action of TERMINAL_ACTION_NAMES) {
     const value = effective[action];
@@ -644,13 +647,17 @@ function validateTerminalKeybinds(
       actionsByAccelerator.set(canonical, action);
       continue;
     }
-    // Defaults never collide with each other, so blame a remapped entry.
-    const blamed = action in keybinds ? action : holder;
-    const other = blamed === action ? holder : action;
+    if (explicit(action) !== explicit(holder)) {
+      const yielding = explicit(action) ? holder : action;
+      effective[yielding] = null;
+      actionsByAccelerator.set(canonical, explicit(action) ? action : holder);
+      continue;
+    }
+    // Defaults never collide with each other, so both entries are explicit.
     fail(
       configurationPath,
-      `keybinds.${blamed}`,
-      `conflicts with the "${other}" keybind on ${displayAccelerator(value, platform)}. Choose another shortcut for one of them, or set one of them to null to disable its shortcut`,
+      `keybinds.${action}`,
+      `conflicts with the "${holder}" keybind on ${displayAccelerator(value, platform)}. Choose another shortcut for one of them, or set one of them to null to disable its shortcut`,
     );
   }
   return Object.freeze(effective);
