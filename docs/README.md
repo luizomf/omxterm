@@ -29,9 +29,7 @@ tested.
 | [SSH Connect](ssh-connect.md)        | Open a terminal session on another computer    | Linux on ARM64, Macs with Apple silicon                                  |
 | [Snippets](snippets-availability.md) | Save commands or text and insert them in a tab | Linux, Macs with Apple silicon, Windows on ARM (built in on Windows x64) |
 | [Saved Layout](saved-layout.md)      | Save a window's tabs, splits and folders       | Linux, Macs with Apple silicon, Windows on ARM                           |
-
-[Mirror Typing](mirror-typing.md) is still in development and can't be
-installed yet.
+| [Mirror Typing](mirror-typing.md)    | Type into several panes of a tab at once       | Linux on ARM64, Macs with Apple silicon, Windows on ARM                  |
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 
@@ -48,7 +46,7 @@ Developer and architecture docs for contributors and coding agents:
 - **[First-time reader audit](first-time-reader-audit.md)** — newcomer blockers, documentation dispositions, and platform walkthroughs still needed.
 - **[SSH Connect development notes](ssh-connect-development.md)** — launch handoff to core, build, tests and current limits.
 - **[Saved Layout development notes](saved-layout-development.md)** — capture, opening, storage, build, tests and current limits.
-- **[Mirror Typing development record](mirror-typing-development.md)** — source build, input behavior, capability contract and qualification limits.
+- **[Mirror Typing development notes](mirror-typing-development.md)** — how the setup page and core input route fit together, build, tests and limits.
 - **[Files development notes](files-development-preview.md)** — package, backend, view, build, tests and platform limits.
 - **[Snippets extension](snippets-migration.md)** — which hosts use it, terminal-input rules, build, test and publish.
 - **[Extension composition records](macos-extension-composition.md)** — platform-specific foundation, hosted-view and packaging evidence; see also [Linux x64](linux-x64-extension-composition.md) and [Windows ARM64](windows-arm64-extension-composition.md).

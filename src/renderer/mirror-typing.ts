@@ -104,6 +104,11 @@ function observeMembers(members: readonly Member[], ended: () => void) {
     return () => pane.snippetTargetListeners.delete(ended);
   });
 }
+function onFocus(document: Document, listener: () => void) {
+  const window = document.defaultView!;
+  window.addEventListener("focus", listener, { once: true });
+  return () => window.removeEventListener("focus", listener);
+}
 function publicPanes(members: readonly Member[]): MirrorPane[] {
   return members.map(({ handle, sessionId, title, required }) => ({
     handle,
@@ -265,27 +270,31 @@ export function createMirrorTyping(deps: {
     }
     current.handoff = command.request;
     const snapshot = current.snapshot;
+    const document = deps.parent.ownerDocument;
+    const ready = (waited: boolean) => {
+      if (attempt !== current) return;
+      if (!valid(current) || !selectedMember(current) || !document.hasFocus())
+        return stop("unavailable");
+      if (waited) deps.focus();
+      current.ready = true;
+      status.show(
+        "preparing",
+        current.members.map((item) => item.pane),
+        snapshot.original.pane,
+      );
+      bridge.reply({ request: command.request, ok: true });
+    };
     deps.handoff(
       snapshot.tab,
       snapshot.original.pane,
       () => {
-        if (
-          !valid(current) ||
-          !selectedMember(current) ||
-          !deps.parent.ownerDocument.hasFocus()
-        ) {
-          if (attempt === current) stop("unavailable");
-          return;
-        }
-        current.ready = true;
-        status.show(
-          "preparing",
-          current.members.map((item) => item.pane),
-          snapshot.original.pane,
-        );
-        bridge.reply({ request: command.request, ok: true });
+        // Hiding the setup view can return focus here a moment later (Linux
+        // X11). Wait for it; the prepare timer and blur still bound the wait.
+        if (document.hasFocus() || !valid(current) || !selectedMember(current))
+          ready(false);
+        else unsubscribers.push(onFocus(document, () => ready(true)));
       },
-      () => valid(current) && deps.parent.ownerDocument.hasFocus(),
+      () => valid(current) && document.hasFocus(),
     );
   };
   const onCommand = (command: MirrorCommand) => {

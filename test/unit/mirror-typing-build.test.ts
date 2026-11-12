@@ -9,7 +9,7 @@ import {
   parseManifest,
 } from "../../src/installed-packages/archive";
 
-it("declares only the memory-only mirror capability and ships the AshyTerm license", async () => {
+it("declares the mirror and docs-link capabilities and ships the AshyTerm license", async () => {
   const manifest = parseManifest(
     JSON.parse(
       await readFile("extensions/mirror-typing/extension.json", "utf8"),
@@ -18,8 +18,8 @@ it("declares only the memory-only mirror capability and ships the AshyTerm licen
   expect(manifest).toMatchObject({
     id: "omxterm.mirror-typing",
     name: "Mirror Typing",
-    version: "0.1.0",
-    capabilities: ["terminal.mirrorTyping.v1"],
+    version: "0.2.0",
+    capabilities: ["terminal.mirrorTyping.v1", "links.open.v1"],
     view: { context: "window", action: "omxterm.mirror-typing.open" },
   });
   expect(
@@ -48,7 +48,7 @@ it.skipIf(process.env.OMXTERM_MIRROR_TYPING_BUILD !== "1")(
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: "0.24.0-dev.2",
+        appVersion: "0.27.0",
         apiVersion: "0.1.0",
       });
       expect(validated.manifest).toEqual(receipt.manifest);

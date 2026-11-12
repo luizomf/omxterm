@@ -16,32 +16,33 @@ body {
   background: var(--ui-surface);
 }
 .application-page-content > * {
-  max-width: 720px;
+  max-width: 560px;
 }
-.application-page-content > p:first-child {
-  margin-top: 0;
+.application-page-content > .ui-hint {
+  margin: 0 0 var(--ui-space-6);
 }
 fieldset {
-  margin: 24px 0;
+  min-width: 0;
+  margin: 0 0 var(--ui-space-4);
   padding: 0;
   border: 0;
-  min-width: 0;
+}
+fieldset[hidden] {
+  display: none;
 }
 legend {
+  margin-bottom: var(--ui-space-2);
   padding: 0;
-  margin-bottom: 12px;
-  font-weight: 600;
 }
-.mirror-targets label {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 12px;
-  overflow-wrap: anywhere;
+.mirror-targets .ui-row {
+  cursor: default;
 }
-.mirror-targets input {
+.mirror-pane {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mirror-current {
   flex: none;
-}
-.mirror-help {
-  margin-top: 24px;
 }

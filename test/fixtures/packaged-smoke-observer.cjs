@@ -46,6 +46,20 @@ const extensionView = () =>
         !view.isDestroyed() && view.getURL().startsWith("omx-extension://"),
     );
 
+const extensionViews = () =>
+  webContents
+    .getAllWebContents()
+    .filter(
+      (view) =>
+        !view.isDestroyed() && view.getURL().startsWith("omx-extension://"),
+    );
+// A view that is being replaced may never answer; don't wait on it.
+const evaluate = (view, code) =>
+  Promise.race([
+    view.executeJavaScript(code).catch(() => undefined),
+    new Promise((resolve) => setTimeout(resolve, 2000)),
+  ]);
+
 const shellQuote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
 const psQuote = (text) => "'" + text.replaceAll("'", "''") + "'";
 
@@ -73,6 +87,8 @@ const commands =
         cd: (folder) => `cd ${shellQuote(folder)}`,
         pwd: (file) => `printf %s "$PWD" > ${shellQuote(file)}`,
       };
+// Mirror Typing commands follow the same shells as `commands` above.
+const onWindows = process.platform === "win32";
 
 // Waits for a working shell, then installs `archive` through Settings.
 async function install(archive, id, marker) {
@@ -389,6 +405,345 @@ async function layoutOpen({ marker }) {
   };
 }
 
+// Two panes, one Start, then typing, Stop, paste, a native file drop and
+// (with a Snippets archive) a snippet Insert.
+async function mirror({ archive, snippetsArchive, marker, dropped }) {
+  // Appends this shell's process id to `file`.
+  const line = (file) =>
+    onWindows
+      ? `Add-Content -LiteralPath ${psQuote(file)} $PID`
+      : `echo $$ >> ${shellQuote(file)}`;
+  const { core, type, read, consents } = await install(
+    archive,
+    "omxterm.mirror-typing",
+    marker,
+  );
+  const js = (code) => core.executeJavaScript(code);
+  const lines = async (file) =>
+    ((await read(file)) ?? "").split(/\r?\n/).filter(Boolean);
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 1500));
+  // Real key events into whichever pane has focus, like a person typing.
+  const keys = async (text, enter = true) => {
+    for (const keyCode of text) {
+      core.sendInputEvent({ type: "keyDown", keyCode });
+      core.sendInputEvent({ type: "char", keyCode });
+      core.sendInputEvent({ type: "keyUp", keyCode });
+    }
+    if (enter) {
+      core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+      core.sendInputEvent({ type: "char", keyCode: "\r" });
+      core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    }
+  };
+  const status = () =>
+    js(
+      "(() => { const row = document.querySelector('.mirror-typing-status'); return row && !row.hidden ? row.querySelector('[role=status]').textContent : ''; })()",
+    );
+  if (snippetsArchive) {
+    menu("Settings");
+    await until(
+      () => js("!!document.querySelector('#settings-tab-extensions')"),
+      "Settings",
+    );
+    dialog.showOpenDialog = async () => ({
+      canceled: false,
+      filePaths: [snippetsArchive],
+    });
+    await js("document.querySelector('#settings-tab-extensions').click()");
+    await until(() => click(core, "Install local .omxext…"), "install button");
+    await until(
+      () =>
+        js(
+          "document.querySelector('.extensions-panel')?.textContent.includes('omxterm.snippets · generation 1')",
+        ),
+      "Snippets installed",
+    );
+    await js("document.querySelector('.settings-close')?.click()");
+    await until(
+      () => js("!document.querySelector('.settings-dialog')"),
+      "Settings closed",
+    );
+  }
+
+  // The action is findable from the Command Palette.
+  menu("Command Palette");
+  await until(
+    () => js("!!document.querySelector('.command-palette [role=combobox]')"),
+    "Command Palette",
+  );
+  await js(
+    "document.querySelector('.command-palette [role=combobox]').focus()",
+  );
+  await core.insertText("mirror");
+  await settle();
+  const palette = await js(
+    "[...document.querySelectorAll('.command-palette [role=option]')].map(o => o.textContent)",
+  );
+  core.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
+  core.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
+  await until(
+    () => js("!document.querySelector('.command-palette')"),
+    "palette closed",
+  );
+
+  menu("Split Right");
+  await until(
+    () =>
+      js("document.querySelectorAll('.terminal-surface canvas').length === 2"),
+    "two panes",
+  );
+  core.focus();
+  const ready = marker + ".split";
+  await settle();
+  await keys(line(ready));
+  await until(async () => (await lines(ready)).length === 1, "split shell");
+
+  const result = { consents, palette, steps: {} };
+  const start = async (opener = "menu") => {
+    if (opener === "palette") {
+      menu("Command Palette");
+      await until(
+        () =>
+          js("!!document.querySelector('.command-palette [role=combobox]')"),
+        "Command Palette",
+      );
+      await js(
+        "document.querySelector('.command-palette [role=combobox]').focus()",
+      );
+      await core.insertText("mirror");
+      await settle();
+      core.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+      core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    } else menu("Mirror Typing");
+    // A new action may replace the previous setup view; wait for a live one
+    // whose Start has focus.
+    let view;
+    await until(async () => {
+      for (const candidate of extensionViews())
+        if (
+          await evaluate(
+            candidate,
+            "document.activeElement?.dataset.action === 'start' && !document.activeElement.disabled",
+          )
+        ) {
+          view = candidate;
+          return true;
+        }
+      return false;
+    }, "Start focused").catch(async (error) => {
+      const views = await Promise.all(
+        extensionViews().map(async (candidate) => ({
+          loading: candidate.isLoading(),
+          crashed: candidate.isCrashed(),
+          state: await evaluate(
+            candidate,
+            "[document.visibilityState, document.querySelector('[role=status]')?.textContent, document.activeElement?.outerHTML].join(' | ')",
+          ),
+        })),
+      );
+      throw new Error(`${error.message}: ${JSON.stringify(views)}`);
+    });
+    const panes = await view.executeJavaScript(
+      "[...document.querySelectorAll('.mirror-targets label')].map(l => l.textContent)",
+    );
+    view.focus();
+    if (opener === "palette") {
+      // A release or a held repeat that didn't start on Start must not start.
+      view.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+      view.sendInputEvent({
+        type: "keyDown",
+        keyCode: "Enter",
+        modifiers: ["isAutoRepeat"],
+      });
+      view.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+      await settle();
+      result.strayKeysStarted = (await status()).startsWith("Mirroring typing");
+    }
+    // Enter on the focused Start, as a person would.
+    view.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+    view.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    await until(
+      async () => (await status()).startsWith("Mirroring typing"),
+      "mirroring active",
+    ).catch(async (error) => {
+      const notice = await view
+        .executeJavaScript(
+          "[document.querySelector('[role=status]')?.textContent, document.activeElement?.outerHTML].join(' | ')",
+        )
+        .catch(() => "view gone");
+      throw new Error(`${error.message}: ${await status()} | ${notice}`);
+    });
+    core.focus();
+    await settle();
+    return panes;
+  };
+
+  const focusedPoint = () =>
+    js(
+      "(() => { const pane = document.querySelector('.terminal-surface.pane-focused') ?? document.querySelector('.terminal-surface'); const r = pane.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; })()",
+    );
+  // After a stop, Enter in the other pane runs whatever reached it.
+  const enterInOtherPane = async () => {
+    menu("Focus Next Pane");
+    await settle();
+    await keys("", true);
+    await settle();
+    menu("Focus Next Pane");
+    await settle();
+  };
+  // 1. Typing reaches both shells. This start comes from the palette.
+  const typed = marker + ".typed";
+  result.panes = await start("palette");
+  result.active = await status();
+  await keys(line(typed));
+  await until(async () => (await lines(typed)).length >= 2, "mirrored typing");
+  await settle();
+  result.steps.typing = await lines(typed);
+
+  // 2. Stop: the next command runs in one shell only.
+  await js("document.querySelector('.mirror-typing-status button').click()");
+  result.steps.stopStatus = await status();
+  core.focus();
+  const stopped = marker + ".stopped";
+  await keys(line(stopped));
+  await until(async () => (await lines(stopped)).length >= 1, "after Stop");
+  await settle();
+  result.steps.stopped = await lines(stopped);
+
+  // 3. Every paste route stops mirroring first and goes to the focused pane
+  // only: the menu, the platform shortcut and, on Linux, a middle click.
+  const shortcut =
+    process.platform === "darwin" ? ["meta"] : ["control", "shift"];
+  const routes = {
+    menu: () => menu("Paste"),
+    shortcut: () => {
+      core.sendInputEvent({
+        type: "keyDown",
+        keyCode: "V",
+        modifiers: shortcut,
+      });
+      core.sendInputEvent({ type: "keyUp", keyCode: "V", modifiers: shortcut });
+    },
+    // Linux pastes the primary selection on a middle click.
+    ...(process.platform === "linux"
+      ? {
+          middleClick: async () => {
+            const { x, y } = await focusedPoint();
+            for (const type of ["mouseDown", "mouseUp"])
+              core.sendInputEvent({
+                type,
+                x,
+                y,
+                button: "middle",
+                clickCount: 1,
+              });
+          },
+        }
+      : {}),
+  };
+  result.paste = {};
+  for (const [route, paste] of Object.entries(routes)) {
+    await start();
+    const pasted = `${marker}.pasted-${route}`;
+    const { clipboard } = require("electron");
+    clipboard.writeText(line(pasted));
+    if (process.platform === "linux")
+      clipboard.writeText(line(pasted), "selection");
+    await paste();
+    await until(
+      async () => !(await status()).startsWith("Mirroring typing"),
+      `${route} paste stop`,
+    );
+    const pasteStatus = await status();
+    await keys("", true);
+    await until(
+      async () => (await lines(pasted)).length >= 1,
+      `${route} pasted command`,
+    );
+    await settle();
+    await enterInOtherPane();
+    result.paste[route] = { status: pasteStatus, lines: await lines(pasted) };
+  }
+
+  // 4. A native file drop stops mirroring first; only the focused pane gets
+  // the path. The command before it is typed while mirroring, into both.
+  await start();
+  const drop = marker + ".dropped";
+  await keys(
+    onWindows
+      ? `Add-Content -LiteralPath ${psQuote(drop)} -Value `
+      : `echo >> ${shellQuote(drop)} `,
+    false,
+  );
+  await settle();
+  const point = await focusedPoint();
+  core.debugger.attach("1.3");
+  try {
+    const data = { items: [], files: [dropped], dragOperationsMask: 1 };
+    for (const type of ["dragEnter", "dragOver", "drop"])
+      await core.debugger.sendCommand("Input.dispatchDragEvent", {
+        type,
+        ...point,
+        data,
+      });
+  } finally {
+    core.debugger.detach();
+  }
+  await until(
+    async () => !(await status()).startsWith("Mirroring typing"),
+    "drop stop",
+  );
+  result.steps.dropStatus = await status();
+  core.focus();
+  await keys("", true);
+  await until(async () => (await lines(drop)).length >= 1, "dropped path");
+  await settle();
+  await enterInOtherPane();
+  result.steps.dropped = await lines(drop);
+  // On sh the other pane's "echo >> file" adds an empty line: proof that
+  // enterInOtherPane reached it.
+  result.otherPaneReached = (await read(drop)).endsWith("\n\n");
+
+  // 5. A snippet Insert stops mirroring first.
+  if (snippetsArchive) {
+    await start();
+    menu("Toggle Snippets");
+    const row = `[...document.querySelectorAll('.snippet-activate')].find(row => row.querySelector('.snippet-name')?.textContent === 'Mirror smoke')`;
+    let view;
+    await until(async () => {
+      for (const candidate of webContents.getAllWebContents()) {
+        if (
+          candidate.isDestroyed() ||
+          !candidate.getURL().startsWith("omx-extension://")
+        )
+          continue;
+        if (await candidate.executeJavaScript(`!!${row}`).catch(() => false)) {
+          view = candidate;
+          return true;
+        }
+      }
+      return false;
+    }, "snippet row");
+    await view.executeJavaScript(`${row}.click()`);
+    await until(
+      async () => !(await status()).startsWith("Mirroring typing"),
+      "snippet stop",
+    );
+    result.steps.snippetStatus = await status();
+    core.focus();
+    await keys("", true);
+    const snippet = marker + ".snippet";
+    await until(
+      async () => (await lines(snippet)).length >= 1,
+      "snippet command",
+    );
+    await settle();
+    await enterInOtherPane();
+    result.steps.snippet = await lines(snippet);
+  }
+  return result;
+}
+
 function quit() {
   setImmediate(() => app.quit());
   return true;
@@ -402,6 +757,7 @@ module.exports = {
   snippets,
   layoutSave,
   layoutOpen,
+  mirror,
   quit,
   windows,
 };

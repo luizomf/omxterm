@@ -1,17 +1,59 @@
-# Mirror Typing availability
+# Mirror Typing
 
-Mirror Typing exists as preview code for **Linux computers with 64-bit ARM
-processors (ARM64)** in the OMXTerm repository.
-It is not included with the app and has no published download or official
-catalog offer, so there is no end-user installation path. Its latest preview
-targets OMXTerm 0.24.x hosts only (its manifest admits `>=0.24.0-dev.2 <0.25.0`),
-so it does not install on current releases.
+Mirror Typing sends what you type to several panes of one tab at once, like
+tmux's `synchronize-panes`. Use it to run the same commands on a few servers,
+or in a few folders, side by side. It's an optional add-on (an extension).
 
-The preview can copy typing from one terminal pane to selected panes in the same
-tab. Because input is sent to several running programs, it requires matching
-terminal modes and may have effects that cannot be undone. This is not a feature
-in the current release.
+## Availability
 
-The [development record](mirror-typing-development.md) has source-build
-instructions, compatibility limits and qualification evidence. It is intended
-for contributors, not as an installation guide.
+The official extension catalog offers Mirror Typing 0.2.0 for OMXTerm 0.27.0
+or later on **Macs with Apple silicon**, **Linux on ARM64** and **Windows on
+ARM**. Other platforms aren't tested yet. See the
+[developer notes](mirror-typing-development.md) for how it works.
+
+## Install
+
+1. Open **Settings → Extensions** and choose **Browse official extensions**.
+2. Find **Mirror Typing**, choose **Install** and review the trust warning.
+   Extensions run with your account's permissions; the warning is not a sandbox.
+
+## Use it
+
+1. Split a tab into two or more panes and click the pane you want to type in.
+2. Open **Mirror Typing** from the **File** menu, the terminal's right-click
+   menu or the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Linux
+   and Windows; type `mirror`).
+3. Every pane is checked, and **Start mirroring** has focus: press **Enter** to
+   mirror them all. To leave some out, uncheck them first, then choose **Start
+   mirroring**.
+
+OMXTerm returns to your tab. A bar above the panes reads **Mirroring typing ·
+N panes** and has a **Stop** button, and each mirrored pane is marked. Type in
+any of them and the others follow.
+
+## Stop
+
+Choose **Stop** in that bar. Mirroring also stops on its own when you:
+
+- paste, insert a snippet or drop a file: the text goes only to the pane you're
+  in;
+- click a pane that isn't mirrored, switch tabs, or open Settings or Mirror
+  Typing again;
+- close a mirrored pane or minimize the window.
+
+Stopping doesn't close shells or undo what was already typed. To mirror again,
+open Mirror Typing and start a new group. New panes never join on their own.
+
+## Good to know
+
+- Only typing is copied: keys, Enter, Ctrl+C and the like. Paste, snippets,
+  drops and mouse clicks always go to one pane.
+- Each key is sent exactly as the pane you type in encodes it. Mirror panes that
+  run the same kind of program (shells with shells, the same editor with the
+  same editor), or the panes may read the keys differently.
+- A key such as `Ctrl+V` inside a terminal program is still typing: each program
+  handles it on its own, for example by reading its own clipboard.
+- Nothing is saved. Mirroring ends when OMXTerm quits and never starts on its
+  own.
+- If a pane can't receive input, mirroring stops and the bar says some panes may
+  have missed it. Check them before typing again.

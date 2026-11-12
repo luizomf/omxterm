@@ -2,11 +2,17 @@ import {
   createApplicationPage,
   createPageButton,
   setPageNotice,
-  type NoticeSeverity,
 } from "../../src/renderer/application-page.js";
+import type { SupportedLanguage } from "../../src/shared/i18n.js";
+import {
+  mountHostedAppearance,
+  type AppearanceBridge,
+} from "../shared/appearance.js";
+import { mirrorMessages, type MirrorNotice } from "./messages.js";
 
 const operation = "terminal.mirrorTyping.v1";
-export interface MirrorTypingBridge {
+export interface MirrorTypingBridge extends AppearanceBridge {
+  onLanguage(listener: (language: SupportedLanguage) => void): () => void;
   request(value: unknown): Promise<unknown>;
   onVisibility(listener: (visible: boolean) => void): () => void;
 }
@@ -47,50 +53,60 @@ function isSetup(value: unknown): value is Setup {
   );
 }
 
+// Setup only: core owns the input route, the visible Stop and every stop
+// condition. This page picks panes and asks for one deliberate Start.
 export function mountMirrorTypingPage(
   document: Document,
   bridge: MirrorTypingBridge,
 ) {
+  const unsubscribeAppearance = mountHostedAppearance(document, bridge);
   const window = document.defaultView!;
   const lifetime = new window.AbortController();
   const events = { signal: lifetime.signal };
   const title = document.createElement("h2");
-  title.textContent = "Mirror Typing";
+  const hint = document.createElement("p");
+  hint.className = "ui-hint";
+  const hintText = document.createTextNode("");
+  const learnMore = document.createElement("button");
+  learnMore.type = "button";
+  learnMore.className = "ui-link";
+  learnMore.hidden = true;
+  learnMore.addEventListener(
+    "click",
+    () => {
+      void bridge
+        .request({ operation: "links.open.v1", link: "docs" })
+        .catch(() => {});
+    },
+    events,
+  );
+  hint.append(hintText, " ", learnMore);
   const notice = document.createElement("div");
+  notice.hidden = true;
   notice.setAttribute("role", "status");
   notice.setAttribute("aria-live", "polite");
-  const content = document.createElement("section");
-  const introduction = document.createElement("p");
-  introduction.textContent =
-    "Choose at least two live panes from the original tab. The originally focused pane must stay selected. New panes do not join automatically.";
-  const warning = document.createElement("p");
-  setPageNotice(warning, {
-    text: "Typing is copied exactly. Use matching terminal programs/modes. Paste, snippets and drops stop mirroring and go only to their original pane. Input already sent cannot be undone.",
-    severity: "warning",
-  });
   const targets = document.createElement("fieldset");
   const legend = document.createElement("legend");
-  legend.textContent = "Panes to mirror";
+  legend.className = "ui-meta";
   const list = document.createElement("div");
   list.className = "mirror-targets ui-list";
   targets.append(legend, list);
+  targets.hidden = true;
   const actions = document.createElement("div");
   actions.className = "mirror-actions ui-actions";
   const start = createPageButton(document, "primary");
-  start.textContent = "Start mirroring";
   start.dataset.action = "start";
   const refresh = createPageButton(document);
-  refresh.textContent = "Refresh targets";
   refresh.dataset.action = "refresh";
   actions.append(start, refresh);
-  const help = document.createElement("p");
-  help.className = "mirror-help ui-hint";
-  help.textContent =
-    "Linux ARM64 preview · Nothing is saved. Start returns to the original pane. Use the visible Stop in the terminal to end mirroring without closing programs. Keys follow the source pane's terminal mode; different programs may interpret the same bytes differently.";
-  content.append(introduction, warning, targets, actions, help);
+  const content = document.createElement("section");
+  content.append(hint, targets, actions);
   const page = createApplicationPage(document, { title, notice, content });
   document.body.append(page);
 
+  let language: SupportedLanguage = "en-US";
+  let noticeState:
+    { key: MirrorNotice; severity: "warning" | "error" } | undefined;
   let setup: Setup | undefined;
   let inputs: HTMLInputElement[] = [];
   let pending = false;
@@ -104,14 +120,44 @@ export function mountMirrorTypingPage(
   let suppressClick = false;
   let clickTimer: number | undefined;
   let holdTimer: number | undefined;
-  const message = (text: string, severity: NoticeSeverity = "info") =>
-    setPageNotice(notice, { text, severity });
+  function relabel() {
+    const m = mirrorMessages(language);
+    document.documentElement.lang = language;
+    title.textContent = m.title;
+    hintText.data = m.hint;
+    learnMore.textContent = m.learnMore;
+    legend.textContent = m.panes;
+    start.textContent = m.start;
+    refresh.textContent = m.refresh;
+    setPageNotice(
+      notice,
+      noticeState
+        ? { text: m[noticeState.key], severity: noticeState.severity }
+        : { text: "", severity: "info" },
+    );
+    setup?.panes.forEach((pane, index) => {
+      const label = inputs[index]?.parentElement;
+      label
+        ?.querySelector(".mirror-pane")
+        ?.replaceChildren(m.pane(pane.ordinal, pane.title));
+      label?.querySelector(".mirror-current")?.replaceChildren(m.current);
+    });
+  }
+  const message = (
+    key: MirrorNotice | undefined,
+    severity: "warning" | "error" = "error",
+  ) => {
+    noticeState = key && { key, severity };
+    relabel();
+  };
   const selected = () =>
     inputs.filter((input) => input.checked).map((input) => input.value);
   const controls = () => {
     start.disabled =
       pending || !visible || !available || !setup || selected().length < 2;
     refresh.disabled = pending || !visible || !available;
+    // Refresh is only the way back to a fresh setup.
+    refresh.hidden = pending || !available || !!setup;
     inputs.forEach((input, index) => {
       input.disabled =
         pending || !visible || !setup || !!setup.panes[index]?.required;
@@ -145,43 +191,45 @@ export function mountMirrorTypingPage(
     const intent = generation;
     pending = true;
     controls();
-    message("Reading panes from the original tab…");
     try {
       const reply = await bridge.request({ operation, action: "describe" });
       if (disposed || !visible || intent !== generation) return;
       if (!isSetup(reply)) {
         list.replaceChildren();
         inputs = [];
-        message(
-          "Targets unavailable. Focus a live pane in a tab with at least two live panes, then open Mirror Typing again, or Refresh targets.",
-          "error",
-        );
+        targets.hidden = true;
+        message("noPanes");
         return;
       }
       setup = reply;
       inputs = reply.panes.map((pane) => {
         const label = document.createElement("label");
-        label.className = "ui-card";
+        label.className = "ui-row";
         const input = document.createElement("input");
         input.type = "checkbox";
         input.className = "page-control";
         input.value = pane.handle;
         input.checked = true;
         const text = document.createElement("span");
-        text.textContent = `Pane ${pane.ordinal} · ${pane.title}${pane.required ? " · Original focus (required)" : ""}`;
+        text.className = "mirror-pane";
         label.append(input, text);
+        if (pane.required) {
+          const current = document.createElement("span");
+          current.className = "mirror-current ui-meta";
+          label.append(current);
+        }
         return input;
       });
       list.replaceChildren(...inputs.map((input) => input.parentElement!));
-      message("Choose your targets, then Start mirroring.");
+      targets.hidden = false;
+      message(undefined);
     } catch {
-      if (!disposed && intent === generation)
-        message(
-          "Targets unavailable. Choose Refresh targets to try again.",
-          "error",
-        );
+      if (!disposed && intent === generation) message("noPanes");
     } finally {
       settle();
+      // Enter starts right away; the key that opened this page never reaches
+      // Start (see the keydown handler below).
+      if (!disposed && intent === generation && !start.disabled) start.focus();
     }
   }
   async function begin() {
@@ -197,7 +245,6 @@ export function mountMirrorTypingPage(
     const intent = generation;
     pending = true;
     controls();
-    message("Starting mirroring…");
     try {
       const reply = await bridge.request(request);
       if (disposed || intent !== generation) return;
@@ -208,18 +255,10 @@ export function mountMirrorTypingPage(
         reply.ok === true &&
         "status" in reply &&
         reply.status === "active";
-      message(
-        active
-          ? "Mirroring started. Use the terminal's visible Stop. Refresh targets before starting again."
-          : "Start unavailable. Check the terminal's status, then Refresh targets before another Start.",
-        active ? "success" : "error",
-      );
+      // Core has already returned to the terminal; a fresh visit refreshes.
+      if (!active) message("refused");
     } catch {
-      if (!disposed && intent === generation)
-        message(
-          "Start result unavailable. Check the terminal's status and visible Stop; Refresh targets before another Start.",
-          "warning",
-        );
+      if (!disposed && intent === generation) message("unknown", "warning");
     } finally {
       settle();
     }
@@ -242,7 +281,9 @@ export function mountMirrorTypingPage(
     },
     events,
   );
-  // Consume both button activation keys before native hiding can transfer focus.
+  // Start fires on key release, and only for a press that began on Start:
+  // a press from the palette or a held repeat can't start mirroring, and the
+  // release can't leak into a pane after core hides this page.
   start.addEventListener(
     "keydown",
     (event) => {
@@ -280,7 +321,11 @@ export function mountMirrorTypingPage(
     },
     events,
   );
-  const unsubscribe = bridge.onVisibility((next) => {
+  const unsubscribeLanguage = bridge.onLanguage((next) => {
+    language = next;
+    relabel();
+  });
+  const unsubscribeVisibility = bridge.onVisibility((next) => {
     if (disposed || visible === next) return;
     visible = next;
     invalidate();
@@ -289,28 +334,29 @@ export function mountMirrorTypingPage(
       else void describe();
     }
   });
+  relabel();
   controls();
   const ready = (async () => {
+    let capabilities: unknown[] = [];
     try {
       const reply = await bridge.request({ operation: "host.capabilities" });
-      available =
-        !!reply &&
+      if (
+        reply &&
         typeof reply === "object" &&
         "capabilities" in reply &&
-        Array.isArray(reply.capabilities) &&
-        reply.capabilities.includes(operation);
+        Array.isArray(reply.capabilities)
+      )
+        capabilities = reply.capabilities;
     } catch {
-      available = false;
+      // Treated as unavailable below.
     }
     if (disposed) return;
+    available = capabilities.includes(operation);
+    learnMore.hidden = !capabilities.includes("links.open.v1");
     initialized = true;
     controls();
     if (available) await describe();
-    else
-      message(
-        "Mirror Typing requires a compatible Linux ARM64 preview host.",
-        "error",
-      );
+    else message("unavailable");
   })();
   return {
     ready,
@@ -318,7 +364,9 @@ export function mountMirrorTypingPage(
       if (disposed) return;
       disposed = true;
       invalidate();
-      unsubscribe();
+      unsubscribeLanguage();
+      unsubscribeVisibility();
+      unsubscribeAppearance();
       lifetime.abort();
       page.remove();
     },

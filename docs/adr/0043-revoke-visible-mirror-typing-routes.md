@@ -2,7 +2,7 @@
 
 ## Decision
 
-The optional, separately installed Linux ARM64 [Mirror Typing preview](../mirror-typing-development.md)
+The optional, separately installed [Mirror Typing extension](../mirror-typing-development.md)
 owns setup and deliberate Start; core owns a revocable, visible input route.
 This is a narrow exception to single-pane keyboard delivery, not an extension
 PTY API, command runner or semantic keyboard translator. The implementation
@@ -41,7 +41,9 @@ Core shows an in-flow status and keyboard-reachable Stop independent of hidden
 title/tab chrome or extension responsiveness, plus distinct source/member marks.
 Preparing is input-inert and cancellable before the first asynchronous package
 admission. Only then may the acknowledged native hide handoff begin; Start
-revalidates original focus/context before arming. Leave-and-return navigation
+revalidates original focus/context before arming. Keyboard focus can return to
+the core document shortly after the hide, so Start waits for it, bounded by the
+prepare timer, and a blur in between still cancels. Leave-and-return navigation
 invalidates the attempt rather than merely checking its final selected page. Start/Stop
 activation keys, repeats and releases must not leak to terminals. Escape remains
 terminal input, not a new global Stop shortcut.

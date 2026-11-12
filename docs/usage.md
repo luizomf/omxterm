@@ -18,7 +18,7 @@ The **Close Pane** context-menu action is available in split tabs. Closing a pan
 
 ### Source previews
 
-The optional [Saved Layout](saved-layout.md) add-on saves a window's tabs, splits and folders and opens them again with fresh shells. Mirror Typing is a source-only preview with no published archive or catalog offer; see its [availability note](mirror-typing.md).
+The optional [Saved Layout](saved-layout.md) add-on saves a window's tabs, splits and folders and opens them again with fresh shells. The optional [Mirror Typing](mirror-typing.md) add-on types into several panes of a tab at once.
 
 ## Window controls
 

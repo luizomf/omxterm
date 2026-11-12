@@ -1,11 +1,14 @@
 {
   "format": 1,
   "id": "omxterm.mirror-typing",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": "Mirror Typing",
-  "engines": { "omxterm": ">=0.24.0-dev.2 <0.25.0", "api": "^0.1.0" },
+  "engines": { "omxterm": ">=0.27.0", "api": "0.1.x" },
   "backend": "backend.mjs",
-  "capabilities": ["terminal.mirrorTyping.v1"],
+  "capabilities": ["terminal.mirrorTyping.v1", "links.open.v1"],
+  "links": {
+    "docs": "https://github.com/luizomf/omxterm/blob/main/docs/mirror-typing.md"
+  },
   "view": {
     "entry": "index.html",
     "action": "omxterm.mirror-typing.open",

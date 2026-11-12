@@ -367,7 +367,10 @@ Snippets, it is the
 installs the archive, then inserts and runs a snippet in the terminal. For Saved
 Layout, it is the
 [packaged Saved Layout smoke](saved-layout-development.md#packaged-saved-layout-smoke):
-it saves a window, restarts the app and opens the layout again.
+it saves a window, restarts the app and opens the layout again. For
+Mirror Typing, it is the
+[packaged Mirror Typing smoke](mirror-typing-development.md#packaged-mirror-typing-smoke):
+it mirrors a command into two shells and checks Stop, paste, drop and snippets.
 
 ### Publishing an extension archive
 
