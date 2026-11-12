@@ -79,12 +79,12 @@ const extensionEntries = [
 ];
 
 function packagedExtensionEntries(platform, arch) {
-  if (
-    (platform === "linux" && arch === "x64") ||
-    (platform === "win32" && ["arm64", "x64"].includes(arch))
-  )
-    return extensionEntries;
-  if (arch !== "arm64" || !["linux", "darwin"].includes(platform)) return [];
+  if (!(
+    (["linux", "win32"].includes(platform) &&
+      ["arm64", "x64"].includes(arch)) ||
+    (platform === "darwin" && arch === "arm64")
+  ))
+    return [];
   return [...extensionEntries, "/dist/extension-runtime/files-move.node"];
 }
 
@@ -173,7 +173,7 @@ export function inspectAsarEntries(
       privateLooking.has(entry) ||
       (platform !== "darwin" &&
         [macBlurEntry, macOptionEntry].includes(entry)) ||
-      ((!["linux", "darwin"].includes(platform) || arch !== "arm64") &&
+      (packagedExtensionEntries(platform, arch).length === 0 &&
         entry === "/dist/extension-runtime/files-move.node") ||
       entry.includes("/node_modules/@xterm/") ||
       (platform === "linux" &&

@@ -14,6 +14,9 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif
+#ifdef _WIN32
+#include "files-windows.h"
+#endif
 
 namespace {
 std::atomic<unsigned> pending{0};
@@ -43,15 +46,36 @@ bool Path(napi_env env, napi_value value, std::string& result) {
   if (napi_get_value_string_utf8(env, value, result.data(), result.size(), &length) != napi_ok)
     return false;
   result.resize(length);
-  return result.find('\0') == std::string::npos && result[0] == '/';
+  if (result.find('\0') != std::string::npos) return false;
+#ifdef _WIN32
+  // Drive-absolute only: no UNC, device or drive-relative spellings.
+  const char drive = result[0];
+  return result.size() >= 3 &&
+         ((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) &&
+         result[1] == ':' && (result[2] == '\\' || result[2] == '/');
+#else
+  return result[0] == '/';
+#endif
 }
+#ifdef _WIN32
+constexpr const char* separators = "\\/";
+constexpr size_t rootLength = 3;
+#else
+constexpr const char* separators = "/";
+constexpr size_t rootLength = 1;
+#endif
 bool TrashPath(const std::string& value) {
   // A trailing separator or dot component can turn a final symlink into its
   // referent. Refuse these spellings, including root, rather than resolve them.
-  if (value.back() == '/') return false;
-  size_t start = 1;
+  if (std::string(separators).find(value.back()) != std::string::npos)
+    return false;
+#ifdef _WIN32
+  // A colon past the drive names an alternate data stream, not an entry.
+  if (value.find(':', 2) != std::string::npos) return false;
+#endif
+  size_t start = rootLength;
   while (start < value.size()) {
-    size_t end = value.find('/', start);
+    size_t end = value.find_first_of(separators, start);
     if (end == std::string::npos) end = value.size();
     const auto component = value.substr(start, end - start);
     if (component.empty() || component == "." || component == "..") return false;
@@ -64,6 +88,8 @@ void Execute(napi_env, void* data) {
   if (move->operation == Operation::Trash) {
 #ifdef __APPLE__
     move->error = TrashMacOS(move->source, move->trashed);
+#elif defined(_WIN32)
+    move->error = TrashWindows(move->source);
 #else
     move->error = ENOSYS;
 #endif
@@ -78,6 +104,8 @@ void Execute(napi_env, void* data) {
   // RENAME_EXCL excludes existing entries atomically; never retry or fall back.
   if (renameatx_np(AT_FDCWD, move->source.c_str(), AT_FDCWD,
                   move->destination.c_str(), RENAME_EXCL) < 0) move->error = errno;
+#elif defined(_WIN32)
+  move->error = MoveWindows(move->source, move->destination);
 #else
   move->error = ENOSYS;
 #endif
@@ -150,7 +178,7 @@ napi_value Queue(napi_env env, napi_callback_info info, Operation operation) {
 napi_value MoveNoReplace(napi_env env, napi_callback_info info) {
   return Queue(env, info, Operation::Move);
 }
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
 napi_value Trash(napi_env env, napi_callback_info info) {
   return Queue(env, info, Operation::Trash);
 }
@@ -159,7 +187,7 @@ napi_value Init(napi_env env, napi_value exports) {
   napi_value function;
   Check(napi_create_function(env, "moveNoReplace", NAPI_AUTO_LENGTH, MoveNoReplace, nullptr, &function));
   Check(napi_set_named_property(env, exports, "moveNoReplace", function));
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
   Check(napi_create_function(env, "trash", NAPI_AUTO_LENGTH, Trash, nullptr, &function));
   Check(napi_set_named_property(env, exports, "trash", function));
 #endif

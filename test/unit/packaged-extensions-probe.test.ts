@@ -31,8 +31,7 @@ export const InstalledPackages = { async open(options) {
 `,
     );
     await writeFile(path.join(runtime, "bootstrap.mjs"), "process.exit(78);\n");
-    if (arch === "arm64" && platform !== "win32")
-      await writeFile(path.join(runtime, "files-move.node"), "fake");
+    await writeFile(path.join(runtime, "files-move.node"), "fake");
     const probe = await readFile(
       "scripts/packaged-extensions-probe.mjs",
       "utf8",
@@ -69,47 +68,32 @@ fakeRequire(import.meta.url).extensions['.node'] = (module) => {
   }
 }
 
-it("runs the packaged lease/store/bootstrap probe on Windows ARM64 without a POSIX UID", async () => {
-  const result = await runProbe("win32", "arm64");
+const linux = [
+  "packaged-store-and-lease",
+  "native-move-and-conflict",
+  "bootstrap-missing-IPC-refusal",
+];
+const withTrash = [
+  "packaged-store-and-lease",
+  "native-trash-export-and-root-refusal",
+  "native-move-and-conflict",
+  "bootstrap-missing-IPC-refusal",
+];
+
+it.each([
+  ["linux", "x64", linux],
+  ["linux", "arm64", linux],
+  ["darwin", "arm64", withTrash],
+  // Windows has no POSIX UID; the probe must not require one.
+  ["win32", "arm64", withTrash],
+  ["win32", "x64", withTrash],
+])("runs packaged %s %s checks", async (platform, arch, checks) => {
+  const result = await runProbe(platform, arch);
   expect(result.error).toBeUndefined();
   expect(result.status, result.stderr).toBe(0);
   expect(JSON.parse(result.stdout)).toMatchObject({
-    target: "win32-arm64",
-    hostVersion: "1.2.3",
-    checks: ["packaged-store-and-lease", "bootstrap-missing-IPC-refusal"],
-  });
-});
-
-it.each([
-  [
-    "linux",
-    "x64",
-    ["packaged-store-and-lease", "bootstrap-missing-IPC-refusal"],
-  ],
-  [
-    "linux",
-    "arm64",
-    [
-      "packaged-store-and-lease",
-      "native-move-and-conflict",
-      "bootstrap-missing-IPC-refusal",
-    ],
-  ],
-  [
-    "darwin",
-    "arm64",
-    [
-      "packaged-store-and-lease",
-      "native-trash-export-and-root-refusal",
-      "native-move-and-conflict",
-      "bootstrap-missing-IPC-refusal",
-    ],
-  ],
-])("retains packaged %s %s checks", async (platform, arch, checks) => {
-  const result = await runProbe(platform, arch);
-  expect(result.status, result.stderr).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({
     target: `${platform}-${arch}`,
+    hostVersion: "1.2.3",
     checks,
   });
 });
@@ -119,15 +103,4 @@ it("still refuses a root POSIX packaged-extension probe", async () => {
   expect(result.status).not.toBe(0);
   expect(result.stderr).toContain("AssertionError");
   expect(result.stdout).toBe("");
-});
-
-it("runs the packaged lease/store/bootstrap probe on Windows x64 without a POSIX UID", async () => {
-  const result = await runProbe("win32", "x64");
-  expect(result.error).toBeUndefined();
-  expect(result.status, result.stderr).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({
-    target: "win32-x64",
-    hostVersion: "1.2.3",
-    checks: ["packaged-store-and-lease", "bootstrap-missing-IPC-refusal"],
-  });
 });

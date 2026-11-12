@@ -33,6 +33,9 @@ vi.mock("../../scripts/build-macos-window-blur.mjs", () => ({
 vi.mock("../../scripts/build-macos-option-shortcut.mjs", () => ({
   buildMacOSOptionShortcut: calls.optionShortcut,
 }));
+vi.mock("../../scripts/windows-msvc-environment.mjs", () => ({
+  resolveMsvcEnvironment: () => ({ MSVC: "1" }),
+}));
 
 const filesTrashNative = /[/\\]native[/\\]files-trash-macos\.mm$/u;
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
@@ -40,6 +43,7 @@ const arch = Object.getOwnPropertyDescriptor(process, "arch")!;
 afterEach(() => {
   Object.defineProperty(process, "platform", platform);
   Object.defineProperty(process, "arch", arch);
+  vi.unstubAllEnvs();
   vi.clearAllMocks();
   vi.resetModules();
 });
@@ -47,22 +51,42 @@ afterEach(() => {
 it.each([
   ["darwin", "arm64", true, true],
   ["linux", "arm64", true, true],
-  ["linux", "x64", true, false],
-  ["win32", "arm64", true, false],
-  ["win32", "x64", true, false],
+  ["linux", "x64", true, true],
+  ["win32", "arm64", true, true],
+  ["win32", "x64", true, true],
   ["darwin", "x64", false, false],
 ])(
   "ordinary %s %s build selects runtime=%s Files move=%s",
   async (os, cpu, runtime, move) => {
     Object.defineProperty(process, "platform", { value: os });
     Object.defineProperty(process, "arch", { value: cpu });
+    vi.stubEnv("OMXTERM_NODE_IMPORT_LIBRARY", "/toolchain/node.lib");
     // Import the real orchestration and Files builder with all effectful seams mocked.
     const entry = "../../build.mjs";
     await import(entry);
     expect(calls.optionShortcut).toHaveBeenCalledOnce();
     expect(calls.leases).toHaveBeenCalledTimes(runtime ? 1 : 0);
     expect(calls.native).toHaveBeenCalledTimes(move ? 1 : 0);
-    if (move) {
+    if (move && os === "win32") {
+      const [command, args, options] = calls.native.mock.calls[0]!;
+      expect(command).toBe("cl.exe");
+      expect(args).toEqual(
+        expect.arrayContaining([
+          "/DNAPI_VERSION=8",
+          "/DNODE_GYP_MODULE_NAME=files_move",
+          "/WX",
+          `/MACHINE:${cpu === "arm64" ? "ARM64" : "X64"}`,
+          "/DELAYLOAD:node.exe",
+          "ole32.lib",
+          "shell32.lib",
+          "/toolchain/node.lib",
+        ]),
+      );
+      expect(args).toContainEqual(
+        expect.stringMatching(/[/\\]native[/\\]files-windows\.cc$/u),
+      );
+      expect(options).toMatchObject({ env: { MSVC: "1" } });
+    } else if (move) {
       const [command, args, options] = calls.native.mock.calls[0]!;
       expect(command).toBe(
         os === "darwin" ? "/usr/bin/xcrun" : process.env.CXX || "c++",
@@ -128,13 +152,14 @@ it.each([
   );
 });
 
-it.each(["mac", "linux"] as const)(
+it.each(["mac", "linux", "win"] as const)(
   "unpacks the %s lease and Files move addons explicitly with smart unpacking disabled",
   (platform) => {
     const config = parse(readFileSync("electron-builder.yml", "utf8")) as {
       asar: { smartUnpack: boolean };
       mac: { asarUnpack: string[] };
       linux: { asarUnpack: string[] };
+      win: { asarUnpack: string[] };
     };
     expect(config.asar.smartUnpack).toBe(false);
     expect(config[platform].asarUnpack).toContain(

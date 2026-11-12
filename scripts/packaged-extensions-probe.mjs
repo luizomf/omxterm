@@ -35,12 +35,12 @@ const packages = await InstalledPackages.open({
 assert.deepEqual(await packages.snapshot(), []);
 const checks = ["packaged-store-and-lease"];
 // Native loading/conflict evidence only, not a complete Files qualification.
-// Linux x64 packages contain the runtime prerequisite, not the Files primitive.
-if (process.arch === "arm64" && process.platform !== "win32") {
+{
   const move = require("./files-move.node");
-  if (process.platform === "darwin") {
+  if (process.platform !== "linux") {
     assert.equal(typeof move.trash, "function");
-    assert.throws(() => move.trash("/"), { code: "EINVAL" });
+    const root = process.platform === "win32" ? "C:\\" : "/";
+    assert.throws(() => move.trash(root), { code: "EINVAL" });
     checks.push("native-trash-export-and-root-refusal");
   }
   const source = path.join(scratch, "source");

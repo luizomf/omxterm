@@ -179,6 +179,7 @@ win:
     - "!node_modules/node-pty/lib/**/*.test.js"
   asarUnpack:
     - dist/extension-runtime/extension-leases.node
+    - dist/extension-runtime/files-move.node
     - node_modules/node-pty/prebuilds/win32-${arch}/**
   target:
     - target: nsis

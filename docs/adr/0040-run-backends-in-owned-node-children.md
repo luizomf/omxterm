@@ -28,8 +28,10 @@ The [runtime contract](../dev/extension-backend-runtime.md) governs actual calle
 
 ### Current application consumer
 
-Linux ARM64/x64, macOS ARM64 and Windows ARM64 source application startup
-construct the runtime without activating installed code. The bounded
+Application startup on every supported target (Linux ARM64/x64, macOS ARM64,
+Windows ARM64/x64) constructs the runtime without activating installed code.
+Windows x64 joined in #964 with build-only CI evidence
+([ADR 0036](0036-distribute-build-only-x64-ci-artifacts.md)). The bounded
 [Windows ARM64 source-composition checkpoint](../dev/windows-arm64-extension-composition.md#installed-package-production-fixture)
 passed separately from packaging. [macOS composition](../dev/macos-extension-composition.md)
 and [Linux x64 composition](../dev/linux-x64-extension-composition.md) retain separate

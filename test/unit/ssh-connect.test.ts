@@ -179,23 +179,30 @@ it("resolves only executable regular files under absolute application PATH entri
   await writeFile(path.join(home, "client"), "not executed", { mode: 0o700 });
   await symlink("client", path.join(home, "ssh"));
   expect(
-    await findSsh({ PATH: ["", ".", "relative", home].join(path.delimiter) }),
+    await findSsh(
+      { PATH: ["", ".", "relative", home].join(path.delimiter) },
+      "linux",
+    ),
   ).toBe(path.join(home, "ssh"));
   expect(
-    await findSsh({ PATH: ["", ".", "relative"].join(path.delimiter) }),
+    await findSsh(
+      { PATH: ["", ".", "relative"].join(path.delimiter) },
+      "linux",
+    ),
   ).toBeUndefined();
 });
 
-it("does not infer an ssh executable from PATHEXT or an ssh directory", async () => {
+it("looks for ssh.exe only on Windows and never for an ssh directory", async () => {
   const home = await fixture();
   await writeFile(path.join(home, "ssh.exe"), "not executed", { mode: 0o700 });
   const environment = { PATH: home, PATHEXT: ".EXE;.CMD" };
-  expect(await findSsh(environment)).toBeUndefined();
+  expect(await findSsh(environment, "linux")).toBeUndefined();
+  expect(await findSsh(environment, "win32")).toBe(path.join(home, "ssh.exe"));
   await mkdir(path.join(home, "ssh"));
-  expect(await findSsh(environment)).toBeUndefined();
+  expect(await findSsh(environment, "linux")).toBeUndefined();
   await rm(path.join(home, "ssh"), { recursive: true });
   await writeFile(path.join(home, "ssh"), "not executed", { mode: 0o700 });
-  expect(await findSsh(environment)).toBe(path.join(home, "ssh"));
+  expect(await findSsh(environment, "linux")).toBe(path.join(home, "ssh"));
 });
 
 it("transfers to the original core owner once, independently of later extension revocation", async () => {

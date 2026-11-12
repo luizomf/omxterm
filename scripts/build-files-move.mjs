@@ -2,18 +2,71 @@ import { execFileSync } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { resolveMsvcEnvironment } from "./windows-msvc-environment.mjs";
 
+const native = (file) => path.resolve(import.meta.dirname, "../native", file);
+
+// Native no-replace moves on every supported target. macOS and Windows also
+// supply their system trash; Linux keeps the extension's literal gio call.
 export async function buildFilesMove(outputDirectory) {
-  // These ARM64 hosts provide native no-replace moves; macOS also supplies
-  // Foundation trash. This does not qualify the full Files preview.
-  if (
-    (process.platform !== "linux" && process.platform !== "darwin") ||
-    process.arch !== "arm64"
-  )
+  const { platform, arch } = process;
+  if (!(
+    (platform === "linux" && ["arm64", "x64"].includes(arch)) ||
+    (platform === "darwin" && arch === "arm64") ||
+    (platform === "win32" && ["arm64", "x64"].includes(arch))
+  ))
     return;
-  const mac = process.platform === "darwin";
   const { include_dir } = createRequire(import.meta.url)("node-api-headers");
-  await mkdir(outputDirectory, { recursive: true });
+  const output = path.resolve(outputDirectory);
+  await mkdir(output, { recursive: true });
+  const addon = path.join(output, "files-move.node");
+  const defines = ["NAPI_VERSION=8", "NODE_GYP_MODULE_NAME=files_move"];
+  if (platform === "win32") {
+    // Same MSVC route and delay-loaded node.exe binding as extension leases.
+    const library = process.env.OMXTERM_NODE_IMPORT_LIBRARY;
+    if (!library || !path.isAbsolute(library))
+      throw new Error(
+        "OMXTERM_NODE_IMPORT_LIBRARY must name an absolute runtime import library",
+      );
+    execFileSync(
+      "cl.exe",
+      [
+        "/nologo",
+        "/std:c++17",
+        "/EHsc",
+        "/MD",
+        "/LD",
+        "/W4",
+        "/WX",
+        "/DUNICODE",
+        "/D_UNICODE",
+        ...defines.map((define) => `/D${define}`),
+        `/I${include_dir}`,
+        native("files-move.cc"),
+        native("files-windows.cc"),
+        native("extension-leases-delay-load.cc"),
+        `/Fo${output}${path.sep}`,
+        "/link",
+        "/WX",
+        `/MACHINE:${arch === "arm64" ? "ARM64" : "X64"}`,
+        "/DELAYLOAD:node.exe",
+        "delayimp.lib",
+        "ole32.lib",
+        "shell32.lib",
+        library,
+        `/OUT:${addon}`,
+        `/IMPLIB:${path.join(output, "files-move.lib")}`,
+      ],
+      {
+        stdio: "pipe",
+        timeout: 60_000,
+        env: resolveMsvcEnvironment(),
+        cwd: output,
+      },
+    );
+    return;
+  }
+  const mac = platform === "darwin";
   execFileSync(
     mac ? "/usr/bin/xcrun" : process.env.CXX || "c++",
     [
@@ -23,22 +76,17 @@ export async function buildFilesMove(outputDirectory) {
       "-Wall",
       "-Wextra",
       "-Werror",
-      "-DNAPI_VERSION=8",
-      "-DNODE_GYP_MODULE_NAME=files_move",
+      ...defines.map((define) => `-D${define}`),
       `-I${include_dir}`,
       ...(mac
         ? ["-bundle", "-undefined", "dynamic_lookup"]
         : ["-shared", "-fPIC"]),
-      path.resolve(import.meta.dirname, "../native/files-move.cc"),
+      native("files-move.cc"),
       ...(mac
-        ? [
-            path.resolve(import.meta.dirname, "../native/files-trash-macos.mm"),
-            "-framework",
-            "Foundation",
-          ]
+        ? [native("files-trash-macos.mm"), "-framework", "Foundation"]
         : []),
       "-o",
-      path.join(outputDirectory, "files-move.node"),
+      addon,
     ],
     { stdio: "pipe", timeout: 60_000 },
   );

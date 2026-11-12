@@ -12,10 +12,13 @@ export interface SshLaunch {
 }
 export async function findSsh(
   environment: NodeJS.ProcessEnv,
+  platform: NodeJS.Platform = process.platform,
 ): Promise<string | undefined> {
+  // Windows ships OpenSSH as ssh.exe; a literal PATHEXT search is not needed.
+  const name = platform === "win32" ? "ssh.exe" : "ssh";
   for (const directory of (environment.PATH ?? "").split(path.delimiter)) {
     if (!path.isAbsolute(directory)) continue;
-    const candidate = path.join(directory, "ssh");
+    const candidate = path.join(directory, name);
     try {
       if (!(await stat(candidate)).isFile()) continue;
       await access(candidate, constants.X_OK);

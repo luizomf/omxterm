@@ -114,6 +114,7 @@ async function inspectWindowsDirectory(dotAncestor: boolean) {
     "dist/extension-runtime/index.mjs",
     "dist/extension-runtime/packages.mjs",
     "dist/extension-runtime/extension-leases.node",
+    "dist/extension-runtime/files-move.node",
   ]) {
     const bytes = file.endsWith(".node") ? pe : file;
     await put(path.join(project, file), bytes);

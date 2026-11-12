@@ -17,7 +17,7 @@ function adapter() {
 }
 
 describe("exact Windows installer verification", () => {
-  it("unpacks the Windows extension lease addon alongside the PTY runtime", async () => {
+  it("unpacks the Windows extension lease and Files move addons alongside the PTY runtime", async () => {
     const configuration = parse(
       await readFile(
         new URL("../../electron-builder.yml", import.meta.url),
@@ -30,7 +30,7 @@ describe("exact Windows installer verification", () => {
     expect(configuration.win.asarUnpack).toContain(
       "node_modules/node-pty/prebuilds/win32-${arch}/**",
     );
-    expect(configuration.win.asarUnpack).not.toContain(
+    expect(configuration.win.asarUnpack).toContain(
       "dist/extension-runtime/files-move.node",
     );
   });
@@ -116,7 +116,7 @@ describe("exact Windows installer verification", () => {
       ],
       [
         configuration.replace(
-          "  asarUnpack:\n    - dist/extension-runtime/extension-leases.node\n    - node_modules/node-pty/prebuilds/win32-${arch}/**",
+          "  asarUnpack:\n    - dist/extension-runtime/extension-leases.node\n    - dist/extension-runtime/files-move.node\n    - node_modules/node-pty/prebuilds/win32-${arch}/**",
           "  asarUnpack:\n    - node_modules/node-pty/prebuilds/win32-${arch}/**",
         ),
         "26.15.3",

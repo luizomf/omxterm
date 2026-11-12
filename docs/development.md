@@ -61,7 +61,7 @@ Remove the directory when you're done. Don't remount `/tmp` or change system pol
 3. Install the Microsoft Visual C++ Redistributable that matches your machine (**ARM64** or **x64**). Without it, `npm ci` fails while loading native modules.
 4. Run desktop development and graphical tests as a normal (non-Administrator) user in an interactive desktop session, not a headless SSH session.
 
-`npm run build` (and so `npm run dev` and `check:portable`) compiles the extension lease addon on both ARM64 and x64. That needs:
+`npm run build` (and so `npm run dev` and `check:portable`) compiles the extension lease and Files addons on both ARM64 and x64. That needs:
 
 - Visual Studio C++ Build Tools with the native compiler, linker and Windows SDK libraries for your architecture. The build scripts find it themselves with `vswhere` and load `vcvarsall` for the host architecture when `cl.exe` isn't on `PATH`, so a plain PowerShell works. If no Build Tools are installed, they fail with a message naming what to install. A native-tools developer shell is optional; if you prefer one, start it through `cmd.exe` (`call vcvarsall.bat arm64` or `x64`, then launch `powershell.exe`; running the batch file directly from PowerShell doesn't update its environment) and check that `$env:VSCMD_ARG_TGT_ARCH` matches.
 - A trusted `node.lib` import library for your architecture from a compatible Node release, exporting the Node-API 8 symbols. The build doesn't download one. Set its **absolute** path in your shell:
@@ -71,7 +71,7 @@ $env:OMXTERM_NODE_IMPORT_LIBRARY = 'C:\tools\node-arm64\node.lib'
 npm.cmd run build
 ```
 
-The path above is a placeholder. The addon delay-loads `node.exe` against the running Node/Electron executable, so the `.lib`, `.exp` and `.obj` files are build intermediates and are not packaged. The hosted x64 CI lane pins Node 24.22.2 and its official import library.
+The path above is a placeholder. The addons delay-load `node.exe` against the running Node/Electron executable, so the `.lib`, `.exp` and `.obj` files are build intermediates and are not packaged. The hosted x64 CI lane pins Node 24.22.2 and its official import library.
 
 To check that your account can create symlinks before running `npm ci`, run in a non-elevated PowerShell window:
 
@@ -460,13 +460,12 @@ standalone `package:*` and `package-built:*` commands.
   installer.
 
 In every mode, package verification also checks the bundled extension runtime:
-exact bundled bytes, native architecture, that its lease addon (and on ARM64
-macOS/Linux the Files move addon) is unpacked from `app.asar`, and a packaged
-store/lease/bootstrap probe. Results go to `.scratch/extensions-package.json`.
+exact bundled bytes, native architecture, that its lease and Files addons are
+unpacked from `app.asar`, and a packaged store/lease/bootstrap and Files move
+probe. Results go to `.scratch/extensions-package.json`.
 On macOS native bytes change with code signing, so the verifier records final
 hashes and checks the full signature seal; JavaScript must match exactly.
-Windows x64 packages carry the runtime too, but the app enables extensions only
-on macOS ARM64, Linux ARM64/x64 and Windows ARM64.
+Every target enables extensions; Windows x64 still keeps built-in Snippets.
 
 On supported targets, packaging also bundles the default Snippets extension; see
 [Default Snippets](dev/default-snippets.md) for `prepare:default-snippets`.

@@ -151,7 +151,7 @@ jobs:
           "OMXTERM_VCVARS=$vcvars" >> $env:GITHUB_ENV
           Write-Output "Verified Node v24.22.2 x64 import library SHA256: $expected"
 
-      - name: Run native x64 lease, store and backend tests (no windows)
+      - name: Run native x64 lease, store, backend and Files tests (no windows)
         id: extension-native
         shell: cmd
         run: |
@@ -159,7 +159,7 @@ jobs:
           if errorlevel 1 exit /b 1
           node -e "if(process.platform!=='win32'||process.arch!=='x64'||process.version!=='v24.22.2')process.exit(1)"
           if errorlevel 1 exit /b 1
-          call npm.cmd test -- test/integration/installed-packages.test.ts test/integration/extension-runtime.test.ts --reporter=json --outputFile=.scratch/825-native-results.json
+          call npm.cmd test -- test/integration/installed-packages.test.ts test/integration/extension-runtime.test.ts test/integration/files-native.test.ts --reporter=json --outputFile=.scratch/825-native-results.json
           if errorlevel 1 exit /b 1
           node -e "const r=require('./.scratch/825-native-results.json'); const a=r.testResults.flatMap(x=>x.assertionResults); for(const n of ['executes native lifetime regressions through the actual adapter in a fresh owned process','runs the actual Node-IPC runtime and rejects browser-mode bootstrap before import']) { const m=a.filter(x=>x.fullName.includes(n)); if(m.length!==1||m[0].status!=='passed') process.exit(1); console.log('PASS native scenario: '+n); } console.log('Native tests passed: '+r.numPassedTests+'; skipped: '+r.numPendingTests);"
           if errorlevel 1 exit /b 1

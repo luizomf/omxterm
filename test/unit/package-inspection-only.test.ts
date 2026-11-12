@@ -36,9 +36,10 @@ function extractFixtureMember(
 }
 
 function fixtureNativeMetadata(member: string, unpacked: boolean) {
-  expect(member).toBe(
+  expect([
     path.win32.normalize("dist/extension-runtime/extension-leases.node"),
-  );
+    path.win32.normalize("dist/extension-runtime/files-move.node"),
+  ]).toContain(member);
   return { unpacked };
 }
 
@@ -100,6 +101,7 @@ async function createInspectionArchives(
           "dist/extension-runtime/index.mjs",
           "dist/extension-runtime/packages.mjs",
           "dist/extension-runtime/extension-leases.node",
+          "dist/extension-runtime/files-move.node",
         ]
       : [];
   const pe = Buffer.alloc(128);
