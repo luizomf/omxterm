@@ -111,7 +111,6 @@ describe("official catalog", () => {
       await catalog.refresh(new AbortController().signal);
       const card = catalog.snapshot([]).entries[0]!;
       expect(card).toMatchObject({
-        targets: ["linux-arm64"],
         incompatibility,
         compatible,
       });
@@ -134,6 +133,33 @@ describe("official catalog", () => {
     for (const version of [release.version, "0.2.0"])
       expect(catalogAction(release, { version, digest: "x" })).toBe("replace");
   });
+  it.each([
+    [undefined, "install"],
+    [{ version: "0.0.9", digest: "x" }, "update"],
+    [{ version: release.version, digest: release.archive.sha256 }, null],
+    [{ version: release.version, digest: "x" }, null],
+    [{ version: "0.2.0", digest: "x" }, null],
+    [{ version: "0.0.9", digest: null }, "install"],
+  ] as const)(
+    "offers only a first install or a real update (%o)",
+    async (installed, action) => {
+      const catalog = createExtensionCatalog(runtime, "linux-arm64");
+      vi.mocked(downloadExtension).mockResolvedValue(bytes());
+      await catalog.refresh(new AbortController().signal);
+      const card = catalog.snapshot(
+        installed
+          ? [
+              {
+                id: release.id,
+                manifest: { version: installed.version },
+                digest: installed.digest,
+              },
+            ]
+          : [],
+      ).entries[0]!;
+      expect(card.action).toBe(action);
+    },
+  );
   it.each([
     ["linux-arm64", OFFICIAL_CATALOG_URL],
     ["linux-x64", OFFICIAL_CATALOG_URL],

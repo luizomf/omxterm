@@ -9,50 +9,133 @@ import type {
   ExtensionsResult,
 } from "../../src/shared/extensions";
 afterEach(() => document.body.replaceChildren());
+const en = translatorFor("en-US").t;
+const pt = translatorFor("pt-BR").t;
+const files = {
+  id: "omxterm.files",
+  generation: 4,
+  name: "Files",
+  version: "0.1.0",
+  installed: true,
+  enabled: true,
+  local: "unknown",
+};
 const snapshot: ExtensionsResult = {
   ok: true,
-  pendingCleanup: true,
   entries: [
+    files,
     {
-      id: "omxterm.files",
-      generation: 4,
-      name: "Files",
-      version: "0.1.0",
-      installed: true,
-      enabled: true,
+      id: "omxterm.restoration",
+      generation: 2,
+      name: "omxterm.restoration",
+      version: null,
+      installed: false,
+      enabled: false,
       local: "unknown",
     },
   ],
 };
-function click(text: string) {
-  [...document.querySelectorAll("button")]
-    .find((button) => button.textContent === text)!
-    .click();
-}
-it("explains empty and whitespace-only URLs before preload without claiming an unknown mutation", async () => {
-  const invoked = vi.fn().mockResolvedValue(snapshot);
-  const request = async (
-    value: ExtensionsRequest,
-  ): Promise<ExtensionsResult> => {
-    if (!isExtensionsRequest(value))
-      throw new TypeError("Invalid extension request");
-    return invoked(value) as Promise<ExtensionsResult>;
-  };
-  document.body.append(renderExtensions(document, { request }, () => true));
-  await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("generation 4"),
+const action = (name: string) =>
+  document.querySelector<HTMLButtonElement>(`[data-action="${name}"]`)!;
+const row = (id: string) =>
+  document.querySelector<HTMLElement>(
+    `.extension-installed-list [data-extension-id="${id}"]`,
   );
-  for (const value of ["", "   "]) {
-    document.querySelector("input")!.value = value;
-    click("Install from link");
-    expect(document.body.textContent).toContain("Use an HTTPS link");
-    expect(document.body.textContent).not.toContain(
-      "Operation outcome unknown",
-    );
-  }
-  expect(invoked).toHaveBeenCalledTimes(1);
+const notice = () =>
+  document.querySelector<HTMLElement>(".extensions-status [role=status]")!;
+function mount(
+  request: (value: ExtensionsRequest) => Promise<ExtensionsResult>,
+  labels: ((t: Translate) => void)[] = [],
+  disposers: (() => void)[] = [],
+) {
+  document.body.append(
+    renderExtensions(
+      document,
+      {
+        request: async (value) => {
+          if (!isExtensionsRequest(value))
+            throw new TypeError("Invalid extension request");
+          return request(value);
+        },
+      },
+      () => true,
+      labels,
+      disposers,
+    ),
+  );
+}
+it("lists installed extensions as quiet rows and leaves uninstalled ones out", async () => {
+  mount(vi.fn().mockResolvedValue(snapshot));
+  await vi.waitFor(() => expect(row("omxterm.files")).not.toBeNull());
+  const files = row("omxterm.files")!;
+  expect(files.classList.contains("ui-row")).toBe(true);
+  expect(files.textContent).toContain("Files");
+  expect(files.textContent).toContain("0.1.0");
+  expect(files.querySelector("[title]")?.getAttribute("title")).toBe(
+    "omxterm.files",
+  );
+  expect(row("omxterm.restoration")).toBeNull();
+  expect(document.body.textContent).not.toContain("omxterm.restoration");
+  // An enabled extension carries no state word.
+  expect(files.textContent).not.toContain(en("extensions.off"));
+  for (const button of files.querySelectorAll("button"))
+    expect(button.classList.contains("page-button-primary")).toBe(false);
+  // Success is quiet.
+  expect(notice().hidden).toBe(true);
+  expect(action("refresh").hidden).toBe(true);
 });
-it("retains a pending HTTPS request across language changes and cancels its exact identity on dismissal", async () => {
+it("marks a disabled extension Off and sends the displayed generation", async () => {
+  const request = vi
+    .fn<(value: ExtensionsRequest) => Promise<ExtensionsResult>>()
+    .mockResolvedValueOnce({
+      ok: true,
+      entries: [{ ...files, enabled: false }],
+    })
+    .mockResolvedValue(snapshot);
+  mount(request);
+  await vi.waitFor(() =>
+    expect(row("omxterm.files")?.textContent).toContain(en("extensions.off")),
+  );
+  action("enable").click();
+  await vi.waitFor(() =>
+    expect(request).toHaveBeenLastCalledWith({
+      operation: "enable",
+      id: "omxterm.files",
+      generation: 4,
+    }),
+  );
+  await vi.waitFor(() => expect(action("disable")).not.toBeNull());
+  expect(row("omxterm.files")!.textContent).not.toContain(en("extensions.off"));
+});
+it("shows the empty state when nothing is installed", async () => {
+  mount(
+    vi.fn().mockResolvedValue({ ok: true, entries: [snapshot.entries![1]!] }),
+  );
+  await vi.waitFor(() =>
+    expect(document.body.textContent).toContain(en("extensions.empty")),
+  );
+  expect(
+    document.querySelectorAll(".extension-installed-list > *"),
+  ).toHaveLength(0);
+});
+it("explains empty and whitespace-only links without sending them", async () => {
+  const request = vi.fn().mockResolvedValue(snapshot);
+  mount(request);
+  await vi.waitFor(() => expect(row("omxterm.files")).not.toBeNull());
+  const input = document.querySelector<HTMLInputElement>("input[type=url]")!;
+  expect(input.closest<HTMLElement>(".extensions-link")!.hidden).toBe(true);
+  action("install-link").click();
+  expect(input.closest<HTMLElement>(".extensions-link")!.hidden).toBe(false);
+  expect(action("install-link").getAttribute("aria-expanded")).toBe("true");
+  for (const value of ["", "   "]) {
+    input.value = value;
+    action("install-link-submit").click();
+    expect(notice().textContent).toBe(en("extensions.invalid-url"));
+    expect(notice().dataset.severity).toBe("warning");
+  }
+  expect(request).toHaveBeenCalledTimes(1);
+});
+it("keeps a pending download across language changes and cancels its exact identity on dismissal", async () => {
   let finish!: (result: ExtensionsResult) => void;
   const request = vi
     .fn<(value: ExtensionsRequest) => Promise<ExtensionsResult>>()
@@ -65,27 +148,26 @@ it("retains a pending HTTPS request across language changes and cancels its exac
     });
   const labels: ((t: Translate) => void)[] = [];
   const disposers: (() => void)[] = [];
-  document.body.append(
-    renderExtensions(document, { request }, () => true, labels, disposers),
-  );
-  await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("generation 4"),
-  );
-  const input = document.querySelector("input")!;
+  mount(request, labels, disposers);
+  await vi.waitFor(() => expect(row("omxterm.files")).not.toBeNull());
+  action("install-link").click();
+  const input = document.querySelector<HTMLInputElement>("input[type=url]")!;
   expect(input.classList.contains("page-control")).toBe(true);
-  expect(input.closest("label")?.textContent).toContain("HTTPS archive link");
   input.value = "https://example.org/archive?signature=abc";
-  click("Install from link");
+  action("install-link-submit").click();
   const submitted = request.mock.calls[1]![0];
   expect(submitted).toMatchObject({
     operation: "install-link",
     url: input.value,
   });
   expect(input.disabled).toBe(true);
-  expect(document.body.textContent).toContain("Downloading and checking");
-  labels.forEach((label) => label(translatorFor("pt-BR").t));
+  expect(
+    document.querySelector(".extensions-panel")!.getAttribute("aria-busy"),
+  ).toBe("true");
+  expect(notice().textContent).toBe(en("extensions.downloading"));
+  labels.forEach((label) => label(pt));
   expect(input.value).toBe("https://example.org/archive?signature=abc");
-  expect(document.body.textContent).toContain("Baixando e verificando");
+  expect(notice().textContent).toBe(pt("extensions.downloading"));
   expect(request).toHaveBeenCalledTimes(2);
   disposers.forEach((dispose) => dispose());
   expect(request).toHaveBeenLastCalledWith({
@@ -94,34 +176,14 @@ it("retains a pending HTTPS request across language changes and cancels its exac
   });
   finish({ ok: false, error: "cancelled" });
   await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("Instalação cancelada"),
+    expect(notice().textContent).toBe(pt("extensions.cancelled")),
   );
   expect(input.disabled).toBe(false);
 });
-it("shows separate registry/local/other-instance/cleanup states and captures the displayed generation", async () => {
-  const request = vi
-    .fn<(_request: ExtensionsRequest) => Promise<ExtensionsResult>>()
-    .mockResolvedValue(snapshot);
-  document.body.append(renderExtensions(document, { request }, () => true));
-  await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("Pending Cleanup"),
-  );
-  expect(document.body.textContent).toContain(
-    "generation 4 · enabled · local unknown · other instances unknown",
-  );
-  click("Disable");
-  await vi.waitFor(() =>
-    expect(request).toHaveBeenLastCalledWith({
-      operation: "disable",
-      id: "omxterm.files",
-      generation: 4,
-    }),
-  );
-});
-it("relabels retained pending controls and status without replaying or changing generations", async () => {
+it("relabels a pending row action without replaying it or changing its generation", async () => {
   let finish!: (result: ExtensionsResult) => void;
   const request = vi
-    .fn<(_request: ExtensionsRequest) => Promise<ExtensionsResult>>()
+    .fn<(value: ExtensionsRequest) => Promise<ExtensionsResult>>()
     .mockResolvedValueOnce(snapshot)
     .mockImplementationOnce(
       () =>
@@ -130,30 +192,18 @@ it("relabels retained pending controls and status without replaying or changing 
         }),
     );
   const labels: ((t: Translate) => void)[] = [];
-  document.body.append(
-    renderExtensions(document, { request }, () => true, labels),
-  );
-  await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("generation 4"),
-  );
-  const button = [...document.querySelectorAll("button")].find(
-    (b) => b.textContent === "Disable",
-  )!;
+  mount(request, labels);
+  await vi.waitFor(() => expect(row("omxterm.files")).not.toBeNull());
+  const button = action("disable");
   button.click();
-  labels.forEach((label) => label(translatorFor("pt-BR").t));
+  labels.forEach((label) => label(pt));
   expect(button.isConnected).toBe(true);
   expect(button.disabled).toBe(true);
-  expect(button.textContent).toBe("Desabilitar");
-  expect(document.body.textContent).toContain(
-    "geração 4 · habilitada · local desconhecida",
-  );
-  expect(document.body.textContent).toContain("Limpeza pendente");
+  expect(button.textContent).toBe(pt("extensions.disable"));
   expect(request).toHaveBeenCalledTimes(2);
   finish({ ok: false, error: "outcome-unknown" });
   await vi.waitFor(() =>
-    expect(document.body.textContent).toContain(
-      "Resultado da operação desconhecido",
-    ),
+    expect(notice().textContent).toBe(pt("extensions.outcome-unknown")),
   );
   expect(button.disabled).toBe(false);
   expect(request).toHaveBeenLastCalledWith({
@@ -162,28 +212,53 @@ it("relabels retained pending controls and status without replaying or changing 
     generation: 4,
   });
 });
-it("does not repeat unknown mutation outcomes; Refresh is a separate deliberate snapshot", async () => {
+it("never repeats an unknown outcome; Refresh appears and is a deliberate snapshot", async () => {
   const request = vi
-    .fn<(_request: ExtensionsRequest) => Promise<ExtensionsResult>>()
+    .fn<(value: ExtensionsRequest) => Promise<ExtensionsResult>>()
     .mockResolvedValueOnce(snapshot)
     .mockResolvedValueOnce({ ok: false, error: "outcome-unknown" })
     .mockResolvedValue(snapshot);
-  document.body.append(renderExtensions(document, { request }, () => true));
-  await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("generation 4"),
-  );
-  click("Uninstall");
-  await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("No automatic retry"),
-  );
-  const notice = [
-    ...document.querySelectorAll<HTMLElement>(".page-notice"),
-  ].find((node) => node.textContent?.includes("No automatic retry"));
-  expect(notice?.dataset.severity).toBe("warning");
+  mount(request);
+  await vi.waitFor(() => expect(row("omxterm.files")).not.toBeNull());
+  action("uninstall").click();
+  await vi.waitFor(() => expect(action("refresh").hidden).toBe(false));
+  expect(notice().dataset.severity).toBe("warning");
   expect(request).toHaveBeenCalledTimes(2);
-  click("Refresh");
+  action("refresh").click();
   await vi.waitFor(() =>
     expect(request).toHaveBeenLastCalledWith({ operation: "snapshot" }),
   );
   expect(request).toHaveBeenCalledTimes(3);
+  await vi.waitFor(() => expect(action("refresh").hidden).toBe(true));
+  expect(notice().hidden).toBe(true);
+});
+it("marks an installed row when the loaded catalog has a compatible update", async () => {
+  const card = {
+    selection: "a".repeat(36),
+    id: "omxterm.files",
+    name: "Files",
+    description: "Browse files.",
+    version: "0.2.0",
+    compatible: true,
+    incompatibility: null,
+    action: "update" as const,
+  };
+  const request = vi
+    .fn<(value: ExtensionsRequest) => Promise<ExtensionsResult>>()
+    .mockResolvedValueOnce(snapshot)
+    .mockResolvedValueOnce({
+      ok: true,
+      catalog: { loaded: true, stale: false, entries: [card] },
+    });
+  mount(request);
+  await vi.waitFor(() => expect(row("omxterm.files")).not.toBeNull());
+  expect(row("omxterm.files")!.textContent).not.toContain(
+    en("extensions.updateAvailable"),
+  );
+  action("catalog-browse").click();
+  await vi.waitFor(() =>
+    expect(row("omxterm.files")!.textContent).toContain(
+      en("extensions.updateAvailable"),
+    ),
+  );
 });

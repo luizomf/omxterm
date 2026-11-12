@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -10,6 +11,7 @@ import { createExtensionManager } from "../../src/main/extension-manager";
 import { createExtensionPackageTrust } from "../../src/main/extension-package-trust";
 import { createExtensionLinkInstaller } from "../../src/main/extension-link-install";
 import { installExtensionFromDialog } from "../../src/main/extension-install-dialog";
+import type { CatalogRelease } from "../../src/main/extension-catalog";
 import { translatorFor } from "../../src/shared/i18n";
 import { packageArchive } from "../fixtures/extension-package-archive";
 
@@ -222,3 +224,61 @@ it.each(["local", "link"])(
     expectRestingListeners();
   },
 );
+it("still warns in the trust prompt when a catalog selection would downgrade", async () => {
+  // Settings no longer offers older versions, but a stale or second-window
+  // selection can still request one; the native prompt must say so.
+  adapters.consent.mockResolvedValueOnce({ response: 1 });
+  await installExtensionFromDialog(
+    window,
+    manager,
+    () => false,
+    translator,
+    bytes,
+  );
+  const older = packageArchive([
+    {
+      name: "extension.json",
+      data: JSON.stringify({
+        format: 1,
+        id,
+        name: "Files",
+        version: "0.9.0",
+        engines: { omxterm: ">=0.23.0-0", api: "0.1.x" },
+        backend: "backend.mjs",
+        view: {
+          entry: "index.html",
+          action: "example.files.open",
+          title: "Files",
+        },
+      }),
+    },
+    { name: "backend.mjs", data: "" },
+    { name: "index.html", data: "" },
+  ]);
+  const release = {
+    id,
+    version: "0.9.0",
+    engines: { omxterm: ">=0.23.0-0", api: "0.1.x" },
+    archive: {
+      bytes: older.length,
+      sha256: createHash("sha256").update(older).digest("hex"),
+    },
+  } as CatalogRelease;
+  adapters.consent.mockResolvedValueOnce({ response: 0 });
+  expect(
+    await installExtensionFromDialog(
+      window,
+      manager,
+      () => false,
+      translator,
+      older,
+      release,
+    ),
+  ).toBe(false);
+  expect(
+    (adapters.consent.mock.lastCall![1] as { detail: string }).detail,
+  ).toContain(translator().t("extensions.catalogReplaceWarning"));
+  expect(await manager.snapshot()).toMatchObject([
+    { manifest: { version: "1.0.0" } },
+  ]);
+});

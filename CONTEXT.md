@@ -337,8 +337,8 @@ ordinary extension trust decision. See
 [extension distribution](docs/extension-distribution.md#trust).
 
 **Official Catalog** — The project-controlled HTTPS index of official extension
-releases, loaded when the user chooses Browse or Refresh. Settings shows
-compatible offers, and main verifies the selected archive against its catalog
+releases, loaded when the user chooses Browse or Refresh. Settings offers
+only a first install or a newer version, and main verifies the selected archive against its catalog
 identity before asking for installation approval. Browsing does not install or
 update extensions automatically. See [extension distribution](docs/extension-distribution.md).
 

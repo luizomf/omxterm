@@ -106,8 +106,9 @@ Every category shares a 720 px content boundary; the sidebar is 168 px below
 fields end at the content edge (fields at most 384 px, numbers 112 px); below
 560 px of content width labels sit above fields. Shortcut rows are at least
 48 px with the binding as a `ui-chip` and compact actions; only Custom and
-Unbound are labelled. Settings is comfortable at 640×480; below 480 px
-categories become a two-column grid.
+Unbound are labelled. Extensions lists installed extensions as `ui-row`s with
+compact `-text` actions and official extensions as `ui-card`s. Settings is
+comfortable at 640×480; below 480 px categories become a two-column grid.
 
 **Auxiliary panel.** 13 px text on a 15 % neutral layer, separated from the
 terminal by a hairline. The header holds the tool name, or a single-line

@@ -236,84 +236,64 @@ export const englishMessages = {
   "extensions.snippetsOptional":
     "Snippets is an optional extension; install or enable it below.",
   "extensions.explanation":
-    "Extensions run with your user permissions and aren't sandboxed or signed.",
+    "Extensions can read your files and run programs. Only install ones you trust.",
   "extensions.learnMore": "Learn more",
-  "extensions.install": "Install local .omxext…",
-  "extensions.url": "HTTPS archive link",
-  "extensions.installLink": "Install from link",
-  "extensions.downloading": "Downloading and checking the archive…",
-  "extensions.invalid-url":
-    "Use an HTTPS link without credentials or a fragment",
-  "extensions.download-failed":
-    "Download failed. Check the link, network and certificate; login pages are not supported",
-  "extensions.download-limit":
-    "Download exceeds the 64 MiB archive or five-redirect limit",
-  "extensions.download-timeout": "Download exceeded the 60-second limit",
-  "extensions.cancelled": "Installation cancelled before approval",
-  "extensions.invalid-catalog": "The catalog is invalid or exceeds its limits",
-  "extensions.catalog-mismatch":
-    "Archive bytes or manifest do not match the selected catalog release",
-  "extensions.catalog-selection":
-    "The catalog selection expired; select the release again",
-  "extensions.catalogHeading": "Official extensions",
-  "extensions.catalogTrust":
-    "Official means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.",
-  "extensions.catalogBrowse": "Browse official extensions",
-  "extensions.catalogRefresh": "Refresh catalog",
-  "extensions.catalogRetry": "Retry catalog",
-  "extensions.catalogLoading": "Loading the official catalog…",
-  "extensions.catalogStale":
-    "Catalog refresh unavailable. Showing the last successful snapshot; versions may be outdated.",
-  "extensions.catalogUnavailable":
-    "Catalog unavailable. If extension management is available, you can still install local files and manage installed extensions offline.",
-  "extensions.catalogManagementUnavailable":
-    "Catalog and installation are unavailable because extension management is unavailable.",
-  "extensions.catalogEmpty": "The catalog has no published extensions yet.",
-  "extensions.catalogInstalled": "Installed: {version}",
-  "extensions.catalogNotInstalled": "Not installed",
-  "extensions.catalogPlatforms": "Catalog offer platforms: {platforms}",
-  "extensions.catalogPlatformIncompatible":
-    "Not offered by this catalog for this platform",
-  "extensions.catalogEngineIncompatible":
-    "Not compatible with this OMXTerm or extension API version",
-  "extensions.catalogInstall": "Install",
-  "extensions.catalogUpdate": "Update",
-  "extensions.catalogReinstall": "Reinstall",
-  "extensions.catalogReplace": "Replace installed version",
-  "extensions.catalogReplaceWarning":
-    "This replaces the installed extension with an older version or different bytes of the same version. Review the selected version and digest before approving.",
-  "extensions.refresh": "Refresh",
+  "extensions.installedHeading": "Installed",
+  "extensions.empty": "No extensions installed.",
+  "extensions.off": "Off",
+  "extensions.updateAvailable": "Update available",
   "extensions.enable": "Enable",
   "extensions.disable": "Disable",
   "extensions.uninstall": "Uninstall",
-  "extensions.empty": "No local extensions installed.",
-  "extensions.error":
-    "{reason}. No automatic retry. Refresh to inspect current state.",
-  "extensions.cleanupUnchecked":
-    "Retained-byte cleanup has not been inspected. ",
-  "extensions.cleanupPending":
-    "Pending Cleanup: a package is still pinned or cleanup has not settled. Other app instances: unknown.",
-  "extensions.state":
-    "{id} · generation {generation} · {installed} · local {local} · other instances unknown",
-  "extensions.enabled": "enabled",
-  "extensions.disabled": "disabled",
-  "extensions.uninstalled": "uninstalled",
-  "extensions.dormant": "dormant",
-  "extensions.starting": "starting",
-  "extensions.active": "active",
-  "extensions.stopping": "stopping",
-  "extensions.failed": "failed",
-  "extensions.unknown": "unknown",
-  "extensions.busy": "An operation is already in progress",
-  "extensions.invalid-package": "Invalid extension package",
-  "extensions.incompatible": "Incompatible extension package",
-  "extensions.invalid-store": "Invalid extension store",
-  "extensions.conflict": "The installed generation changed",
-  "extensions.outcome-unknown": "Operation outcome unknown",
+  "extensions.refresh": "Refresh",
+  "extensions.install": "Install from file…",
+  "extensions.installLink": "Install from link…",
+  "extensions.url": "HTTPS link",
+  "extensions.downloading": "Downloading the extension…",
+  "extensions.catalogHeading": "Official extensions",
+  "extensions.catalogTrust":
+    "Official extensions are maintained by the OMXTerm project. They aren't sandboxed.",
+  "extensions.catalogBrowse": "Browse official extensions",
+  "extensions.catalogRefresh": "Refresh",
+  "extensions.catalogRetry": "Try again",
+  "extensions.catalogLoading": "Loading official extensions…",
+  "extensions.catalogStale": "Couldn't refresh. This list may be out of date.",
+  "extensions.catalogUnavailable":
+    "Couldn't load official extensions. Check your connection.",
+  "extensions.catalogManagementUnavailable":
+    "Extensions can't be installed right now.",
+  "extensions.catalogEmpty": "No official extensions yet.",
+  "extensions.catalogInstalled": "Installed",
+  "extensions.catalogPlatformIncompatible": "Not available on this system",
+  "extensions.catalogEngineIncompatible":
+    "Doesn't work with this OMXTerm version",
+  "extensions.catalogInstall": "Install",
+  "extensions.catalogUpdate": "Update",
+  "extensions.catalogReplaceWarning":
+    "This replaces the installed version with an older one or a different build.",
+  "extensions.invalid-url": "Enter an HTTPS link.",
+  "extensions.download-failed":
+    "Couldn't download it. Check the link and your connection.",
+  "extensions.download-limit":
+    "The download is too large or redirects too many times.",
+  "extensions.download-timeout": "The download took too long.",
+  "extensions.cancelled": "Installation cancelled.",
+  "extensions.invalid-catalog": "The catalog couldn't be read.",
+  "extensions.catalog-mismatch":
+    "The download didn't match the catalog, so nothing was installed.",
+  "extensions.catalog-selection": "The catalog changed. Try again.",
+  "extensions.busy": "Wait for the current change to finish.",
+  "extensions.invalid-package": "This isn't a valid extension file.",
+  "extensions.incompatible":
+    "This extension doesn't work with this OMXTerm version.",
+  "extensions.invalid-store": "Installed extensions couldn't be read.",
+  "extensions.conflict":
+    "Extensions changed in the meantime. Refresh and try again.",
+  "extensions.outcome-unknown":
+    "Couldn't confirm the change. Refresh to check.",
   "extensions.runtime-unavailable":
-    "Extension store or runtime unavailable. Terminal sessions remain usable",
-  "extensions.unsupported":
-    "Extension management is unavailable on this platform",
+    "Extensions aren't available right now. Your terminals still work.",
+  "extensions.unsupported": "Extensions aren't supported on this system.",
   "mirrorTyping.title": "Mirror Typing",
   "mirrorTyping.source": "Mirroring typing from this pane.",
   "mirrorTyping.member": "Mirroring typing to this pane.",
@@ -331,8 +311,7 @@ export const englishMessages = {
   "extensions.terminalDirectoryBusy":
     "A terminal directory request is already in progress. Try again",
   "extensions.unavailable": "Extension unavailable",
-  "extensions.unavailableDetail":
-    "Refresh Extensions in Settings to inspect the installed state. No operation was automatically retried.",
+  "extensions.unavailableDetail": "Open Settings → Extensions to check it.",
   "extensions.chooserTitle": "Install local extension",
   "extensions.chooserType": "OMXTerm extension",
   "extensions.trustTitle": "Trust extension code?",

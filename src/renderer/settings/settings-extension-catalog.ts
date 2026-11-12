@@ -1,25 +1,37 @@
 import type {
+  CatalogCard,
   CatalogSnapshot,
   ExtensionsBridge,
   ExtensionsRequest,
 } from "../../shared/extensions";
+import type { MessageKey } from "../../shared/i18n";
 import { createPageButton, setPageNotice } from "../application-page";
 import { englishLanguage, type Translate } from "../renderer-language";
 
-const platformNames: Record<string, string> = {
-  "linux-arm64": "Linux ARM64",
-  "linux-x64": "Linux x64",
-  "darwin-arm64": "macOS ARM64",
-  "win32-arm64": "Windows ARM64",
-  "win32-x64": "Windows x64",
-};
+// A card says one thing: its action, or why there is none.
+function cardState(entry: CatalogCard): MessageKey | undefined {
+  if (entry.incompatibility === "engine")
+    return entry.action === "install"
+      ? "extensions.catalogEngineIncompatible"
+      : "extensions.catalogInstalled";
+  if (entry.incompatibility)
+    return entry.action === "install"
+      ? "extensions.catalogPlatformIncompatible"
+      : "extensions.catalogInstalled";
+  return entry.action ? undefined : "extensions.catalogInstalled";
+}
 
 /** Independent acquisition state leaves local/installed management usable offline. */
 export function renderExtensionCatalog(
   document: Document,
   bridge: ExtensionsBridge,
   live: () => boolean,
-  install: (request: ExtensionsRequest) => void,
+  page: {
+    // Installs run through the page so they share its busy state and notice.
+    install: (request: ExtensionsRequest) => void;
+    // Installed rows read the catalog for "Update available".
+    changed: (snapshot: CatalogSnapshot) => void;
+  },
   labels: ((t: Translate) => void)[],
   disposers: (() => void)[],
 ) {
@@ -31,17 +43,19 @@ export function renderExtensionCatalog(
   let managementBusy = false;
   const section = document.createElement("section");
   section.className = "extension-catalog";
+  const header = document.createElement("div");
+  header.className = "extension-section-header";
   const heading = document.createElement("h3");
-  const actions = document.createElement("div");
-  actions.className = "ui-actions";
   const browse = createPageButton(document);
-  const cancel = createPageButton(document);
+  browse.dataset.action = "catalog-browse";
+  const cancel = createPageButton(document, "text");
+  cancel.classList.add("page-button-compact");
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
   const list = document.createElement("div");
   list.className = "extension-catalog-list";
   const bindings: (() => void)[] = [];
-  const buttons: { button: HTMLButtonElement; compatible: boolean }[] = [];
+  const buttons: HTMLButtonElement[] = [];
   const cancelLoad = () => {
     if (token)
       void bridge
@@ -51,7 +65,14 @@ export function renderExtensionCatalog(
   cancel.addEventListener("click", cancelLoad);
   disposers.push(cancelLoad);
   function relabel() {
+    // Before the first load the button is the whole section; afterwards it
+    // becomes a quiet Refresh beside the heading.
+    const shown = snapshot.loaded || failed;
+    heading.hidden = !shown;
     heading.textContent = t("extensions.catalogHeading");
+    browse.className = `page-control page-button ${
+      shown ? "page-button-text page-button-compact" : "page-button-quiet"
+    }`;
     browse.textContent = t(
       failed
         ? "extensions.catalogRetry"
@@ -80,8 +101,7 @@ export function renderExtensionCatalog(
         managementUnavailable || failed || snapshot.stale ? "warning" : "info",
     });
     for (const apply of bindings) apply();
-    for (const item of buttons)
-      item.button.disabled = managementBusy || !item.compatible;
+    for (const button of buttons) button.disabled = managementBusy;
   }
   function update(next: CatalogSnapshot) {
     snapshot = next;
@@ -95,70 +115,57 @@ export function renderExtensionCatalog(
     for (const entry of snapshot.entries) {
       const card = document.createElement("section");
       card.className = "extension-catalog-card ui-card";
-      const title = document.createElement("h4");
-      title.textContent = `${entry.name} · ${entry.version}`;
+      card.dataset.extensionId = entry.id;
+      const title = document.createElement("div");
+      title.className = "extension-card-title";
+      const name = document.createElement("h4");
+      name.textContent = entry.name;
+      title.append(name);
+      const state = cardState(entry);
+      // Installed cards drop the catalog version; the installed row has the
+      // real one, which may be newer than the catalog's.
+      if (state !== "extensions.catalogInstalled") {
+        const version = document.createElement("span");
+        version.className = "ui-meta";
+        version.textContent = entry.version;
+        title.append(version);
+      }
       const description = document.createElement("p");
       description.textContent = entry.description;
-      const platforms = document.createElement("p");
-      const status = document.createElement("p");
-      const button = createPageButton(document);
-      bindings.push(() => {
-        platforms.textContent = t("extensions.catalogPlatforms", {
-          platforms: entry.targets
-            .map((target) => platformNames[target] ?? target)
-            .join(", "),
+      card.append(title, description);
+      if (state) {
+        const status = document.createElement("p");
+        status.className = "ui-meta";
+        bindings.push(() => {
+          status.textContent = t(state);
         });
-        const reasons = [];
-        if (
-          entry.incompatibility === "platform" ||
-          entry.incompatibility === "platform-and-engine"
-        )
-          reasons.push(t("extensions.catalogPlatformIncompatible"));
-        if (
-          entry.incompatibility === "engine" ||
-          entry.incompatibility === "platform-and-engine"
-        )
-          reasons.push(t("extensions.catalogEngineIncompatible"));
-        status.textContent = entry.compatible
-          ? entry.installedVersion
-            ? t("extensions.catalogInstalled", {
-                version: entry.installedVersion,
-              })
-            : t("extensions.catalogNotInstalled")
-          : reasons.join(". ");
-        button.textContent = t(
-          entry.action === "install"
-            ? "extensions.catalogInstall"
-            : entry.action === "update"
+        card.append(status);
+      } else {
+        const action = entry.action!;
+        const button = createPageButton(document);
+        button.classList.add("page-button-compact");
+        button.dataset.action = `catalog-${action}`;
+        bindings.push(() => {
+          button.textContent = t(
+            action === "update"
               ? "extensions.catalogUpdate"
-              : entry.action === "reinstall"
-                ? "extensions.catalogReinstall"
-                : "extensions.catalogReplace",
-        );
-      });
-      button.addEventListener("click", () =>
-        install({
-          operation: "catalog-install",
-          selection: entry.selection,
-          token: crypto.randomUUID(),
-        }),
-      );
-      buttons.push({ button, compatible: entry.compatible });
-      card.append(title, description, platforms, status);
-      if (entry.action === "replace") {
-        const warning = document.createElement("p");
-        bindings.push(() =>
-          setPageNotice(warning, {
-            text: t("extensions.catalogReplaceWarning"),
-            severity: "warning",
+              : "extensions.catalogInstall",
+          );
+        });
+        button.addEventListener("click", () =>
+          page.install({
+            operation: "catalog-install",
+            selection: entry.selection,
+            token: crypto.randomUUID(),
           }),
         );
-        card.append(warning);
+        buttons.push(button);
+        card.append(button);
       }
-      card.append(button);
       list.append(card);
     }
     relabel();
+    page.changed(snapshot);
   }
   browse.addEventListener("click", () => {
     if (token || !live()) return;
@@ -191,8 +198,8 @@ export function renderExtensionCatalog(
     t = next;
     relabel();
   });
-  actions.append(browse, cancel);
-  section.append(heading, actions, notice, list);
+  header.append(heading, browse, cancel);
+  section.append(header, notice, list);
   relabel();
   return {
     element: section,

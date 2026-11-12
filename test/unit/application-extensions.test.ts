@@ -252,7 +252,7 @@ it.each(["linux", "darwin"])(
     const selection = loaded.catalog!.entries[0]!.selection;
     adapters.consent.mockImplementationOnce(async (_window, options) => {
       expect(options.detail).toContain(
-        "not an independent publisher signature",
+        translatorFor("en-US").t("extensions.catalogTrust"),
       );
       await request({ operation: "catalog-refresh", token });
       return { response: 1 };

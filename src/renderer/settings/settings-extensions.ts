@@ -1,5 +1,7 @@
 import { renderExtensionCatalog } from "./settings-extension-catalog";
 import type {
+  CatalogSnapshot,
+  ExtensionEntry,
   ExtensionsBridge,
   ExtensionsRequest,
   ExtensionsResult,
@@ -56,16 +58,8 @@ export function extensionsPage(...args: Parameters<typeof renderExtensions>) {
 const TRUST_DOCS =
   "https://github.com/luizomf/omxterm/blob/main/docs/extension-distribution.md#trust";
 
-const statusWords = [
-  "enabled",
-  "disabled",
-  "uninstalled",
-  "dormant",
-  "starting",
-  "active",
-  "stopping",
-  "failed",
-  "unknown",
+// Main reports these codes; anything else reads as an unknown outcome.
+const errorCodes = [
   "busy",
   "invalid-package",
   "incompatible",
@@ -74,7 +68,6 @@ const statusWords = [
   "outcome-unknown",
   "runtime-unavailable",
   "unsupported",
-  "unavailable",
   "invalid-url",
   "download-failed",
   "download-limit",
@@ -84,9 +77,18 @@ const statusWords = [
   "catalog-mismatch",
   "catalog-selection",
 ] as const;
+// Errors after which the page may be out of date; they offer Refresh.
+const recheck = new Set([
+  "busy",
+  "conflict",
+  "invalid-store",
+  "outcome-unknown",
+  "runtime-unavailable",
+]);
 
 // Explicit snapshots, never polling. Relabel retained nodes without repeating a
 // request, losing a displayed generation or changing a pending operation.
+// eslint-disable-next-line max-lines-per-function -- one page owner keeps busy state, rows and the catalog in step
 export function renderExtensions(
   document: Document,
   bridge: ExtensionsBridge,
@@ -103,11 +105,10 @@ export function renderExtensions(
     bindings.set(element, apply);
     apply();
   }
-  const term = (value: string) => {
-    return t(
-      `extensions.${statusWords.find((word) => word === value) ?? "unknown"}`,
+  const reason = (code: string | undefined) =>
+    t(
+      `extensions.${errorCodes.find((word) => word === code) ?? "outcome-unknown"}`,
     );
-  };
   const panel = document.createElement("section");
   panel.className = "settings-panel extensions-panel";
   const heading = document.createElement("h2");
@@ -116,7 +117,7 @@ export function renderExtensions(
   bind(heading, () => t("extensions.heading"));
   // One plain trust sentence; the details live in the docs.
   const explanation = document.createElement("p");
-  explanation.className = "extensions-trust";
+  explanation.className = "ui-hint";
   const trust = document.createElement("span");
   bind(trust, () => `${t("extensions.explanation")} `);
   explanation.append(trust);
@@ -124,21 +125,62 @@ export function renderExtensions(
   if (terminal) {
     const learnMore = document.createElement("button");
     learnMore.type = "button";
-    learnMore.className = "extensions-learn-more ui-link";
+    learnMore.className = "ui-link";
     bind(learnMore, () => t("extensions.learnMore"));
     learnMore.addEventListener("click", () =>
       terminal.openExternalLink(TRUST_DOCS),
     );
     explanation.append(learnMore);
   }
-  const controls = document.createElement("div");
-  controls.className = "ui-actions";
+
+  // Operation status: one notice, plus Cancel while downloading and Refresh
+  // after an error that may leave the page out of date.
+  const status = document.createElement("div");
+  status.className = "extensions-status";
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
+  const statusActions = document.createElement("div");
+  statusActions.className = "ui-actions";
+  const cancel = createPageButton(document);
+  cancel.classList.add("page-button-compact");
+  bind(cancel, () => t("common.cancel"));
+  cancel.hidden = true;
+  const refresh = createPageButton(document);
+  refresh.classList.add("page-button-compact");
+  refresh.dataset.action = "refresh";
+  bind(refresh, () => t("extensions.refresh"));
+  refresh.hidden = true;
+  statusActions.append(cancel, refresh);
+  status.append(notice, statusActions);
+
+  const installed = document.createElement("section");
+  installed.className = "extensions-installed";
+  const installedHeading = document.createElement("h3");
+  bind(installedHeading, () => t("extensions.installedHeading"));
   const list = document.createElement("div");
-  list.className = "extension-installed-list";
-  let busy = false;
-  let token: string | undefined;
+  list.className = "extension-installed-list ui-list";
+  const empty = document.createElement("p");
+  empty.className = "ui-meta";
+  bind(empty, () => t("extensions.empty"));
+  empty.hidden = true;
+  installed.append(installedHeading, list, empty);
+
+  // Other ways to install stay one quiet line; the link field opens on demand.
+  const more = document.createElement("div");
+  more.className = "ui-actions";
+  const fileButton = createPageButton(document, "text");
+  fileButton.classList.add("page-button-compact");
+  fileButton.dataset.action = "install-file";
+  bind(fileButton, () => t("extensions.install"));
+  const linkToggle = createPageButton(document, "text");
+  linkToggle.classList.add("page-button-compact");
+  linkToggle.dataset.action = "install-link";
+  linkToggle.setAttribute("aria-expanded", "false");
+  bind(linkToggle, () => t("extensions.installLink"));
+  more.append(fileButton, linkToggle);
+  const linkForm = document.createElement("div");
+  linkForm.className = "extensions-link";
+  linkForm.hidden = true;
   const urlLabel = document.createElement("label");
   urlLabel.className = "settings-row";
   const urlText = document.createElement("span");
@@ -151,117 +193,129 @@ export function renderExtensions(
   url.autocomplete = "off";
   url.spellcheck = false;
   urlLabel.append(urlText, url);
+  const linkActions = document.createElement("div");
+  linkActions.className = "ui-actions";
   const link = createPageButton(document);
-  bind(link, () => t("extensions.installLink"));
-  link.addEventListener("click", () => {
-    if (!busy)
-      void run({
-        operation: "install-link",
-        url: url.value.trim(),
-        token: crypto.randomUUID(),
-      });
+  link.classList.add("page-button-compact");
+  link.dataset.action = "install-link-submit";
+  bind(link, () => t("extensions.catalogInstall"));
+  linkActions.append(link);
+  linkForm.append(urlLabel, linkActions);
+  linkToggle.addEventListener("click", () => {
+    linkForm.hidden = !linkForm.hidden;
+    linkToggle.setAttribute("aria-expanded", String(!linkForm.hidden));
+    if (!linkForm.hidden) url.focus();
   });
-  const cancel = createPageButton(document);
-  bind(cancel, () => t("common.cancel"));
-  cancel.hidden = true;
-  const cancelDownload = () => {
-    if (token)
-      void bridge
-        .request({ operation: "cancel-install", token })
-        .catch(() => {});
-  };
-  cancel.addEventListener("click", cancelDownload);
-  disposers.push(cancelDownload);
+
+  let busy = false;
+  let token: string | undefined;
   let last: ExtensionsResult | undefined;
-  const buttons = new Set<HTMLButtonElement>();
-  function button(
+  let entries: ExtensionEntry[] = [];
+  let catalogSnapshot: CatalogSnapshot | undefined;
+  const controls = new Set<HTMLButtonElement>([
+    fileButton,
+    linkToggle,
+    link,
+    refresh,
+  ]);
+  const rowButtons = new Set<HTMLButtonElement>();
+  function setBusy(value: boolean) {
+    busy = value;
+    panel.setAttribute("aria-busy", String(value));
+    url.disabled = value;
+    for (const element of [...controls, ...rowButtons])
+      element.disabled = value;
+  }
+  function renderNotice() {
+    // Success is quiet; only downloads and problems speak up.
+    const error =
+      !token && last && !last.ok ? (last.error ?? "outcome-unknown") : "";
+    setPageNotice(notice, {
+      text: token ? t("extensions.downloading") : error ? reason(error) : "",
+      severity: token || error === "cancelled" ? "info" : "warning",
+    });
+    cancel.hidden = !token;
+    refresh.hidden = !recheck.has(error);
+    statusActions.hidden = cancel.hidden && refresh.hidden;
+    status.hidden = notice.hidden;
+  }
+  // Plain states only when they aren't the normal one.
+  function rowState(entry: ExtensionEntry) {
+    const states: string[] = [];
+    if (!entry.enabled) states.push(t("extensions.off"));
+    if (
+      catalogSnapshot?.entries.some(
+        (card) =>
+          card.id === entry.id && card.action === "update" && card.compatible,
+      )
+    )
+      states.push(t("extensions.updateAvailable"));
+    return states.join(" · ");
+  }
+  function rowButton(
     label: MessageKey,
-    request: ExtensionsRequest,
+    request: Extract<ExtensionsRequest, { id: string }>,
     parent: HTMLElement,
   ) {
-    const element = createPageButton(document);
+    const element = createPageButton(document, "text");
+    element.classList.add("page-button-compact");
+    element.dataset.action = request.operation;
     bind(element, () => t(label));
     element.disabled = busy;
     element.addEventListener("click", () => {
       void run(request);
     });
-    buttons.add(element);
+    rowButtons.add(element);
     parent.append(element);
   }
-  function renderNotice() {
-    if (token) {
-      setPageNotice(notice, {
-        text: t("extensions.downloading"),
-        severity: "info",
-      });
-      return;
+  function renderRows() {
+    for (const element of bindings.keys())
+      if (list.contains(element)) bindings.delete(element);
+    rowButtons.clear();
+    list.replaceChildren();
+    // Uninstalled extensions leave the list; the catalog installs them again.
+    for (const entry of entries.filter((item) => item.installed)) {
+      const row = document.createElement("div");
+      row.className = "extension-row ui-row";
+      row.dataset.extensionId = entry.id;
+      const name = document.createElement("span");
+      name.className = "extension-row-name";
+      name.textContent = entry.name;
+      name.title = entry.id;
+      const version = document.createElement("span");
+      version.className = "ui-meta";
+      version.textContent = entry.version ?? "";
+      const state = document.createElement("span");
+      state.className = "ui-meta";
+      bind(state, () => rowState(entry));
+      const actions = document.createElement("div");
+      actions.className = "ui-actions ui-actions-dense extension-row-actions";
+      rowButton(
+        entry.enabled ? "extensions.disable" : "extensions.enable",
+        {
+          operation: entry.enabled ? "disable" : "enable",
+          id: entry.id,
+          generation: entry.generation,
+        },
+        actions,
+      );
+      rowButton(
+        "extensions.uninstall",
+        { operation: "uninstall", id: entry.id, generation: entry.generation },
+        actions,
+      );
+      row.append(name, version, state, actions);
+      list.append(row);
     }
-    if (!last) return;
-    setPageNotice(notice, {
-      text: !last.ok
-        ? t("extensions.error", {
-            reason: term(last.error ?? "outcome-unknown"),
-          })
-        : // A successful refresh is quiet; only cleanup problems speak up.
-          (last.pendingCleanup === undefined
-            ? t("extensions.cleanupUnchecked")
-            : "") + (last.pendingCleanup ? t("extensions.cleanupPending") : ""),
-      severity: !last.ok || last.pendingCleanup ? "warning" : "info",
-    });
+    empty.hidden = list.children.length > 0;
   }
   function render(result: ExtensionsResult) {
     last = result;
     if (result.catalog) catalog.update(result.catalog);
     renderNotice();
     if (!result.ok) return;
-    for (const element of bindings.keys())
-      if (element === list || list.contains(element)) bindings.delete(element);
-    for (const element of buttons)
-      if (list.contains(element)) buttons.delete(element);
-    list.replaceChildren();
-    for (const entry of result.entries ?? []) {
-      const row = document.createElement("section");
-      const title = document.createElement("h3");
-      title.textContent = `${entry.name}${entry.version ? ` · ${entry.version}` : ""}`;
-      const state = document.createElement("p");
-      bind(state, () =>
-        t("extensions.state", {
-          id: entry.id,
-          generation: entry.generation,
-          installed: term(
-            entry.installed
-              ? entry.enabled
-                ? "enabled"
-                : "disabled"
-              : "uninstalled",
-          ),
-          local: term(entry.local),
-        }),
-      );
-      row.append(title, state);
-      if (entry.installed) {
-        button(
-          entry.enabled ? "extensions.disable" : "extensions.enable",
-          {
-            operation: entry.enabled ? "disable" : "enable",
-            id: entry.id,
-            generation: entry.generation,
-          },
-          row,
-        );
-        button(
-          "extensions.uninstall",
-          {
-            operation: "uninstall",
-            id: entry.id,
-            generation: entry.generation,
-          },
-          row,
-        );
-      }
-      list.append(row);
-    }
-    if (!list.children.length) bind(list, () => t("extensions.empty"));
+    entries = result.entries ?? [];
+    renderRows();
   }
   async function run(request: ExtensionsRequest) {
     if (busy || !live()) return;
@@ -269,18 +323,14 @@ export function renderExtensions(
       render({ ok: false, error: "invalid-url" });
       return;
     }
-    busy = true;
     token =
       request.operation === "install-link" ||
       request.operation === "catalog-install"
         ? request.token
         : undefined;
+    setBusy(true);
     catalog.busy(true);
-    cancel.hidden = !token;
-    url.disabled = true;
-    link.disabled = true;
     renderNotice();
-    for (const element of buttons) element.disabled = true;
     try {
       const result = await bridge.request(request);
       token = undefined;
@@ -289,14 +339,31 @@ export function renderExtensions(
       token = undefined;
       if (live()) render({ ok: false, error: "outcome-unknown" });
     } finally {
-      busy = false;
+      setBusy(false);
       catalog.busy(false);
-      cancel.hidden = true;
-      url.disabled = false;
-      link.disabled = false;
-      for (const element of buttons) element.disabled = false;
     }
   }
+  const cancelDownload = () => {
+    if (token)
+      void bridge
+        .request({ operation: "cancel-install", token })
+        .catch(() => {});
+  };
+  cancel.addEventListener("click", cancelDownload);
+  disposers.push(cancelDownload);
+  fileButton.addEventListener(
+    "click",
+    () => void run({ operation: "install" }),
+  );
+  refresh.addEventListener("click", () => void run({ operation: "snapshot" }));
+  link.addEventListener("click", () => {
+    if (!busy)
+      void run({
+        operation: "install-link",
+        url: url.value.trim(),
+        token: crypto.randomUUID(),
+      });
+  });
   labels.push((next) => {
     t = next;
     for (const apply of bindings.values()) apply();
@@ -306,23 +373,27 @@ export function renderExtensions(
     document,
     bridge,
     live,
-    (request) => {
-      void run(request);
+    {
+      install: (request) => {
+        void run(request);
+      },
+      changed: (next) => {
+        catalogSnapshot = next;
+        for (const [element, apply] of bindings)
+          if (list.contains(element)) apply();
+      },
     },
     labels,
     disposers,
   );
-  controls.append(link, cancel);
-  button("extensions.install", { operation: "install" }, controls);
-  button("extensions.refresh", { operation: "snapshot" }, controls);
   panel.append(
     heading,
     explanation,
+    status,
+    installed,
     catalog.element,
-    urlLabel,
-    controls,
-    notice,
-    list,
+    more,
+    linkForm,
   );
   void run({ operation: "snapshot" });
   return panel;

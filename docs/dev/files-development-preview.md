@@ -194,8 +194,8 @@ imports installed code.
 
 ## HTTPS archive installation
 
-In Settings → Extensions, paste an HTTPS archive link and choose **Install from
-link** (`src/main/extension-link-install.ts`). After download and validation,
+In Settings → Extensions, choose **Install from link…**, paste an HTTPS archive
+link and choose **Install** (`src/main/extension-link-install.ts`). After download and validation,
 the same native trust dialog as local installation shows the identity, version,
 SHA-256 and replacement generation. A digest identifies bytes, not a publisher.
 Downloading never activates code.
@@ -263,7 +263,7 @@ Tests:
 `test/integration/files-smoke-packaged.test.ts` qualifies a Files archive on a
 packaged host (Linux, macOS or Windows). It launches the packaged app with an
 isolated home and profile, installs the archive through **Settings → Extensions
-→ Install local .omxext…** (one consent), lists a directory, and inserts a file
+→ Install from file…** (one consent), lists a directory, and inserts a file
 path into the terminal with Shift+Enter. The shell then writes what it received,
 and the test compares it with the path. Last, it renames a file and sends a
 folder to the system trash through the backend. It runs in seconds:

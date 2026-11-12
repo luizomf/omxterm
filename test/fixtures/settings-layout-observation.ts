@@ -178,7 +178,7 @@ export function observeSettingsLayout(
             ),
             installed: box(panel.querySelector(".extension-installed-list")!),
             installedRows: [
-              ...panel.querySelectorAll(".extension-installed-list > section"),
+              ...panel.querySelectorAll(".extension-installed-list > .ui-row"),
             ].map(box),
           }
         : null,
@@ -202,6 +202,7 @@ export function observeSettingsLayout(
         ".settings-control-caption, .settings-shortcut-name, .extensions-panel .settings-row > span",
       ),
     ]
+      .filter((label) => !label.closest("[hidden]"))
       .slice(0, 16)
       .map((label) => {
         const font = getComputedStyle(label);

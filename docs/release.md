@@ -400,7 +400,7 @@ Publish an extension before a host release that depends on it (for example, a
 host that stops bundling a built-in feature).
 
 Release notes name the required host range, the HTTPS archive link for
-**Settings → Extensions → HTTPS archive link → Install from link**, the archive
+**Settings → Extensions → Install from link…**, the archive
 size/SHA-256, the source commit and the qualified platforms.
 
 ### Catalog promotion

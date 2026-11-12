@@ -183,10 +183,13 @@ export function catalogCompatible(
 ): boolean {
   return catalogIncompatibility(release, runtime, target) === null;
 }
+// What a selection would do to the installed extension. The trust prompt uses
+// all four; Settings offers only install and update.
+export type CatalogAction = "install" | "update" | "reinstall" | "replace";
 export function catalogAction(
   release: CatalogRelease,
   installed?: { version: string | null; digest: string | null },
-): CatalogCard["action"] {
+): CatalogAction {
   if (!installed?.digest || !installed.version) return "install";
   if (
     installed.version === release.version &&
@@ -245,25 +248,26 @@ export function createExtensionCatalog(
             runtime,
             target,
           );
+          const action = catalogAction(
+            release,
+            existing
+              ? {
+                  version: existing.manifest?.version ?? null,
+                  digest: existing.digest,
+                }
+              : undefined,
+          );
           return {
             selection,
             id: release.id,
             name: release.name,
             description: release.description,
             version: release.version,
-            installedVersion: existing?.manifest?.version ?? null,
             compatible: incompatibility === null,
-            targets: [...release.targets],
             incompatibility,
-            action: catalogAction(
-              release,
-              existing
-                ? {
-                    version: existing.manifest?.version ?? null,
-                    digest: existing.digest,
-                  }
-                : undefined,
-            ),
+            // Offer only a first install or a real update. A selection for
+            // anything else still meets the replace warning at trust time.
+            action: action === "install" || action === "update" ? action : null,
           };
         }),
       };

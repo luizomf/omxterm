@@ -4,135 +4,153 @@ import { renderExtensions } from "../../src/renderer/settings/settings-extension
 import { translatorFor } from "../../src/shared/i18n";
 import type { Translate } from "../../src/renderer/renderer-language";
 import type {
+  CatalogCard,
+  CatalogSnapshot,
   ExtensionsRequest,
   ExtensionsResult,
 } from "../../src/shared/extensions";
 afterEach(() => document.body.replaceChildren());
-const catalog = {
+const en = translatorFor("en-US").t;
+const pt = translatorFor("pt-BR").t;
+const card: CatalogCard = {
+  selection: "a".repeat(36),
+  id: "omxterm.files",
+  name: "<img src=x>",
+  description: "<script>evil()</script>",
+  version: "0.2.0",
+  compatible: true,
+  incompatibility: null,
+  action: "update",
+};
+const catalog: CatalogSnapshot = {
   loaded: true,
   stale: false,
-  entries: [
-    {
-      selection: "a".repeat(36),
-      id: "omxterm.files",
-      name: "<img src=x>",
-      description: "<script>evil()</script>",
-      version: "0.1.0",
-      installedVersion: "0.2.0",
-      compatible: true,
-      targets: ["linux-arm64"],
-      incompatibility: null,
-      action: "replace" as const,
-    },
-  ],
+  entries: [card],
 };
-const button = (text: string) =>
-  [...document.querySelectorAll("button")].find(
-    (item) => item.textContent === text,
-  )!;
-it("loads only explicitly, renders plain text, localizes retained cards and binds selection", async () => {
+const withCard = (changes: Partial<CatalogCard>): CatalogSnapshot => ({
+  ...catalog,
+  entries: [{ ...card, ...changes }],
+});
+const action = (name: string) =>
+  document.querySelector<HTMLButtonElement>(`[data-action="${name}"]`);
+const catalogNotice = () =>
+  document.querySelector<HTMLElement>(".extension-catalog [role=status]")!;
+const cardElement = () =>
+  document.querySelector<HTMLElement>(".extension-catalog-card")!;
+function mount(
+  request: (value: ExtensionsRequest) => Promise<ExtensionsResult>,
+  labels: ((t: Translate) => void)[] = [],
+  disposers: (() => void)[] = [],
+) {
+  document.body.append(
+    renderExtensions(document, { request }, () => true, labels, disposers),
+  );
+}
+it("loads only explicitly, renders plain text, relabels retained cards and binds selection", async () => {
   const request = vi
     .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
     .mockResolvedValueOnce({ ok: true, entries: [] })
     .mockResolvedValueOnce({ ok: true, catalog })
     .mockResolvedValue({ ok: true, entries: [], catalog });
   const labels: ((t: Translate) => void)[] = [];
-  document.body.append(
-    renderExtensions(document, { request }, () => true, labels),
-  );
+  mount(request, labels);
   await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
   expect(request).toHaveBeenLastCalledWith({ operation: "snapshot" });
-  button("Browse official extensions").click();
-  await vi.waitFor(() =>
-    expect(button("Replace installed version")).toBeDefined(),
-  );
+  expect(document.querySelector(".extension-catalog-card")).toBeNull();
+  action("catalog-browse")!.click();
+  await vi.waitFor(() => expect(action("catalog-update")).not.toBeNull());
   expect(document.querySelector("script,img")).toBeNull();
-  expect(document.body.textContent).toContain("<script>evil()</script>");
-  expect(document.body.textContent).toContain(
-    "Catalog offer platforms: Linux ARM64",
-  );
-  expect(document.body.textContent).not.toContain(
-    "This preview is Linux ARM64 only",
-  );
-  expect(document.body.textContent).toContain(
-    "older version or different bytes",
-  );
-  const retained = button("Replace installed version");
+  expect(cardElement().textContent).toContain("<script>evil()</script>");
+  expect(cardElement().textContent).toContain("0.2.0");
+  const retained = action("catalog-update")!;
+  expect(retained.classList.contains("page-button-primary")).toBe(false);
   retained.focus();
-  labels.forEach((label) => label(translatorFor("pt-BR").t));
-  expect(button("Substituir versão instalada")).toBe(retained);
+  labels.forEach((label) => label(pt));
+  expect(action("catalog-update")).toBe(retained);
+  expect(retained.textContent).toBe(pt("extensions.catalogUpdate"));
   expect(document.activeElement).toBe(retained);
   expect(request).toHaveBeenCalledTimes(2);
   retained.click();
   await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(3));
   expect(request.mock.calls[2]![0]).toMatchObject({
     operation: "catalog-install",
-    selection: catalog.entries[0]!.selection,
+    selection: card.selection,
   });
 });
+it("offers Install for an extension that isn't installed", async () => {
+  mount(
+    vi.fn().mockResolvedValue({
+      ok: true,
+      entries: [],
+      catalog: withCard({ action: "install" }),
+    }),
+  );
+  await vi.waitFor(() => expect(action("catalog-install")).not.toBeNull());
+  expect(action("catalog-install")!.textContent).toBe(
+    en("extensions.catalogInstall"),
+  );
+});
+it("offers nothing for an installed extension without a newer release", async () => {
+  mount(
+    vi.fn().mockResolvedValue({
+      ok: true,
+      entries: [],
+      catalog: withCard({ action: null }),
+    }),
+  );
+  await vi.waitFor(() =>
+    expect(cardElement().textContent).toContain(
+      en("extensions.catalogInstalled"),
+    ),
+  );
+  expect(cardElement().querySelector("button")).toBeNull();
+  // The installed row has the real version; the card doesn't repeat the catalog's.
+  expect(cardElement().textContent).not.toContain("0.2.0");
+});
 it.each([
-  ["platform", "Not offered by this catalog for this platform"],
-  ["engine", "Not compatible with this OMXTerm or extension API version"],
-  ["platform-and-engine", "Not offered by this catalog for this platform"],
+  ["platform", "install", "extensions.catalogPlatformIncompatible"],
+  ["engine", "install", "extensions.catalogEngineIncompatible"],
+  ["platform-and-engine", "install", "extensions.catalogPlatformIncompatible"],
+  ["engine", "update", "extensions.catalogInstalled"],
 ] as const)(
-  "shows %s incompatibility and supported platforms",
-  async (reason, en) => {
-    const request = vi
-      .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
-      .mockResolvedValue({
+  "explains a %s incompatibility for %s without a button",
+  async (incompatibility, cardAction, key) => {
+    mount(
+      vi.fn().mockResolvedValue({
         ok: true,
         entries: [],
-        catalog: {
-          ...catalog,
-          entries: [
-            {
-              ...catalog.entries[0]!,
-              compatible: false,
-              targets: ["linux-arm64", "darwin-arm64"],
-              incompatibility: reason,
-            },
-          ],
-        },
-      });
-    document.body.append(renderExtensions(document, { request }, () => true));
-    await vi.waitFor(() => expect(document.body.textContent).toContain(en));
-    expect(document.body.textContent).toContain(
-      "Catalog offer platforms: Linux ARM64, macOS ARM64",
+        catalog: withCard({
+          compatible: false,
+          incompatibility,
+          action: cardAction,
+        }),
+      }),
     );
-    if (reason === "platform-and-engine")
-      expect(document.body.textContent).toContain(
-        "Not compatible with this OMXTerm or extension API version",
-      );
-    expect(button("Replace installed version").disabled).toBe(true);
+    await vi.waitFor(() =>
+      expect(cardElement().textContent).toContain(en(key)),
+    );
+    expect(cardElement().querySelector("button")).toBeNull();
   },
 );
 it("explains unavailable extension management", async () => {
-  const request = vi
-    .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
-    .mockResolvedValue({ ok: false, error: "unsupported" });
-  document.body.append(renderExtensions(document, { request }, () => true));
+  mount(vi.fn().mockResolvedValue({ ok: false, error: "unsupported" }));
   await vi.waitFor(() =>
-    expect(document.body.textContent).toContain(
-      "Extension management is unavailable on this platform",
-    ),
+    expect(document.body.textContent).toContain(en("extensions.unsupported")),
   );
 });
 it.each(["unsupported", "runtime-unavailable"])(
-  "does not promise offline installation when catalog refresh returns %s",
+  "says installation is unavailable when catalog refresh returns %s",
   async (error) => {
     const request = vi
       .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
       .mockResolvedValue({ ok: false, error });
-    document.body.append(renderExtensions(document, { request }, () => true));
+    mount(request);
     await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
-    button("Browse official extensions").click();
+    action("catalog-browse")!.click();
     await vi.waitFor(() =>
-      expect(document.body.textContent).toContain(
-        "Catalog and installation are unavailable because extension management is unavailable",
+      expect(catalogNotice().textContent).toBe(
+        en("extensions.catalogManagementUnavailable"),
       ),
-    );
-    expect(document.body.textContent).not.toContain(
-      "local-file installation still work offline",
     );
   },
 );
@@ -142,26 +160,14 @@ it("clears manager-unavailable status when an explicit shared snapshot succeeds"
     .mockResolvedValueOnce({ ok: false, error: "runtime-unavailable" })
     .mockResolvedValueOnce({ ok: false, error: "runtime-unavailable" })
     .mockResolvedValueOnce({ ok: true, entries: [], catalog });
-  document.body.append(renderExtensions(document, { request }, () => true));
+  mount(request);
   await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(1));
-  button("Browse official extensions").click();
-  await vi.waitFor(() =>
-    expect(document.body.textContent).toContain(
-      "Catalog and installation are unavailable",
-    ),
-  );
-  button("Refresh").click();
-  await vi.waitFor(() =>
-    expect(button("Replace installed version")).toBeDefined(),
-  );
-  expect(document.body.textContent).not.toContain(
-    "Catalog and installation are unavailable",
-  );
+  action("catalog-browse")!.click();
+  await vi.waitFor(() => expect(catalogNotice().hidden).toBe(false));
+  action("refresh")!.click();
+  await vi.waitFor(() => expect(action("catalog-update")).not.toBeNull());
   // A loaded catalog speaks through its cards, not a notice.
-  expect(
-    document.querySelector<HTMLElement>(".extension-catalog [role=status]")!
-      .hidden,
-  ).toBe(true);
+  expect(catalogNotice().hidden).toBe(true);
 });
 it("keeps local controls usable during cold offline loading and failure, with owned cancellation", async () => {
   let finish!: (result: ExtensionsResult) => void;
@@ -176,14 +182,11 @@ it("keeps local controls usable during cold offline loading and failure, with ow
     );
   const disposers: (() => void)[] = [];
   const labels: ((t: Translate) => void)[] = [];
-  document.body.append(
-    renderExtensions(document, { request }, () => true, labels, disposers),
-  );
-  await vi.waitFor(() =>
-    expect(button("Install from link").disabled).toBe(false),
-  );
-  button("Browse official extensions").click();
-  expect(button("Install from link").disabled).toBe(false);
+  mount(request, labels, disposers);
+  await vi.waitFor(() => expect(action("install-file")!.disabled).toBe(false));
+  action("catalog-browse")!.click();
+  expect(catalogNotice().textContent).toBe(en("extensions.catalogLoading"));
+  expect(action("install-file")!.disabled).toBe(false);
   const selected = request.mock.calls[1]![0];
   disposers.forEach((dispose) => dispose());
   expect(request).toHaveBeenLastCalledWith({
@@ -196,22 +199,18 @@ it("keeps local controls usable during cold offline loading and failure, with ow
     catalog: { loaded: false, stale: true, entries: [] },
   });
   await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("Catalog unavailable."),
+    expect(catalogNotice().textContent).toBe(
+      en("extensions.catalogUnavailable"),
+    ),
   );
-  expect(document.body.textContent).not.toContain("no published extensions");
-  const notice = [
-    ...document.querySelectorAll<HTMLElement>(".page-notice"),
-  ].find((node) => node.textContent?.includes("Catalog unavailable."));
-  expect(notice?.dataset.severity).toBe("warning");
-  expect(document.body.textContent).toContain(
-    "If extension management is available, you can still install local files and manage installed extensions offline",
+  expect(catalogNotice().dataset.severity).toBe("warning");
+  expect(action("install-file")!.disabled).toBe(false);
+  expect(action("catalog-browse")!.disabled).toBe(false);
+  expect(action("catalog-browse")!.textContent).toBe(
+    en("extensions.catalogRetry"),
   );
-  expect(button("Install from link").disabled).toBe(false);
-  expect(button("Retry catalog").disabled).toBe(false);
-  labels.forEach((label) => label(translatorFor("pt-BR").t));
-  expect(document.body.textContent).toContain(
-    "Se o gerenciamento de extensões estiver disponível, você ainda pode instalar arquivos locais e gerenciar extensões instaladas offline",
-  );
+  labels.forEach((label) => label(pt));
+  expect(catalogNotice().textContent).toBe(pt("extensions.catalogUnavailable"));
 });
 it("adopts a fresh shared snapshot after another window recovers the catalog", async () => {
   const request = vi
@@ -222,32 +221,24 @@ it("adopts a fresh shared snapshot after another window recovers the catalog", a
       error: "download-failed",
       catalog: { ...catalog, stale: true },
     })
+    .mockResolvedValueOnce({ ok: false, error: "outcome-unknown" })
     .mockResolvedValueOnce({ ok: true, entries: [], catalog });
-  document.body.append(renderExtensions(document, { request }, () => true));
-  await vi.waitFor(() => expect(button("Refresh catalog")).toBeDefined());
-  button("Refresh catalog").click();
-  await vi.waitFor(() => expect(button("Retry catalog")).toBeDefined());
-  button("Refresh").click();
-  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(3));
-  await vi.waitFor(() => expect(button("Refresh catalog")).toBeDefined());
-  expect(document.body.textContent).not.toContain("last successful snapshot");
-  expect(request).toHaveBeenLastCalledWith({ operation: "snapshot" });
-});
-it("shows stale success rather than an empty catalog after a failed refresh", async () => {
-  const request = vi
-    .fn<(request: ExtensionsRequest) => Promise<ExtensionsResult>>()
-    .mockResolvedValueOnce({ ok: true, entries: [], catalog })
-    .mockResolvedValueOnce({
-      ok: false,
-      error: "download-failed",
-      catalog: { ...catalog, stale: true },
-    });
-  document.body.append(renderExtensions(document, { request }, () => true));
-  await vi.waitFor(() => expect(button("Refresh catalog")).toBeDefined());
-  button("Refresh catalog").click();
+  mount(request);
   await vi.waitFor(() =>
-    expect(document.body.textContent).toContain("last successful snapshot"),
+    expect(action("catalog-browse")!.textContent).toBe(
+      en("extensions.catalogRefresh"),
+    ),
   );
-  expect(button("Replace installed version").disabled).toBe(false);
-  expect(document.body.textContent).toContain("Installed: 0.2.0");
+  action("catalog-browse")!.click();
+  await vi.waitFor(() =>
+    expect(catalogNotice().textContent).toBe(en("extensions.catalogStale")),
+  );
+  // The stale snapshot stays usable.
+  expect(action("catalog-update")!.disabled).toBe(false);
+  action("catalog-update")!.click();
+  await vi.waitFor(() => expect(action("refresh")!.hidden).toBe(false));
+  action("refresh")!.click();
+  await vi.waitFor(() => expect(request).toHaveBeenCalledTimes(4));
+  expect(request).toHaveBeenLastCalledWith({ operation: "snapshot" });
+  await vi.waitFor(() => expect(catalogNotice().hidden).toBe(true));
 });

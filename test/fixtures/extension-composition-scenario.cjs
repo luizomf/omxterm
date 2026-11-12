@@ -40,6 +40,14 @@ async function runScenario({
     if (!b || b.disabled || b.closest('[inert]')) throw Error('Unavailable button');
     b.click();
   })()`);
+  // Extensions controls carry stable data hooks, so the scenario doesn't
+  // depend on their wording.
+  const pageAction = (action) =>
+    js(`(() => {
+    const b = document.querySelector('.extensions-panel [data-action=${JSON.stringify(action)}]');
+    if (!b || b.disabled || b.closest('[inert]')) throw Error('Unavailable button');
+    b.click();
+  })()`);
   const closeSettings = () =>
     js("document.querySelector('.settings-close').click()");
   const hosted = () =>
@@ -155,7 +163,7 @@ async function runScenario({
     assert.equal(hosted().length, 0);
     assert.equal(children.length, 0);
     await management();
-    await button("Install local .omxext…");
+    await pageAction("install-file");
     await installed();
     assert.equal(approvalCount(), 1);
     assert.equal(children.length, 0, "installation stays dormant");
@@ -188,7 +196,7 @@ async function runScenario({
     }
     checks.push("explicit-activation-hosted-backend-and-editing");
     await management();
-    await button("Disable");
+    await pageAction("disable");
     await until(
       () => hosted().length === 0 && children[0].closed,
       "disable joins view and backend",
@@ -197,25 +205,25 @@ async function runScenario({
     await until(
       () =>
         js(
-          "document.querySelector('.extensions-panel').textContent.includes('disabled') && ![...document.querySelectorAll('.extensions-panel button')].some(b => b.disabled)",
+          "!!document.querySelector('.extension-installed-list [data-action=enable]') && ![...document.querySelectorAll('.extensions-panel button')].some(b => b.disabled)",
         ),
       "disabled management snapshot",
     );
-    await button("Enable");
+    await pageAction("enable");
     await until(
       () =>
         js(
-          "[...document.querySelectorAll('.extensions-panel button')].some(b => b.textContent === 'Disable' && !b.disabled)",
+          "!!document.querySelector('.extension-installed-list [data-action=disable]:not(:disabled)')",
         ),
       "enabled management snapshot",
     );
     assert.equal(children.length, 1, "enable stays dormant");
     assert.equal(hosted().length, 0);
-    await button("Uninstall");
+    await pageAction("uninstall");
     await until(
       () =>
         js(
-          "document.querySelector('.extensions-panel').textContent.includes('uninstalled')",
+          "!document.querySelector('.extension-installed-list [data-extension-id=\"test.composition\"]') && document.querySelector('.extensions-panel').getAttribute('aria-busy') === 'false'",
         ),
       "uninstall",
     );
@@ -255,7 +263,7 @@ async function runScenario({
     // Leave a second real epoch active: normal Quit must join it, not just a
     // backend that already stopped during the disable scenario.
     await management();
-    await button("Install local .omxext…");
+    await pageAction("install-file");
     await installed();
     assert.equal(approvalCount(), 2);
     assert.equal(children.length, 1, "reinstall stays dormant");

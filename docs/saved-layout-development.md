@@ -99,7 +99,7 @@ To build an archive, follow
 `npm run build:restoration-extension`. It writes
 `dist/extensions/restoration-<version>.omxext` with `.sha256` and `.json`
 sidecars and refuses a dirty checkout. To try it, install the archive through
-**Settings → Extensions → Install local .omxext…**.
+**Settings → Extensions → Install from file…**.
 
 ### Packaged Saved Layout smoke
 

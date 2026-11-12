@@ -25,10 +25,10 @@ for how it is built and its current limits.
    Settings is selected. Open **SSH Connect** from the **File** menu, Command
    Palette or terminal context menu. Installing it alone does not open it.
 
-If the card is missing, choose **Refresh catalog** and check your internet
-connection. If it remains missing or disabled, your platform or host version may
-not match the offer. Do not download an archive from an untrusted source to work
-around it.
+If the card is missing, choose **Refresh** next to **Official extensions** and
+check your internet connection. If it's still missing, or the card says it isn't
+available, your platform or OMXTerm version doesn't match the offer. Do not
+download an archive from an untrusted source to work around it.
 
 ## Connect
 
