@@ -117,11 +117,15 @@ export function observeSettingsLayout(
         tabBox.bottom <= Math.min(innerHeight, navBox.bottom) + 1
       );
     });
+  // The last control a person can see; collapsed or hidden-until-needed
+  // controls (an on-demand link field, Cancel while idle) aren't on screen.
   const target = [
     ...panel.querySelectorAll<HTMLElement>(
       "button:not(:disabled), input, select, textarea",
     ),
-  ].at(-1);
+  ]
+    .filter((control) => control.checkVisibility())
+    .at(-1);
   (
     window as Window & { settingsLayoutTarget?: HTMLElement | undefined }
   ).settingsLayoutTarget = target;
