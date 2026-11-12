@@ -9,6 +9,10 @@ import {
   parseManifest,
 } from "../../src/installed-packages/archive";
 
+const hostVersion = (
+  JSON.parse(await readFile("package.json", "utf8")) as { version: string }
+).version;
+
 it("declares the mirror and docs-link capabilities and ships the AshyTerm license", async () => {
   const manifest = parseManifest(
     JSON.parse(
@@ -48,7 +52,7 @@ it.skipIf(process.env.OMXTERM_MIRROR_TYPING_BUILD !== "1")(
       const extracted = path.join(root, "extracted");
       await mkdir(extracted);
       const validated = await extractPackage(bytes, extracted, {
-        appVersion: "0.29.1",
+        appVersion: hostVersion,
         apiVersion: "0.1.0",
       });
       expect(validated.manifest).toEqual(receipt.manifest);
