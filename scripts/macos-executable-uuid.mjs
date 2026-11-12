@@ -20,23 +20,34 @@ const machO64HeaderSize = 32;
 const loadCommandUuid = 0x1b;
 
 /**
- * Derives an RFC 4122 name-based UUID for one executable of one build, from
- * the bundle identifier, the executable's path inside the bundle and a digest
- * of the build's contents.
+ * Derives an RFC 9562 version 8 (custom, SHA-256 based) UUID for one
+ * architecture of one executable of one build, from the bundle identifier,
+ * the executable's path inside the bundle, a digest of the build's contents
+ * and the Mach-O CPU type.
  */
-export function executableUuid(bundleIdentifier, relativePath, buildDigest) {
+export function executableUuid(
+  bundleIdentifier,
+  relativePath,
+  buildDigest,
+  architecture,
+) {
   const bytes = createHash("sha256")
-    .update(`${bundleIdentifier}\0${relativePath}\0${buildDigest}`)
+    .update(
+      [bundleIdentifier, relativePath, buildDigest, architecture].join("\0"),
+    )
     .digest()
     .subarray(0, 16);
-  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[6] = (bytes[6] & 0x0f) | 0x80;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
   return bytes;
 }
 
-function replaceThinUuid(binary, start, uuid) {
+function replaceThinUuid(binary, start, uuidFor) {
   if (binary.readUInt32LE(start) !== machO64Magic)
     throw new Error("Expected a 64-bit little-endian Mach-O image");
+  const uuid = uuidFor(
+    `${binary.readUInt32LE(start + 4)}:${binary.readUInt32LE(start + 8) & 0xffffff}`,
+  );
   const commandCount = binary.readUInt32LE(start + 16);
   let offset = start + machO64HeaderSize;
   let replaced = 0;
@@ -55,18 +66,22 @@ function replaceThinUuid(binary, start, uuid) {
     throw new Error(`Expected one LC_UUID load command, found ${replaced}`);
 }
 
-/** Replaces the LC_UUID of every architecture slice in a Mach-O binary. */
-export function replaceMachOUuid(binary, uuid) {
+/**
+ * Replaces the LC_UUID of every architecture slice in a Mach-O binary with
+ * `uuidFor(architecture)`, where architecture is "cputype:cpusubtype".
+ */
+export function replaceMachOUuid(binary, uuidFor) {
   if (binary.readUInt32BE(0) !== fatMagic) {
-    replaceThinUuid(binary, 0, uuid);
+    replaceThinUuid(binary, 0, uuidFor);
     return;
   }
   const sliceCount = binary.readUInt32BE(4);
   for (let index = 0; index < sliceCount; index += 1)
-    replaceThinUuid(binary, binary.readUInt32BE(8 + index * 20 + 8), uuid);
+    replaceThinUuid(binary, binary.readUInt32BE(8 + index * 20 + 8), uuidFor);
 }
 
-async function bundleExecutables(applicationPath, productName) {
+/** Lists the main and helper executables, relative to the app bundle. */
+export async function bundleExecutables(applicationPath, productName) {
   const executables = [path.join("Contents", "MacOS", productName)];
   const frameworks = path.join(applicationPath, "Contents", "Frameworks");
   for (const entry of await readdir(frameworks)) {
@@ -85,7 +100,8 @@ async function bundleExecutables(applicationPath, productName) {
 }
 
 // electron-builder afterPack hook. It runs before code signing, so the seal
-// covers the rewritten executables.
+// covers the rewritten executables; they must be re-signed (ad-hoc at least),
+// because Apple Silicon kills an executable whose bytes no longer match.
 export default async function afterPack(context) {
   if (context.electronPlatformName !== "darwin") return;
   const { productFilename, id } = context.packager.appInfo;
@@ -106,7 +122,9 @@ export default async function afterPack(context) {
   )) {
     const file = path.join(applicationPath, relativePath);
     const binary = await readFile(file);
-    replaceMachOUuid(binary, executableUuid(id, relativePath, buildDigest));
+    replaceMachOUuid(binary, (architecture) =>
+      executableUuid(id, relativePath, buildDigest, architecture),
+    );
     await writeFile(file, binary);
   }
 }
