@@ -150,7 +150,7 @@ async function install(archive, id, marker) {
   return { core, type, read, consents };
 }
 
-async function files({ archive, directory, fileName, marker }) {
+async function files({ archive, directory, fileName, marker, rename, trash }) {
   const { type, read, consents } = await install(
     archive,
     "omxterm.files",
@@ -179,7 +179,12 @@ async function files({ archive, directory, fileName, marker }) {
   );
 
   // Start a command, insert the path at the prompt, then finish the command.
-  await type("printf '%s' ", false);
+  await type(
+    onWindows
+      ? `Set-Content -NoNewline -LiteralPath ${psQuote(marker)} -Value `
+      : "printf '%s' ",
+    false,
+  );
   await view.executeJavaScript(`(() => {
     const row = ${rowQuery};
     row.click();
@@ -218,13 +223,34 @@ async function files({ archive, directory, fileName, marker }) {
   const notices = await view.executeJavaScript(
     "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
   );
-  await type(` > ${shellQuote(marker)}`, true);
+  await type(onWindows ? "" : ` > ${shellQuote(marker)}`, true);
   await until(
     async () => (await read(marker)) !== undefined,
     "marker",
     10000,
   ).catch(() => {});
-  return { consents, rows, notices, inserted: await read(marker) };
+  // Rename and trash go through the backend and the host's native services.
+  const request = (value) =>
+    view.executeJavaScript(
+      `omxHostedContent.request(${JSON.stringify(value)})`,
+    );
+  const renamed = await request({
+    operation: "move",
+    path: listed,
+    destination: path.join(directory, rename),
+  });
+  const trashed = await request({
+    operation: "trash",
+    path: path.join(directory, trash),
+  });
+  return {
+    consents,
+    rows,
+    notices,
+    inserted: await read(marker),
+    renamed,
+    trashed,
+  };
 }
 
 async function ssh({ archive, alias, marker }) {

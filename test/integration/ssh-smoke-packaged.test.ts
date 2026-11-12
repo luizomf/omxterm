@@ -1,5 +1,6 @@
 import {
   chmod,
+  copyFile,
   mkdir,
   mkdtemp,
   realpath,
@@ -14,13 +15,15 @@ import { launchPackaged } from "../fixtures/packaged-inspector.js";
 // Packaged SSH Connect smoke on a published host: install a local SSH archive,
 // pick an alias from ~/.ssh/config and check what the ssh client received.
 // A fake `ssh` first on PATH records its argv; nothing touches the network.
+// On Windows the fake ssh.exe is a copy of node.exe: Node consumes the `--`,
+// then runs the alias as a script file that records it.
 //
 //   OMXTERM_SSH_SMOKE_APP      .AppImage, .app bundle or packaged executable
 //   OMXTERM_SSH_SMOKE_ARCHIVE  ssh-X.Y.Z.omxext
 const app = process.env.OMXTERM_SSH_SMOKE_APP;
 const archive = process.env.OMXTERM_SSH_SMOKE_ARCHIVE;
 
-it.skipIf(!app || !archive || process.platform === "win32")(
+it.skipIf(!app || !archive)(
   "installs SSH Connect and opens an alias with the ssh client on PATH",
   { timeout: 300000 },
   async () => {
@@ -30,19 +33,30 @@ it.skipIf(!app || !archive || process.platform === "win32")(
     const marker = path.join(root, "ssh-argv.txt");
     const bin = path.join(root, "bin");
     await mkdir(bin);
-    await writeFile(
-      path.join(bin, "ssh"),
-      `#!/bin/sh\nprintf '%s\\n' "$@" > '${marker}'\n`,
-    );
-    await chmod(path.join(bin, "ssh"), 0o755);
     await mkdir(path.join(root, "home/.ssh"), { recursive: true });
+    if (process.platform === "win32") {
+      await copyFile(process.execPath, path.join(bin, "ssh.exe"));
+      await writeFile(
+        path.join(root, "home/smoke-host"),
+        `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "--\\n" + require("node:path").basename(process.argv[1]) + "\\n");\n`,
+      );
+    } else {
+      await writeFile(
+        path.join(bin, "ssh"),
+        `#!/bin/sh\nprintf '%s\\n' "$@" > '${marker}'\n`,
+      );
+      await chmod(path.join(bin, "ssh"), 0o755);
+    }
     await writeFile(
       path.join(root, "home/.ssh/config"),
       "Host smoke-host\n  HostName 192.0.2.1\n",
     );
-    const omxterm = await launchPackaged(app!, root, {
-      PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}`,
-    });
+    const omxterm = await launchPackaged(
+      app!,
+      root,
+      { PATH: `${bin}${path.delimiter}${process.env.PATH ?? ""}` },
+      { defaultShell: process.platform === "win32" },
+    );
     try {
       const result = (await omxterm.call(
         `ssh(${JSON.stringify({
