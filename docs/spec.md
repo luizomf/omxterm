@@ -111,9 +111,9 @@ Optional, separately installed previews:
 - [SSH Connect](ssh-connect.md) (Linux and macOS ARM64): an incomplete read-only
   alias index and a quick-connect page request a typed, main-owned literal
   system `ssh` launch. It does not broker authentication or add reconnect.
-- [Saved Layout](#saved-layout) saves one window's layout and reopens it with
-  fresh Default Shells. It never restores running sessions, commands, or output,
-  and there is no startup restore or autosave.
+- [Saved Layout](#saved-layout) (optional extension) saves one window's layout
+  and reopens it with fresh Default Shells. It never restores running sessions,
+  commands, or output, and there is no startup restore or autosave.
 - [Mirror Typing](#mirror-typing): a narrow same-tab keyboard-byte exception, not
   unrestricted broadcast or multi-pane paste.
 
@@ -998,23 +998,25 @@ Both routes below share these rules:
 
 ## Saved Layout
 
-The separately installed Linux ARM64
-[Saved Layout extension](saved-layout-development.md) explicitly saves and
+The optional [Saved Layout extension](saved-layout.md) explicitly saves and
 reopens one window's terminal layout
-([ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md)). Its preview
-targets older hosts and does not install on current releases.
+([ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md),
+[developer notes](saved-layout-development.md)). It needs host 0.27.0 or later
+and runs wherever extensions do.
 
-- The page offers Save/Replace, Open, Forget, and Refresh (for cross-instance
-  conflicts or unknown outcomes).
+- The page shows the saved snapshot (tab and pane counts, save time) with Open,
+  Save/Replace and Forget. Open is the primary action when a snapshot exists,
+  otherwise Save. **Try again** appears only after a failed read.
 - Saving captures only the original window's terminal tabs, weighted flat pane
   trees, focus and selection, and reported-local/launch-local/home directory
-  provenance. Graphical tabs are excluded and counted.
+  provenance. Graphical tabs are excluded and counted. When no pane has a
+  reported folder, the page says panes reopen where they started.
 - Limits are 16 tabs, 16 panes per tab, 32 panes in total, and 256 KiB. Larger
   requests are refused whole, never truncated.
 - Opening transfers a fully validated plan to one new core window with no dummy
   shell. Every pane starts through normal Surface initialization using the
   Default Shell, never consuming a pending `-e`. Current work is untouched;
-  partial failures keep healthy panes.
+  partial failures keep healthy panes. The page reports folder fallbacks.
 - Core owns tokens, status, cancellation, and native shutdown independently of
   extension retirement. Keyboard Open waits for the Enter release; delayed
   presentation respects newer focus intent.
@@ -1022,10 +1024,10 @@ targets older hosts and does not install on current releases.
   configuration and immutable packages. Opaque revisions and Forget tombstones
   prevent stale destructive writes. Data survives disable, update, and
   uninstall.
-- Forget removes the active snapshot but not possible interrupted-write temp
-  copies; the guide gives manual cleanup steps, not an erasure guarantee.
-  Malformed or unreadable state is not repaired. A possibly committed write
-  followed by transport loss needs Refresh, never an automatic retry.
+- A conflicting write, or one whose outcome is unknown, is never retried; the
+  page reads the saved state again and shows it, and reads again whenever it is
+  shown. Malformed or unreadable state is not repaired. Forget removes the
+  active snapshot, not possible interrupted-write temp copies.
 - No terminal payload, command, environment, title, process, or SSH target is
   stored.
 - Directory provenance has the same [OSC 7 limits](#terminal-panes) as split

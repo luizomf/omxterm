@@ -292,7 +292,7 @@ See [Mirror Typing](docs/mirror-typing-development.md) for setup and limits.
 including tab order, splits, focused panes and local starting folders. Opening
 it creates fresh Default Shells in a new window; it does not restore running
 processes or replay commands. Saved data survives uninstall. See
-[Saved Layout](docs/saved-layout-development.md).
+[Saved Layout](docs/saved-layout.md).
 
 **SSH Connect** — An optional extension that lists OpenSSH aliases in the
 Auxiliary Panel and opens a selected alias or quick-connect target in a new

@@ -47,6 +47,32 @@ const extensionView = () =>
     );
 
 const shellQuote = (text) => "'" + text.replaceAll("'", "'\\''") + "'";
+const psQuote = (text) => "'" + text.replaceAll("'", "''") + "'";
+
+// Commands typed into the shell under test: PowerShell, the Windows Default
+// Shell, or a POSIX shell elsewhere. `reportFolder` is the one-line form of the
+// startup lines in docs/saved-layout.md, so the smoke checks them too.
+const shell = path.basename(require("node:os").userInfo().shell ?? "");
+const commands =
+  process.platform === "win32"
+    ? {
+        write: (text, file) =>
+          `Set-Content -NoNewline -LiteralPath ${psQuote(file)} -Value ${psQuote(text)}`,
+        reportFolder: String.raw`function prompt { $location = $ExecutionContext.SessionState.Path.CurrentLocation; if ($location.Provider.Name -eq 'FileSystem') { $path = $location.ProviderPath -replace '\\', '/'; [Console]::Write("$([char]27)]7;file://$([System.Net.Dns]::GetHostName())/$path$([char]27)\") }; "PS $location> " }`,
+        cd: (folder) => `Set-Location -LiteralPath ${psQuote(folder)}`,
+        pwd: (file) =>
+          `Set-Content -NoNewline -LiteralPath ${psQuote(file)} -Value (Get-Location).ProviderPath`,
+      }
+    : {
+        write: (text, file) =>
+          `printf %s ${shellQuote(text)} > ${shellQuote(file)}`,
+        reportFolder:
+          shell === "zsh"
+            ? '_report_folder() { printf \'\\033]7;file://%s%s\\033\\\\\' "$HOST" "$PWD"; }; autoload -Uz add-zsh-hook; add-zsh-hook precmd _report_folder'
+            : '_report_folder() { printf \'\\033]7;file://%s%s\\033\\\\\' "$HOSTNAME" "$PWD"; }; PROMPT_COMMAND="_report_folder${PROMPT_COMMAND:+;$PROMPT_COMMAND}"',
+        cd: (folder) => `cd ${shellQuote(folder)}`,
+        pwd: (file) => `printf %s "$PWD" > ${shellQuote(file)}`,
+      };
 
 // Waits for a working shell, then installs `archive` through Settings.
 async function install(archive, id, marker) {
@@ -83,7 +109,7 @@ async function install(archive, id, marker) {
   );
   // Prove the shell is reading input before the real check.
   const ready = marker + ".ready";
-  await type(`printf ok > ${shellQuote(ready)}`, true);
+  await type(commands.write("ok", ready), true);
   await until(async () => (await read(ready)) === "ok", "shell reads input");
 
   menu("Settings");
@@ -249,6 +275,120 @@ async function snippets({ archive, insert, run, marker }) {
   };
 }
 
+// Saved Layout, first launch: a reported folder, a split that inherits it and
+// a home tab; tab 1 stays selected with the split focused. Save the window.
+async function layoutSave({ archive, folder, marker }) {
+  const { core, type, read, consents } = await install(
+    archive,
+    "omxterm.restoration",
+    marker,
+  );
+  const js = (code) => core.executeJavaScript(code);
+  const surfaces = (count) =>
+    until(
+      () =>
+        js(
+          `document.querySelectorAll('.terminal-surface canvas').length === ${count}`,
+        ),
+      `${count} terminal surfaces`,
+    );
+  // Report the folder from the prompt as the user guide shows, then change to
+  // it; the next prompt reports it.
+  await type(commands.reportFolder, true);
+  await type(
+    `${commands.cd(folder)}; ${commands.write("ok", marker + ".cd")}`,
+    true,
+  );
+  await until(async () => (await read(marker + ".cd")) === "ok", "cd");
+  // The prompt that follows carries the report.
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  menu("New Tab");
+  await surfaces(2);
+  menu("Show Previous Tab");
+  menu("Split Right");
+  await surfaces(3);
+  menu("Saved Layout");
+  await until(() => !!extensionView(), "Saved Layout view");
+  const view = extensionView();
+  await until(() => click(view, "Save this window"), "Save button");
+  const summary = () =>
+    view.executeJavaScript(
+      "document.querySelector('.snapshot')?.textContent ?? ''",
+    );
+  await until(
+    async () => /2 tabs · 3 panes/.test(await summary()),
+    "saved snapshot",
+  ).catch(() => {});
+  const notices = await view.executeJavaScript(
+    "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
+  );
+  return { consents, notices, summary: await summary() };
+}
+
+// Saved Layout, second launch: open the saved layout and ask the focused
+// restored pane where it started.
+async function layoutOpen({ marker }) {
+  const [first] = BrowserWindow.getAllWindows();
+  await until(
+    () =>
+      first.webContents.executeJavaScript(
+        "!!document.querySelector('.terminal-surface canvas')",
+      ),
+    "terminal surface",
+  );
+  menu("Saved Layout");
+  await until(() => !!extensionView(), "Saved Layout view");
+  const view = extensionView();
+  await until(() => click(view, "Open in a new window"), "Open button");
+  await until(() => windows() === 2, "restored window").catch(() => {});
+  const notices = await view.executeJavaScript(
+    "[...document.querySelectorAll('[role=status], [role=alert]')].filter(n => !n.hidden).map(n => n.textContent)",
+  );
+  const restored = BrowserWindow.getAllWindows().find((w) => w !== first);
+  if (!restored) return { notices, windows: windows() };
+  const contents = restored.webContents;
+  const js = (code) => contents.executeJavaScript(code);
+  await until(
+    () =>
+      js("document.querySelectorAll('.terminal-surface canvas').length === 3"),
+    "restored surfaces",
+  ).catch(() => {});
+  const tabs = await js("document.querySelectorAll('.ui-tab').length");
+  const panes = await js(
+    "document.querySelectorAll('.terminal-surface').length",
+  );
+  restored.focus();
+  contents.focus();
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  const active = await js(
+    "!!document.activeElement?.closest('.terminal-surface')",
+  );
+  // The restored shell may still be starting; type once it reads input.
+  const file = marker + ".pwd";
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await contents.insertText(commands.pwd(file));
+    contents.sendInputEvent({ type: "keyDown", keyCode: "Enter" });
+    contents.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
+    const done = await until(
+      async () => (await readFile(file, "utf8").catch(() => "")) !== "",
+      "restored pwd",
+      3000,
+    ).then(
+      () => true,
+      () => false,
+    );
+    if (done) break;
+  }
+  return {
+    notices,
+    windows: windows(),
+    tabs,
+    panes,
+    active,
+    pwd: await readFile(file, "utf8").catch(() => undefined),
+  };
+}
+
 function quit() {
   setImmediate(() => app.quit());
   return true;
@@ -256,4 +396,12 @@ function quit() {
 
 const windows = () => BrowserWindow.getAllWindows().length;
 
-module.exports = { files, ssh, snippets, quit, windows };
+module.exports = {
+  files,
+  ssh,
+  snippets,
+  layoutSave,
+  layoutOpen,
+  quit,
+  windows,
+};

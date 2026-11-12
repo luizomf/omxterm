@@ -28,9 +28,10 @@ tested.
 | [Files](files-availability.md)       | Browse folders, move and delete files          | Linux on ARM64, Macs with Apple silicon                                  |
 | [SSH Connect](ssh-connect.md)        | Open a terminal session on another computer    | Linux on ARM64, Macs with Apple silicon                                  |
 | [Snippets](snippets-availability.md) | Save commands or text and insert them in a tab | Linux, Macs with Apple silicon, Windows on ARM (built in on Windows x64) |
+| [Saved Layout](saved-layout.md)      | Save a window's tabs, splits and folders       | Linux, Macs with Apple silicon, Windows on ARM                           |
 
-[Saved Layout](saved-layout.md) and [Mirror Typing](mirror-typing.md) are still
-in development and can't be installed yet.
+[Mirror Typing](mirror-typing.md) is still in development and can't be
+installed yet.
 
 Downloads and checksums are listed in the [README](../README.md#platforms-and-downloads), and full changelogs are in [GitHub Releases](https://github.com/luizomf/omxterm/releases).
 
@@ -46,7 +47,7 @@ Developer and architecture docs for contributors and coding agents:
 - **[Native development](development.md)** — OS prerequisites, test layers and suites, graphical test precautions, the performance benchmark, and packaging verification.
 - **[First-time reader audit](first-time-reader-audit.md)** — newcomer blockers, documentation dispositions, and platform walkthroughs still needed.
 - **[SSH Connect development notes](ssh-connect-development.md)** — launch handoff to core, build, tests and current limits.
-- **[Saved Layout development record](saved-layout-development.md)** — source build, storage behavior, compatibility and qualification limits.
+- **[Saved Layout development notes](saved-layout-development.md)** — capture, opening, storage, build, tests and current limits.
 - **[Mirror Typing development record](mirror-typing-development.md)** — source build, input behavior, capability contract and qualification limits.
 - **[Files development notes](files-development-preview.md)** — package, backend, view, build, tests and platform limits.
 - **[Snippets extension](snippets-migration.md)** — which hosts use it, terminal-input rules, build, test and publish.

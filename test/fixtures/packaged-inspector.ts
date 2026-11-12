@@ -146,12 +146,14 @@ async function executable(root: string, target: string) {
 /**
  * Launches a packaged OMXTerm (.AppImage, .app bundle or executable) with
  * `root/home` as HOME and a private profile, then loads the smoke observer
- * into its main process. `call` evaluates `observer.<expression>`.
+ * into its main process. `call` evaluates `observer.<expression>`. The first
+ * tab runs `/bin/sh` unless `defaultShell` asks for the Default Shell.
  */
 export async function launchPackaged(
   app: string,
   root: string,
   env: NodeJS.ProcessEnv = {},
+  { defaultShell = false } = {},
 ) {
   const home = path.join(root, "home");
   await mkdir(path.join(home, ".config/omxterm"), { recursive: true });
@@ -165,13 +167,13 @@ export async function launchPackaged(
       ...(process.platform === "linux" ? ["--no-sandbox"] : []),
       "--inspect=127.0.0.1:0",
       `--user-data-dir=${path.join(root, "profile")}`,
-      "-e",
-      "/bin/sh",
+      ...(defaultShell ? [] : ["-e", "/bin/sh"]),
     ],
     {
       env: {
         ...process.env,
         HOME: home,
+        ...(process.platform === "win32" ? { USERPROFILE: home } : {}),
         XDG_CONFIG_HOME: path.join(home, ".config"),
         ELECTRON_RUN_AS_NODE: undefined,
         ...env,
@@ -207,14 +209,25 @@ export async function launchPackaged(
     client = await inspector(
       /Debugger listening on (ws:\/\/\S+)/.exec(stderr)![1]!,
     );
+    // On Windows, loading the observer while a reused profile is still
+    // starting can leave that inspector request unanswered.
+    if (process.platform === "win32")
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    let last: unknown;
     await until(
-      async () => (await call("windows()").catch(() => 0)) === 1,
+      async () =>
+        (last = await call("windows()").catch(
+          (error: Error) => error.message,
+        )) === 1,
       "application window",
       60000,
-    );
+    ).catch((error: Error) => {
+      throw new Error(`${error.message} (last: ${String(last)})`);
+    });
   } catch (error) {
     await stop();
-    throw error;
+    // The app's own diagnostics, for a launch that never reached a window.
+    throw new Error(`${(error as Error).message}\n${stderr.slice(-4000)}`);
   }
   return {
     home,

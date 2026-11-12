@@ -1,13 +1,14 @@
 # Save layouts without restoring sessions
 
-Status: Accepted for the optional Linux ARM64 Saved Layout preview (#673).
+Status: Accepted (#673). Since #962 the extension needs host 0.27.0 or later and
+runs on every platform that runs extensions.
 
 ## Decision
 
 One separately installed extension owns manual Save/Replace/Open/Forget policy
 and one explicitly saved current-window layout with local-directory provenance.
-The [development record](../saved-layout-development.md) owns observable bounds, exclusions and
-retention disclosure. This narrows the old workspace proposal: no startup
+The [developer notes](../saved-layout-development.md) describe observable bounds,
+exclusions and retention. This narrows the old workspace proposal: no startup
 or distributed multi-window snapshot coordinator, autosave or command replay.
 
 Core exposes declared `terminal.captureLayout.v1` and `terminal.openLayout.v1`
@@ -58,23 +59,16 @@ exclusive lease, comparing revisions while locked. Each successful mutation
 gets a fresh opaque revision; Forget writes an empty tombstone so A→B→A and
 stale destructive requests remain detectable. Busy is a refusal, not a spin.
 
-No lock spans renderer capture, dialogs or shell startup. Unknown publication
-requires Refresh, never automatic replay. Reads reject unsafe files and never
-repair or migrate data. Disable/update/uninstall preserve user state. Forget
+No lock spans renderer capture, dialogs or shell startup. An unknown
+publication is never replayed; the page reads the saved state again and shows
+it. Reads reject unsafe files and never repair or migrate data. Disable/update/uninstall preserve user state. Forget
 removes only the active snapshot; interrupted-write temp copies may remain.
 No sweeper or forensic-erasure guarantee is introduced.
 
-## Compatibility and verification
-
-Host0.24.0-dev.1 explicitly admits unchanged immutable Files0.1.0 metadata in
-addition to the previous exact dev.0 admission, not a wildcard prerelease
-exception. SSH's existing declared range admits dev.1. Published assets stay
-immutable; the new extension requires the newer host. API0.1.x remains preview.
+## Verification
 
 Controlled tests cover codecs/wire envelopes, provenance, correlated capture,
 single-use transfer, revoked admission, bounded unresolved I/O, CAS/tombstones,
-invalid storage and release-before-dispatch. The focused native fixture must
-save, destroy page/backend memory, freshly read through production bootstrap,
-open fresh usable shells without `clear`, preserve original identities, retire
-the extension and join Quit. Native and portable verification are separate
-from preparation tests; no platform or publication result follows from source.
+invalid storage and release-before-dispatch. A packaged smoke installs the
+archive on a published host, saves a window with a reported folder, restarts the
+app, opens the layout and checks where the restored shell started.
