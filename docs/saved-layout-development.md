@@ -1,125 +1,117 @@
-# Saved Layout — Linux ARM64 preview
+# Saved Layout development
 
-Saved Layout **0.1.1** is an optional, separately installed extension for host
-**>=0.24.0-dev.1 <0.26.0**, with preview API **^0.1.0**. The host's explicit
-0.24.1-dev.N and 0.25.0-dev.N compatibility bridges also admit this range.
-The 0.26.0-dev.N bridge does not: the range excludes its 0.26.0 endpoint, so
-current 0.26.0-dev.1 source refuses this unchanged package. Other prerelease
-families follow ordinary semver rules. It is not bundled, automatically
-installed, or a stable SDK. This change does not publish an archive or catalog
-entry. Build instructions below are for developers; install a separately
-provided `.omxext` through Settings → Extensions using the ordinary code-trust
-prompt. Enabling it does not run code until its **Saved Layout…** action opens.
+Saved Layout is an optional extension (`omxterm.restoration`) that saves one
+window's terminal tabs, splits, focus and pane folders, and later opens them in
+a new window with fresh Default Shells. It ships as a separate `.omxext`
+archive. The [user guide](saved-layout.md) covers installing and using it;
+[ADR 0042](adr/0042-save-layouts-without-restoring-sessions.md) records why it
+restores structure and never sessions.
 
-## Save and open
+## Where the code lives
 
-The application page offers **Save this window / Replace saved layout**,
-**Open in a new window**, **Forget saved layout**, and **Refresh**.
+- `extensions/restoration/extension.json`: id, version, host range, the
+  `terminal.captureLayout.v1`, `terminal.openLayout.v1`, `state.v1` and
+  `links.open.v1` capabilities, the `docs` link and the window-context view.
+- `extensions/restoration/page.ts`, `ui.ts`, `messages.ts`, `restoration.css`:
+  the page. It follows the host theme and interface language (`en-US`,
+  `pt-BR`).
+- `extensions/restoration/open-gesture.ts`: keyboard Open waits for the Enter
+  release, so the key can't leak into the new window.
+- `extensions/restoration/backend.ts`, `document.ts`: reads and replaces the one
+  saved document through `state.v1`.
+- `src/shared/terminal-layout.ts`: the layout format and its validation.
+- `src/main/terminal-layout-ipc.ts`, `terminal-layout-transfer.ts`,
+  `terminal-working-directories.ts`, `application-extension-views.ts`: capture,
+  folder provenance, and opening the new window.
+- `src/extension-runtime/state.ts`: the `state.v1` adapter.
 
-Save explicitly includes the originating window's ordered terminal tabs,
-weighted splits, focused panes, terminal selection and available local folders.
-Settings and extension pages are excluded and counted. Save is live at the
-moment of capture, not frozen when the page opened. With graphical content
-selected, the most recently selected surviving terminal tab is remembered.
-There must be at least one terminal tab. Limits are 16 terminal tabs, 16 panes
-per tab, 32 total panes and a 256 KiB document; excess refuses the whole request.
+## How it works
 
-Open uses the exact snapshot loaded by that page, creates **one new window**,
-and starts fresh Default Shells. Current terminals and their work stay open.
-All restored panes start, including background tabs, through ordinary Surface
-initialization; none is a dummy shell. The core status reports initializing,
-completed or partially opened mounts and folder-fallback counts. A failed pane
-uses ordinary startup/failure acknowledgement; healthy panes remain. Resizing
-recovers space when the saved proportions cannot fit comfortable grids.
+**Save.** The page asks core to capture the window it was opened from. The
+renderer sends the tab order, the flat split tree with weights, the focused pane
+and the selected tab; main replaces each session with a folder:
 
-Keyboard Open waits until Enter is released; blur, hiding or a lost release
-cancels the undispatched gesture. Pointer Open is immediate. A delayed new
-window is shown inactive when the original focus intent no longer survives.
-Accepted means core owns the new window, not that every shell has mounted.
+- `reported-local`: the pane's last local OSC 7 report;
+- `launch-local`: the folder the Default Shell started in, when the shell never
+  reported one;
+- `home`: SSH Connect and `-e` panes, ended or pending panes, and panes whose
+  last report was remote or invalid.
 
-No output, scrollback, title, environment, command, foreground process or SSH
-target is saved. No `cd`, `clear`, Enter, integration hook or saved command is
-injected. Shells still run their normal startup files. There is no automatic
-SSH reconnect, process resurrection, startup restore, autosave, named profile,
-window-placement recovery or migration of old fork `workspace.json` files.
+Settings and extension tabs are left out and counted. Limits are 16 tabs, 16
+panes per tab, 32 panes and 256 KiB; a larger window is refused, never
+truncated. The backend writes the document with `state.v1`.
 
-## Folder provenance is not current-process inspection
+**Open.** The page sends the saved document back. Main checks it, refuses one
+saved on another OS, checks each folder (two at a time, 1.5 s each) and uses
+home for missing ones. Then it creates one new window that owns every pane from
+the start: no default tab, no repeated split commands. Each pane gets a
+single-use token that carries its folder in main; the renderer never sees the
+paths. Every pane starts the Default Shell normally, including background tabs.
+Core reports how many folders fell back.
 
-The page distinguishes main-observed **reported-local** OSC 7 paths from
-**launch-local** paths known when a Default Shell started without a report, and
-**home** slots. A remote, invalid or overlong report invalidates launch fallback;
-a later valid report may replace it. Known SSH Connect, explicit `-e`, ended,
-failed and not-yet-started panes become home-directory shell slots.
+After Open, the new window belongs to core. Disabling or removing the extension
+doesn't touch it.
 
-OMXTerm does not inspect process cwd or authenticate OSC 7 locality. A program or
-manually typed SSH session can emit a local-looking report. Launch-only folders
-may be stale after a shell changes directory; startup files can also change cwd.
-Capture clones renderer structure and then samples main's directory provenance,
-not an atomic filesystem/process snapshot.
+**Storage.** `state.v1` keeps one JSON document per extension at
+`<profile>/extension-state/omxterm.restoration/state.json`, outside the user
+configuration and the installed archives. Each write takes a short native lease,
+compares the expected revision and renames a complete temp file into place.
+Forget writes an empty document with a new revision. A write that conflicts or
+whose outcome is unknown is never retried: the page reads the saved state again
+and shows it. Reads never repair or migrate a file; an unreadable one shows
+**Try again**.
 
-Open revalidates bounded absolute paths and directory usability asynchronously.
-Missing/unavailable folders fall back to account home, with a count and no folder
-creation. A disappearance after validation is an ordinary launch failure, not an
-automatic second spawn. Windows UNC/device paths and cross-platform documents
-are rejected. Symlinked local folders are allowed; OS-mounted folders and normal
-shell startup may access networks. “Local” means interpreted on the OMXTerm
-machine, not a promise of network-free I/O.
+## Build and test
 
-## Persistence, conflicts and forgetting
-
-The backend's declared `state.v1` adapter stores one document at
-`<Electron userData>/extension-state/omxterm.restoration/state.json`, separately
-from `config.json` and immutable installed archives. On this Linux preview,
-Electron normally places userData under `$XDG_CONFIG_HOME/omxterm` (or
-`~/.config/omxterm`); an application profile override changes that location.
-Paths and terminal data never become operational logs.
-
-Save and Forget use short native exclusive leases and opaque revision
-compare-and-replace. Another window/process's newer save wins over stale choices;
-**Refresh** before making a new deliberate choice. A possible write followed by
-transport loss is **outcome unknown**, never automatically replayed. Invalid
-schema data with a readable revision can be explicitly replaced or forgotten;
-unreadable, malformed state envelopes and oversized files require external
-correction. Reads never repair, quarantine or migrate files.
-
-Disable, update and uninstall retain saved data. Forget replaces the **active
-snapshot** with a revisioned empty tombstone; it is not forensic erasure.
-Interrupted writes may leave private `state-<UUID>.tmp` siblings containing an
-older snapshot and paths. To remove those deliberately, close **all OMXTerm
-instances**, inspect the extension's state directory, and remove those sibling
-temp files. Do not remove/recreate `state.lock` while any instance is running.
-POSIX-created directories/files use 0700/0600; no Windows ACL or universal
-power-loss durability claim is made. The helper is correctness infrastructure,
-not a sandbox for trusted extension code.
-
-## Development and evidence
+Unit tests cover the layout format, capture and folder provenance, the transfer,
+the state adapter, the backend and the page:
 
 ```sh
-npm run build:restoration-extension -- /absolute/output/restoration-0.1.1.omxext
+npx vitest run test/unit/restoration-*.test.ts test/unit/terminal-layout-*.test.ts test/unit/extension-state.test.ts
 ```
 
-### Source compatibility follow-up (#785)
+To build an archive, follow
+[Building an extension archive](release.md#building-an-extension-archive) with
+`npm run build:restoration-extension`. It writes
+`dist/extensions/restoration-<version>.omxext` with `.sha256` and `.json`
+sidecars and refuses a dirty checkout. To try it, install the archive through
+**Settings → Extensions → Install local .omxext…**.
 
-The 0.1.0 source manifest stopped below stable 0.25.0, so the existing minor-dev
-bridge correctly refused it on host 0.25.0-dev.4. Version 0.1.1 extends only the
-source archive's upper bound to 0.26.0; it does not weaken global admission or
-modify any historical archive. The extension ID, saved-document version, CAS
-state location and capabilities are unchanged, so updating retains saved data
-without migration or implicit replacement.
+### Packaged Saved Layout smoke
 
-The audit from #673's integrated host `c1a09dd1906414c03a24fc58dc0e554098e39f00`
-to the #785 baseline `57adbe391eda3abdbf66ee1a72191c2d672a2461` found no
-changes to the layout codec, directory provenance/transfer, state adapter,
-bootstrap protocol or extension payload. Shared view dispatch/presentation and
-window-owner cleanup did change. Those paths require fresh bounded production
-lifecycle evidence on the current host, not reuse of the old native receipt.
-The original #673 qualification retains only its historical host/archive scope;
-this follow-up is not a new cross-platform or packaged-host qualification.
+`test/integration/restoration-smoke-packaged.test.ts` checks an archive on a
+packaged host, on macOS, Linux and Windows. It installs the archive, reports a
+folder with OSC 7 from the Default Shell, adds a tab and a split, and saves.
+Then it quits, starts the app again, opens the saved layout and asks the
+restored shell where it started. It runs in seconds:
 
-The separate archive contains its MIT license, Community Big MIT notice and
-adaptation credit for @ruscher's #622 layout work. Host and archive source
-identities, digests, actual checks and limits must accompany delivery. See
-[ADR0042](adr/0042-save-layouts-without-restoring-sessions.md). Headless
-codec/page/storage tests and prepared native bundles do not establish graphical
-or native qualification. Other-platform preview support and release/catalog
-publication remain separate work.
+```sh
+OMXTERM_RESTORATION_SMOKE_APP=/absolute/OMXTerm-X.Y.Z-arm64.AppImage \
+OMXTERM_RESTORATION_SMOKE_ARCHIVE=/absolute/restoration-X.Y.Z.omxext \
+npx vitest run test/integration/restoration-smoke-packaged.test.ts
+```
+
+On macOS, point the app variable at an `OMXTerm.app` copied out of the DMG; on
+Windows, at the installed `OMXTerm.exe`. Run it from a logged-in desktop
+session. The test skips when either variable is unset.
+
+### Publishing
+
+Follow [Publishing an extension archive](release.md#publishing-an-extension-archive).
+Published archives are immutable, so changed bytes need a new version in
+`extension.json`.
+
+## Current limits
+
+- Folders come only from OSC 7 reports and launch folders. OMXTerm never
+  inspects a process's working directory or adds shell integration
+  ([ADR 0013](adr/0013-do-not-inject-shell-integration.md)); most shells need a
+  few lines of setup, shown in the user guide.
+- One saved layout for one window. Opening is always explicit.
+- Windows x64 hosts don't run extensions.
+
+## Credits
+
+The layout validation adapts pane coverage and indexing ideas from @ruscher's
+#622. The archive keeps MIT licensing and the acknowledgement in
+`extensions/restoration/NOTICE`.

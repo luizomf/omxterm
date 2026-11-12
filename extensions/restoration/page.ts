@@ -2,43 +2,56 @@ import {
   isSavedLayout,
   type SavedLayout,
 } from "../../src/shared/terminal-layout.js";
+import type { SupportedLanguage } from "../../src/shared/i18n.js";
+import {
+  mountHostedAppearance,
+  type AppearanceBridge,
+} from "../shared/appearance.js";
 import { errorCode, isStateDocument, type StateDocument } from "./document.js";
 import { bindReleasedOpen } from "./open-gesture.js";
-import { createRestorationPage } from "./ui.js";
+import { createRestorationPage, type PageNotice } from "./ui.js";
 
-export interface RestorationBridge {
+export interface RestorationBridge extends Partial<AppearanceBridge> {
   request(value: unknown): Promise<unknown>;
   onVisibility(listener: (visible: boolean) => void): () => void;
+  onLanguage?(listener: (language: SupportedLanguage) => void): () => void;
 }
+
+const notice = (
+  text: PageNotice["text"],
+  severity: PageNotice["severity"] = "info",
+): PageNotice => ({ text, severity });
+
+/**
+ * Save and Open are explicit. A write that conflicts or whose outcome is
+ * unknown is never retried; the page reads the saved state again and shows it.
+ */
 export function mountRestorationPage(
   document: Document,
   bridge: RestorationBridge,
 ) {
   const ui = createRestorationPage(document);
+  const unsubscribeAppearance = bridge.onAppearance
+    ? mountHostedAppearance(document, bridge as AppearanceBridge)
+    : () => {};
+  const unsubscribeLanguage =
+    bridge.onLanguage?.((language) => ui.language(language)) ?? (() => {});
   const lifetime = new document.defaultView!.AbortController();
   let displayed: StateDocument | undefined;
   let pending = false;
   let visible = false;
   let disposed = false;
   let available = false;
-  let refreshRequired = true;
+  let loaded = false;
+  // Hiding the page cancels a Save between capture and write.
   let generation = 0;
-  const controls = () => {
-    const blocked = pending || !visible || refreshRequired || !displayed;
-    ui.buttons.open.disabled =
-      blocked || !available || displayed?.status !== "saved";
-    ui.buttons.save.disabled = blocked || !available;
-    ui.buttons.forget.disabled = blocked || displayed?.status === "empty";
-    ui.buttons.refresh.disabled = pending || !visible;
-  };
+  const sync = () =>
+    ui.update({ state: displayed, available, pending, visible });
   const openSnapshot = () =>
-    !pending &&
-    visible &&
-    !disposed &&
-    !refreshRequired &&
-    available &&
-    displayed?.status === "saved"
-      ? (displayed.value ?? undefined)
+    !pending && visible && !disposed && available
+      ? displayed?.status === "saved"
+        ? (displayed.value ?? undefined)
+        : undefined
       : undefined;
   const gesture = bindReleasedOpen(
     document,
@@ -51,31 +64,21 @@ export function mountRestorationPage(
   const adopt = (state: StateDocument) => {
     gesture.cancel();
     displayed = JSON.parse(JSON.stringify(state)) as StateDocument;
-    refreshRequired = false;
-    ui.render(displayed);
+    ui.update({ failed: false });
   };
   async function run(work: () => Promise<void>, requireVisible = true) {
     if (pending || disposed || (requireVisible && !visible)) return;
     pending = true;
-    controls();
+    sync();
     try {
       await work();
-    } catch {
-      if (!disposed) {
-        refreshRequired = true;
-        ui.message(
-          "The result is unavailable. Choose Refresh before another deliberate action; nothing will be retried automatically.",
-          "warning",
-        );
-      }
     } finally {
       pending = false;
-      if (!disposed) controls();
+      if (!disposed) sync();
     }
   }
-  async function refresh() {
+  async function read() {
     gesture.cancel();
-    ui.message("Reading saved state…");
     let reply: unknown;
     try {
       reply = await bridge.request({ operation: "read" });
@@ -83,24 +86,10 @@ export function mountRestorationPage(
       reply = undefined;
     }
     if (disposed) return;
-    if (isStateDocument(reply)) {
-      adopt(reply);
-      ui.message(
-        reply.status === "invalid"
-          ? "Saved data was preserved. Replace or Forget is available only because its current revision is readable."
-          : "Saved state refreshed. Save and Open are always explicit actions.",
-        reply.status === "invalid" ? "warning" : "info",
-      );
-    } else {
-      refreshRequired = true;
+    if (isStateDocument(reply)) adopt(reply);
+    else {
       displayed = undefined;
-      ui.render();
-      ui.message(
-        errorCode(reply) === "invalid-state"
-          ? "State cannot be read safely. Nothing was repaired or overwritten. Unreadable, oversized or malformed state requires external correction with the app closed, then Refresh."
-          : "Saved state is unavailable or busy. Choose Refresh to read again; no automatic retry.",
-        "error",
-      );
+      ui.update({ failed: true });
     }
   }
   async function replace(expectedRevision: string, value: SavedLayout | null) {
@@ -121,41 +110,25 @@ export function mountRestorationPage(
       reply.status === (value === null ? "empty" : "saved")
     ) {
       adopt(reply);
-      ui.message(
-        value === null
-          ? "Active saved layout forgotten. Interrupted-write temporary files may remain; see the cleanup guidance below."
-          : "Window layout saved. This replaces the displayed snapshot, not your live terminals.",
-        "success",
-      );
       return;
     }
     const code = isStateDocument(reply) ? "outcome-unknown" : errorCode(reply);
-    if (code === "conflict") {
-      refreshRequired = true;
-      ui.message(
-        "Another window or process changed the saved layout. Its newer data was preserved. Choose Refresh before a new deliberate Replace or Forget.",
-        "warning",
-      );
-    } else if (code === "outcome-unknown" || code === "unavailable") {
-      refreshRequired = true;
-      ui.message(
-        "The write outcome is unknown; it may already have committed. Choose Refresh to read actual state. Do not replay the request; no automatic retry.",
-        "warning",
-      );
-    } else {
-      refreshRequired = code === "invalid-state";
-      ui.message(
-        "Saved state was not replaced. It may be busy or unreadable. Refresh before trying again; unreadable state needs external correction, not a blind overwrite.",
-        "error",
-      );
-    }
+    ui.notify(
+      code === "conflict"
+        ? notice((m) => m.conflict, "warning")
+        : code === "outcome-unknown" || code === "unavailable"
+          ? notice((m) => m.writeUnknown, "warning")
+          : notice((m) => m.writeFailed, "error"),
+    );
+    // Show what is actually saved now; never resubmit the write.
+    await read();
   }
   async function save() {
-    if (!displayed || refreshRequired || !available) return;
+    if (!displayed || !available) return;
     gesture.cancel();
+    ui.notify();
     const expectedRevision = displayed.revision;
     const intent = generation;
-    ui.message("Capturing this window's current terminal arrangement…");
     let captured: unknown;
     try {
       captured = await bridge.request({
@@ -164,31 +137,21 @@ export function mountRestorationPage(
     } catch {
       captured = undefined;
     }
-    if (disposed) return;
-    if (!visible || generation !== intent) {
-      ui.message(
-        "Save cancelled before writing because the source page was hidden. Saved state was not changed.",
-        "info",
-      );
-      return;
-    }
+    if (disposed || !visible || generation !== intent) return;
     if (!isSavedLayout(captured)) {
-      ui.message(
-        "Capture failed or there are no eligible terminal tabs. Saved state was not changed. Keep the layout within 16 tabs, 16 panes per tab and 32 panes total.",
-        "error",
-      );
+      ui.notify(notice((m) => m.captureFailed, "error"));
       return;
     }
     await replace(expectedRevision, captured);
   }
   async function forget() {
-    if (!displayed || refreshRequired || displayed.status === "empty") return;
+    if (!displayed || displayed.status === "empty") return;
     gesture.cancel();
-    ui.message("Forgetting the active saved layout…");
+    ui.notify();
     await replace(displayed.revision, null);
   }
   async function open(layout: SavedLayout) {
-    ui.message("Opening this saved snapshot in a new window…");
+    ui.notify();
     let reply: unknown;
     try {
       reply = await bridge.request({
@@ -196,44 +159,28 @@ export function mountRestorationPage(
         layout,
       });
     } catch {
-      reply = { error: "outcome-unknown" };
+      reply = undefined;
     }
     if (disposed) return;
-    if (
-      reply &&
-      typeof reply === "object" &&
-      "ok" in reply &&
-      reply.ok === true &&
-      "status" in reply &&
-      reply.status === "accepted"
-    ) {
-      ui.message(
-        "New window accepted. Its core status reports shell initialization and folder fallbacks; acceptance does not mean every shell started. Existing work stays open.",
-        "success",
-      );
+    const record =
+      reply && typeof reply === "object"
+        ? (reply as Record<string, unknown>)
+        : {};
+    if (record.ok === true && record.status === "accepted") {
+      const fallbacks =
+        typeof record.fallbacks === "number" ? record.fallbacks : 0;
+      if (fallbacks > 0) ui.notify(notice((m) => m.fallbacks(fallbacks)));
     } else if (
-      reply &&
-      typeof reply === "object" &&
-      "ok" in reply &&
-      reply.ok === false &&
+      record.ok === false &&
       ["busy", "invalid-layout", "unavailable"].includes(errorCode(reply))
-    ) {
-      ui.message(
-        "Open was refused. The host may be busy, the source window unavailable, or the snapshot incompatible with this platform. Existing work was not changed.",
-        "error",
-      );
-    } else {
-      refreshRequired = true;
-      ui.message(
-        "A new window may already have opened. Check your windows, then Refresh before another deliberate Open. This request will not be replayed automatically.",
-        "warning",
-      );
-    }
+    )
+      ui.notify(notice((m) => m.openFailed, "error"));
+    else ui.notify(notice((m) => m.openUnknown, "warning"));
   }
   for (const [name, action] of [
     ["save", save],
     ["forget", forget],
-    ["refresh", refresh],
+    ["retry", read],
   ] as const)
     ui.buttons[name].addEventListener(
       "click",
@@ -242,18 +189,23 @@ export function mountRestorationPage(
       },
       { signal: lifetime.signal },
     );
-  const unsubscribe = bridge.onVisibility((next) => {
+  const unsubscribeVisibility = bridge.onVisibility((next) => {
     if (visible === next) return;
     visible = next;
     if (!next) {
       generation++;
       gesture.cancel();
     }
-    controls();
-    if (next && !disposed)
-      (ui.buttons.open.disabled ? ui.buttons.refresh : ui.buttons.open).focus();
+    sync();
+    if (!next || disposed) return;
+    // Another window may have saved while this page was hidden.
+    if (loaded) void run(read);
+    const focus = [ui.buttons.open, ui.buttons.save, ui.buttons.retry].find(
+      (button) => !button.hidden,
+    );
+    focus?.focus();
   });
-  controls();
+  sync();
   const ready = run(async () => {
     let capabilities: unknown;
     try {
@@ -272,12 +224,15 @@ export function mountRestorationPage(
     available = ["terminal.captureLayout.v1", "terminal.openLayout.v1"].every(
       (name) => declared.includes(name),
     );
-    await refresh();
-    if (!disposed && !available)
-      ui.message(
-        "This host does not provide both layout capabilities. Use a compatible Linux ARM64 preview host. Read and Forget do not require a host filesystem bridge.",
-        "warning",
-      );
+    if (declared.includes("links.open.v1"))
+      ui.learnMore(() => {
+        void bridge
+          .request({ operation: "links.open.v1", link: "docs" })
+          .catch(() => {});
+      });
+    if (!available) ui.notify(notice((m) => m.unsupported, "warning"));
+    await read();
+    loaded = true;
   }, false);
   return {
     ready,
@@ -285,7 +240,9 @@ export function mountRestorationPage(
       if (disposed) return;
       disposed = true;
       generation++;
-      unsubscribe();
+      unsubscribeVisibility();
+      unsubscribeLanguage();
+      unsubscribeAppearance();
       gesture.dispose();
       lifetime.abort();
       ui.page.remove();

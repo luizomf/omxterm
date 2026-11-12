@@ -14,35 +14,20 @@ body {
   display: flex;
   background: var(--ui-surface);
 }
-.application-page-content > * {
+.application-page-content > section {
   max-width: 720px;
 }
-.application-page-header p {
-  margin: 4px 0 0;
+.application-page-content .ui-hint {
+  margin: 0 0 var(--ui-space-6);
 }
-.introduction {
-  margin: 0 0 24px;
-}
-.application-page-content h2 {
-  margin: 0 0 8px;
-  font-size: var(--ui-text-body);
-  font-weight: 600;
-}
+.snapshot h3,
 .snapshot p {
   margin: 0;
-  color: var(--ui-secondary);
 }
-.layout-actions {
-  margin-top: 16px;
-}
-.layout-explanation {
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid var(--ui-decoration);
-}
-.layout-explanation p {
+.snapshot p {
+  margin-top: var(--ui-space-1);
   overflow-wrap: anywhere;
 }
-[hidden] {
-  display: none !important;
+.layout-actions {
+  margin-top: var(--ui-space-4);
 }

@@ -329,9 +329,9 @@ Mark x64 releases as build-only and untested on a desktop. Record accepted test 
 
 ## Extension archives
 
-Files, SSH Connect and Snippets ship as separate `.omxext` archives with their
-own non-Latest prereleases (`ext-<name>-vX.Y.Z`), not inside a host target
-release. See [extension distribution](extension-distribution.md) for catalog
+Files, SSH Connect, Snippets and Saved Layout ship as separate `.omxext`
+archives with their own non-Latest prereleases (`ext-<name>-vX.Y.Z`), not inside
+a host target release. See [extension distribution](extension-distribution.md) for catalog
 semantics.
 
 ### Building an extension archive
@@ -341,7 +341,7 @@ On an exact, clean committed source (the builder refuses a dirty checkout):
 ```sh
 npm ci
 npm run build
-node scripts/build-files-extension.mjs   # or build-ssh-extension.mjs / build-snippets-extension.mjs
+node scripts/build-files-extension.mjs   # or build-ssh-/build-snippets-/build-restoration-extension.mjs
 OMXTERM_FILES_BUILD=1 npm test -- test/integration/files-extension-build.test.ts
 ```
 
@@ -364,7 +364,10 @@ For SSH Connect, it is the
 the archive, picks an alias and checks what the ssh client received. For
 Snippets, it is the
 [packaged Snippets smoke](snippets-migration.md#packaged-snippets-smoke): it
-installs the archive, then inserts and runs a snippet in the terminal.
+installs the archive, then inserts and runs a snippet in the terminal. For Saved
+Layout, it is the
+[packaged Saved Layout smoke](saved-layout-development.md#packaged-saved-layout-smoke):
+it saves a window, restarts the app and opens the layout again.
 
 ### Publishing an extension archive
 
