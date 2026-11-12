@@ -33,35 +33,42 @@ body {
   );
 }
 
-.mirror-typing-status {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--terminal-chrome-neutral);
-  color: var(--terminal-foreground, #eee);
-  background: var(--terminal-background, #111);
-  font: 13px/1.4 var(--ui-font);
-}
-.mirror-typing-status[hidden] {
-  display: none;
-}
-.terminal-tab .pane-mirroring.restty-terminal-surface {
-  padding-top: calc(22px + var(--terminal-padding-top, 12px));
-}
-.mirror-typing-marker {
+/* State marks (ADR 0050) sit in the pane's top padding, over the canvas and
+   out of the layout flow, so showing one never changes the terminal grid. */
+.state-marks {
   position: absolute;
-  top: 2px;
-  left: 8px;
-  max-width: calc(100% - 16px);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-1);
+  height: max(var(--ui-space-3), var(--terminal-padding-top, 12px));
+  padding: 0 var(--ui-space-1);
+}
+
+.state-notice {
+  position: fixed;
+  z-index: 5;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  max-width: calc(100% - 24px);
+  margin: 0;
+  padding: var(--ui-space-1) var(--ui-space-1) var(--ui-space-1)
+    var(--ui-space-3);
+}
+
+.state-notice-transient {
+  padding: var(--ui-space-2) var(--ui-space-3);
   pointer-events: none;
-  color: var(--terminal-foreground, #eee);
-  font: 12px/18px var(--ui-font);
+}
+
+.state-notice[hidden],
+.state-notice button[hidden] {
+  display: none;
 }
 
 /* While a dialog is modal, soften application paint around it, including
@@ -451,15 +458,6 @@ body.tabs-visible .terminal-tab {
   margin: 0;
   padding: 8px 12px;
   pointer-events: none;
-}
-
-.terminal-layout-status {
-  flex: none;
-  padding: 6px 16px;
-  font: 13px/1.5 var(--ui-font);
-  color: var(--terminal-foreground, #eee);
-  background: var(--terminal-background, #111);
-  user-select: text;
 }
 
 #user-file-errors,

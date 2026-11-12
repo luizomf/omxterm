@@ -21,7 +21,14 @@ afterEach(() => {
 const settle = async () => {
   for (let i = 0; i < 12; i++) await Promise.resolve();
 };
-async function harness() {
+const paneMarks = () =>
+  [...document.querySelectorAll(".terminal-surface")].map(
+    (pane) => pane.querySelector(".ui-mark")?.getAttribute("aria-label") ?? "",
+  );
+const notice = () =>
+  document.querySelector<HTMLElement>(".state-notice:not([hidden])")
+    ?.textContent ?? "";
+async function harness(showTabBar = false) {
   let command!: (value: MirrorCommand) => void;
   let open!: (value: HostedContentDescriptor) => void;
   const bridge: MirrorTypingBridge = {
@@ -49,7 +56,7 @@ async function harness() {
       mirrorTyping: bridge,
       hostedContent: hosted,
       language,
-      showTabBar: false,
+      showTabBar,
     },
   });
   owners.push(h.tabs);
@@ -146,14 +153,35 @@ it("captures exact original focus, hands off only after native hide, and sends o
     ),
   ).toBe(true);
   expect(h.strip.hidden).toBe(true);
-  const row = document.querySelector<HTMLElement>(".mirror-typing-status")!;
-  expect(row.hidden).toBe(false);
-  expect(row.textContent).toContain("2 panes");
-  expect(document.querySelectorAll(".mirror-typing-marker")).toHaveLength(2);
+  expect(paneMarks()).toEqual([
+    expect.stringContaining("to this pane"),
+    expect.stringContaining("from this pane"),
+  ]);
+  expect(notice()).toBe("");
   const focusCount = h.surfaces[1]!.focus.mock.calls.length;
   h.language.set("pt-BR");
-  expect(row.textContent).toContain("Parar");
+  expect(paneMarks()[1]).toContain("deste painel");
   expect(h.surfaces[1]!.focus).toHaveBeenCalledTimes(focusCount);
+});
+
+it("repeats the mark on the visible tab and clears every mark on an ordinary stop", async () => {
+  const h = await harness(true);
+  await h.start();
+  const terminalTab = h.strip.querySelector("button")!;
+  const mark = terminalTab.querySelector("[role=img]")!;
+  expect(mark.getAttribute("title")).toBe("Mirroring typing from this pane.");
+  expect(paneMarks()[1]).toBe(
+    "Mirroring typing from this pane. Click to stop.",
+  );
+  // Opening the Command Palette is a modal entry: it stops mirroring.
+  h.tabs.setBlocked(true);
+  expect(h.bridge.stop).toHaveBeenCalledExactlyOnceWith(
+    "context",
+    "unavailable",
+  );
+  expect(paneMarks()).toEqual(["", ""]);
+  expect(h.strip.querySelector("[role=img]")).toBeNull();
+  expect(notice()).toBe("");
 });
 
 it("waits for focus to come back after the setup view hides, then focuses the original pane", async () => {
@@ -214,9 +242,7 @@ it("owns cancellable Preparing before store admission and rejects leave-and-retu
     snapshot.panes!.map((pane) => pane.handle),
     false,
   );
-  expect(
-    document.querySelector(".mirror-typing-status")!.textContent,
-  ).toContain("Starting mirroring");
+  expect(paneMarks()).toEqual(["", ""]);
   h.tabs.handleCommand({ action: "previous" });
   h.tabs.handleCommand({ action: "next" });
   await settle();
@@ -232,9 +258,35 @@ it("owns cancellable Preparing before store admission and rejects leave-and-retu
   expect(h.reply().ok).toBe(false);
 });
 
+it("clicking any pane's mark stops mirroring quietly and keeps terminal focus", async () => {
+  const h = await harness();
+  await h.start();
+  h.language.set("pt-BR");
+  expect(paneMarks()[0]).toBe(
+    "Espelhando a digitação para este painel. Clique para parar.",
+  );
+  const member = document
+    .querySelectorAll(".terminal-surface")[0]!
+    .querySelector<HTMLButtonElement>("button.ui-mark")!;
+  const press = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+  });
+  member.dispatchEvent(press);
+  expect(press.defaultPrevented).toBe(true);
+  const focusCount = h.surfaces[1]!.focus.mock.calls.length;
+  member.click();
+  expect(h.bridge.stop).toHaveBeenCalledExactlyOnceWith("context", "stopped");
+  expect(h.mountedSurfaceOptions[1]!.routeKeyInput!("x")).toBe(false);
+  expect(paneMarks()).toEqual(["", ""]);
+  expect(notice()).toBe("");
+  expect(h.surfaces[1]!.focus.mock.calls.length).toBeGreaterThan(focusCount);
+});
+
 it("semantic gestures synchronously stop once, then leave ordinary local delivery available", async () => {
   const h = await harness();
   await h.start();
+  vi.useFakeTimers();
   const source = h.mountedSurfaceOptions[1]!;
   source.onSemanticInput!();
   source.onSemanticInput!();
@@ -243,14 +295,15 @@ it("semantic gestures synchronously stop once, then leave ordinary local deliver
     "semantic-input",
   );
   expect(source.routeKeyInput!("local")).toBe(false);
-  expect(
-    document.querySelector(".mirror-typing-status")!.textContent,
-  ).toContain("one pane");
+  expect(paneMarks()).toEqual(["", ""]);
+  expect(notice()).toContain("one pane");
   h.activate();
   expect(h.reply().ok).toBe(false);
+  vi.advanceTimersByTime(4000);
+  expect(notice()).toBe("");
 });
 
-it.each(["blur", "overlay", "switch", "death", "cancel"])(
+it.each(["blur", "overlay", "switch", "death", "preview"])(
   "fences a held prepare against %s and rejects late activation",
   async (reason) => {
     const h = await harness();
@@ -272,10 +325,7 @@ it.each(["blur", "overlay", "switch", "death", "cancel"])(
         signal: 0,
         retained: true,
       });
-    if (reason === "cancel")
-      document
-        .querySelector<HTMLButtonElement>(".mirror-typing-status button")!
-        .click();
+    if (reason === "preview") h.tabs.openOverlay(() => {});
     const focusBeforeHide = h.surfaces[1]!.focus.mock.calls.length;
     hidden(true);
     await settle();
@@ -310,19 +360,22 @@ it("retains original context for describe and refuses an ended original even wit
   expect(h.capture().ok).toBe(false);
 });
 
-it("shows localized partial-delivery failure and clears the mirroring marker", async () => {
+it("shows a localized, dismissible partial-delivery notice and clears the marks", async () => {
   const h = await harness();
   await h.start();
-  const pane = document.querySelector<HTMLElement>(".pane-mirroring")!;
+  vi.useFakeTimers();
   h.command({ kind: "stop", context: "context", reason: "write-failed" });
-  expect(
-    document.querySelector(".mirror-typing-status")!.textContent,
-  ).toContain("only some panes");
+  expect(paneMarks()).toEqual(["", ""]);
+  expect(notice()).toContain("some panes may have missed");
   h.language.set("pt-BR");
-  expect(
-    document.querySelector(".mirror-typing-status")!.textContent,
-  ).toContain("apenas alguns painéis");
-  expect(pane.classList.contains("pane-mirroring")).toBe(false);
+  expect(notice()).toContain("alguns painéis podem não ter recebido");
+  vi.advanceTimersByTime(60000);
+  const dismiss = document.querySelector<HTMLButtonElement>(
+    ".state-notice button",
+  )!;
+  expect(dismiss.getAttribute("aria-label")).toBe("Fechar");
+  dismiss.click();
+  expect(notice()).toBe("");
 });
 
 it("keeps active blur dormant, stops on new unselected split, and never enrolls it", async () => {
@@ -340,7 +393,7 @@ it("keeps active blur dormant, stops on new unselected split, and never enrolls 
   expect(h.mountedSurfaceOptions[2]!.routeKeyInput!("new")).toBe(false);
 });
 
-it("consumes Start/Stop repeats and release, but not a fresh terminal press", async () => {
+it("consumes Start repeats and release, but not a fresh terminal press", async () => {
   const h = await harness();
   await h.start();
   const release = new KeyboardEvent("keyup", {
@@ -350,17 +403,6 @@ it("consumes Start/Stop repeats and release, but not a fresh terminal press", as
   });
   window.dispatchEvent(release);
   expect(release.defaultPrevented).toBe(true);
-  const button = document.querySelector<HTMLButtonElement>(
-    ".mirror-typing-status button",
-  )!;
-  button.dispatchEvent(
-    new KeyboardEvent("keydown", {
-      key: " ",
-      code: "Space",
-      bubbles: true,
-      cancelable: true,
-    }),
-  );
   const repeat = new KeyboardEvent("keydown", {
     key: " ",
     code: "Space",
@@ -376,7 +418,7 @@ it("consumes Start/Stop repeats and release, but not a fresh terminal press", as
   });
   window.dispatchEvent(fresh);
   expect(fresh.defaultPrevented).toBe(false);
-  expect(h.bridge.stop).toHaveBeenCalledOnce();
+  expect(h.bridge.stop).not.toHaveBeenCalled();
 });
 
 it.each(["foreign", "duplicate", "missing-original", "stale-refresh"])(
@@ -419,9 +461,8 @@ it("allows selected-member focus, but a stale activation cannot replace the acti
   expect(h.bridge.input).toHaveBeenLastCalledWith(
     expect.objectContaining({ sourceSessionId: "s1" }),
   );
-  expect(
-    document.querySelector(".mirror-typing-marker")!.textContent,
-  ).toContain("source");
+  expect(paneMarks()[0]).toContain("from this pane");
+  expect(paneMarks()[1]).toContain("to this pane");
   h.activate("wrong-prepare");
   expect(h.reply().ok).toBe(false);
   expect(h.mountedSurfaceOptions[0]!.routeKeyInput!("local")).toBe(false);

@@ -36,6 +36,12 @@ function plan(): InitialLayout {
     })),
   };
 }
+const notice = () =>
+  document.querySelector<HTMLElement>(".state-notice:not([hidden])")
+    ?.textContent ?? "";
+const settle = async () => {
+  for (let i = 0; i < 12; i++) await Promise.resolve();
+};
 function captureBridge() {
   let capture!: () => CapturedLayout | null;
   const remove = vi.fn();
@@ -78,25 +84,14 @@ describe("initial saved-window layout ownership", () => {
     await h.tabs.ready;
     expect(h.mount).toHaveBeenCalledTimes(3);
     expect(h.surfaces).toHaveLength(1);
-    expect(
-      document
-        .querySelector(".terminal-layout-status")
-        ?.getAttribute("data-phase"),
-    ).toBe("initializing");
     releases[1]!();
     await vi.waitFor(() => expect(h.mount).toHaveBeenCalledTimes(4));
     releases[2]!();
     releases[3]!();
-    await vi.waitFor(() =>
-      expect(
-        document
-          .querySelector(".terminal-layout-status")
-          ?.getAttribute("data-phase"),
-      ).toBe("completed"),
-    );
-    expect(
-      document.querySelector(".terminal-layout-status")?.textContent,
-    ).toContain("2 folder fallbacks");
+    await vi.waitFor(() => expect(h.surfaces).toHaveLength(4));
+    await settle();
+    // Success is quiet: nothing is added around the terminal.
+    expect(notice()).toBe("");
     expect(captured.capture()!.selected).toBe(1);
     expect(captured.capture()!.tabs[1]!.focused).toBe(1);
   });
@@ -117,19 +112,16 @@ describe("initial saved-window layout ownership", () => {
     releases[0]!();
     releases[1]!();
     await h.tabs.ready;
-    await vi.waitFor(() =>
-      expect(
-        document
-          .querySelector(".terminal-layout-status")
-          ?.getAttribute("data-phase"),
-      ).toBe("partial"),
-    );
+    await vi.waitFor(() => expect(h.surfaces).toHaveLength(2));
+    await settle();
+    // Panes the user closed aren't failures.
+    expect(notice()).toBe("");
     expect(h.mount).toHaveBeenCalledTimes(2);
     expect(h.adapters[0]!.start).not.toHaveBeenCalled();
     expect(h.adapters[1]!.start).not.toHaveBeenCalled();
   });
 
-  it("keeps successful siblings and truthful status when the first selected pane fails", async () => {
+  it("keeps successful siblings and says so in one sentence when the first selected pane fails", async () => {
     const h = createTabsHarness({
       failMountAt: 1,
       tabsOptions: { initialLayout: plan() },
@@ -137,11 +129,9 @@ describe("initial saved-window layout ownership", () => {
     owners.push(h.tabs);
     await expect(h.tabs.ready).rejects.toThrow();
     await vi.waitFor(() =>
-      expect(
-        document
-          .querySelector(".terminal-layout-status")
-          ?.getAttribute("data-phase"),
-      ).toBe("partial"),
+      expect(notice()).toContain(
+        "Some panes of the saved layout couldn't open.",
+      ),
     );
     expect(h.createAdapter).toHaveBeenCalledTimes(4);
     expect(h.surfaces).toHaveLength(3);
@@ -170,12 +160,11 @@ describe("initial saved-window layout ownership", () => {
     owners.push(h.tabs);
     await h.tabs.ready;
     await vi.waitFor(() =>
-      expect(
-        document
-          .querySelector(".terminal-layout-status")
-          ?.getAttribute("data-phase"),
-      ).toBe("partial"),
+      expect(h.container.querySelectorAll(".terminal-surface")).toHaveLength(3),
     );
+    await settle();
+    // A shell that exits cleanly did open; it isn't a failure.
+    expect(notice()).toBe("");
     expect(empty).not.toHaveBeenCalled();
     expect(h.container.children).toHaveLength(2);
     expect(h.container.querySelectorAll(".terminal-surface")).toHaveLength(3);

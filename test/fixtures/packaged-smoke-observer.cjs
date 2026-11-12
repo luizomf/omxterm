@@ -497,9 +497,10 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
       core.sendInputEvent({ type: "keyUp", keyCode: "Enter" });
     }
   };
+  // The focused pane's state mark while mirroring, else the visible notice.
   const status = () =>
     js(
-      "(() => { const row = document.querySelector('.mirror-typing-status'); return row && !row.hidden ? row.querySelector('[role=status]').textContent : ''; })()",
+      "(() => { const mark = document.querySelector('.terminal-surface.pane-focused .ui-mark') ?? document.querySelector('.terminal-surface .ui-mark'); if (mark) return mark.getAttribute('aria-label'); return document.querySelector('.state-notice:not([hidden]) > span')?.textContent ?? ''; })()",
     );
   if (snippetsArchive) {
     menu("Settings");
@@ -653,18 +654,33 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     menu("Focus Next Pane");
     await settle();
   };
-  // 1. Typing reaches both shells. This start comes from the palette.
+  // 1. Typing reaches both shells. This start comes from the palette. The
+  // marks float over the panes, so showing or clearing them never changes the
+  // terminal grid. The setup page stays open as a tab (its tab strip is
+  // #999), and while it is selected the terminal tab is hidden, so compare the
+  // grid with marks (active) and without them (stopped), same strip.
+  const canvases = () =>
+    js(
+      "[...document.querySelectorAll('.terminal-surface canvas')].map(c => { const r = c.getBoundingClientRect(); return [r.width, r.height]; })",
+    );
+  result.grid = {};
   const typed = marker + ".typed";
   result.panes = await start("palette");
   result.active = await status();
+  result.grid.active = await canvases();
   await keys(line(typed));
   await until(async () => (await lines(typed)).length >= 2, "mirrored typing");
   await settle();
   result.steps.typing = await lines(typed);
 
-  // 2. Stop: the next command runs in one shell only.
-  await js("document.querySelector('.mirror-typing-status button').click()");
+  // 2. Stop by clicking a pane's mark: the marks go away quietly and the next
+  // command runs in one shell only.
+  await js(
+    "document.querySelector('.terminal-surface button.ui-mark').click()",
+  );
   result.steps.stopStatus = await status();
+  await settle();
+  result.grid.stopped = await canvases();
   core.focus();
   const stopped = marker + ".stopped";
   await keys(line(stopped));
@@ -713,7 +729,7 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
       clipboard.writeText(line(pasted), "selection");
     await paste();
     await until(
-      async () => !(await status()).startsWith("Mirroring typing"),
+      async () => !(await status()).startsWith("Mirroring typing from"),
       `${route} paste stop`,
     );
     const pasteStatus = await status();
@@ -752,7 +768,7 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     core.debugger.detach();
   }
   await until(
-    async () => !(await status()).startsWith("Mirroring typing"),
+    async () => !(await status()).startsWith("Mirroring typing from"),
     "drop stop",
   );
   result.steps.dropStatus = await status();
@@ -788,7 +804,7 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     }, "snippet row");
     await view.executeJavaScript(`${row}.click()`);
     await until(
-      async () => !(await status()).startsWith("Mirroring typing"),
+      async () => !(await status()).startsWith("Mirroring typing from"),
       "snippet stop",
     );
     result.steps.snippetStatus = await status();

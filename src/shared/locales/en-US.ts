@@ -155,12 +155,7 @@ export const englishMessages = {
   "terminal.filesDropRefused":
     "Path not inserted. Drag it again from Files in this window.",
   "terminal.sshExit": "SSH exited (code {code}).",
-  "layout.initializing":
-    "Opening saved layout: {settled}/{total} panes; {fallbacks} folder fallbacks; {failed} unavailable panes.",
-  "layout.completed":
-    "Saved layout opened: {settled}/{total} panes; {fallbacks} folder fallbacks; {failed} unavailable panes.",
-  "layout.partial":
-    "Saved layout partially opened: {settled}/{total} panes; {fallbacks} folder fallbacks; {failed} unavailable panes.",
+  "layout.partial": "Some panes of the saved layout couldn't open.",
   "terminal.tabs": "Terminal Tabs",
   "terminal.userFileErrors": "User File Errors",
   "terminal.surfaceFailure": "Terminal Surface Failure",
@@ -320,17 +315,12 @@ export const englishMessages = {
   "extensions.unsupported":
     "Extension management is unavailable on this platform",
   "mirrorTyping.title": "Mirror Typing",
-  "mirrorTyping.preparing": "Starting mirroring…",
-  "mirrorTyping.active": "Mirroring typing · {count} panes",
-  "mirrorTyping.stop": "Stop",
-  "mirrorTyping.cancel": "Cancel",
-  "mirrorTyping.source": "Mirror typing source",
-  "mirrorTyping.member": "Mirror typing member",
-  "mirrorTyping.stopped": "Mirroring stopped",
-  "mirrorTyping.semantic":
-    "Mirroring stopped — paste/insertion goes to one pane.",
+  "mirrorTyping.source": "Mirroring typing from this pane.",
+  "mirrorTyping.member": "Mirroring typing to this pane.",
+  "mirrorTyping.clickToStop": "Click to stop.",
+  "mirrorTyping.semantic": "Mirroring stopped, so this went to one pane only.",
   "mirrorTyping.failed":
-    "Mirroring stopped — input may have reached only some panes. Check them before typing again. Nothing will be retried automatically.",
+    "Mirroring stopped, and some panes may have missed what you typed.",
   "mirrorTyping.focusLivePane": "Focus a live pane, then open Mirror Typing.",
   "mirrorTyping.needTwoPanes":
     "Open at least two live panes in one tab, then open Mirror Typing.",

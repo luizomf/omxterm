@@ -58,29 +58,30 @@ take `color-scheme` from background luminance (light above 0.179).
 
 ## Components
 
-| Class                               | Use it for                                                                                                                |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `page-button` + `-primary`          | The one main action of a view (Save, Connect). Foreground fill.                                                           |
-| `page-button` + `-quiet`            | Ordinary actions. Control fill, no border.                                                                                |
-| `page-button` + `-text`             | Secondary actions in dense lists and navigation. No fill until hover.                                                     |
-| `page-button-compact`               | Add to any button in a dense row: 28 px tall, 13 px text.                                                                 |
-| `ui-icon-button`                    | A 28 px square glyph or icon button (close, hide, toolbars). Always give it an accessible name and a tooltip.             |
-| `ui-link`                           | A text link, such as "Learn more" or About's links.                                                                       |
-| `page-control`                      | Native text fields, selects and textareas. 36 px, control fill, input border. Checkboxes stay native.                     |
-| `ui-actions` (`ui-actions-dense`)   | A group of buttons: wraps with an 8 px (4 px) gap. Buttons never touch.                                                   |
-| `ui-list` + `ui-row`                | Lists people pick from (snippets, aliases, files, palette results). Hover and selection are fills, never borders or bars. |
-| `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.           |
-| `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency.     |
-| `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                        |
-| `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                  |
-| `ui-chip`                           | A key binding or short literal value.                                                                                     |
-| `ui-dialog`                         | Modal overlays (About, Command Palette, previews). Clear backdrop; the rest of the window softens.                        |
-| `ui-overlay`                        | Non-modal floating notices (the exit notice, the panel status, drop hints).                                               |
-| `ui-popover`                        | Menus and tooltips over content in the same view. Solid surface.                                                          |
-| `page-notice` via `setPageNotice()` | Info, success, warning or error. Tinted block with a colored start edge; non-info severities add a glyph.                 |
-| `ui-hint`                           | The one sentence of guidance on a page. Secondary color, about 72 characters wide.                                        |
-| `ui-meta`                           | Small secondary text: counts, kinds, states.                                                                              |
-| `ui-visually-hidden`                | A heading or label that only assistive technology needs.                                                                  |
+| Class                               | Use it for                                                                                                                                                                             |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page-button` + `-primary`          | The one main action of a view (Save, Connect). Foreground fill.                                                                                                                        |
+| `page-button` + `-quiet`            | Ordinary actions. Control fill, no border.                                                                                                                                             |
+| `page-button` + `-text`             | Secondary actions in dense lists and navigation. No fill until hover.                                                                                                                  |
+| `page-button-compact`               | Add to any button in a dense row: 28 px tall, 13 px text.                                                                                                                              |
+| `ui-icon-button`                    | A 28 px square glyph or icon button (close, hide, toolbars). Always give it an accessible name and a tooltip.                                                                          |
+| `ui-link`                           | A text link, such as "Learn more" or About's links.                                                                                                                                    |
+| `page-control`                      | Native text fields, selects and textareas. 36 px, control fill, input border. Checkboxes stay native.                                                                                  |
+| `ui-actions` (`ui-actions-dense`)   | A group of buttons: wraps with an 8 px (4 px) gap. Buttons never touch.                                                                                                                |
+| `ui-list` + `ui-row`                | Lists people pick from (snippets, aliases, files, palette results). Hover and selection are fills, never borders or bars.                                                              |
+| `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.                                                                        |
+| `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency.                                                                  |
+| `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                                                                                     |
+| `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                                                                               |
+| `ui-chip`                           | A key binding or short literal value.                                                                                                                                                  |
+| `ui-dialog`                         | Modal overlays (About, Command Palette, previews). Clear backdrop; the rest of the window softens.                                                                                     |
+| `ui-overlay`                        | Non-modal floating notices (the exit notice, the panel status, drop hints, state notices).                                                                                             |
+| `ui-mark` via `createStateMarks()`  | An ongoing state on a pane and its tab: one 12 px secondary glyph with a tooltip and accessible name, no text on screen. With an action, the pane's glyph is a 16 px `ui-icon-button`. |
+| `ui-popover`                        | Menus and tooltips over content in the same view. Solid surface.                                                                                                                       |
+| `page-notice` via `setPageNotice()` | Info, success, warning or error. Tinted block with a colored start edge; non-info severities add a glyph.                                                                              |
+| `ui-hint`                           | The one sentence of guidance on a page. Secondary color, about 72 characters wide.                                                                                                     |
+| `ui-meta`                           | Small secondary text: counts, kinds, states.                                                                                                                                           |
+| `ui-visually-hidden`                | A heading or label that only assistive technology needs.                                                                                                                               |
 
 Build pages with `createApplicationPage(document, { title, actions,
 navigation, notice, content, status })` and buttons with
@@ -119,6 +120,28 @@ softens the other body children; it's independent of the native `window.blur`
 preference. The startup configuration banner is the one exception: a
 full-width red strip, because OMXTerm fell back to defaults.
 
+**State marks.** One system for state, from `src/renderer/state-marks.ts`
+([ADR 0050](adr/0050-show-ongoing-states-as-quiet-state-marks.md)); never add
+a strip, badge or color of your own. Pick the quietest tier that works:
+
+- idle or success: nothing;
+- something ongoing (mirroring, later an SSH session or an attached agent): a
+  `ui-mark` glyph in the pane's top-right padding, repeated once before the
+  title on its tab when the tab strip shows;
+- a surprise (paste stopped mirroring): `flash()`, one `ui-overlay` sentence at
+  the bottom right that goes away after 4 s;
+- something that needs the user: `notify()`, one sentence without counts and a
+  close button.
+
+Marks and notices float over the terminal, out of the layout flow, so they
+never change the grid. Stopping a state goes through existing actions
+(shortcut, Command Palette, menu), never a separate button; an owner may also
+give its mark an `action` (Mirror Typing: click ↔ to stop). The pane's glyph
+then becomes a `ui-icon-button` with the same look, brightening on hover, and
+its tooltip adds one short sentence such as "Click to stop." A new state adds
+its glyph to `stateGlyphs`; reporters pass a glyph name, a label and an
+optional action, never their own visuals.
+
 **Extension views.** Panel views (Files, SSH Connect, Snippets) are
 transparent: the host paints the panel tint. They don't repeat the tool name;
 the panel header shows it. Window-context views (Saved Layout, Mirror Typing)
@@ -133,7 +156,8 @@ are full pages with an 18 px title.
   their manifest and open it by id with `links.open.v1`
   ([ADR 0045](adr/0045-open-declared-extension-links-by-id.md)).
 - No notices for success or idle states. A notice says what happened and,
-  if needed, what to do next, in one or two sentences.
+  if needed, what to do next, in one or two sentences. State notices (see
+  State marks) take one.
 - Buttons are verbs ("Connect", "Save"), not "OK". Sentence case everywhere.
 - Keep user data literal, never HTML.
 - Interface Languages ship together: update English and Portuguese in the same

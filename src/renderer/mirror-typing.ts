@@ -10,8 +10,8 @@ import {
   type TerminalPane,
   type TerminalTab,
 } from "./terminal-panes";
-import type { RendererLanguage } from "./renderer-language";
-import { createMirrorTypingStatus } from "./mirror-typing-status";
+import { retainDismissalGesture } from "./about/about-dialog";
+import type { StateMarks } from "./state-marks";
 
 interface Member extends MirrorPane {
   readonly pane: TerminalPane;
@@ -118,12 +118,49 @@ function publicPanes(members: readonly Member[]): MirrorPane[] {
   }));
 }
 
+// The Start gesture originated in another WebContents. Retain both possible
+// activation releases; a fresh non-repeat press releases each guard normally.
+function guardStartRelease(document: Document) {
+  const enter = retainDismissalGesture(document);
+  const space = retainDismissalGesture(document);
+  return {
+    settle() {
+      const Keyboard = document.defaultView!.KeyboardEvent;
+      enter.settle(new Keyboard("keydown", { key: "Enter", code: "Enter" }));
+      space.settle(new Keyboard("keydown", { key: " ", code: "Space" }));
+    },
+    dispose() {
+      enter.dispose();
+      space.dispose();
+    },
+  };
+}
+
+// While the route is armed, members and the source carry a State Mark;
+// clicking any of them stops the group.
+// Preparing is input-inert and brief, so it shows nothing.
+function markMembers(marks: StateMarks, stop: () => void) {
+  let marked: readonly TerminalPane[] = [];
+  return (panes: readonly TerminalPane[] = [], source?: TerminalPane) => {
+    for (const pane of marked)
+      if (!panes.includes(pane)) marks.set(pane, "mirror", undefined);
+    for (const pane of panes)
+      marks.set(pane, "mirror", {
+        glyph: "mirror",
+        label: (t) =>
+          t(pane === source ? "mirrorTyping.source" : "mirrorTyping.member"),
+        action: { label: (t) => t("mirrorTyping.clickToStop"), run: stop },
+      });
+    marked = panes;
+  };
+}
+
 // Renderer owns exact DOM/Surface identities; main independently owns native
 // focus, package admission and the lease. Neither side can arm the other alone.
 export function createMirrorTyping(deps: {
   bridge: MirrorTypingBridge;
   parent: HTMLElement;
-  language: RendererLanguage;
+  marks: StateMarks;
   selected(): ApplicationTab | undefined;
   available(): boolean;
   handoff(
@@ -139,10 +176,14 @@ export function createMirrorTyping(deps: {
   let attempt: Attempt | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const unsubscribers: (() => void)[] = [];
-  const status = createMirrorTypingStatus(deps.parent, deps.language, () => {
+  const { marks } = deps;
+  const document = deps.parent.ownerDocument;
+  const startGuard = guardStartRelease(document);
+  const mark = markMembers(marks, () => {
     stop("stopped");
     deps.focus();
   });
+  let dismissFailure = () => {};
   const clear = () => {
     if (timer) clearTimeout(timer);
     timer = undefined;
@@ -153,13 +194,12 @@ export function createMirrorTyping(deps: {
     attempt = undefined; // Close local admission before crossing IPC.
     clear();
     if (!previous) return;
-    status.show(
-      reason === "semantic-input"
-        ? "semantic"
-        : reason === "write-failed"
-          ? "failed"
-          : "stopped",
-    );
+    mark();
+    // An ordinary stop is idle: the marks just go away.
+    if (reason === "semantic-input")
+      marks.flash((t) => t("mirrorTyping.semantic"));
+    if (reason === "write-failed")
+      dismissFailure = marks.notify((t) => t("mirrorTyping.failed"));
     if (previous.handoff && !previous.ready)
       bridge.reply({ request: previous.handoff, ok: false });
     if (echo) bridge.stop(previous.context, reason);
@@ -175,9 +215,8 @@ export function createMirrorTyping(deps: {
   const changed = () => {
     if (!attempt) return;
     if (!valid(attempt) || !selectedMember(attempt)) stop("unavailable");
-    else
-      status.show(
-        attempt.lease ? "active" : "preparing",
+    else if (attempt.lease)
+      mark(
         attempt.members.map((item) => item.pane),
         attempt.snapshot.tab.focused,
       );
@@ -244,8 +283,8 @@ export function createMirrorTyping(deps: {
       sequence: 0,
     };
     attempt = current;
-    status.guardStart();
-    status.show("preparing");
+    dismissFailure();
+    startGuard.settle();
     unsubscribers.push(
       ...observeMembers(current.members, () => stop("unavailable")),
     );
@@ -270,18 +309,12 @@ export function createMirrorTyping(deps: {
     }
     current.handoff = command.request;
     const snapshot = current.snapshot;
-    const document = deps.parent.ownerDocument;
     const ready = (waited: boolean) => {
       if (attempt !== current) return;
       if (!valid(current) || !selectedMember(current) || !document.hasFocus())
         return stop("unavailable");
       if (waited) deps.focus();
       current.ready = true;
-      status.show(
-        "preparing",
-        current.members.map((item) => item.pane),
-        snapshot.original.pane,
-      );
       bridge.reply({ request: command.request, ok: true });
     };
     deps.handoff(
@@ -367,7 +400,7 @@ export function createMirrorTyping(deps: {
       unsubscribe();
       contexts.clear();
       page?.removeEventListener("blur", blur);
-      status.dispose();
+      startGuard.dispose();
     },
   };
 }
