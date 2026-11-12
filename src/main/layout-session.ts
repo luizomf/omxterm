@@ -80,18 +80,20 @@ export function createLayoutSession<Window>(options: {
       return [];
     }
   }
-  async function write(windows: SavedLayout[]) {
+  async function write(windows: SavedLayout[]): Promise<boolean> {
     const temporary = path.join(options.directory, `last-${randomUUID()}.tmp`);
     const bytes = JSON.stringify({
       version: 1,
       windows,
     } satisfies LayoutSession);
-    if (Buffer.byteLength(bytes) > MAX_BYTES) return;
+    if (Buffer.byteLength(bytes) > MAX_BYTES) return false;
     try {
       await fs.writeFile(temporary, bytes, { mode: 0o600, flag: "wx" });
       await fs.rename(temporary, file);
+      return true;
     } catch {
       await fs.rm(temporary, { force: true }).catch(() => {});
+      return false;
     }
   }
   async function save() {
@@ -114,9 +116,8 @@ export function createLayoutSession<Window>(options: {
       (result) => (result as PromiseFulfilledResult<SavedLayout>).value,
     );
     const next = arrangement(layouts);
-    if (next === last) return;
-    last = next;
-    await write(layouts);
+    // A failed write is tried again on the next tick.
+    if (next !== last && (await write(layouts))) last = next;
   }
   const tick = () => {
     saving ??= save().finally(() => {
@@ -132,9 +133,11 @@ export function createLayoutSession<Window>(options: {
   function refresh() {
     if (!owner || disposed) return;
     if (!options.enabled()) {
+      // Forget only when reopening was on and is now turned off, never because
+      // the extension runtime couldn't load at startup.
+      if (timer) void forget();
       clearInterval(timer);
       timer = undefined;
-      void forget();
       return;
     }
     timer ??= setInterval(() => void tick(), options.interval ?? 3000);
@@ -143,11 +146,14 @@ export function createLayoutSession<Window>(options: {
 
   return {
     /**
-     * Claims the profile and returns the windows to reopen: none when another
-     * process owns the profile, reopening is off, or the previous reopening
-     * never finished (so a layout that crashes OMXTerm can't loop).
+     * Claims the profile and returns the windows to reopen. A start with `-e`
+     * (`reopen` false) takes no part at all, so it never overwrites them.
+     * Nothing comes back when another process owns the profile, reopening is
+     * off, or the previous reopening never finished: then the remembered
+     * windows are dropped, so a layout that crashes OMXTerm can't loop.
      */
     async start(reopen: boolean): Promise<SavedLayout[]> {
+      if (!reopen) return [];
       try {
         await fs.mkdir(options.directory, { recursive: true, mode: 0o700 });
         lease = await options.leases?.tryAcquire(
@@ -159,16 +165,12 @@ export function createLayoutSession<Window>(options: {
       } catch {
         owner = false;
       }
-      if (!owner) return [];
-      if (!options.enabled()) {
+      if (!owner || !options.enabled()) return [];
+      if (await exists(marker)) {
+        await fs.rm(marker, { force: true }).catch(() => {});
         await forget();
         return [];
       }
-      if (await exists(marker)) {
-        await fs.rm(marker, { force: true }).catch(() => {});
-        return [];
-      }
-      if (!reopen) return [];
       const windows = await read();
       if (windows.length > 0)
         await fs.writeFile(marker, "", { mode: 0o600 }).catch(() => {});
@@ -176,6 +178,7 @@ export function createLayoutSession<Window>(options: {
     },
     /** The reopened windows exist; start remembering changes. */
     async reopened() {
+      if (!owner) return;
       await fs.rm(marker, { force: true }).catch(() => {});
       refresh();
     },

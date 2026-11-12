@@ -71,10 +71,11 @@ and shows it. Reads never repair or migrate a file; an unreadable one shows
 runs no code for it. `layout-session.ts` captures every window every 3 s (and
 right after one closes) and writes `<profile>/layout-session/last.json` when the
 arrangement changed, skipping quits, empty window sets and failed captures. A
-plain start passes each remembered window through the same plan as Open. Only
-the process holding `session.lock` takes part, and a leftover `reopening`
-marker skips one start so a bad layout can't loop. Disabling the extension
-deletes `last.json`. Change the interval or limits there.
+plain start passes each remembered window through the same plan as Open; a
+start with `-e` takes no part. Only the process holding `session.lock` takes
+part, and a leftover `reopening` marker drops the remembered windows so a bad
+layout can't loop. Disabling the extension deletes `last.json`. Change the
+interval or limits there.
 
 ## Build and test
 

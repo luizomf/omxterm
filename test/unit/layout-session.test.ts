@@ -110,7 +110,7 @@ it("lets only the first process on a profile reopen and remember", async () => {
   second.session.dispose();
 });
 
-it("skips reopening once after a reopening that never finished", async () => {
+it("drops the windows after a reopening that never finished", async () => {
   const first = await setup();
   await first.session.start(true);
   first.state.windows = [layout(1)];
@@ -124,11 +124,11 @@ it("skips reopening once after a reopening that never finished", async () => {
   expect(await next.session.start(true)).toEqual([]);
   next.session.dispose();
   const after = await setup(leases(), first.directory);
-  expect(await after.session.start(true)).toHaveLength(1);
+  expect(await after.session.start(true)).toEqual([]);
   after.session.dispose();
 });
 
-it("opens normally for an explicit command, and forgets the windows when reopening is turned off", async () => {
+it("leaves the windows alone for an explicit command", async () => {
   const test = await setup();
   await test.session.start(true);
   test.state.windows = [layout(1)];
@@ -137,12 +137,45 @@ it("opens normally for an explicit command, and forgets the windows when reopeni
 
   const command = await setup(leases(), test.directory);
   expect(await command.session.start(false)).toEqual([]);
+  await command.session.reopened();
+  command.state.windows = [layout(9)];
+  await command.session.flush();
+  expect((await command.saved()).windows).toEqual([layout(1)]);
   command.session.dispose();
 
+  const next = await setup(leases(), test.directory);
+  expect(await next.session.start(true)).toEqual([layout(1)]);
+  next.session.dispose();
+});
+
+it("forgets the windows only when reopening is turned off", async () => {
+  const test = await setup();
+  await test.session.start(true);
+  test.state.windows = [layout(1)];
+  await test.session.flush();
+  test.session.dispose();
+
+  // The extension runtime didn't load: nothing reopens, nothing is deleted.
+  const unloaded = await setup(leases(), test.directory);
+  unloaded.state.enabled = false;
+  expect(await unloaded.session.start(true)).toEqual([]);
+  await unloaded.session.reopened();
+  expect((await unloaded.saved()).windows).toEqual([layout(1)]);
+  unloaded.session.dispose();
+
   const off = await setup(leases(), test.directory);
+  expect(await off.session.start(true)).toEqual([layout(1)]);
+  await off.session.reopened();
   off.state.enabled = false;
-  expect(await off.session.start(true)).toEqual([]);
-  await expect(off.saved()).rejects.toThrow();
+  off.session.refresh();
+  await expect
+    .poll(() =>
+      off.saved().then(
+        () => "kept",
+        () => "deleted",
+      ),
+    )
+    .toBe("deleted");
   off.session.dispose();
 });
 

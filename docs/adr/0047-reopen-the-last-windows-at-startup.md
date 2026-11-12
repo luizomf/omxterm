@@ -34,16 +34,21 @@ Core owns reopening; an extension only switches it on.
   several windows forgets that window. At most 16 windows are remembered.
 - **Reopening.** A plain start opens each remembered window through the same
   plan as Open: every folder is checked, missing ones become home, and every
-  pane starts a fresh Default Shell. A start with `-e` opens as asked. Windows
-  saved on another OS are skipped. If none can open, one ordinary window opens.
+  pane starts a fresh Default Shell. A start with `-e` opens as asked and takes
+  no part: it neither reopens nor remembers, so it can't overwrite the
+  arrangement. Windows saved on another OS are skipped. If none can open, one
+  ordinary window opens.
 - **One owner per profile.** OMXTerm has no single-instance lock, so a second
   process on the same profile could reopen everything again and overwrite the
   first one's arrangement. Only the process holding the profile's
   `layout-session/session.lock` lease reopens and remembers; the OS releases it
-  if OMXTerm crashes.
+  if OMXTerm crashes. Windows of a second process aren't remembered.
 - **No crash loop.** A `reopening` marker is written before reopening and
-  removed once the windows exist. If it is still there at the next start, that
-  start opens one ordinary window instead.
+  removed once the windows exist. If it is still there at the next start, the
+  remembered windows are dropped and that start opens one ordinary window.
+- **Turning it off.** The remembered windows are deleted when reopening goes
+  from on to off while OMXTerm runs, never just because the extension runtime
+  failed to load.
 
 Window position and size aren't remembered. Writes are a complete temp file
 renamed into place; there is no revision check, because only the lease owner

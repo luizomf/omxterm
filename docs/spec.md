@@ -1011,7 +1011,8 @@ back with fresh shells
 
 - Reopening is on while an installed, enabled extension declares
   `terminal.reopenLayout.v1`. No extension code runs at startup. Disabling or
-  uninstalling it deletes the remembered windows.
+  uninstalling it while OMXTerm runs deletes the remembered windows; an
+  extension runtime that fails to load doesn't.
 - Main captures every terminal window every 3 s and after a window closes,
   and writes `<profile>/layout-session/last.json` only when the arrangement
   changed. It never writes while quitting, for zero windows, or when a capture
@@ -1020,10 +1021,10 @@ back with fresh shells
 - A start without `-e` opens each remembered window from the same plan as Open
   (folders checked, home fallback, fresh Default Shells), skipping windows saved
   on another OS; if none open, one ordinary window opens. A start with `-e`
-  opens as asked.
+  opens as asked and neither reopens nor remembers.
 - Only the process holding `layout-session/session.lock` reopens and
-  remembers. A `reopening` marker left by a start that never finished makes the
-  next start open one ordinary window.
+  remembers. A `reopening` marker left by a start that never finished drops
+  the remembered windows; that start opens one ordinary window.
 - Window position and size are not remembered.
 
 ### Saving a window
