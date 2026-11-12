@@ -412,6 +412,75 @@ async function readPeMachine(file) {
   return data.readUInt16LE(peOffset + 4);
 }
 
+// DLL names a PE imports, eagerly or delay-loaded.
+export function readPeImports(data) {
+  const pe = data.readUInt32LE(0x3c);
+  const sectionCount = data.readUInt16LE(pe + 6);
+  const optional = pe + 24;
+  const optionalSize = data.readUInt16LE(pe + 20);
+  const sectionTable = optional + optionalSize;
+  const pe32Plus = optionalSize > 0 && data.readUInt16LE(optional) === 0x20b;
+  const directoriesAt = pe32Plus ? 112 : 96;
+  // A header without data directories imports nothing.
+  if (optionalSize < directoriesAt) return [];
+  const directoryCount = Math.min(
+    data.readUInt32LE(optional + directoriesAt - 4),
+    (optionalSize - directoriesAt) / 8,
+  );
+  const directories = optional + directoriesAt;
+  const fileOffset = (rva) => {
+    for (let index = 0; index < sectionCount; index += 1) {
+      const section = sectionTable + index * 40;
+      const start = data.readUInt32LE(section + 12);
+      const size = Math.max(
+        data.readUInt32LE(section + 8),
+        data.readUInt32LE(section + 16),
+      );
+      if (rva >= start && rva < start + size)
+        return rva - start + data.readUInt32LE(section + 20);
+    }
+    throw new Error(`PE RVA 0x${rva.toString(16)} is outside every section`);
+  };
+  const names = [];
+  // Import descriptors (directory 1) are 20 bytes with the name RVA at +12;
+  // delay-import descriptors (directory 13) are 32 bytes with it at +4.
+  for (const [directory, size, nameField] of [
+    [1, 20, 12],
+    [13, 32, 4],
+  ]) {
+    if (directory >= directoryCount) continue;
+    const rva = data.readUInt32LE(directories + directory * 8);
+    if (rva === 0) continue;
+    for (let entry = fileOffset(rva); ; entry += size) {
+      const nameRva = data.readUInt32LE(entry + nameField);
+      if (nameRva === 0) break;
+      const start = fileOffset(nameRva);
+      names.push(data.toString("latin1", start, data.indexOf(0, start)));
+    }
+  }
+  return names;
+}
+
+// Users shouldn't need the Visual C++ Redistributable: shipped binaries link
+// the C++ runtime statically and use only the Universal CRT built into Windows.
+const redistributableDll = /^(?:vcruntime|msvcp|vcomp|concrt)\d/iu;
+
+async function inspectWindowsRuntimeImports(applicationRoot) {
+  const needsRedistributable = [];
+  for (const entry of await listTreeEntries(applicationRoot)) {
+    if (!/\.(?:dll|exe|node)$/iu.test(entry)) continue;
+    const imports = readPeImports(
+      await readFile(path.join(applicationRoot, entry)),
+    ).filter((name) => redistributableDll.test(name));
+    if (imports.length > 0)
+      needsRedistributable.push(`${entry} (${imports.join(", ")})`);
+  }
+  if (needsRedistributable.length > 0)
+    throw new Error(
+      `Packaged binaries need the Visual C++ Redistributable: ${needsRedistributable.join("; ")}`,
+    );
+}
+
 export function inspectElfDynamicDependencies(dynamicSection) {
   const dependencies = [
     ...dynamicSection.matchAll(/\(NEEDED\).*\[([^\]]+)\]/gu),
@@ -1102,6 +1171,8 @@ export async function verifyPackagedApplication(
       throw new Error(
         "Development/private-looking files were packaged outside app.asar",
       );
+    if (platform === "win32")
+      await inspectWindowsRuntimeImports(applicationRoot);
 
     const resources =
       platform === "darwin"

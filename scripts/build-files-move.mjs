@@ -17,7 +17,8 @@ export async function buildFilesMove(outputDirectory) {
   const addon = path.join(output, "files-move.node");
   const defines = ["NAPI_VERSION=8", "NODE_GYP_MODULE_NAME=files_move"];
   if (platform === "win32") {
-    // Same MSVC route and delay-loaded node.exe binding as extension leases.
+    // Same MSVC route, static C++ runtime and delay-loaded node.exe binding
+    // as extension leases.
     const library = process.env.OMXTERM_NODE_IMPORT_LIBRARY;
     if (!library || !path.isAbsolute(library))
       throw new Error(
@@ -29,7 +30,7 @@ export async function buildFilesMove(outputDirectory) {
         "/nologo",
         "/std:c++17",
         "/EHsc",
-        "/MD",
+        "/MT",
         "/LD",
         "/W4",
         "/WX",
