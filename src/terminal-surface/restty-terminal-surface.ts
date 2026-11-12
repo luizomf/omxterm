@@ -176,8 +176,18 @@ export async function mountResttyTerminalSurface(
     revealInput,
   );
 
-  const applyContainerAppearance = () =>
+  // Hosts place quiet overlays (State Marks) against the first text row.
+  const paintFontMetrics = () => {
+    container.style.setProperty("--terminal-font-size", `${currentFontSize}px`);
+    container.style.setProperty(
+      "--terminal-line-height",
+      `${initialLineHeight}`,
+    );
+  };
+  const applyContainerAppearance = () => {
     paintContainer(container, padding, terminalTheme, options.background);
+    paintFontMetrics();
+  };
   const applyRuntimeTheme = (theme: TerminalTheme, labels?: Labels) => {
     pane?.runtime.terminal.applyTheme(toGhosttyTheme(theme), "OMXTerm");
     applySearchTheme(restty, container, theme, labels);
@@ -186,6 +196,7 @@ export async function mountResttyTerminalSurface(
     !isInactive() && !container.hidden && container.isConnected;
   const applyRuntimeSize = (fontSize: number) => {
     currentFontSize = fontSize;
+    paintFontMetrics();
     pane?.runtime.terminal.setFontSize(fontSize);
   };
   const refit = () => {
