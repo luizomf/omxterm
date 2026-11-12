@@ -54,7 +54,12 @@ import {
 import { createKeybindCapture } from "./keybind-capture";
 import { loadMacOSOptionShortcut } from "./macos-option-shortcut";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
-import { MalformedLaunchRequestError } from "./launch-request";
+import {
+  consumeLaunchRequestOnce,
+  MalformedLaunchRequestError,
+  type LaunchRequest,
+} from "./launch-request";
+import { claimSingleInstance } from "./single-instance";
 import { prepareStartup } from "./application-startup";
 import { registerTerminalShutdown } from "./terminal-shutdown";
 import { applyLinuxDisplayBackendDefault } from "./linux-display-backend";
@@ -183,13 +188,29 @@ applyChromiumSandboxPolicy(app.commandLine);
 
 applyChromiumGpuPolicy(app.commandLine);
 
-applyLinuxDisplayBackendDefault(app, chromiumStartupVariables);
+const relaunching = applyLinuxDisplayBackendDefault(
+  app,
+  chromiumStartupVariables,
+);
+
+// A later launch on this profile becomes a window here, after startup.
+let openLaunchedWindow: ((request: LaunchRequest) => void) | undefined;
+const earlyLaunches: LaunchRequest[] = [];
+const primary =
+  !relaunching &&
+  claimSingleInstance(app, process.argv, (request) => {
+    if (openLaunchedWindow) openLaunchedWindow(request);
+    else earlyLaunches.push(request);
+  });
+// Read by the window being created right now, from openLaunchedWindow.
+let launchedWindowRequest: LaunchRequest | undefined;
 
 app.on("before-quit", () => operationalEvents?.flush());
 
 app
   .whenReady()
   .then(async () => {
+    if (!primary) return;
     const provisioning = await claimDefaultSnippets(
       defaultProfile,
       () => app.getPath("userData"),
@@ -344,7 +365,9 @@ app
           confirmClose: userConfiguration.confirmClose,
           alwaysOnTopDefault: userConfiguration.alwaysOnTop,
           createWindow(lifecycle, restoration) {
-            const consumeLaunch = consumeLaunchRequest(lifecycle.windowId);
+            const consumeLaunch = launchedWindowRequest
+              ? consumeLaunchRequestOnce(launchedWindowRequest)
+              : consumeLaunchRequest(lifecycle.windowId);
             const active = configurationReloader.current();
             const initialShell = resolveCurrentDefaultShell();
             const window = new BrowserWindow(
@@ -598,17 +621,17 @@ app
           operationalEvents: operationalEvents!,
         });
 
-        const menuActions = terminalMenuActions(terminalApplication, {
-          newWindow: () => {
-            void terminalApplication!.newWindow().catch((cause) => {
-              const failure = terminalApplicationFailure("new-window", cause);
-              operationalEvents!.write({
-                name: "application.failure",
-                stage: failure.stage,
-              });
-              nativeDialogs.applicationFailure(failure);
+        const reportNewWindow = (opened: Promise<void>) =>
+          void opened.catch((cause) => {
+            const failure = terminalApplicationFailure("new-window", cause);
+            operationalEvents!.write({
+              name: "application.failure",
+              stage: failure.stage,
             });
-          },
+            nativeDialogs.applicationFailure(failure);
+          });
+        const menuActions = terminalMenuActions(terminalApplication, {
+          newWindow: () => reportNewWindow(terminalApplication!.newWindow()),
           reloadUserConfiguration: () => void configurationReloader.reload(),
           showAbout: applicationAbout.startApplicationAbout(
             terminalIpcRouter,
@@ -657,6 +680,16 @@ app
           application: () => terminalApplication,
         });
         await layoutSession.openWindows(!explicitCommand);
+        openLaunchedWindow = (request) => {
+          // createWindow runs synchronously inside newWindow.
+          launchedWindowRequest = request;
+          const opened = terminalApplication!.newWindow();
+          launchedWindowRequest = undefined;
+          reportNewWindow(opened);
+          // The launch came from another process; bring OMXTerm forward.
+          if (process.platform === "darwin") app.focus({ steal: true });
+        };
+        earlyLaunches.splice(0).forEach(openLaunchedWindow);
       },
     );
   })

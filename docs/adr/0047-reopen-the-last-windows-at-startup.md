@@ -45,11 +45,13 @@ Core owns reopening; an extension only switches it on.
   no part: it neither reopens nor remembers, so it can't overwrite the
   arrangement. Windows saved on another OS are skipped. If none can open, one
   ordinary window opens.
-- **One owner per profile.** OMXTerm has no single-instance lock, so a second
-  process on the same profile could reopen everything again and overwrite the
-  first one's arrangement. Only the process holding the profile's
-  `layout-session/session.lock` lease reopens and remembers; the OS releases it
-  if OMXTerm crashes. Windows of a second process aren't remembered.
+- **One owner per profile.** A second process on the same profile could reopen
+  everything again and overwrite the first one's arrangement. Only the process
+  holding the profile's `layout-session/session.lock` lease reopens and
+  remembers; the OS releases it if OMXTerm crashes. Windows of a second process
+  aren't remembered. Packaged launches now join the running process
+  ([ADR 0048](0048-open-a-second-launch-in-the-running-process.md)), so the
+  lease is what still separates source runs from an installed OMXTerm.
 - **No crash loop.** A `reopening` marker is written before reopening and
   removed after the first successful save once the reopened windows run, or
   when OMXTerm starts quitting normally. If it

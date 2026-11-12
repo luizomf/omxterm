@@ -68,8 +68,10 @@ tmux.
 was requested. macOS and Linux use the OS-configured shell. Windows uses
 `windowsShell` when configured, otherwise PowerShell with a ComSpec fallback.
 
-**Launch Request** — Startup `-e <program> [arguments...]`, consumed by the
-first tab. The program and literal argument list go directly to the PTY.
+**Launch Request** — `-e <program> [arguments...]` on a launch, consumed by
+the first tab of that launch's window. The program and literal argument list go
+directly to the PTY. A launch while OMXTerm runs on the same profile hands its
+request to the running process, which opens it in a new window.
 
 **Initial Working Directory** — The operating-system account's home directory,
 where new tabs and an explicit Launch Request start. Split panes instead use

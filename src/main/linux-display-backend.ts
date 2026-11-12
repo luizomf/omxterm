@@ -8,10 +8,11 @@ import {
 } from "./chromium-startup-environment";
 import { withSwitchBeforeLaunchRequest } from "./launch-request";
 
+/** Returns true when this process relaunched itself and is exiting. */
 export function applyLinuxDisplayBackendDefault(
   app: Pick<App, "commandLine" | "exit">,
   chromiumStartupVariables?: ChromiumStartupVariables,
-): void {
+): boolean {
   const action = planLinuxDisplayBackendDefault(
     app.commandLine.getSwitchValue("ozone-platform"),
   );
@@ -55,10 +56,12 @@ export function applyLinuxDisplayBackendDefault(
         },
       ).unref();
       app.exit(0);
+      return true;
     } catch {
       // Preserve the existing fallback to the seeded backend if spawning fails.
     }
   }
+  return false;
 }
 
 export type LinuxDisplayBackendAction = "none" | "append-x11" | "relaunch-x11";

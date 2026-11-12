@@ -25,9 +25,9 @@ With Saved Layout 0.3.0 or later on OMXTerm 0.28.0 or later, there's nothing to 
 quit OMXTerm (or let it update, or even crash) and the next start reopens the
 same windows, tabs, splits, focused panes and folders. Closing one of several
 windows forgets that one. Window positions and sizes aren't kept, and starting
-OMXTerm with `-e` to run a command opens just that. Open more windows with
-**File → New Window**: windows of a second OMXTerm started separately aren't
-remembered.
+OMXTerm with `-e` to run a command opens just that. Opening OMXTerm again while
+it runs adds a window to the running one, so it's remembered too (unless that
+OMXTerm was itself started with `-e`).
 
 To stop it, disable or remove Saved Layout in **Settings → Extensions**; that
 also deletes the remembered windows.
