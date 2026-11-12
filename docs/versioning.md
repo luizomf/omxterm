@@ -12,7 +12,7 @@ in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
 `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N`,
-`0.27.1-dev.N`, `0.28.0-dev.N` and `0.28.1-dev.N` bridges have distinct
+`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N` and `0.29.1-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
@@ -40,6 +40,12 @@ Stable 0.28.0 uses the frozen cut `ed0ed9e1`; the next development baseline is
 `0.28.1-dev.0`. Its bridge admits ranges that accept both `0.28.0` and
 `0.28.1`, so every catalog archive, including Saved Layout 0.3.0, stays
 installable unchanged.
+
+## Post-0.29.0 development baseline
+
+Stable 0.29.0 uses the frozen cut `aefba704`; the next development baseline is
+`0.29.1-dev.0`. Its bridge admits ranges that accept both `0.29.0` and
+`0.29.1`.
 
 ## Public contract
 

@@ -2653,7 +2653,7 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N` or `0.28.1-dev.N` host admit a
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N` or `0.29.1-dev.N` host admit a
   range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.
