@@ -187,37 +187,38 @@ Use **Settings → Shortcuts** to record, reset or unbind application shortcuts.
 
 Every shortcut needs a key and at least one modifier other than Shift. Function keys F1–F24 can stand alone. Set an action to `null` to unbind it; omit the action to keep its default. Conflicting shortcuts are rejected. A shortcut used by a terminal program, such as Ctrl+C, will be handled by OMXTerm instead of reaching the shell.
 
-| Action                                                    | macOS default                                                         | Linux/Windows default                      |
-| --------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------ |
-| `commandPalette`                                          | `Cmd+Shift+P`                                                         | `Ctrl+Shift+P`                             |
-| `quit`                                                    | `Cmd+Q`                                                               | `Ctrl+Alt+Shift+Q`                         |
-| `copy` / `paste`                                          | `Cmd+C` / `Cmd+V`                                                     | `Ctrl+Shift+C` / `Ctrl+Shift+V`            |
-| `selectAll` / `find`                                      | `Cmd+A` / `Cmd+F`                                                     | `Ctrl+Shift+A` / `Ctrl+Shift+F`            |
-| `newWindow` / `newTab`                                    | `Cmd+N` / `Cmd+T`                                                     | `Ctrl+Shift+N` / `Ctrl+Shift+T`            |
-| `closeTab` / `closeWindow`                                | `Cmd+W` / `Cmd+Shift+W`                                               | `Ctrl+Shift+W` / `Ctrl+Shift+Q`            |
-| `nextTab` / `previousTab`                                 | `Ctrl+Tab` / `Ctrl+Shift+Tab`                                         | `Ctrl+PageDown` / `Ctrl+PageUp`            |
-| `selectTab1` … `selectTab9`                               | `Cmd+1` … `Cmd+9`                                                     | `Alt+1` … `Alt+9`                          |
-| `splitRight` / `splitDown`                                | `Cmd+D` / `Cmd+Shift+E`                                               | `Ctrl+Shift+O` / `Ctrl+Shift+E`            |
-| `closePane`                                               | `Cmd+Option+W`                                                        | `Ctrl+Shift+K`                             |
-| `focusNextPane` / `focusPreviousPane`                     | `Cmd+]` / `Cmd+[`                                                     | `Ctrl+Shift+]` / `Ctrl+Shift+[`            |
-| `focusPaneLeft` / `focusPaneRight`                        | `Cmd+Option+Left` / `Cmd+Option+Right`                                | `Alt+Shift+Left` / `Alt+Shift+Right`       |
-| `focusPaneUp` / `focusPaneDown`                           | `Cmd+Option+Up` / `Cmd+Option+Down`                                   | `Alt+Shift+Up` / `Alt+Shift+Down`          |
-| `equalizePanes`                                           | `Cmd+Ctrl+=`                                                          | `Ctrl+Shift+0`                             |
-| `zoomIn` / `zoomOut` / `actualSize`                       | `CommandOrControl+Plus` / `CommandOrControl+-` / `CommandOrControl+0` | `Control+Plus` / `Control+-` / `Control+0` |
-| `toggleFullScreen`                                        | `Ctrl+Cmd+F`                                                          | `F11`                                      |
-| `toggleSnippets`                                          | `Cmd+Shift+S`                                                         | `Ctrl+Shift+S`                             |
-| `toggleFiles`, `toggleSshConnect`, `toggleAuxiliaryPanel` | unbound                                                               | unbound                                    |
-| `toggleMirrorTyping`                                      | `Cmd+Shift+M`                                                         | `Ctrl+Shift+M`                             |
-| `saveLayout`                                              | `Cmd+Shift+L`                                                         | `Ctrl+Shift+L`                             |
-| `moveAuxiliaryPanel`                                      | `Cmd+Shift+Option+P`                                                  | `Ctrl+Shift+Alt+P`                         |
-| `toggleTabBar` / `toggleTitleBar`                         | `Cmd+Shift+B` / `Cmd+Shift+D`                                         | `Ctrl+Shift+B` / `Ctrl+Shift+D`            |
-| `reloadConfig`                                            | `Cmd+Shift+,`                                                         | `Ctrl+Shift+,`                             |
+| Action                                | macOS default                                                         | Linux/Windows default                      |
+| ------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------ |
+| `commandPalette`                      | `Cmd+Shift+P`                                                         | `Ctrl+Shift+P`                             |
+| `quit`                                | `Cmd+Q`                                                               | `Ctrl+Alt+Shift+Q`                         |
+| `copy` / `paste`                      | `Cmd+C` / `Cmd+V`                                                     | `Ctrl+Shift+C` / `Ctrl+Shift+V`            |
+| `selectAll` / `find`                  | `Cmd+A` / `Cmd+F`                                                     | `Ctrl+Shift+A` / `Ctrl+Shift+F`            |
+| `newWindow` / `newTab`                | `Cmd+N` / `Cmd+T`                                                     | `Ctrl+Shift+N` / `Ctrl+Shift+T`            |
+| `closeTab` / `closeWindow`            | `Cmd+W` / `Cmd+Shift+W`                                               | `Ctrl+Shift+W` / `Ctrl+Shift+Q`            |
+| `nextTab` / `previousTab`             | `Ctrl+Tab` / `Ctrl+Shift+Tab`                                         | `Ctrl+PageDown` / `Ctrl+PageUp`            |
+| `selectTab1` … `selectTab9`           | `Cmd+1` … `Cmd+9`                                                     | `Alt+1` … `Alt+9`                          |
+| `splitRight` / `splitDown`            | `Cmd+D` / `Cmd+Shift+E`                                               | `Ctrl+Shift+O` / `Ctrl+Shift+E`            |
+| `closePane`                           | `Cmd+Option+W`                                                        | `Ctrl+Shift+K`                             |
+| `focusNextPane` / `focusPreviousPane` | `Cmd+]` / `Cmd+[`                                                     | `Ctrl+Shift+]` / `Ctrl+Shift+[`            |
+| `focusPaneLeft` / `focusPaneRight`    | `Cmd+Option+Left` / `Cmd+Option+Right`                                | `Alt+Shift+Left` / `Alt+Shift+Right`       |
+| `focusPaneUp` / `focusPaneDown`       | `Cmd+Option+Up` / `Cmd+Option+Down`                                   | `Alt+Shift+Up` / `Alt+Shift+Down`          |
+| `equalizePanes`                       | `Cmd+Ctrl+=`                                                          | `Ctrl+Shift+0`                             |
+| `zoomIn` / `zoomOut` / `actualSize`   | `CommandOrControl+Plus` / `CommandOrControl+-` / `CommandOrControl+0` | `Control+Plus` / `Control+-` / `Control+0` |
+| `toggleFullScreen`                    | `Ctrl+Cmd+F`                                                          | `F11`                                      |
+| `toggleSnippets`                      | `Cmd+Option+S`                                                        | `Ctrl+Shift+S`                             |
+| `toggleFiles` / `toggleSshConnect`    | `Cmd+Option+F` / `Cmd+Option+O`                                       | unbound                                    |
+| `toggleAuxiliaryPanel`                | unbound                                                               | unbound                                    |
+| `toggleMirrorTyping`                  | `Cmd+Shift+M`                                                         | `Ctrl+Shift+M`                             |
+| `saveLayout`                          | `Cmd+Shift+L`                                                         | `Ctrl+Shift+L`                             |
+| `moveAuxiliaryPanel`                  | `Cmd+Shift+Option+P`                                                  | `Ctrl+Shift+Alt+P`                         |
+| `toggleTabBar` / `toggleTitleBar`     | `Cmd+Shift+B` / `Cmd+Shift+D`                                         | `Ctrl+Shift+B` / `Ctrl+Shift+D`            |
+| `reloadConfig`                        | `Cmd+Shift+,`                                                         | `Ctrl+Shift+,`                             |
 
 The Command Palette is also available from **View → Command Palette…** when its shortcut is unbound. `toggleMirrorTyping` works only while the [Mirror Typing](mirror-typing.md) extension is installed and enabled, and `saveLayout` only while [Saved Layout](saved-layout.md) is; otherwise their keys reach the terminal. On Linux and Windows, Find uses Ctrl+Shift+F and full screen uses F11; remove conflicting custom bindings if upgrading an older configuration.
 
 ## Snippets
 
-Snippets save reusable text or commands in `snippets.yaml`, beside `config.json`. Return from Settings to a terminal tab, then open the Snippets sidebar with `Cmd+Shift+S` or `Ctrl+Shift+S`; the shortcut does nothing in Settings. See [Snippets availability](snippets-availability.md) for where it is offered.
+Snippets save reusable text or commands in `snippets.yaml`, beside `config.json`. Return from Settings to a terminal tab, then open the Snippets sidebar with `Cmd+Option+S` or `Ctrl+Shift+S`; the shortcut does nothing in Settings. See [Snippets availability](snippets-availability.md) for where it is offered.
 
 Create `snippets.yaml` if it is absent, and save this example:
 

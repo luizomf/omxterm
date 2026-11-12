@@ -110,8 +110,9 @@ read.
 
 ### Panel shortcuts
 
-- `toggleFiles` and `toggleSshConnect` are unbound by default and can be set
-  before the tool is installed. A missing, disabled or unsupported tool doesn't
+- `toggleFiles` and `toggleSshConnect` default to `Cmd+Option+F` and
+  `Cmd+Option+O` on macOS and are unbound on Linux and Windows (`Ctrl+Alt` is
+  AltGr there); they can be set before the tool is installed. A missing, disabled or unsupported tool doesn't
   consume the key, but the binding still counts for conflicts. A held key acts
   once: it closes a selected visible tool, reveals a hidden or unselected one and
   opens a closed one.

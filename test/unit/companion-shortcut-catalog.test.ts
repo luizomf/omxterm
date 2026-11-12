@@ -26,16 +26,18 @@ const tools = [
     id: "omxterm.files",
     action: "toggleFiles",
     title: "Files",
+    mac: "CommandOrControl+Alt+F",
   },
   {
     id: "omxterm.ssh",
     action: "toggleSshConnect",
     title: "SSH Connect",
+    mac: "CommandOrControl+Alt+O",
   },
 ] as const;
 
 it.each(tools)(
-  "projects $id once with its captured callback and nullable core binding",
+  "projects $id once with its captured callback and core binding",
   (tool) => {
     const { t } = translatorFor("en-US");
     const invoke = vi.fn();
@@ -50,7 +52,10 @@ it.each(tools)(
     expect(companionToolShortcut(metadata)).toBe(tool.action);
     for (const platform of ["darwin", "linux", "win32"]) {
       const defaults = terminalDefaultKeybinds(platform);
-      expect(defaults[tool.action]).toBeNull();
+      // macOS only: Ctrl+Alt is AltGr on Windows and Linux layouts.
+      expect(defaults[tool.action]).toBe(
+        platform === "darwin" ? tool.mac : null,
+      );
       for (const value of [null, "Control+Alt+J"]) {
         const configured = validateUserConfiguration(
           { version: 1, keybinds: { [tool.action]: value } },

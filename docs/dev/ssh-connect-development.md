@@ -3,8 +3,8 @@
 SSH Connect is an optional extension that opens OpenSSH sessions in new
 OMXTerm terminal tabs. It ships as a separate `.omxext` archive, not inside the
 host. Users install it from **Settings → Extensions** and open it from File, the
-Command Palette or the terminal context menu, or with an optional
-`toggleSshConnect` shortcut. The [SSH Connect user guide](../ssh-connect.md) covers
+Command Palette or the terminal context menu, or with the
+`toggleSshConnect` shortcut (`Cmd+Option+O` on macOS, unbound elsewhere). The [SSH Connect user guide](../ssh-connect.md) covers
 installation and connecting.
 
 The extension lists `Host` aliases from `~/.ssh/config` and offers a quick-connect

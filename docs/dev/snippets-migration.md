@@ -64,7 +64,7 @@ Which home directory the extension uses depends on its version:
   update an installed 0.1.0.
 
 **View → Toggle Snippets**, its Command Palette entry and its shortcut
-(`Ctrl+Shift+S` on Linux/Windows, `Cmd+Shift+S` on macOS, `keybinds.toggleSnippets`)
+(`Ctrl+Shift+S` on Linux/Windows, `Cmd+Option+S` on macOS, `keybinds.toggleSnippets`)
 are the only entry point. The package's own duplicate action is withheld.
 
 - With Snippets installed and enabled, the command opens the companion view.

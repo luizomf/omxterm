@@ -264,7 +264,7 @@ describe("native application menu", () => {
         }),
         expect.objectContaining({
           label: "Toggle Snippets",
-          accelerator: "CommandOrControl+Shift+S",
+          accelerator: "CommandOrControl+Alt+S",
           click: actions.toggleSelectedSnippets,
         }),
       ]),

@@ -677,7 +677,7 @@ Connect share it; no per-tool placement or second panel exists.
 
 **Opening tools**
 
-- `View -> Toggle Snippets` (default `Cmd+Shift+S` on macOS and `Ctrl+Shift+S`
+- `View -> Toggle Snippets` (default `Cmd+Option+S` on macOS and `Ctrl+Shift+S`
   on Linux and Windows, remappable through `keybinds`) opens, reveals, or closes
   the selected window's Snippets view. It is the only menu/palette entry for
   Snippets, including with remapped or null bindings.
@@ -1997,8 +1997,9 @@ Vocabulary:
 
 Files, SSH Connect, Mirror Typing and Saved Layout slots:
 
-- `toggleFiles` and `toggleSshConnect` default to `null` everywhere;
-  `toggleMirrorTyping` and `saveLayout` have the defaults above. The first
+- `toggleFiles` and `toggleSshConnect` default to `Cmd+Option+F` and
+  `Cmd+Option+O` on macOS and to `null` on Linux and Windows, where `Ctrl+Alt`
+  is AltGr; `toggleMirrorTyping` and `saveLayout` have the defaults above. The first
   three reuse the installed extension's action and guards and its single
   File-menu and palette entry. `saveLayout` is a second entry beside Saved
   Layout's page entry (see [Saved Layout](#saved-layout)). Other extension
