@@ -52,6 +52,8 @@ export function inspectWindowsInstallerInputs(
   // NSIS identity, registration/cache paths, templates and options are unchanged.
   // ADR 0046 adds only the macOS sign hook. Windows payload, NSIS identity,
   // registration/cache paths, templates and options are unchanged.
+  // #964 unpacks the Files move addon on Windows too. NSIS identity,
+  // registration/cache paths, templates and options are unchanged.
   const digest = createHash("sha256")
     .update(configuration.replaceAll("\r\n", "\n"))
     .digest("hex");
@@ -59,7 +61,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest !==
-      "bc5a9277c3004ca7130099786b9f98893fcb018d88468666f63e79f2338caf57"
+      "14a5b7b703907f70e0cae08e5d93f122e4b4a1633f580f4ae692688d01b9ec2b"
   )
     throw new Error(
       "Unknown Windows installer footprint; review the pinned packaging inputs before exact installer verification",

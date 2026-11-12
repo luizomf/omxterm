@@ -211,8 +211,7 @@ npm test -- test/integration/installed-packages.test.ts
 
 The explicit build produces `dist/installed-packages/index.mjs` and the addon.
 `npm run build` includes both on macOS ARM64, Linux ARM64/x64 and Windows
-ARM64/x64. Extension admission is enabled on Linux ARM64/x64, macOS ARM64 and
-Windows ARM64; see [macOS composition](macos-extension-composition.md) and
+ARM64/x64, and extension admission is enabled on all of them; see [macOS composition](macos-extension-composition.md) and
 [Windows ARM64 composition](windows-arm64-extension-composition.md). Native
 binaries never enter Git. `yauzl` and `semver` are external runtime
 dependencies of this bundle.

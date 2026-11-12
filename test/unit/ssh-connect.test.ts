@@ -97,6 +97,17 @@ describe("bounded static index", () => {
     expect(await readFile(path.join(ssh, "config"), "utf8")).toBe(config);
     expect((await stat(path.join(ssh, "config"))).mtimeMs).toBe(before.mtimeMs);
   });
+  it("reads a Windows-edited config with CRLF lines and skips backslash includes", async () => {
+    const home = await fixture();
+    await writeFile(
+      path.join(home, ".ssh/config"),
+      "Include conf.d\\extra\r\nHost work\r\n  HostName 192.0.2.1\r\nHost home-box\r\n",
+    );
+    const result = await discoverAliases(home, signal());
+    expect(result.aliases).toEqual(["work", "home-box"]);
+    // Backslashes aren't parsed; the list just reports itself incomplete.
+    expect(result.incomplete).toBe(true);
+  });
   it("sorts globs, permits symlink configs and detects active-stack cycles", async () => {
     const home = await fixture();
     const ssh = path.join(home, ".ssh");
@@ -179,23 +190,30 @@ it("resolves only executable regular files under absolute application PATH entri
   await writeFile(path.join(home, "client"), "not executed", { mode: 0o700 });
   await symlink("client", path.join(home, "ssh"));
   expect(
-    await findSsh({ PATH: ["", ".", "relative", home].join(path.delimiter) }),
+    await findSsh(
+      { PATH: ["", ".", "relative", home].join(path.delimiter) },
+      "linux",
+    ),
   ).toBe(path.join(home, "ssh"));
   expect(
-    await findSsh({ PATH: ["", ".", "relative"].join(path.delimiter) }),
+    await findSsh(
+      { PATH: ["", ".", "relative"].join(path.delimiter) },
+      "linux",
+    ),
   ).toBeUndefined();
 });
 
-it("does not infer an ssh executable from PATHEXT or an ssh directory", async () => {
+it("looks for ssh.exe only on Windows and never for an ssh directory", async () => {
   const home = await fixture();
   await writeFile(path.join(home, "ssh.exe"), "not executed", { mode: 0o700 });
   const environment = { PATH: home, PATHEXT: ".EXE;.CMD" };
-  expect(await findSsh(environment)).toBeUndefined();
+  expect(await findSsh(environment, "linux")).toBeUndefined();
+  expect(await findSsh(environment, "win32")).toBe(path.join(home, "ssh.exe"));
   await mkdir(path.join(home, "ssh"));
-  expect(await findSsh(environment)).toBeUndefined();
+  expect(await findSsh(environment, "linux")).toBeUndefined();
   await rm(path.join(home, "ssh"), { recursive: true });
   await writeFile(path.join(home, "ssh"), "not executed", { mode: 0o700 });
-  expect(await findSsh(environment)).toBe(path.join(home, "ssh"));
+  expect(await findSsh(environment, "linux")).toBe(path.join(home, "ssh"));
 });
 
 it("transfers to the original core owner once, independently of later extension revocation", async () => {

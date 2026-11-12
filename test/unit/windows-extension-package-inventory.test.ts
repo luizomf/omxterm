@@ -12,10 +12,11 @@ const runtime = [
   "/dist/extension-runtime/extension-leases.node",
   "/node_modules/semver/package.json",
   "/node_modules/yauzl/package.json",
+  "/dist/extension-runtime/files-move.node",
 ];
 
 it.each(["arm64", "x64"] as const)(
-  "requires the Windows %s extension runtime without Files",
+  "requires the Windows %s extension runtime including Files move",
   (arch) => {
     expect(inspectAsarEntries([], "win32", arch).missing).toEqual(
       expect.arrayContaining(runtime),
@@ -30,10 +31,7 @@ it.each(["arm64", "x64"] as const)(
       for (const present of runtime.filter((file) => file !== entry))
         expect(result.missing).not.toContain(present);
     }
-    const move = "/dist/extension-runtime/files-move.node";
-    expect(
-      inspectAsarEntries([...runtime, move], "win32", arch).forbidden,
-    ).toContain(move);
+    expect(inspectAsarEntries(runtime, "win32", arch).forbidden).toEqual([]);
   },
 );
 

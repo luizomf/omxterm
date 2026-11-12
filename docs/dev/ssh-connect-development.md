@@ -63,8 +63,8 @@ core.
 - The request is `{operation: "terminal.openSsh.v1", target: {host, user?, port?}}`
   with exact keys.
 - Main validates the target, then looks for an executable regular `ssh` file
-  (symlinks allowed) in the absolute directories of the application `PATH` at
-  Connect time. That `PATH` can differ from a login shell's. If `ssh` is missing,
+  (`ssh.exe` on Windows; symlinks allowed) in the absolute directories of the
+  application `PATH` at Connect time. That `PATH` can differ from a login shell's. If `ssh` is missing,
   the page shows an error and no tab opens. OMXTerm never installs `ssh`.
 - Main builds literal argv: optional `-l USER`, optional `-p PORT`, then
   `-- HOST`. There is no shell string and the caller can't pick the executable or
@@ -162,9 +162,10 @@ install the newer archive themselves.
 
 ## Current limits
 
-- The official catalogs offer SSH Connect 0.4.0 (host `>=0.27.0-dev.0`) for
-  Linux ARM64 and macOS ARM64 only; 0.26 hosts lose the catalog offer and can
-  install 0.3.2 by link. Windows and x64 aren't offered or tested.
+- SSH Connect 0.4.0 needs host `>=0.27.0-dev.0`; 0.26 hosts lose the catalog
+  offer and can install 0.3.2 by link. Windows hosts before 0.28.0 look for
+  `ssh` instead of `ssh.exe` and report OpenSSH as missing. Linux x64 and
+  Windows x64 are checked in hosted CI only, never on a desktop.
 - OpenSSH owns authentication, host-key prompts and network access. The user's
   OpenSSH configuration still applies, including configured commands, forwards,
   agent access and sockets, and connecting can write `known_hosts`.

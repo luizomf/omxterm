@@ -30,9 +30,9 @@ The selected adapter adds a small per-target native build obligation, including 
 ## Current integration and qualification
 
 The [foundation contract](../dev/extension-installation-foundation.md) owns interfaces,
-limits, builds and error behavior. Linux ARM64/x64, macOS ARM64 and Windows ARM64
-source application startup constructs installation/runtime infrastructure without
-activating installed code. The bounded [Windows ARM64 source-composition checkpoint](../dev/windows-arm64-extension-composition.md#installed-package-production-fixture)
+limits, builds and error behavior. Application startup on every supported target
+(Linux ARM64/x64, macOS ARM64, Windows ARM64/x64) constructs installation/runtime
+infrastructure without activating installed code. The bounded [Windows ARM64 source-composition checkpoint](../dev/windows-arm64-extension-composition.md#installed-package-production-fixture)
 passed separately from packaging. Execution, web-content hosting, acquisition and trust UI remain consumer responsibilities;
 [Files composition](../dev/files-development-preview.md#host-composition)
 documents their integration. Installation and enable remain dormant. Separate

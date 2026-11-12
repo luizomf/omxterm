@@ -36,11 +36,19 @@ function extractFixtureMember(
 }
 
 function fixtureNativeMetadata(member: string, unpacked: boolean) {
-  expect(member).toBe(
+  expect([
     path.win32.normalize("dist/extension-runtime/extension-leases.node"),
-  );
+    path.win32.normalize("dist/extension-runtime/files-move.node"),
+  ]).toContain(member);
   return { unpacked };
 }
+
+const probeChecks = (platform: string) => [
+  "packaged-store-and-lease",
+  ...(platform === "linux" ? [] : ["native-trash-export-and-root-refusal"]),
+  "native-move-and-conflict",
+  "bootstrap-missing-IPC-refusal",
+];
 
 async function tinyRuntimeArchive(
   root: string,
@@ -100,6 +108,7 @@ async function createInspectionArchives(
           "dist/extension-runtime/index.mjs",
           "dist/extension-runtime/packages.mjs",
           "dist/extension-runtime/extension-leases.node",
+          "dist/extension-runtime/files-move.node",
         ]
       : [];
   const pe = Buffer.alloc(128);
@@ -244,10 +253,7 @@ function inspectionCommands(
                     target: `${platform}-${arch}`,
                     hostVersion: "1.2.3",
                     runtime: { electron: "43.8.1" },
-                    checks: [
-                      "packaged-store-and-lease",
-                      "bootstrap-missing-IPC-refusal",
-                    ],
+                    checks: probeChecks(platform),
                   },
                 ),
               ),
@@ -552,7 +558,7 @@ it.each([
         target: `${platform}-${arch}`,
         hostVersion: "1.2.3",
         runtime: { electron: "43.8.1" },
-        checks: ["packaged-store-and-lease", "bootstrap-missing-IPC-refusal"],
+        checks: probeChecks(platform),
       };
       for (const report of [
         { ...validReport, target: "wrong-target" },

@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import { parse } from "yaml";
 import type { BuildOptions } from "esbuild";
 
@@ -33,13 +34,16 @@ vi.mock("../../scripts/build-macos-window-blur.mjs", () => ({
 vi.mock("../../scripts/build-macos-option-shortcut.mjs", () => ({
   buildMacOSOptionShortcut: calls.optionShortcut,
 }));
+vi.mock("../../scripts/windows-msvc-environment.mjs", () => ({
+  resolveMsvcEnvironment: () => ({ MSVC: "1" }),
+}));
 
-const filesTrashNative = /[/\\]native[/\\]files-trash-macos\.mm$/u;
 const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
 const arch = Object.getOwnPropertyDescriptor(process, "arch")!;
 afterEach(() => {
   Object.defineProperty(process, "platform", platform);
   Object.defineProperty(process, "arch", arch);
+  vi.unstubAllEnvs();
   vi.clearAllMocks();
   vi.resetModules();
 });
@@ -47,15 +51,16 @@ afterEach(() => {
 it.each([
   ["darwin", "arm64", true, true],
   ["linux", "arm64", true, true],
-  ["linux", "x64", true, false],
-  ["win32", "arm64", true, false],
-  ["win32", "x64", true, false],
+  ["linux", "x64", true, true],
+  ["win32", "arm64", true, true],
+  ["win32", "x64", true, true],
   ["darwin", "x64", false, false],
 ])(
   "ordinary %s %s build selects runtime=%s Files move=%s",
   async (os, cpu, runtime, move) => {
     Object.defineProperty(process, "platform", { value: os });
     Object.defineProperty(process, "arch", { value: cpu });
+    vi.stubEnv("OMXTERM_NODE_IMPORT_LIBRARY", "/toolchain/node.lib");
     // Import the real orchestration and Files builder with all effectful seams mocked.
     const entry = "../../build.mjs";
     await import(entry);
@@ -63,43 +68,15 @@ it.each([
     expect(calls.leases).toHaveBeenCalledTimes(runtime ? 1 : 0);
     expect(calls.native).toHaveBeenCalledTimes(move ? 1 : 0);
     if (move) {
-      const [command, args, options] = calls.native.mock.calls[0]!;
-      expect(command).toBe(
-        os === "darwin" ? "/usr/bin/xcrun" : process.env.CXX || "c++",
+      // Only the platform's system trash source joins the shared move source.
+      const sources = calls.native.mock.calls[0]![1].filter((arg) =>
+        /[/\\]native[/\\]files-[a-z-]+\.(?:cc|mm)$/u.test(arg),
       );
-      expect(args).toEqual(
-        expect.arrayContaining([
-          "-DNAPI_VERSION=8",
-          "-DNODE_GYP_MODULE_NAME=files_move",
-          "-Werror",
-        ]),
-      );
-      expect(options).toEqual({ stdio: "pipe", timeout: 60_000 });
-      if (os === "darwin") {
-        expect(args.slice(0, 2)).toEqual([
-          "clang++",
-          "-mmacosx-version-min=12.0",
-        ]);
-        expect(args).toEqual(
-          expect.arrayContaining(["-bundle", "-undefined", "dynamic_lookup"]),
-        );
-        expect(args).not.toContain("-shared");
-        expect(args).not.toContain("-fPIC");
-        expect(args).toContainEqual(expect.stringMatching(filesTrashNative));
-        expect(
-          args.slice(
-            args.indexOf("-framework"),
-            args.indexOf("-framework") + 2,
-          ),
-        ).toEqual(["-framework", "Foundation"]);
-      } else {
-        expect(args).toEqual(expect.arrayContaining(["-shared", "-fPIC"]));
-        expect(args).not.toContain("-bundle");
-        expect(args).not.toContain("Foundation");
-        expect(args).not.toContainEqual(
-          expect.stringMatching(/files-trash-macos\.mm$/),
-        );
-      }
+      expect(sources.map((source) => path.basename(source))).toEqual([
+        "files-move.cc",
+        ...(os === "darwin" ? ["files-trash-macos.mm"] : []),
+        ...(os === "win32" ? ["files-windows.cc"] : []),
+      ]);
     }
     const runtimeBuild = calls.build.mock.calls.find(([options]) =>
       options.outdir?.endsWith("extension-runtime"),
@@ -118,23 +95,14 @@ it.each([
   },
 );
 
-it.each([
-  ["POSIX", "/project/native/files-trash-macos.mm"],
-  ["Windows", "C:\\project\\native\\files-trash-macos.mm"],
-])("recognizes the macOS native source on a %s host", (_host, source) => {
-  expect(source).toMatch(filesTrashNative);
-  expect(source.replace("native", "native-other")).not.toMatch(
-    filesTrashNative,
-  );
-});
-
-it.each(["mac", "linux"] as const)(
+it.each(["mac", "linux", "win"] as const)(
   "unpacks the %s lease and Files move addons explicitly with smart unpacking disabled",
   (platform) => {
     const config = parse(readFileSync("electron-builder.yml", "utf8")) as {
       asar: { smartUnpack: boolean };
       mac: { asarUnpack: string[] };
       linux: { asarUnpack: string[] };
+      win: { asarUnpack: string[] };
     };
     expect(config.asar.smartUnpack).toBe(false);
     expect(config[platform].asarUnpack).toContain(

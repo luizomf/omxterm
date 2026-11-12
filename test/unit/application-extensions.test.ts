@@ -449,7 +449,7 @@ it.each([
   ["linux", "x64", true],
   ["linux", "arm", false],
   ["win32", "arm64", true],
-  ["win32", "x64", false],
+  ["win32", "x64", true],
 ] as const)(
   "production admission on %s %s is %s",
   async (platform, arch, supported) => {
@@ -492,7 +492,10 @@ it.each([
       expect(adapters.consent).not.toHaveBeenCalled();
       return;
     }
-    expect(usesOptionalSnippets(platform, arch)).toBe(true);
+    // Windows x64 runs extensions but keeps built-in Snippets (ADR 0044).
+    expect(usesOptionalSnippets(platform, arch)).toBe(
+      platform !== "win32" || arch !== "x64",
+    );
     expect(await request({ operation: "install" })).toMatchObject({
       ok: true,
       entries: [{ enabled: true, local: "dormant" }],

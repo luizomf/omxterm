@@ -140,7 +140,7 @@ Published archives are immutable, so changed bytes need a new version in
   integration ([ADR 0013](adr/0013-do-not-inject-shell-integration.md)).
 - One saved layout for one window, opened only when chosen. Reopening at
   startup doesn't keep window positions or sizes.
-- Windows x64 hosts don't run extensions.
+- Windows x64 hosts run extensions from 0.28.0; earlier ones don't.
 
 ## Credits
 

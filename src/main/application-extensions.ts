@@ -230,8 +230,9 @@ function captureExtensionTarget(
 
 function supportsExtensionPreview() {
   return (
-    (process.platform === "linux" && ["arm64", "x64"].includes(process.arch)) ||
-    (["darwin", "win32"].includes(process.platform) && process.arch === "arm64")
+    (["linux", "win32"].includes(process.platform) &&
+      ["arm64", "x64"].includes(process.arch)) ||
+    (process.platform === "darwin" && process.arch === "arm64")
   );
 }
 

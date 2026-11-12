@@ -79,12 +79,12 @@ const extensionEntries = [
 ];
 
 function packagedExtensionEntries(platform, arch) {
-  if (
-    (platform === "linux" && arch === "x64") ||
-    (platform === "win32" && ["arm64", "x64"].includes(arch))
-  )
-    return extensionEntries;
-  if (arch !== "arm64" || !["linux", "darwin"].includes(platform)) return [];
+  if (!(
+    (["linux", "win32"].includes(platform) &&
+      ["arm64", "x64"].includes(arch)) ||
+    (platform === "darwin" && arch === "arm64")
+  ))
+    return [];
   return [...extensionEntries, "/dist/extension-runtime/files-move.node"];
 }
 
@@ -173,7 +173,7 @@ export function inspectAsarEntries(
       privateLooking.has(entry) ||
       (platform !== "darwin" &&
         [macBlurEntry, macOptionEntry].includes(entry)) ||
-      ((!["linux", "darwin"].includes(platform) || arch !== "arm64") &&
+      (packagedExtensionEntries(platform, arch).length === 0 &&
         entry === "/dist/extension-runtime/files-move.node") ||
       entry.includes("/node_modules/@xterm/") ||
       (platform === "linux" &&
@@ -296,13 +296,14 @@ async function verifyPackagedExtensions(executable, asar) {
     const report = JSON.parse(
       new TextDecoder("utf-8", { fatal: true }).decode(stdout),
     );
-    const checks = ["packaged-store-and-lease"];
-    if (process.arch === "arm64" && process.platform !== "win32") {
-      if (process.platform === "darwin")
-        checks.push("native-trash-export-and-root-refusal");
-      checks.push("native-move-and-conflict");
-    }
-    checks.push("bootstrap-missing-IPC-refusal");
+    const checks = [
+      "packaged-store-and-lease",
+      ...(process.platform === "linux"
+        ? []
+        : ["native-trash-export-and-root-refusal"]),
+      "native-move-and-conflict",
+      "bootstrap-missing-IPC-refusal",
+    ];
     if (
       !report ||
       typeof report !== "object" ||

@@ -5,6 +5,33 @@ type NativeFiles = {
   moveNoReplace(source: string, destination: string): Promise<void>;
   trash?(target: string): Promise<string>;
 };
+// Reject root, trailing separators and dot/empty components rather than
+// converting a final symlink spelling into its referent. Windows takes only
+// drive-absolute paths, no alternate data streams, and no part ending in a dot
+// or space (Windows would act on the trimmed name instead).
+function trashPath(target: unknown): target is string {
+  if (
+    typeof target !== "string" ||
+    target.length > 4096 ||
+    target.includes("\0")
+  )
+    return false;
+  const windows = process.platform === "win32";
+  const root = windows ? /^[A-Za-z]:[\\/]/.exec(target)?.[0] : "/";
+  if (!root || !target.startsWith(root)) return false;
+  const rest = target.slice(root.length);
+  if (windows && rest.includes(":")) return false;
+  return rest
+    .split(windows ? /[\\/]/ : "/")
+    .every(
+      (part) =>
+        part &&
+        part !== "." &&
+        part !== ".." &&
+        !(windows && /[. ]$/.test(part)),
+    );
+}
+
 export function createFilesServices() {
   let native: NativeFiles | undefined;
   function load(): NativeFiles {
@@ -14,26 +41,16 @@ export function createFilesServices() {
     return native;
   }
   return {
-    // Omit on Linux: existing archives keep their literal gio implementation.
-    ...(process.platform === "darwin" && process.arch === "arm64"
+    // Every packaged target ships the addon. Linux omits trash: existing
+    // archives keep their literal gio implementation.
+    ...(process.platform !== "linux"
       ? {
           async trash(target: string, signal: AbortSignal): Promise<void> {
             if (signal.aborted)
               throw Object.assign(new Error("cancelled"), {
                 code: "ECANCELED",
               });
-            // Reject root, trailing separators and dot/empty components rather
-            // than converting a final symlink spelling into its referent.
-            if (
-              typeof target !== "string" ||
-              target.length > 4096 ||
-              !target.startsWith("/") ||
-              target.includes("\0") ||
-              target
-                .slice(1)
-                .split("/")
-                .some((part) => !part || part === "." || part === "..")
-            )
+            if (!trashPath(target))
               throw Object.assign(new Error("invalid-path"), {
                 code: "EINVAL",
               });
@@ -50,11 +67,6 @@ export function createFilesServices() {
         }
       : {}),
     async moveNoReplace(source: string, destination: string): Promise<void> {
-      if (
-        (process.platform !== "linux" && process.platform !== "darwin") ||
-        process.arch !== "arm64"
-      )
-        throw Object.assign(new Error("unsupported"), { code: "ENOTSUP" });
       await load().moveNoReplace(source, destination);
     },
   };

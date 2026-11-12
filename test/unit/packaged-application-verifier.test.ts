@@ -87,11 +87,6 @@ const extensionEntries = [
   "/dist/extension-runtime/files-move.node",
 ];
 
-const linuxExtensionEntries = extensionEntries;
-const portableExtensionEntries = extensionEntries.filter(
-  (entry) => !entry.endsWith("/files-move.node"),
-);
-
 const windowsEntries = (arch: string) => [
   ...[
     "conpty.node",
@@ -287,7 +282,7 @@ describe("packaged runtime inventory", () => {
       inspectAsarEntries(
         [
           ...requiredEntries,
-          ...linuxExtensionEntries,
+          ...extensionEntries,
           "/node_modules/node-pty/build/Release/pty.node",
         ],
         "linux",
@@ -295,10 +290,8 @@ describe("packaged runtime inventory", () => {
     ).toEqual({ missing: [], forbidden: [] });
   });
 
-  it("requires Linux x64 runtime prerequisites but refuses the ARM64-only Files addon", () => {
-    const runtime = extensionEntries.filter(
-      (entry) => !entry.endsWith("/files-move.node"),
-    );
+  it("requires the Linux x64 runtime including Files move", () => {
+    const runtime = extensionEntries;
     expect(
       inspectAsarEntries([...requiredEntries, ...runtime], "linux", "x64"),
     ).toEqual({ missing: [], forbidden: [] });
@@ -311,13 +304,6 @@ describe("packaged runtime inventory", () => {
         ).missing,
       ).toEqual([entry]);
     }
-    expect(
-      inspectAsarEntries(
-        [...requiredEntries, ...extensionEntries],
-        "linux",
-        "x64",
-      ).forbidden,
-    ).toEqual(["/dist/extension-runtime/files-move.node"]);
   });
 
   it("accepts only the win32-arm64 native runtime and rejects debug symbols on Windows", () => {
@@ -327,7 +313,7 @@ describe("packaged runtime inventory", () => {
           ...requiredEntries,
           "/node_modules/node-pty/prebuilds/win32-arm64",
           ...windowsEntries("arm64"),
-          ...portableExtensionEntries,
+          ...extensionEntries,
         ],
         "win32",
       ),
@@ -421,7 +407,7 @@ describe("pinned PTY packaged inventory", () => {
         inspectAsarEntries(
           [
             ...requiredEntries,
-            ...portableExtensionEntries,
+            ...extensionEntries,
             ...entries.filter((file) => file !== entry),
           ],
           "win32",
@@ -446,7 +432,7 @@ describe("pinned PTY packaged inventory", () => {
   it("reports a missing runtime asset", () => {
     expect(
       inspectAsarEntries(
-        [...requiredEntries.slice(1), ...linuxExtensionEntries],
+        [...requiredEntries.slice(1), ...extensionEntries],
         "linux",
       ).missing,
     ).toEqual(["/dist/main/index.js"]);
@@ -476,18 +462,16 @@ it("requires the blur addon only on macOS and rejects its build-only headers", (
 });
 
 describe("separately installed Files package inventory", () => {
-  it("requires Linux Files move in addition to the shared ARM64 runtime", () => {
+  it("requires Linux Files move on ARM64 and x64", () => {
     expect(
       inspectAsarEntries(requiredEntries, "linux", "arm64").missing,
-    ).toEqual(linuxExtensionEntries);
+    ).toEqual(extensionEntries);
     expect(inspectAsarEntries(requiredEntries, "linux", "x64").missing).toEqual(
-      linuxExtensionEntries.filter(
-        (entry) => !entry.endsWith("/files-move.node"),
-      ),
+      extensionEntries,
     );
     expect(
       inspectAsarEntries(
-        [...requiredEntries, ...linuxExtensionEntries],
+        [...requiredEntries, ...extensionEntries],
         "linux",
         "arm64",
       ).missing,
@@ -514,20 +498,12 @@ describe("separately installed Files package inventory", () => {
       inspectAsarEntries([...base, ...extensionEntries], "darwin").forbidden,
     ).toEqual([]);
   });
-  it.each([
-    ["darwin", "x64"],
-    ["linux", "x64"],
-    ["win32", "arm64"],
-    ["win32", "x64"],
-  ] as const)(
-    "rejects the Files move addon on unsupported %s %s",
-    (platform, arch) => {
-      const move = "/dist/extension-runtime/files-move.node";
-      expect(inspectAsarEntries([move], platform, arch).forbidden).toContain(
-        move,
-      );
-    },
-  );
+  it("rejects the Files move addon on unsupported darwin x64", () => {
+    const move = "/dist/extension-runtime/files-move.node";
+    expect(inspectAsarEntries([move], "darwin", "x64").forbidden).toContain(
+      move,
+    );
+  });
   it("rejects separate archives and receipts both inside and outside ASAR", () => {
     expect(
       inspectForbiddenPackagedEntries([
@@ -563,7 +539,7 @@ describe("Windows native runtime architecture", () => {
             ...requiredEntries,
             `/node_modules/node-pty/prebuilds/win32-${arch}`,
             ...windowsEntries(arch),
-            ...portableExtensionEntries,
+            ...extensionEntries,
           ],
           "win32",
           arch,

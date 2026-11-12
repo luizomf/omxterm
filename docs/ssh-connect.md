@@ -7,14 +7,12 @@ not install SSH or store your keys.
 
 ## Availability
 
-The official extension catalog offers SSH Connect 0.4.0 on **Linux with ARM64
-(64-bit Arm) processors** and **Macs with Apple silicon**. It needs OMXTerm
-0.27.0 or later; on OMXTerm 0.26, install
-[SSH Connect 0.3.2](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.2)
-from its release link instead. This is a preview; other operating
-systems and processor types are not qualified. The documented checks used OMXTerm
-0.27.0. An installer compatibility check does not mean every app version or
-connection setup has been tested. See the [developer notes](dev/ssh-connect-development.md)
+SSH Connect 0.4.0 runs on macOS (Apple silicon) and Linux with OMXTerm 0.27.0
+or later. Windows support ships with the next OMXTerm host (0.28.0); earlier
+Windows versions can't find `ssh.exe`. A real Windows connection hasn't been
+tested yet. On OMXTerm 0.26,
+install [SSH Connect 0.3.2](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.2)
+from its release link instead. See the [developer notes](dev/ssh-connect-development.md)
 for how it is built and its current limits.
 
 ## Install and open it
@@ -79,7 +77,9 @@ applies, including configured commands, port forwarding and agent access.
   with `sudo apt install openssh-client`. On Fedora, install the
   [OpenSSH client package](https://packages.fedoraproject.org/pkgs/openssh/openssh-clients/)
   with `sudo dnf install openssh-clients`. On macOS, use the `ssh` command in
-  Terminal. Restart OMXTerm after installing so it can find the program.
+  Terminal. Windows 10 and 11 include it; if `ssh -V` fails, add **OpenSSH
+  Client** in **Settings → System → Optional features**. Restart OMXTerm after
+  installing so it can find the program.
 - **Alias missing:** check `~/.ssh/config`, then close and reopen SSH Connect or
   choose **Refresh**. Quick connect works even when an alias is not listed.
 - **Sign-in or server identity prompt:** follow OpenSSH's instructions in the

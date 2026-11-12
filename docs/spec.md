@@ -1731,7 +1731,7 @@ location and the strict, non-mutating model.
   defaults (including explicit `window.blur: false`, `window.transparency: 0`
   and `theme.path: "themes/omtheme.json"`) and a copy of the bundled theme at
   `themes/omtheme.json`. Windows x64, which keeps built-in Snippets, also gets a
-  non-executing literal-block example `snippets.yaml`; the extension targets
+  non-executing literal-block example `snippets.yaml`; the optional-Snippets targets
   (Linux ARM64/x64, macOS ARM64, Windows ARM64) leave it absent and the optional
   package provides an example. Shell, font family and shortcuts keep their
   implicit platform defaults.
@@ -2554,9 +2554,8 @@ implementation; there is no renderer selector or registry
 - The internal Installed Packages module owns local archive validation and
   installation, compatibility, immutable version pins, generation-based
   admission, disable/tombstones, and deferred physical cleanup.
-- Linux ARM64/x64, macOS ARM64, and Windows ARM64 use it through production
-  Settings with captured-byte trust. Windows x64 does not admit production
-  extensions.
+- Every supported target uses it through production Settings with
+  captured-byte trust.
 - It owns neither extension execution, catalog/network acquisition, nor a public
   SDK. Main owns HTTPS acquisition separately; terminal ownership is unchanged.
 - Its interface and limits are in the
@@ -2569,11 +2568,11 @@ implementation; there is no renderer selector or registry
 
 - macOS ARM64, Linux ARM64/x64, and Windows ARM64/x64 builds include the runtime
   and its native lease addon.
-- Linux ARM64/x64, macOS ARM64, and Windows ARM64 admit explicit extension
-  installation and activation through the same management, runtime, and view
-  owners. Their new configuration kits omit the Snippets starter example.
-- Windows x64 carries the runtime without enabling production extension
-  admission (see [Auxiliary Panel](#auxiliary-panel) for Snippets).
+- Every supported target admits explicit extension installation and activation
+  through the same management, runtime, and view owners.
+- Windows x64 still keeps built-in Snippets and its starter example; the other
+  targets use the optional Snippets extension (see
+  [Auxiliary Panel](#auxiliary-panel)).
 
 **Activation and retirement**
 
@@ -2600,10 +2599,11 @@ implementation; there is no renderer selector or registry
 
 **Files native primitives**
 
-- The Files move addon exists only on macOS and Linux ARM64. It uses Linux
-  `renameat2(RENAME_NOREPLACE)` or macOS `renameatx_np(RENAME_EXCL)` behind one
-  bounded asynchronous interface, and refuses unsupported filesystems and
-  cross-device moves with no overwrite-capable fallback.
+- The Files move addon ships on every supported target. It uses Linux
+  `renameat2(RENAME_NOREPLACE)`, macOS `renameatx_np(RENAME_EXCL)` or Windows
+  `MoveFileExW` without replace or copy flags behind one bounded asynchronous
+  interface, and refuses unsupported filesystems and cross-device moves with no
+  overwrite-capable fallback.
 - macOS ARM64 trash uses Foundation `NSFileManager` in the same native addon and
   owned Node child, sharing its bounded asynchronous admission. Root, trailing
   separators, and empty or dot path components are refused instead of resolving
@@ -2612,6 +2612,13 @@ implementation; there is no renderer selector or registry
   retirement and no cancellation or rollback guarantee. Native errors and
   missing results stay fixed and path-free. There is no permanent-delete
   fallback, automatic retry, Finder automation, or new main RPC.
+- Windows trash uses the shell's `IFileOperation` with the Recycle Bin, no UI,
+  in the same addon and with the same admission. Windows move and trash take
+  drive-absolute paths only and refuse the same ambiguous spellings, alternate
+  data streams, and any part ending in a dot or space (Windows would act on the
+  trimmed name). Moves use the `\\?\` long-path form. An item the shell can't
+  recycle (too large, or on a drive without a Recycle Bin) is refused with
+  `ENOTRASH` and left untouched, never deleted permanently.
 - Linux trash runs the literal `gio` trash command.
 
 **Files archive compatibility**
@@ -2636,12 +2643,11 @@ implementation; there is no renderer selector or registry
 - Archives and build receipts are not included in application packages. A build
   receipt binds the final archive bytes to source/tool metadata without claiming
   qualification.
-- macOS ARM64 and Linux ARM64/x64 package inspection exercises packaged
-  store/lease/bootstrap resolution, not backend activation or the Files
+- Package inspection exercises packaged store/lease/bootstrap resolution and
+  the Files no-clobber move on every target, not backend activation or the Files
   lifecycle. Native extension addons must be explicitly unpacked; macOS also
-  needs the complete application seal. Only the ARM64 targets include and
-  exercise the Files no-clobber move primitive; the macOS probe also checks the
-  trash export and root refusal without running a trash mutation
+  needs the complete application seal. The macOS and Windows probes also check
+  the trash export and root refusal without running a trash mutation
   ([building an extension archive](release.md#building-an-extension-archive)).
 
 ## Release contract

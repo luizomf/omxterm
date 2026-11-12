@@ -14,6 +14,9 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #endif
+#ifdef _WIN32
+#include "files-windows.h"
+#endif
 
 namespace {
 std::atomic<unsigned> pending{0};
@@ -35,6 +38,29 @@ napi_value Error(napi_env env, const char* code) {
   Check(napi_create_error(env, text, text, &result));
   return result;
 }
+#ifdef _WIN32
+// Drive-absolute paths with at least one entry, and no part Windows would
+// rewrite: empty, dot, trailing dot or space (`x.` names `x`), or a colon
+// (alternate data stream). No UNC, device or drive-relative spellings.
+bool WindowsPath(const std::string& value) {
+  const char drive = value[0];
+  if (value.size() < 4 ||
+      !((drive >= 'A' && drive <= 'Z') || (drive >= 'a' && drive <= 'z')) ||
+      value[1] != ':' || (value[2] != '\\' && value[2] != '/'))
+    return false;
+  size_t start = 3;
+  while (start <= value.size()) {
+    size_t end = value.find_first_of("\\/", start);
+    if (end == std::string::npos) end = value.size();
+    const auto part = value.substr(start, end - start);
+    if (part.empty() || part.back() == '.' || part.back() == ' ' ||
+        part.find(':') != std::string::npos)
+      return false;
+    start = end + 1;
+  }
+  return true;
+}
+#endif
 bool Path(napi_env env, napi_value value, std::string& result) {
   size_t length = 0;
   if (napi_get_value_string_utf8(env, value, nullptr, 0, &length) != napi_ok ||
@@ -43,9 +69,18 @@ bool Path(napi_env env, napi_value value, std::string& result) {
   if (napi_get_value_string_utf8(env, value, result.data(), result.size(), &length) != napi_ok)
     return false;
   result.resize(length);
-  return result.find('\0') == std::string::npos && result[0] == '/';
+  if (result.find('\0') != std::string::npos) return false;
+#ifdef _WIN32
+  return WindowsPath(result);
+#else
+  return result[0] == '/';
+#endif
 }
 bool TrashPath(const std::string& value) {
+#ifdef _WIN32
+  (void)value;
+  return true;  // Path() already refused every ambiguous Windows spelling.
+#else
   // A trailing separator or dot component can turn a final symlink into its
   // referent. Refuse these spellings, including root, rather than resolve them.
   if (value.back() == '/') return false;
@@ -58,12 +93,15 @@ bool TrashPath(const std::string& value) {
     start = end + 1;
   }
   return true;
+#endif
 }
 void Execute(napi_env, void* data) {
   auto* move = static_cast<Work*>(data);
   if (move->operation == Operation::Trash) {
 #ifdef __APPLE__
     move->error = TrashMacOS(move->source, move->trashed);
+#elif defined(_WIN32)
+    move->error = TrashWindows(move->source);
 #else
     move->error = ENOSYS;
 #endif
@@ -78,11 +116,17 @@ void Execute(napi_env, void* data) {
   // RENAME_EXCL excludes existing entries atomically; never retry or fall back.
   if (renameatx_np(AT_FDCWD, move->source.c_str(), AT_FDCWD,
                   move->destination.c_str(), RENAME_EXCL) < 0) move->error = errno;
+#elif defined(_WIN32)
+  move->error = MoveWindows(move->source, move->destination);
 #else
   move->error = ENOSYS;
 #endif
 }
 const char* Code(int error) {
+#ifdef _WIN32
+  // The shell would have deleted it permanently, so nothing was done.
+  if (error == FILES_NOT_RECYCLED) return "ENOTRASH";
+#endif
   // ENOTSUP and EOPNOTSUPP may alias; keep them out of duplicate case labels.
   if (error == ENOTSUP || error == EOPNOTSUPP) return "ENOTSUP";
   switch (error) {
@@ -150,7 +194,7 @@ napi_value Queue(napi_env env, napi_callback_info info, Operation operation) {
 napi_value MoveNoReplace(napi_env env, napi_callback_info info) {
   return Queue(env, info, Operation::Move);
 }
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
 napi_value Trash(napi_env env, napi_callback_info info) {
   return Queue(env, info, Operation::Trash);
 }
@@ -159,7 +203,7 @@ napi_value Init(napi_env env, napi_value exports) {
   napi_value function;
   Check(napi_create_function(env, "moveNoReplace", NAPI_AUTO_LENGTH, MoveNoReplace, nullptr, &function));
   Check(napi_set_named_property(env, exports, "moveNoReplace", function));
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
   Check(napi_create_function(env, "trash", NAPI_AUTO_LENGTH, Trash, nullptr, &function));
   Check(napi_set_named_property(env, exports, "trash", function));
 #endif

@@ -19,26 +19,29 @@ beforeEach(() => {
   files.access.mockReset();
 });
 
-it("searches absolute semicolon-separated PATH directories for a literal regular ssh file", async () => {
+it("searches absolute semicolon-separated PATH directories for a regular ssh.exe", async () => {
   files.stat.mockImplementation(async (name) => {
-    if (name === "C:\\directory\\ssh") return { isFile: () => false };
-    if (name === "C:\\denied\\ssh" || name === "C:\\ready\\ssh")
+    if (name === "C:\\directory\\ssh.exe") return { isFile: () => false };
+    if (name === "C:\\denied\\ssh.exe" || name === "C:\\ready\\ssh.exe")
       return { isFile: () => true };
     throw new Error("missing");
   });
   files.access.mockImplementation(async (name) => {
-    if (name === "C:\\denied\\ssh") throw new Error("denied");
+    if (name === "C:\\denied\\ssh.exe") throw new Error("denied");
   });
   expect(
-    await findSsh({ PATH: ";.;relative;C:\\directory;C:\\denied;C:\\ready" }),
-  ).toBe("C:\\ready\\ssh");
+    await findSsh(
+      { PATH: ";.;relative;C:\\directory;C:\\denied;C:\\ready" },
+      "win32",
+    ),
+  ).toBe("C:\\ready\\ssh.exe");
   expect(files.stat.mock.calls).toEqual([
-    ["C:\\directory\\ssh"],
-    ["C:\\denied\\ssh"],
-    ["C:\\ready\\ssh"],
+    ["C:\\directory\\ssh.exe"],
+    ["C:\\denied\\ssh.exe"],
+    ["C:\\ready\\ssh.exe"],
   ]);
   expect(files.access.mock.calls).toEqual([
-    ["C:\\denied\\ssh", constants.X_OK],
-    ["C:\\ready\\ssh", constants.X_OK],
+    ["C:\\denied\\ssh.exe", constants.X_OK],
+    ["C:\\ready\\ssh.exe", constants.X_OK],
   ]);
 });

@@ -28,39 +28,27 @@ afterEach(() => {
   calls.createRequire.mockReturnValue(calls.load);
 });
 
-it.each(["darwin", "linux"])(
-  "loads the %s ARM64 addon lazily and reuses it",
-  async (os) => {
-    Object.defineProperty(process, "platform", { value: os });
-    Object.defineProperty(process, "arch", { value: "arm64" });
-    const services = createFilesServices();
-    expect(calls.load).not.toHaveBeenCalled();
-    await services.moveNoReplace("/source", "/destination");
-    await services.moveNoReplace("/second", "/other");
-    expect(calls.load).toHaveBeenCalledTimes(1);
-    expect(calls.load).toHaveBeenCalledWith(
-      expect.stringMatching(/[\\/]files-move\.node$/),
-    );
-    expect(calls.moveNoReplace.mock.calls).toEqual([
-      ["/source", "/destination"],
-      ["/second", "/other"],
-    ]);
-  },
-);
-
 it.each([
-  ["darwin", "x64"],
+  ["darwin", "arm64"],
+  ["linux", "arm64"],
   ["linux", "x64"],
   ["win32", "arm64"],
   ["win32", "x64"],
-])("refuses %s %s before native loading", async (os, cpu) => {
+])("loads the %s %s addon lazily and reuses it", async (os, cpu) => {
   Object.defineProperty(process, "platform", { value: os });
   Object.defineProperty(process, "arch", { value: cpu });
-  await expect(
-    createFilesServices().moveNoReplace("/source", "/destination"),
-  ).rejects.toMatchObject({ code: "ENOTSUP" });
+  const services = createFilesServices();
   expect(calls.load).not.toHaveBeenCalled();
-  expect(calls.moveNoReplace).not.toHaveBeenCalled();
+  await services.moveNoReplace("/source", "/destination");
+  await services.moveNoReplace("/second", "/other");
+  expect(calls.load).toHaveBeenCalledTimes(1);
+  expect(calls.load).toHaveBeenCalledWith(
+    expect.stringMatching(/[\\/]files-move\.node$/),
+  );
+  expect(calls.moveNoReplace.mock.calls).toEqual([
+    ["/source", "/destination"],
+    ["/second", "/other"],
+  ]);
 });
 
 it.each(["EEXIST", "EXDEV", "ENOTSUP", "EACCES", "EBUSY"])(
@@ -84,10 +72,8 @@ function macServices() {
 }
 
 it.each([
-  ["darwin", "x64"],
   ["linux", "arm64"],
   ["linux", "x64"],
-  ["win32", "arm64"],
 ])("omits trash on %s %s without loading native code", (os, cpu) => {
   Object.defineProperty(process, "platform", { value: os });
   Object.defineProperty(process, "arch", { value: cpu });
@@ -202,5 +188,50 @@ it.each(["EIO", "EBUSY", "ECANCELED"])(
     ).rejects.toBe(failure);
     expect(calls.trash).toHaveBeenCalledTimes(1);
     expect(calls.moveNoReplace).not.toHaveBeenCalled();
+  },
+);
+
+function windowsServices(cpu = "arm64") {
+  Object.defineProperty(process, "platform", { value: "win32" });
+  Object.defineProperty(process, "arch", { value: cpu });
+  return createFilesServices();
+}
+
+it.each(["arm64", "x64"])(
+  "forwards a literal Windows %s drive path to the Recycle Bin service",
+  async (cpu) => {
+    const target = "C:\\Users\\me\\space ' \" ; $() % # café";
+    calls.trash.mockResolvedValue("");
+    await expect(
+      windowsServices(cpu).trash!(target, new AbortController().signal),
+    ).resolves.toBeUndefined();
+    expect(calls.trash.mock.calls).toEqual([[target]]);
+  },
+);
+
+it.each([
+  "C:\\",
+  "C:/",
+  "C:\\item\\",
+  "C:\\link\\.",
+  "C:\\link\\..\\victim",
+  "C:\\one\\\\two",
+  "C:item",
+  "\\\\server\\share\\item",
+  "\\item",
+  "/item",
+  "relative",
+  "C:\\file.txt:stream",
+  "C:\\Users\\me\\x.",
+  "C:\\Users\\me\\x ",
+  "C:\\Users\\...",
+  "C:\\dir. \\x",
+])(
+  "refuses ambiguous Windows trash input before loading (%j)",
+  async (target) => {
+    await expect(
+      windowsServices().trash!(target, new AbortController().signal),
+    ).rejects.toMatchObject({ code: "EINVAL" });
+    expect(calls.load).not.toHaveBeenCalled();
   },
 );
