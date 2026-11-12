@@ -54,6 +54,24 @@
       },
       "sourceCommit": "56162970a92760da31b141d1e74af82cfff5d961",
       "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.2"
+    },
+    {
+      "id": "omxterm.restoration",
+      "name": "Saved Layout",
+      "description": "Save a window's tabs, splits and folders, then open them again with fresh shells.",
+      "version": "0.2.0",
+      "engines": {
+        "omxterm": ">=0.27.0",
+        "api": "0.1.x"
+      },
+      "targets": ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
+      "archive": {
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-restoration-v0.2.0/restoration-0.2.0.omxext",
+        "sha256": "4d951b28251d09fce888fd2539553b5b8b920c50e4b79887e398ada270bd392d",
+        "bytes": 14971
+      },
+      "sourceCommit": "53400958a878c88491cc91f47c2ea65cc0beac43",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.2.0"
     }
   ]
 }
