@@ -67,7 +67,7 @@ it.skipIf(!app || !archive)(
         otherPaneReached: boolean;
         panes: string[];
         active: string;
-        grid: { before: number[][]; active: number[][] };
+        grid: { active: number[][]; stopped: number[][] };
         steps: Record<string, string | string[]>;
         paste: Record<string, { status: string; lines: string[] }>;
       };
@@ -80,7 +80,13 @@ it.skipIf(!app || !archive)(
       );
       expect(result.strayKeysStarted).toBe(false);
       expect(result.panes).toHaveLength(2);
-      expect(result.grid.active).toEqual(result.grid.before);
+      // Marks never change the grid: same canvases with and without them.
+      expect(result.grid.active).toHaveLength(2);
+      for (const [width, height] of result.grid.active) {
+        expect(width).toBeGreaterThan(0);
+        expect(height).toBeGreaterThan(0);
+      }
+      expect(result.grid.stopped).toEqual(result.grid.active);
       expect(result.active).toBe(
         "Mirroring typing from this pane. Click to stop.",
       );

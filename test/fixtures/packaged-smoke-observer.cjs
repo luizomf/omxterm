@@ -655,12 +655,15 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     await settle();
   };
   // 1. Typing reaches both shells. This start comes from the palette. The
-  // marks float over the panes: mirroring never changes the terminal grid.
+  // marks float over the panes, so showing or clearing them never changes the
+  // terminal grid. The setup page stays open as a tab (its tab strip is
+  // #999), and while it is selected the terminal tab is hidden, so compare the
+  // grid with marks (active) and without them (stopped), same strip.
   const canvases = () =>
     js(
       "[...document.querySelectorAll('.terminal-surface canvas')].map(c => { const r = c.getBoundingClientRect(); return [r.width, r.height]; })",
     );
-  result.grid = { before: await canvases() };
+  result.grid = {};
   const typed = marker + ".typed";
   result.panes = await start("palette");
   result.active = await status();
@@ -676,6 +679,8 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     "document.querySelector('.terminal-surface button.ui-mark').click()",
   );
   result.steps.stopStatus = await status();
+  await settle();
+  result.grid.stopped = await canvases();
   core.focus();
   const stopped = marker + ".stopped";
   await keys(line(stopped));
