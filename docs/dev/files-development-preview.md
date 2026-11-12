@@ -2,8 +2,8 @@
 
 Files is an optional extension for browsing local folders. It can create,
 rename, move, trash and delete entries, and insert a path into the terminal. It
-is installed separately from OMXTerm and runs only on Linux ARM64 and macOS
-ARM64. It is a development preview, not a stable extension SDK.
+is installed separately from OMXTerm and runs on every OMXTerm platform. It is
+not a stable extension SDK.
 
 [Files availability](../files-availability.md) covers what users do. This page
 covers how Files is built and how to change, test and ship it. The "why" lives
@@ -23,9 +23,11 @@ or the terminal renderer; it ships only as a `.omxext` archive.
 - `view.ts`, `page.ts`, `tree.ts`, `toolbar.ts`, `messages.ts`, `index.html`,
   `files.css` — the view page shown in the companion panel.
 
-Files 0.8.3 declares host `>=0.26.0`, API `0.1.x` and the
+Files 0.9.0 declares host `>=0.26.0`, API `0.1.x` and the
 `terminal.insertPath.v1` capability. Host 0.26.0 is the first published host
-with the protected path consumer, so older hosts neither offer nor admit Files 0.8.
+with the protected path consumer, so older hosts neither offer nor admit Files 0.8
+or later. Paths are handled in the form the backend reports them (POSIX, or
+Windows drive paths like `C:\Users\me`) by `paths.ts`.
 The narrow [development bridges](extension-installation-foundation.md#archive-contract)
 admit some archives on matching prerelease hosts. Admission checks host, API and
 capability grammar, not platform qualification.
@@ -217,8 +219,7 @@ Downloading never activates code.
 **Browse official extensions** fetches the catalog only on explicit Browse or
 Refresh. Main picks one endpoint by target:
 `distribution/official-extensions-darwin-arm64-v1.json` on macOS ARM64 and
-`distribution/official-extensions-v1.json` everywhere else. Both select Files
-0.8.3. Downloaded length, SHA-256 and manifest strings must match the entry
+`distribution/official-extensions-v1.json` everywhere else. Downloaded length, SHA-256 and manifest strings must match the entry
 before trust. Installation stays dormant until Files is opened.
 
 The schema allows one release per extension ID, so hosts excluded by the
@@ -260,11 +261,12 @@ Tests:
 ### Packaged Files smoke
 
 `test/integration/files-smoke-packaged.test.ts` qualifies a Files archive on a
-published host, on Linux ARM64 and macOS ARM64. It launches the packaged app with
-an isolated home and profile, installs the archive through **Settings → Extensions
+packaged host (Linux, macOS or Windows). It launches the packaged app with an
+isolated home and profile, installs the archive through **Settings → Extensions
 → Install local .omxext…** (one consent), lists a directory, and inserts a file
 path into the terminal with Shift+Enter. The shell then writes what it received,
-and the test compares it with the path. It runs in seconds:
+and the test compares it with the path. Last, it renames a file and sends a
+folder to the system trash through the backend. It runs in seconds:
 
 ```sh
 OMXTERM_FILES_SMOKE_APP=/absolute/OMXTerm-X.Y.Z-arm64.AppImage \
@@ -278,10 +280,16 @@ The AppImage is extracted, not modified.
 
 ## Platform limits
 
-- Files runs only on Linux ARM64 and macOS ARM64. Windows, Linux x64 and other
-  targets have no move addon and no catalog offer.
-- Files 0.8.3 passed the packaged smoke on the 0.27.0 Linux and macOS ARM64
-  hosts. Native drag onto the terminal is covered by headless tests only.
+- Files 0.9.0 browses POSIX and Windows drive paths. Rename, move and Windows
+  trash need the host's native Files services, which every target has from
+  OMXTerm 0.28.0; older Windows and Linux x64 hosts report them as unsupported.
+  UNC and other non-drive Windows paths aren't supported.
+- Files 0.9.0 passed the packaged smoke (list, insert, rename, trash) on the
+  published 0.27.0 Linux and macOS ARM64 hosts and on a 0.28.0-dev Windows ARM64
+  build. On 0.27.0 Windows ARM64 it lists and inserts, but rename and trash
+  report unsupported. Linux x64 and Windows x64 are build-only: hosted CI runs
+  the native move and Recycle Bin tests, never a desktop. Native drag onto the
+  terminal is covered by headless tests only.
 - Native checks used synthetic Chromium input and controlled consent. They don't
   establish physical keyboard, IME or drag input, native dialogs,
   Gatekeeper/notarization, execution on macOS 12, cancelling a blocked native

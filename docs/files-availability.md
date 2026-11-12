@@ -4,11 +4,11 @@ Files is an optional add-on for browsing folders and files. It can move or
 delete items after confirmation, and insert a file's path into the terminal
 (**Insert path into terminal**, Shift+Enter, or drag it onto a terminal pane).
 
-The official catalogs offer **Files 0.8** for Linux computers with 64-bit ARM
-processors and for Macs with Apple silicon. It needs OMXTerm 0.26.0 or later;
-older versions can install Files 0.7 or 0.6 from their
-[releases](https://github.com/luizomf/omxterm/releases). These are previews;
-Windows and other processor types are not offered.
+Files works on every OMXTerm platform: macOS (Apple silicon), Linux and
+Windows, on ARM64 and x64. It needs OMXTerm 0.26.0 or later, and on Windows and
+Linux x64 it needs OMXTerm 0.28.0 or later to rename, move and (on Windows) send
+items to the Recycle Bin. Older OMXTerm versions can install Files 0.7 or 0.6
+from their [releases](https://github.com/luizomf/omxterm/releases).
 
 1. Open **Settings → Extensions → Browse official extensions** and choose
    **Install** on the Files card shown for your computer.
