@@ -111,7 +111,7 @@ The manifest is strict and small:
   refused, so an older host rejects a package that needs a newer capability
   instead of half-activating it. `terminal.reopenLayout.v1` only turns on core's
   reopening of windows at startup
-  ([ADR 0047](adr/0047-reopen-the-last-windows-at-startup.md)), and `state.v1`
+  ([ADR 0047](../adr/0047-reopen-the-last-windows-at-startup.md)), and `state.v1`
   is backend bootstrap support, not browser filesystem access. The rest are
   host operations on the extension's own view. A capability grants nothing beyond its contract:
   for example, `terminal.semanticInput.v1` sends text through Protected Paste
