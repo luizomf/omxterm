@@ -417,10 +417,17 @@ export function readPeImports(data) {
   const pe = data.readUInt32LE(0x3c);
   const sectionCount = data.readUInt16LE(pe + 6);
   const optional = pe + 24;
-  const sectionTable = optional + data.readUInt16LE(pe + 20);
-  const pe32Plus = data.readUInt16LE(optional) === 0x20b;
-  const directoryCount = data.readUInt32LE(optional + (pe32Plus ? 108 : 92));
-  const directories = optional + (pe32Plus ? 112 : 96);
+  const optionalSize = data.readUInt16LE(pe + 20);
+  const sectionTable = optional + optionalSize;
+  const pe32Plus = optionalSize > 0 && data.readUInt16LE(optional) === 0x20b;
+  const directoriesAt = pe32Plus ? 112 : 96;
+  // A header without data directories imports nothing.
+  if (optionalSize < directoriesAt) return [];
+  const directoryCount = Math.min(
+    data.readUInt32LE(optional + directoriesAt - 4),
+    (optionalSize - directoriesAt) / 8,
+  );
+  const directories = optional + directoriesAt;
   const fileOffset = (rva) => {
     for (let index = 0; index < sectionCount; index += 1) {
       const section = sectionTable + index * 40;
