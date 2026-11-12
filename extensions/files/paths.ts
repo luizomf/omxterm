@@ -1,14 +1,22 @@
-// Host paths as the backend reports them: POSIX, or Windows drive paths such
-// as C:\Users\me. The separator follows the path itself, not the view's OS.
+// Host paths as the backend reports them: POSIX, or Windows paths on a drive
+// (C:\Users\me) or a network share (\\server\share\folder). The separator
+// follows the path itself, not the view's OS.
 const drive = /^[A-Za-z]:[\\/]/;
-const windows = (path: string) => drive.test(path);
+const share = /^\\\\[^\\/]+[\\/][^\\/]+(?:[\\/]|$)/;
+const windows = (path: string) => drive.test(path) || share.test(path);
 
-const root = (path: string) => (windows(path) ? path.slice(0, 3) : "/");
+function root(path: string) {
+  if (drive.test(path)) return path.slice(0, 3);
+  const unc = share.exec(path)?.[0];
+  if (unc) return /[\\/]$/.test(unc) ? unc : unc + "\\";
+  return "/";
+}
 
-export const isRoot = (path: string) => path === root(path);
+export const isRoot = (path: string) =>
+  path === root(path) || path + "\\" === root(path);
 
 export const join = (base: string, name: string) =>
-  isRoot(base) ? base + name : base + (windows(base) ? "\\" : "/") + name;
+  isRoot(base) ? root(base) + name : base + (windows(base) ? "\\" : "/") + name;
 
 export function parent(path: string) {
   const index = windows(path)
@@ -27,11 +35,13 @@ export function inside(path: string, directory: string) {
   return false;
 }
 
-/** One entry name for `directory`: no separators, dot names or NUL. */
+/** One entry name for `directory`: no separators, dot names or NUL. Windows
+ * also refuses its reserved characters (a colon names a data stream) and a
+ * trailing dot or space, which it would silently trim. */
 export const validName = (name: string, directory: string) =>
   !!name &&
   name !== "." &&
   name !== ".." &&
   !name.includes("/") &&
   !name.includes("\0") &&
-  !(windows(directory) && name.includes("\\"));
+  !(windows(directory) && /[<>:"|?*\\\x00-\x1f]|[. ]$/.test(name));

@@ -52,6 +52,10 @@ function failure(error: unknown): string {
     case "ENOSYS":
     case "ENOTSUP":
       return "unsupported";
+    case "ENOTRASH":
+      return "trash-unavailable";
+    case "EINVAL":
+      return "invalid-path";
     case "EACCES":
     case "EPERM":
       return "permission";
@@ -137,9 +141,8 @@ function sameMove(a: MoveCapture, b: MoveCapture) {
     a.directoryInode === b.directoryInode
   );
 }
+// Linux only; the caller refuses other platforms without a host trash.
 async function systemTrash(target: string, signal: AbortSignal): Promise<void> {
-  if (process.platform !== "linux")
-    throw Object.assign(new Error("unsupported"), { code: "ENOTSUP" });
   await new Promise<void>((resolve, reject) => {
     // Literal arguments; never shell commands. Failure never falls back to rm.
     execFile(
@@ -364,17 +367,33 @@ export function activate(context: {
             await context.files.moveNoReplace(target, destination);
             break;
           }
-          case "trash":
+          case "trash": {
+            const trash = context.files.trash;
+            // Hosts before 0.28 have no Windows trash: refuse before acting.
+            if (!trash && process.platform !== "linux") refuse("ENOTSUP");
             mutation = true;
             uncertain = true; // A dispatched OS trash failure is not rollback.
-            // pathname already validated the string. Preserve its original
-            // spelling for the host hook's destructive-path checks; normalizing
-            // first would erase dot/empty components around final symlinks.
-            await (context.files.trash ?? systemTrash)(
-              context.files.trash ? (request.path as string) : target,
-              signal,
-            );
+            try {
+              // pathname already validated the string. Preserve its original
+              // spelling for the host hook's destructive-path checks;
+              // normalizing first would erase dot/empty components around
+              // final symlinks.
+              await (trash ?? systemTrash)(
+                trash ? (request.path as string) : target,
+                signal,
+              );
+            } catch (error) {
+              // The host refused the spelling, or the Recycle Bin refused the
+              // item, before anything changed.
+              const code =
+                error && typeof error === "object" && "code" in error
+                  ? error.code
+                  : undefined;
+              if (code === "EINVAL" || code === "ENOTRASH") mutation = false;
+              throw error;
+            }
             break;
+          }
           default:
             throw new Error("invalid-request");
         }

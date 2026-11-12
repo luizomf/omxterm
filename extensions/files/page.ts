@@ -192,6 +192,7 @@ export function mountFilesPage(
         return m.terminalDirectoryChanged;
       if (reply.reason === "terminal-directory-busy")
         return m.terminalDirectoryBusy;
+      if (reply.error === "trash-unavailable") return m.trashUnavailable;
       return reply.error === "outcome-unknown"
         ? m.unknown
         : moving

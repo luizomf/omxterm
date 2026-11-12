@@ -111,6 +111,8 @@ const english = {
   unknown:
     "Outcome unknown. Do not repeat the operation automatically. Refresh to inspect the directory.",
   invalidName: "Enter one file or folder name.",
+  trashUnavailable:
+    "This item can't go to the Trash here. Nothing was deleted.",
   failed: (error: string) => `Operation not completed: ${error}.`,
   folderUnavailable: (error: string) => `Folder unavailable: ${error}`,
   directoryUnavailable: (error: string) => `Directory unavailable: ${error}`,
@@ -242,6 +244,8 @@ const portuguese: FilesMessages = {
   unknown:
     "Resultado desconhecido. Não repita a operação automaticamente. Atualize para inspecionar o diretório.",
   invalidName: "Digite um único nome de arquivo ou pasta.",
+  trashUnavailable:
+    "Este item não pode ir para a Lixeira aqui. Nada foi apagado.",
   failed: (error) => `Operação não concluída: ${error}.`,
   folderUnavailable: (error) => `Pasta indisponível: ${error}`,
   directoryUnavailable: (error) => `Diretório indisponível: ${error}`,
