@@ -56,7 +56,7 @@ Mirror Typing marks every member while its route is armed; the label says
 whether the pane is the source or a member, and clicking any member's mark
 stops the group. Opening the Command Palette or any modal, switching tabs,
 selecting an unmirrored pane, or opening Mirror Typing again stops the group,
-as before. The Toggle Mirror Typing shortcut (or the Command Palette) is the
+as before. The Mirror Typing shortcut (or the Command Palette) is the
 keyboard Stop, and the mark the pointer one, all working with hidden chrome and
 an unresponsive extension; the mark's label names the shortcut ("Click or press
 Cmd+Shift+M to stop."). An ordinary stop shows nothing,

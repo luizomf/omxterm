@@ -300,9 +300,9 @@ continuations remain refused; see the [terminal contract](docs/spec.md#terminal-
 
 **Mirror Typing** — An optional extension that copies the source pane's encoded
 keyboard input to a fixed group of live panes in one Terminal Tab. Core owns input delivery and the
-State Marks on mirrored panes; clicking one, pressing the Toggle Mirror Typing
-shortcut, or opening the Command Palette stops it. The toggle acts only on the
-focused window's group. Its setup is a Hosted Dialog. Extension code receives no keyboard
+State Marks on mirrored panes; clicking one, using its one
+entry or shortcut (a toggle), or opening the Command Palette stops it. The
+toggle acts only on its own window's group. Its setup is a Hosted Dialog. Extension code receives no keyboard
 payloads. Paste,
 snippets and drops stop mirroring before delivery to their original target.
 See [Mirror Typing](docs/mirror-typing.md) for setup and limits.

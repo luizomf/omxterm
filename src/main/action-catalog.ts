@@ -7,8 +7,8 @@ import {
   TERMINAL_ACTION_NAMES,
   terminalActionForKeyboardInput,
   type AcceleratorKeyboardInput,
-  type CompanionToolAction,
-  isCompanionToolAction,
+  type ExtensionShortcutAction,
+  isExtensionShortcutAction,
   type TerminalActionName,
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
@@ -16,7 +16,6 @@ import type {
   TerminalPaneFocusTarget,
   TerminalSplitDirection,
 } from "../shared/terminal-panes";
-import { MIRROR_TYPING_ACTION } from "./extension-presentation";
 
 export interface TerminalApplicationMenuActions {
   readonly newWindow: () => void;
@@ -38,7 +37,6 @@ export interface TerminalApplicationMenuActions {
   readonly selectAllSelectedTerminal: () => void;
   readonly findInSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
-  readonly toggleSelectedMirrorTyping: () => void;
   readonly toggleSelectedTabBar: () => void;
   readonly toggleSelectedAuxiliaryPanel: () => void;
   readonly moveSelectedAuxiliaryPanel: () => void;
@@ -63,8 +61,8 @@ export type CoreActionId =
 export interface CoreAction {
   readonly id: string;
   readonly extension?: boolean;
-  // Assigned only by core composition for the two recognized companion tools.
-  readonly shortcut?: CompanionToolAction;
+  // Assigned only by core composition for the recognized official extensions.
+  readonly shortcut?: ExtensionShortcutAction;
   readonly label: string;
   readonly accelerator: string | null;
   // These existing guarded callbacks own availability, target selection and
@@ -121,10 +119,7 @@ export function createCoreActionCatalog(
     actualSize: action(t("menu.actualSize"), actions.resetSelectedWindowZoom),
     toggleFiles: action(t("menu.toggleFiles"), () => {}, false),
     toggleSshConnect: action(t("menu.toggleSshConnect"), () => {}, false),
-    toggleMirrorTyping: action(
-      t("menu.toggleMirrorTyping"),
-      actions.toggleSelectedMirrorTyping,
-    ),
+    toggleMirrorTyping: action(t("mirrorTyping.title"), () => {}, false),
     toggleSnippets: action(
       t("menu.toggleSnippets"),
       actions.toggleSelectedSnippets,
@@ -217,32 +212,26 @@ export function createCoreActionCatalog(
         Object.freeze({ ...entry, accelerator: null }),
       ]),
   );
-  const mirrorTyping = Object.hasOwn(contributed, MIRROR_TYPING_ACTION);
   return Object.freeze({
     ...contributed,
     ...(Object.fromEntries(
       Object.entries(definitions).map(([id, definition]) => {
-        const companion = isCompanionToolAction(id);
+        const companion = isExtensionShortcutAction(id);
         const installed = companion
           ? extensions.find((entry) => entry.extension && entry.shortcut === id)
           : undefined;
-        // The toggle sits beside Mirror Typing's own entry and exists only
-        // while that entry does, so a missing extension leaves the key free.
-        const absent =
-          (companion && !installed) ||
-          (id === "toggleMirrorTyping" && !mirrorTyping);
         return [
           id,
           Object.freeze({
             ...definition,
             ...(installed ?? {}),
             id,
-            ...(absent ? { palette: false } : {}),
-            accelerator: absent
-              ? null
-              : Object.hasOwn(keybinds, id)
-                ? keybinds[id as TerminalActionName]
-                : null,
+            accelerator:
+              companion && !installed
+                ? null
+                : Object.hasOwn(keybinds, id)
+                  ? keybinds[id as TerminalActionName]
+                  : null,
           }),
         ];
       }),

@@ -324,6 +324,7 @@ export function createCompanionContent(
       );
     },
     dialogShown: dialogs.shown,
+    closeDialog: dialogs.closeShown,
     ownsPanelFocus() {
       const target = selectedPanel();
       return (

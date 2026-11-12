@@ -57,13 +57,23 @@ export function isCompanionToolAction(
   return action === "toggleFiles" || action === "toggleSshConnect";
 }
 
-// Window actions that are not companion-tool slots. A held key must not run
-// them again (moving the panel back, or stopping and reopening Mirror Typing),
-// so delivery owns one physical press separately from the classifier above.
+// Core shortcut slots an official extension's own entry fills: the companion
+// tools above, and Mirror Typing, whose entry toggles its group.
+export type ExtensionShortcutAction =
+  CompanionToolAction | "toggleMirrorTyping";
+
+export function isExtensionShortcutAction(
+  action: string,
+): action is ExtensionShortcutAction {
+  return isCompanionToolAction(action) || action === "toggleMirrorTyping";
+}
+
+// A window preference, not an extension slot. Delivery owns one physical
+// press separately from the extension classifier above.
 export function isDiscreteWindowAction(
   action: string,
-): action is "moveAuxiliaryPanel" | "toggleMirrorTyping" {
-  return action === "moveAuxiliaryPanel" || action === "toggleMirrorTyping";
+): action is "moveAuxiliaryPanel" {
+  return action === "moveAuxiliaryPanel";
 }
 
 // null disables an action's shortcut; the action stays in the menu.

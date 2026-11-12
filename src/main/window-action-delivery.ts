@@ -8,14 +8,14 @@ import type { KeybindCapture } from "./keybind-capture";
 import { deliverKeybindsFromKeyEvents } from "./keybind-delivery";
 import { createCompanionDismissal } from "./companion-dismissal";
 import {
-  isCompanionToolAction,
   isDiscreteWindowAction,
+  isExtensionShortcutAction,
 } from "../shared/terminal-keybinds";
 
-// Companion-tool slots and the panel-side action stay separate classifiers.
+// Extension slots and the panel-side action stay separate classifiers.
 // Both own one physical press, including repeats and release across focus.
 function ownsPhysicalPress(action: string): boolean {
-  return isCompanionToolAction(action) || isDiscreteWindowAction(action);
+  return isExtensionShortcutAction(action) || isDiscreteWindowAction(action);
 }
 import {
   optionShortcutInterpreter,

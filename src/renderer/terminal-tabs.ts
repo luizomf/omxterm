@@ -95,6 +95,8 @@ export interface TerminalTabsOptions {
   readonly isSshSourceForeground?: (id: string) => boolean;
   // The hosted dialog shown over the selected tab, if any.
   readonly isDialogShown?: (id?: string) => boolean;
+  // Closes the shown hosted dialog; false when none is shown.
+  readonly closeDialog?: () => boolean;
   readonly onGraphicalSelected?: () => void;
   readonly settings?: SettingsBridge;
   readonly extensions?: import("../shared/extensions").ExtensionsBridge;
@@ -430,6 +432,7 @@ export function createTerminalTabs(
       panes.closePane(findPaneBySession(terminalTabs(), id)),
     pane: panes.handleCommand,
     extensions: options.extensions,
+    closeDialog: options.closeDialog,
     canOpenSnippets: () => !!interactivePane(),
     openSnippetsManagement: () =>
       settingsActions.openSettings({ page: "extensions", reason: "snippets" }),

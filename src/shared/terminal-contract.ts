@@ -85,6 +85,8 @@ export type TerminalTabCommand =
   | { readonly action: "new" }
   | { readonly action: "open-extension"; readonly token: string }
   | { readonly action: "toggle-snippets-extension"; readonly token: string }
+  // Closes a shown Hosted Dialog, otherwise opens like open-extension.
+  | { readonly action: "toggle-extension-dialog"; readonly token: string }
   | { readonly action: "snippets-management" }
   | { readonly action: "cancel-panel-default" }
   | {
@@ -253,7 +255,8 @@ export function isTerminalTabCommand(
   if (isStrictRecord(value, ["action", "token"]))
     return (
       (value.action === "open-extension" ||
-        value.action === "toggle-snippets-extension") &&
+        value.action === "toggle-snippets-extension" ||
+        value.action === "toggle-extension-dialog") &&
       typeof value.token === "string" &&
       /^[0-9a-f-]{36}$/.test(value.token)
     );

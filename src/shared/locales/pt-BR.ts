@@ -36,7 +36,6 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.toggleSnippets": "Alternar Snippets",
   "menu.toggleFiles": "Alternar Files",
   "menu.toggleSshConnect": "Alternar SSH Connect",
-  "menu.toggleMirrorTyping": "Alternar espelhamento da digitação",
   "menu.toggleTabBar": "Alternar Barra de Abas",
   "menu.toggleAuxiliaryPanel": "Alternar Painel Auxiliar",
   "menu.moveAuxiliaryPanel": "Mover Painel Auxiliar para o Outro Lado",

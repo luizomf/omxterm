@@ -27,7 +27,6 @@ import { applicationViews } from "./application-extension-views";
 import {
   companionToolShortcut,
   extensionPresentation,
-  MIRROR_TYPING_ACTION,
 } from "./extension-presentation";
 import { MirrorSetupError } from "./mirror-typing-ipc";
 import { startExtensionViewHost } from "./extension-view-ipc";
@@ -241,22 +240,27 @@ function supportsExtensionPreview() {
   );
 }
 
-// Acts only on this window: a running or preparing group stops; otherwise
-// Mirror Typing opens for the selected tab, as its own entry would.
-export function toggleMirrorTyping(
-  window: BrowserWindow,
-  mirrorTyping: Pick<
-    NonNullable<ApplicationExtensionsOptions["mirrorTyping"]>,
-    "toggleStop"
-  >,
-  actions: () => readonly CoreAction[],
+const focusedWindow = () => BrowserWindow.getFocusedWindow() ?? undefined;
+
+// Mirror Typing's entry is its window's toggle. It stops a running or
+// preparing group in that window only, never another window's.
+function stopsMirrorGroup(
+  options: ApplicationExtensionsOptions,
+  shortcut: string | undefined,
+  source: ExtensionTarget,
 ) {
-  if (BrowserWindow.getFocusedWindow() !== window) return;
-  if (mirrorTyping.toggleStop(window)) return;
-  // Without a target, the action captures the focused window's selected tab.
-  actions()
-    .find((entry) => entry.id === MIRROR_TYPING_ACTION)
-    ?.invoke();
+  return (
+    shortcut === "toggleMirrorTyping" &&
+    options.mirrorTyping?.toggleStop(source.owner as BrowserWindow) === true
+  );
+}
+
+// Otherwise the renderer closes a shown setup dialog, or accepts the open.
+function tabAction(shortcut: string | undefined, snippets: boolean) {
+  if (snippets) return "toggle-snippets-extension";
+  return shortcut === "toggleMirrorTyping"
+    ? "toggle-extension-dialog"
+    : "open-extension";
 }
 
 // Startup creates infrastructure, never activates installed code. Unsupported
@@ -418,8 +422,8 @@ export async function startApplicationExtensions(
           ...(shortcut ? { shortcut } : {}),
           invoke() {
             if (claim && !claim()) return;
-            const source =
-              target ?? capture(BrowserWindow.getFocusedWindow() ?? undefined);
+            const source = target ?? capture(focusedWindow());
+            if (source && stopsMirrorGroup(options, shortcut, source)) return;
             const captured =
               source &&
               captureExtensionTarget(
@@ -449,9 +453,7 @@ export async function startApplicationExtensions(
                 ),
             });
             options.sendAction(window.webContents, terminalIpc.tabCommand, {
-              action: snippetsCompatibility
-                ? "toggle-snippets-extension"
-                : "open-extension",
+              action: tabAction(shortcut, snippetsCompatibility),
               token,
             });
           },

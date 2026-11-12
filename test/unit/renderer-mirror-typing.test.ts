@@ -79,6 +79,7 @@ async function harness(showTabBar = false) {
       hostedPresentation: companion.presentation,
       selectContent: companion.select,
       isDialogShown: companion.dialogShown,
+      closeDialog: companion.closeDialog,
       language,
       showTabBar,
     },
@@ -521,4 +522,20 @@ it("names the toggle's binding in each mark's tooltip and accessible name", asyn
   expect(paneMarks()[1]).toContain(
     "Clique ou pressione Ctrl+Shift+M para parar.",
   );
+});
+
+it("closes a shown setup dialog on the toggle instead of opening another", async () => {
+  const h = await harness();
+  const toggle = () =>
+    h.tabs.handleCommand({
+      action: "toggle-extension-dialog",
+      token: "00000000-0000-0000-0000-000000000001",
+    });
+  await h.setup();
+  toggle();
+  await settle();
+  expect(h.hosted.close).toHaveBeenCalledExactlyOnceWith("setup");
+  toggle();
+  await settle();
+  expect(h.hosted.close).toHaveBeenCalledOnce();
 });

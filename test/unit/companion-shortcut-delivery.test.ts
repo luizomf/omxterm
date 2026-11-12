@@ -242,10 +242,7 @@ it.each(["core", "child"] as const)(
     const catalog = () =>
       createCoreActionCatalog(
         "OMXTerm",
-        new Proxy({} as TerminalApplicationMenuActions, {
-          get: (_target, name) =>
-            name === "toggleSelectedMirrorTyping" ? toggle : vi.fn(),
-        }),
+        new Proxy({} as TerminalApplicationMenuActions, { get: () => vi.fn() }),
         {
           ...terminalDefaultKeybinds(process.platform),
           toggleMirrorTyping: "Control+Alt+J",
@@ -255,10 +252,11 @@ it.each(["core", "child"] as const)(
           {
             id: "omxterm.mirror-typing.open",
             extension: true,
+            shortcut: "toggleMirrorTyping",
             label: "Mirror Typing",
             accelerator: null,
             palette: true,
-            invoke: vi.fn(),
+            invoke: toggle,
           },
         ],
       );

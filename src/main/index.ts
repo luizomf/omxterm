@@ -29,10 +29,7 @@ import { startCommandPalette } from "./command-palette";
 import { terminalMenuActions } from "./terminal-menu-actions";
 import { extensionInvocationTarget } from "./extension-invocation-target";
 import { usesOptionalSnippets } from "../shared/snippets-mode";
-import {
-  startApplicationExtensions,
-  toggleMirrorTyping,
-} from "./application-extensions";
+import { startApplicationExtensions } from "./application-extensions";
 import { requestExternalLink } from "./terminal-ipc-boundaries";
 import { registerSshTerminalLaunch } from "./ssh-terminal-ipc";
 import { registerSemanticInputIpc } from "./semantic-input-ipc";
@@ -623,12 +620,6 @@ app
               extensions?.toggleSnippets(window);
             else notifyWindow(terminalIpc.snippetsToggle)(window);
           },
-          toggleMirrorTyping: (window) =>
-            toggleMirrorTyping(
-              window,
-              mirrors,
-              () => extensions?.actions() ?? [],
-            ),
           sendLocalImageOpen: notifyWindow(terminalIpc.localImageOpen),
           toggleDeveloperTools: (window) => window.webContents.toggleDevTools(),
           sendTabCommand: (window, command) =>

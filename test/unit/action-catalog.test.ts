@@ -44,7 +44,7 @@ it("projects a namespaced extension through the same menu and palette without ad
   );
   const contributed = catalog["omxterm.files.open"]!;
   expect(contributed.accelerator).toBeNull();
-  // Without Mirror Typing installed, its toggle holds no key.
+  // Without Mirror Typing installed, its slot holds no key.
   expect(coreActionKeybinds(catalog)).toEqual({
     ...bindings,
     toggleMirrorTyping: null,
@@ -81,7 +81,6 @@ function menuActions(): TerminalApplicationMenuActions {
     selectAllSelectedTerminal: vi.fn(),
     findInSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
-    toggleSelectedMirrorTyping: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
     toggleSelectedAuxiliaryPanel: vi.fn(),
     moveSelectedAuxiliaryPanel: vi.fn(),
@@ -201,60 +200,5 @@ it.each(["en-US", "pt-BR"] as const)(
         "linux",
       ),
     ).toBeUndefined();
-  },
-);
-
-it.each([
-  ["darwin", "CommandOrControl+Shift+M", { meta: true, control: false }],
-  ["linux", "Control+Shift+M", { meta: false, control: true }],
-  ["win32", "Control+Shift+M", { meta: false, control: true }],
-] as const)(
-  "places the Mirror Typing toggle beside its entry with a rebindable default on %s",
-  (platform, binding, modifiers) => {
-    const actions = menuActions();
-    const { t } = translatorFor("en-US");
-    const open = vi.fn();
-    const defaults = terminalDefaultKeybinds(platform);
-    expect(defaults.toggleMirrorTyping).toBe(binding);
-    const catalog = createCoreActionCatalog("OMXTerm", actions, defaults, t, [
-      {
-        id: "omxterm.mirror-typing.open",
-        label: "Mirror Typing",
-        invoke: open,
-        palette: true,
-        accelerator: null,
-        extension: true,
-      },
-    ]);
-    const toggle = catalog.toggleMirrorTyping;
-    expect(toggle.label).toBe("Toggle Mirror Typing");
-    expect(toggle.accelerator).toBe(binding);
-    expect(corePaletteActions(catalog)).toContain(toggle);
-    const file = coreActionMenuTemplate("OMXTerm", catalog, t).find(
-      (menu) => menu.label === t("menu.file"),
-    )!.submenu as MenuItemConstructorOptions[];
-    const entry = file.findIndex((item) => item.click === open);
-    expect(file[entry + 1]).toMatchObject({
-      label: "Toggle Mirror Typing",
-      accelerator: binding,
-      click: toggle.invoke,
-    });
-    const match = coreActionForKeyboardInput(
-      catalog,
-      { key: "M", alt: false, shift: true, ...modifiers },
-      platform,
-    );
-    expect(match).toBe(toggle);
-    match?.invoke();
-    expect(actions.toggleSelectedMirrorTyping).toHaveBeenCalledOnce();
-    expect(open).not.toHaveBeenCalled();
-    const rebound = createCoreActionCatalog(
-      "OMXTerm",
-      actions,
-      { ...defaults, toggleMirrorTyping: "Control+Alt+M" },
-      t,
-      [catalog["omxterm.mirror-typing.open"]!],
-    );
-    expect(rebound.toggleMirrorTyping.accelerator).toBe("Control+Alt+M");
   },
 );

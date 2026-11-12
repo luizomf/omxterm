@@ -33,7 +33,7 @@ Extension code never sees keyboard bytes.
 ## How it works
 
 1. The **Mirror Typing** action (File menu, terminal context menu, Command
-   Palette) captures the selected tab and its focused pane, then opens the
+   Palette, shortcut) captures the selected tab and its focused pane, then opens the
    setup dialog. It refuses unless the focused pane is live and the tab has
    another live pane.
 2. The view asks `{operation: "terminal.mirrorTyping.v1", action: "describe"}`
@@ -49,14 +49,15 @@ Extension code never sees keyboard bytes.
    which writes them once to every member. Paste, snippet Insert/Run and drops
    call the Surface's semantic-input hook first, which stops the group before
    the text goes to the one pane.
-5. **Toggle Mirror Typing** (`toggleMirrorTyping`, a core action listed only
-   while the extension is enabled) goes through
-   `toggleMirrorTyping(window)` in `src/main/application-extensions.ts`. It
-   asks that window's `MirrorWindow` to stop a running or preparing group and
-   otherwise runs the extension's own action. Main keeps one `MirrorWindow`
-   per window, so the toggle never reaches another window's group. The
-   activate command carries the toggle's displayed binding, which the marks
-   name in their Stop hint.
+5. The **Mirror Typing** entry is a toggle, bound to the `toggleMirrorTyping`
+   slot (`src/main/extension-presentation.ts`). Its invoke in
+   `src/main/application-extensions.ts` first asks that window's
+   `MirrorWindow` to stop a running or preparing group. Otherwise it sends the
+   `toggle-extension-dialog` tab command: the renderer closes a shown setup
+   dialog, or accepts and setup opens. Main keeps one `MirrorWindow` per
+   window, so the toggle never reaches another window's group. The activate
+   command carries the toggle's displayed binding, which the marks name in
+   their Stop hint.
 
 Start fires on key release, and only for a press that began on the Start
 button. The Enter that ran the palette action and held-key repeats can't start

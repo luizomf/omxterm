@@ -36,7 +36,6 @@ function menuActions() {
     selectAllSelectedTerminal: vi.fn(),
     findInSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
-    toggleSelectedMirrorTyping: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
     toggleSelectedAuxiliaryPanel: vi.fn(),
     moveSelectedAuxiliaryPanel: vi.fn(),

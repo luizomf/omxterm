@@ -1,16 +1,14 @@
-import type { CompanionToolAction } from "../shared/terminal-keybinds";
+import type { ExtensionShortcutAction } from "../shared/terminal-keybinds";
 import type { HostedPresentationKind } from "../shared/extension-view";
 import type { PackageManifest } from "../installed-packages/installed-packages";
 
-// Core's Mirror Typing toggle reuses this official open action.
-export const MIRROR_TYPING_ACTION = "omxterm.mirror-typing.open";
-
 export function companionToolShortcut(
   manifest: Pick<PackageManifest, "id" | "view">,
-): CompanionToolAction | undefined {
+): ExtensionShortcutAction | undefined {
   if (manifest.view?.action !== `${manifest.id}.open`) return undefined;
   if (manifest.id === "omxterm.files") return "toggleFiles";
   if (manifest.id === "omxterm.ssh") return "toggleSshConnect";
+  if (manifest.id === "omxterm.mirror-typing") return "toggleMirrorTyping";
   return undefined;
 }
 
