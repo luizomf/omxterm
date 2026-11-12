@@ -48,6 +48,22 @@ const separator = "document.querySelector('.auxiliary-separator')";
 export type AuxiliaryPanelScenario = ReturnType<typeof createScenario>;
 type Scene = AuxiliaryPanelScenario;
 
+// At some Windows display scales (200%, for one) a frameless window's content
+// comes out one DIP narrower than requested. Correct the request by what
+// Electron reports, so each step tests the exact width it names. Other
+// platforms may apply the size later, so a read there could be stale.
+function setContentSize(window: BrowserWindow, width: number, height: number) {
+  let request = width;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    window.setContentSize(request, height);
+    if (process.platform !== "win32") return;
+    const [actual = 0] = window.getContentSize();
+    if (actual === width) return;
+    request += width - actual;
+  }
+  assert.fail(`Content width ${width} is unreachable at this display scale`);
+}
+
 function createScenario(options: PanelOptions) {
   const { window, application } = options;
   const contents = window.webContents;
@@ -178,7 +194,7 @@ export async function exerciseAuxiliaryPanel(options: PanelOptions) {
   const scene = createScenario(options);
   const { window, application, sizes } = options;
   const { until, wait, evaluate, clickMenu, width } = scene;
-  window.setContentSize(1000, 700);
+  setContentSize(window, 1000, 700);
   window.focus();
   await until("document.querySelectorAll('canvas').length === 1");
   await wait(() => (sizes[0]?.length ?? 0) > 0, "initial grid");
@@ -366,20 +382,20 @@ async function exerciseResize(s: Scene, side: "left" | "right") {
 async function exerciseSmallWindow(s: Scene) {
   const { window } = s.options;
   const { until, wait, width, key, evaluate } = s;
-  window.setContentSize(500, 700);
+  setContentSize(window, 500, 700);
   await wait(async () => (await width()) === 314, "automatic clamp");
-  window.setContentSize(1000, 700);
+  setContentSize(window, 1000, 700);
   await wait(
     async () => (await width()) === 560,
     "preferred width restoration",
   );
-  window.setContentSize(405, 300);
+  setContentSize(window, 405, 300);
   await until(`!(${shown})`);
   key("S", ["control", "alt"]);
   await until(
     "document.querySelector('.auxiliary-status').textContent.includes('Widen the window')",
   );
-  window.setContentSize(406, 300);
+  setContentSize(window, 406, 300);
   await until(
     "document.querySelector('#terminal-window-content').getBoundingClientRect().width === 406",
   );
@@ -387,7 +403,7 @@ async function exerciseSmallWindow(s: Scene) {
   key("S", ["control", "alt"]);
   await until(shown);
   assert.equal(await width(), 220);
-  window.setContentSize(1000, 300);
+  setContentSize(window, 1000, 300);
   await wait(
     async () => (await width()) === 560,
     "preferred width survives hiding",

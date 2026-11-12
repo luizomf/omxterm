@@ -70,7 +70,7 @@ export function assertWindowsDragGeometry(receipt: string, handle: bigint) {
   );
   assert.ok(
     after.outer.x !== before.outer.x && after.outer.y !== before.outer.y,
-    "native drag must move the physical window on both axes",
+    `native drag must move the physical window on both axes: ${receipt}`,
   );
   assert.equal(after.outer.width, before.outer.width, "physical window width");
   assert.equal(
