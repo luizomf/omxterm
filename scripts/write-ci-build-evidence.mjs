@@ -13,13 +13,23 @@ import { inspectChecksumRecord } from "./verify-packaged-app.mjs";
 const require = createRequire(import.meta.url);
 const ptyRequire = createRequire(require.resolve("node-pty/package.json"));
 const platform = process.platform;
+const arch = process.arch;
+const runners = {
+  x64: { machine: "x86_64", runnerArch: "X64" },
+  // Linux ARM64 also builds on a hosted runner to keep the glibc floor low.
+  ...(platform === "linux"
+    ? { arm64: { machine: "aarch64", runnerArch: "ARM64" } }
+    : {}),
+};
 if (
   !["linux", "win32"].includes(platform) ||
-  process.arch !== "x64" ||
-  os.machine() !== "x86_64" ||
-  process.env.RUNNER_ARCH !== "X64"
+  !Object.hasOwn(runners, arch) ||
+  os.machine() !== runners[arch].machine ||
+  process.env.RUNNER_ARCH !== runners[arch].runnerArch
 )
-  throw new Error("Expected a native Linux/Windows x64 runner");
+  throw new Error(
+    "Expected a native Linux x64/ARM64 or Windows x64 hosted runner",
+  );
 const sourceSHA = execFileSync("git", ["rev-parse", "HEAD"], {
   encoding: "utf8",
 }).trim();
@@ -30,7 +40,7 @@ if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u.test(version))
   throw new Error("Invalid version");
 const binary =
   platform === "linux"
-    ? linuxAppImageName(version, "x64")
+    ? linuxAppImageName(version, arch)
     : `OMXTerm-${version}-x64.exe`;
 const names = [
   binary,
@@ -72,7 +82,7 @@ const runtime = JSON.parse(
   await readFile(".scratch/packaged-runtime.json", "utf8"),
 );
 const lock = await readFile("package-lock.json");
-const artifactName = `${platform}-x64-build-only-${sourceSHA}-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`;
+const artifactName = `${platform}-${arch}-build-only-${sourceSHA}-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`;
 const evidence = {
   scope: "build-only",
   sourceSHA,

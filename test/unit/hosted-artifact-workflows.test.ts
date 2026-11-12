@@ -20,16 +20,16 @@ interface Workflow {
   jobs: { candidate: { steps: Step[] } };
 }
 
-describe("bounded manual x64 artifact workflows", () => {
-  it.each(["linux", "windows"])(
+describe("bounded manual hosted artifact workflows", () => {
+  it.each([
+    ["linux", "linux.yml"],
+    ["windows", "windows-x64.yml"],
+  ])(
     "%s only uploads allowlisted files after successful checks",
-    (platform) => {
+    (platform, file) => {
       const workflow = parse(
         readFileSync(
-          new URL(
-            `../../.github/workflows/${platform}-x64.yml`,
-            import.meta.url,
-          ),
+          new URL(`../../.github/workflows/${file}`, import.meta.url),
           "utf8",
         ),
       ) as Workflow;
@@ -47,7 +47,9 @@ describe("bounded manual x64 artifact workflows", () => {
         step.uses.startsWith("actions/setup-node@"),
       );
       expect(node!.with["package-manager-cache"]).toBe(false);
-      expect(node!.with.architecture).toBe("x64");
+      expect(node!.with.architecture).toBe(
+        platform === "linux" ? "${{ matrix.arch }}" : "x64",
+      );
       if (platform === "windows") {
         expect(node!.with["node-version"]).toBe("24.22.2");
         const setup = steps.find((step) => step.id === "extension-toolchain")!;
