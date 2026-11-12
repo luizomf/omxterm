@@ -59,9 +59,9 @@ exclusive lease, comparing revisions while locked. Each successful mutation
 gets a fresh opaque revision; Forget writes an empty tombstone so A→B→A and
 stale destructive requests remain detectable. Busy is a refusal, not a spin.
 
-No lock spans renderer capture, dialogs or shell startup. Unknown publication
-requires Refresh, never automatic replay. Reads reject unsafe files and never
-repair or migrate data. Disable/update/uninstall preserve user state. Forget
+No lock spans renderer capture, dialogs or shell startup. An unknown
+publication is never replayed; the page reads the saved state again and shows
+it. Reads reject unsafe files and never repair or migrate data. Disable/update/uninstall preserve user state. Forget
 removes only the active snapshot; interrupted-write temp copies may remain.
 No sweeper or forensic-erasure guarantee is introduced.
 

@@ -303,3 +303,10 @@ it("follows the interface language", async () => {
   expect(f.button("open").textContent).toBe("Abrir em uma nova janela");
   expect(f.button("save").textContent).toBe("Substituir por esta janela");
 });
+it("focuses the main action once the saved layout is read", async () => {
+  const f = await setup();
+  expect(document.activeElement).toBe(f.button("open"));
+  dispose?.();
+  const g = await setup(stateDocument("absent", null));
+  expect(document.activeElement).toBe(g.button("save"));
+});

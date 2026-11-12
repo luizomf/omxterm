@@ -189,6 +189,12 @@ export function mountRestorationPage(
       },
       { signal: lifetime.signal },
     );
+  const focusAction = () => {
+    if (disposed || !visible) return;
+    [ui.buttons.open, ui.buttons.save, ui.buttons.retry]
+      .find((button) => !button.hidden && !button.disabled)
+      ?.focus();
+  };
   const unsubscribeVisibility = bridge.onVisibility((next) => {
     if (visible === next) return;
     visible = next;
@@ -198,12 +204,9 @@ export function mountRestorationPage(
     }
     sync();
     if (!next || disposed) return;
-    // Another window may have saved while this page was hidden.
-    if (loaded) void run(read);
-    const focus = [ui.buttons.open, ui.buttons.save, ui.buttons.retry].find(
-      (button) => !button.hidden,
-    );
-    focus?.focus();
+    // Another window may have saved while this page was hidden. Focus the
+    // main action once the buttons are enabled again.
+    if (loaded) void run(read).then(focusAction);
   });
   sync();
   const ready = run(async () => {
@@ -233,7 +236,7 @@ export function mountRestorationPage(
     if (!available) ui.notify(notice((m) => m.unsupported, "warning"));
     await read();
     loaded = true;
-  }, false);
+  }, false).then(focusAction);
   return {
     ready,
     dispose() {
