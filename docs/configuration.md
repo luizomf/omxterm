@@ -202,6 +202,8 @@ Every shortcut needs a key and at least one modifier other than Shift. Function 
 | `focusNextPane` / `focusPreviousPane` | `Cmd+]` / `Cmd+[`                                                     | `Ctrl+Shift+]` / `Ctrl+Shift+[`            |
 | `focusPaneLeft` / `focusPaneRight`    | `Cmd+Option+Left` / `Cmd+Option+Right`                                | `Alt+Shift+Left` / `Alt+Shift+Right`       |
 | `focusPaneUp` / `focusPaneDown`       | `Cmd+Option+Up` / `Cmd+Option+Down`                                   | `Alt+Shift+Up` / `Alt+Shift+Down`          |
+| `swapPaneLeft` / `swapPaneRight`      | unbound                                                               | unbound                                    |
+| `swapPaneUp` / `swapPaneDown`         | unbound                                                               | unbound                                    |
 | `equalizePanes`                       | `Cmd+Ctrl+=`                                                          | `Ctrl+Shift+0`                             |
 | `zoomIn` / `zoomOut` / `actualSize`   | `CommandOrControl+Plus` / `CommandOrControl+-` / `CommandOrControl+0` | `Control+Plus` / `Control+-` / `Control+0` |
 | `toggleFullScreen`                    | `Ctrl+Cmd+F`                                                          | `F11`                                      |

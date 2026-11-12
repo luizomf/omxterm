@@ -23,6 +23,7 @@ export function terminalMenuActions(
     closeSelectedPane: () => void application.closeSelectedPane(),
     splitSelectedPane: application.splitSelectedPane,
     focusSelectedPane: application.focusSelectedPane,
+    swapSelectedPane: application.swapSelectedPane,
     equalizeSelectedPanes: application.equalizeSelectedPanes,
     selectNextTab: application.selectNextTab,
     selectPreviousTab: application.selectPreviousTab,

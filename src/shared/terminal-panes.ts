@@ -15,8 +15,9 @@ export const MIN_PANE_COLUMNS = 20;
 export const MIN_PANE_ROWS = 5;
 
 export type TerminalSplitDirection = "right" | "down";
+export type TerminalPaneDirection = "left" | "right" | "up" | "down";
 export type TerminalPaneFocusTarget =
-  "next" | "previous" | "left" | "right" | "up" | "down";
+  "next" | "previous" | TerminalPaneDirection;
 
 // Main-to-renderer pane instructions for the selected tab. "close-pane" closes
 // the focused pane when no confirmation is needed; "prepare-close-pane" retains
@@ -27,6 +28,7 @@ export type TerminalPaneFocusTarget =
 export type TerminalPaneCommand =
   | { readonly action: "split"; readonly direction: TerminalSplitDirection }
   | { readonly action: "focus-pane"; readonly target: TerminalPaneFocusTarget }
+  | { readonly action: "swap-pane"; readonly direction: TerminalPaneDirection }
   | { readonly action: "equalize-panes" }
   | {
       readonly action: "close-pane";
@@ -63,14 +65,8 @@ export interface TerminalSessionStart {
 
 export const MAX_WORKING_DIRECTORY_REPORT_LENGTH = 4_096;
 
-const FOCUS_TARGETS = new Set<string>([
-  "next",
-  "previous",
-  "left",
-  "right",
-  "up",
-  "down",
-]);
+const PANE_DIRECTIONS = new Set<string>(["left", "right", "up", "down"]);
+const FOCUS_TARGETS = new Set<string>(["next", "previous", ...PANE_DIRECTIONS]);
 
 export function isTerminalPaneCommand(
   value: unknown,
@@ -83,8 +79,11 @@ export function isTerminalPaneCommand(
     );
   if (hasExactKeys(value, ["action", "direction"]))
     return (
-      value.action === "split" &&
-      (value.direction === "right" || value.direction === "down")
+      (value.action === "split" &&
+        (value.direction === "right" || value.direction === "down")) ||
+      (value.action === "swap-pane" &&
+        typeof value.direction === "string" &&
+        PANE_DIRECTIONS.has(value.direction))
     );
   if (hasExactKeys(value, ["action", "target"]))
     return (

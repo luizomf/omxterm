@@ -92,7 +92,7 @@ Preview accepts PNG and JPEG up to 64 MiB, 8192 pixels per side and
 or a line of their own to be recognized.
 
 About and image preview don't stack. While either owns input (including image
-choosing and loading), split, pane focus and equalize are ignored. Confirmed
+choosing and loading), split, pane focus, swap and equalize are ignored. Confirmed
 closure and failure acknowledgement still work.
 
 ## Configuration reload

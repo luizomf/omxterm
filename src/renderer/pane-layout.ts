@@ -111,6 +111,25 @@ export function equalizeParent<Pane>(
   };
 }
 
+// Exchange two panes' places. The tree and every share stay as they were, so
+// each pane takes the other's slot and size.
+export function swapPanes<Pane>(
+  layout: PaneLayout<Pane>,
+  first: Pane,
+  second: Pane,
+): PaneLayout<Pane> {
+  if (layout.kind === "leaf")
+    return layout.pane === first
+      ? leaf(second)
+      : layout.pane === second
+        ? leaf(first)
+        : layout;
+  return {
+    ...layout,
+    children: layout.children.map((child) => swapPanes(child, first, second)),
+  };
+}
+
 // Move the boundary between child `index` and `index + 1` of the split at
 // `path` by `delta` (a fraction of that split's length). `minimum(child)` is
 // the smallest fraction each side may keep.

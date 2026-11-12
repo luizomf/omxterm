@@ -10,6 +10,7 @@ import {
   removePane,
   resizeSplit,
   splitPane,
+  swapPanes,
   type PaneLayout,
 } from "../../src/renderer/pane-layout";
 
@@ -132,5 +133,19 @@ describe("pane layout", () => {
     expect(directionalPane(panes, "c", "up", rectangle)).toBe("b");
     expect(directionalPane(panes, "c", "left", rectangle)).toBe("a");
     expect(directionalPane(panes, "a", "up", rectangle)).toBeUndefined();
+  });
+
+  it("swaps two panes across nested splits and keeps every share in its slot", () => {
+    let layout = splitPane(leaf("a"), "a", "b", "row");
+    layout = splitPane(layout, "b", "c", "column");
+    layout = resizeSplit(layout, [], 0, 0.2, () => 0);
+    layout = resizeSplit(layout, [1], 0, -0.2, () => 0);
+    const swapped = swapPanes(layout, "a", "c");
+    expect(layoutPanes(swapped)).toEqual(["c", "b", "a"]);
+    expectWeights(swapped, weightsOf(layout)!);
+    const nested = (value: PaneLayout<string>) =>
+      value.kind === "split" ? value.children[1]! : value;
+    expectWeights(nested(swapped), weightsOf(nested(layout))!);
+    expect(layoutPanes(swapPanes(swapped, "c", "a"))).toEqual(["a", "b", "c"]);
   });
 });

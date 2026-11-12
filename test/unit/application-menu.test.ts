@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- One action fixture drives every menu section, shortcut and extension projection. */
 import { describe, expect, it, vi } from "vitest";
 import { translatorFor } from "../../src/shared/i18n";
 import { settingsMessageText } from "../../src/shared/settings-messages";
@@ -48,6 +49,7 @@ function menuActions() {
     splitSelectedPane: vi.fn(),
     closeSelectedPane: vi.fn(),
     focusSelectedPane: vi.fn(),
+    swapSelectedPane: vi.fn(),
     equalizeSelectedPanes: vi.fn(),
   };
 }
@@ -133,6 +135,10 @@ it.each(["en-US", "pt-BR"] as const)(
       "menu.focusPaneRight",
       "menu.focusPaneAbove",
       "menu.focusPaneBelow",
+      "menu.swapPaneLeft",
+      "menu.swapPaneRight",
+      "menu.swapPaneUp",
+      "menu.swapPaneDown",
       "menu.equalizePanes",
       "menu.closePane",
     ] as const;

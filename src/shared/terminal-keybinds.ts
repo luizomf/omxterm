@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep the action vocabulary, platform defaults and accelerator grammar in one contract. */
 // User-facing keybind action vocabulary. These names are the stable
 // configuration keys in config.json; future actions join this list without a
 // schema change.
@@ -31,6 +32,10 @@ export const TERMINAL_ACTION_NAMES = [
   "focusPaneRight",
   "focusPaneUp",
   "focusPaneDown",
+  "swapPaneLeft",
+  "swapPaneRight",
+  "swapPaneUp",
+  "swapPaneDown",
   "equalizePanes",
   "zoomIn",
   "zoomOut",
@@ -124,6 +129,10 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     focusPaneRight: "CommandOrControl+Alt+Right",
     focusPaneUp: "CommandOrControl+Alt+Up",
     focusPaneDown: "CommandOrControl+Alt+Down",
+    swapPaneLeft: null,
+    swapPaneRight: null,
+    swapPaneUp: null,
+    swapPaneDown: null,
     equalizePanes: "Command+Control+=",
     zoomIn: "CommandOrControl+Plus",
     zoomOut: "CommandOrControl+-",
@@ -175,6 +184,10 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   focusPaneRight: "Alt+Shift+Right",
   focusPaneUp: "Alt+Shift+Up",
   focusPaneDown: "Alt+Shift+Down",
+  swapPaneLeft: null,
+  swapPaneRight: null,
+  swapPaneUp: null,
+  swapPaneDown: null,
   equalizePanes: "Control+Shift+0",
   zoomIn: "Control+Plus",
   zoomOut: "Control+-",

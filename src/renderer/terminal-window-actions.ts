@@ -35,6 +35,7 @@ const MODAL_COMPETING_TAB_ACTIONS = new Set<TerminalTabCommand["action"]>([
   "select",
   "split",
   "focus-pane",
+  "swap-pane",
   "equalize-panes",
 ]);
 

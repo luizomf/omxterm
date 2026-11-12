@@ -13,6 +13,7 @@ import {
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
 import type {
+  TerminalPaneDirection,
   TerminalPaneFocusTarget,
   TerminalSplitDirection,
 } from "../shared/terminal-panes";
@@ -49,6 +50,7 @@ export interface TerminalApplicationMenuActions {
   readonly splitSelectedPane: (direction: TerminalSplitDirection) => void;
   readonly closeSelectedPane: () => void;
   readonly focusSelectedPane: (target: TerminalPaneFocusTarget) => void;
+  readonly swapSelectedPane: (direction: TerminalPaneDirection) => void;
   readonly equalizeSelectedPanes: () => void;
 }
 export type CoreActionId =
@@ -161,6 +163,18 @@ export function createCoreActionCatalog(
     ),
     focusPaneDown: action(t("menu.focusPaneBelow"), () =>
       actions.focusSelectedPane("down"),
+    ),
+    swapPaneLeft: action(t("menu.swapPaneLeft"), () =>
+      actions.swapSelectedPane("left"),
+    ),
+    swapPaneRight: action(t("menu.swapPaneRight"), () =>
+      actions.swapSelectedPane("right"),
+    ),
+    swapPaneUp: action(t("menu.swapPaneUp"), () =>
+      actions.swapSelectedPane("up"),
+    ),
+    swapPaneDown: action(t("menu.swapPaneDown"), () =>
+      actions.swapSelectedPane("down"),
     ),
     equalizePanes: action(
       t("menu.equalizePanes"),

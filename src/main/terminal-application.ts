@@ -1,5 +1,6 @@
 /* eslint-disable max-lines -- Keep window and pane lifecycle routing under the application owner. */
 import type {
+  TerminalPaneDirection,
   TerminalPaneFocusTarget,
   TerminalSplitDirection,
 } from "../shared/terminal-panes";
@@ -140,6 +141,7 @@ export interface TerminalApplication<
   closePane(window: Window, target: TerminalContextMenuTarget): Promise<void>;
   splitSelectedPane(direction: TerminalSplitDirection): void;
   focusSelectedPane(target: TerminalPaneFocusTarget): void;
+  swapSelectedPane(direction: TerminalPaneDirection): void;
   equalizeSelectedPanes(): void;
   selectNextTab(): void;
   selectPreviousTab(): void;
@@ -481,6 +483,7 @@ function paneActions<Window extends NativeTerminalWindow>(
   | "closePane"
   | "splitSelectedPane"
   | "focusSelectedPane"
+  | "swapSelectedPane"
   | "equalizeSelectedPanes"
   | "clipboardPane"
   | "exportPane"
@@ -542,6 +545,7 @@ function paneActions<Window extends NativeTerminalWindow>(
     closePane,
     splitSelectedPane: (direction) => send({ action: "split", direction }),
     focusSelectedPane: (target) => send({ action: "focus-pane", target }),
+    swapSelectedPane: (direction) => send({ action: "swap-pane", direction }),
     equalizeSelectedPanes: () => send({ action: "equalize-panes" }),
   };
 }

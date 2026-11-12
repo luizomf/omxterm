@@ -342,6 +342,63 @@ describe("Terminal Panes", () => {
   });
 });
 
+describe("Terminal Pane swap", () => {
+  it("swaps the focused pane with its neighbor, keeping sessions, shares and focus", async () => {
+    const harness = await splitHarness();
+    await split(harness, "right");
+    await split(harness, "right");
+    const panes = () => [...tab(harness).querySelectorAll<HTMLElement>("main")];
+    const [first, second, third] = panes();
+    // Panes sit side by side in their current DOM order.
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const index = panes().indexOf(this);
+        if (index < 0) return original.call(this);
+        return {
+          left: index * 100,
+          right: index * 100 + 96,
+          top: 0,
+          bottom: 100,
+        } as DOMRect;
+      },
+    );
+    const shares = () =>
+      panes().map((element) => Number(element.style.flexGrow));
+    harness.surfaces[2]!.focus.mockClear();
+
+    harness.tabs.handleCommand({ action: "swap-pane", direction: "left" });
+    expect(panes()).toEqual([first, third, second]);
+    expect(shares()).toEqual([0.5, 0.25, 0.25]);
+    expect(third!.classList.contains("pane-focused")).toBe(true);
+    expect(harness.surfaces[2]!.focus).toHaveBeenCalled();
+    expect(harness.notifySelection).toHaveBeenLastCalledWith("s3", [
+      "s1",
+      "s3",
+      "s2",
+    ]);
+
+    // Repeating keeps walking the same pane, which takes each slot's share.
+    harness.tabs.handleCommand({ action: "swap-pane", direction: "left" });
+    expect(panes()).toEqual([third, first, second]);
+    expect(shares()).toEqual([0.5, 0.25, 0.25]);
+
+    // No neighbor in that direction leaves the layout and selection alone.
+    const calls = harness.notifySelection.mock.calls.length;
+    harness.tabs.handleCommand({ action: "swap-pane", direction: "left" });
+    harness.tabs.handleCommand({ action: "swap-pane", direction: "up" });
+    expect(panes()).toEqual([third, first, second]);
+    expect(harness.notifySelection).toHaveBeenCalledTimes(calls);
+
+    expect(harness.createAdapter).toHaveBeenCalledTimes(3);
+    for (const surface of harness.surfaces)
+      expect(surface.dispose).not.toHaveBeenCalled();
+    for (const adapter of harness.adapters)
+      expect(adapter.close).not.toHaveBeenCalled();
+    harness.tabs.dispose();
+  });
+});
+
 describe("Terminal Pane context menu", () => {
   it("does not borrow a sibling's target while the clicked pane is pending or dead", async () => {
     let finish!: () => void;

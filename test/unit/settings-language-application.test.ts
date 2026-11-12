@@ -74,6 +74,7 @@ it("saves the selector through validated IPC, reloader, menu and two retained wi
       "splitSelectedPane",
       "closeSelectedPane",
       "focusSelectedPane",
+      "swapSelectedPane",
       "equalizeSelectedPanes",
     ].map((key) => [key, vi.fn()]),
   ) as unknown as Actions;

@@ -207,9 +207,16 @@ are the job of a session manager such as tmux.
 - `View -> Pane` splits the selected tab's focused pane right or down
   (`splitRight`, `splitDown`), moves pane focus (`focusNextPane`,
   `focusPreviousPane`, `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`,
-  `focusPaneDown`), resets the shares of the focused pane's split
-  (`equalizePanes`), and closes the focused pane (`closePane`). Every shortcut
-  can be remapped or set to null.
+  `focusPaneDown`), swaps the focused pane with a neighbor (`swapPaneLeft`,
+  `swapPaneRight`, `swapPaneUp`, `swapPaneDown`), resets the shares of the
+  focused pane's split (`equalizePanes`), and closes the focused pane
+  (`closePane`). Every shortcut can be remapped or set to null; the swap
+  actions have no default shortcut.
+- Swap uses the same directional neighbor as focus: the nearest pane in that
+  direction that overlaps the focused pane, the first in layout order on a tie.
+  The two panes trade slots, so each takes the other's share and the split
+  tree is unchanged. Focus stays on the moved pane; repeating the action keeps
+  moving it the same way. No neighbor in that direction does nothing.
 - A split needs room for two usable grids of at least 20 columns by 5 rows,
   using the source Surface's current cell geometry for the new pane. The
   prospective layout accounts for each Surface's own metrics, padding and other
@@ -217,7 +224,7 @@ are the job of a session manager such as tmux.
   geometry refuses the split, and a tab holds at most 16 panes; a refused split
   starts nothing.
 - Splitting in the same direction adds a sibling. Pane containers move without
-  recreating Surfaces or sessions.
+  recreating Surfaces or sessions, including on swap.
 - Dividers are `role="separator"` controls that drag with the pointer and move
   with arrow keys, limited by the same minimum. A later resize or zoom that
   cannot fit every minimum keeps every session and the layout; an impossible
@@ -1976,6 +1983,7 @@ Vocabulary:
   `moveAuxiliaryPanel`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
   `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`,
   `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`, `focusPaneDown`,
+  `swapPaneLeft`, `swapPaneRight`, `swapPaneUp`, `swapPaneDown`,
   `equalizePanes`, `commandPalette`, `toggleMirrorTyping`, `saveLayout`. New actions, global shortcuts, chords and
   per-platform maps are unsupported.
 - A value is `null` or a case-insensitive Electron accelerator with exactly one

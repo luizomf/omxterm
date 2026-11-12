@@ -4,6 +4,7 @@ import {
   MIN_PANE_COLUMNS,
   MIN_PANE_ROWS,
   type TerminalPaneCommand,
+  type TerminalPaneDirection,
   type TerminalPaneFocusTarget,
   type TerminalSplitDirection,
 } from "../shared/terminal-panes";
@@ -16,6 +17,7 @@ import {
   removePane as removeLayoutPane,
   resizeSplit,
   splitPane,
+  swapPanes,
   type PaneLayout,
   type SplitAxis,
 } from "./pane-layout";
@@ -201,6 +203,25 @@ export function createPaneOperations(deps: {
             );
       if (next) focusPane(tab, next, true);
     },
+    // The focused pane trades places with its geometric neighbor, the same
+    // one focus would move to. Shares stay with their slots and focus stays
+    // on the moved pane; no neighbor leaves everything unchanged.
+    swap(direction: TerminalPaneDirection) {
+      const tab = deps.selectedTab();
+      if (!tab || !deps.canInteract()) return;
+      const pane = tab.focused;
+      const neighbor = directionalPane(tabPanes(tab), pane, direction, (item) =>
+        item.container.getBoundingClientRect(),
+      );
+      if (!neighbor) return;
+      tab.layout = swapPanes(tab.layout, pane, neighbor);
+      renderTab(tab);
+      deps.onFocusChange(tab);
+      // Rendering keeps a focused control inside the moved pane, such as its
+      // search field; otherwise keyboard input returns to its Surface.
+      if (!pane.container.contains(pane.container.ownerDocument.activeElement))
+        deps.focusSurface(pane);
+    },
     equalize() {
       const tab = deps.selectedTab();
       if (!tab) return;
@@ -214,6 +235,9 @@ export function createPaneOperations(deps: {
           return;
         case "focus-pane":
           operations.focusTarget(command.target);
+          return;
+        case "swap-pane":
+          operations.swap(command.direction);
           return;
         case "equalize-panes":
           operations.equalize();

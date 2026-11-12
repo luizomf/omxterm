@@ -247,6 +247,7 @@ it.each(["about", "settings", "snippet", "showing"] as const)(
       command({ action: "split", direction: "right" });
       command({ action: "split", direction: "down" });
       command({ action: "focus-pane", target: "previous" });
+      command({ action: "swap-pane", direction: "left" });
       command({ action: "equalize-panes" });
       expect(surfaces).toHaveLength(3);
       expect(tabsContainer.innerHTML).toBe(layout);
