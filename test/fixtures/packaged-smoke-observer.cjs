@@ -543,8 +543,9 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
   );
   await core.insertText("mirror");
   await settle();
+  // Read each row's label element: the row also shows its shortcut chip.
   const palette = await js(
-    "[...document.querySelectorAll('.command-palette [role=option]')].map(o => o.textContent)",
+    "[...document.querySelectorAll('.command-palette [role=option]')].map(o => o.querySelector(':scope > span')?.textContent)",
   );
   core.sendInputEvent({ type: "keyDown", keyCode: "Escape" });
   core.sendInputEvent({ type: "keyUp", keyCode: "Escape" });
