@@ -83,6 +83,10 @@ export const englishMessages = {
   "menu.focusPaneRight": "Focus Pane Right",
   "menu.focusPaneAbove": "Focus Pane Above",
   "menu.focusPaneBelow": "Focus Pane Below",
+  "menu.swapPaneLeft": "Swap Pane Left",
+  "menu.swapPaneRight": "Swap Pane Right",
+  "menu.swapPaneAbove": "Swap Pane Above",
+  "menu.swapPaneBelow": "Swap Pane Below",
   "menu.equalizePanes": "Equalize Panes",
   "pane.resize": "Resize panes",
   "dialog.imageBaseFolder":

@@ -91,6 +91,10 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.focusPaneRight": "Focar Painel à Direita",
   "menu.focusPaneAbove": "Focar Painel Acima",
   "menu.focusPaneBelow": "Focar Painel Abaixo",
+  "menu.swapPaneLeft": "Trocar Painel à Esquerda",
+  "menu.swapPaneRight": "Trocar Painel à Direita",
+  "menu.swapPaneAbove": "Trocar Painel Acima",
+  "menu.swapPaneBelow": "Trocar Painel Abaixo",
   "menu.equalizePanes": "Igualar Painéis",
   "pane.resize": "Redimensionar painéis",
   "dialog.imageBaseFolder":

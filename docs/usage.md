@@ -12,7 +12,7 @@ The tab bar appears when a window has two or more tabs. Click a tab to select it
 
 ### Split panes
 
-Choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) or **Split Down** (`Cmd+Shift+E` / `Ctrl+Shift+E`). Each pane has its own shell. Click a pane or use the focus shortcuts below; typing, copy, paste, Find, snippets, and dropped paths go to the focused pane. Drag the divider to resize. **Close Pane** (`Cmd+Option+W` / `Ctrl+Shift+K`) ends that shell and gives its space to the neighbor.
+Choose **View → Pane → Split Right** (`Cmd+D` / `Ctrl+Shift+O`) or **Split Down** (`Cmd+Shift+E` / `Ctrl+Shift+E`). Each pane has its own shell. Click a pane or use the focus shortcuts below; typing, copy, paste, Find, snippets, and dropped paths go to the focused pane. Drag the divider to resize. **Swap Pane Left**, **Right**, **Above** or **Below** trades the focused pane with its neighbor and keeps its shell running; these have no default shortcut, so assign one in Settings if you use them. **Close Pane** (`Cmd+Option+W` / `Ctrl+Shift+K`) ends that shell and gives its space to the neighbor.
 
 The **Close Pane** context-menu action is available in split tabs. Closing a pane, tab, or window with a running command asks for confirmation. Disable confirmation with `"confirmClose": false` in `config.json`.
 
@@ -44,6 +44,7 @@ The application menu displays active shortcuts, including custom bindings.
 | Close Pane                    | `Cmd+Option+W`                  | `Ctrl+Shift+K`                  |
 | Focus Next / Previous Pane    | `Cmd+]` / `Cmd+[`               | `Ctrl+Shift+]` / `Ctrl+Shift+[` |
 | Focus Pane by Direction       | `Cmd+Option+Arrow`              | `Alt+Shift+Arrow`               |
+| Swap Pane by Direction        | unbound                         | unbound                         |
 | Equalize Panes                | `Cmd+Ctrl+=`                    | `Ctrl+Shift+0`                  |
 | Copy / Paste                  | `Cmd+C` / `Cmd+V`               | `Ctrl+Shift+C` / `Ctrl+Shift+V` |
 | Select All / Find             | `Cmd+A` / `Cmd+F`               | `Ctrl+Shift+A` / `Ctrl+Shift+F` |

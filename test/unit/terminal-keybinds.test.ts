@@ -124,6 +124,10 @@ describe("terminal keybind accelerators", () => {
             "toggleAuxiliaryPanel",
             "toggleFiles",
             "toggleSshConnect",
+            "swapPaneLeft",
+            "swapPaneRight",
+            "swapPaneUp",
+            "swapPaneDown",
           ]).toContain(action);
           return [];
         }

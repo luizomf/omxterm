@@ -94,6 +94,7 @@ function menuActions(): TerminalApplicationMenuActions {
     splitSelectedPane: vi.fn(),
     closeSelectedPane: vi.fn(),
     focusSelectedPane: vi.fn(),
+    swapSelectedPane: vi.fn(),
     equalizeSelectedPanes: vi.fn(),
   };
 }

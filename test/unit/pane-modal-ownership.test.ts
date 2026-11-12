@@ -170,6 +170,20 @@ it.each(["about", "settings", "snippet", "showing"] as const)(
       await vi.waitFor(() => expect(surfaces).toHaveLength(2));
       command({ action: "split", direction: "right" });
       await vi.waitFor(() => expect(surfaces).toHaveLength(3));
+      // Panes sit side by side in DOM order, so a swap has a real neighbor.
+      const panes = () => [
+        ...tabsContainer.querySelectorAll<HTMLElement>(".terminal-surface"),
+      ];
+      for (const pane of panes())
+        vi.spyOn(pane, "getBoundingClientRect").mockImplementation(() => {
+          const left = panes().indexOf(pane) * 100;
+          return { left, right: left + 96, top: 0, bottom: 100 } as DOMRect;
+        });
+      const order = panes();
+      command({ action: "swap-pane", direction: "left" });
+      expect(panes()).not.toEqual(order);
+      command({ action: "swap-pane", direction: "right" });
+      expect(panes()).toEqual(order);
       command({ action: "prepare-close-pane" });
       const captured = surfaces[2]!;
       const activeDivider = tabsContainer.querySelector<HTMLElement>(
@@ -247,6 +261,9 @@ it.each(["about", "settings", "snippet", "showing"] as const)(
       command({ action: "split", direction: "right" });
       command({ action: "split", direction: "down" });
       command({ action: "focus-pane", target: "previous" });
+      // Any pane in the row has a neighbor on at least one side.
+      command({ action: "swap-pane", direction: "left" });
+      command({ action: "swap-pane", direction: "right" });
       command({ action: "equalize-panes" });
       expect(surfaces).toHaveLength(3);
       expect(tabsContainer.innerHTML).toBe(layout);

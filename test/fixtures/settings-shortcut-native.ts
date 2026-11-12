@@ -189,6 +189,7 @@ async function createCaptureRouting(options: ShortcutCaptureOptions) {
     splitSelectedPane: unexpected,
     closeSelectedPane: unexpected,
     focusSelectedPane: unexpected,
+    swapSelectedPane: unexpected,
     equalizeSelectedPanes: unexpected,
   };
   const invocations = terminalActionInvocations(actions);

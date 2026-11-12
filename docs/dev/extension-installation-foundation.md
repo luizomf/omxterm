@@ -139,7 +139,7 @@ development hosts keep accepting the same archives.
   (`0.24.0` and `0.25.0`), `0.26.0-dev.N` (`0.25.0` and `0.26.0`),
   `0.26.1-dev.N` (`0.26.0` and `0.26.1`), `0.27.0-dev.N` (`0.26.0` and
   `0.27.0`), `0.27.1-dev.N` (`0.27.0` and `0.27.1`), `0.28.0-dev.N`
-  (`0.27.0` and `0.28.0`) `0.28.1-dev.N` (`0.28.0` and `0.28.1`) `0.29.1-dev.N` (`0.29.0` and `0.29.1`) and `0.30.1-dev.N` (`0.30.0` and `0.30.1`). They do not rewrite the
+  (`0.27.0` and `0.28.0`) `0.28.1-dev.N` (`0.28.0` and `0.28.1`) `0.29.1-dev.N` (`0.29.0` and `0.29.1`) `0.30.1-dev.N` (`0.30.0` and `0.30.1`) and `0.31.0-dev.N` (`0.30.0` and `0.31.0`). They do not rewrite the
   range, and a
   range with an upper bound that excludes the required stable versions gains
   nothing. Other development families need ordinary admission or a reviewed

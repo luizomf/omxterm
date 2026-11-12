@@ -57,7 +57,7 @@ explicit next/previous navigation still wraps. About, snippet preview
 and Local Image Preview share the window's modal predicate. Settings is ordinary
 graphical tab content, not a modal or fake pane. Terminal-only actions and hidden
 pane focus/divider activity are inert while Settings is selected. The modal
-predicate suppresses competing pane split/focus/equalize and tab-navigation/new-tab commands,
+predicate suppresses competing pane split/focus/swap/equalize and tab-navigation/new-tab commands,
 including image choosing/loading, and guards passive mount/rebuild focus and
 divider input. Captured closure and failure acknowledgement remain deliverable.
 Application clipboard actions still edit a focused Settings field before

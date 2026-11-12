@@ -108,16 +108,18 @@ describe("pane actions in main", () => {
     expect(view.showClosePaneConfirmation).not.toHaveBeenCalled();
   });
 
-  it("sends split, focus and equalize commands to the selected window", async () => {
+  it("sends split, focus, swap and equalize commands to the selected window", async () => {
     const view = await application({ focused: false, tab: false });
     view.app.splitSelectedPane("down");
     view.app.focusSelectedPane("left");
+    view.app.swapSelectedPane("up");
     view.app.equalizeSelectedPanes();
     expect(
       view.sendTabCommand.mock.calls.map(([, command]) => command),
     ).toEqual([
       { action: "split", direction: "down" },
       { action: "focus-pane", target: "left" },
+      { action: "swap-pane", direction: "up" },
       { action: "equalize-panes" },
     ]);
   });
@@ -295,6 +297,10 @@ describe("View -> Pane", () => {
         "Focus Pane Right",
         "Focus Pane Above",
         "Focus Pane Below",
+        "Swap Pane Left",
+        "Swap Pane Right",
+        "Swap Pane Above",
+        "Swap Pane Below",
         "Equalize Panes",
         "Close Pane",
       ]);
@@ -317,6 +323,8 @@ describe("View -> Pane", () => {
     const invocations = terminalActionInvocations(actions);
     invocations.focusPaneUp();
     expect(actions.focusSelectedPane).toHaveBeenCalledWith("up");
+    invocations.swapPaneRight();
+    expect(actions.swapSelectedPane).toHaveBeenCalledWith("right");
     invocations.equalizePanes();
     expect(actions.equalizeSelectedPanes).toHaveBeenCalled();
   });
