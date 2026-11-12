@@ -194,3 +194,5 @@ Verification for Settings layout lives in the
   Linux and Windows leave them unbound: `Ctrl+Alt` is AltGr on Windows and
   types characters on international layouts (on ABNT2, `Ctrl+Alt+Q` types
   "/"), and Linux desktops reserve many `Ctrl+Alt` combinations.
+- Older defaults predate this and stay: Snippets keeps `Ctrl+Shift+S` on Linux
+  and Windows, and Mirror Typing uses `Cmd/Ctrl+Shift+M`.
