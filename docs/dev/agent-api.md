@@ -229,14 +229,18 @@ wire shape is not settled yet.
   granted window isn't the selected one
   ([#1048](https://github.com/luizomf/omxterm/issues/1048)).
 - A chord that matches one of the window's effective shortcuts (defaults plus
-  the user's rebinds) runs that action in the granted window, on its selected
-  tab and focused pane, and the result names the action. Tab and pane actions
+  the user's rebinds) runs that action in the granted window on the pane
+  `press` names: main focuses that pane first, as a user clicks a pane and
+  presses, so `press s3 Cmd+W` closes `s3`. The result names the action and
+  the pane. Tab and pane actions
   come first ([#1050](https://github.com/luizomf/omxterm/issues/1050)), the
   rest later ([#1052](https://github.com/luizomf/omxterm/issues/1052)); until
   an action is covered, its chord goes to the pane.
 - The grant toggle is refused, whatever chord it is bound to. The Command
   Palette, Settings, Find, extension panels and native dialogs answer "not
   yet" in one sentence.
+- A close that would ask to confirm a Busy Session answers that it needs the
+  user and does nothing; that confirmation stays the user's.
 - An ungranted window or an ended grant refuses as `send` does.
 
 ### `keys` (slice 4)

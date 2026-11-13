@@ -107,8 +107,11 @@ still never pass a color: CSS maps the glyph to its tone.
 
 Not built yet. Once agents can press shortcuts in a granted window
 ([#1050](https://github.com/luizomf/omxterm/issues/1050)), the `agent` mark
-moves from the accent to the theme's error tone (`--ui-error-accent`, the
-theme's red, the same tone as error notices), and its label reads "Agents can
-do anything you can in this window. Click this mark to stop them." Same glyph,
-same placement and click, no banner: it stays the one mark with a tone of its
-own, and reporters still never pass a color.
+moves from the accent to the theme's error tone: the theme's red (the color
+behind `--ui-error-accent`, as on error notices), or its foreground when the
+red lacks contrast against the background, the same fallback as the accent.
+Its label reads "Agents can do anything you can in this window. Click this
+mark to stop them." Same glyph, same placement and click, no banner: it stays
+the one mark with a tone of its own, and reporters still never pass a color.
+While a grant exists the mark is always visible: no hidden chrome, extension
+tab or state the agent can toggle may hide it.

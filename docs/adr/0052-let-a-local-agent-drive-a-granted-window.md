@@ -230,16 +230,25 @@ automatically. Slice 4 builds it; until then agent input is `send` only.
   is not sent to the pane either. The API reaches actions only through that
   lookup, never through the menu, the Command Palette or a native dialog, so
   rebinding the toggle can't route around it.
-- **Presses act on the granted window**, even when another window is
-  selected. Keys go to the pane `press` names; a matched action runs on that
-  window's selected tab and focused pane, as the user's own press there
-  would. They never type into the selected window or through the user's
-  keyboard handling. Today every catalog action takes the selected window,
-  so slice 4 gives the actions it covers an explicit window.
+- **Presses act on the granted window and the pane they name**, even when
+  another window is selected. Keys go to that pane. For a matched action,
+  main first focuses that pane in the granted window (selecting its tab if
+  needed), then runs the action, the way the user clicks a pane and presses,
+  so `press s3 Cmd+W` closes `s3`. The result names the action and the pane.
+  Presses never type into the selected window or through the user's keyboard
+  handling. Today every catalog action takes the selected window, so slice 4
+  gives the actions it covers an explicit window.
+- **Closing a Busy Session needs the user.** When an agent's close would
+  raise the Busy Session confirmation (ADR 0017), the native dialog stays the
+  user's: the press answers one sentence ("needs the user") and does
+  nothing. With `confirmClose` off it closes, as the user's press would.
 - **UI the agent can't read yet answers "not yet"** in one sentence and does
   nothing, until its own decision: the Command Palette (which lists **Allow
   Agents in This Window**), Settings, Find, extension panels and native
-  dialogs.
+  dialogs. About, Settings, Open Local Image, Always on Top and Developer
+  Tools have no shortcut, so `press` can't reach them. Developer Tools stays
+  out of reach even if it gets one: it runs code in the renderer, and the
+  renderer can grant ([Slice 1 as built](#slice-1-as-built)).
 - **`send` stays as it is**: literal text and mode-independent keys, never
   matched against shortcuts.
 - **The mark turns to the error tone** once shortcuts land
@@ -305,9 +314,16 @@ automatically. Slice 4 builds it; until then agent input is `send` only.
   theme can set `appearance.activePaneHighlight` to `null` and a consent
   indicator can't be something a theme switches off.
 - Once agents can press shortcuts (slice 4), the same mark takes the theme's
-  error tone (`--ui-error-accent`, the theme's red) and its label reads
-  "Agents can do anything you can in this window. Click this mark to stop
-  them." Same glyph, same click, no banner. Until then it keeps the accent.
+  error tone and its label reads "Agents can do anything you can in this
+  window. Click this mark to stop them." Same glyph, same click, no banner.
+  The tone is derived like the accent: the theme's red (the color behind
+  `--ui-error-accent`), or the foreground when the red lacks contrast against
+  the background. Until then the mark keeps the accent.
+- **The mark is always visible while a grant exists.** It is the panic
+  button, so no state may hide it: not a hidden tab strip or title bar, not an
+  extension tab or its native view, not anything the agent can toggle. Slice
+  4 makes this hold before the agent can press shortcuts (#1050), and the
+  tab-bar and title-bar toggles stay closed to agents until it does (#1052).
 - With the tab strip hidden, the selected tab's panes still carry the mark,
   so the window always shows it, with one exception that needs a fix: an
   Application Tab has no pane. A window-scoped mark also renders at the page's
@@ -376,19 +392,13 @@ a command name, its duration and an error code.
   to the foreground color when cyan is too close to the background, and a
   custom palette or transparency can still leave it weak. The mark can't be
   switched off, but a theme can make it as quiet as any other mark. The
-  error tone of slice 4 has even less: it is the theme's red as is, with no
-  fallback.
+  error tone of slice 4 gets the same fallback and the same limit.
 - **"Visible" holds only while the window is.** A minimized, hidden or
   covered window keeps its grant, by decision, and shows nothing anywhere
   else. The menu item's check mark is the only other trace.
 - **Parity includes the window's selection.** The agent's New Tab selects
-  the new tab, as the user's does, so what the user sees in that window moves
-  with the agent.
-- **Parity reaches the mark's blind spot.** Once an agent can hide the tab
-  strip and select tabs, it can reach the unverified case in
-  [Slice 1 as built](#slice-1-as-built): tab strip hidden and an extension
-  tab selected, where the corner mark may be covered. That needs checking
-  before the tab-bar toggle is open to agents.
+  the new tab, as the user's does, and a matched shortcut first focuses the
+  pane it names, so what the user sees in that window moves with the agent.
 - **Environment variables in every pane** are visible to every program the
   user runs there, and say only where OMXTerm is. That is the price of an
   agent finding the API by itself.
@@ -433,15 +443,18 @@ a command name, its duration and an error code.
    - [#1049](https://github.com/luizomf/omxterm/issues/1049): the tab and
      pane tree in `list`.
    - [#1050](https://github.com/luizomf/omxterm/issues/1050): tab and pane
-     shortcuts run in the granted window, the grant toggle is refused by
-     action, parked UI answers "not yet", and the mark takes the error tone.
-     Other chords still go to the pane.
+     shortcuts run in the granted window on the pane `press` names, the
+     grant toggle is refused by action, parked UI answers "not yet", a busy
+     close needs the user, and the mark takes the error tone with its
+     contrast fallback and is always visible. Other chords still go to the
+     pane.
    - [#1051](https://github.com/luizomf/omxterm/issues/1051): `keys` lists
      the window's effective shortcuts, marking the refused and "not yet"
      ones.
    - [#1052](https://github.com/luizomf/omxterm/issues/1052): the remaining
-     shortcut actions, each decided; a window the agent opens starts
-     ungranted.
+     shortcut actions, each decided, including the Snippets sidebar, the
+     auxiliary panel toggle and move, Reload Configuration and the extension
+     slots; a window the agent opens starts ungranted.
 
    It replaces the id-based tab and pane commands first planned here and
    takes the named keys of slice 6.
@@ -550,16 +563,6 @@ building it:
   Windows? It does on macOS (slice 1).
 - Limits: how many tabs and panes may an agent create, and does a grant need
   a rate limit on input?
-- Closing a tab or pane with a Busy Session asks for confirmation in a native
-  dialog (ADR 0017), which is parked UI. What does the agent's close chord do
-  there: answer "not yet", or leave the dialog to the user? (#1050)
-- Shortcut actions that neither #1050 nor #1052 names: the Snippets sidebar,
-  the auxiliary panel toggle and move, Reload Configuration, and the
-  extension slots (Files, SSH Connect, Mirror Typing, Save layout). About,
-  Settings, Open Local Image, Always on Top and Developer Tools have no
-  shortcut, so `press` can't reach them. If Developer Tools ever gets one, it
-  must stay out of reach: it runs code in the renderer, and the renderer can
-  grant ([Slice 1 as built](#slice-1-as-built)).
 - Should the grant show anywhere outside its window (Dock, tray, another
   window's menu) for the overnight case?
 - `OMXTERM_CTL` points into the AppImage's current mount. A multiplexer server
