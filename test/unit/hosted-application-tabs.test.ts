@@ -592,3 +592,14 @@ it("runs an agent's command on a tab only once it shows, and never after giving 
   expect(h.surfaces[1]!.dispose).not.toHaveBeenCalled();
   vi.useRealTimers();
 });
+
+it("answers unavailable for an agent's command while a dialog holds the window", async () => {
+  let blocked = false;
+  const h = harness(() => !blocked);
+  await h.tabs.ready;
+  blocked = true;
+  await expect(
+    h.tabs.runSessionCommand("one", "s1", { action: "close-pane" }),
+  ).resolves.toEqual({ id: "one", error: "unavailable" });
+  expect(h.surfaces[0]!.dispose).not.toHaveBeenCalled();
+});

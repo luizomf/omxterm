@@ -647,11 +647,13 @@ export function createTerminalTabs(
       } finally {
         agentSelection = false;
       }
-      // A dialog over the window keeps its selection; never act elsewhere.
+      // A dialog over the window keeps its selection and takes the user's
+      // keys; never act elsewhere, or behind it.
       const run = (): AgentActionResult => {
         if (
           disposed ||
           closing ||
+          canFocus?.() === false ||
           pane.removed ||
           selectedTab() !== pane.tab ||
           pane.tab.focused !== pane
