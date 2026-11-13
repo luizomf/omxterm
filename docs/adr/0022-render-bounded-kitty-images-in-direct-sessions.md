@@ -76,7 +76,7 @@ measurements:
 - **Two images per screen.** The 128,000,000-byte store keeps two images at
   the limit, or four 9 MP photos.
 
-Measured on the real core, all panes of a window share one WASM memory: one
+All panes of a window share one WASM memory. Measured on the real core, one
 image at the limit takes it to about 260 MiB, a stream of them holds one screen
 at about 390 MiB, and both screens of a pane at about 520 MiB. The old limits
 already reached 162 MiB while rejecting these photos, because input and
