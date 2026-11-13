@@ -576,3 +576,31 @@ posix("serves per-request MCP clients without a handshake", async () => {
     error: { code: -32022, data: { requested: "1900-01-01" } },
   });
 });
+
+posix("drops a cancelled call and leaves when stdin closes", async () => {
+  const { profile, pane, access, window, shown } = setup();
+  access.toggle(window);
+  await shown();
+  const server = mcp(profile, pane);
+  const pause = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+  // Without the cancel, this wait would answer "timeout" after 500 ms.
+  void server.request("tools/call", {
+    name: "wait",
+    arguments: { pane: "s2", timeout: 500 },
+  });
+  await pause(200);
+  server.notify("notifications/cancelled", { requestId: 0 });
+  await pause(600);
+  expect(server.lines).toEqual([]);
+
+  // A long wait doesn't keep the server alive once its client is gone.
+  void server.request("tools/call", {
+    name: "wait",
+    arguments: { pane: "s2", timeout: 60_000 },
+  });
+  await pause(200);
+  server.child.stdin.end();
+  expect(await server.exited).toBe(0);
+  expect(server.lines).toEqual([]);
+});

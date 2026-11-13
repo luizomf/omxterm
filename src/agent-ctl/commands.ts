@@ -251,7 +251,8 @@ export async function execute(
   if (!grant) throw new CtlError(EXIT.absent, agentNotGrantedSentence());
   const client = await Client.connect(grant.endpoint);
   const drop = () => client.destroy();
-  signal?.addEventListener("abort", drop, { once: true });
+  if (signal?.aborted) drop();
+  else signal?.addEventListener("abort", drop, { once: true });
   try {
     await client.handshake(
       grant,

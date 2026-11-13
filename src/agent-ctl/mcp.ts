@@ -4,7 +4,16 @@
 // call. It speaks the per-request protocol (2026-07-28) and the older
 // `initialize` handshake, which clients such as Codex still use.
 import { version } from "../../package.json";
-import { AGENT_GRANT_ITEM, isPlainRecord } from "../shared/agent-api";
+import {
+  AGENT_GRANT_ITEM,
+  DEFAULT_AGENT_IDLE_MS,
+  DEFAULT_AGENT_READ_LINES,
+  MAX_AGENT_IDLE_MS,
+  MAX_AGENT_READ_LINES,
+  MAX_AGENT_WAIT_MS,
+  MIN_AGENT_IDLE_MS,
+  isPlainRecord,
+} from "../shared/agent-api";
 import { CtlError, EXIT } from "./client";
 import { execute, parse, type Options } from "./commands";
 
@@ -38,13 +47,15 @@ const pane = {
 };
 const idle = {
   type: "integer",
-  minimum: 0,
-  description: "Milliseconds without output that count as quiet (default 500).",
+  minimum: MIN_AGENT_IDLE_MS,
+  maximum: MAX_AGENT_IDLE_MS,
+  description: `Milliseconds without output that count as quiet (default ${DEFAULT_AGENT_IDLE_MS}).`,
 };
 const timeout = {
   type: "integer",
-  minimum: 0,
-  description: `Give up after this many milliseconds (default ${MCP_WAIT_TIMEOUT_MS}, at most 600000). Keep it under your client's tool timeout.`,
+  minimum: 1,
+  maximum: MAX_AGENT_WAIT_MS,
+  description: `Give up after this many milliseconds (default ${MCP_WAIT_TIMEOUT_MS}). Keep it under your client's tool timeout.`,
 };
 
 type Schema = { type: string; [key: string]: unknown };
@@ -119,8 +130,9 @@ const TOOLS: readonly Tool[] = [
       pane,
       lines: {
         type: "integer",
-        minimum: 0,
-        description: "How many lines (default 200, at most 10000).",
+        minimum: 1,
+        maximum: MAX_AGENT_READ_LINES,
+        description: `How many lines (default ${DEFAULT_AGENT_READ_LINES}).`,
       },
       window,
     },
