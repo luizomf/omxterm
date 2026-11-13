@@ -106,7 +106,7 @@ restored or granted by anything but that gesture.
 
 **Agent API** — Main's user-only local socket for granted windows: list tabs and
 panes, type text and mode-independent keys, press named keys encoded for the pane's
-modes or the window's tab and pane shortcuts on a named pane, read a pane's
+modes or the window's tab and pane shortcuts on a named pane, list those shortcuts as the user set them, read a pane's
 last lines and wait for it to go quiet or end. `omxterm-ctl`, the bundled client, finds it from the
 `OMXTERM_CTL`, `OMXTERM_PROFILE` and `OMXTERM_PANE` variables every pane gets
 on macOS and Linux, prints an agent guide (`guide`) and serves the same

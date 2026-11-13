@@ -36,6 +36,7 @@ they did. Don't look for another way in.
 "$OMXTERM_CTL" wait s2 --idle 2000 --timeout 60000
 "$OMXTERM_CTL" send s2 --keys Ctrl+C    # interrupt
 "$OMXTERM_CTL" press s2 Down Down Enter # move in a menu, then choose
+"$OMXTERM_CTL" keys                     # the window's shortcuts, as the user set them
 "$OMXTERM_CTL" press s2 Cmd+T           # new tab, as the user's shortcut (Linux: Ctrl+Shift+T)
 ```
 
@@ -69,8 +70,12 @@ they did. Don't look for another way in.
   The defaults are `Cmd+T`, `Cmd+W`, `Cmd+D`, `Cmd+Shift+E`, `Cmd+Alt+W`,
   `Cmd+1` … on macOS and `Ctrl+Shift+T`, `Ctrl+Shift+W`, `Ctrl+Shift+O`,
   `Ctrl+Shift+E`, `Ctrl+Shift+K`, `Alt+1` … on Linux, unless the user rebound
-  them. Press a shortcut on its own; it prints the action and the pane. Then
-  `list` to see the result. A new tab or pane starts the user's shell.
+  them. Don't guess: run `keys`. Press a shortcut on its own; it prints the
+  action and the pane. Then `list` to see the result. A new tab or pane
+  starts the user's shell.
+- `keys` lists the shortcuts `press` runs, with the user's rebinds: the chord
+  (`-` when they unbound it), the action, and `refused` or `not-yet` when
+  `press` won't run it (`--json` for the list). Only what it lists runs.
 - Closing a pane or tab whose program is still running answers that it needs
   the user, and nothing closes: ask them. Closing the last tab closes the
   window and ends your access. The shortcut that allows or stops agents is
@@ -86,7 +91,7 @@ they did. Don't look for another way in.
 ## MCP
 
 `"$OMXTERM_CTL" mcp` serves the same commands as MCP tools on stdio: `status`,
-`list`, `send`, `press`, `read` and `wait`. Their arguments are the CLI's
+`list`, `keys`, `send`, `press`, `read` and `wait`. Their arguments are the CLI's
 options: `pane`, `text`, `keys` (for `press`, the keys to press), `enter`,
 `wait`, `idle`, `timeout`, `lines`, `window`
 (only needed when several windows are allowed and you aren't in one of them)

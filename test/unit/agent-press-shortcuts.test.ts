@@ -55,6 +55,7 @@ function grantedWindow(
     encode,
     tabs: () => tabsAnswer,
     shortcut: (chord) => agentShortcutAction(keybinds, chord, platform),
+    keybinds: () => keybinds,
     act,
     closeNeedsUser,
     platform,
@@ -193,4 +194,52 @@ it("matches every default tab and pane shortcut as the user's press would", () =
       );
     }
   }
+});
+
+it("lists the effective shortcuts, rebinds included, marking what press won't run", async () => {
+  const window = grantedWindow({
+    keybinds: { ...terminalDefaultKeybinds("darwin"), newTab: "F9" },
+  });
+  const { shortcuts } = (await window.commands.run(
+    "keys",
+    {},
+    { signal: new AbortController().signal },
+  )) as {
+    shortcuts: { action: string; chord: string | null; status: string }[];
+  };
+  const entry = (action: string) =>
+    shortcuts.find((shortcut) => shortcut.action === action);
+  // The rebind shows up, and it is what press runs.
+  expect(entry("newTab")).toEqual({
+    action: "newTab",
+    chord: "F9",
+    status: "available",
+  });
+  await expect(window.press("s1", "F9")).resolves.toEqual({
+    action: "newTab",
+    pane: "s1",
+  });
+  expect(entry("closePane")).toMatchObject({
+    chord: "Cmd+Alt+W",
+    status: "available",
+  });
+  // The grant toggle is unbound by default and refused anyway.
+  expect(entry("toggleAgentAccess")).toEqual({
+    action: "toggleAgentAccess",
+    chord: null,
+    status: "refused",
+  });
+  expect(entry("find")).toMatchObject({ chord: "Cmd+F", status: "not-yet" });
+  expect(entry("toggleSnippets")?.status).toBe("not-yet");
+  // Keys that go to the pane aren't shortcuts press runs.
+  expect(entry("copy")).toBeUndefined();
+  await expect(
+    window.commands.run(
+      "keys",
+      { x: 1 },
+      {
+        signal: new AbortController().signal,
+      },
+    ),
+  ).rejects.toMatchObject({ code: "invalid-request" });
 });

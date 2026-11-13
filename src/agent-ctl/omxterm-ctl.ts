@@ -30,6 +30,9 @@ Commands:
                                (Ctrl+Shift+Up). A tab or pane shortcut of
                                the window (Cmd+T) runs on that pane instead,
                                on its own, and prints the action and pane.
+  keys                         List the window's shortcuts that press runs,
+                               as the user set them (chord, action), with
+                               refused or not-yet marked. Look here, don't guess.
   read <pane> [--lines N]      Print the last N lines (default 200).
   wait <pane> [--after OFFSET] [--idle MS] [--timeout MS]
                                Wait until the pane goes quiet or its program

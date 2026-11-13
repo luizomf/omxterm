@@ -6,7 +6,7 @@ and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
 and its [MCP server](#mcp). From slice 4, the tab tree in
 [`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
-named keys and the window's tab and pane shortcuts are implemented. Each later
+named keys and the window's tab and pane shortcuts, and [`keys`](#keys-slice-4), are implemented. Each later
 command says which slice of the ADR's plan it belongs to; until then, names
 and shapes can still change.
 
@@ -329,6 +329,24 @@ Lists the granted window's effective shortcuts, including the user's rebinds,
 and marks the ones that are refused or "not yet", so agents look there
 instead of guessing ([#1051](https://github.com/luizomf/omxterm/issues/1051)).
 
+```json
+{ "id": 9, "cmd": "keys", "args": {} }
+{ "id": 9, "ok": true, "result": { "shortcuts": [
+  { "action": "newTab", "chord": "Cmd+T", "status": "available" },
+  { "action": "toggleAgentAccess", "chord": null, "status": "refused" },
+  { "action": "find", "chord": "Cmd+F", "status": "not-yet" }
+] } }
+```
+
+- It takes no arguments. It reads the same table as `press`
+  (`src/main/agent-shortcuts.ts`) and the live catalog, so a rebind in
+  `config.json` shows up and what `keys` marks `available` is
+  what `press` runs. `chord` is the display form `press` takes, or `null` when
+  the user unbound the action; `refused` and `not-yet` are the codes `press`
+  answers with. Actions whose chords still go to the pane as keys aren't listed.
+- The CLI prints one line per shortcut: chord (`-` when unbound), action, and
+  `refused` or `not-yet` when `press` won't run it. `--json` prints the result.
+
 ### Tabs and panes (slice 4)
 
 There are no tab or pane commands. An agent opens, splits, selects and closes
@@ -376,7 +394,7 @@ omxterm-ctl read s1 --lines 200
 omxterm-ctl read s1 --screen               # slice 3
 omxterm-ctl press s1 Down Down Enter       # slice 4
 omxterm-ctl press s3 Cmd+Alt+W             # slice 4: closePane on s3
-omxterm-ctl keys                           # slice 4
+omxterm-ctl keys                           # slice 4: chords press runs
 ```
 
 - Inside a pane, agents call it as `"$OMXTERM_CTL"`; window and profile come
@@ -424,7 +442,7 @@ as Codex does). It offers tools only.
 | `read`   | `pane`, `lines?`, `window?`                                                        |
 | `wait`   | `pane`, `after?`, `idle?`, `timeout?`, `window?`                                   |
 
-Slice 4 adds `keys` with the same name.
+| `keys` | `window?` |
 
 - A tool call is the CLI command of the same name, with the arguments as its
   options, on its own connection. The tools are always listed; the grant is

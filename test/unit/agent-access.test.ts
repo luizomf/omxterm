@@ -434,3 +434,28 @@ posix(
     expect(sent.at(-1)).toEqual([agentIpc.actionCancel, { id: asked.id }]);
   },
 );
+
+posix("lists the window's shortcuts for the CLI", async () => {
+  const { profile, pane, access, window, shown } = setup(process.platform, {
+    keybinds: () => ({
+      ...terminalDefaultKeybinds(process.platform),
+      newTab: "F9",
+    }),
+  });
+  access.toggle(window);
+  await shown();
+  const lines = (await ctl(profile, ["keys"], pane)).stdout.trim().split("\n");
+  expect(lines).toContain("F9\tnewTab");
+  expect(lines).toContain("-\ttoggleAgentAccess\trefused");
+  expect(lines.filter((line) => /\tfind\tnot-yet$/u.test(line))).toHaveLength(
+    1,
+  );
+  const json = JSON.parse(
+    (await ctl(profile, ["keys", "--json"], pane)).stdout,
+  ) as { shortcuts: unknown[] };
+  expect(json.shortcuts).toContainEqual({
+    action: "newTab",
+    chord: "F9",
+    status: "available",
+  });
+});

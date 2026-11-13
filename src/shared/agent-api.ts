@@ -29,6 +29,7 @@ export const AGENT_COMMANDS = [
   "read",
   "wait",
   "press",
+  "keys",
 ] as const;
 export type AgentCommand = (typeof AGENT_COMMANDS)[number];
 

@@ -175,7 +175,10 @@ export function useAgentHarness() {
 
   function setup(
     platform: NodeJS.Platform = process.platform,
-    shortcuts: Pick<Parameters<typeof startAgentAccess>[0], "shortcut"> & {
+    shortcuts: Pick<
+      Parameters<typeof startAgentAccess>[0],
+      "shortcut" | "keybinds"
+    > & {
       closeNeedsUser?: (
         sessionIds: readonly string[],
       ) => "busy" | "confirming" | "closing" | undefined;
@@ -202,7 +205,7 @@ export function useAgentHarness() {
       platform,
       operationalEvents: { write },
       changed,
-      ...(shortcuts.shortcut ? { shortcut: shortcuts.shortcut } : {}),
+      ...shortcuts,
     });
     cleanups.push(() => access.dispose());
     const port = sessions();

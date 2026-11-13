@@ -315,6 +315,7 @@ app
               chord,
               process.platform,
             ),
+          keybinds: () => coreActionKeybinds(actionCatalog),
         });
         void agentAccess.removeLeftovers().catch(() => {});
         app.on("browser-window-focus", syncAgentMenu);
