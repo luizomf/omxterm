@@ -103,10 +103,16 @@ shows Mirror Typing setup as a small core-framed dialog over the tab instead of
 a tab, so opening it never changes the terminal grid, and amends ADR 0043's
 setup page.
 
+[ADR0052: Let a local agent drive a window the user grants](0052-let-a-local-agent-drive-a-granted-window.md)
+is proposed, not implemented: a per-window, revocable grant shown as an accent
+State Mark lets an outside program type, read and wait through a user-only
+local socket owned by main. The [Agent API reference](../dev/agent-api.md)
+sketches the protocol and CLI.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
-- Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045.
+- Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052 (proposed).
 - Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046, 0049.

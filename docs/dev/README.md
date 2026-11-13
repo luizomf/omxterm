@@ -7,6 +7,7 @@ Notes for contributors and coding agents. User guides live in [`docs/`](../READM
 - [Configuration](configuration-development.md), [usage](usage-development.md), [Restty Terminal Surface](restty-development.md)
 - [Files](files-development-preview.md), [SSH Connect](ssh-connect-development.md), [Snippets](snippets-migration.md), [default Snippets](default-snippets.md)
 - Saved Layout and Mirror Typing: [Saved Layout](../saved-layout-development.md), [Mirror Typing](../mirror-typing-development.md)
+- Proposed: [Agent API](agent-api.md) (protocol and CLI sketch for ADR 0052)
 
 **Extension internals**
 
