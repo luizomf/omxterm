@@ -128,6 +128,7 @@ describe("terminal keybind accelerators", () => {
             "swapPaneRight",
             "swapPaneUp",
             "swapPaneDown",
+            "toggleAgentAccess",
           ]).toContain(action);
           return [];
         }

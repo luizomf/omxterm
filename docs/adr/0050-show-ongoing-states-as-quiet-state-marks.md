@@ -4,7 +4,9 @@ Status: accepted. Amends
 [ADR 0043](0043-revoke-visible-mirror-typing-routes.md), whose in-flow status
 row and Stop button this replaces. Amended by
 [ADR 0053](0053-mark-program-progress-and-attention.md), which adds the
-`working` and `attention` glyphs.
+`working` and `attention` glyphs, and by
+[ADR 0052](0052-let-a-local-agent-drive-a-granted-window.md), which adds the
+window-scoped `agent` mark and the one accent tone.
 
 ## Context
 
@@ -82,3 +84,20 @@ is a 24 px hit target with a pointer cursor, a visible hover state and a
 tooltip that appears quickly, so it is easy to find once you look for it.
 Without the strip, the stop is the mark
 itself: only its tooltip says it can be clicked.
+
+## Amendment: window marks and one accent (ADR 0052)
+
+An agent grant covers a whole Terminal Window, so marks gain a window scope:
+`setWindow(owner, mark)` puts the mark after each pane's own marks on every
+pane of the window, including panes opened later, and once on every tab,
+Application Tabs included. When the selected tab has no pane and the tab strip
+is hidden, so nothing else could carry it, the mark sits in the page's
+top-right corner. The pane and corner copies can carry the action; the tab
+copy stays a plain glyph.
+
+The `agent` glyph (`◆`) is the only mark with a tone of its own: `--ui-accent`,
+derived like the focused-pane line (the theme's cyan, or its foreground when
+cyan lacks contrast) but never switched off by
+`appearance.activePaneHighlight`. The accent means "something other than you
+can act here", so `working` and `attention` keep the secondary color. Reporters
+still never pass a color: CSS maps the glyph to its tone.

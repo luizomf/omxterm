@@ -14,6 +14,7 @@ import {
   MAX_TERMINAL_COLUMNS,
   MAX_TERMINAL_ROWS,
 } from "../shared/terminal-contract";
+import { agentEventLevel, isAgentEvent, type AgentEvent } from "./agent-events";
 
 export const MAX_OPERATIONAL_LOG_BYTES = 5 * 1024 * 1024;
 export const CURRENT_OPERATIONAL_LOG_FILE = "omxterm.jsonl";
@@ -83,6 +84,7 @@ export type OperationalEvent =
       readonly code: number | null;
       readonly durationMs: number;
     }
+  | AgentEvent
   | {
       readonly name: "boundary.rejected";
       readonly boundary: "ipc" | "title" | "external-link" | "clipboard";
@@ -315,6 +317,7 @@ const unavailableOperationalEventLog: OperationalEventLog = Object.freeze({
 });
 
 function eventLevel(event: OperationalEvent): OperationalLogLevel {
+  if (event.name.startsWith("agent.")) return agentEventLevel(event);
   if (
     event.name === "application.failure" ||
     event.name === "configuration.rejected" ||
@@ -344,6 +347,7 @@ function isOperationalEvent(value: unknown): value is OperationalEvent {
   if (!isRecord(value) || typeof value.name !== "string") return false;
   if (value.name.startsWith("configuration."))
     return isConfigurationEvent(value);
+  if (value.name.startsWith("agent.")) return isAgentEvent(value);
   switch (value.name) {
     case "application.started":
       return hasExactKeys(value, ["name"]);

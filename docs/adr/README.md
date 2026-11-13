@@ -104,10 +104,11 @@ a tab, so opening it never changes the terminal grid, and amends ADR 0043's
 setup page.
 
 [ADR0052: Let a local agent drive a window the user grants](0052-let-a-local-agent-drive-a-granted-window.md)
-is proposed, not implemented: a per-window, revocable grant shown as an accent
-State Mark lets an outside program type, read and wait through a user-only
-local socket owned by main. The [Agent API reference](../dev/agent-api.md)
-sketches the protocol and CLI.
+lets an outside program type, read and wait in a window the user granted, shown
+as an accent State Mark, through a user-only local socket owned by main. Its
+first slice (macOS and Linux) is accepted and implemented; later slices remain
+proposed. It amends ADRs 0004, 0013 and 0050. The
+[Agent API reference](../dev/agent-api.md) holds the protocol and CLI.
 
 [ADR0053: Mark program progress and attention](0053-mark-program-progress-and-attention.md)
 reads OSC 9;4 progress as a "working" State Mark and BEL, OSC 9 and OSC 777 as
@@ -120,5 +121,5 @@ vocabulary.
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051, 0053.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
-- Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052 (proposed).
+- Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052.
 - Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046, 0049.

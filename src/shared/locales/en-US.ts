@@ -44,6 +44,7 @@ export const englishMessages = {
   "menu.window": "Window",
   "menu.minimize": "Minimize",
   "menu.alwaysOnTop": "Always on Top",
+  "menu.allowAgents": "Allow Agents in This Window",
   "menu.showNextTab": "Show Next Tab",
   "menu.showPreviousTab": "Show Previous Tab",
   "menu.selectTab": "Select Tab",
@@ -305,6 +306,16 @@ export const englishMessages = {
   "attention.working": "Working.",
   "attention.pending": "Asked for your attention.",
   "attention.bell": "Rang the bell.",
+  "agent.mark": "Agents can control and read this window.",
+  "agent.clickToStop": "Click to stop.",
+  "agent.allowed":
+    "Agents can now control and read this window. Click ◆ to stop.",
+  "agent.refused.in-use":
+    "Another OMXTerm is already serving agents for this profile.",
+  "agent.refused.path-too-long":
+    "This profile's folder path is too long for the agent socket.",
+  "agent.refused.unavailable": "Agents couldn't be allowed in this window.",
+  "agent.refused.unsupported": "Agent access isn't available on Windows yet.",
   "mirrorTyping.title": "Mirror Typing",
   "mirrorTyping.source": "Mirroring typing from this pane.",
   "mirrorTyping.member": "Mirroring typing to this pane.",

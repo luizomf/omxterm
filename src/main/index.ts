@@ -39,6 +39,7 @@ import {
 } from "./application-layout";
 import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
+import { startAgentAccess, type AgentAccess } from "./agent-access";
 import { displayAccelerator } from "../shared/terminal-keybinds";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import {
@@ -170,10 +171,12 @@ let sshLaunch: ReturnType<typeof registerSshTerminalLaunch>;
 let layouts: ReturnType<typeof startApplicationLayout>;
 let layoutSession: ReturnType<typeof startLayoutSession> | undefined;
 let mirrors: ReturnType<typeof registerMirrorTypingIpc>;
+let agentAccess: AgentAccess | undefined;
 let semanticInput: ReturnType<typeof registerSemanticInputIpc>;
 const shutdown = registerTerminalShutdown(app, {
   application: () => terminalApplication,
   disposeSessions: () => {
+    agentAccess?.dispose();
     sshLaunch?.dispose();
     layouts?.dispose();
     mirrors?.dispose();
@@ -282,6 +285,30 @@ app
               : undefined;
           },
         });
+        // The agent client sits beside the app, outside the archive.
+        const agentClient = app.isPackaged
+          ? path.join(process.resourcesPath, "agent-ctl", "omxterm-ctl")
+          : path.join(applicationRoot, "agent-ctl", "omxterm-ctl");
+        const profile = app.getPath("userData");
+        const agentPlatform =
+          process.platform === "darwin" || process.platform === "linux";
+        const syncAgentMenu = () => {
+          const item =
+            Menu.getApplicationMenu()?.getMenuItemById("toggleAgentAccess");
+          if (item)
+            item.checked =
+              agentAccess?.granted(BrowserWindow.getFocusedWindow()) === true;
+        };
+        agentAccess = startAgentAccess({
+          ipc: ipcMain,
+          trusted: terminalIpcRouter.isTrustedSender,
+          profile,
+          platform: process.platform,
+          operationalEvents: operationalEvents!,
+          changed: syncAgentMenu,
+        });
+        void agentAccess.removeLeftovers().catch(() => {});
+        app.on("browser-window-focus", syncAgentMenu);
         semanticInput = registerSemanticInputIpc({
           ipc: ipcMain,
           trusted: terminalIpcRouter.isTrustedSender,
@@ -475,7 +502,13 @@ app
               consumeLayoutLaunch: (token) => layouts.consume(window, token),
               rememberedLayoutFolder: (token) =>
                 layouts.remembered(window, token),
-              createSession(callbacks, workingDirectory, ssh, restored) {
+              createSession(
+                callbacks,
+                workingDirectory,
+                ssh,
+                restored,
+                sessionId,
+              ) {
                 return shutdown.createSession(nodePty.spawn, {
                   shell: resolveCurrentDefaultShell(),
                   launchRequest: restored
@@ -488,6 +521,15 @@ app
                   applicationVersionProvider: app,
                   environment: process.env,
                   chromiumStartupVariables,
+                  ...(agentPlatform && agentAccess && sessionId
+                    ? {
+                        agentEnvironment: {
+                          OMXTERM_CTL: agentClient,
+                          OMXTERM_PROFILE: profile,
+                          OMXTERM_PANE: `${agentAccess.instance}:${lifecycle.windowId}:${sessionId}`,
+                        },
+                      }
+                    : {}),
                   ...callbacks,
                 });
               },
@@ -574,6 +616,11 @@ app
 
             layouts.register(window, controller, restoration?.plan);
             mirrors.register(window, controller);
+            agentAccess?.register(
+              window,
+              lifecycle.windowId,
+              controller.agentSessions,
+            );
             semanticInput.register(window);
             extensions!.registerWindow(window, (source, context) =>
               invocationTarget.capture(
@@ -667,6 +714,11 @@ app
             sendAction,
           ),
           showCommandPalette: () => palette?.show(),
+          toggleAgentAccess: () => {
+            const window = BrowserWindow.getFocusedWindow();
+            if (window) agentAccess?.toggle(window);
+            syncAgentMenu();
+          },
           showSettings: startApplicationSettings(
             terminalIpcRouter,
             configurationLoadOptions,
@@ -690,6 +742,7 @@ app
               currentTranslator().t,
             ),
           );
+          syncAgentMenu();
         };
         rebuildMenu();
         palette = startCommandPalette({

@@ -1,6 +1,7 @@
 import type {
   TerminalExit,
   TerminalSessionId,
+  TerminalWriteReceipt,
   TerminalContextMenuRequest,
   TerminalContextMenuTarget,
   TerminalExportSaveRequest,
@@ -85,6 +86,7 @@ export interface TerminalIpcControllerOptions {
     workingDirectory?: string,
     ssh?: import("./ssh-terminal-launch").SshLaunch,
     restored?: boolean,
+    sessionId?: TerminalSessionId,
   ) => LocalTerminalSession;
   readonly consumeSshLaunch?: (
     token: string,
@@ -141,7 +143,35 @@ export interface TerminalIpcControllerOptions {
   ) => Promise<LocalImageData | null>;
 }
 
+/** One live session as the agent API sees it (ADR 0052). */
+export interface AgentSessionSnapshot {
+  readonly sessionId: TerminalSessionId;
+  readonly focused: boolean;
+  readonly cols?: number;
+  readonly rows?: number;
+}
+
+export interface AgentSessionObserver {
+  output(sessionId: TerminalSessionId): void;
+  acknowledged(sessionId: TerminalSessionId): void;
+  exited(sessionId: TerminalSessionId, exitCode: number): void;
+}
+
+/**
+ * The window's live sessions for the agent API, which never sees the
+ * controller's IPC. Agent bytes enter only through write().
+ */
+export interface AgentSessionPort {
+  sessions(): readonly AgentSessionSnapshot[];
+  position(
+    sessionId: TerminalSessionId,
+  ): { readonly sent: number; readonly acknowledged: number } | undefined;
+  write(sessionId: TerminalSessionId, data: string): TerminalWriteReceipt;
+  observe(observer: AgentSessionObserver): () => void;
+}
+
 export interface TerminalIpcController {
+  readonly agentSessions?: AgentSessionPort;
   readonly mirrorTyping?: ReturnType<
     typeof import("./mirror-input-lease").createMirrorInputLease<LocalTerminalSession>
   >;

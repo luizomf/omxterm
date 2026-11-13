@@ -103,3 +103,55 @@ it("shows one sentence at a time; surprises time out and notices wait for the us
   marks.dispose();
   expect(document.querySelector(".state-notice")).toBeNull();
 });
+
+it("shows a window mark on every pane, later panes and every tab, and in the corner without either", () => {
+  const changed = vi.fn();
+  const { tab, panes } = tabWithPanes(2);
+  const all = [...panes];
+  const corner = document.createElement("div");
+  document.body.append(corner);
+  let cornerShown = false;
+  const marks = createStateMarks(document, createRendererLanguage(), changed, {
+    panes: () => all,
+    corner,
+    cornerShown: () => cornerShown,
+  });
+  const stop = vi.fn();
+  marks.set(panes[0]!, "mirror", { glyph: "mirror", label: "Source" });
+  marks.setWindow("agent", {
+    glyph: "agent",
+    label: "Agents can control and read this window.",
+    action: { label: "Click to stop.", run: stop },
+  });
+  const agent = "Agents can control and read this window. Click to stop.";
+  // The window's mark sits at the edge, after the pane's own.
+  expect(paneLabels(panes[0]!)).toEqual(["Source", agent]);
+  expect(paneLabels(panes[1]!)).toEqual([agent]);
+  expect(labels(marks.tab(tab))).toEqual([
+    "Source",
+    "Agents can control and read this window.",
+  ]);
+  // An Application Tab carries only the window's mark.
+  expect(labels(marks.tab(undefined))).toEqual([
+    "Agents can control and read this window.",
+  ]);
+
+  const later = document.createElement("main");
+  document.body.append(later);
+  const pane = { tab, container: later } as unknown as TerminalPane;
+  all.push(pane);
+  marks.attach(pane);
+  expect(paneLabels(pane)).toEqual([agent]);
+
+  expect(corner.querySelector(".ui-mark")).toBeNull();
+  cornerShown = true;
+  marks.refreshCorner();
+  corner.querySelector<HTMLButtonElement>("button.ui-mark")!.click();
+  expect(stop).toHaveBeenCalledOnce();
+
+  marks.setWindow("agent", undefined);
+  expect(paneLabels(panes[0]!)).toEqual(["Source"]);
+  expect(paneLabels(pane)).toEqual([]);
+  expect(corner.querySelector(".ui-mark")).toBeNull();
+  marks.dispose();
+});

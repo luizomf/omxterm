@@ -93,7 +93,21 @@ names the state; its owner may make the pane's glyph clickable (Mirror Typing:
 click to stop). It never changes the terminal grid. Idle and success show
 nothing; surprises and problems use one overlay sentence instead, and so does
 the confirmation of an explicit action with no other visible result (Save
-Layout).
+Layout). A window-wide state, such as an Agent Grant, marks every pane and
+tab of the window; its `◆` is the only mark in the accent color.
+
+**Agent Grant** — The user's per-window, in-memory consent (**Allow Agents in
+This Window**) that lets a local program drive that Terminal Window through the
+Agent API. It shows as an accent State Mark on every pane and tab, and ends on
+a click on that mark, the toggle, closing the window or quitting. It is never
+restored or granted by anything but that gesture.
+
+**Agent API** — Main's user-only local socket for granted windows: list panes,
+type text and mode-independent keys, read a pane's last lines and wait for it
+to go quiet or end. `omxterm-ctl`, the bundled client, finds it from the
+`OMXTERM_CTL`, `OMXTERM_PROFILE` and `OMXTERM_PANE` variables every pane gets
+on macOS and Linux. See [ADR 0052](docs/adr/0052-let-a-local-agent-drive-a-granted-window.md)
+and the [reference](docs/dev/agent-api.md).
 
 **Always-on-Top Window** — A window temporarily kept above ordinary windows by
 its native floating behavior. The menu toggles the selected window;
@@ -268,7 +282,8 @@ Surface's memory; they are never persisted, logged or shared with other panes.
 
 **Terminal Capability Identity** — The environment advertised to programs:
 `TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm` and the
-running version in `TERM_PROGRAM_VERSION`. Ghostty answers cursor-position
+running version in `TERM_PROGRAM_VERSION`. The Agent API's three location
+variables sit beside it but describe OMXTerm, not the terminal. Ghostty answers cursor-position
 queries from its parser cursor at each query's stream position, with core and
 filter-owned DA/cell-size replies kept in order without waiting for a render
 frame. This identity is not a guarantee of every xterm extension.

@@ -4,8 +4,10 @@ OMXTerm launches the user's Default Shell as an interactive login shell on macOS
 and Linux. Windows starts its selected shell interactively without a login flag.
 Shell startup remains user-owned: OMXTerm leaves startup files, `ZDOTDIR`,
 dotfiles, and shell commands unchanged and injects no project-owned scripts.
-Apart from the Terminal Capability Identity required to describe the PTY, the
-session inherits the user's environment and configuration as they exist.
+Apart from the Terminal Capability Identity required to describe the PTY and,
+on macOS and Linux, three non-secret variables that locate the agent API (see
+the amendment below), the session inherits the user's environment and
+configuration as they exist.
 
 Shell Integration can provide richer prompt, working-directory, title, and
 notification behavior, but it also makes OMXTerm participate in shell startup
@@ -40,3 +42,16 @@ which runs at most every 3 s and only after layout or terminal activity
 the folders read before. OSC 7 still wins when present; SSH Connect and `-e`
 panes stay home. Windows keeps OSC 7 or home, because PowerShell's location
 isn't its process working directory.
+
+## Amendment: agent API discovery (ADR 0052)
+
+On macOS and Linux every pane's PTY also gets `OMXTERM_CTL` (the absolute path
+of the bundled `omxterm-ctl` launcher), `OMXTERM_PROFILE` (the profile
+directory) and `OMXTERM_PANE` (process instance, window and session id, such
+as `5f0c9a1e2b3d4c6f:3:s4`), in
+granted and ungranted windows alike, so an agent running in a pane can find
+the [agent API](0052-let-a-local-agent-drive-a-granted-window.md) with nothing
+configured. They are values in the environment, not shell integration: no
+startup file, prompt or command changes. None is a secret: the grant's token
+never enters an environment. A pane never inherits another OMXTerm's values;
+on Windows, until its slice, panes get none.

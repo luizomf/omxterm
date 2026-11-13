@@ -46,6 +46,7 @@ import {
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
 import { createAttentionBridge } from "./attention-bridge";
+import { createAgentBridge } from "./agent-bridge";
 import { isTerminalTabSelection } from "../shared/terminal-panes";
 import {
   formatFilePathInsertion,
@@ -217,6 +218,7 @@ const terminal: TerminalBridge = {
   semanticInput: createSemanticInputBridge(ipcRenderer),
   filesTerminalDrag: createFilesTerminalDragBridge(ipcRenderer),
   mirrorTyping: createMirrorTypingBridge(ipcRenderer),
+  agent: createAgentBridge(ipcRenderer),
   async start(surfaceId, workingDirectoryOf, launchToken, restoreToken) {
     if (surfaceId !== undefined && !isSurfaceIdentity(surfaceId))
       throw new TypeError("Invalid Surface identity");

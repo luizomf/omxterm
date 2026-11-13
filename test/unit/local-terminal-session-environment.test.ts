@@ -19,7 +19,7 @@ function sessionEnvironment(
   environment: NodeJS.ProcessEnv,
   options: Pick<
     Parameters<typeof createLocalTerminalSession>[1],
-    "chromiumStartupVariables"
+    "chromiumStartupVariables" | "agentEnvironment"
   > = {},
 ): NodeJS.ProcessEnv | undefined {
   const pty = {
@@ -224,4 +224,36 @@ describe("local PTY Adapter environment after Chromium startup", () => {
       });
     },
   );
+});
+
+describe("local PTY Adapter environment for the agent API", () => {
+  const inherited = {
+    HOME: "/home/example",
+    OMXTERM_CTL: "/other/omxterm-ctl",
+    OMXTERM_PROFILE: "/other/profile",
+    OMXTERM_PANE: "9:s9",
+  };
+
+  it("names this OMXTerm's client, profile and pane, over any inherited values", () => {
+    const agentEnvironment = {
+      OMXTERM_CTL:
+        "/Applications/OMXTerm.app/Contents/Resources/agent-ctl/omxterm-ctl",
+      OMXTERM_PROFILE: "/home/example/profile",
+      OMXTERM_PANE: "5f0c9a1e2b3d4c6f:3:s4",
+    };
+    expect(
+      sessionEnvironment("darwin", inherited, { agentEnvironment }),
+    ).toEqual({
+      HOME: "/home/example",
+      ...agentEnvironment,
+      ...capabilityIdentity,
+    });
+  });
+
+  it("drops another OMXTerm's values when this one sets none", () => {
+    expect(sessionEnvironment("win32", inherited)).toEqual({
+      HOME: "/home/example",
+      ...capabilityIdentity,
+    });
+  });
 });

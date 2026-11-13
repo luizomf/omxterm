@@ -26,6 +26,7 @@ The optional [Saved Layout](saved-layout.md) add-on saves a window's tabs, split
 - **View → Toggle Title Bar:** hide or show the title bar (`Cmd+Shift+D` / `Ctrl+Shift+D`). Drag the three-dot handle at the top to move a window without its title bar.
 - **View → Toggle Full Screen:** use `Ctrl+Cmd+F` on macOS or `F11` on Linux/Windows.
 - **Window → Always on Top:** keep the current window above normal windows.
+- **Window → Allow Agents in This Window:** let a program you run, such as a coding agent, drive this window (see [Letting an agent drive a window](#letting-an-agent-drive-a-window)).
 
 These toggles affect the current window. Set defaults for new windows in [Configuration](configuration.md).
 
@@ -56,6 +57,7 @@ The application menu displays active shortcuts, including custom bindings.
 | Files / SSH Connect (add-ons) | `Cmd+Option+F` / `Cmd+Option+O` | unbound                         |
 | Mirror Typing (add-on)        | `Cmd+Shift+M`                   | `Ctrl+Shift+M`                  |
 | Save Layout (add-on)          | `Cmd+Shift+L`                   | `Ctrl+Shift+L`                  |
+| Allow Agents in This Window   | unbound                         | unbound                         |
 | Reload Configuration          | `Cmd+Shift+,`                   | `Ctrl+Shift+,`                  |
 
 If `+` shares a key with `=`, press Shift as well. On Linux and Windows, press and release **Alt** to open the application menu; on macOS use the system menu bar. Customize shortcuts in [Settings](configuration.md#keybinds).
@@ -140,6 +142,24 @@ You can test it from a shell in a background tab:
 ```sh
 sleep 3; printf '\e]777;notify;Build;Finished\e\\'
 ```
+
+## Letting an agent drive a window
+
+On macOS and Linux, you can let a program you run, such as a coding agent in one pane, work the panes of its window: type commands, read their output and wait for them to finish. It only ever reaches the windows you allow.
+
+1. Choose **Window → Allow Agents in This Window** (or find it in the Command Palette). A `◆` appears on every pane and tab of that window.
+2. Ask the agent to use OMXTerm. Every pane has `OMXTERM_CTL`, the path of OMXTerm's small client, so the agent can run `"$OMXTERM_CTL" status` and `"$OMXTERM_CTL" --help` to find its way. Before you allow it, `status` tells the agent which menu item to ask you for.
+3. To stop, click any pane's `◆`, or choose the menu item again. Closing the window or quitting OMXTerm also stops it.
+
+For example, from one pane an agent can run a command in the pane next to it:
+
+```sh
+"$OMXTERM_CTL" list
+"$OMXTERM_CTL" send s2 --text 'npm test' --enter --wait
+"$OMXTERM_CTL" read s2 --lines 40
+```
+
+Allowing a window lets an agent do what you could do at its keyboard, including in SSH sessions open there, and read its scrollback. Keep sensitive sessions in another window. The [Agent API reference](dev/agent-api.md) has every command.
 
 ## About and credits
 

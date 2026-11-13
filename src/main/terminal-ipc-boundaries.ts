@@ -39,22 +39,25 @@ export function acknowledgeTerminalOutput(
   payload: unknown,
   target: (sessionId: TerminalSessionId) => OutputAckTarget | undefined,
   reject: RejectBoundary,
-): void {
+): TerminalSessionId | undefined {
   if (!isTerminalSessionOutputAck(payload)) {
     reject("ipc", "invalid-payload");
-    return;
+    return undefined;
   }
   const state = target(payload.sessionId);
   if (!state) {
     reject("ipc", "unknown-session");
-    return;
+    return undefined;
   }
   if (
     state.closed ||
     state.exited ||
     !state.outputFlow.acknowledge(payload.end)
-  )
+  ) {
     reject("ipc", "invalid-progress");
+    return undefined;
+  }
+  return payload.sessionId;
 }
 
 export function createTerminalTitleRequests(

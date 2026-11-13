@@ -47,6 +47,7 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.window": "Janela",
   "menu.minimize": "Minimizar",
   "menu.alwaysOnTop": "Sempre no Topo",
+  "menu.allowAgents": "Permitir Agentes Nesta Janela",
   "menu.showNextTab": "Mostrar Próxima Aba",
   "menu.showPreviousTab": "Mostrar Aba Anterior",
   "menu.selectTab": "Selecionar Aba",
@@ -318,6 +319,17 @@ export const brazilianPortugueseMessages: Readonly<
   "attention.working": "Trabalhando.",
   "attention.pending": "Pediu sua atenção.",
   "attention.bell": "Tocou a campainha.",
+  "agent.mark": "Agentes podem controlar e ler esta janela.",
+  "agent.clickToStop": "Clique para parar.",
+  "agent.allowed":
+    "Agentes agora podem controlar e ler esta janela. Clique em ◆ para parar.",
+  "agent.refused.in-use": "Outro OMXTerm já atende agentes neste perfil.",
+  "agent.refused.path-too-long":
+    "O caminho da pasta deste perfil é longo demais para o socket dos agentes.",
+  "agent.refused.unavailable":
+    "Não foi possível permitir agentes nesta janela.",
+  "agent.refused.unsupported":
+    "O acesso de agentes ainda não está disponível no Windows.",
   "mirrorTyping.title": "Espelhar digitação",
   "mirrorTyping.source": "Espelhando a digitação deste painel.",
   "mirrorTyping.member": "Espelhando a digitação para este painel.",

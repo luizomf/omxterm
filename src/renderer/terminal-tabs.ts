@@ -2,7 +2,12 @@
 import { createMirrorTyping } from "./mirror-typing";
 import type { MirrorTypingBridge } from "../shared/mirror-typing";
 import { createTerminalTabsLayout } from "./terminal-tabs-layout";
-import { createStateMarks } from "./state-marks";
+import {
+  createStateMarks,
+  type StateMark,
+  type StateText,
+} from "./state-marks";
+import { agentTail, type AgentReadResult } from "../shared/agent-access";
 import { createPaneAttention } from "./pane-attention";
 import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
@@ -153,6 +158,15 @@ export interface TerminalTabs {
   setSessionTitle(sessionId: TerminalSessionId, title: string): void;
   // Main's verdict for a session's attention mark (ADR 0053).
   setSessionAttention(sessionId: TerminalSessionId, pending: boolean): void;
+  // A mark on every pane and tab of the window (ADR 0052).
+  setWindowMark(owner: string, mark: StateMark | undefined): void;
+  flash(text: StateText): void;
+  // The last lines of one session's text, hidden tabs included.
+  readSession(
+    id: string,
+    sessionId: TerminalSessionId,
+    lines: number,
+  ): AgentReadResult;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -227,6 +241,15 @@ export function createTerminalTabs(
     elements.container.ownerDocument,
     language,
     () => renderStrip(),
+    {
+      panes: () => terminalTabs().flatMap(tabPanes),
+      corner: elements.container,
+      // Only when nothing else carries them: no tab strip, no pane.
+      cornerShown: () => {
+        const tab = selectedApplicationTab();
+        return elements.strip.hidden && !!tab && tab.kind !== "terminal";
+      },
+    },
   );
   const attention = createPaneAttention(marks);
   const layout = createTerminalTabsLayout(
@@ -249,7 +272,7 @@ export function createTerminalTabs(
   });
   const strip = createApplicationTabStrip(elements.strip, tabs, {
     label: (tab, index) => tabLabel(tab, index, language),
-    marks: (tab) => (tab.kind === "terminal" ? marks.tab(tab) : []),
+    marks: (tab) => marks.tab(tab.kind === "terminal" ? tab : undefined),
     select: (tab) => select(tabs.indexOf(tab)),
     canInteract: () => !disposed && options.canFocus?.() !== false,
     reordered(reorder) {
@@ -263,7 +286,10 @@ export function createTerminalTabs(
       if (tab) notifyFocus(tab);
     },
   });
-  const renderStrip = () => strip.render(selectedIndex, tabBarEnabled);
+  const renderStrip = () => {
+    strip.render(selectedIndex, tabBarEnabled);
+    marks.refreshCorner();
+  };
 
   // Selection is a complete snapshot even while focus has no live session.
   const notifyFocus = (tab: TerminalTab) => {
@@ -367,7 +393,7 @@ export function createTerminalTabs(
     terminalPaneEnded(pane, exit, panes, keyboard, notifyFocus, language.t);
   };
 
-  const mountPane = createPaneMount({
+  const mountPaneSurface = createPaneMount({
     document: elements.container.ownerDocument,
     options,
     surfaceOptions: configuration.current,
@@ -389,6 +415,11 @@ export function createTerminalTabs(
     onProgress: (pane, active) => attention.progress(pane, active),
     onAttention: (pane) => attention.progress(pane, false),
   });
+  // Every pane gets the window's marks from the start, wherever it opens.
+  const mountPane = (pane: TerminalPane) => {
+    marks.attach(pane);
+    return mountPaneSurface(pane);
+  };
 
   const panes = createPaneOperations({
     selectedTab,
@@ -500,6 +531,29 @@ export function createTerminalTabs(
       if (disposed) return;
       const pane = findPaneBySession(terminalTabs(), sessionId);
       if (pane) attention.pending(pane, pending);
+    },
+    setWindowMark: (owner, mark) => {
+      if (!disposed) marks.setWindow(owner, mark);
+    },
+    flash: (text) => {
+      if (!disposed) marks.flash(text);
+    },
+    readSession(id, sessionId, lines) {
+      const pane = disposed
+        ? undefined
+        : findPaneBySession(terminalTabs(), sessionId);
+      if (!pane?.surface || pane.removed) return { id, error: "unknown-pane" };
+      try {
+        const tail = agentTail(pane.surface.exportText("content"), lines);
+        return {
+          id,
+          ...tail,
+          ...(pane.size ? { cols: pane.size.cols, rows: pane.size.rows } : {}),
+        };
+      } catch {
+        // Core text extraction can fail (e.g. a WASM allocation).
+        return { id, error: "failed" };
+      }
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

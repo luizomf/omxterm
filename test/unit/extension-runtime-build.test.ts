@@ -23,6 +23,8 @@ vi.mock("node:fs/promises", () => ({
   mkdir: vi.fn(),
   rm: vi.fn(),
   cp: vi.fn(),
+  chmod: vi.fn(),
+  writeFile: vi.fn(),
 }));
 vi.mock("node:child_process", () => ({ execFileSync: calls.native }));
 vi.mock("../../scripts/build-extension-leases.mjs", () => ({

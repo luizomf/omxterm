@@ -13,6 +13,7 @@ export function terminalMenuActions(
     | "showAbout"
     | "showSettings"
     | "showCommandPalette"
+    | "toggleAgentAccess"
   >,
 ): TerminalApplicationMenuActions {
   return {

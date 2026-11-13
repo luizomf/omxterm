@@ -57,10 +57,19 @@ extraResources:
 artifactName: ${productName}-${version}-${arch}.${ext}
 mac:
   icon: assets/application-icon.icns
+  # The agent client runs the app's own binary in Node mode (ADR 0052); the
+  # launcher must be a real executable outside the archive.
+  extraResources:
+    - from: dist/agent-ctl
+      to: agent-ctl
+      filter:
+        - omxterm-ctl
+        - omxterm-ctl.cjs
   category: public.app-category.developer-tools
   files:
     - dist/**
     - "!dist/default-snippets/**"
+    - "!dist/agent-ctl/**"
     - "!dist/extensions/**"
     - "!dist/**/*.omxext"
     - "!dist/**/*.omxext.json"
@@ -103,12 +112,21 @@ mac:
   hardenedRuntime: false
 linux:
   icon: assets/application-icon.png
+  # The agent client runs the app's own binary in Node mode (ADR 0052); the
+  # launcher must be a real executable outside the archive.
+  extraResources:
+    - from: dist/agent-ctl
+      to: agent-ctl
+      filter:
+        - omxterm-ctl
+        - omxterm-ctl.cjs
   category: Utility
   executableName: omxterm
   syncDesktopName: true
   files:
     - dist/**
     - "!dist/default-snippets/**"
+    - "!dist/agent-ctl/**"
     - "!dist/extensions/**"
     - "!dist/**/*.omxext"
     - "!dist/**/*.omxext.json"
@@ -150,6 +168,7 @@ win:
   files:
     - dist/**
     - "!dist/default-snippets/**"
+    - "!dist/agent-ctl/**"
     - "!dist/extension-runtime/*.lib"
     - "!dist/extension-runtime/*.exp"
     - "!dist/extension-runtime/*.obj"

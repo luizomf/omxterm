@@ -525,8 +525,16 @@ quietest form that works:
   edge, in its top padding, with a tooltip and an accessible name and no
   on-screen text. With the tab strip visible, the tab shows each state's glyph
   once before its title. Core owns the glyphs: Mirror Typing `↔`, a program
-  working `⋯`, and a program asking for attention `●`
-  ([program progress and attention](#program-progress-and-attention)).
+  working `⋯`, a program asking for attention `●`
+  ([program progress and attention](#program-progress-and-attention)), and an
+  agent grant `◆` ([agent access](#agent-access)).
+- A window-wide state puts its mark on every pane of the window, panes opened
+  later included, after each pane's own marks, and once on every tab, Settings
+  and extension tabs included. When Settings is selected and the tab strip is
+  hidden, it sits in the page's top-right corner instead.
+- Marks use the secondary text color, except the agent grant's `◆`, which is
+  the window's one accent: the theme's cyan, or its foreground when cyan lacks
+  contrast. `appearance.activePaneHighlight` doesn't change it.
 - A surprise, or that confirmation, is one transient overlay sentence that
   disappears after four seconds.
 - Something that needs the user is one overlay sentence without counts that
@@ -1236,6 +1244,60 @@ title, needs 0.29.1-dev.0 or later.
   synthesize key releases. Native writes are best-effort sequential, not atomic,
   with no replay or rollback. Cross-instance revocation is not instantaneous.
 
+## Agent access
+
+A program the user runs, such as a coding agent, can drive a Terminal Window
+the user allows, on macOS and Linux
+([ADR 0052](adr/0052-let-a-local-agent-drive-a-granted-window.md); protocol
+and CLI in the [Agent API reference](dev/agent-api.md)).
+
+- **Allow Agents in This Window** (Window menu and Command Palette, with the
+  `toggleAgentAccess` shortcut, unbound by default) is the only way to grant;
+  terminal output, extensions, configuration, launch arguments and the API
+  itself can't. A held shortcut toggles once.
+  Its check mark follows the focused window. Turning it on flashes "Agents can
+  now control and read this window. Click ◆ to stop." with no confirmation
+  dialog.
+- While a window is granted, every pane and tab shows the accent `◆`
+  [State Mark](#state-marks). The pane's mark is a button: its tooltip says
+  "Agents can control and read this window. Click to stop." The grant ends on
+  that click, the toggle, closing the window, quitting, a renderer reload or
+  crash, or when main can't keep its socket. Switching tabs, modals, blur,
+  hide and minimize keep it. It is never restored at startup, by Saved Layout,
+  configuration, a launch argument or an extension.
+- Agents get only what's in that window: list its live panes, type literal
+  text and the mode-independent keys `Enter`, `Tab`, `Escape`, `Backspace`,
+  `Space` and `Ctrl+A`–`Ctrl+Z`, read the last lines of a pane's scrollback
+  and screen (including output from before the grant), and wait until a pane
+  goes quiet, its program ends or a timeout passes. Panes in hidden tabs
+  answer too. The API can't grant, see other windows, run application
+  actions, or type anywhere but a pane's PTY.
+- Agent input is written to the PTY in main. It never passes the window's
+  keyboard handling, so it never starts or stops Mirror Typing, skips
+  Protected Paste, doesn't jump the view to the bottom the way typing does,
+  doesn't clear attention, and can't press
+  OMXTerm's shortcuts. The user's typing keeps working; the two interleave.
+- Every pane's environment carries `OMXTERM_CTL`, `OMXTERM_PROFILE` and
+  `OMXTERM_PANE` (see [terminal identity](#terminal-identity-and-replies)), so
+  an agent in a pane runs `"$OMXTERM_CTL" status` with no setup. Without a
+  grant it prints one sentence that names **Allow Agents in This Window** and
+  exits 3.
+- Main listens on `<profile>/agent-api/ctl.sock` (directory `0700`, socket
+  `0600`) only while a grant exists, and never on TCP. Each grant has a random
+  256-bit token in `<profile>/agent-api/grants/<window>.json` (`0600`), written
+  after the marks are on screen and removed when the grant ends; leftovers
+  from a crash are removed at startup unless another live OMXTerm holds the
+  socket. Connections prove the token both ways without sending it and stay
+  bound to their window and to this OMXTerm process: a pane of another
+  process on the same profile can't reach it. A profile path too long for a
+  socket, or a socket another OMXTerm process holds, refuses the grant with
+  one sentence.
+- Windows isn't supported yet: the toggle answers with one sentence and panes
+  get no agent variables.
+- Other processes of the same user can read the token, as they can read the
+  user's other files; the grant is consent, not a sandbox. Keep sensitive
+  sessions in a window without a grant.
+
 ## Terminal behavior
 
 The Restty Terminal Surface (Ghostty WASM core) works with Terminal Tabs, the
@@ -1420,6 +1482,11 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 
 - The environment sets `TERM=xterm-256color`, `COLORTERM=truecolor`,
   `TERM_PROGRAM=OMXTerm` and the installed version in `TERM_PROGRAM_VERSION`.
+- On macOS and Linux it also sets `OMXTERM_CTL` (the bundled `omxterm-ctl`
+  launcher), `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE`
+  (process instance, window and session id, such as `5f0c9a1e2b3d4c6f:3:s4`) for
+  [agent access](#agent-access),
+  replacing any inherited values. None is secret.
 - Everything else comes from OMXTerm's own environment. On Linux under an
   AppImage (an absolute `APPDIR`), sessions do not inherit the AppImage
   runtime: `APPIMAGE`, `APPDIR`, `ARGV0`, `OWD` and `CHROME_DESKTOP` are
@@ -2042,7 +2109,8 @@ Vocabulary:
   `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`,
   `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`, `focusPaneDown`,
   `swapPaneLeft`, `swapPaneRight`, `swapPaneUp`, `swapPaneDown`,
-  `equalizePanes`, `commandPalette`, `toggleMirrorTyping`, `saveLayout`. New actions, global shortcuts, chords and
+  `equalizePanes`, `commandPalette`, `toggleMirrorTyping`, `saveLayout`,
+  `toggleAgentAccess`. New actions, global shortcuts, chords and
   per-platform maps are unsupported.
 - A value is `null` or a case-insensitive Electron accelerator with exactly one
   key and at least one non-Shift modifier. Only `F1`–`F24` may be bare or
@@ -2504,6 +2572,10 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   environment, configuration contents, paths in reload records, executable
   names, arguments, commands, titles, secrets, transcripts, URLs or archive
   contents.
+- [Agent access](#agent-access) logs that a window's grant started, ended or
+  was refused, with a fixed reason, and at debug level each command's name,
+  outcome code and duration, and each client refused at the handshake.
+  Requests, responses, tokens, typed text and pane text are never logged.
 - Explicit copy, local search and export are not logging. Search stays in
   memory; export writes only the requested text to the chosen file. Neither
   authorizes automatic recording or diagnostic capture.
@@ -2511,6 +2583,7 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
 ### Network access
 
 - No analytics, telemetry, crash reporting, update checks or remote logging.
+- [Agent access](#agent-access) uses a user-only Unix socket, never a port.
 - Remote requests happen only for deliberate official-catalog browsing and
   HTTPS extension archive installation, on the extension targets. Child
   processes keep their normal network access.
@@ -2706,9 +2779,13 @@ the portable Terminal Surface.
 ### Process boundaries
 
 - Electron main owns native windows, PTY creation, filesystem access,
-  configuration, logs, clipboard capabilities, external-link opening, and
+  configuration, logs, clipboard capabilities, external-link opening,
   bounded Local Image Preview reads
-  ([ADR 0006](adr/0006-isolate-the-renderer-from-local-capabilities.md)).
+  ([ADR 0006](adr/0006-isolate-the-renderer-from-local-capabilities.md)), and
+  the [agent access](#agent-access) socket. The renderer shows the grant's
+  marks, reports a click on them and answers main's reads of pane text; like
+  any palette action it can invoke the toggle, which gives a compromised
+  renderer nothing it couldn't already do by typing into its own panes.
 - The renderer runs with context isolation and without Node integration. Main
   validates IPC request senders and payloads; the preload validates response and
   event payloads exposed by its minimal typed bridge.

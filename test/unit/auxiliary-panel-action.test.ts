@@ -234,3 +234,51 @@ it("moves the panel once per physical press, including held repeats", () => {
   expect(move).toHaveBeenCalledOnce();
   expect(preventDefault).toHaveBeenCalledTimes(3);
 });
+
+it("toggles agent access once per physical press, including held repeats", () => {
+  const toggle = vi.fn();
+  const actions = new Proxy({} as TerminalApplicationMenuActions, {
+    get: (_target, property) =>
+      property === "toggleAgentAccess" ? toggle : vi.fn(),
+  });
+  const contents = Object.assign(new EventEmitter(), {
+    send: vi.fn(),
+    isDestroyed: () => false,
+  });
+  const window = Object.assign(new EventEmitter(), { webContents: contents });
+  registerWindowActionDelivery(
+    window as unknown as BrowserWindow,
+    () =>
+      createCoreActionCatalog("OMXTerm", actions, {
+        ...terminalDefaultKeybinds(process.platform),
+        toggleAgentAccess: "F7",
+      }),
+    createKeybindCapture(process.platform),
+    () => undefined,
+  );
+  const key = {
+    type: "keyDown",
+    key: "F7",
+    code: "F7",
+    control: false,
+    alt: false,
+    shift: false,
+    meta: false,
+  };
+  const preventDefault = vi.fn();
+  contents.emit("before-input-event", { preventDefault }, key);
+  contents.emit(
+    "before-input-event",
+    { preventDefault },
+    { ...key, isAutoRepeat: true },
+  );
+  contents.emit(
+    "before-input-event",
+    { preventDefault },
+    {
+      ...key,
+      type: "keyUp",
+    },
+  );
+  expect(toggle).toHaveBeenCalledOnce();
+});

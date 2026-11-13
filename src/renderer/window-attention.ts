@@ -1,3 +1,5 @@
+import { subscribeToAgentAccess } from "./agent-access";
+
 /**
  * Plays the user's notification sound file, whose bytes main read (ADR 0053).
  * Decoding through Web Audio keeps the page's media policy closed; a file
@@ -43,22 +45,30 @@ export function createAttentionSound(
 
 export type WindowAttentionBridge = Pick<
   import("../shared/terminal-bridge").TerminalBridge,
-  "notify" | "onSessionAttention" | "onAttentionSound"
+  "notify" | "onSessionAttention" | "onAttentionSound" | "agent"
 >;
 
-// Main's attention verdicts become pane marks; its sound bytes play here.
+// Main's per-window verdicts become marks: a session's attention and the
+// window's agent grant (ADR 0052). The user's sound bytes play here.
 export function subscribeToWindowAttention(
   bridge: WindowAttentionBridge,
-  tabs: Pick<import("./terminal-tabs").TerminalTabs, "setSessionAttention">,
+  tabs: Pick<
+    import("./terminal-tabs").TerminalTabs,
+    "setSessionAttention" | "setWindowMark" | "flash" | "readSession"
+  >,
 ): () => void {
   const removeAttention = bridge.onSessionAttention((sessionId, pending) =>
     tabs.setSessionAttention(sessionId, pending),
   );
   const sound = createAttentionSound();
   const removeSound = bridge.onAttentionSound(sound.play);
+  const removeAgent = bridge.agent
+    ? subscribeToAgentAccess(bridge.agent, tabs)
+    : undefined;
   return () => {
     removeAttention();
     removeSound();
+    removeAgent?.();
     sound.dispose();
   };
 }

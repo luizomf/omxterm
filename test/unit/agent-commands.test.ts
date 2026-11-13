@@ -1,0 +1,280 @@
+import { afterEach, expect, it, vi } from "vitest";
+import {
+  AgentApiError,
+  createAgentCommands,
+} from "../../src/main/agent-commands";
+import type {
+  AgentSessionObserver,
+  AgentSessionPort,
+} from "../../src/main/terminal-ipc-types";
+
+afterEach(() => vi.useRealTimers());
+
+// One window with live sessions s1 and s2, driven like the controller would.
+function fakeWindow() {
+  const positions = new Map([
+    ["s1", { sent: 0, acknowledged: 0 }],
+    ["s2", { sent: 0, acknowledged: 0 }],
+  ]);
+  const writes: [string, string][] = [];
+  let observer: AgentSessionObserver | undefined;
+  const sessions: AgentSessionPort = {
+    sessions: () =>
+      [...positions.keys()].map((sessionId) => ({
+        sessionId: sessionId as `s${number}`,
+        focused: sessionId === "s1",
+        cols: 80,
+        rows: 24,
+      })),
+    position: (id) => positions.get(id),
+    write(id, data) {
+      if (!positions.has(id)) return "rejected";
+      writes.push([id, data]);
+      return "accepted";
+    },
+    observe(next) {
+      observer = next;
+      return () => (observer = undefined);
+    },
+  };
+  return {
+    sessions,
+    writes,
+    output(id: string, bytes: number, acknowledged = true) {
+      const position = positions.get(id)!;
+      position.sent += bytes;
+      observer?.output(id as `s${number}`);
+      if (acknowledged) this.acknowledge(id);
+    },
+    acknowledge(id: string) {
+      const position = positions.get(id)!;
+      position.acknowledged = position.sent;
+      observer?.acknowledged(id as `s${number}`);
+    },
+    exit(id: string, code: number) {
+      positions.delete(id);
+      observer?.exited(id as `s${number}`, code);
+    },
+    observed: () => observer !== undefined,
+  };
+}
+
+const caller = (pane?: string) => ({
+  signal: new AbortController().signal,
+  ...(pane ? { pane } : {}),
+});
+const failure = (promise: Promise<unknown>) =>
+  promise.then(
+    () => undefined,
+    (error: unknown) => (error instanceof AgentApiError ? error.code : error),
+  );
+
+it("lists the window's panes and marks the caller's own", async () => {
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+  });
+  await expect(commands.run("list", undefined, caller("s2"))).resolves.toEqual({
+    panes: [
+      {
+        pane: "s1",
+        focused: true,
+        self: false,
+        cols: 80,
+        rows: 24,
+        live: true,
+      },
+      {
+        pane: "s2",
+        focused: false,
+        self: true,
+        cols: 80,
+        rows: 24,
+        live: true,
+      },
+    ],
+  });
+  expect(await failure(commands.run("list", { all: true }, caller()))).toBe(
+    "invalid-request",
+  );
+});
+
+it("types text and mode-independent keys in one write and returns the offset", async () => {
+  const window = fakeWindow();
+  window.output("s1", 40);
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+  });
+  await expect(
+    commands.run(
+      "send",
+      { pane: "s1", text: "npm test", keys: ["Enter", "ctrl+c", "Tab"] },
+      caller(),
+    ),
+  ).resolves.toEqual({ receipt: "accepted", offset: 40 });
+  expect(window.writes).toEqual([["s1", "npm test\r\x03\t"]]);
+
+  const refusals = await Promise.all([
+    failure(commands.run("send", { pane: "s1", keys: ["Up"] }, caller())),
+    failure(commands.run("send", { pane: "s1", keys: ["F1"] }, caller())),
+    failure(commands.run("send", { pane: "s1" }, caller())),
+    failure(commands.run("send", { pane: "s1", text: "" }, caller())),
+    failure(
+      commands.run("send", { pane: "s1", text: "é".repeat(40_000) }, caller()),
+    ),
+    failure(commands.run("send", { pane: "s7", text: "x" }, caller())),
+    failure(commands.run("send", { pane: "1", text: "x" }, caller())),
+    failure(
+      commands.run("send", { pane: "s1", text: "x", extra: 1 }, caller()),
+    ),
+  ]);
+  expect(refusals).toEqual([
+    "unsupported-key",
+    "unsupported-key",
+    "invalid-request",
+    "invalid-request",
+    "too-large",
+    "unknown-pane",
+    "invalid-request",
+    "invalid-request",
+  ]);
+  expect(window.writes).toHaveLength(1);
+});
+
+it("waits for output past the offset to go quiet, and reports time-outs", async () => {
+  vi.useFakeTimers();
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+  });
+  const idle = commands.run(
+    "wait",
+    { pane: "s1", idleMs: 500, timeoutMs: 10_000 },
+    caller(),
+  );
+  let settled: unknown;
+  void idle.then((value) => (settled = value));
+  // Silence alone isn't idle: nothing new has arrived yet.
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(settled).toBeUndefined();
+  window.output("s1", 10);
+  await vi.advanceTimersByTimeAsync(300);
+  window.output("s1", 5, false);
+  await vi.advanceTimersByTimeAsync(600);
+  // Quiet, but the window hasn't consumed the last chunk.
+  expect(settled).toBeUndefined();
+  window.acknowledge("s1");
+  await vi.advanceTimersByTimeAsync(0);
+  expect(settled).toEqual({ reason: "idle", offset: 15 });
+
+  const timeout = commands.run(
+    "wait",
+    { pane: "s1", after: 15, timeoutMs: 1000 },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(timeout).resolves.toEqual({ reason: "timeout", offset: 15 });
+});
+
+it("answers exited with the code, during a wait and after it", async () => {
+  vi.useFakeTimers();
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+  });
+  const waiting = commands.run(
+    "wait",
+    { pane: "s2", timeoutMs: 5000 },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  window.output("s2", 3);
+  window.exit("s2", 42);
+  await expect(waiting).resolves.toEqual({
+    reason: "exited",
+    offset: 3,
+    exitCode: 42,
+  });
+  await expect(
+    commands.run("wait", { pane: "s2", timeoutMs: 5000 }, caller()),
+  ).resolves.toEqual({ reason: "exited", offset: 3, exitCode: 42 });
+  expect(
+    await failure(commands.run("send", { pane: "s2", text: "x" }, caller())),
+  ).toBe("not-live");
+});
+
+it("refuses what later versions add and out-of-range limits", async () => {
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+  });
+  const codes = await Promise.all(
+    [
+      { pane: "s1", timeoutMs: 1000, match: "done" },
+      { pane: "s1" },
+      { pane: "s1", timeoutMs: 600_001 },
+      { pane: "s1", timeoutMs: 1000, idleMs: 50 },
+      { pane: "s1", timeoutMs: 1000, after: 99 },
+    ].map((args) => failure(commands.run("wait", args, caller()))),
+  );
+  expect(codes).toEqual(Array(5).fill("invalid-request"));
+  expect(
+    await failure(
+      commands.run("read", { pane: "s1", source: "screen" }, caller()),
+    ),
+  ).toBe("invalid-request");
+  expect(
+    await failure(
+      commands.run("read", { pane: "s1", lines: 10_001 }, caller()),
+    ),
+  ).toBe("invalid-request");
+});
+
+it("reads after the window caught up and reports the consumed offset", async () => {
+  vi.useFakeTimers();
+  const window = fakeWindow();
+  const read = vi.fn(async () => ({
+    text: "$ echo hi\nhi",
+    truncated: false,
+    cols: 80,
+    rows: 24,
+  }));
+  const commands = createAgentCommands({ sessions: window.sessions, read });
+  window.output("s1", 12, false);
+  const result = commands.run("read", { pane: "s1", lines: 2 }, caller());
+  await vi.advanceTimersByTimeAsync(100);
+  expect(read).not.toHaveBeenCalled();
+  window.acknowledge("s1");
+  await expect(result).resolves.toEqual({
+    text: "$ echo hi\nhi",
+    cols: 80,
+    rows: 24,
+    offset: 12,
+    truncated: false,
+  });
+  expect(read).toHaveBeenCalledWith("s1", 2, expect.any(AbortSignal));
+});
+
+it("ends a pending wait when the caller goes away and stops observing on dispose", async () => {
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+  });
+  const controller = new AbortController();
+  const waiting = commands.run(
+    "wait",
+    { pane: "s1", timeoutMs: 60_000 },
+    { signal: controller.signal },
+  );
+  await Promise.resolve();
+  controller.abort(new AgentApiError("revoked", "stopped"));
+  expect(await failure(waiting)).toBe("revoked");
+  commands.dispose();
+  expect(window.observed()).toBe(false);
+});

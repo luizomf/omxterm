@@ -17,6 +17,9 @@ export const stateGlyphs = {
   // A program asked for attention (BEL, OSC 9, OSC 777) and the pane has
   // not been seen since.
   attention: "●",
+  // Something other than the user can act here: an agent grant (ADR 0052).
+  // The only glyph in the accent tone.
+  agent: "◆",
 } as const;
 export type StateGlyph = keyof typeof stateGlyphs;
 
@@ -37,6 +40,17 @@ export interface StateMark {
 const NOTICE_TIMEOUT = 4000;
 
 /**
+ * Where window-scoped marks go: every pane (including later ones) and, when
+ * the selected tab has no pane, the page's corner.
+ */
+export interface StateMarksWindow {
+  panes(): readonly TerminalPane[];
+  readonly corner: HTMLElement;
+  /** True while neither a pane nor a tab button can carry the marks. */
+  cornerShown(): boolean;
+}
+
+/**
  * The window's one system for quiet state (ADR 0050). Idle or success shows
  * nothing (an explicit action with no other visible result may flash); an
  * ongoing state is a mark at the pane edge, repeated on its tab; a
@@ -47,9 +61,12 @@ export function createStateMarks(
   document: Document,
   language: RendererLanguage,
   tabsChanged: () => void,
+  scope?: StateMarksWindow,
 ) {
   const page = document.defaultView!;
   const panes = new Map<TerminalPane, Map<string, StateMark>>();
+  const windowMarks = new Map<string, StateMark>();
+  let corner: HTMLElement | undefined;
   const text = (value: StateText, t: Translate = language.t) =>
     typeof value === "string" ? value : value(t);
   // Tabs are buttons already, so only a pane's glyph carries the action.
@@ -85,24 +102,45 @@ export function createStateMarks(
     }
     return element;
   };
+  // A pane's own marks, then the window's, which sit at the edge.
   const renderPane = (pane: TerminalPane, t: Translate = language.t) => {
-    const marks = panes.get(pane);
+    const marks = [
+      ...(panes.get(pane)?.values() ?? []),
+      ...windowMarks.values(),
+    ];
     let row = pane.container.querySelector<HTMLElement>(
       ":scope > .state-marks",
     );
-    if (!marks?.size) return row?.remove();
+    if (!marks.length) return row?.remove();
     if (!row) {
       row = document.createElement("span");
       row.className = "state-marks";
       pane.container.append(row);
     }
-    row.replaceChildren(
-      ...[...marks.values()].map((mark) => glyph(mark, t, true)),
+    row.replaceChildren(...marks.map((mark) => glyph(mark, t, true)));
+  };
+  const renderCorner = (t: Translate = language.t) => {
+    if (!scope) return;
+    if (!windowMarks.size || !scope.cornerShown()) {
+      corner?.remove();
+      corner = undefined;
+      return;
+    }
+    if (!corner) {
+      corner = document.createElement("span");
+      corner.className = "state-marks state-marks-corner";
+      scope.corner.append(corner);
+    }
+    corner.replaceChildren(
+      ...[...windowMarks.values()].map((mark) => glyph(mark, t, true)),
     );
   };
-  const unbind = language.bind((t) => {
-    for (const pane of panes.keys()) renderPane(pane, t);
-  });
+  const renderAll = (t: Translate = language.t) => {
+    const all = new Set([...panes.keys(), ...(scope?.panes() ?? [])]);
+    for (const pane of all) renderPane(pane, t);
+    renderCorner(t);
+  };
+  const unbind = language.bind((t) => renderAll(t));
 
   const notice = document.createElement("p");
   notice.className = "state-notice ui-overlay";
@@ -166,12 +204,34 @@ export function createStateMarks(
       renderPane(pane);
       tabsChanged();
     },
-    /** One glyph per owner for a tab button, labelled from its focused pane. */
-    tab(tab: TerminalTab): HTMLElement[] {
+    /**
+     * Show, replace or (with undefined) remove one owner's mark on the whole
+     * window: every pane, every tab, and the corner when no pane is shown.
+     */
+    setWindow(owner: string, mark: StateMark | undefined) {
+      if (mark) windowMarks.set(owner, mark);
+      else windowMarks.delete(owner);
+      renderAll();
+      tabsChanged();
+    },
+    /** A pane joined the window: give it the window's marks. */
+    attach(pane: TerminalPane) {
+      if (windowMarks.size) renderPane(pane);
+    },
+    /** The selected tab or the tab strip changed: re-check the corner. */
+    refreshCorner() {
+      renderCorner();
+    },
+    /**
+     * One glyph per owner for a tab button, labelled from its focused pane,
+     * then the window's. A tab without panes carries only the window's.
+     */
+    tab(tab: TerminalTab | undefined): HTMLElement[] {
       const owners = new Map<string, StateMark>();
-      for (const pane of [tab.focused, ...tabPanes(tab)])
+      for (const pane of tab ? [tab.focused, ...tabPanes(tab)] : [])
         for (const [owner, mark] of panes.get(pane) ?? [])
           if (!owners.has(owner)) owners.set(owner, mark);
+      for (const [owner, mark] of windowMarks) owners.set(owner, mark);
       return [...owners.values()].map((mark) => glyph(mark, language.t));
     },
     /**
@@ -188,9 +248,11 @@ export function createStateMarks(
       unbind();
       unbindNotice();
       keyboard.dispose();
-      for (const pane of panes.keys())
+      for (const pane of new Set([...panes.keys(), ...(scope?.panes() ?? [])]))
         pane.container.querySelector(":scope > .state-marks")?.remove();
       panes.clear();
+      windowMarks.clear();
+      corner?.remove();
       notice.remove();
     },
   };

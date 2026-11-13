@@ -29,6 +29,9 @@ export function applyWindowTheme(
     if (color === undefined) style.removeProperty(property);
     else style.setProperty(property, color === null ? "transparent" : color);
   }
+  // A consent mark can't be something a theme turns off, so the accent
+  // ignores activePaneHighlight.
+  style.setProperty("--terminal-accent", terminalPaneAccent(theme));
   const highlight = appearance?.activePaneHighlight;
   style.setProperty(
     "--terminal-pane-accent",

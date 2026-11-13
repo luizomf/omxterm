@@ -12,10 +12,15 @@ import {
   isExtensionShortcutAction,
 } from "../shared/terminal-keybinds";
 
-// Extension slots and the panel-side action stay separate classifiers.
-// Both own one physical press, including repeats and release across focus.
+// Extension slots, the panel-side action and the agent grant toggle each own
+// one physical press, including repeats and release across focus, so holding
+// a key never flips a toggle back and forth.
 function ownsPhysicalPress(action: string): boolean {
-  return isExtensionShortcutAction(action) || isDiscreteWindowAction(action);
+  return (
+    isExtensionShortcutAction(action) ||
+    isDiscreteWindowAction(action) ||
+    action === "toggleAgentAccess"
+  );
 }
 import {
   optionShortcutInterpreter,
