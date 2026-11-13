@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import {
   existsSync,
@@ -17,6 +17,7 @@ import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
 import { agentSocketPath, startAgentAccess } from "../../src/main/agent-access";
 import type { AgentSessionPort } from "../../src/main/terminal-ipc-types";
 import { agentIpc, type AgentReadRequest } from "../../src/shared/agent-access";
+import { agentNotGrantedSentence } from "../../src/shared/agent-api";
 import { createIpcHarness } from "../fixtures/terminal-ipc-harness";
 
 let client: string;
@@ -31,6 +32,7 @@ beforeAll(async () => {
     bundle: true,
     platform: "node",
     format: "cjs",
+    loader: { ".md": "text" },
     outfile: client,
     logLevel: "silent",
   });
@@ -63,6 +65,70 @@ function ctl(profile: string, args: string[], pane?: string) {
           resolve({ code: Number(error?.code ?? 0), stdout, stderr }),
       ),
   );
+}
+
+// `omxterm-ctl mcp` over real stdio: send lines, await answers by id.
+function mcp(profile: string, pane?: string) {
+  const child = spawn(process.execPath, [client, "mcp"], {
+    env: {
+      PATH: process.env.PATH,
+      OMXTERM_PROFILE: profile,
+      OMXTERM_PANE: pane,
+    },
+    stdio: ["pipe", "pipe", "inherit"],
+  });
+  cleanups.push(() => child.kill());
+  const answers = new Map<
+    unknown,
+    (message: Record<string, unknown>) => void
+  >();
+  const lines: Record<string, unknown>[] = [];
+  let buffer = "";
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => {
+    buffer += chunk;
+    for (let end; (end = buffer.indexOf("\n")) >= 0;) {
+      const message = JSON.parse(buffer.slice(0, end)) as Record<
+        string,
+        unknown
+      >;
+      buffer = buffer.slice(end + 1);
+      lines.push(message);
+      answers.get(message.id)?.(message);
+    }
+  });
+  let nextId = 0;
+  const notify = (method: string, params?: object) =>
+    child.stdin.write(
+      `${JSON.stringify({ jsonrpc: "2.0", method, params })}\n`,
+    );
+  const request = (method: string, params?: object) => {
+    const id = nextId++;
+    const answer = new Promise<Record<string, unknown>>((resolve) =>
+      answers.set(id, resolve),
+    );
+    child.stdin.write(
+      `${JSON.stringify({ jsonrpc: "2.0", id, method, params })}\n`,
+    );
+    return answer;
+  };
+  const call = async (name: string, args: object = {}, meta?: object) => {
+    const { result } = await request("tools/call", {
+      name,
+      arguments: args,
+      ...(meta ? { _meta: meta } : {}),
+    });
+    const { content, isError } = result as {
+      content: { type: string; text: string }[];
+      isError: boolean;
+    };
+    expect(content).toHaveLength(1);
+    return { text: content[0]!.text, isError };
+  };
+  const exited = new Promise<number | null>((resolve) =>
+    child.on("exit", resolve),
+  );
+  return { child, request, notify, call, lines, exited };
 }
 
 function sessions(): AgentSessionPort & { writes: [string, string][] } {
@@ -389,4 +455,124 @@ posix("sends nothing to a crashed window while ending its grant", async () => {
   contents.emit("render-process-gone");
   expect(access.granted(window)).toBe(false);
   expect(contents.send.mock.calls).toHaveLength(sent);
+});
+
+it("prints the agent guide, which is the shipped SKILL.md", async () => {
+  const guide = await ctl(scratch, ["guide"]);
+  const skill = readFileSync(
+    path.resolve(import.meta.dirname, "../../src/agent-ctl/SKILL.md"),
+    "utf8",
+  );
+  expect(guide.code).toBe(0);
+  expect(guide.stdout.trim()).not.toBe("");
+  expect(guide.stdout).toBe(skill);
+  // A skill-aware agent can install it as is.
+  const frontmatter = /^---\n([\s\S]*?)\n---\n/u.exec(skill)?.[1] ?? "";
+  expect(frontmatter).toMatch(/^name: omxterm$/mu);
+  expect(frontmatter).toMatch(/^description: \S/mu);
+});
+
+posix(
+  "serves MCP on stdio and starts working when the window is allowed",
+  async () => {
+    const { profile, pane, access, window, shown, port } = setup();
+    const server = mcp(profile, pane);
+    // An initialize-era client, as Codex is.
+    const { result: initialized } = await server.request("initialize", {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "test", version: "1" },
+    });
+    expect(initialized).toMatchObject({
+      protocolVersion: "2025-06-18",
+      capabilities: { tools: {} },
+      serverInfo: { name: "omxterm" },
+    });
+    server.notify("notifications/initialized");
+    const { result: listed } = await server.request("tools/list");
+    expect(
+      (listed as { tools: { name: string }[] }).tools.map((tool) => tool.name),
+    ).toEqual(["status", "list", "send", "read", "wait"]);
+
+    // Listed, but not granted yet: the status sentence, as a tool error.
+    expect(await server.call("list")).toEqual({
+      text: agentNotGrantedSentence(),
+      isError: true,
+    });
+
+    access.toggle(window);
+    await shown();
+    expect(await server.call("status")).toMatchObject({ isError: false });
+    expect(await server.call("list")).toEqual({
+      text: "s1\t80x24\tfocused\tself\ns2\t80x24",
+      isError: false,
+    });
+    const sent = await server.call("send", {
+      pane: "s2",
+      text: "ls -la",
+      enter: true,
+    });
+    expect(sent.isError).toBe(false);
+    expect(JSON.parse(sent.text)).toEqual({ receipt: "accepted", offset: 10 });
+    expect(port.writes).toEqual([["s2", "ls -la\r"]]);
+    expect(await server.call("read", { pane: "s2" })).toEqual({
+      text: "text of s2",
+      isError: false,
+    });
+    // A wait that runs out is an answer, not an error.
+    expect(await server.call("wait", { pane: "s2", timeout: 50 })).toEqual({
+      text: "timeout",
+      isError: false,
+    });
+    expect(await server.call("read", { pane: 2 })).toMatchObject({
+      isError: true,
+    });
+    expect(await server.request("tools/call", { name: "split" })).toMatchObject(
+      { error: { code: -32602 } },
+    );
+
+    server.child.stdin.end();
+    expect(await server.exited).toBe(0);
+    // Nothing but protocol lines reached stdout.
+    expect(server.lines.every((line) => line.jsonrpc === "2.0")).toBe(true);
+  },
+);
+
+posix("serves per-request MCP clients without a handshake", async () => {
+  const { profile, pane, access, window, shown } = setup();
+  access.toggle(window);
+  await shown();
+  const server = mcp(profile, pane);
+  const meta = {
+    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+    "io.modelcontextprotocol/clientCapabilities": {},
+  };
+  const { result: discovered } = await server.request("server/discover", {
+    _meta: meta,
+  });
+  expect(discovered).toMatchObject({
+    resultType: "complete",
+    capabilities: { tools: {} },
+  });
+  expect(
+    (discovered as { supportedVersions: string[] }).supportedVersions,
+  ).toContain("2026-07-28");
+  const { result: listed } = await server.request("tools/list", {
+    _meta: meta,
+  });
+  expect(listed).toMatchObject({ resultType: "complete" });
+  expect((listed as { tools: unknown[] }).tools).toHaveLength(5);
+  expect(await server.call("status", {}, meta)).toMatchObject({
+    isError: false,
+  });
+  expect(
+    await server.request("tools/list", {
+      _meta: {
+        ...meta,
+        "io.modelcontextprotocol/protocolVersion": "1900-01-01",
+      },
+    }),
+  ).toMatchObject({
+    error: { code: -32022, data: { requested: "1900-01-01" } },
+  });
 });

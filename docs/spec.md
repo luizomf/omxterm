@@ -1282,6 +1282,12 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   an agent in a pane runs `"$OMXTERM_CTL" status` with no setup. Without a
   grant it prints one sentence that names **Allow Agents in This Window** and
   exits 3.
+- `"$OMXTERM_CTL" guide` prints a short agent guide, which is also a
+  `SKILL.md` an agent can keep. `"$OMXTERM_CTL" mcp` serves `status`, `list`,
+  `send`, `read` and `wait` as MCP tools on stdio, with the CLI's arguments.
+  The tools are always listed; without a grant they answer with the `status`
+  sentence as a tool error, and they work from the next call once the user
+  allows the window, with no restart.
 - Main listens on `<profile>/agent-api/ctl.sock` (directory `0700`, socket
   `0600`) only while a grant exists, and never on TCP. Each grant has a random
   256-bit token in `<profile>/agent-api/grants/<window>.json` (`0600`), written
