@@ -7,6 +7,9 @@ import { renderSettingsThemes } from "./settings-themes";
 import type { MessageKey } from "../../shared/i18n";
 import { englishLanguage, type Translate } from "../renderer-language";
 
+const BACKGROUND_DOCS =
+  "https://github.com/luizomf/omxterm/blob/main/docs/configuration.md#background-transparency-and-blur";
+
 type Caption = { readonly path: SettingsPath; readonly label: MessageKey };
 export type Control = Caption &
   (
@@ -240,9 +243,24 @@ export function renderSettingsPage(
       const hint = document.createElement("p");
       hint.id = "settings-background-hint";
       hint.className = "ui-hint settings-hint settings-background-hint";
+      const sentence = document.createElement("span");
       options.labels.push((t) => {
-        hint.textContent = t("settings.backgroundHint");
+        sentence.textContent = `${t("settings.backgroundHint")} `;
       });
+      hint.append(sentence);
+      const terminal = document.defaultView?.omxterm?.terminal;
+      if (terminal) {
+        const learnMore = document.createElement("button");
+        learnMore.type = "button";
+        learnMore.className = "ui-link";
+        options.labels.push((t) => {
+          learnMore.textContent = t("settings.learnMore");
+        });
+        learnMore.addEventListener("click", () =>
+          terminal.openExternalLink(BACKGROUND_DOCS),
+        );
+        hint.append(learnMore);
+      }
       panel.append(hint);
     }
   }
