@@ -32,7 +32,7 @@ import {
   agentShortcutList,
   type AgentNativeAction,
 } from "./agent-shortcuts";
-import type { AgentCloseBlock } from "./terminal-application";
+import type { AgentNeedsUser } from "./terminal-application";
 import type { AgentSessionPort } from "./terminal-ipc-types";
 
 export class AgentApiError extends Error {
@@ -87,12 +87,12 @@ export interface AgentCommandsOptions {
   /** Why closing these sessions is the user's to do, if it is (ADR 0017). */
   readonly closeNeedsUser?: (
     sessionIds: readonly TerminalSessionId[],
-  ) => AgentCloseBlock | undefined;
+  ) => AgentNeedsUser | undefined;
   /**
    * Runs a window action in main on the granted window, unless it's the
    * user's to do; then it runs nothing and says why.
    */
-  readonly native?: (action: AgentNativeAction) => AgentCloseBlock | undefined;
+  readonly native?: (action: AgentNativeAction) => AgentNeedsUser | undefined;
   /** Decides which chords the user's own press would send; process.platform. */
   readonly platform?: string;
   readonly now?: () => number;
@@ -141,11 +141,12 @@ const unsupportedPress = () =>
     "unsupported-key",
     "press sends Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, with any of Ctrl+, Alt+ and Shift+, to the pane; any other chord must be one of the window's shortcuts.",
   );
-const NEEDS_USER: Readonly<Record<AgentCloseBlock, string>> = {
+const NEEDS_USER: Readonly<Record<AgentNeedsUser, string>> = {
   busy: "This needs the user: a program is still running there.",
   confirming: "This needs the user: they are already confirming a close.",
   closing: "This needs the user: the window is closing.",
   "other-windows": "This needs the user: it would close other windows too.",
+  dialog: "This needs the user: a dialog is open in this window.",
   elsewhere:
     "This needs the user: they are in another window, and this would take them from it.",
 };

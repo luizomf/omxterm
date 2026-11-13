@@ -30,8 +30,7 @@ export type AgentShortcut =
   | { readonly kind: "not-yet"; readonly why: string };
 
 /** What main does to the granted window itself, or for it. */
-export type AgentNativeAction =
-  "full-screen" | "new-window" | "close-window" | "quit";
+export type AgentNativeAction = "full-screen" | "close-window" | "quit";
 
 const run = (
   command: AgentWindowCommand,
@@ -85,8 +84,6 @@ export const AGENT_SHORTCUTS: Readonly<
   toggleTabBar: run({ action: "toggle-tab-bar" }),
   toggleTitleBar: run({ action: "toggle-title-bar" }),
   toggleFullScreen: native("full-screen"),
-  // The new window starts ungranted, like every window.
-  newWindow: native("new-window"),
   closeWindow: native("close-window"),
   quit: native("quit"),
   paste: notYet(
@@ -100,6 +97,11 @@ export const AGENT_SHORTCUTS: Readonly<
   toggleFiles: opensUi,
   toggleSshConnect: opensUi,
   toggleMirrorTyping: opensUi,
+  // The granted window is the agent's workspace; a new one would take the
+  // user's focus (and their toggle shortcut with it).
+  newWindow: notYet(
+    "opens a window that would take the user's focus; work in this one.",
+  ),
   saveLayout: notYet(
     "replaces the user's saved layout through an extension, which agents can't use yet.",
   ),

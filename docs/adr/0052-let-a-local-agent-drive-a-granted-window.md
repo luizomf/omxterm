@@ -100,8 +100,8 @@ What the code gives us today:
   on flashes one sentence; there is no confirmation dialog.
 - Only that gesture creates a grant. The API has no command that grants or
   reaches another window, and agent input never passes the window's keyboard
-  handling. A window the agent opens with New Window starts ungranted, like
-  every window. Until slice 4 it runs no application action at all; after
+  handling. New Window is "not yet" for agents: the granted window is their
+  workspace. Until slice 4 it runs no application action at all; after
   it, the agent presses shortcuts in its window and the grant toggle is
   refused by action, not by key ([Keyboard parity](#keyboard-parity)).
 - It ends when the user clicks a mark, uses the toggle, closes the window or
@@ -463,7 +463,8 @@ a command name, its duration and an error code.
    - [#1052](https://github.com/luizomf/omxterm/issues/1052): the remaining
      shortcut actions, each decided, including the Snippets sidebar, the
      auxiliary panel toggle and move, Reload Configuration and the extension
-     slots; a window the agent opens starts ungranted.
+     slots. New Window stays "not yet": the granted window is the agent's
+     workspace.
 
    It replaces the id-based tab and pane commands first planned here and
    takes the named keys of slice 6.
@@ -672,14 +673,17 @@ key. Each runs in the granted window or answers "not yet":
   that can type nothing new. Toggle Tab Bar and Toggle Title Bar are
   window-local, and the mark stays visible and one click with them hidden
   (checked below).
-- **Run, from main on the granted window:** Toggle Full Screen and New
-  Window, only from the window the user is in; otherwise they need the user,
-  since on macOS full screen moves them to the window's Space (seen on a
-  macOS guest) and a new window takes their focus. The new window is
-  ungranted. Close Window, like Close Tab: a Busy Session anywhere in the
-  window, or a close being confirmed, needs the user. Quit, only when the
-  granted window is the last one: other windows aren't the agent's to close,
-  so it needs the user then, and for a Busy Session. Both end the grant.
+- **Run, from main on the granted window:** Toggle Full Screen, only from
+  the window the user is in; otherwise it needs the user, since on macOS it
+  moves them to the window's Space (seen on a macOS guest). Close Window, like
+  Close Tab: a Busy Session anywhere in the window, a close or quit being
+  confirmed, or any native dialog open over the window (Protected Paste, an
+  export or extension install, a session failure) needs the user; closing out
+  from under a dialog is their call, and so is Close Tab or Close Pane then.
+  Quit, only when the granted window is the last one: other windows aren't
+  the agent's to close, so it needs the user then, and under the same
+  conditions. Both end the grant. Main checks the window's grant right
+  before acting, so a stop main has heard always wins.
 - **Not yet:** Paste brings the clipboard, filled from other windows and
   apps, into a pane the agent can `read`, and can raise Protected Paste's
   native dialog; agents type with `send`, and paste by mode is slice 6.
@@ -688,17 +692,25 @@ key. Each runs in the granted window or answers "not yet":
   the user's saved snapshot through an extension that acts on the selected
   window. Find, the Command Palette, the Snippets, Files and SSH Connect
   panels, the Auxiliary Panel's toggle and move, and Mirror Typing (a setup
-  dialog) are UI the agent can't read.
+  dialog) are UI the agent can't read. New Window (owner decision): the
+  granted window is the agent's workspace. A new window takes the user's
+  keyboard, and the focus check races with the window being created; at
+  worst the user's toggle shortcut, which acts on the focused window, would
+  grant the agent's new window instead of stopping the old grant. Opening
+  windows without taking focus is a later decision.
 - **Window commands, two routes.** Zoom, Copy, Select All and the bar
   toggles ride the window request `press` already uses for tab and pane
   actions: the window focuses the named pane, then runs them, and a stop
   still drops one in flight. A toggle a preview holds answers `unavailable`.
-  Full Screen, New Window, Close Window and Quit are main's: the application
+  Full Screen, Close Window and Quit are main's: the application
   acts on the granted window it was given, never the selected one, and never
   through a confirmation dialog.
+- **The mark at any zoom.** Pane marks follow the terminal's font size, which
+  Zoom Out takes down to 1px, so the glyph never shrinks below the UI's meta
+  text (`max(var(--terminal-font-size), var(--ui-text-meta))` in `ui.css`).
 - **The mark, checked.** On a macOS guest, after the agent hid the tab strip
-  and title bar: one pane, a split, zoomed out three steps, Settings (the
-  corner copy), and full screen. Every mark was on screen and topmost, also
+  and title bar: one pane, a split, zoomed out to the smallest font,
+  Settings (the corner copy), and full screen. Every mark was on screen and topmost, also
   with the pointer resting on it and the hidden title bar's drag handle shown
   beside a split's middle mark, and one window-server click on it ended the
   grant each time. With the user in another window, the agent's zoom, copy

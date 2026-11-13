@@ -26,11 +26,12 @@ import { createSelectedWindowAction } from "./terminal-window-action";
 export const DEFAULT_CONFIRM_CLOSE = true;
 
 // Why an agent's close or window action is left to the user: a Busy Session
-// would ask to confirm, the user is already confirming a close, the window is
-// going, a quit would close windows the agent wasn't granted, or the user is
-// in another window that full screen or a new window would take them from.
-export type AgentCloseBlock =
-  "busy" | "confirming" | "closing" | "other-windows" | "elsewhere";
+// would ask to confirm, the user is already confirming a close or quit, a
+// dialog is open over the window, the window is going, a quit would close
+// windows the agent wasn't granted, or the user is in another window that
+// full screen would take them from.
+export type AgentNeedsUser =
+  "busy" | "confirming" | "dialog" | "closing" | "other-windows" | "elsewhere";
 export const DEFAULT_ALWAYS_ON_TOP = false;
 
 export interface NativeTerminalWindow {
@@ -106,6 +107,8 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     window: Window | undefined,
   ) => Promise<boolean>;
   readonly showCloseWindowConfirmation: (window: Window) => Promise<boolean>;
+  /** A native dialog is open over the window (the agent's closes wait). */
+  readonly hasOpenDialog?: (window: Window) => boolean;
   readonly showCloseTabConfirmation: (window: Window) => Promise<boolean>;
   readonly showClosePaneConfirmation?: (window: Window) => Promise<boolean>;
   readonly showSessionFailure: (
@@ -149,14 +152,13 @@ export interface TerminalApplication<
   agentCloseNeedsUser(
     window: Window,
     sessionIds?: readonly TerminalSessionId[],
-  ): AgentCloseBlock | undefined;
+  ): AgentNeedsUser | undefined;
   // An agent's Full Screen, Close Window or Quit, on the window it was
   // granted: never the selected one, and never a confirmation dialog.
   agentWindowAction(
     window: Window,
     action: AgentNativeAction,
-    openWindow: () => void,
-  ): AgentCloseBlock | undefined;
+  ): AgentNeedsUser | undefined;
   forceCloseWindow(window: Window): void;
   requestQuit(): Promise<void>;
   newTabInSelectedWindow(): void;
@@ -371,7 +373,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         !state.sessionActivity.hasBusySession()
       );
     },
-    ...agentActions(windows, () => confirmCloseEnabled),
+    ...agentActions(windows, options.hasOpenDialog, () => ({
+      confirmClose: confirmCloseEnabled,
+      quitPending: quitRequest !== undefined,
+    })),
     forceCloseWindow,
     requestQuit() {
       if (quitting) return Promise.resolve();
@@ -464,29 +469,29 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
 // granted, never through a confirmation dialog.
 function agentActions<Window extends NativeTerminalWindow>(
   windows: ReadonlyMap<Window, TerminalWindowState>,
-  confirmClose: () => boolean,
+  hasOpenDialog: ((window: Window) => boolean) | undefined,
+  current: () => Omit<AgentCloseContext<Window>, "hasOpenDialog">,
 ): Pick<
   TerminalApplication<Window>,
   "agentCloseNeedsUser" | "agentWindowAction"
 > {
   return {
     agentCloseNeedsUser: (window, ids) =>
-      agentCloseNeedsUser(window, windows, confirmClose(), ids),
-    // Full screen and a new window only from the window the user is in
-    // (macOS moves them to a full-screen window's Space), a close or quit
-    // only with nothing to confirm, and a quit never takes other windows.
-    agentWindowAction(
-      this: TerminalApplication<Window>,
-      window,
-      action,
-      openWindow,
-    ) {
+      agentCloseNeedsUser(
+        window,
+        windows,
+        { ...current(), hasOpenDialog },
+        ids,
+      ),
+    // Full screen only from the window the user is in (macOS moves them to
+    // a full-screen window's Space), a close or quit only with nothing to
+    // confirm, and a quit never takes other windows.
+    agentWindowAction(this: TerminalApplication<Window>, window, action) {
       if (this.isQuitting() || !windows.has(window) || window.isDestroyed())
         return "closing";
-      if (action === "full-screen" || action === "new-window") {
+      if (action === "full-screen") {
         if (!window.isFocused()) return "elsewhere";
-        if (action === "new-window") openWindow();
-        else window.setFullScreen(!window.isFullScreen());
+        window.setFullScreen(!window.isFullScreen());
         return undefined;
       }
       if (action === "quit" && windows.size > 1) return "other-windows";
@@ -500,20 +505,30 @@ function agentActions<Window extends NativeTerminalWindow>(
   };
 }
 
-// An agent's close never raises the Busy Session confirmation (ADR 0052):
-// with confirmClose on, a Busy Session among the panes it would close, or a
-// close the user is already confirming, leaves it to the user.
+interface AgentCloseContext<Window> {
+  readonly confirmClose: boolean;
+  readonly quitPending: boolean;
+  readonly hasOpenDialog?: ((window: Window) => boolean) | undefined;
+}
+
+// An agent's close never raises the Busy Session confirmation (ADR 0052),
+// and never closes under the user's dialog: with confirmClose on, a Busy
+// Session among the panes it would close, a close or quit the user is
+// already confirming, or any dialog open over the window leaves it to them.
 function agentCloseNeedsUser<Window extends NativeTerminalWindow>(
   window: Window,
   windows: ReadonlyMap<Window, TerminalWindowState>,
-  confirmClose: boolean,
+  context: AgentCloseContext<Window>,
   // Every session of the window when absent.
   sessionIds?: readonly TerminalSessionId[],
-): AgentCloseBlock | undefined {
+): AgentNeedsUser | undefined {
   const state = windows.get(window);
   if (!state || window.isDestroyed()) return "closing";
-  if (state.closeRequest || state.tabCloseRequest) return "confirming";
-  if (!confirmClose) return undefined;
+  if (state.closeRequest || state.tabCloseRequest || context.quitPending)
+    return "confirming";
+  if (state.pendingFailures > 0 || context.hasOpenDialog?.(window))
+    return "dialog";
+  if (!context.confirmClose) return undefined;
   return ((sessionIds &&
     state.sessionActivity.hasBusySessionAmong?.(sessionIds)) ??
     state.sessionActivity.hasBusySession())

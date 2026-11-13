@@ -308,24 +308,23 @@ elsewhere), as accelerators do: `Cmd+T`, `Ctrl+Shift+]`, `Cmd+Ctrl+=`,
   the action and the pane; nothing is written to the PTY. The chord must be
   the press's only key (`invalid-request` otherwise). A window that can't take
   it now (a dialog or preview over it) answers `unavailable`.
-- `toggleFullScreen`, `newWindow`, `closeWindow` and `quit` act on the
-  granted window from main, whichever window is selected. `toggleFullScreen`
-  and `newWindow` run only while the user is in the granted window; from
-  another window they answer `needs-user`, since full screen would move the
-  user to it (a new Space on macOS) and a new window would take their focus.
-  The new window starts ungranted, like every window, and its panes are
-  unknown to this grant.
+- `toggleFullScreen`, `closeWindow` and `quit` act on the granted window
+  from main, whichever window is selected. `toggleFullScreen` runs only while
+  the user is in the granted window; from another window it answers
+  `needs-user`, since full screen would move the user to it (a new Space on
+  macOS).
 - A close (`closeTab`, `closePane`, `closeWindow`, `quit`) that would ask to
   confirm a Busy Session, with `confirmClose` on, answers `needs-user` and
-  does nothing; so does one while the user is confirming a close in that
-  window, or while it closes, and a `quit` while other windows are open,
-  since it would close them too. The message says which. The confirmation
+  does nothing; so does one while the user is confirming a close or quit,
+  while a native dialog is open over the window (Protected Paste, an export,
+  an extension install, a session failure), or while it closes, and a `quit`
+  while other windows are open, since it would close them too. The message says which. The confirmation
   stays the user's. With `confirmClose` off it closes, as the user's press
   would. Closing the last tab, the window, or quitting ends the grant, so the
   answer may be `revoked`, or the connection may close, instead.
 - The **Allow Agents in This Window** shortcut answers `refused`, whatever
   chord it is bound to, and nothing is written. The Command Palette, Find,
-  Paste, Reload Configuration, the Snippets, Files and SSH Connect panels,
+  Paste, New Window, Reload Configuration, the Snippets, Files and SSH Connect panels,
   the Auxiliary Panel's toggle and move, Mirror Typing and Save layout answer
   `not-yet`, with the reason in the message. Settings, About, Always on Top,
   Open Local Image and Developer Tools have no shortcut, so `press` can't
@@ -381,7 +380,7 @@ ends the grant.
 | `unavailable`     | The window couldn't answer in time (a read, a press or a tree request). |
 | `refused`         | The press named the grant toggle's shortcut; only the user toggles it.  |
 | `not-yet`         | UI agents can't use yet, or an action past the window.                  |
-| `needs-user`      | Left to the user: a Busy Session, a pending close, or another window.   |
+| `needs-user`      | Left to the user: a running program, an open dialog, another window.    |
 
 `message` is one English sentence for people reading logs of their own
 scripts. Programs should branch on `code`.

@@ -156,7 +156,8 @@ it("refuses the grant toggle by action, whatever key it is bound to", async () =
 it("answers not yet for UI agents can't use and actions past the window, and runs nothing", async () => {
   const window = grantedWindow();
   // Command Palette, Find, the Snippets, Files and SSH Connect panels, moving
-  // the panel, Mirror Typing, Paste, Save layout and Reload Configuration.
+  // the panel, Mirror Typing, Paste, Save layout, Reload Configuration and
+  // New Window.
   for (const chord of [
     "Cmd+Shift+P",
     "Cmd+F",
@@ -168,6 +169,7 @@ it("answers not yet for UI agents can't use and actions past the window, and run
     "Cmd+V",
     "Cmd+Shift+L",
     "Cmd+Shift+,",
+    "Cmd+N",
   ])
     await expect(window.press("s1", chord), chord).resolves.toBe("not-yet");
   expect(window.act).not.toHaveBeenCalled();
@@ -200,11 +202,10 @@ it("runs zoom, copy, select all and the bar toggles on the pane it names", async
   expect(window.writes).toEqual([]);
 });
 
-it("asks main for full screen, a new window, closing the window and quitting", async () => {
+it("asks main for full screen, closing the window and quitting", async () => {
   const window = grantedWindow();
   const actions = {
     "Cmd+Ctrl+F": ["toggleFullScreen", "full-screen"],
-    "Cmd+N": ["newWindow", "new-window"],
     "Cmd+Shift+W": ["closeWindow", "close-window"],
     "Cmd+Q": ["quit", "quit"],
   };
@@ -218,7 +219,7 @@ it("asks main for full screen, a new window, closing the window and quitting", a
   expect(window.act).not.toHaveBeenCalled();
   // An unknown pane runs nothing.
   await expect(window.press("s9", "Cmd+Q")).resolves.toBe("unknown-pane");
-  expect(window.native).toHaveBeenCalledTimes(4);
+  expect(window.native).toHaveBeenCalledTimes(3);
 });
 
 it("leaves a window close or quit that needs the user to the user", async () => {

@@ -102,8 +102,7 @@ This Window**) that lets a local program drive that Terminal Window through the
 Agent API. It shows as a State Mark in the error tone on every pane and tab,
 always visible while it lasts, and ends on a click on that mark, the toggle,
 or closing the window or quitting (the user's or the agent's). It is never
-restored or granted by anything but that gesture, so a window an agent opens
-starts without one.
+restored or granted by anything but that gesture.
 
 **Agent API** — Main's user-only local socket for granted windows: list tabs and
 panes, type text and mode-independent keys, press named keys encoded for the pane's

@@ -879,25 +879,20 @@ describe("Terminal application window actions", () => {
     await harness.application.newWindow();
     await harness.application.newWindow();
     const [granted, selected] = harness.windows;
-    const openWindow = vi.fn();
     const act = (
       window: NativeTerminalWindow,
-      action: "full-screen" | "new-window" | "close-window" | "quit",
-    ) => harness.application.agentWindowAction(window, action, openWindow);
+      action: "full-screen" | "close-window" | "quit",
+    ) => harness.application.agentWindowAction(window, action);
 
-    // From the window the user is in, full screen and a new window run there.
+    // From the window the user is in, full screen runs there.
     expect(act(granted!.window, "full-screen")).toBeUndefined();
     expect(granted!.setFullScreen).toHaveBeenLastCalledWith(true);
-    expect(act(granted!.window, "new-window")).toBeUndefined();
-    expect(openWindow).toHaveBeenCalledOnce();
-    // The user moves to the other window: neither takes them from it.
+    // The user moves to the other window: it doesn't take them from it.
     granted!.focused.value = false;
     harness.select(selected!.window);
     expect(act(granted!.window, "full-screen")).toBe("elsewhere");
-    expect(act(granted!.window, "new-window")).toBe("elsewhere");
     expect(granted!.setFullScreen).toHaveBeenCalledOnce();
     expect(selected!.setFullScreen).not.toHaveBeenCalled();
-    expect(openWindow).toHaveBeenCalledOnce();
 
     // Quitting would close the user's other window.
     granted!.setBusy(false);
@@ -922,5 +917,50 @@ describe("Terminal application window actions", () => {
     expect(act(selected!.window, "quit")).toBeUndefined();
     expect(harness.quit).toHaveBeenCalledOnce();
     expect(harness.showQuitConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("never closes or quits under the user's dialog or quit confirmation", async () => {
+    const dialogs = new Set<NativeTerminalWindow>();
+    const harness = createApplicationHarness({
+      hasOpenDialog: (window) => dialogs.has(window),
+    });
+    await harness.application.newWindow();
+    const { window, setBusy } = harness.windows[0]!;
+    setBusy(false);
+    const act = (action: "close-window" | "quit") =>
+      harness.application.agentWindowAction(window, action);
+
+    // A Protected Paste, export or install dialog over the window.
+    dialogs.add(window);
+    expect(act("close-window")).toBe("dialog");
+    expect(act("quit")).toBe("dialog");
+    expect(harness.application.agentCloseNeedsUser(window, ["s1"])).toBe(
+      "dialog",
+    );
+    dialogs.delete(window);
+
+    // A session failure the user hasn't acknowledged yet.
+    const failure = deferred<void>();
+    harness.showSessionFailure.mockReturnValueOnce(failure.promise);
+    harness.windows[0]!.lifecycle.onSessionStartError({
+      launchKind: "default-shell",
+    } as never);
+    expect(act("close-window")).toBe("dialog");
+    failure.resolve();
+    await failure.promise;
+    await Promise.resolve();
+
+    // The user's own quit, waiting on its confirmation.
+    setBusy(true);
+    const confirmation = deferred<boolean>();
+    harness.showQuitConfirmation.mockReturnValueOnce(confirmation.promise);
+    harness.select(window);
+    const quitting = harness.application.requestQuit();
+    setBusy(false);
+    expect(act("close-window")).toBe("confirming");
+    confirmation.resolve(false);
+    await quitting;
+    expect(act("close-window")).toBeUndefined();
+    expect(window.isDestroyed()).toBe(true);
   });
 });
