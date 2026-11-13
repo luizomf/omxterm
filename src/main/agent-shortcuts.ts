@@ -10,7 +10,8 @@ import {
  * What an agent's press of a shortcut does (ADR 0052, keyboard parity):
  * - run: the tab or pane action, on the pane the press names;
  * - refused: the grant toggle, which only the user turns on or off;
- * - not-yet: UI the agent can't read yet;
+ * - not-yet: UI the agent can't read yet (Command Palette, Find, and the
+ *   Snippets, Files and SSH Connect panels);
  * - key: the chord still goes to the pane as a key (#1052 decides these).
  * Every action is listed, so a new one can't run for agents by default.
  */
@@ -74,9 +75,9 @@ export const AGENT_SHORTCUTS: Readonly<
   zoomOut: key,
   actualSize: key,
   toggleFullScreen: key,
-  toggleSnippets: key,
-  toggleFiles: key,
-  toggleSshConnect: key,
+  toggleSnippets: notYet,
+  toggleFiles: notYet,
+  toggleSshConnect: notYet,
   toggleMirrorTyping: key,
   saveLayout: key,
   toggleTabBar: key,

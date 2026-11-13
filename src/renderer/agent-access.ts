@@ -33,12 +33,21 @@ export function subscribeToAgentAccess(
     | "encodeSessionKeys"
     | "agentTabs"
     | "runSessionCommand"
+    | "cancelAgentCommands"
   >,
 ): () => void {
   let granted = false;
+  // Commands may run only while this is true. The user's click clears it at
+  // once, before main hears of it, so nothing already handed over still runs.
+  let live = false;
+  const halt = () => {
+    live = false;
+    tabs.cancelAgentCommands();
+  };
   const removeState = bridge.onState((state) => {
     if (state.state === "off") {
       granted = false;
+      halt();
       tabs.setWindowMark("agent", undefined);
       if (state.refused) tabs.flash((t) => t(refusals[state.refused!]));
       return;
@@ -46,11 +55,18 @@ export function subscribeToAgentAccess(
     tabs.setWindowMark("agent", {
       glyph: "agent",
       label: (t) => t("agent.mark"),
-      action: { label: (t) => t("agent.clickToStop"), run: bridge.stop },
+      action: {
+        label: (t) => t("agent.clickToStop"),
+        run() {
+          halt();
+          bridge.stop();
+        },
+      },
     });
     if (state.state === "pending") bridge.shown();
     else if (!granted) tabs.flash((t) => t("agent.allowed"));
     granted = state.state === "granted";
+    live = granted;
   });
   const removeRead = bridge.onRead((request) =>
     bridge.readResult(
@@ -65,13 +81,26 @@ export function subscribeToAgentAccess(
   const removeTabs = bridge.onTabs((request) =>
     bridge.tabsResult(tabs.agentTabs(request.id)),
   );
-  const removeAction = bridge.onAction(
-    (request) =>
-      void tabs
-        .runSessionCommand(request.id, request.sessionId, request.command)
-        .then((result) => bridge.actionResult(result)),
+  const removeAction = bridge.onAction((request) => {
+    if (!live) {
+      bridge.actionResult({ id: request.id, error: "unavailable" });
+      return;
+    }
+    void tabs
+      .runSessionCommand(
+        request.id,
+        request.sessionId,
+        request.command,
+        () => live,
+      )
+      .then((result) => bridge.actionResult(result));
+  });
+  // Main gave up on a command (the agent went away, or time ran out).
+  const removeCancel = bridge.onActionCancel((id) =>
+    tabs.cancelAgentCommands(id),
   );
   return () => {
+    removeCancel();
     removeAction();
     removeTabs();
     removeState();

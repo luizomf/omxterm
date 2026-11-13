@@ -74,7 +74,8 @@ they did. Don't look for another way in.
 - Closing a pane or tab whose program is still running answers that it needs
   the user, and nothing closes: ask them. Closing the last tab closes the
   window and ends your access. The shortcut that allows or stops agents is
-  refused, and the Command Palette and Find answer "not yet".
+  refused, and the Command Palette, Find and the Snippets, Files and SSH
+  Connect panels answer "not yet".
 - Pane ids such as `s2` come from `list` and last as long as the grant.
 - Sends to the same pane at the same time arrive in no guaranteed order. Send
   one at a time.

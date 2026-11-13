@@ -20,9 +20,6 @@ import {
 } from "../shared/agent-access";
 import type { AgentKeyChord } from "../shared/agent-api";
 import { encodeAgentKeys } from "./agent-access";
-
-// Below main's 3 s window answer, so a late command never runs after it.
-const AGENT_ACTIVATION_MS = 2000;
 import { createPaneAttention } from "./pane-attention";
 import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
@@ -86,6 +83,9 @@ import {
 } from "./terminal-panes";
 
 import { createApplicationTabStrip } from "./application-tab-strip";
+
+// Below main's 3 s window answer, so a late command never runs after it.
+const AGENT_ACTIVATION_MS = 2000;
 export { TERMINAL_TAB_DRAG_DATA_TYPE } from "./application-tab-strip";
 
 type MountTerminalSurface = (
@@ -196,11 +196,16 @@ export interface TerminalTabs {
   agentTabs(id: string): AgentTabsResult;
   // An agent's tab or pane shortcut: focus the session's pane, selecting its
   // tab, then run the command there, as the user's click and press would.
+  // allowed() is checked again right before the command runs: a stopped
+  // grant never runs a command it already handed over.
   runSessionCommand(
     id: string,
     sessionId: TerminalSessionId,
     command: AgentWindowCommand,
+    allowed?: () => boolean,
   ): Promise<AgentActionResult>;
+  // Drops one waiting agent command, or all of them, as unavailable.
+  cancelAgentCommands(id?: string): void;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -280,9 +285,11 @@ export function createTerminalTabs(
       corner: elements.container,
       // Whenever no pane shows them: a tab button's glyph can't be clicked,
       // and the grant's mark is the one-click stop (ADR 0052).
+      // A terminal tab's panes show only once its content is ready (an
+      // extension's view hides first), so the corner stays until then.
       cornerShown: () => {
         const tab = selectedApplicationTab();
-        return !!tab && tab.kind !== "terminal";
+        return !!tab && (tab.kind !== "terminal" || !contentReady);
       },
     },
   );
@@ -342,7 +349,7 @@ export function createTerminalTabs(
 
   let agentSelection = false;
   // Agent commands waiting for their tab's content to show.
-  const activated = new Set<() => void>();
+  const activated = new Map<string, { shown(): void; cancel(): void }>();
   const select = (
     index: number,
     passive = false,
@@ -361,6 +368,7 @@ export function createTerminalTabs(
     contextMenu.selectionChanged();
     if (tab.kind === "hosted") options.notifySelection?.(null, []);
     contentReady = false;
+    marks.refreshCorner();
     const activate = (focusAllowed = true) => {
       contentReady = true;
       automaticFocusAllowed = focusAllowed;
@@ -375,7 +383,8 @@ export function createTerminalTabs(
         notifyFocus,
       );
       mirrorReady?.ready();
-      for (const shown of [...activated]) shown();
+      marks.refreshCorner();
+      for (const waiter of [...activated.values()]) waiter.shown();
     };
     // An agent's shortcut never pulls native focus into a window the user
     // isn't in (ADR 0052): focusing an extension's view would raise it.
@@ -633,14 +642,14 @@ export function createTerminalTabs(
         })),
       };
     },
-    runSessionCommand(id, sessionId, command) {
+    runSessionCommand(id, sessionId, command, allowed = () => true) {
       const pane = disposed
         ? undefined
         : findPaneBySession(terminalTabs(), sessionId);
       if (!pane || pane.removed || pane.tab.removed)
         return Promise.resolve({ id, error: "unknown-pane" });
-      if (closing) return Promise.resolve({ id, error: "unavailable" });
       const unavailable = { id, error: "unavailable" } as const;
+      if (closing || !allowed()) return Promise.resolve(unavailable);
       agentSelection = true;
       try {
         revealSession(sessionId);
@@ -648,11 +657,12 @@ export function createTerminalTabs(
         agentSelection = false;
       }
       // A dialog over the window keeps its selection and takes the user's
-      // keys; never act elsewhere, or behind it.
+      // keys; never act elsewhere, or behind it, or once the grant ended.
       const run = (): AgentActionResult => {
         if (
           disposed ||
           closing ||
+          !allowed() ||
           canFocus?.() === false ||
           pane.removed ||
           selectedTab() !== pane.tab ||
@@ -675,17 +685,23 @@ export function createTerminalTabs(
       return new Promise((resolve) => {
         // Settles once: the command may select again, which activates again.
         const finish = (result: () => AgentActionResult) => {
-          activated.delete(shown);
+          activated.delete(id);
           page.clearTimeout(timer);
           resolve(result());
         };
-        const shown = () => finish(run);
         const timer = page.setTimeout(
           () => finish(() => unavailable),
           AGENT_ACTIVATION_MS,
         );
-        activated.add(shown);
+        activated.set(id, {
+          shown: () => finish(run),
+          cancel: () => finish(() => unavailable),
+        });
       });
+    },
+    cancelAgentCommands(id) {
+      for (const [key, waiter] of [...activated])
+        if (id === undefined || key === id) waiter.cancel();
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

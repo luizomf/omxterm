@@ -127,7 +127,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "press",
-    "Press keys in a pane, encoded for the pane's current modes exactly as the user's own keys, for full-screen programs and menus (arrows in vim, less, htop); answers the output offset to pass to wait as after. A key that is one of the window's tab or pane shortcuts (new, close, next, previous or select tab, split, close pane, focus or swap panes, equalize; Cmd+T on macOS, Ctrl+Shift+T on Linux) runs that action on the pane instead, pressed alone, and answers the action and pane. Closing a pane whose program is still running answers needs-user; the grant toggle is refused.",
+    "Press keys in a pane, encoded for the pane's current modes exactly as the user's own keys, for full-screen programs and menus (arrows in vim, less, htop); answers the output offset to pass to wait as after. A key that is one of the window's tab or pane shortcuts (new, close, next, previous or select tab, split, close pane, focus or swap panes, equalize; Cmd+T on macOS, Ctrl+Shift+T on Linux) runs that action on the pane instead, pressed alone, and answers the action and pane. Closing a pane whose program is still running answers needs-user; the grant toggle is refused; the Command Palette, Find and side panels answer not-yet.",
     {
       pane,
       keys: {

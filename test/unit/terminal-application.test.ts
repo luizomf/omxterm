@@ -850,24 +850,24 @@ describe("Terminal application window actions", () => {
       harness.application.agentCloseNeedsUser(window, ids);
 
     // Only the named panes count, wherever the user's focus is.
-    expect(needsUser("s1")).toBe(false);
-    expect(needsUser("s1", "s2")).toBe(true);
+    expect(needsUser("s1")).toBeUndefined();
+    expect(needsUser("s1", "s2")).toBe("busy");
 
     // A Close Tab the user is confirming keeps every agent close waiting.
     const confirmation = deferred<boolean>();
     harness.showCloseTabConfirmation.mockReturnValueOnce(confirmation.promise);
     harness.select(window);
     const closing = harness.application.closeSelectedTab();
-    expect(needsUser("s1")).toBe(true);
+    expect(needsUser("s1")).toBe("confirming");
     confirmation.resolve(false);
     await closing;
-    expect(needsUser("s1")).toBe(false);
+    expect(needsUser("s1")).toBeUndefined();
 
     // With confirmClose off, a Busy Session closes as the user's press would.
     harness.application.applyConfiguration({
       confirmClose: false,
       alwaysOnTopDefault: false,
     });
-    expect(needsUser("s2")).toBe(false);
+    expect(needsUser("s2")).toBeUndefined();
   });
 });

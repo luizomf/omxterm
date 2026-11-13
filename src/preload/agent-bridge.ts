@@ -2,6 +2,7 @@ import type { IpcRenderer, IpcRendererEvent } from "electron";
 import {
   agentIpc,
   isAgentAccessState,
+  isAgentActionCancel,
   isAgentActionRequest,
   isAgentActionResult,
   isAgentPressRequest,
@@ -76,6 +77,13 @@ export function createAgentBridge(
       if (!isAgentActionResult(result))
         throw new TypeError("Invalid agent action result");
       ipcRenderer.send(agentIpc.actionResult, result);
+    },
+    onActionCancel(listener) {
+      const handler = (_event: IpcRendererEvent, payload: unknown) => {
+        if (isAgentActionCancel(payload)) listener(payload.id);
+      };
+      ipcRenderer.on(agentIpc.actionCancel, handler);
+      return () => ipcRenderer.removeListener(agentIpc.actionCancel, handler);
     },
   };
 }

@@ -41,7 +41,9 @@ function grantedWindow(
   const act = vi.fn(async () => {});
   const encode = vi.fn(async () => "<key>");
   const closeNeedsUser = vi.fn((ids: readonly string[]) =>
-    ids.some((id) => options.busy?.includes(id)),
+    ids.some((id) => options.busy?.includes(id))
+      ? ("busy" as const)
+      : undefined,
   );
   let tabsAnswer = Promise.resolve([
     { tab: "t1", title: "zsh", selected: true, panes: ["s1", "s2"] as const },
@@ -146,10 +148,13 @@ it("refuses the grant toggle by action, whatever key it is bound to", async () =
   });
 });
 
-it("answers not yet for the Command Palette and Find, and runs nothing", async () => {
+it("answers not yet for the Command Palette, Find and the side panels, and runs nothing", async () => {
   const window = grantedWindow();
   await expect(window.press("s1", "Cmd+Shift+P")).resolves.toBe("not-yet");
   await expect(window.press("s1", "Cmd+F")).resolves.toBe("not-yet");
+  // The Snippets, Files and SSH Connect panels aren't for agents yet either.
+  for (const chord of ["Cmd+Alt+S", "Cmd+Alt+F", "Cmd+Alt+O"])
+    await expect(window.press("s1", chord)).resolves.toBe("not-yet");
   expect(window.act).not.toHaveBeenCalled();
   expect(window.writes).toEqual([]);
 });

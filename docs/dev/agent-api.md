@@ -307,13 +307,14 @@ elsewhere), as accelerators do: `Cmd+T`, `Ctrl+Shift+]`, `Cmd+Ctrl+=`,
   it now (a dialog over it) answers `unavailable`.
 - A close (`closeTab`, `closePane`) that would ask to confirm a Busy Session,
   with `confirmClose` on, answers `needs-user` and does nothing; so does one
-  while the user is confirming a close in that window. The confirmation stays
+  while the user is confirming a close in that window, or while it closes.
+  The message says which. The confirmation stays
   the user's. With `confirmClose` off it closes, as the user's press would.
   Closing the last tab closes the window and ends the grant, so the answer may
   be `revoked`, or the connection may close, instead.
 - The **Allow Agents in This Window** shortcut answers `refused`, whatever
-  chord it is bound to, and nothing is written. The Command Palette and Find
-  shortcuts answer `not-yet`. Settings, About and the rest have no default
+  chord it is bound to, and nothing is written. The Command Palette, Find,
+  Snippets, Files and SSH Connect shortcuts answer `not-yet`. Settings, About and the rest have no default
   shortcut.
 - The window's other shortcuts aren't run for agents yet
   ([#1052](https://github.com/luizomf/omxterm/issues/1052)): a named-key chord
@@ -350,8 +351,8 @@ ends the grant.
 | `limit`           | Too many tabs, panes, connections or pending waits.                     |
 | `unavailable`     | The window couldn't answer in time (a read, a press or a tree request). |
 | `refused`         | The press named the grant toggle's shortcut; only the user toggles it.  |
-| `not-yet`         | The shortcut opens UI agents can't use yet (Command Palette, Find).     |
-| `needs-user`      | The close would ask the user to confirm a Busy Session.                 |
+| `not-yet`         | The shortcut opens UI agents can't use yet (palette, Find, panels).     |
+| `needs-user`      | The close is the user's: a Busy Session or a close they're confirming.  |
 
 `message` is one English sentence for people reading logs of their own
 scripts. Programs should branch on `code`.
@@ -477,6 +478,7 @@ instead.
 | Wire limits and keys     | `src/shared/agent-api.ts`, shared by main and the client                                                   |
 | Grants and credentials   | `src/main/agent-access.ts`                                                                                 |
 | Socket and handshake     | `src/main/agent-endpoint.ts`                                                                               |
+| Window requests          | `src/main/agent-window-requests.ts` (reads, presses, tabs and actions asked of the window)                 |
 | Commands and waits       | `src/main/agent-commands.ts`                                                                               |
 | Agent input and outputs  | `agentSessions` in `src/main/terminal-ipc-controller.ts` (the only agent write)                            |
 | Pane environment         | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                                     |

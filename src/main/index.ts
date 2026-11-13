@@ -632,8 +632,9 @@ app
               lifecycle.windowId,
               controller.agentSessions,
               (sessionIds) =>
-                terminalApplication?.agentCloseNeedsUser(window, sessionIds) ??
-                true,
+                terminalApplication
+                  ? terminalApplication.agentCloseNeedsUser(window, sessionIds)
+                  : "closing",
             );
             semanticInput.register(window);
             extensions!.registerWindow(window, (source, context) =>

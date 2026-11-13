@@ -25,6 +25,7 @@ import type {
 import type { TerminalSessionId } from "../shared/terminal-contract";
 import type { TerminalActionName } from "../shared/terminal-keybinds";
 import { AGENT_SHORTCUTS } from "./agent-shortcuts";
+import type { AgentCloseBlock } from "./terminal-application";
 import type { AgentSessionPort } from "./terminal-ipc-types";
 
 export class AgentApiError extends Error {
@@ -74,10 +75,10 @@ export interface AgentCommandsOptions {
     command: AgentWindowCommand,
     signal: AbortSignal,
   ) => Promise<void>;
-  /** Whether closing these sessions would ask the user (ADR 0017). */
+  /** Why closing these sessions is the user's to do, if it is (ADR 0017). */
   readonly closeNeedsUser?: (
     sessionIds: readonly TerminalSessionId[],
-  ) => boolean;
+  ) => AgentCloseBlock | undefined;
   /** Decides which chords the user's own press would send; process.platform. */
   readonly platform?: string;
   readonly now?: () => number;
@@ -126,6 +127,12 @@ const unsupportedPress = () =>
     "unsupported-key",
     "press sends Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, with any of Ctrl+, Alt+ and Shift+, to the pane; any other chord must be one of the window's tab or pane shortcuts.",
   );
+const NEEDS_USER: Readonly<Record<AgentCloseBlock, string>> = {
+  busy: "This close needs the user: a program is still running there.",
+  confirming:
+    "This close needs the user: they are already confirming a close in this window.",
+  closing: "This close needs the user: the window is closing.",
+};
 const revoked = () =>
   new AgentApiError("revoked", "The user stopped agent access.");
 
@@ -324,16 +331,14 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     const shortcut = AGENT_SHORTCUTS[action];
     if (shortcut.kind !== "run" || !options.act) throw unsupportedPress();
     position(sessionId);
-    if (
-      shortcut.closes &&
-      options.closeNeedsUser?.(
-        await closedBy(shortcut.closes, sessionId, options.tabs, signal),
-      ) !== false
-    )
-      throw new AgentApiError(
-        "needs-user",
-        "This close needs the user: a program is still running there.",
-      );
+    if (shortcut.closes) {
+      // Without a check, assume the close would ask.
+      const block =
+        options.closeNeedsUser?.(
+          await closedBy(shortcut.closes, sessionId, options.tabs, signal),
+        ) ?? (options.closeNeedsUser ? undefined : "busy");
+      if (block) throw new AgentApiError("needs-user", NEEDS_USER[block]);
+    }
     if (disposed) throw revoked();
     await options.act(sessionId, shortcut.command, signal);
     return { action, pane: sessionId };

@@ -381,7 +381,7 @@ posix(
             chord,
             "darwin",
           ),
-        closeNeedsUser: () => false,
+        closeNeedsUser: () => undefined,
       });
     access.toggle(window);
     await shown();
@@ -419,5 +419,18 @@ posix(
     const stopped = await ctl(profile, ["press", "s1", "Cmd+Alt+W"], pane);
     expect(stopped.code).toBe(1);
     expect(stopped.stderr).toMatch(/stopped agent access/u);
+
+    // A window that never answers: main gives up and tells it to drop it.
+    access.toggle(window);
+    await shown();
+    contents.send.mockImplementation(() => {});
+    const late = await ctl(profile, ["press", "s1", "Cmd+Alt+W"], pane);
+    expect(late.code).toBe(1);
+    const sent = contents.send.mock.calls.filter(
+      ([channel]) =>
+        channel === agentIpc.action || channel === agentIpc.actionCancel,
+    );
+    const asked = sent.at(-2)![1] as { id: string };
+    expect(sent.at(-1)).toEqual([agentIpc.actionCancel, { id: asked.id }]);
   },
 );

@@ -31,6 +31,7 @@ export const agentIpc = {
   tabsResult: "agent:tabs-result",
   action: "agent:action",
   actionResult: "agent:action-result",
+  actionCancel: "agent:action-cancel",
 } as const;
 
 /** Bounds for the window's tab tree, whatever the renderer sends. */
@@ -266,6 +267,12 @@ export type AgentActionResult =
   | { readonly id: string }
   | { readonly id: string; readonly error: "unknown-pane" | "unavailable" };
 
+export function isAgentActionCancel(value: unknown): value is { id: string } {
+  return (
+    isPlainRecord(value) && hasOnlyKeys(value, ["id"]) && isReadId(value.id)
+  );
+}
+
 export function isAgentActionRequest(
   value: unknown,
 ): value is AgentActionRequest {
@@ -324,4 +331,6 @@ export interface AgentAccessBridge {
   tabsResult(result: AgentTabsResult): void;
   onAction(listener: (request: AgentActionRequest) => void): () => void;
   actionResult(result: AgentActionResult): void;
+  /** Main stopped waiting for this action: drop it if it hasn't run. */
+  onActionCancel(listener: (id: string) => void): () => void;
 }

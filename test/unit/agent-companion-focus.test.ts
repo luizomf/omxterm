@@ -4,6 +4,7 @@ import { fixture, settle } from "../fixtures/companion-content";
 import { cleanupSnippetsWindows } from "../fixtures/snippets-window";
 import type {
   AgentAccessBridge,
+  AgentAccessState,
   AgentActionRequest,
 } from "../../src/shared/agent-access";
 
@@ -11,8 +12,12 @@ afterEach(() => cleanupSnippetsWindows());
 
 it("shows an extension tab for an agent's shortcut without native focus while the user is in another window", async () => {
   let action: ((request: AgentActionRequest) => void) | undefined;
+  let state: ((value: AgentAccessState) => void) | undefined;
   const agent: AgentAccessBridge = {
-    onState: () => () => {},
+    onState(listener) {
+      state = listener;
+      return () => {};
+    },
     shown: vi.fn(),
     stop: vi.fn(),
     onRead: () => () => {},
@@ -26,6 +31,7 @@ it("shows an extension tab for an agent's shortcut without native focus while th
       return () => {};
     },
     actionResult: vi.fn(),
+    onActionCancel: () => () => {},
   };
   const f = await fixture({
     attention: {
@@ -35,6 +41,7 @@ it("shows an extension tab for an agent's shortcut without native focus while th
       agent,
     },
   });
+  state!({ state: "granted" });
   f.open("general", false);
   await settle();
   f.tabCommand({ action: "select", position: 1 });

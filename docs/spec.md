@@ -532,7 +532,8 @@ quietest form that works:
   later included, after each pane's own marks, and once on every tab, Settings
   and extension tabs included. When a Settings or extension tab is selected,
   so no pane shows it, it also sits in the page's top-right corner, where it
-  can be clicked like a pane's.
+  can be clicked like a pane's; it stays there until the panes of a terminal
+  tab the user returns to actually show.
 - Marks use the secondary text color, except the agent grant's `◆`, which
   takes the theme's error tone: its red, or its foreground when the red lacks
   contrast against the background. `appearance.activePaneHighlight` doesn't
@@ -1290,9 +1291,10 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   closes the tab holding `s3`. The press answers the action and the pane, and
   must hold that one chord. A close that would ask to confirm a Busy Session
   (with `confirmClose` on), or that comes while the user is confirming one,
-  answers that it needs the user and does nothing. The **Allow Agents in This
+  answers that it needs the user, saying why, and does nothing. A click on the
+  mark stops the window at once: an action already handed to it doesn't run. The **Allow Agents in This
   Window** shortcut is refused, whatever it is bound to, and the Command
-  Palette and Find shortcuts answer "not yet". Other shortcuts aren't run for
+  Palette, Find, Snippets, Files and SSH Connect shortcuts answer "not yet". Other shortcuts aren't run for
   agents yet: a named-key chord goes to the pane as a key, any other is
   refused as an unsupported key.
 - Agent input is written to the PTY in main. It never passes the window's

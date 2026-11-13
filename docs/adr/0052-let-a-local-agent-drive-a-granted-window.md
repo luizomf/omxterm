@@ -305,42 +305,39 @@ matching lands, every chord goes to the pane.
 
 ### Visible state
 
-- `stateGlyphs` gains `agent`. Marks get a window scope:
+- `stateGlyphs` has `agent` (`◆`). Marks have a window scope:
   `setWindow(owner, mark)`, rendered on every pane of the window, including
-  panes created later, and once on every tab. Today `set()` is keyed by pane
-  and Application Tabs (Settings) get no marks.
+  panes created later, and once on every tab, Application Tabs included.
 - The pane mark is actionable: clicking it ends the grant. Its label names the
-  state and the stop ("Agents can control and read this window. Click to
-  stop."). The tab copy stays a plain glyph.
-- The tone is core-owned. `ui.css` gains `--ui-accent`, set from the same
-  derivation as the focused-pane line (`terminalPaneAccent()`: the theme's
-  cyan, or the foreground when cyan lacks contrast), and CSS maps
-  `.ui-mark[data-glyph="agent"]` to it, including on hover. Reporters still
-  never pass a color. It doesn't reuse `--terminal-pane-accent`, because a
-  theme can set `appearance.activePaneHighlight` to `null` and a consent
-  indicator can't be something a theme switches off.
-- Once agents can press shortcuts (slice 4), the same mark takes the theme's
-  error tone and its label reads "Agents can do anything you can in this
-  window. Click this mark to stop them." Same glyph, same click, no banner.
-  The tone is derived like the accent: the theme's red (the color behind
+  state and the stop: "Agents can do anything you can in this window. Click
+  this mark to stop them." The tab copy stays a plain glyph, since a tab is a
+  button already.
+- The tone is core-owned: `--ui-agent`, the theme's red (the color behind
   `--ui-error-accent`), or the foreground when the red lacks contrast against
-  the background. Until then the mark keeps the accent.
-- **The mark is always visible while a grant exists.** It is the panic
-  button, so no state may hide it: not a hidden tab strip or title bar, not an
-  extension tab or its native view, not anything the agent can toggle. Slice
-  4 makes this hold before the agent can press shortcuts (#1050), and the
-  tab-bar and title-bar toggles stay closed to agents until it does (#1052).
-- With the tab strip hidden, the selected tab's panes still carry the mark,
-  so the window always shows it, with one exception that needs a fix: an
-  Application Tab has no pane. A window-scoped mark also renders at the page's
-  top-right corner when the selected tab has no pane.
+  the background. CSS maps `.ui-mark[data-glyph="agent"]` to it, including on
+  hover, and reporters never pass a color. It ignores
+  `appearance.activePaneHighlight`: a consent indicator can't be something a
+  theme switches off. Before slice 4 the mark took the cyan accent
+  (`--ui-accent`) and read "Agents can control and read this window. Click to
+  stop."; agents pressing shortcuts made it the error tone.
+- **The mark is always visible, and clickable, while a grant exists.** It is
+  the panic button, so no state may hide it: not a hidden tab strip or title
+  bar, not an extension tab or its native view, not anything the agent can
+  toggle. When the selected tab shows no pane (Settings, an extension tab, or
+  a terminal tab whose panes wait for an extension's view to hide), a copy
+  with the same click sits in the page's top-right corner, tab strip or not.
+  Marks are `app-region: no-drag`, so a hidden title bar's drag area doesn't
+  take the click. The tab-bar and title-bar toggles stay closed to agents
+  until [#1052](https://github.com/luizomf/omxterm/issues/1052) decides them.
+- The click stops the window at once: it drops every agent command the window
+  holds before main hears of it, so nothing already handed over runs after.
 - Main admits commands only while the renderer has confirmed the marks are
   shown. No mark, no access.
 - The attention mark of
   [#1026](https://github.com/luizomf/omxterm/issues/1026) can share the
   plumbing (a glyph in the vocabulary, the glyph-to-tone CSS mapping, the tab
-  copy) but is pane-scoped and should not use the accent: the accent means
-  "something other than you can act here".
+  copy) but is pane-scoped and has no tone of its own: the agent's tone means
+  "agents can act here".
 
 ### Privacy
 
@@ -601,7 +598,8 @@ Tab and pane shortcuts, and the mark in the error tone
   `Ctrl+Shift+]`) and runs it through `terminalActionForKeyboardInput()`
   against the live catalog's shortcuts, the matcher `before-input-event`
   uses. One table (`src/main/agent-shortcuts.ts`) decides every action: run,
-  refused (`toggleAgentAccess`), not yet (Command Palette, Find), or still a
+  refused (`toggleAgentAccess`), not yet (Command Palette, Find, and the
+  Snippets, Files and SSH Connect panels), or still a
   key for the pane, so a new action never runs for agents by default.
   Refusals answer before anything happens, whatever else the press holds; a
   shortcut that runs must be the press's only key. A named-key chord of an
@@ -625,7 +623,14 @@ Tab and pane shortcuts, and the mark in the error tone
   `agentCloseNeedsUser()` in the application, which owns `confirmClose`,
   about the named pane, or for Close Tab every pane of its tab (from the
   window's tab list). A close the user is already confirming in that window
-  also needs the user.
+  also needs the user. The sentence says which: a running program, a close being
+  confirmed, or a window that is closing.
+- **A stop is immediate in the window too.** The renderer keeps its own
+  live flag: the mark's click clears it before telling main, and so does
+  main's grant-off message. The window then refuses queued actions and drops
+  any action still waiting for its tab to show. When main stops waiting for
+  an action (the agent went away, or time ran out), it tells the window to
+  drop that one.
 - **The mark** takes `--ui-agent`, the theme's red or its foreground when the
   red has a contrast below 3 against the background, the accent's rule. The
   `--ui-accent` token had no other use and is gone. Its label reads "Agents

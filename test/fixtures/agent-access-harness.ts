@@ -176,7 +176,9 @@ export function useAgentHarness() {
   function setup(
     platform: NodeJS.Platform = process.platform,
     shortcuts: Pick<Parameters<typeof startAgentAccess>[0], "shortcut"> & {
-      closeNeedsUser?: (sessionIds: readonly string[]) => boolean;
+      closeNeedsUser?: (
+        sessionIds: readonly string[],
+      ) => "busy" | "confirming" | "closing" | undefined;
     } = {},
   ) {
     const profile = mkdtempSync(path.join(scratch, "p"));
