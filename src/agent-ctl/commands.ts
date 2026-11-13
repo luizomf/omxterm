@@ -23,6 +23,7 @@ export type Options = {
   enter: boolean;
   wait: boolean;
   idle?: number;
+  match?: string;
   timeout?: number;
   after?: number;
   lines?: number;
@@ -75,6 +76,9 @@ export function parse(argv: readonly string[]): Options {
         break;
       case "--idle":
         options.idle = number(argument, value());
+        break;
+      case "--match":
+        options.match = value();
         break;
       case "--timeout":
         options.timeout = number(argument, value());
@@ -362,7 +366,8 @@ async function send(
     ...(options.text === undefined ? {} : { text: options.text }),
     ...(keys.length ? { keys } : {}),
   })) as { offset: number };
-  if (options.wait)
+  // A match is something to wait for.
+  if (options.wait || options.match !== undefined)
     return report(
       options,
       await client.request("wait", waitArguments(options, pane, sent.offset)),
@@ -437,6 +442,7 @@ function waitArguments(options: Options, pane: string, after?: number) {
     timeoutMs: options.timeout ?? 60_000,
     ...(after === undefined ? {} : { after }),
     ...(options.idle === undefined ? {} : { idleMs: options.idle }),
+    ...(options.match === undefined ? {} : { match: options.match }),
   };
 }
 

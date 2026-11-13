@@ -4,8 +4,9 @@ The wire protocol and CLI of
 [ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slices 1
 and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
-and its [MCP server](#mcp). From slice 3, the exact `screen` source of
-[`read`](#read-tail-and-screen) is implemented. From slice 4, the tab tree in
+and its [MCP server](#mcp). Slice 3 is implemented too: the exact `screen`
+source of [`read`](#read-tail-and-screen) and `match` in
+[`wait`](#wait). From slice 4, the tab tree in
 [`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
 named keys and the window's shortcuts, and [`keys`](#keys-slice-4), are implemented. Each later
 command says which slice of the ADR's plan it belongs to; until then, names
@@ -211,7 +212,7 @@ partly happened; it is never retried). A refused write is the error
 Later, without changing these fields: `"source": "command"` for one command's
 output once OSC 133 lands (slice 8).
 
-### `wait` (slice 1; `match` in slice 3)
+### `wait`
 
 ```json
 {
@@ -232,11 +233,32 @@ output once OSC 133 lands (slice 8).
   when the request arrived is used.
 - `idleMs` (default 500, 100 to 60,000): satisfied when output has moved past
   `after`, none arrived for that long, and the window has consumed it all.
-- `match` (slice 3): a literal string of at most 1,024 characters, looked for
-  in the pane's screen text. Not a regular expression. Slice 1 answers
-  `invalid-request`.
+- `match`: a literal string of 1 to 1,024 characters, not a regular
+  expression, looked for in the pane's screen text (what `read` with
+  `source: "screen"` answers, rows joined by `\n`). It answers once the
+  window has shown output past `after` and the screen holds more copies of
+  the text than it did at `after`, so an old copy still on screen doesn't
+  count, and one that scrolled off doesn't hide a new one. The screen at
+  `after` is known when `after` is the offset the pane's latest `send` or
+  `press` returned, or the current position; for any other `after`, every
+  copy counts once output moved past it.
+  - Run a command and wait for its output with `send` then `wait`, passing
+    the `send`'s offset as `after` (`omxterm-ctl send … --match TEXT` does
+    both). A `wait` without `after` counts from its own arrival, so it can
+    miss output that came first.
+  - The echo of the typed command is new output too: expect text the
+    command line doesn't contain.
+  - A line wider than the pane is split across rows, and so is a match on
+    it.
 - The first condition met answers. At least one of `idleMs` or `match`
   applies; with only `match`, idleness is ignored.
+
+```json
+{ "reason": "match", "offset": 50213 }
+```
+
+With `match`, `offset` is the position the screen showed when the text
+appeared.
 
 ```json
 { "reason": "idle", "offset": 51877 }
@@ -404,7 +426,8 @@ omxterm-ctl list
 omxterm-ctl send s1 --text 'npm test' --enter --wait --idle 800
 omxterm-ctl send s1 --keys Ctrl+C
 omxterm-ctl wait s1 --after 48211 --idle 800 --timeout 120000
-omxterm-ctl wait s1 --match 'Tests passed' --timeout 120000   # slice 3
+omxterm-ctl send s1 --text 'npm test' --enter --match 'Tests passed' --timeout 120000
+omxterm-ctl wait s1 --after 48211 --match 'Tests passed' --timeout 120000
 omxterm-ctl read s1 --lines 200
 omxterm-ctl read s1 --screen               # the screen's rows, one line each
 omxterm-ctl press s1 Down Down Enter       # slice 4
@@ -430,8 +453,9 @@ omxterm-ctl keys                           # slice 4: chords press runs
 - `send` remembers nothing between calls. `--keys` takes a comma-separated
   list, `--enter` appends `Enter` in the same request, and `send … --wait`
   runs `wait` with the returned `offset` on the same connection, which is the
-  reliable way to type a command and wait for it. `--timeout` defaults to
-  60000 for `wait` and `send --wait`.
+  reliable way to type a command and wait for it. `--match TEXT` on `send`
+  waits the same way, for that text. `--timeout` defaults to 60000 for
+  `wait` and `send --wait`.
 - A pane may be named `s4` or `3:s4`; the window part must match.
 - `press` takes the keys as arguments after the pane (`--keys` with a
   comma-separated list works too) and prints nothing for keys; a shortcut
@@ -448,14 +472,14 @@ script. It answers both the per-request protocol (`2026-07-28`, opened with
 Code does) and the `initialize` handshake (`2025-11-25` back to `2024-11-05`,
 as Codex does). It offers tools only.
 
-| Tool     | Arguments                                                                          |
-| -------- | ---------------------------------------------------------------------------------- |
-| `status` | `window?`                                                                          |
-| `list`   | `window?`                                                                          |
-| `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `timeout?`, `window?` |
-| `press`  | `pane`, `keys` (list), `window?`                                                   |
-| `read`   | `pane`, `lines?`, `screen?`, `window?`                                             |
-| `wait`   | `pane`, `after?`, `idle?`, `timeout?`, `window?`                                   |
+| Tool     | Arguments                                                                                    |
+| -------- | -------------------------------------------------------------------------------------------- |
+| `status` | `window?`                                                                                    |
+| `list`   | `window?`                                                                                    |
+| `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `match?`, `timeout?`, `window?` |
+| `press`  | `pane`, `keys` (list), `window?`                                                             |
+| `read`   | `pane`, `lines?`, `screen?`, `window?`                                                       |
+| `wait`   | `pane`, `after?`, `idle?`, `match?`, `timeout?`, `window?`                                   |
 
 | `keys` | `window?` |
 

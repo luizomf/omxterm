@@ -246,7 +246,7 @@ it("answers exited with the code, during a wait and after it", async () => {
   ).toBe("not-live");
 });
 
-it("refuses what later versions add and out-of-range limits", async () => {
+it("refuses malformed matches and out-of-range limits", async () => {
   const window = fakeWindow();
   const commands = createAgentCommands({
     tabs: tabs(),
@@ -256,14 +256,16 @@ it("refuses what later versions add and out-of-range limits", async () => {
   });
   const codes = await Promise.all(
     [
-      { pane: "s1", timeoutMs: 1000, match: "done" },
+      { pane: "s1", timeoutMs: 1000, match: "" },
+      { pane: "s1", timeoutMs: 1000, match: "é".repeat(1025) },
+      { pane: "s1", timeoutMs: 1000, match: 7 },
       { pane: "s1" },
       { pane: "s1", timeoutMs: 600_001 },
       { pane: "s1", timeoutMs: 1000, idleMs: 50 },
       { pane: "s1", timeoutMs: 1000, after: 99 },
     ].map((args) => failure(commands.run("wait", args, caller()))),
   );
-  expect(codes).toEqual(Array(5).fill("invalid-request"));
+  expect(codes).toEqual(Array(7).fill("invalid-request"));
   const reads = await Promise.all(
     [
       { pane: "s1", source: "command" },
@@ -272,6 +274,181 @@ it("refuses what later versions add and out-of-range limits", async () => {
     ].map((args) => failure(commands.run("read", args, caller()))),
   );
   expect(reads).toEqual(Array(3).fill("invalid-request"));
+});
+
+// A pane whose screen the test sets; each read answers it as it is then.
+function screenWindow(initial: string) {
+  const window = fakeWindow();
+  let screen = initial;
+  const read = vi.fn(async () => ({ text: screen, truncated: false }));
+  const commands = createAgentCommands({
+    tabs: tabs(),
+    sessions: window.sessions,
+    read,
+    encode: vi.fn(),
+  });
+  return {
+    window,
+    read,
+    commands,
+    // The program prints: the screen changes and the window shows it.
+    print(next: string, bytes = 10) {
+      screen = next;
+      window.output("s1", bytes);
+    },
+  };
+}
+
+function settled<T>(promise: Promise<T>) {
+  const state: { value?: T } = {};
+  void promise.then((value) => (state.value = value));
+  return state;
+}
+
+it("matches new text past a send, never an old copy still on screen", async () => {
+  vi.useFakeTimers();
+  const pane = screenWindow("$ npm test\nTests passed\n$ ");
+  pane.window.output("s1", 40);
+  const { offset } = (await pane.commands.run(
+    "send",
+    { pane: "s1", text: "npm test\r" },
+    caller(),
+  )) as { offset: number };
+  // The echo moves output past `after`; the old copy doesn't count.
+  pane.print("$ npm test\nTests passed\n$ npm test\nrunning");
+  const result = settled(
+    pane.commands.run(
+      "wait",
+      { pane: "s1", after: offset, match: "Tests passed", timeoutMs: 10_000 },
+      caller(),
+    ),
+  );
+  await vi.advanceTimersByTimeAsync(2000);
+  expect(result.value).toBeUndefined();
+  pane.print("$ npm test\nTests passed\n$ npm test\nrunning\nTests passed");
+  await vi.advanceTimersByTimeAsync(100);
+  expect(result.value).toEqual({ reason: "match", offset: 60 });
+});
+
+it("matches output that landed before the wait, and after an old copy scrolled off", async () => {
+  vi.useFakeTimers();
+  const pane = screenWindow("done\n$ ");
+  const sent = (await pane.commands.run(
+    "send",
+    { pane: "s1", text: "make\r" },
+    caller(),
+  )) as { offset: number };
+  pane.print("done\n$ make\nbuilt\ndone");
+  await expect(
+    pane.commands.run(
+      "wait",
+      { pane: "s1", after: sent.offset, match: "done", timeoutMs: 1000 },
+      caller(),
+    ),
+  ).resolves.toEqual({ reason: "match", offset: 10 });
+
+  await pane.commands.run("send", { pane: "s1", text: "make\r" }, caller());
+  const result = settled(
+    pane.commands.run(
+      "wait",
+      { pane: "s1", after: 10, match: "done", timeoutMs: 10_000 },
+      caller(),
+    ),
+  );
+  pane.print("$ make\ncompiling");
+  await vi.advanceTimersByTimeAsync(100);
+  expect(result.value).toBeUndefined();
+  pane.print("compiling\ndone");
+  await vi.advanceTimersByTimeAsync(100);
+  expect(result.value).toEqual({ reason: "match", offset: 30 });
+});
+
+it("waits for a match until it times out or the program ends", async () => {
+  vi.useFakeTimers();
+  const pane = screenWindow("$ ");
+  const timeout = pane.commands.run(
+    "wait",
+    { pane: "s1", match: "never", timeoutMs: 1000 },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  pane.print("$ sleep 1");
+  // With only match, a quiet pane isn't an answer.
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(timeout).resolves.toEqual({ reason: "timeout", offset: 10 });
+
+  const exited = pane.commands.run(
+    "wait",
+    { pane: "s1", match: "never", timeoutMs: 5000 },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  pane.window.exit("s1", 1);
+  await expect(exited).resolves.toEqual({
+    reason: "exited",
+    offset: 10,
+    exitCode: 1,
+  });
+});
+
+it("answers whichever of match and idle comes first", async () => {
+  vi.useFakeTimers();
+  const pane = screenWindow("$ ");
+  const idle = pane.commands.run(
+    "wait",
+    { pane: "s1", match: "ok", idleMs: 500, timeoutMs: 10_000 },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  pane.print("$ spin");
+  await vi.advanceTimersByTimeAsync(600);
+  await expect(idle).resolves.toEqual({ reason: "idle", offset: 10 });
+
+  const match = pane.commands.run(
+    "wait",
+    { pane: "s1", match: "ok", idleMs: 5000, timeoutMs: 10_000 },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  pane.print("$ spin\nok");
+  await vi.advanceTimersByTimeAsync(100);
+  await expect(match).resolves.toEqual({ reason: "match", offset: 20 });
+});
+
+it("ends a match wait when the grant ends, and stops looking", async () => {
+  vi.useFakeTimers();
+  const pane = screenWindow("$ ");
+  const controller = new AbortController();
+  const waiting = pane.commands.run(
+    "wait",
+    { pane: "s1", match: "ok", timeoutMs: 60_000 },
+    { signal: controller.signal },
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  pane.print("$ a");
+  await vi.advanceTimersByTimeAsync(100);
+  controller.abort(new AgentApiError("revoked", "stopped"));
+  expect(await failure(waiting)).toBe("revoked");
+  const looks = pane.read.mock.calls.length;
+  pane.print("$ a\nb");
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(pane.read).toHaveBeenCalledTimes(looks);
+});
+
+it("ends a match wait with the window's failure to read the screen", async () => {
+  vi.useFakeTimers();
+  const pane = screenWindow("$ ");
+  const waiting = pane.commands.run(
+    "wait",
+    { pane: "s1", match: "ok", timeoutMs: 60_000 },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  pane.read.mockRejectedValueOnce(
+    new AgentApiError("unavailable", "The pane's text couldn't be read."),
+  );
+  pane.print("$ a");
+  expect(await failure(waiting)).toBe("unavailable");
 });
 
 it("reads after the window caught up and reports the consumed offset", async () => {

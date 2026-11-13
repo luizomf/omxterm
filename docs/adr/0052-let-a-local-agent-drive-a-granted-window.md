@@ -1,8 +1,8 @@
 # Let a local agent drive a window the user grants
 
 Status: accepted for slice 1, "Drive what's there", and slice 2, "Agents plug
-in by themselves" (macOS and Linux), which are implemented. Of slice 3, the
-exact `screen` read is implemented. The
+in by themselves" (macOS and Linux), and slice 3, "Read and wait better",
+which are implemented. The
 [keyboard-parity rule](#keyboard-parity) is accepted, and slice 4 builds it
 ([#1047](https://github.com/luizomf/omxterm/issues/1047)): `press` with named
 keys and every shortcut decided, the tab tree in `list`, and `keys`. The
@@ -294,6 +294,23 @@ matching lands, every chord goes to the pane.
 - Without command boundaries, `idle` is a heuristic: a spinner or a prompt
   clock never goes idle, and a slow command can pause. That is why `match`
   and the timeout exist.
+- `match` is looked for in the same screen text `read` with `source:
+"screen"` answers, so an agent can copy what it expects from a read. A
+  screen can't tell an old copy from a new one, so the wait compares it with
+  the screen at `after`: it answers `match` once the window has shown output
+  past `after` and its screen holds more copies than it did then. The
+  fewest copies seen since then count, so an old copy that scrolled off
+  doesn't hide a new one. The screen at `after` is known when `after` is
+  the offset a `send` or `press` just returned (main reads the screen right
+  before writing, so the window answers before the program can echo
+  anything) or the current position (the wait reads it first). Any other
+  `after` has no baseline, and every copy counts once output moved past it.
+  Main looks again each time the window shows more output, at most every
+  50 ms. A burst that scrolls an old copy off and prints a new one between
+  two looks keeps the count and ends in `timeout`, never a false `match`.
+  Watching the output stream instead would miss full-screen programs that
+  redraw only the cells that changed, and would mean keeping terminal
+  output in main.
 
 ### Tabs and panes
 

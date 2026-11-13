@@ -9,6 +9,7 @@ import {
   isPlainRecord,
   MAX_AGENT_IDLE_MS,
   MAX_AGENT_KEYS,
+  MAX_AGENT_MATCH_CHARS,
   MAX_AGENT_READ_LINES,
   MAX_AGENT_SEND_BYTES,
   MAX_AGENT_WAIT_MS,
@@ -34,6 +35,7 @@ import {
   agentShortcutList,
   type AgentNativeAction,
 } from "./agent-shortcuts";
+import { createScreenMatches } from "./agent-screen-match";
 import type { AgentNeedsUser } from "./terminal-application";
 import type { AgentSessionPort } from "./terminal-ipc-types";
 
@@ -125,6 +127,49 @@ function integer(
   if ((value as number) > max)
     throw invalid(`${name} must be an integer from ${min} to ${max}.`);
   return value as number;
+}
+
+// A literal, non-empty and bounded; counted in characters, not code units.
+function matchText(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > 2 * MAX_AGENT_MATCH_CHARS ||
+    [...value].length > MAX_AGENT_MATCH_CHARS
+  )
+    throw invalid(
+      `match must be text of 1 to ${MAX_AGENT_MATCH_CHARS} characters.`,
+    );
+  return value;
+}
+
+// wait's arguments but `after`, which is checked against the pane's position.
+function waitRequest(args: unknown) {
+  const value = argumentsOf(
+    args,
+    ["pane", "timeoutMs"],
+    ["after", "idleMs", "match"],
+  );
+  if (!isAgentPaneId(value.pane))
+    throw invalid("pane must be an id such as s1.");
+  const match = value.match === undefined ? undefined : matchText(value.match);
+  return {
+    sessionId: value.pane,
+    after: value.after,
+    match,
+    timeoutMs: integer(value.timeoutMs, "timeoutMs", 1, MAX_AGENT_WAIT_MS),
+    // With only match, idleness is ignored.
+    idleMs:
+      match !== undefined && value.idleMs === undefined
+        ? undefined
+        : integer(
+            value.idleMs,
+            "idleMs",
+            MIN_AGENT_IDLE_MS,
+            MAX_AGENT_IDLE_MS,
+            DEFAULT_AGENT_IDLE_MS,
+          ),
+  };
 }
 
 function argumentsOf(
@@ -320,6 +365,12 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     TerminalSessionId,
     { readonly exitCode: number; readonly offset: number }
   >();
+  const screens = createScreenMatches({
+    read: options.read,
+    shown: (sessionId) => options.sessions.position(sessionId)?.acknowledged,
+    changed: () => changed(),
+    now,
+  });
   const watchers = new Set<() => void>();
   const changed = () => {
     for (const watcher of [...watchers]) watcher();
@@ -334,6 +385,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     acknowledged: changed,
     exited(sessionId, exitCode) {
       lastOutput.delete(sessionId);
+      screens.forget(sessionId);
       exits.set(sessionId, { exitCode, offset: lastSent.get(sessionId) ?? 0 });
       lastSent.delete(sessionId);
       if (exits.size > MAX_REMEMBERED_EXITS)
@@ -429,6 +481,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       if (utf8Length(data) > MAX_AGENT_SEND_BYTES)
         throw new AgentApiError("too-large", "At most 64 KiB per send.");
       const offset = position(sessionId).sent;
+      screens.remember(sessionId, offset);
       const receipt = options.sessions.write(sessionId, data);
       if (receipt === "rejected")
         throw new AgentApiError("not-live", "The pane isn't accepting input.");
@@ -493,6 +546,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       if (disposed) throw revoked();
       if (data === "") throw unsupportedPress();
       const offset = position(sessionId).sent;
+      screens.remember(sessionId, offset);
       const receipt = options.sessions.write(sessionId, data);
       if (receipt === "rejected")
         throw new AgentApiError("not-live", "The pane isn't accepting input.");
@@ -507,27 +561,8 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     },
 
     wait(args, caller) {
-      const value = argumentsOf(
-        args,
-        ["pane", "timeoutMs"],
-        ["after", "idleMs", "match"],
-      );
-      const sessionId = pane(value.pane);
-      if (value.match !== undefined)
-        throw invalid("match isn't available in this version; use idleMs.");
-      const timeoutMs = integer(
-        value.timeoutMs,
-        "timeoutMs",
-        1,
-        MAX_AGENT_WAIT_MS,
-      );
-      const idleMs = integer(
-        value.idleMs,
-        "idleMs",
-        MIN_AGENT_IDLE_MS,
-        MAX_AGENT_IDLE_MS,
-        DEFAULT_AGENT_IDLE_MS,
-      );
+      const { sessionId, match, timeoutMs, idleMs, ...request } =
+        waitRequest(args);
       const exited = () => {
         const exit = exits.get(sessionId);
         return exit && { reason: "exited", ...exit };
@@ -535,7 +570,11 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       if (!options.sessions.position(sessionId) && exits.has(sessionId))
         return exited();
       const start = position(sessionId);
-      const after = integer(value.after, "after", 0, start.sent, start.sent);
+      const after = integer(request.after, "after", 0, start.sent, start.sent);
+      const screen =
+        match === undefined
+          ? undefined
+          : screens.watch(sessionId, match, after, start.sent, caller.signal);
       let last = start;
       return watch<object>(
         watchers,
@@ -549,6 +588,9 @@ export function createAgentCommands(options: AgentCommandsOptions) {
             throw new AgentApiError("unknown-pane", "The pane was closed.");
           }
           last = current;
+          const found = screen?.check();
+          if (found !== undefined) return { reason: "match", offset: found };
+          if (idleMs === undefined) return undefined;
           const quiet = now() - (lastOutput.get(sessionId) ?? 0);
           return current.sent > after &&
             quiet >= idleMs &&
@@ -559,11 +601,13 @@ export function createAgentCommands(options: AgentCommandsOptions) {
         () => ({ reason: "timeout", offset: last.sent }),
         () => {
           const output = lastOutput.get(sessionId);
-          return last.sent > after && output !== undefined
+          return idleMs !== undefined &&
+            last.sent > after &&
+            output !== undefined
             ? output + idleMs - now()
             : undefined;
         },
-      );
+      ).finally(() => screen?.stop());
     },
   };
 
@@ -573,6 +617,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     },
     dispose() {
       disposed = true;
+      screens.dispose();
       unobserve();
       watchers.clear();
     },

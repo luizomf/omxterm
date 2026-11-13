@@ -102,6 +102,12 @@ posix(
       text: "timeout",
       isError: false,
     });
+    expect(
+      await server.call("wait", { pane: "s2", match: "done", timeout: 50 }),
+    ).toEqual({ text: "timeout", isError: false });
+    expect(
+      await server.call("wait", { pane: "s2", match: "", timeout: 50 }),
+    ).toMatchObject({ isError: true });
     expect(await server.call("read", { pane: 2 })).toMatchObject({
       isError: true,
     });

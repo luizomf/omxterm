@@ -1,6 +1,6 @@
 ---
 name: omxterm
-description: Drive the OMXTerm terminal window you run in. List its tabs and panes, type commands and press keys in them, open, split and close tabs and panes with the window's shortcuts, read their output and wait for them. Use when OMXTERM_CTL is set and the user wants something run, watched or checked in another pane.
+description: Drive the OMXTerm terminal window you run in. List its tabs and panes, type commands and press keys in them, open, split and close tabs and panes with the window's shortcuts, read their output and wait for them to finish or show given text. Use when OMXTERM_CTL is set and the user wants something run, watched or checked in another pane.
 ---
 
 # OMXTerm
@@ -27,11 +27,16 @@ Exit 0 means you can drive this window. Exit 3 means the user hasn't allowed
 it: tell the user the sentence it printed, as is, and try again once they say
 they did. Don't look for another way in.
 
+Prefer a window the user opened for you: if they're working in this one, ask
+them to open a new window and allow agents there, so you don't type beside
+them.
+
 ## Commands
 
 ```sh
 "$OMXTERM_CTL" list                     # tabs, each with its panes: id, size, focused, self
 "$OMXTERM_CTL" send s2 --text 'npm test' --enter --wait --timeout 300000
+"$OMXTERM_CTL" send s2 --text 'npm test' --enter --match 'Tests passed' --timeout 300000
 "$OMXTERM_CTL" read s2 --lines 100      # the last 100 lines of s2
 "$OMXTERM_CTL" read s2 --screen         # exactly what s2's screen shows, one line per row
 "$OMXTERM_CTL" wait s2 --idle 2000 --timeout 60000
@@ -52,6 +57,15 @@ they did. Don't look for another way in.
 - `idle` only means no output for a while (500 ms by default, `--idle` to
   change it). A slow command can pause; on `timeout` it is still running. If
   in doubt, `wait` again or `read` and look.
+- `--match TEXT` waits for that text (literal, not a pattern) to show up on
+  the pane's screen instead, and prints `match`. Use it when a spinner, a
+  clock or a slow step means the pane never goes quiet, and in full-screen
+  programs. Only a new copy counts, not one already on screen. Run the
+  command and wait in one call (`send … --match`): a separate `wait` counts
+  from when it starts unless you pass the offset `send --json` printed as
+  `--after`. Pick text the command line itself doesn't contain, since its
+  echo is on the screen too. With `--idle` as well, whichever comes first
+  answers.
 - `list` shows every tab (id, title, `selected` for the visible one) with its
   panes indented under it (`focused` is the pane that takes the user's keys).
   Use it to see what your keys did, and `--json` for the tree. Tab titles are
@@ -91,6 +105,9 @@ they did. Don't look for another way in.
   is not yet. The shortcut that allows or stops agents is refused; paste,
   the Command Palette, Find, panels and the rest answer "not yet" with the
   reason.
+- When `$TMUX` is set, you run inside tmux: the whole tmux session is one
+  OMXTerm pane. Reach tmux's own windows and panes with tmux's commands
+  (`tmux send-keys`, `tmux capture-pane -p`), not with these.
 - Pane ids such as `s2` come from `list` and last as long as the grant.
 - Sends to the same pane at the same time arrive in no guaranteed order. Send
   one at a time.
@@ -103,7 +120,7 @@ they did. Don't look for another way in.
 `"$OMXTERM_CTL" mcp` serves the same commands as MCP tools on stdio: `status`,
 `list`, `keys`, `send`, `press`, `read` and `wait`. Their arguments are the CLI's
 options: `pane`, `text`, `keys` (for `press`, the keys to press), `enter`,
-`wait`, `idle`, `timeout`, `lines`, `screen` (true reads the screen),
+`wait`, `idle`, `match`, `timeout`, `lines`, `screen` (true reads the screen),
 `window`
 (only needed when several windows are allowed and you aren't in one of them)
 and `after` (the `offset` that `send` returned; only output past it counts).
