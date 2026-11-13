@@ -3,7 +3,7 @@
 // Settings, then exercise Files, SSH Connect or Snippets against the real
 // terminal.
 const assert = require("node:assert/strict");
-const { readFile } = require("node:fs/promises");
+const { readFile, readdir } = require("node:fs/promises");
 const path = require("node:path");
 const { BrowserWindow, Menu, app, dialog, webContents } = require("electron");
 
@@ -677,13 +677,32 @@ async function mirror({ archive, snippetsArchive, marker, dropped }) {
     );
   result.grid = { before: await canvases() };
   const typed = marker + ".typed";
+  // While mirroring, both panes run this command within milliseconds. Two
+  // concurrent appends to one shared file race on Windows, where `Add-Content`
+  // opens it without sharing writes and one shell fails with "The stream was
+  // not readable", so each shell writes its own `<marker>.typed.<pid>` and
+  // the check counts those files.
+  const typedWrite = (file) =>
+    onWindows
+      ? `Set-Content -LiteralPath (${psQuote(file + ".")} + $PID) $PID`
+      : `echo $$ > ${shellQuote(file + ".")}$$`;
+  const typedFiles = async () => {
+    const dir = path.dirname(typed);
+    const base = path.basename(typed) + ".";
+    return (await readdir(dir).catch(() => []))
+      .filter((entry) => entry.startsWith(base))
+      .map((entry) => path.join(dir, entry));
+  };
   result.panes = await start("palette");
   result.active = await status();
   result.grid.active = await canvases();
-  await keys(line(typed));
-  await until(async () => (await lines(typed)).length >= 2, "mirrored typing");
+  await keys(typedWrite(typed));
+  await until(async () => (await typedFiles()).length >= 2, "mirrored typing");
   await settle();
-  result.steps.typing = await lines(typed);
+  // The per-shell files carry each shell's process id, as the shared file did.
+  result.steps.typing = (
+    await Promise.all((await typedFiles()).map((file) => lines(file)))
+  ).flat();
 
   // 2. Stop by clicking a pane's mark: the marks go away quietly and the next
   // command runs in one shell only.
