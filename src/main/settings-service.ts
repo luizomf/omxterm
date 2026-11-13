@@ -330,6 +330,9 @@ function settingsValues(
     "window.showTitleBar": configuration.showTitleBar,
     "window.showTabBar": configuration.showTabBar,
     "theme.path": typeof theme === "string" ? theme : "",
+    "notifications.enabled": configuration.notifications.enabled,
+    "notifications.sound": configuration.notifications.sound,
+    "notifications.soundFile": configuration.notifications.soundFile ?? "",
   };
 }
 

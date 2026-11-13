@@ -118,9 +118,26 @@ With Pi, enable Kitty images in its settings (this option works across shells):
 
 Or, in a POSIX shell, start one session with `PI_IMAGE_PROTOCOL=kitty pi`. Inline images stay with their terminal cells while scrolling, zooming, or resizing.
 
-## Bells and attention
+## Program progress and attention
 
-Terminal bells are silent. When a session rings the bell, OMXTerm adds a `🔔` badge to the tab title and requests desktop attention if the window is unfocused. Focusing the window or interacting with the tab clears the indicator.
+Programs such as coding agents can tell OMXTerm what they're doing:
+
+- **Working (`⋯`):** while a program reports progress (OSC 9;4), its pane and tab show `⋯`. It goes away when the program says it's done, asks for attention, or exits.
+- **Attention (`●`):** when a program rings the bell or sends a notification (OSC 9 or OSC 777), its pane and tab show `●` until you look at that pane. Bells stay silent.
+
+If the window is in the background, or the program's tab isn't selected, OMXTerm also shows a desktop notification with the program's message. Click it to jump to that tab. Sound is off by default. To turn notifications off or add a sound, see [Notifications](configuration.md#notifications).
+
+Most agents only send these to terminals they recognize, so you may need to tell them to:
+
+- **Claude Code:** set `preferredNotifChannel` to `iterm2` (OSC 9) or `ghostty` (OSC 777, with a title) in `/config` or `~/.claude.json`. Claude Code shows its own progress only in terminals it recognizes, so its working mark doesn't appear in OMXTerm.
+- **Codex:** in `~/.codex/config.toml`, under `[tui]`, set `notification_method = "osc9"`.
+- **Gemini CLI:** turn on `general.enableNotifications`; it sends OSC 777 by default.
+
+You can test it from a shell in a background tab:
+
+```sh
+sleep 3; printf '\e]777;notify;Build;Finished\e\\'
+```
 
 ## About and credits
 

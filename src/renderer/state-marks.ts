@@ -10,7 +10,14 @@ import {
  * Core owns the glyphs so every state looks the same whoever reports it. A
  * new state adds a glyph here; reporters never bring their own visuals.
  */
-export const stateGlyphs = { mirror: "↔\uFE0E" } as const;
+export const stateGlyphs = {
+  mirror: "↔\uFE0E",
+  // A program reports progress (OSC 9;4); static, never animated.
+  working: "⋯",
+  // A program asked for attention (BEL, OSC 9, OSC 777) and the pane has
+  // not been seen since.
+  attention: "●",
+} as const;
 export type StateGlyph = keyof typeof stateGlyphs;
 
 /** Literal text (never HTML), or a resolver for core strings. */

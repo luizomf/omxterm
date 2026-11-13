@@ -109,6 +109,8 @@ export type TerminalTabCommand =
   | { readonly action: "previous" }
   | { readonly action: "select"; readonly position: number }
   | { readonly action: "close-session"; readonly sessionId: TerminalSessionId }
+  // A clicked notification selects its session's tab and focuses its pane.
+  | { readonly action: "reveal-session"; readonly sessionId: TerminalSessionId }
   | TerminalPaneCommand;
 
 export type TerminalFontZoom = "in" | "out" | "reset";
@@ -305,7 +307,8 @@ function isTabCommandEnvelope(value: unknown): value is TerminalTabCommand {
     );
   if (isStrictRecord(value, ["action", "sessionId"]))
     return (
-      value.action === "close-session" && isTerminalSessionId(value.sessionId)
+      (value.action === "close-session" || value.action === "reveal-session") &&
+      isTerminalSessionId(value.sessionId)
     );
   return false;
 }

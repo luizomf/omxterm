@@ -3,6 +3,7 @@ import { createMirrorTyping } from "./mirror-typing";
 import type { MirrorTypingBridge } from "../shared/mirror-typing";
 import { createTerminalTabsLayout } from "./terminal-tabs-layout";
 import { createStateMarks } from "./state-marks";
+import { createPaneAttention } from "./pane-attention";
 import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
   InitialLayout,
@@ -128,6 +129,10 @@ export interface TerminalTabsOptions {
     request: string,
   ) => void;
   readonly notifyBell?: (sessionId: TerminalSessionId) => void;
+  readonly notifyDesktop?: (
+    sessionId: TerminalSessionId,
+    notification: import("../shared/terminal-attention").TerminalNotification,
+  ) => void;
   readonly syncTitle?: (sessionId: TerminalSessionId) => void;
 }
 
@@ -146,6 +151,8 @@ export interface TerminalTabs {
   ): boolean;
   handleCommand(command: TerminalTabCommand): void;
   setSessionTitle(sessionId: TerminalSessionId, title: string): void;
+  // Main's verdict for a session's attention mark (ADR 0053).
+  setSessionAttention(sessionId: TerminalSessionId, pending: boolean): void;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -221,6 +228,7 @@ export function createTerminalTabs(
     language,
     () => renderStrip(),
   );
+  const attention = createPaneAttention(marks);
   const layout = createTerminalTabsLayout(
     elements.container,
     tabs,
@@ -353,7 +361,9 @@ export function createTerminalTabs(
     pane: TerminalPane,
     exit: import("../shared/terminal-contract").TerminalExit,
   ) => {
-    if (disposed || pane.removed) return;
+    if (disposed) return;
+    attention.ended(pane);
+    if (pane.removed) return;
     terminalPaneEnded(pane, exit, panes, keyboard, notifyFocus, language.t);
   };
 
@@ -376,6 +386,8 @@ export function createTerminalTabs(
     fieldClipboard: contextMenu.fieldClipboard,
     routeKeyInput: (pane, data) => mirror?.route(pane, data) ?? false,
     onSemanticInput: (pane) => mirror?.semantic(pane),
+    onProgress: (pane, active) => attention.progress(pane, active),
+    onAttention: (pane) => attention.progress(pane, false),
   });
 
   const panes = createPaneOperations({
@@ -439,6 +451,18 @@ export function createTerminalTabs(
       settingsActions.openSettings({ page: "extensions", reason: "snippets" }),
   });
   const layoutSaved = createLayoutSaveNotice(marks);
+  // A clicked notification: select the session's tab and focus its pane.
+  const revealSession = (sessionId: TerminalSessionId) => {
+    const pane = findPaneBySession(terminalTabs(), sessionId);
+    if (disposed || !pane || pane.removed || pane.tab.removed) return;
+    if (pane.tab === selectedTab()) {
+      panes.focusPane(pane.tab, pane, true);
+      return;
+    }
+    pane.tab.focused = pane;
+    panes.renderTab(pane.tab);
+    select(tabs.indexOf(pane.tab));
+  };
   if (options.mirrorTyping)
     mirror = createMirrorTyping({
       bridge: options.mirrorTyping,
@@ -472,6 +496,11 @@ export function createTerminalTabs(
       if (blocked) mirror?.stop();
       settingsActions.setBlocked(blocked);
     },
+    setSessionAttention(sessionId, pending) {
+      if (disposed) return;
+      const pane = findPaneBySession(terminalTabs(), sessionId);
+      if (pane) attention.pending(pane, pending);
+    },
     setSessionTitle(sessionId, title) {
       if (disposed) return;
       const pane = findPaneBySession(terminalTabs(), sessionId);
@@ -482,10 +511,12 @@ export function createTerminalTabs(
     applyConfiguration(next) {
       if (!disposed) configuration.apply(next);
     },
-    handleCommand: (command: TerminalTabCommand) =>
-      command.action === "layout-save-result"
-        ? layoutSaved(command.outcome)
-        : commands.handle(command),
+    handleCommand: (command: TerminalTabCommand) => {
+      if (command.action === "layout-save-result") layoutSaved(command.outcome);
+      else if (command.action === "reveal-session")
+        revealSession(command.sessionId);
+      else commands.handle(command);
+    },
     zoom(command) {
       if (!disposed && selectedTab()) configuration.zoom(command);
     },

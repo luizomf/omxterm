@@ -111,6 +111,7 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
           notifyTabsEmpty: bridge.terminal.notifyTabsEmpty,
           onTitleRequest: bridge.terminal.title,
           onBell: bridge.terminal.bell,
+          attention: bridge.terminal,
           onExternalLink: bridge.terminal.openExternalLink,
           loadLocalImage: bridge.terminal.loadLocalImage,
           subscribeToLocalImageOpen: bridge.terminal.onLocalImageOpen,

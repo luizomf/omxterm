@@ -1,6 +1,7 @@
 import type { PtyTransport } from "restty";
 import type { PatchedResttyServices } from "./restty-runtime-contract";
 import { decodeOsc52Write } from "./osc52-clipboard";
+import { parseAttentionOsc } from "./attention-osc";
 import type { SemanticInputDelivery } from "./semantic-input-delivery";
 import type {
   TerminalSurfaceOptions,
@@ -123,7 +124,18 @@ export function resttyHostServices(
       return null;
     },
     onOsc: (command: number, payload: string) => {
-      if (!isLive() || command !== 52 || !options.clipboard) return;
+      if (!isLive()) return;
+      if (command === 9 || command === 777) {
+        const report = parseAttentionOsc(command, payload);
+        if (report?.kind === "progress") options.onProgress?.(report.active);
+        else if (report)
+          options.onDesktopNotification?.({
+            title: report.title,
+            body: report.body,
+          });
+        return;
+      }
+      if (command !== 52 || !options.clipboard) return;
       const text = decodeOsc52Write(payload);
       if (text === undefined) return;
       void options.clipboard

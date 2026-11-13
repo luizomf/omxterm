@@ -140,7 +140,7 @@ describe("startup title reconciliation through host, real Adapter and tab labels
     expect(h.nativeTitle).toHaveBeenLastCalledWith("synthetic-shell");
   });
 
-  it("reconciles the latest sanitized title and BEL, including a background pending tab", async () => {
+  it("reconciles the latest sanitized title, including a background pending tab, and keeps BEL out of labels", async () => {
     const h = harness();
     h.controller.requestTitle("s1", "first\n\u202etitle");
     await h.finish(0);
@@ -150,10 +150,10 @@ describe("startup title reconciliation through host, real Adapter and tab labels
     h.controller.ringBell("s2");
     h.command({ action: "select", position: 1 });
     await h.finish(1);
-    expect(h.labels()).toEqual(["firsttitle", "🔔 newertitle"]);
+    expect(h.labels()).toEqual(["firsttitle", "newertitle"]);
     expect(h.nativeTitle).toHaveBeenLastCalledWith("firsttitle");
     h.controller.requestTitle("s2", "latest");
-    expect(h.labels()).toEqual(["firsttitle", "🔔 latest"]);
+    expect(h.labels()).toEqual(["firsttitle", "latest"]);
   });
 
   it("never reconciles a removed pending owner or retargets its late title", async () => {

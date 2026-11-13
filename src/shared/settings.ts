@@ -105,6 +105,9 @@ export const SETTINGS_FIELDS = {
   "window.showTitleBar": { lifetime: "new-windows", accepts: isBoolean },
   "window.showTabBar": { lifetime: "new-windows", accepts: isBoolean },
   "theme.path": { lifetime: "live", accepts: nonEmptyText },
+  "notifications.enabled": { lifetime: "live", accepts: isBoolean },
+  "notifications.sound": { lifetime: "live", accepts: isBoolean },
+  "notifications.soundFile": { lifetime: "live", accepts: nonEmptyText },
 } as const satisfies Record<string, SettingsFieldDefinition>;
 
 export type SettingsPath = keyof typeof SETTINGS_FIELDS;

@@ -315,6 +315,9 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.runtime-unavailable":
     "Extensões não estão disponíveis agora. Seus terminais continuam funcionando.",
   "extensions.unsupported": "Extensões não são compatíveis com este sistema.",
+  "attention.working": "Trabalhando.",
+  "attention.pending": "Pediu sua atenção.",
+  "attention.bell": "Tocou a campainha.",
   "mirrorTyping.title": "Espelhar digitação",
   "mirrorTyping.source": "Espelhando a digitação deste painel.",
   "mirrorTyping.member": "Espelhando a digitação para este painel.",
@@ -392,6 +395,10 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.scrollback": "Linhas de histórico",
   "settings.contextMenu":
     "Menu de contexto do terminal (entrada do mouse para aplicativos não muda)",
+  "settings.notifications": "Notificações na área de trabalho",
+  "settings.notificationSound": "Som de notificação",
+  "settings.soundFile": "Arquivo de som",
+  "settings.systemSound": "Som do sistema",
   "settings.padding.top": "Espaçamento superior",
   "settings.padding.right": "Espaçamento direito",
   "settings.padding.bottom": "Espaçamento inferior",

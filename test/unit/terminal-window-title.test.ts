@@ -40,14 +40,31 @@ function createControllerHarness(focused = false) {
   const rejected = vi.fn();
   const sessionTitles = vi.fn();
   const chromeTitle = vi.fn();
+  const attention = vi.fn();
+  const notify = vi.fn();
+  const clearNotification = vi.fn();
   const controller = createTerminalWindowTitleController(fixture.window, {
     fallbackSessionTitle: "example-shell",
     requestAttention: dock,
     sendSessionTitle: sessionTitles,
     onRejected: rejected,
     onWindowTitle: chromeTitle,
+    sendSessionAttention: attention,
+    notify,
+    clearNotification,
+    bellText: () => "Rang the bell.",
   });
-  return { ...fixture, dock, rejected, sessionTitles, chromeTitle, controller };
+  return {
+    ...fixture,
+    dock,
+    rejected,
+    sessionTitles,
+    chromeTitle,
+    attention,
+    notify,
+    clearNotification,
+    controller,
+  };
 }
 
 describe("native Terminal Title and bell attention", () => {
@@ -62,16 +79,18 @@ describe("native Terminal Title and bell attention", () => {
     expect(h.window.setTitle).toHaveBeenLastCalledWith("Settings");
     expect(h.sessionTitles).toHaveBeenLastCalledWith(
       "s1",
-      "🔔 synthetic background",
+      "synthetic background",
     );
     h.controller.selectSettings("Configurações");
     h.controller.syncSessionTitle("s1");
     expect(h.window.setTitle).toHaveBeenLastCalledWith("Configurações");
-    expect(h.sessionTitles).toHaveBeenLastCalledWith(
-      "s1",
-      "🔔 synthetic background",
-    );
+    // Settings hides the session, so its attention stays pending.
+    expect(h.attention.mock.calls).toEqual([["s1", true]]);
     h.controller.selectSession("s1");
+    expect(h.attention.mock.calls).toEqual([
+      ["s1", true],
+      ["s1", false],
+    ]);
     expect(h.window.setTitle).toHaveBeenLastCalledWith("synthetic background");
     h.controller.selectSettings("Settings");
     h.controller.selectSession(null);
@@ -85,7 +104,8 @@ describe("native Terminal Title and bell attention", () => {
     harness.controller.requestTitle("s1", "before\n\u202eafter");
     expect(harness.chromeTitle).toHaveBeenLastCalledWith("beforeafter");
     harness.controller.ringBell("s1");
-    expect(harness.chromeTitle).toHaveBeenLastCalledWith("🔔 beforeafter");
+    // Attention is a State Mark now; the title itself stays the program's.
+    expect(harness.chromeTitle).toHaveBeenLastCalledWith("beforeafter");
     harness.controller.resetAttention();
     harness.controller.requestTitle("s1", "x".repeat(257));
     expect(harness.chromeTitle).toHaveBeenLastCalledWith("example-shell");
@@ -204,46 +224,47 @@ describe("native Terminal Title and bell attention", () => {
     expect(JSON.stringify(harness.rejected.mock.calls)).not.toContain("CANARY");
   });
 
-  it("marks every ringing session, selected or not, and reserves native attention for unfocused windows", () => {
+  it("marks every attention, selected or not, and reserves native attention for what is out of sight", () => {
     const harness = createControllerHarness(true);
     harness.controller.sessionStarted("s1");
     harness.controller.sessionStarted("s2");
     harness.controller.selectSession("s1");
-    harness.sessionTitles.mockClear();
 
-    // The selected tab of a focused window is marked too: silent, but visible.
+    // The focused pane of a focused window is marked too, but nothing native.
     harness.controller.ringBell("s1");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
-      "s1",
-      "🔔 example-shell",
-    );
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith(
-      "🔔 example-shell",
-    );
+    expect(harness.attention.mock.calls).toEqual([["s1", true]]);
     expect(harness.dock).not.toHaveBeenCalled();
+    expect(harness.notify).not.toHaveBeenCalled();
 
-    // Typing in the selected tab acknowledges its own bell.
+    // Typing in the selected pane acknowledges its own attention.
     harness.controller.resetAttention();
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
-      "s1",
-      "example-shell",
-    );
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
+    expect(harness.attention).toHaveBeenLastCalledWith("s1", false);
 
-    harness.controller.ringBell("s2");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
-      "s2",
-      "🔔 example-shell",
-    );
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
+    // Another pane of the selected tab is on screen: marked, no notification.
+    harness.controller.ringBell("s2", true);
+    expect(harness.attention).toHaveBeenLastCalledWith("s2", true);
+    expect(harness.notify).not.toHaveBeenCalled();
+    harness.controller.resetAttention();
+    expect(harness.attention).toHaveBeenLastCalledWith("s2", true);
+
+    // A background tab gets a notification, titled by its session.
+    harness.controller.requestTitle("s2", "agent");
+    harness.controller.notify("s2", { title: "", body: "Done" });
+    expect(harness.notify).toHaveBeenLastCalledWith("s2", {
+      title: "agent",
+      body: "Done",
+    });
+    harness.controller.notify("s2", { title: "Claude Code", body: "Waiting" });
+    expect(harness.notify).toHaveBeenLastCalledWith("s2", {
+      title: "Claude Code",
+      body: "Waiting",
+    });
     expect(harness.dock).not.toHaveBeenCalled();
 
     harness.controller.selectSession("s2");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
-      "s2",
-      "example-shell",
-    );
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("example-shell");
+    expect(harness.attention).toHaveBeenLastCalledWith("s2", false);
+    expect(harness.clearNotification).toHaveBeenLastCalledWith("s2");
+    expect(harness.window.setTitle).toHaveBeenLastCalledWith("agent");
   });
 
   it("requests native attention once for an unfocused window until focus clears it", () => {
@@ -255,48 +276,41 @@ describe("native Terminal Title and bell attention", () => {
     harness.controller.ringBell("s1");
     harness.controller.ringBell("s1");
     expect(harness.dock).toHaveBeenCalledOnce();
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("🔔 remote job");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
-      "s1",
-      "🔔 remote job",
-    );
+    expect(harness.attention.mock.calls).toEqual([["s1", true]]);
+    // An unfocused window notifies even for its selected pane.
+    expect(harness.notify).toHaveBeenLastCalledWith("s1", {
+      title: "remote job",
+      body: "Rang the bell.",
+    });
 
     harness.focus();
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("remote job");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s1", "remote job");
+    expect(harness.attention).toHaveBeenLastCalledWith("s1", false);
+    expect(harness.clearNotification).toHaveBeenCalledExactlyOnceWith("s1");
 
     harness.unfocus();
     harness.controller.ringBell("s1");
     expect(harness.dock).toHaveBeenCalledTimes(2);
   });
 
-  it("keeps an unselected tab's marker through selected-tab interaction and composes over titles", () => {
+  it("keeps an unselected pane's attention through selected-pane interaction", () => {
     const harness = createControllerHarness(false);
     harness.controller.sessionStarted("s1");
     harness.controller.sessionStarted("s2");
     harness.controller.selectSession("s1");
-    harness.controller.requestTitle("s2", "🔔legitimate");
 
     harness.controller.ringBell("s2");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
-      "s2",
-      "🔔 🔔legitimate",
-    );
-
-    // Interaction happens in the selected tab; the other marker stays.
+    // Interaction happens in the selected pane; the other mark stays.
     harness.controller.resetAttention();
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith(
-      "s2",
-      "🔔 🔔legitimate",
-    );
-
-    harness.controller.requestTitle("s2", "latest");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s2", "🔔 latest");
+    expect(harness.attention.mock.calls).toEqual([["s2", true]]);
 
     harness.focus();
     harness.controller.selectSession("s2");
-    expect(harness.sessionTitles).toHaveBeenLastCalledWith("s2", "latest");
-    expect(harness.window.setTitle).toHaveBeenLastCalledWith("latest");
+    expect(harness.attention).toHaveBeenLastCalledWith("s2", false);
+
+    // An ended session takes its notification with it.
+    harness.controller.ringBell("s1");
+    harness.controller.sessionEnded("s1");
+    expect(harness.clearNotification).toHaveBeenLastCalledWith("s1");
   });
 
   it("ignores late title and bell events after its Terminal Window closes", () => {

@@ -207,6 +207,44 @@ describe("isolated preload terminal bridge requests", () => {
     });
   });
 
+  it("bounds program notifications out and attention verdicts in", () => {
+    const bridge = electron.bridge!;
+    bridge.notify("s1", { title: "Claude Code", body: "Waiting" });
+    expect(() =>
+      bridge.notify("s1", { title: "", body: "x".repeat(513) }),
+    ).toThrow(TypeError);
+    expect(() => bridge.notify("bad", { title: "", body: "Done" })).toThrow(
+      TypeError,
+    );
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.notification, {
+      sessionId: "s1",
+      title: "Claude Code",
+      body: "Waiting",
+    });
+
+    const attention = vi.fn();
+    const sound = vi.fn();
+    const removeAttention = bridge.onSessionAttention(attention);
+    const removeSound = bridge.onAttentionSound(sound);
+    const deliver = (channel: string, payload: unknown) =>
+      electron.listeners.get(channel)?.({}, payload);
+    deliver(terminalIpc.sessionAttention, { sessionId: "s1", pending: true });
+    deliver(terminalIpc.sessionAttention, { sessionId: "s1", pending: "yes" });
+    deliver(terminalIpc.sessionAttention, {
+      sessionId: "s1",
+      pending: false,
+      extra: 1,
+    });
+    deliver(terminalIpc.attentionSound, new Uint8Array([1, 2]));
+    deliver(terminalIpc.attentionSound, new Uint8Array());
+    deliver(terminalIpc.attentionSound, "not bytes");
+    removeAttention();
+    removeSound();
+
+    expect(attention.mock.calls).toEqual([["s1", true]]);
+    expect(sound.mock.calls).toEqual([[new Uint8Array([1, 2])]]);
+  });
+
   it("delivers only validated tab title updates from main", () => {
     const bridge = electron.bridge!;
     const onTabTitle = vi.fn();

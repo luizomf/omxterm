@@ -133,6 +133,22 @@ export function pages(platform: string): readonly Page[] {
           max: 100_000,
           step: 1_000,
         },
+        {
+          kind: "toggle",
+          path: "notifications.enabled",
+          label: "settings.notifications",
+        },
+        {
+          kind: "toggle",
+          path: "notifications.sound",
+          label: "settings.notificationSound",
+        },
+        {
+          kind: "text",
+          path: "notifications.soundFile",
+          label: "settings.soundFile",
+          placeholder: "settings.systemSound",
+        },
         ...(["top", "right", "bottom", "left"] as const).map(
           (side) =>
             ({

@@ -6,6 +6,7 @@ import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-co
 import { bufferTextCorrections } from "../../scripts/restty-buffer-text-corrections.mjs";
 import { idleRenderCorrections } from "../../scripts/restty-idle-render-corrections.mjs";
 import { idleBlinkCorrections } from "../../scripts/restty-idle-blink-corrections.mjs";
+import { attentionOscCorrections } from "../../scripts/restty-attention-osc-corrections.mjs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
 import { describe, expect, it, vi } from "vitest";
@@ -73,7 +74,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(occurrences + 1);
         return value.replaceAll(corrected, original);
       }, text);
-    const preBlink = reverse(source, idleBlinkCorrections);
+    const preAttention = reverse(source, attentionOscCorrections);
+    expect(hash(preAttention)).toBe(
+      "3194723adecac1901096c384e9a9687fcf0c979dab64fcae22886353354facff",
+    );
+    const preBlink = reverse(preAttention, idleBlinkCorrections);
     expect(hash(preBlink)).toBe(
       "a20cb57ea8e2b248398a47b5235db207c36ee6f6920e129757bf1f878d655f3c",
     );

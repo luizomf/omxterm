@@ -88,6 +88,7 @@ import {
 import { registerWindowChrome } from "./window-chrome";
 import * as nativeMenu from "./native-application-menu";
 import { createNativeTerminalWindowTitleController } from "./terminal-window-attention";
+import { createWindowNotifications } from "./terminal-window-notifications";
 import { fontIpcRouter } from "./terminal-font-data";
 import { loadTerminalSnippets } from "./snippets";
 import {
@@ -401,10 +402,28 @@ app
               cursor: () => screen.getCursorScreenPoint(),
               popupApplicationMenu: nativeMenu.applicationMenuForWindow(window),
             });
+            const notifications = createWindowNotifications(window, {
+              preferences: () =>
+                configurationReloader.current().configuration.notifications,
+              reveal: (sessionId) =>
+                sendAction(window.webContents, terminalIpc.tabCommand, {
+                  action: "reveal-session",
+                  sessionId,
+                }),
+            });
             const titleController = createNativeTerminalWindowTitleController(
               window,
               {
                 fallbackSessionTitle: shellName,
+                sendSessionAttention: (sessionId, pending) =>
+                  !window.webContents.isDestroyed() &&
+                  window.webContents.send(terminalIpc.sessionAttention, {
+                    sessionId,
+                    pending,
+                  }),
+                notify: notifications.show,
+                clearNotification: notifications.clear,
+                bellText: () => currentTranslator().t("attention.bell"),
                 onWindowTitle: chrome.setTitle,
                 sendSessionTitle: (sessionId, title) =>
                   !window.webContents.isDestroyed() &&
@@ -423,6 +442,7 @@ app
             );
             window.once("closed", () => {
               titleController.dispose();
+              notifications.dispose();
               layoutSession?.windowClosed();
             });
             sshLaunch.register(window);
@@ -477,6 +497,7 @@ app
                 actionDelivery.invalidate();
                 invocationTarget.ended(context.sessionId);
                 titleController.sessionEnded(context.sessionId);
+                notifications.ended(context.sessionId);
                 lifecycle.onSessionExit(exit, context);
               },
               onSessionStarted: (sessionId, title) => {
@@ -500,6 +521,7 @@ app
               onSessionTitleSync: titleController.syncSessionTitle,
               onTitleRequest: titleController.requestTitle,
               onBell: titleController.ringBell,
+              onNotification: titleController.notify,
               onUserInteraction: titleController.resetAttention,
               onLayoutActivity: () => layoutSession?.touch(),
               openExternalLink: (url) => shell.openExternal(url),

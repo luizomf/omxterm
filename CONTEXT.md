@@ -87,7 +87,8 @@ area and tab strip. macOS uses native window buttons; Linux and Windows draw a
 themed title row with native window actions.
 
 **State Mark** — A small core-owned glyph at a pane's edge (and on its tab when
-the tab strip shows) for an ongoing state such as Mirror Typing. Its tooltip
+the tab strip shows) for an ongoing state such as Mirror Typing, Program
+Progress or Attention. Its tooltip
 names the state; its owner may make the pane's glyph clickable (Mirror Typing:
 click to stop). It never changes the terminal grid. Idle and success show
 nothing; surprises and problems use one overlay sentence instead, and so does
@@ -126,8 +127,22 @@ one window, relative to its configured baseline.
 the tab and selected window. It is untrusted display text, excluded from logs
 and PTY replies.
 
-**Terminal Bell** — A silent BEL request: a title marker and, for an unfocused
-window, one native attention request until focus or interaction clears it.
+**Terminal Bell** — A silent BEL request. Like a Program Notification, it
+leaves an Attention mark and, for an unfocused window, one native attention
+request until focus or interaction clears it.
+
+**Program Progress** — A program's OSC 9;4 report that it is working, shown as
+the "working" State Mark until the program clears it, asks for attention, or
+its session ends. It is never a notification.
+
+**Program Notification** — Untrusted plain text a program sends with OSC 9 or
+OSC 777 notify. It leaves an Attention mark and, when the pane is out of
+sight, a native desktop notification whose click selects that pane.
+
+**Attention** — Main's per-session record that a program rang the bell or
+sent a notification and the pane hasn't been seen since, shown as the
+"attention" State Mark. See
+[program progress and attention](docs/spec.md#program-progress-and-attention).
 
 ## Appearance and configuration
 

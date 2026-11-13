@@ -302,6 +302,9 @@ export const englishMessages = {
   "extensions.runtime-unavailable":
     "Extensions aren't available right now. Your terminals still work.",
   "extensions.unsupported": "Extensions aren't supported on this system.",
+  "attention.working": "Working.",
+  "attention.pending": "Asked for your attention.",
+  "attention.bell": "Rang the bell.",
   "mirrorTyping.title": "Mirror Typing",
   "mirrorTyping.source": "Mirroring typing from this pane.",
   "mirrorTyping.member": "Mirroring typing to this pane.",
@@ -377,6 +380,10 @@ export const englishMessages = {
   "settings.scrollback": "Scrollback lines",
   "settings.contextMenu":
     "Terminal context menu (application mouse input is unchanged)",
+  "settings.notifications": "Desktop notifications",
+  "settings.notificationSound": "Notification sound",
+  "settings.soundFile": "Sound file",
+  "settings.systemSound": "System sound",
   "settings.padding.top": "Padding top",
   "settings.padding.right": "Padding right",
   "settings.padding.bottom": "Padding bottom",
