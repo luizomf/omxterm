@@ -62,6 +62,8 @@ Tabs multiply these costs, so the limits are not a total process-memory bound.
 Kitty rendering does not change the Terminal Capability Identity. OMXTerm keeps
 `TERM=xterm-256color`, `COLORTERM=truecolor`, `TERM_PROGRAM=OMXTerm`, and its
 installed version without branded terminfo, Shell Integration, Kitty or iTerm2
-impersonation, or Pi-specific environment injection. For Pi versions that do not
+impersonation, or Pi-specific environment injection. XTVERSION's `ghostty 1.0`
+reply is the one deliberate exception
+([ADR 0012](0012-use-standard-xterm-terminal-capabilities.md)). For Pi versions that do not
 recognize OMXTerm, select Kitty explicitly. Capability selection remains the
 child application's decision.

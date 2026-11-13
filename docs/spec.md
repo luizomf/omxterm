@@ -1516,6 +1516,14 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
   recovered. macOS and Windows sessions are unaffected.
 - Restty answers DA1 as `CSI ? 1 ; 2 c` and DA2 as `CSI > 0 ; 0 ; 0 c`, once
   per query.
+- XTVERSION (`CSI > q`) answers `DCS > | ghostty 1.0 ST`, Restty's default, on
+  purpose. With `OMXTerm <version>` instead
+  ([#1028](https://github.com/luizomf/omxterm/issues/1028)), timg's auto mode
+  fell back to half blocks, snacks.nvim refused images (it enables them only
+  when XTVERSION names kitty, ghostty or wezterm), and yazi's preview stayed
+  blank inside tmux. icat, viu, Chafa and `timg -pk` didn't care. OMXTerm
+  answers with its own name once those tools recognize it or rely on the Kitty
+  `a=q` probe.
 - Ghostty answers cursor-position queries (`CSI 6 n`) from its parser cursor at
   the query's place in the output stream, including wide/combining text and
   pending-wrap resize, without a render frame or JavaScript cursor hint.
@@ -1526,9 +1534,9 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
   reading at DA1 still sees them.
 - `CSI 16 t` gets the cell size from the Surface metrics once the Surface opens.
 - Not every xterm extension is guaranteed. OMXTerm installs no custom terminfo,
-  does not touch shell startup files. Inline-image support does not
-  impersonate another terminal or inject application-specific capability
-  variables.
+  does not touch shell startup files. Apart from the XTVERSION reply above,
+  inline-image support does not impersonate another terminal or inject
+  application-specific capability variables.
 
 ### Inline Terminal Images
 

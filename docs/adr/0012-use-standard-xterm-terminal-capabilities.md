@@ -43,6 +43,18 @@ regressions cover the failures reported in
 [#568](https://github.com/luizomf/omxterm/issues/568) and mixed reply ordering.
 See [ADR 0025](0025-use-restty-as-the-terminal-surface.md#keyboard-input-and-terminal-controls).
 
+XTVERSION (`CSI > q`) answers `ghostty 1.0`, Restty's default, as a deliberate
+exception to describing OMXTerm by its own name
+([#1035](https://github.com/luizomf/omxterm/issues/1035)). Answering
+`OMXTerm 0.31.0` was tested in
+[#1028](https://github.com/luizomf/omxterm/issues/1028): timg's auto mode
+dropped to half blocks, snacks.nvim refused images because it enables them
+only when XTVERSION names kitty, ghostty or wezterm, and yazi's preview stayed
+blank inside tmux. icat, viu, Chafa and `timg -pk` behaved the same either way.
+The environment still says `TERM_PROGRAM=OMXTerm`, so the exception is limited
+to this one reply. Once snacks.nvim and yazi recognize OMXTerm or rely on the
+Kitty `a=q` probe, XTVERSION switches to OMXTerm's name and version.
+
 The standard xterm capability vocabulary describes protocol compatibility.
 OMXTerm uses the widely available `xterm-256color` contract and does not define `xterm-omxterm`, install
 custom terminfo, or propagate terminfo automatically over SSH. A branded entry
