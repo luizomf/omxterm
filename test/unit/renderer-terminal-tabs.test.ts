@@ -388,6 +388,39 @@ describe("renderer Terminal Tabs", () => {
   });
 });
 
+describe("renderer Terminal Tabs for agents", () => {
+  it("lists tabs for an agent: stable ids, titles, the selected tab and each tab's sessions", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    harness.tabs.setSessionTitle("s1", "one");
+    harness.tabs.setSessionTitle("s2", "two");
+
+    const listed = harness.tabs.agentTabs("request");
+    const tabs = "tabs" in listed ? listed.tabs : [];
+    expect(
+      tabs.map(({ title, selected, panes }) => ({ title, selected, panes })),
+    ).toEqual([
+      { title: "one", selected: false, panes: ["s1"] },
+      { title: "two", selected: true, panes: ["s2"] },
+    ]);
+    const ids = tabs.map((tab) => tab.tab);
+    expect(new Set(ids).size).toBe(2);
+
+    // A tab keeps its id when it moves.
+    dragTabTo(harness.strip, 0, 275);
+    const moved = harness.tabs.agentTabs("again");
+    expect("tabs" in moved && moved.tabs.map((tab) => tab.title)).toEqual([
+      "two",
+      "one",
+    ]);
+    expect("tabs" in moved && moved.tabs.map((tab) => tab.tab)).toEqual(
+      ids.toReversed(),
+    );
+  });
+});
+
 describe("renderer Terminal Tabs fatal Surface isolation", () => {
   it("retains a runtime-failed tab until its session acknowledgement, leaving its peer alone", async () => {
     const onFatalError = vi.fn();

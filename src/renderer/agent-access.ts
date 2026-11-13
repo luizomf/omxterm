@@ -2,6 +2,7 @@ import type {
   AgentAccessBridge,
   AgentPressResult,
   AgentRefusal,
+  AgentTabsResult,
 } from "../shared/agent-access";
 import { agentChordKey, type AgentKeyChord } from "../shared/agent-api";
 import type { TerminalSurface } from "../terminal-surface/terminal-surface";
@@ -18,14 +19,18 @@ const refusals: Readonly<Record<AgentRefusal, MessageKey>> = {
 /**
  * The window's agent grant (ADR 0052): one accent mark on every pane and
  * tab while it lasts, a click on a pane's mark to stop it, the pane text
- * main asks for, and presses encoded for a pane's modes. Main admits agents
+ * and tab list main asks for, and presses encoded for a pane's modes. Main admits agents
  * only after shown() confirms the marks.
  */
 export function subscribeToAgentAccess(
   bridge: AgentAccessBridge,
   tabs: Pick<
     TerminalTabs,
-    "setWindowMark" | "flash" | "readSession" | "encodeSessionKeys"
+    | "setWindowMark"
+    | "flash"
+    | "readSession"
+    | "encodeSessionKeys"
+    | "agentTabs"
   >,
 ): () => void {
   let granted = false;
@@ -55,7 +60,11 @@ export function subscribeToAgentAccess(
       tabs.encodeSessionKeys(request.id, request.sessionId, request.keys),
     ),
   );
+  const removeTabs = bridge.onTabs((request) =>
+    bridge.tabsResult(tabs.agentTabs(request.id)),
+  );
   return () => {
+    removeTabs();
     removeState();
     removeRead();
     removePress();

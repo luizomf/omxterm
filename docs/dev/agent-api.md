@@ -4,8 +4,8 @@ The wire protocol and CLI of
 [ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slices 1
 and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
-and its [MCP server](#mcp). From slice 4, [`press`](#press-slice-4) with
-named keys is implemented; its shortcuts are not yet. Each later command says which slice of the ADR's
+and its [MCP server](#mcp). From slice 4, the tab tree in [`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
+named keys are implemented; its shortcuts are not yet. Each later command says which slice of the ADR's
 plan it belongs to; until then, names and shapes can still change.
 
 Slice 4 follows the ADR's
@@ -125,8 +125,31 @@ window (`t2`). Both are valid for this grant only.
 }
 ```
 
-Slice 1 returns `panes` at the top level, without tabs. Titles are the
-display-only tab titles (ADR 0010), so they are untrusted text.
+Tab ids come from the window and are handed out the first time `list` shows a
+tab; a tab keeps its id while it lives, whatever its position. `selected`
+marks the visible tab. Per pane, `focused` is the pane that takes the user's
+keys (a pane in a hidden tab is never `focused`), and `self` is the caller's
+own pane. `cols` and `rows` are missing until the pane has a size, and `live`
+is false for a pane whose program has ended: `send`, `read`, `wait` and
+`press` answer `not-live` for it. Settings and extension tabs
+are listed with `panes: []`. Pane ids are the same ids `send`, `read`, `wait`
+and `press` take.
+
+`list` asks the window for its tabs, like `read` asks for text, and answers
+`unavailable` when it doesn't answer in time. Titles are the display-only tab
+titles (ADR 0010), so they are untrusted text: main replaces control
+characters with spaces and the window caps them at 200 characters. Slice 1
+returned a flat top-level `panes` list; that field is gone.
+
+The CLI prints one line per tab and its panes indented under it, tab-separated:
+
+```text
+t1	zsh	selected
+  s1	120x32	focused	self
+  s2	59x32
+t2	vim
+  s3	120x32
+```
 
 ### `send` (slice 1)
 

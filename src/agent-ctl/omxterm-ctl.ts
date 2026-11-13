@@ -17,7 +17,7 @@ Commands:
   guide                        Print the agent guide (a SKILL.md).
   mcp                          Serve these commands as MCP tools on stdio.
   grants                       List the windows of this profile that do.
-  list                         List the window's panes.
+  list                         List the window's tabs and panes.
   send <pane> [--text TEXT] [--keys KEY,...] [--enter]
               [--wait [--idle MS] [--timeout MS]]
                                Type into a pane. Keys: Enter, Tab, Escape,

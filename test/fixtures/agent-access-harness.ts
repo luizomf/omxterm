@@ -206,6 +206,19 @@ export function useAgentHarness() {
     // The window answers reads and presses like the renderer would; a
     // press's bytes name its keys here, the Surface's encoder is tested apart.
     contents.send.mockImplementation((channel: string, payload: unknown) => {
+      // Two tabs: s1 in the selected one, s2 in the other.
+      if (channel === agentIpc.tabs) {
+        const request = payload as { id: string };
+        setImmediate(() =>
+          ipc.listeners.get(agentIpc.tabsResult)!(event, {
+            id: request.id,
+            tabs: [
+              { tab: "t1", title: "zsh", selected: true, panes: ["s1"] },
+              { tab: "t2", title: "vim", selected: false, panes: ["s2"] },
+            ],
+          }),
+        );
+      }
       if (channel === agentIpc.press) {
         const request = payload as AgentPressRequest;
         setImmediate(() =>

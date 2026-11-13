@@ -18,6 +18,7 @@ import {
   type AgentErrorCode,
   type AgentKeyChord,
 } from "../shared/agent-api";
+import type { AgentWindowTab } from "../shared/agent-access";
 import type { TerminalSessionId } from "../shared/terminal-contract";
 import type { AgentSessionPort } from "./terminal-ipc-types";
 
@@ -55,6 +56,8 @@ export interface AgentCommandsOptions {
     keys: readonly AgentKeyChord[],
     signal: AbortSignal,
   ) => Promise<string>;
+  /** The window's tabs and the session ids of their panes, as it shows them. */
+  readonly tabs: (signal: AbortSignal) => Promise<readonly AgentWindowTab[]>;
   /** Decides which chords the user's own press would send; process.platform. */
   readonly platform?: string;
   readonly now?: () => number;
@@ -247,17 +250,31 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     AgentCommand,
     (args: unknown, caller: AgentCaller) => unknown
   > = {
-    list(args, caller) {
+    // The window knows its tabs; main knows each pane's size and focus.
+    async list(args, caller) {
       argumentsOf(args, []);
+      const windowTabs = await options.tabs(caller.signal);
+      const live = new Map(
+        options.sessions.sessions().map((s) => [s.sessionId, s]),
+      );
       return {
-        panes: options.sessions.sessions().map((session) => ({
-          pane: session.sessionId,
-          focused: session.focused,
-          self: session.sessionId === caller.pane,
-          ...(session.cols === undefined
-            ? {}
-            : { cols: session.cols, rows: session.rows }),
-          live: true,
+        tabs: windowTabs.map((tab) => ({
+          tab: tab.tab,
+          // A title is the program's text: no control characters.
+          title: tab.title.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, " "),
+          selected: tab.selected,
+          panes: tab.panes.map((sessionId) => {
+            const session = live.get(sessionId);
+            return {
+              pane: sessionId,
+              focused: session?.focused ?? false,
+              self: sessionId === caller.pane,
+              ...(session?.cols === undefined
+                ? {}
+                : { cols: session.cols, rows: session.rows }),
+              live: session !== undefined,
+            };
+          }),
         })),
       };
     },

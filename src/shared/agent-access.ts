@@ -13,7 +13,7 @@ import {
 } from "./agent-api";
 
 // Main ⇄ renderer contract for a window's agent grant (ADR 0052). The
-// renderer confirms the marks, stops the grant, answers reads and encodes
+// renderer confirms the marks, stops the grant, answers reads and tab lists, and encodes
 // presses for a pane's modes (main writes the bytes). A grant
 // starts only from the toggle action (menu, shortcut or Command Palette).
 export const agentIpc = {
@@ -24,7 +24,14 @@ export const agentIpc = {
   readResult: "agent:read-result",
   press: "agent:press",
   pressResult: "agent:press-result",
+  tabs: "agent:tabs",
+  tabsResult: "agent:tabs-result",
 } as const;
+
+/** Bounds for the window's tab tree, whatever the renderer sends. */
+export const MAX_AGENT_TABS = 256;
+export const MAX_AGENT_TAB_PANES = 256;
+export const MAX_AGENT_TAB_TITLE = 200;
 
 /** The encoded bytes of one press request; each key is a few bytes. */
 export const MAX_AGENT_PRESS_CHARS = MAX_AGENT_KEYS * 64;
@@ -148,6 +155,55 @@ export function isAgentPressResult(value: unknown): value is AgentPressResult {
   );
 }
 
+export interface AgentTabsRequest {
+  readonly id: string;
+}
+
+/** One tab as the window shows it; its panes are session ids. */
+export interface AgentWindowTab {
+  readonly tab: string;
+  readonly title: string;
+  readonly selected: boolean;
+  readonly panes: readonly TerminalSessionId[];
+}
+
+export type AgentTabsResult =
+  | { readonly id: string; readonly tabs: readonly AgentWindowTab[] }
+  | { readonly id: string; readonly error: "failed" };
+
+export function isAgentTabsRequest(value: unknown): value is AgentTabsRequest {
+  return (
+    isPlainRecord(value) && hasOnlyKeys(value, ["id"]) && isReadId(value.id)
+  );
+}
+
+function isAgentWindowTab(value: unknown): value is AgentWindowTab {
+  return (
+    isPlainRecord(value) &&
+    hasOnlyKeys(value, ["tab", "title", "selected", "panes"]) &&
+    typeof value.tab === "string" &&
+    /^t[1-9][0-9]{0,8}$/u.test(value.tab) &&
+    typeof value.title === "string" &&
+    value.title.length <= MAX_AGENT_TAB_TITLE &&
+    typeof value.selected === "boolean" &&
+    Array.isArray(value.panes) &&
+    value.panes.length <= MAX_AGENT_TAB_PANES &&
+    value.panes.every(isTerminalSessionId)
+  );
+}
+
+export function isAgentTabsResult(value: unknown): value is AgentTabsResult {
+  if (!isPlainRecord(value) || !isReadId(value.id)) return false;
+  if ("error" in value)
+    return hasOnlyKeys(value, ["id", "error"]) && value.error === "failed";
+  return (
+    hasOnlyKeys(value, ["id", "tabs"]) &&
+    Array.isArray(value.tabs) &&
+    value.tabs.length <= MAX_AGENT_TABS &&
+    value.tabs.every(isAgentWindowTab)
+  );
+}
+
 /**
  * The last `lines` rows of exported text, without trailing spaces or the
  * blank rows below the cursor, cut at its start to the read limit.
@@ -180,4 +236,6 @@ export interface AgentAccessBridge {
   readResult(result: AgentReadResult): void;
   onPress(listener: (request: AgentPressRequest) => void): () => void;
   pressResult(result: AgentPressResult): void;
+  onTabs(listener: (request: AgentTabsRequest) => void): () => void;
+  tabsResult(result: AgentTabsResult): void;
 }

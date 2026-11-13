@@ -59,6 +59,7 @@ export function subscribeToWindowAttention(
     | "flash"
     | "readSession"
     | "encodeSessionKeys"
+    | "agentTabs"
   >,
 ): () => void {
   const removeAttention = bridge.onSessionAttention((sessionId, pending) =>

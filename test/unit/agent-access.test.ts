@@ -44,8 +44,21 @@ posix(
     const status = await ctl(profile, ["status"], pane);
     expect(status).toMatchObject({ code: 0 });
     const list = await ctl(profile, ["list", "--json"], pane);
-    const { panes } = JSON.parse(list.stdout) as { panes: { self: boolean }[] };
-    expect(panes.map((pane) => pane.self)).toEqual([true, false]);
+    const { tabs } = JSON.parse(list.stdout) as {
+      tabs: { tab: string; selected: boolean; panes: { self: boolean }[] }[];
+    };
+    expect(tabs.map((tab) => [tab.tab, tab.selected])).toEqual([
+      ["t1", true],
+      ["t2", false],
+    ]);
+    expect(tabs.flatMap((tab) => tab.panes.map((pane) => pane.self))).toEqual([
+      true,
+      false,
+    ]);
+    // Plain output: a line per tab, its panes indented under it.
+    expect((await ctl(profile, ["list"], pane)).stdout).toBe(
+      "t1\tzsh\tselected\n  s1\t80x24\tfocused\tself\nt2\tvim\n  s2\t80x24\n",
+    );
     await ctl(profile, ["send", "s2", "--text", "ls -la", "--enter"], pane);
     expect(port.writes).toEqual([["s2", "ls -la\r"]]);
     expect((await ctl(profile, ["read", "s2"], pane)).stdout).toBe(
