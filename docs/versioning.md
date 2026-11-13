@@ -12,7 +12,7 @@ in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
 `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N`,
-`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N` and `0.33.0-dev.N` bridges have distinct
+`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N` and `0.33.1-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
@@ -93,6 +93,12 @@ installable unchanged.
 
 Accepting a pane as `OMXTERM_PANE` spells it (#1065) moves main to
 `0.33.0-dev.2`.
+
+## Post-0.33.0 development baseline
+
+Stable 0.33.0 uses the frozen cut `b0d1745e`; the next development baseline is
+`0.33.1-dev.0`. Its bridge admits ranges that accept both `0.33.0` and
+`0.33.1`. Every catalog archive stays installable unchanged.
 
 ## Public contract
 
