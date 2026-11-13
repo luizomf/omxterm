@@ -16,6 +16,7 @@ const families = [
   { host: "0.31.0-dev.0", from: "0.30.0", to: "0.31.0" },
   { host: "0.31.1-dev.0", from: "0.31.0", to: "0.31.1" },
   { host: "0.32.0-dev.0", from: "0.31.0", to: "0.32.0" },
+  { host: "0.32.1-dev.0", from: "0.32.0", to: "0.32.1" },
 ];
 const compatible = (range: string, appVersion: string, apiVersion = "0.1.0") =>
   packageCompatible(
@@ -73,7 +74,8 @@ it.each([
   ["0.31.2-dev.0", false],
   ["0.32.0-dev.0", true],
   ["0.32.0-dev.3", true],
-  ["0.32.1-dev.0", false],
+  ["0.32.1-dev.0", true],
+  ["0.32.2-dev.0", false],
   ["0.29.0-dev.0", false],
   ["invalid", false],
   [`0.25.0-dev.${"9".repeat(300)}`, false],
