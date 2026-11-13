@@ -114,12 +114,18 @@ plus a positive enabled-menu control; do not substitute its container-only
 
 ### Inline Kitty images
 
-The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and eviction for direct Pi (`f=100` PNG) and Chafa (`-f kitty`, `f=32` RGBA) sessions:
+The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and eviction for Pi (`f=100` PNG), Chafa (`-f kitty`, `f=32` RGBA), kitten icat, timg, yazi and snacks.nvim (`f=24`/`f=32`/`f=100`, optionally `o=z`, placement IDs and `U=1` placeholders):
 
 - Max decoded transmission input: 33,554,432 bytes.
 - Max image dimensions: 4,194,304 source pixels (Chafa RGBA max: 16,777,216 bytes).
 - Max completed image storage: 64,000,000 bytes per screen (at most one unfinished image per screen).
 - Images stay cell-anchored across resize, font zoom, tab switching, and theme reload, and `CSI 16 t` reports current device-pixel cell metrics.
+- `ghostty-title-events.patch` continues a pending image on an `a=T` that carries only `q` and `m`, the shape of kitten icat's later chunks; any other `a=T` replaces it.
+- Each PTY resize carries `pixelWidth`/`pixelHeight` (columns × cell width, rows × cell height, device pixels, no padding) from `surface-transport.ts` to `node-pty`, so `TIOCGWINSZ` agrees with `CSI 16 t`. The post-start replay reuses the last cell size.
+
+```sh
+npx vitest run test/integration/restty-images-core.test.ts test/unit/terminal-pixel-size.test.ts
+```
 
 ### Terminal capability replies
 
