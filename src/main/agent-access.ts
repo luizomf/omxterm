@@ -25,7 +25,10 @@ import { createGrantFiles } from "./agent-grant-files";
 import type { OperationalEventLog } from "./operational-events";
 import type { AgentCloseBlock } from "./terminal-application";
 import type { TerminalSessionId } from "../shared/terminal-contract";
-import type { TerminalActionName } from "../shared/terminal-keybinds";
+import type {
+  TerminalActionName,
+  TerminalKeybinds,
+} from "../shared/terminal-keybinds";
 import type {
   AgentSessionPort,
   IpcEvent,
@@ -99,6 +102,8 @@ export interface AgentAccessOptions {
   readonly changed?: () => void;
   /** The action a press chord runs, from the effective shortcuts. */
   readonly shortcut?: (chord: string) => TerminalActionName | undefined;
+  /** The effective shortcuts, rebinds included, for `keys`. */
+  readonly keybinds?: () => TerminalKeybinds;
 }
 
 export { agentSocketPath } from "./agent-grant-files";
@@ -145,12 +150,14 @@ function answerListener<R>(
 function commandsFor(
   entry: Entry,
   shortcut: AgentAccessOptions["shortcut"],
+  keybinds: AgentAccessOptions["keybinds"],
 ): AgentCommands {
   const ask = <T>(channel: string, request: object, signal: AbortSignal) =>
     requestWindow<T>(entry.contents, entry.pending, channel, request, signal);
   return createAgentCommands({
     sessions: entry.sessions,
     ...(shortcut ? { shortcut } : {}),
+    ...(keybinds ? { keybinds } : {}),
     ...(entry.closeNeedsUser ? { closeNeedsUser: entry.closeNeedsUser } : {}),
     act: (sessionId, command, signal) =>
       ask<void>(agentIpc.action, { sessionId, command }, signal),
@@ -296,7 +303,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
       return;
     }
     entry.state = "granted";
-    entry.commands = commandsFor(entry, options.shortcut);
+    entry.commands = commandsFor(entry, options.shortcut, options.keybinds);
     sendState(entry, { state: "granted" });
     log?.write({
       name: "agent.grant",

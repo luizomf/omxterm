@@ -34,7 +34,7 @@ const CAPABILITIES = { tools: {} };
 const MCP_WAIT_TIMEOUT_MS = 50_000;
 const MAX_LINE_CHARS = 4 * 1024 * 1024;
 
-const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press; press also runs the window's tab and pane shortcuts (new tab, split, close pane) on the pane it names, then list shows the result. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
+const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press; press also runs the window's tab and pane shortcuts (new tab, split, close pane) on the pane it names, then list shows the result; call keys to see which shortcuts, as the user set them, instead of guessing. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
 
 const window = {
   type: "integer",
@@ -140,6 +140,12 @@ const TOOLS: readonly Tool[] = [
       window,
     },
     false,
+  ),
+  tool(
+    "keys",
+    "List the shortcuts of the window that press runs, as the user set them, rebinds included: each line is the chord (- when the user unbound it), the action, and refused or not-yet when press won't run it (the grant toggle is refused; the Command Palette, Find and side panels are not yet). Look here before pressing a shortcut instead of guessing.",
+    { window },
+    true,
   ),
   tool(
     "read",

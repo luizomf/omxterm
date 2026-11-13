@@ -644,6 +644,17 @@ Tab and pane shortcuts, and the mark in the error tone
   title-bar toggles, and every other action, still don't run for agents
   ([#1052](https://github.com/luizomf/omxterm/issues/1052)).
 
+`keys`, so agents look instead of guess
+([#1051](https://github.com/luizomf/omxterm/issues/1051)):
+
+- **The same table and the same live shortcuts as `press`.** `keys` walks
+  `src/main/agent-shortcuts.ts` and reads the catalog's effective shortcuts,
+  so a rebind shows up and a new action is listed as soon as the table decides
+  it. Each entry has the action, its chord (null when the user unbound it)
+  and a status: `available`, `refused` (the grant toggle) or `not-yet`. Actions
+  that still go to the pane as keys aren't listed, since `press` doesn't run
+  them.
+
 ## Open questions
 
 - Windows: accept the default pipe descriptor behind the token, or pay for a

@@ -1,6 +1,9 @@
 import type { AgentWindowCommand } from "../shared/agent-access";
 import {
+  displayAccelerator,
   keyboardInputForAccelerator,
+  TERMINAL_ACTION_NAMES,
+  terminalDefaultKeybinds,
   terminalActionForKeyboardInput,
   type TerminalActionName,
   type TerminalKeybinds,
@@ -95,4 +98,30 @@ export function agentShortcutAction(
 ): TerminalActionName | undefined {
   const input = keyboardInputForAccelerator(chord, platform);
   return input && terminalActionForKeyboardInput(keybinds, input, platform);
+}
+
+/**
+ * What `keys` tells an agent: every action `press` runs, refuses or answers
+ * "not yet", with the chord the window's shortcuts give it (null when the user
+ * unbound it). Actions whose chords still go to the pane as keys aren't there.
+ */
+export function agentShortcutList(window: {
+  readonly keybinds?: () => TerminalKeybinds;
+  readonly platform?: string;
+}) {
+  const platform = window.platform ?? process.platform;
+  const keybinds = window.keybinds?.() ?? terminalDefaultKeybinds(platform);
+  return TERMINAL_ACTION_NAMES.flatMap((action) => {
+    const { kind } = AGENT_SHORTCUTS[action];
+    if (kind === "key") return [];
+    const accelerator = keybinds[action];
+    return [
+      {
+        action,
+        chord:
+          (accelerator && displayAccelerator(accelerator, platform)) || null,
+        status: kind === "run" ? ("available" as const) : kind,
+      },
+    ];
+  });
 }

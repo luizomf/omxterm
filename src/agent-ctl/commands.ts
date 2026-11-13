@@ -258,7 +258,7 @@ export async function execute(
     );
   }
   if (
-    !["status", "list", "send", "read", "wait", "press"].includes(
+    !["status", "list", "keys", "send", "read", "wait", "press"].includes(
       options.command!,
     )
   )
@@ -320,6 +320,30 @@ async function list(
   );
 }
 
+type Shortcut = {
+  action: string;
+  chord: string | null;
+  status: "available" | "refused" | "not-yet";
+};
+
+// The window's shortcuts: chord, action, and a note for what press won't run.
+async function keys(client: Client, options: Options): Promise<Outcome> {
+  const result = (await client.request("keys")) as { shortcuts: Shortcut[] };
+  if (options.json) return done(JSON.stringify(result), result);
+  return done(
+    result.shortcuts
+      .map((shortcut) =>
+        [
+          shortcut.chord ?? "-",
+          shortcut.action,
+          ...(shortcut.status === "available" ? [] : [shortcut.status]),
+        ].join("\t"),
+      )
+      .join("\n"),
+    result,
+  );
+}
+
 async function send(
   client: Client,
   options: Options,
@@ -364,6 +388,7 @@ async function run(
     );
   }
   if (options.command === "list") return list(client, options, selfKnown);
+  if (options.command === "keys") return keys(client, options);
   const pane = paneArgument(options, window);
   if (options.command === "send") return send(client, options, pane);
   if (options.command === "press") {

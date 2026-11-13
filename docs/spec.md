@@ -1296,7 +1296,10 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   Window** shortcut is refused, whatever it is bound to, and the Command
   Palette, Find, Snippets, Files and SSH Connect shortcuts answer "not yet". Other shortcuts aren't run for
   agents yet: a named-key chord goes to the pane as a key, any other is
-  refused as an unsupported key.
+  refused as an unsupported key. `"$OMXTERM_CTL" keys` lists the window's
+  shortcuts that `press` runs, with the user's rebinds (chord, action), and
+  marks the refused and "not yet" ones; the guide and `--help` send agents there
+  instead of guessing.
 - Agent input is written to the PTY in main. It never passes the window's
   keyboard handling, so it never starts or stops Mirror Typing, skips
   Protected Paste, doesn't jump the view to the bottom the way typing does,
@@ -1309,7 +1312,7 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   exits 3.
 - `"$OMXTERM_CTL" guide` prints a short agent guide, which is also a
   `SKILL.md` an agent can keep. `"$OMXTERM_CTL" mcp` serves `status`, `list`,
-  `send`, `press`, `read` and `wait` as MCP tools on stdio, with the CLI's
+  `keys`, `send`, `press`, `read` and `wait` as MCP tools on stdio, with the CLI's
   arguments.
   The tools are always listed; without a grant they answer with the `status`
   sentence as a tool error, and they work from the next call once the user

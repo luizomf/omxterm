@@ -23,8 +23,11 @@ import type {
   AgentWindowTab,
 } from "../shared/agent-access";
 import type { TerminalSessionId } from "../shared/terminal-contract";
-import type { TerminalActionName } from "../shared/terminal-keybinds";
-import { AGENT_SHORTCUTS } from "./agent-shortcuts";
+import type {
+  TerminalActionName,
+  TerminalKeybinds,
+} from "../shared/terminal-keybinds";
+import { AGENT_SHORTCUTS, agentShortcutList } from "./agent-shortcuts";
 import type { AgentCloseBlock } from "./terminal-application";
 import type { AgentSessionPort } from "./terminal-ipc-types";
 
@@ -66,6 +69,8 @@ export interface AgentCommandsOptions {
   readonly tabs: (signal: AbortSignal) => Promise<readonly AgentWindowTab[]>;
   /** The action a press chord runs, from the window's effective shortcuts. */
   readonly shortcut?: (chord: string) => TerminalActionName | undefined;
+  /** The window's effective shortcuts, rebinds included, for `keys`. */
+  readonly keybinds?: () => TerminalKeybinds;
   /**
    * Focuses the pane in the window, selecting its tab, then runs the
    * command; rejects with an AgentApiError.
@@ -453,6 +458,13 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       if (receipt === "rejected")
         throw new AgentApiError("not-live", "The pane isn't accepting input.");
       return { receipt, offset };
+    },
+
+    // What press does with each shortcut, from the table and live shortcuts
+    // it matches against (#1051).
+    keys(args) {
+      argumentsOf(args, []);
+      return { shortcuts: agentShortcutList(options) };
     },
 
     wait(args, caller) {
