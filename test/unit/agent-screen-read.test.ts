@@ -12,13 +12,10 @@ type Core = Awaited<ReturnType<typeof loadResttyWasm>> & {
 
 const handles: Array<{ core: Core; handle: number }> = [];
 
-// The prepared runtime's own reader against the real core: only the getters
-// it closes over are supplied here.
-async function terminal(cols: number, rows: number) {
-  const core = (await loadResttyWasm()) as Core;
-  const handle = core.create(cols, rows, 1_000_000);
-  handles.push({ core, handle });
-  const read = runInNewContext(
+// The prepared runtime's own reader: only the getters it closes over are
+// supplied here.
+const reader = (core: Core, handle: number) =>
+  runInNewContext(
     runtimeSection(
       preparedCprRuntime(),
       "  const getScreenText = () => {",
@@ -29,7 +26,14 @@ async function terminal(cols: number, rows: number) {
       getWasmExports: () => core.exports,
       getWasmHandle: () => handle,
     },
-  ) as () => string;
+  ) as () => string | null;
+
+async function terminal(cols: number, rows: number) {
+  const core = (await loadResttyWasm()) as Core;
+  const handle = core.create(cols, rows, 1_000_000);
+  handles.push({ core, handle });
+  const screen = reader(core, handle);
+  const read = () => screen() ?? "<no screen>";
   return {
     write: (text: string) => core.write(handle, text),
     scroll: (delta: number) => core.scrollViewport(handle, delta),
@@ -46,6 +50,11 @@ afterEach(() => {
 });
 
 describe("the screen read", () => {
+  it("has no screen to answer before the core is ready", async () => {
+    const core = (await loadResttyWasm()) as Core;
+    expect(reader(core, 0)()).toBeNull();
+  });
+
   it("answers the active screen while the view is scrolled into history", async () => {
     const t = await terminal(10, 4);
     t.write(numbered(20));

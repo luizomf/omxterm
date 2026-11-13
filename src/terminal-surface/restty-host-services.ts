@@ -16,7 +16,7 @@ export function resttyClipboardActions(
     | {
         getSelectionText(): string;
         getBufferText(): string;
-        getScreenText(): string;
+        getScreenText(): string | null;
         selectAll(): boolean;
       }
     | undefined,
@@ -63,7 +63,7 @@ export function resttyClipboardActions(
         ? interaction.getSelectionText()
         : interaction.getBufferText();
     },
-    readScreen: () => liveSelection()?.getScreenText() ?? "",
+    readScreen: () => liveSelection()?.getScreenText() ?? undefined,
   };
 }
 

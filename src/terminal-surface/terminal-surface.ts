@@ -40,8 +40,9 @@ export interface TerminalSurface {
   // Reads selection or retained screen/history without changing interaction state.
   exportText(kind: TerminalExportKind): string;
   // The active screen's rows as text, one line per row, wherever the user
-  // scrolled, without changing selection, scroll or cursor.
-  readScreen?(): string;
+  // scrolled, without changing selection, scroll or cursor. undefined while
+  // the Surface has no screen to read.
+  readScreen?(): string | undefined;
   // The bytes this key would send now, for the terminal's current cursor and
   // Kitty keyboard modes, exactly as the user's own key press; nothing is
   // sent. undefined while the Surface can't take input.

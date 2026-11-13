@@ -23,7 +23,7 @@ const harness = vi.hoisted(() => {
     readonly setOptionKeyMode = vi.fn();
     readonly setScrollbackLines = vi.fn();
     readonly encodeKeyPress = vi.fn((key: { key: string }) => `<${key.key}>`);
-    readonly getScreenText = vi.fn(() => "screen\n");
+    readonly getScreenText = vi.fn((): string | null => "screen\n");
     readonly applyTheme = vi.fn();
     readonly updateSize = vi.fn();
     readonly openSearch = vi.fn();

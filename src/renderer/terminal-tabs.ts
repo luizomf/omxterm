@@ -644,8 +644,12 @@ export function createTerminalTabs(
         let text;
         if (read.source === "tail")
           text = agentTail(surface.exportText("content"), read.lines);
-        else if (surface.readScreen) text = agentScreen(surface.readScreen());
-        else return { id, error: "failed" };
+        else {
+          // A Surface with no screen to read fails rather than answer blank.
+          const screen = surface.readScreen?.();
+          if (screen === undefined) return { id, error: "failed" };
+          text = agentScreen(screen);
+        }
         return {
           id,
           ...text,

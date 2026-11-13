@@ -177,7 +177,7 @@ const priorKeyPressDigest =
 const priorScreenTextDigest =
   "4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321";
 const correctedDigest =
-  "a88f9718d4156431d25df6553ee2942a4c2dea2a0f33ba63f4f9c3560343aa14";
+  "2dea1f31028c175bf08139bdc0f716c00f763ba602968f1fb43f4a6883fafdaa";
 
 const nativeScrollFeedbackCorrections = [
   {
