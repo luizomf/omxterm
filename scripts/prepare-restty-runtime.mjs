@@ -16,6 +16,7 @@ import { idleRenderCorrections } from "./restty-idle-render-corrections.mjs";
 import { idleBlinkCorrections } from "./restty-idle-blink-corrections.mjs";
 import { attentionOscCorrections } from "./restty-attention-osc-corrections.mjs";
 import { replyOrderCorrections } from "./restty-reply-order-corrections.mjs";
+import { wasmAddressCorrections } from "./restty-wasm-address-corrections.mjs";
 import {
   applicationCursorCorrections,
   applicationCursorCoreCorrections,
@@ -66,10 +67,13 @@ const priorApplicationCursorCoreDigest =
 // Already carries every JavaScript core correction; only its WASM changed.
 const priorKittyContinuationCoreDigest =
   "0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307";
-const correctedCoreDigest =
+// Same as the continuation core, with the 4,194,304-pixel image limit.
+const priorImageLimitCoreDigest =
   "fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a";
+const correctedCoreDigest =
+  "9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9";
 const correctedCoreWasmDigest =
-  "a12d667486bd69cafb426af016e819f7d44d588f2da7db96b77e568ea95da011";
+  "0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -1817,6 +1821,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorPaletteCoreDigest &&
     sourceDigest !== priorApplicationCursorCoreDigest &&
     sourceDigest !== priorKittyContinuationCoreDigest &&
+    sourceDigest !== priorImageLimitCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1829,7 +1834,10 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     match[0],
     () => `var WASM_BINARY = \`${encodeWasmBinary(core)}\`;`,
   );
-  if (sourceDigest !== priorKittyContinuationCoreDigest) {
+  if (
+    sourceDigest !== priorKittyContinuationCoreDigest &&
+    sourceDigest !== priorImageLimitCoreDigest
+  ) {
     source = applyCorrections(
       source,
       sourceDigest === originalCoreDigest
@@ -1847,6 +1855,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     );
     source = applyCorrections(source, applicationCursorCoreCorrections);
   }
+  source = applyCorrections(source, wasmAddressCorrections);
   if (digest(source) !== correctedCoreDigest)
     throw new Error(
       `Restty WASM correction did not produce reviewed bytes: ${digest(source)}`,

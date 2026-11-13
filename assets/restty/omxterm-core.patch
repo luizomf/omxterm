@@ -85,7 +85,7 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
          .rows = rows,
          .max_scrollback_bytes = max_scrollback,
 +        .default_modes = .{ .grapheme_cluster = true },
-+        .kitty_image_storage_limit = 64_000_000,
++        .kitty_image_storage_limit = 128_000_000,
          .colors = colors,
      }) catch return null;
      errdefer term.deinit(alloc);

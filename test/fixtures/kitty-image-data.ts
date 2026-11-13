@@ -1,8 +1,5 @@
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 
-export const KITTY_SIZE_LIMIT = 33_554_432;
-export const KITTY_ENCODED_LIMIT = Math.ceil((KITTY_SIZE_LIMIT * 4) / 3);
-export const LARGEST_PADDED_BASE64 = 4 * Math.floor(KITTY_ENCODED_LIMIT / 4);
 export const PI_PHOTON_PNG_BYTES = 16_003_288;
 export const PI_PHOTON_PNG_BASE64_CHARACTERS = 21_337_720;
 const KITTY_CHUNK_CHARACTERS = 4_096;

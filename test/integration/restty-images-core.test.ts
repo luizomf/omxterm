@@ -165,12 +165,16 @@ function placementSnapshots(
   });
 }
 
-function createCompressedSolidPng(width: number, height: number): Uint8Array {
-  const scanlines = new Uint8Array((width * 4 + 1) * height);
+function createCompressedSolidPng(
+  width: number,
+  height: number,
+  bitDepth: 8 | 16 = 8,
+): Uint8Array {
+  const scanlines = new Uint8Array(((width * 4 * bitDepth) / 8 + 1) * height);
   const header = new Uint8Array(13);
   new DataView(header.buffer).setUint32(0, width);
   new DataView(header.buffer).setUint32(4, height);
-  header.set([8, 6, 0, 0, 0], 8);
+  header.set([bitDepth, 6, 0, 0, 0], 8);
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     pngChunk("IHDR", header),
@@ -283,7 +287,7 @@ describe("pinned Restty/Ghostty inline images", () => {
   });
 
   it("rejects oversized PNG dimensions before decoded allocation", () => {
-    const png = createCompressedSolidPng(3_000, 2_000);
+    const png = createCompressedSolidPng(4_000, 4_001);
     const beforeBytes = core.exports.memory.buffer.byteLength;
     transmit(core.exports, core.handle, png, "a=T,f=100,q=2,c=1,r=1,i=260");
     const growthBytes = core.exports.memory.buffer.byteLength - beforeBytes;
@@ -292,29 +296,58 @@ describe("pinned Restty/Ghostty inline images", () => {
     expect(growthBytes).toBeLessThan(1_000_000);
   }, 120_000);
 
-  it("rejects a source above 4,194,304 pixels without blocking a later image", () => {
-    transmit(
-      core.exports,
-      core.handle,
-      new Uint8Array(2_049 * 2_048 * 4),
-      "a=T,f=32,q=2,s=2049,v=2048,c=1,r=1,i=261",
-    );
-    transmit(
-      core.exports,
-      core.handle,
-      new Uint8Array([0, 255, 0, 255]),
-      "a=T,f=32,q=2,s=1,v=1,c=1,r=1,i=262",
-    );
+  // RGB reaches the pixel check. For RGBA the extra row also passes
+  // 64,000,000 bytes, so the byte limit rejects it first.
+  it.each([
+    ["RGB", "f=24", 3],
+    ["RGBA", "f=32", 4],
+  ])(
+    "accepts %s up to 16,000,000 source pixels and rejects one more row",
+    (_label, format, bytesPerPixel) => {
+      transmit(
+        core.exports,
+        core.handle,
+        new Uint8Array(4_000 * 4_001 * bytesPerPixel),
+        `a=T,${format},q=2,s=4000,v=4001,c=1,r=1,i=261`,
+      );
+      transmit(
+        core.exports,
+        core.handle,
+        new Uint8Array(4_000 * 4_000 * bytesPerPixel),
+        `a=T,${format},q=2,s=4000,v=4000,c=1,r=1,i=262`,
+      );
 
-    expect(core.exports.restty_render_update(core.handle)).toBe(0);
-    expect(core.exports.restty_kitty_placement_count(core.handle)).toBe(1);
-  }, 120_000);
+      expect(placementImageIds(core.exports, core.handle)).toEqual([262]);
+      expect(core.exports.restty_debug_kitty_total_bytes(core.handle)).toBe(
+        4_000 * 4_000 * bytesPerPixel,
+      );
+    },
+    120_000,
+  );
 
-  it("rejects direct encoded input above 32 MiB without blocking a later image", () => {
+  it.each([8, 16] as const)(
+    "decodes a %i-bit PNG of 16,000,000 source pixels",
+    (bitDepth) => {
+      transmit(
+        core.exports,
+        core.handle,
+        createCompressedSolidPng(4_000, 4_000, bitDepth),
+        "a=T,f=100,q=2,c=1,r=1,i=262",
+      );
+
+      expect(placementImageIds(core.exports, core.handle)).toEqual([262]);
+      expect(core.exports.restty_debug_kitty_total_bytes(core.handle)).toBe(
+        64_000_000,
+      );
+    },
+    120_000,
+  );
+
+  it("rejects direct encoded input above 64,000,000 bytes without blocking a later image", () => {
     transmit(
       core.exports,
       core.handle,
-      createPaddedPng(33_554_433),
+      createPaddedPng(64_000_001),
       "a=T,f=100,q=2,c=1,r=1,i=263",
     );
     transmit(
@@ -390,28 +423,26 @@ describe("pinned Restty/Ghostty inline images", () => {
     expect(core.exports.restty_debug_kitty_image_count(core.handle)).toBe(1);
   });
 
-  it("accounts decoded bytes against 64,000,000 bytes and evicts oldest images", () => {
+  it("keeps two maximum-size images per screen and evicts the oldest", () => {
     expect(core.exports.restty_debug_kitty_total_limit(core.handle)).toBe(
-      64_000_000,
+      128_000_000,
     );
-    const rgba = new Uint8Array(2_000 * 2_000 * 4);
-    for (const id of [280, 281, 282, 283, 284]) {
+    const rgba = new Uint8Array(4_000 * 4_000 * 4);
+    for (const id of [280, 281, 282]) {
       rgba[0] = id - 280;
       transmit(
         core.exports,
         core.handle,
         rgba,
-        `a=T,f=32,q=2,s=2000,v=2000,c=1,r=1,i=${id}`,
+        `a=T,f=32,q=2,s=4000,v=4000,c=1,r=1,i=${id}`,
       );
     }
 
     expect(core.exports.restty_debug_kitty_total_bytes(core.handle)).toBe(
-      64_000_000,
+      128_000_000,
     );
-    expect(core.exports.restty_debug_kitty_image_count(core.handle)).toBe(4);
-    expect(placementImageIds(core.exports, core.handle)).toEqual([
-      281, 282, 283, 284,
-    ]);
+    expect(core.exports.restty_debug_kitty_image_count(core.handle)).toBe(2);
+    expect(placementImageIds(core.exports, core.handle)).toEqual([281, 282]);
   }, 120_000);
 
   it.each([
@@ -473,6 +504,21 @@ describe("pinned Restty/Ghostty Kitty producer paths", () => {
     const [placement, ...others] = placementDetails(core.exports, core.handle);
     expect(others).toEqual([]);
     expect(placement).toMatchObject({ imageWidth: 944, imageHeight: 629 });
+    expect(Buffer.from(placement!.data).equals(Buffer.from(rgb))).toBe(true);
+  }, 120_000);
+
+  it("completes icat's photo for a full-screen 3456-pixel-wide window", () => {
+    const rgb = noise(3_456 * 2_592 * 3);
+    const chunks = icatChunks(
+      deflateSync(rgb, { level: 1 }),
+      "f=24,o=z,s=3456,v=2592",
+    );
+
+    for (const chunk of chunks) write(core.exports, core.handle, chunk);
+
+    const [placement, ...others] = placementDetails(core.exports, core.handle);
+    expect(others).toEqual([]);
+    expect(placement).toMatchObject({ imageWidth: 3_456, imageHeight: 2_592 });
     expect(Buffer.from(placement!.data).equals(Buffer.from(rgb))).toBe(true);
   }, 120_000);
 

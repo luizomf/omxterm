@@ -47,13 +47,67 @@ PTY-to-Terminal-Surface path and never become Operational Events, clipboard
 transport, files, or application network traffic.
 
 OMXTerm carries checksum-guarded source patches in the reproducible
-Restty build: direct input is limited to 33,554,432 decoded bytes, source area is
-limited to 4,194,304 pixels before completed-image allocation, and exact Chafa
-RGBA length is validated. The native one-pending-image-per-screen model replaces
-unfinished state on new metadata and clears it on malformed, cancelled, failed,
-reset, alternate-screen-exit and disposal paths. Completed decoded image data is
-limited to 64,000,000 bytes per screen using Ghostty's native eviction policy.
-Pi deletion and reset use the same core-owned image and placement state.
+Restty build: direct input and decoded pixels are limited to 64,000,000 bytes,
+source area is limited to 16,000,000 pixels before completed-image allocation,
+and exact Chafa RGBA length is validated. The native one-pending-image-per-screen
+model replaces unfinished state on new metadata and clears it on malformed,
+cancelled, failed, reset, alternate-screen-exit and disposal paths. Completed
+decoded image data is limited to 128,000,000 bytes per screen using Ghostty's
+native eviction policy. Pi deletion and reset use the same core-owned image and
+placement state.
+
+Amended for [#1034](https://github.com/luizomf/omxterm/issues/1034): the
+original 4,194,304-pixel and 33,554,432-byte limits silently dropped icat's
+photos on wide HiDPI windows, because icat scales a photo to the window's width
+in device pixels and sends `q=2`. A full-screen 16" Retina window (3456 device
+pixels wide) gets a 3456×2592 RGB photo (9 MP, 26.9 MB), and an unscaled phone
+portrait is 3024×4032 (12.2 MP, 36.6 MB). The limits now come from three
+measurements:
+
+- **Allocator classes.** Restty's core uses Zig's WASM allocator, which
+  rounds large allocations up to a power of two and keeps freed blocks for
+  reuse, and the WASM memory never shrinks. An RGBA image fits one 64 MiB
+  block up to 16,777,215 pixels; 4096×4096 (67,108,864 bytes) is four bytes
+  over and lands in a 128 MiB block. 16,000,000 is a round number under
+  that.
+- **One byte limit.** Input, inflated pixels and PNG output share the
+  64,000,000-byte limit, so RGBA, RGB, `o=z` and PNG reach the same pixel
+  limit. Each PNG decode allocation may take twice that plus a byte per row
+  (128,010,000 bytes), since WUFFS's work buffer holds the filtered source
+  rows, up to 8 bytes per pixel for 16-bit PNGs.
+- **Two images per screen.** The 128,000,000-byte store keeps two images at
+  the limit, or four 9 MP photos.
+
+All panes of a window share one WASM memory, at most 4 GiB on wasm32.
+Measured on the real core, one image at the limit takes it to about 260 MiB,
+and a stream of them holds one screen at about 390 MiB and both screens of a
+pane at about 520 MiB. The old limits already reached 162 MiB while rejecting
+these photos, because input and inflation happen before the pixel check.
+
+These are not worst cases:
+
+- **Rounding.** Each block is a power of two, so images just over one (for
+  example 16.8 MB in a 32 MiB block) cost up to twice the store: about
+  7 × 32 MiB per screen, or about 450 MiB per pane.
+- **Ratcheting.** Freed blocks only serve their own size class and never
+  merge. A stream of images that fills the store once per size class, from
+  2^25 bytes down to 2^17, takes one pane to about 2.2 GiB (874 MiB with the
+  old limits). Ordinary use repeats a few sizes and plateaus, as the photo
+  stream above does.
+- **Past 2 GiB**, WASM exports return addresses that JavaScript reads as
+  negative. Restty used them as-is, so typed-array views threw and output
+  and rendering broke for every pane in the window. The prepared runtime
+  now reads every address an export returns as unsigned
+  (`scripts/restty-wasm-address-corrections.mjs`).
+- **At 4 GiB**, allocations fail. A new image is dropped like any other
+  rejected image, but `restty_render_update` after a resize can trap
+  ([#1040](https://github.com/luizomf/omxterm/issues/1040)).
+
+Native Ghostty allows 400 MB per transmission (a value it takes from kitty)
+and 320 MB per screen. Downscaling on decode was rejected: the full-size input
+and inflation peak would stay, it would soften the image, and it would need
+logical-size bookkeeping in the core's placement code. Images above the limits
+still render nothing; `q=2` leaves the protocol no way to report it.
 
 Restty's browser/WebGL rendering copies visible decoded RGBA outside core storage
 accounting, while decode and Base64 operations may allocate transient data.
