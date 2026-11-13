@@ -294,23 +294,27 @@ matching lands, every chord goes to the pane.
 - Without command boundaries, `idle` is a heuristic: a spinner or a prompt
   clock never goes idle, and a slow command can pause. That is why `match`
   and the timeout exist.
-- `match` is looked for in the same screen text `read` with `source:
-"screen"` answers, so an agent can copy what it expects from a read. A
-  screen can't tell an old copy from a new one, so the wait compares it with
-  the screen at `after`: it answers `match` once the window has shown output
-  past `after` and its screen holds more copies than it did then. The
-  fewest copies seen since then count, so an old copy that scrolled off
-  doesn't hide a new one. The screen at `after` is known when `after` is
-  the offset a `send` or `press` just returned (main reads the screen right
-  before writing, so the window answers before the program can echo
-  anything) or the current position (the wait reads it first). Any other
-  `after` has no baseline, and every copy counts once output moved past it.
-  Main looks again each time the window shows more output, at most every
-  50 ms. A burst that scrolls an old copy off and prints a new one between
-  two looks keeps the count and ends in `timeout`, never a false `match`.
-  Watching the output stream instead would miss full-screen programs that
-  redraw only the cells that changed, and would mean keeping terminal
-  output in main.
+- `match` is looked for in the screen text of the `screen` read, so an
+  agent can copy what it expects from a read. A screen can't tell an old
+  copy from a new one, so the wait compares it with the screen at `after`:
+  it answers `match` once the window has shown output past `after` and its
+  screen holds more copies than it did then. The fewest copies seen since
+  then count, so an old copy that scrolled off doesn't hide a new one. The
+  screen at `after` is known when `after` is the offset a `send` or `press`
+  just returned (main reads the screen right before writing, so the window
+  answers before the program can echo anything) or the current position
+  (the wait reads it first). Any other `after` has no baseline, and every
+  copy counts once output moved past it. Main keeps that one screen per
+  pane in memory, never in logs, until the pane's next `send` or `press`,
+  its exit or the grant's end.
+- Main looks again each time the window shows more output, at most every
+  50 ms, so what a match misses is between two looks: text that appears and
+  scrolls off, or a burst that scrolls an old copy off and prints a new one
+  (the count stays). Both end in `timeout`, never a false `match`; text that
+  stays on screen, such as a final line, is the reliable thing to wait for.
+  Matching the output stream instead would miss full-screen programs that
+  redraw only the cells that changed, and would need a second escape-sequence
+  parser in main.
 
 ### Tabs and panes
 

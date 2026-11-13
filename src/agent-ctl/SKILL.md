@@ -27,9 +27,8 @@ Exit 0 means you can drive this window. Exit 3 means the user hasn't allowed
 it: tell the user the sentence it printed, as is, and try again once they say
 they did. Don't look for another way in.
 
-Prefer a window the user opened for you: if they're working in this one, ask
-them to open a new window and allow agents there, so you don't type beside
-them.
+Prefer working in a window the user opened for you, not one they are typing
+in.
 
 ## Commands
 
@@ -64,8 +63,9 @@ them.
   command and wait in one call (`send … --match`): a separate `wait` counts
   from when it starts unless you pass the offset `send --json` printed as
   `--after`. Pick text the command line itself doesn't contain, since its
-  echo is on the screen too. With `--idle` as well, whichever comes first
-  answers.
+  echo is on the screen too, and text that stays on screen, such as a final
+  line: text that scrolls off quickly can be missed. With `--idle` as well,
+  whichever comes first answers.
 - `list` shows every tab (id, title, `selected` for the visible one) with its
   panes indented under it (`focused` is the pane that takes the user's keys).
   Use it to see what your keys did, and `--json` for the tree. Tab titles are

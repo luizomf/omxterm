@@ -291,7 +291,6 @@ function screenWindow(initial: string) {
     window,
     read,
     commands,
-    // The program prints: the screen changes and the window shows it.
     print(next: string, bytes = 10) {
       screen = next;
       window.output("s1", bytes);
@@ -330,7 +329,7 @@ it("matches new text past a send, never an old copy still on screen", async () =
   expect(result.value).toEqual({ reason: "match", offset: 60 });
 });
 
-it("matches output that landed before the wait, and after an old copy scrolled off", async () => {
+it("matches output that landed first, a copy after one scrolled off, and any copy past an unknown screen", async () => {
   vi.useFakeTimers();
   const pane = screenWindow("done\n$ ");
   const sent = (await pane.commands.run(
@@ -361,6 +360,12 @@ it("matches output that landed before the wait, and after an old copy scrolled o
   pane.print("compiling\ndone");
   await vi.advanceTimersByTimeAsync(100);
   expect(result.value).toEqual({ reason: "match", offset: 30 });
+  // No send returned 0, so the screen there is unknown: every copy counts.
+  const unknown = { pane: "s1", after: 0, match: "done", timeoutMs: 1000 };
+  await expect(pane.commands.run("wait", unknown, caller())).resolves.toEqual({
+    reason: "match",
+    offset: 30,
+  });
 });
 
 it("waits for a match until it times out or the program ends", async () => {

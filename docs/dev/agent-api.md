@@ -250,6 +250,10 @@ output once OSC 133 lands (slice 8).
     command line doesn't contain.
   - A line wider than the pane is split across rows, and so is a match on
     it.
+  - Main looks at the screen each time the window shows more output, at
+    most every 50 ms. Text that appears and scrolls off between two looks
+    is missed (`timeout`), so wait for text that stays, such as a final
+    line.
 - The first condition met answers. At least one of `idleMs` or `match`
   applies; with only `match`, idleness is ignored.
 
