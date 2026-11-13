@@ -6,7 +6,7 @@ and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
 and its [MCP server](#mcp). From slice 4, the tab tree in
 [`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
-named keys and the window's tab and pane shortcuts, and [`keys`](#keys-slice-4), are implemented. Each later
+named keys and the window's shortcuts, and [`keys`](#keys-slice-4), are implemented. Each later
 command says which slice of the ADR's plan it belongs to; until then, names
 and shapes can still change.
 
@@ -283,7 +283,8 @@ Keys and shortcuts, as the user would press them in the granted window.
 - It works while the granted window isn't the selected one. Like `send`, it
   never passes the window's keyboard handling.
 
-**Shortcuts** ([#1050](https://github.com/luizomf/omxterm/issues/1050)).
+**Shortcuts** ([#1050](https://github.com/luizomf/omxterm/issues/1050),
+[#1052](https://github.com/luizomf/omxterm/issues/1052)).
 Main matches each chord against the window's effective shortcuts (defaults
 plus the user's rebinds, the same matcher a real key goes through). A chord
 here may also name a character key and `Cmd` (macOS Command, Super
@@ -301,26 +302,36 @@ elsewhere), as accelerators do: `Cmd+T`, `Ctrl+Shift+]`, `Cmd+Ctrl+=`,
   `swapPaneLeft` … `swapPaneDown`, `equalizePanes`) runs in the granted window
   on the pane `press` names, even when another window is selected: the window
   first focuses that pane, selecting its tab, as a user clicks a pane and
-  presses, so `press s3 Cmd+W` closes the tab holding `s3`. The result names
+  presses, so `press s3 Cmd+W` closes the tab holding `s3`. So do `zoomIn`,
+  `zoomOut`, `actualSize`, `toggleTabBar` and `toggleTitleBar`, and `copy`
+  and `selectAll`, which take that pane's selection. The result names
   the action and the pane; nothing is written to the PTY. The chord must be
   the press's only key (`invalid-request` otherwise). A window that can't take
-  it now (a dialog over it) answers `unavailable`.
-- A close (`closeTab`, `closePane`) that would ask to confirm a Busy Session,
-  with `confirmClose` on, answers `needs-user` and does nothing; so does one
-  while the user is confirming a close in that window, or while it closes.
-  The message says which. The confirmation stays
-  the user's. With `confirmClose` off it closes, as the user's press would.
-  Closing the last tab closes the window and ends the grant, so the answer may
-  be `revoked`, or the connection may close, instead.
+  it now (a dialog or preview over it) answers `unavailable`.
+- `toggleFullScreen`, `newWindow`, `closeWindow` and `quit` act on the
+  granted window from main, whichever window is selected. `toggleFullScreen`
+  and `newWindow` run only while the user is in the granted window; from
+  another window they answer `needs-user`, since full screen would move the
+  user to it (a new Space on macOS) and a new window would take their focus.
+  The new window starts ungranted, like every window, and its panes are
+  unknown to this grant.
+- A close (`closeTab`, `closePane`, `closeWindow`, `quit`) that would ask to
+  confirm a Busy Session, with `confirmClose` on, answers `needs-user` and
+  does nothing; so does one while the user is confirming a close in that
+  window, or while it closes, and a `quit` while other windows are open,
+  since it would close them too. The message says which. The confirmation
+  stays the user's. With `confirmClose` off it closes, as the user's press
+  would. Closing the last tab, the window, or quitting ends the grant, so the
+  answer may be `revoked`, or the connection may close, instead.
 - The **Allow Agents in This Window** shortcut answers `refused`, whatever
   chord it is bound to, and nothing is written. The Command Palette, Find,
-  Snippets, Files and SSH Connect shortcuts answer `not-yet`. Settings, About and the rest have no default
-  shortcut.
-- The window's other shortcuts aren't run for agents yet
-  ([#1052](https://github.com/luizomf/omxterm/issues/1052)): a named-key chord
-  goes to the pane as a key, as before; any other chord answers
-  `unsupported-key`, and so does a character or `Cmd` chord that is no
-  shortcut at all.
+  Paste, Reload Configuration, the Snippets, Files and SSH Connect panels,
+  the Auxiliary Panel's toggle and move, Mirror Typing and Save layout answer
+  `not-yet`, with the reason in the message. Settings, About, Always on Top,
+  Open Local Image and Developer Tools have no shortcut, so `press` can't
+  reach them.
+- A named-key chord that is no shortcut goes to the pane as a key; any other
+  chord answers `unsupported-key`.
 - An ungranted window or an ended grant refuses as `send` does.
 
 ### `keys` (slice 4)
@@ -343,7 +354,7 @@ instead of guessing ([#1051](https://github.com/luizomf/omxterm/issues/1051)).
   `config.json` shows up and what `keys` marks `available` is
   what `press` runs. `chord` is the display form `press` takes, or `null` when
   the user unbound the action; `refused` and `not-yet` are the codes `press`
-  answers with. Actions whose chords still go to the pane as keys aren't listed.
+  answers with. Every action is listed.
 - The CLI prints one line per shortcut: chord (`-` when unbound), action, and
   `refused` or `not-yet` when `press` won't run it. `--json` prints the result.
 
@@ -369,8 +380,8 @@ ends the grant.
 | `limit`           | Too many tabs, panes, connections or pending waits.                     |
 | `unavailable`     | The window couldn't answer in time (a read, a press or a tree request). |
 | `refused`         | The press named the grant toggle's shortcut; only the user toggles it.  |
-| `not-yet`         | The shortcut opens UI agents can't use yet (palette, Find, panels).     |
-| `needs-user`      | The close is the user's: a Busy Session or a close they're confirming.  |
+| `not-yet`         | UI agents can't use yet, or an action past the window.                  |
+| `needs-user`      | Left to the user: a Busy Session, a pending close, or another window.   |
 
 `message` is one English sentence for people reading logs of their own
 scripts. Programs should branch on `code`.

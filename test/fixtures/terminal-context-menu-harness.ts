@@ -47,6 +47,7 @@ function nativeWindowFor(
     isFullScreen: () => false,
     setFullScreen: vi.fn(),
     isAlwaysOnTop: () => false,
+    isFocused: () => true,
     setAlwaysOnTop: vi.fn(),
     webContents: { mainFrame: {}, isDestroyed, send },
   };

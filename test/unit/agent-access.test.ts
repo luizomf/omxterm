@@ -316,7 +316,7 @@ posix(
     expect(selected.webContents.send).not.toHaveBeenCalled();
     expect(other.writes).toEqual([]);
 
-    const unknown = await ctl(profile, ["press", "s2", "Cmd+Q"], pane);
+    const unknown = await ctl(profile, ["press", "s2", "Cmd+K"], pane);
     expect(unknown.code).toBe(1);
     expect(port.writes).toHaveLength(1);
   },
@@ -369,6 +369,50 @@ posix("settles a read and a press only with their own answers", async () => {
   expect(port.writes).toEqual([["s1", "<ok>"]]);
   expect((await ctl(profile, ["read", "s1"], pane)).stdout).toBe("text\n");
 });
+
+posix(
+  "opens a new window ungranted, and ends the grant when its window closes",
+  async () => {
+    const opened: EventEmitter[] = [];
+    const harness = setup("darwin", {
+      shortcut: (chord) =>
+        agentShortcutAction(terminalDefaultKeybinds("darwin"), chord, "darwin"),
+      native(action) {
+        if (action === "new-window") {
+          const window = Object.assign(new EventEmitter(), {
+            webContents: Object.assign(new EventEmitter(), {
+              mainFrame: {},
+              isDestroyed: () => false,
+              send: vi.fn(),
+            }),
+            isDestroyed: () => false,
+          });
+          harness.access.register(window, 2, sessions());
+          opened.push(window);
+        }
+        if (action === "close-window") harness.window.emit("closed");
+        return undefined;
+      },
+    });
+    const { profile, pane, access, window, shown } = harness;
+    access.toggle(window);
+    await shown();
+    const ran = await ctl(profile, ["press", "s1", "Cmd+N"], pane);
+    expect(ran).toMatchObject({ code: 0, stdout: "newWindow\ts1\n" });
+    expect(opened).toHaveLength(1);
+    expect(access.granted(opened[0] as never)).toBe(false);
+    expect(access.granted(window)).toBe(true);
+    // Its panes are another window's: unknown to this grant.
+    expect((await ctl(profile, ["read", "s1"], pane)).code).toBe(0);
+    expect(
+      (await ctl(profile, ["read", "s1"], `${access.instance}:2:s1`)).code,
+    ).not.toBe(0);
+
+    await ctl(profile, ["press", "s1", "Cmd+Shift+W"], pane);
+    expect(access.granted(window)).toBe(false);
+    expect((await ctl(profile, ["read", "s1"], pane)).code).not.toBe(0);
+  },
+);
 
 posix(
   "runs a tab shortcut on the pane the client names, and a stop fails one in flight",

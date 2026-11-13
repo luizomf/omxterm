@@ -34,7 +34,7 @@ const CAPABILITIES = { tools: {} };
 const MCP_WAIT_TIMEOUT_MS = 50_000;
 const MAX_LINE_CHARS = 4 * 1024 * 1024;
 
-const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press; press also runs the window's tab and pane shortcuts (new tab, split, close pane) on the pane it names, then list shows the result; call keys to see which shortcuts, as the user set them, instead of guessing. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
+const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press; press also runs the window's shortcuts (new tab, split, close pane, zoom, close window) on the pane it names, then list shows the result; call keys to see which shortcuts, as the user set them, instead of guessing. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
 
 const window = {
   type: "integer",
@@ -127,7 +127,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "press",
-    "Press keys in a pane, encoded for the pane's current modes exactly as the user's own keys, for full-screen programs and menus (arrows in vim, less, htop); answers the output offset to pass to wait as after. A key that is one of the window's tab or pane shortcuts (new, close, next, previous or select tab, split, close pane, focus or swap panes, equalize; Cmd+T on macOS, Ctrl+Shift+T on Linux) runs that action on the pane instead, pressed alone, and answers the action and pane. Closing a pane whose program is still running answers needs-user; the grant toggle is refused; the Command Palette, Find and side panels answer not-yet.",
+    "Press keys in a pane, encoded for the pane's current modes exactly as the user's own keys, for full-screen programs and menus (arrows in vim, less, htop); answers the output offset to pass to wait as after. A key that is one of the window's shortcuts (tabs, panes, zoom, copy, select all, the bars, full screen, new window, close window, quit; Cmd+T on macOS, Ctrl+Shift+T on Linux) runs that action on the pane instead, pressed alone, and answers the action and pane. Closing a pane, tab or window whose program is still running answers needs-user, and so do quitting with other windows open and full screen or a new window while the user is in another window; the grant toggle is refused; paste, the Command Palette, Find, panels and the rest answer not-yet. Call keys for the list.",
     {
       pane,
       keys: {
@@ -143,7 +143,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "keys",
-    "List the shortcuts of the window that press runs, as the user set them, rebinds included: each line is the chord (- when the user unbound it), the action, and refused or not-yet when press won't run it (the grant toggle is refused; the Command Palette, Find and side panels are not yet). Look here before pressing a shortcut instead of guessing.",
+    "List the shortcuts of the window that press runs, as the user set them, rebinds included: each line is the chord (- when the user unbound it), the action, and refused or not-yet when press won't run it (the grant toggle is refused; paste, the Command Palette, Find, panels and the rest are not yet). Look here before pressing a shortcut instead of guessing.",
     { window },
     true,
   ),

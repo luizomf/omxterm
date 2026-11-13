@@ -75,6 +75,8 @@ follow: `0.32.0-dev.2`.
 
 `keys`, which lists the shortcuts an agent can press (#1051), follows: `0.32.0-dev.3`.
 
+The remaining shortcut actions for agents (#1052) follow: `0.32.0-dev.4`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

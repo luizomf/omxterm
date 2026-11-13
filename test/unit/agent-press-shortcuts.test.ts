@@ -21,6 +21,7 @@ function grantedWindow(
     keybinds?: TerminalKeybinds;
     busy?: readonly string[];
     platform?: string;
+    native?: "busy" | "other-windows";
   } = {},
 ) {
   const platform = options.platform ?? "darwin";
@@ -45,6 +46,7 @@ function grantedWindow(
       ? ("busy" as const)
       : undefined,
   );
+  const native = vi.fn(() => options.native);
   let tabsAnswer = Promise.resolve([
     { tab: "t1", title: "zsh", selected: true, panes: ["s1", "s2"] as const },
     { tab: "t2", title: "vim", selected: false, panes: ["s3"] as const },
@@ -58,6 +60,7 @@ function grantedWindow(
     keybinds: () => keybinds,
     act,
     closeNeedsUser,
+    native,
     platform,
   });
   const press = (pane: string, ...keys: string[]) =>
@@ -77,6 +80,7 @@ function grantedWindow(
     encode,
     writes,
     closeNeedsUser,
+    native,
     holdTabs(answer: Promise<never>) {
       tabsAnswer = answer;
     },
@@ -149,15 +153,79 @@ it("refuses the grant toggle by action, whatever key it is bound to", async () =
   });
 });
 
-it("answers not yet for the Command Palette, Find and the side panels, and runs nothing", async () => {
+it("answers not yet for UI agents can't use and actions past the window, and runs nothing", async () => {
   const window = grantedWindow();
-  await expect(window.press("s1", "Cmd+Shift+P")).resolves.toBe("not-yet");
-  await expect(window.press("s1", "Cmd+F")).resolves.toBe("not-yet");
-  // The Snippets, Files and SSH Connect panels aren't for agents yet either.
-  for (const chord of ["Cmd+Alt+S", "Cmd+Alt+F", "Cmd+Alt+O"])
-    await expect(window.press("s1", chord)).resolves.toBe("not-yet");
+  // Command Palette, Find, the Snippets, Files and SSH Connect panels, moving
+  // the panel, Mirror Typing, Paste, Save layout and Reload Configuration.
+  for (const chord of [
+    "Cmd+Shift+P",
+    "Cmd+F",
+    "Cmd+Alt+S",
+    "Cmd+Alt+F",
+    "Cmd+Alt+O",
+    "Cmd+Shift+Alt+P",
+    "Cmd+Shift+M",
+    "Cmd+V",
+    "Cmd+Shift+L",
+    "Cmd+Shift+,",
+  ])
+    await expect(window.press("s1", chord), chord).resolves.toBe("not-yet");
   expect(window.act).not.toHaveBeenCalled();
+  expect(window.native).not.toHaveBeenCalled();
   expect(window.writes).toEqual([]);
+});
+
+it("runs zoom, copy, select all and the bar toggles on the pane it names", async () => {
+  const window = grantedWindow();
+  const commands = {
+    "Cmd+Plus": { action: "zoom", zoom: "in" },
+    "Cmd+-": { action: "zoom", zoom: "out" },
+    "Cmd+0": { action: "zoom", zoom: "reset" },
+    "Cmd+C": { action: "copy" },
+    "Cmd+A": { action: "select-all" },
+    "Cmd+Shift+B": { action: "toggle-tab-bar" },
+    "Cmd+Shift+D": { action: "toggle-title-bar" },
+  };
+  for (const [chord, command] of Object.entries(commands)) {
+    await expect(window.press("s3", chord), chord).resolves.toMatchObject({
+      pane: "s3",
+    });
+    expect(window.act).toHaveBeenLastCalledWith(
+      "s3",
+      command,
+      expect.any(AbortSignal),
+    );
+  }
+  expect(window.native).not.toHaveBeenCalled();
+  expect(window.writes).toEqual([]);
+});
+
+it("asks main for full screen, a new window, closing the window and quitting", async () => {
+  const window = grantedWindow();
+  const actions = {
+    "Cmd+Ctrl+F": ["toggleFullScreen", "full-screen"],
+    "Cmd+N": ["newWindow", "new-window"],
+    "Cmd+Shift+W": ["closeWindow", "close-window"],
+    "Cmd+Q": ["quit", "quit"],
+  };
+  for (const [chord, [action, native]] of Object.entries(actions)) {
+    await expect(window.press("s2", chord), chord).resolves.toEqual({
+      action,
+      pane: "s2",
+    });
+    expect(window.native).toHaveBeenLastCalledWith(native);
+  }
+  expect(window.act).not.toHaveBeenCalled();
+  // An unknown pane runs nothing.
+  await expect(window.press("s9", "Cmd+Q")).resolves.toBe("unknown-pane");
+  expect(window.native).toHaveBeenCalledTimes(4);
+});
+
+it("leaves a window close or quit that needs the user to the user", async () => {
+  for (const block of ["busy", "other-windows"] as const) {
+    const window = grantedWindow({ native: block });
+    await expect(window.press("s1", "Cmd+Q")).resolves.toBe("needs-user");
+  }
 });
 
 it("takes a shortcut only on its own, and no chord the pane can't take", async () => {
@@ -231,8 +299,10 @@ it("lists the effective shortcuts, rebinds included, marking what press won't ru
   });
   expect(entry("find")).toMatchObject({ chord: "Cmd+F", status: "not-yet" });
   expect(entry("toggleSnippets")?.status).toBe("not-yet");
-  // Keys that go to the pane aren't shortcuts press runs.
-  expect(entry("copy")).toBeUndefined();
+  // Every action is listed, whatever press does with it.
+  expect(entry("copy")).toMatchObject({ chord: "Cmd+C", status: "available" });
+  expect(entry("paste")).toMatchObject({ chord: "Cmd+V", status: "not-yet" });
+  expect(shortcuts).toHaveLength(TERMINAL_ACTION_NAMES.length);
   await expect(
     window.commands.run(
       "keys",

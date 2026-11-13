@@ -636,6 +636,13 @@ app
                 terminalApplication
                   ? terminalApplication.agentCloseNeedsUser(window, sessionIds)
                   : "closing",
+              // A window the agent opens starts ungranted, like every window.
+              (action) =>
+                terminalApplication
+                  ? terminalApplication.agentWindowAction(window, action, () =>
+                      reportNewWindow(terminalApplication!.newWindow()),
+                    )
+                  : "closing",
             );
             semanticInput.register(window);
             extensions!.registerWindow(window, (source, context) =>

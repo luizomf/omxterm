@@ -64,9 +64,11 @@ they did. Don't look for another way in.
   `Escape`, `Backspace` and `Space`, each with any of `Ctrl+`, `Alt+` and
   `Shift+` (`Ctrl+Shift+Up`). They arrive exactly as the user's own keys
   would. To see what a key did, `read` the pane.
-- `press` with one of the window's tab or pane shortcuts runs it on the pane
-  you name, as if the user clicked that pane and pressed it: new, close, next,
-  previous and select tab, split, close pane, focus and swap panes, equalize.
+- `press` with one of the window's shortcuts runs it on the pane you name, as
+  if the user clicked that pane and pressed it: new, close, next, previous
+  and select tab, split, close pane, focus and swap panes, equalize, zoom,
+  copy and select all (that pane's text), the tab bar and title bar, full
+  screen, new window, close window and quit.
   The defaults are `Cmd+T`, `Cmd+W`, `Cmd+D`, `Cmd+Shift+E`, `Cmd+Alt+W`,
   `Cmd+1` … on macOS and `Ctrl+Shift+T`, `Ctrl+Shift+W`, `Ctrl+Shift+O`,
   `Ctrl+Shift+E`, `Ctrl+Shift+K`, `Alt+1` … on Linux, unless the user rebound
@@ -76,11 +78,13 @@ they did. Don't look for another way in.
 - `keys` lists the shortcuts `press` runs, with the user's rebinds: the chord
   (`-` when they unbound it), the action, and `refused` or `not-yet` when
   `press` won't run it (`--json` for the list). Only what it lists runs.
-- Closing a pane or tab whose program is still running answers that it needs
-  the user, and nothing closes: ask them. Closing the last tab closes the
-  window and ends your access. The shortcut that allows or stops agents is
-  refused, and the Command Palette, Find and the Snippets, Files and SSH
-  Connect panels answer "not yet".
+- Closing a pane, tab or the window while a program is still running there
+  answers that it needs the user, and nothing closes: ask them. So does
+  quitting while other windows are open, and full screen or a new window
+  while the user is in another window. Closing the last tab or the window,
+  or quitting, ends your access; a window you open isn't yours to drive. The
+  shortcut that allows or stops agents is refused; paste, the Command
+  Palette, Find, panels and the rest answer "not yet" with the reason.
 - Pane ids such as `s2` come from `list` and last as long as the grant.
 - Sends to the same pane at the same time arrive in no guaranteed order. Send
   one at a time.

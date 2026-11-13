@@ -87,10 +87,15 @@ export function mountWindowChrome(
     if (toggled && !previewActive) focusTerminal();
   };
   const removeState = bridge.onWindowChrome(render);
-  const removeToggle = bridge.onTitleBarToggle(() => {
-    if (!disposed && !previewActive) bridge.windowChrome("toggle-title-bar");
-  });
+  // A preview keeps the bar as it is; false says nothing happened.
+  const toggleTitleBar = () => {
+    if (disposed || previewActive) return false;
+    bridge.windowChrome("toggle-title-bar");
+    return true;
+  };
+  const removeToggle = bridge.onTitleBarToggle(toggleTitleBar);
   return {
+    toggleTitleBar,
     setPreviewActive(active: boolean) {
       if (disposed || previewActive === active) return;
       previewActive = active;

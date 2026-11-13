@@ -108,6 +108,7 @@ function harness(confirmClose = false) {
       isFullScreen: () => false,
       setFullScreen() {},
       isAlwaysOnTop: () => false,
+      isFocused: () => true,
       setAlwaysOnTop() {},
       close() {
         if (destroyed) return;

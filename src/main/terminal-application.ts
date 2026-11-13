@@ -1,4 +1,5 @@
 /* eslint-disable max-lines -- Keep window and pane lifecycle routing under the application owner. */
+import type { AgentNativeAction } from "./agent-shortcuts";
 import type {
   TerminalPaneDirection,
   TerminalPaneFocusTarget,
@@ -24,9 +25,12 @@ import { createSelectedWindowAction } from "./terminal-window-action";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
 
-// Why an agent's close is left to the user: a Busy Session would ask to
-// confirm, the user is already confirming a close, or the window is going.
-export type AgentCloseBlock = "busy" | "confirming" | "closing";
+// Why an agent's close or window action is left to the user: a Busy Session
+// would ask to confirm, the user is already confirming a close, the window is
+// going, a quit would close windows the agent wasn't granted, or the user is
+// in another window that full screen or a new window would take them from.
+export type AgentCloseBlock =
+  "busy" | "confirming" | "closing" | "other-windows" | "elsewhere";
 export const DEFAULT_ALWAYS_ON_TOP = false;
 
 export interface NativeTerminalWindow {
@@ -36,6 +40,7 @@ export interface NativeTerminalWindow {
   setFullScreen(value: boolean): void;
   isAlwaysOnTop(): boolean;
   setAlwaysOnTop(value: boolean, level: "floating"): void;
+  isFocused(): boolean;
 }
 
 export interface TerminalWindowLifecycle {
@@ -140,9 +145,17 @@ export interface TerminalApplication<
   closeSelectedWindow(): Promise<void>;
   requestWindowClose(window: Window): Promise<void>;
   mayCloseWindow(window: Window): boolean;
+  // Every session of the window when no ids are given.
   agentCloseNeedsUser(
     window: Window,
-    sessionIds: readonly TerminalSessionId[],
+    sessionIds?: readonly TerminalSessionId[],
+  ): AgentCloseBlock | undefined;
+  // An agent's Full Screen, Close Window or Quit, on the window it was
+  // granted: never the selected one, and never a confirmation dialog.
+  agentWindowAction(
+    window: Window,
+    action: AgentNativeAction,
+    openWindow: () => void,
   ): AgentCloseBlock | undefined;
   forceCloseWindow(window: Window): void;
   requestQuit(): Promise<void>;
@@ -358,8 +371,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         !state.sessionActivity.hasBusySession()
       );
     },
-    agentCloseNeedsUser: (window, ids) =>
-      agentCloseNeedsUser(window, windows, confirmCloseEnabled, ids),
+    ...agentActions(windows, () => confirmCloseEnabled),
     forceCloseWindow,
     requestQuit() {
       if (quitting) return Promise.resolve();
@@ -448,6 +460,46 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
   };
 }
 
+// An agent's closes and window actions (ADR 0052): on the window it was
+// granted, never through a confirmation dialog.
+function agentActions<Window extends NativeTerminalWindow>(
+  windows: ReadonlyMap<Window, TerminalWindowState>,
+  confirmClose: () => boolean,
+): Pick<
+  TerminalApplication<Window>,
+  "agentCloseNeedsUser" | "agentWindowAction"
+> {
+  return {
+    agentCloseNeedsUser: (window, ids) =>
+      agentCloseNeedsUser(window, windows, confirmClose(), ids),
+    // Full screen and a new window only from the window the user is in
+    // (macOS moves them to a full-screen window's Space), a close or quit
+    // only with nothing to confirm, and a quit never takes other windows.
+    agentWindowAction(
+      this: TerminalApplication<Window>,
+      window,
+      action,
+      openWindow,
+    ) {
+      if (this.isQuitting() || !windows.has(window) || window.isDestroyed())
+        return "closing";
+      if (action === "full-screen" || action === "new-window") {
+        if (!window.isFocused()) return "elsewhere";
+        if (action === "new-window") openWindow();
+        else window.setFullScreen(!window.isFullScreen());
+        return undefined;
+      }
+      if (action === "quit" && windows.size > 1) return "other-windows";
+      const block = this.agentCloseNeedsUser(window);
+      if (block) return block;
+      // With nothing to confirm, requestQuit quits at once.
+      if (action === "quit") void this.requestQuit();
+      else this.forceCloseWindow(window);
+      return undefined;
+    },
+  };
+}
+
 // An agent's close never raises the Busy Session confirmation (ADR 0052):
 // with confirmClose on, a Busy Session among the panes it would close, or a
 // close the user is already confirming, leaves it to the user.
@@ -455,13 +507,15 @@ function agentCloseNeedsUser<Window extends NativeTerminalWindow>(
   window: Window,
   windows: ReadonlyMap<Window, TerminalWindowState>,
   confirmClose: boolean,
-  sessionIds: readonly TerminalSessionId[],
+  // Every session of the window when absent.
+  sessionIds?: readonly TerminalSessionId[],
 ): AgentCloseBlock | undefined {
   const state = windows.get(window);
   if (!state || window.isDestroyed()) return "closing";
   if (state.closeRequest || state.tabCloseRequest) return "confirming";
   if (!confirmClose) return undefined;
-  return (state.sessionActivity.hasBusySessionAmong?.(sessionIds) ??
+  return ((sessionIds &&
+    state.sessionActivity.hasBusySessionAmong?.(sessionIds)) ??
     state.sessionActivity.hasBusySession())
     ? "busy"
     : undefined;

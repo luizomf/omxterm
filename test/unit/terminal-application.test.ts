@@ -9,6 +9,7 @@ function createWindowHarness(lifecycle: TerminalWindowLifecycle) {
   let destroyed = false;
   let fullScreen = false;
   let alwaysOnTop = false;
+  const focused = { value: true };
   // Sessions count as Busy by default so confirmation tests exercise dialogs.
   const busy = { selected: true, any: true };
   // Busy sessions by id, for an agent's close of named panes.
@@ -32,6 +33,7 @@ function createWindowHarness(lifecycle: TerminalWindowLifecycle) {
     isFullScreen: () => fullScreen,
     setFullScreen,
     isAlwaysOnTop: () => alwaysOnTop,
+    isFocused: () => focused.value,
     setAlwaysOnTop,
   };
 
@@ -41,6 +43,7 @@ function createWindowHarness(lifecycle: TerminalWindowLifecycle) {
     closeSession,
     setFullScreen,
     setAlwaysOnTop,
+    focused,
     sessionActivity: {
       hasBusySelectedSession: () => busy.selected,
       hasBusySession: () => busy.any,
@@ -869,5 +872,55 @@ describe("Terminal application window actions", () => {
       alwaysOnTopDefault: false,
     });
     expect(needsUser("s2")).toBeUndefined();
+  });
+
+  it("runs an agent's window actions on its granted window, never through a dialog", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    await harness.application.newWindow();
+    const [granted, selected] = harness.windows;
+    const openWindow = vi.fn();
+    const act = (
+      window: NativeTerminalWindow,
+      action: "full-screen" | "new-window" | "close-window" | "quit",
+    ) => harness.application.agentWindowAction(window, action, openWindow);
+
+    // From the window the user is in, full screen and a new window run there.
+    expect(act(granted!.window, "full-screen")).toBeUndefined();
+    expect(granted!.setFullScreen).toHaveBeenLastCalledWith(true);
+    expect(act(granted!.window, "new-window")).toBeUndefined();
+    expect(openWindow).toHaveBeenCalledOnce();
+    // The user moves to the other window: neither takes them from it.
+    granted!.focused.value = false;
+    harness.select(selected!.window);
+    expect(act(granted!.window, "full-screen")).toBe("elsewhere");
+    expect(act(granted!.window, "new-window")).toBe("elsewhere");
+    expect(granted!.setFullScreen).toHaveBeenCalledOnce();
+    expect(selected!.setFullScreen).not.toHaveBeenCalled();
+    expect(openWindow).toHaveBeenCalledOnce();
+
+    // Quitting would close the user's other window.
+    granted!.setBusy(false);
+    selected!.setBusy(false);
+    expect(act(granted!.window, "quit")).toBe("other-windows");
+    expect(harness.quit).not.toHaveBeenCalled();
+
+    // A Busy Session anywhere in the window leaves the close to the user.
+    granted!.setBusy(true);
+    expect(act(granted!.window, "close-window")).toBe("busy");
+    granted!.setBusy(false);
+    expect(act(granted!.window, "close-window")).toBeUndefined();
+    expect(granted!.window.isDestroyed()).toBe(true);
+    expect(selected!.window.isDestroyed()).toBe(false);
+    expect(harness.showCloseWindowConfirmation).not.toHaveBeenCalled();
+    expect(act(granted!.window, "close-window")).toBe("closing");
+
+    // Its last window: quit, unless a program runs there.
+    selected!.setBusy(true);
+    expect(act(selected!.window, "quit")).toBe("busy");
+    selected!.setBusy(false);
+    expect(act(selected!.window, "quit")).toBeUndefined();
+    expect(harness.quit).toHaveBeenCalledOnce();
+    expect(harness.showQuitConfirmation).not.toHaveBeenCalled();
   });
 });
