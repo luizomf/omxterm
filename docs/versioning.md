@@ -91,6 +91,9 @@ installable unchanged.
 `wait --match`, which waits for given text on a pane's screen (#1068), follows:
 `0.33.0-dev.1`.
 
+Accepting a pane as `OMXTERM_PANE` spells it (#1065) moves main to
+`0.33.0-dev.2`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
