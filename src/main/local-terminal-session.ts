@@ -169,8 +169,9 @@ export function createLocalTerminalSession(
     );
   }
 
-  // node-pty spawns with 0×0 pixels, so set them before the new process can
-  // read TIOCGWINSZ (#1038). ConPTY has no pixel size.
+  // node-pty spawns with 0×0 pixels, so set them in the same tick (#1038). On
+  // Linux a child that reads TIOCGWINSZ at once can still miss them (#1043).
+  // ConPTY has no pixel size.
   if (
     initialSize.pixelWidth !== undefined &&
     initialSize.pixelHeight !== undefined &&
