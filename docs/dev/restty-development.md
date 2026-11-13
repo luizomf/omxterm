@@ -135,7 +135,16 @@ CSI seam, the prepared `OutputFilter` synchronously submits the filtered prefix
 including CPR through the ordinary runtime controller, which drains core replies
 before filtering later DA1/DA2/`CSI 16 t` queries. No render frame or JavaScript
 cursor hint answers CPR. DA1 remains `CSI ? 1 ; 2 c`, DA2 `CSI > 0 ; 0 ; 0 c`,
-and cell-size reports retain their metrics provider.
+XTVERSION `DCS > | ghostty 1.0 ST`, and cell-size reports retain their metrics
+provider.
+
+Every other filter-owned reply (DA1, DA2, XTVERSION, `CSI 14/16/18 t` and OSC
+color queries) goes through the same consumer in
+`scripts/restty-reply-order-corrections.mjs`: before replying, the filter
+commits the prefix it has filtered so far, without the query, so the core
+answers earlier queries first. Image tools probe with a Kitty `a=q` followed by
+DA1 and stop reading at DA1; yazi also mixes DECRQM and DECRQSS into the same
+probe.
 
 The private `filterOutput(output, onCoreOutput?)` consumer is synchronous. Each
 committed prefix is excluded from the returned suffix; one-argument consumers
@@ -151,6 +160,9 @@ and resize failures, and cancellation/budget checks:
 ```sh
 npx vitest run test/integration/restty-cpr-core.test.ts test/unit/restty-terminal-capabilities.test.ts
 ```
+
+The same file covers a Kitty query followed by DA1, DA2, XTVERSION and
+`CSI 16 t` at every two-chunk split, and yazi's startup probe order.
 
 These are not DOM Surface, native PTY or graphical qualification.
 
@@ -272,7 +284,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `056d91bbc23901c0bf57d1584bf53502fdd9c25b9f4ce6a3b34ccd7577b83faf` |
+| Restty JavaScript runtime | `db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c` |
 | Embedded-core chunk       | `fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `a12d667486bd69cafb426af016e819f7d44d588f2da7db96b77e568ea95da011` |

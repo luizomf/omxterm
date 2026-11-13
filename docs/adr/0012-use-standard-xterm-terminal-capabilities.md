@@ -35,7 +35,11 @@ wide/combining text, pending-wrap resize and origin-mode margins. At each parsed
 CPR, the runtime synchronously submits the filtered prefix including the query
 and drains its reply before later filter-owned replies. This removes the
 UTF-16 cursor-hint interception without a second parser, render-frame lookup or
-WASM change. Actual-core ingestion regressions cover the failures reported in
+WASM change. Before any filter-owned reply (DA1, DA2, XTVERSION, window or
+color report), the runtime likewise commits the filtered prefix, so core replies
+to earlier queries, such as a Kitty `a=q`, come first
+([#1028](https://github.com/luizomf/omxterm/issues/1028)). Actual-core ingestion
+regressions cover the failures reported in
 [#568](https://github.com/luizomf/omxterm/issues/568) and mixed reply ordering.
 See [ADR 0025](0025-use-restty-as-the-terminal-surface.md#keyboard-input-and-terminal-controls).
 

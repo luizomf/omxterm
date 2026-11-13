@@ -254,7 +254,9 @@ origin-mode margins. After existing completion, cancellation and budget checks,
 OutputFilter synchronously submits the filtered prefix including each CPR through
 the ordinary controller, draining its core reply before later filter-owned
 replies. The returned suffix excludes that prefix; without a synchronous consumer,
-CPR passes through to core. No JavaScript cursor hint answers CPR and no second
+CPR passes through to core. Filter-owned replies (DA1, DA2, XTVERSION, window
+and color reports) commit the filtered prefix first, so core replies to earlier
+queries such as a Kitty `a=q` keep stream order. No JavaScript cursor hint answers CPR and no second
 parser, frame lookup, Surface interface or WASM change is required. Actual-core
 production-ingestion tests cover the original
 [#568](https://github.com/luizomf/omxterm/issues/568) failures, split queries and
