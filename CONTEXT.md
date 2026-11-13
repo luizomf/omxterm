@@ -287,7 +287,8 @@ running version in `TERM_PROGRAM_VERSION`. The Agent API's three location
 variables sit beside it but describe OMXTerm, not the terminal. Ghostty answers cursor-position
 queries from its parser cursor at each query's stream position, with core and
 filter-owned DA/cell-size replies kept in order without waiting for a render
-frame. This identity is not a guarantee of every xterm extension.
+frame. XTVERSION answers `ghostty 1.0` on purpose, because image tools key
+on that name. This identity is not a guarantee of every xterm extension.
 
 **Shell Integration** — Terminal-specific shell startup hooks. OMXTerm leaves
 shell initialization to the user and injects no hooks.
