@@ -7,6 +7,11 @@ and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 and its [MCP server](#mcp). Each later command says which slice of the ADR's
 plan it belongs to; until then, names and shapes can still change.
 
+Slice 4 follows the ADR's
+[keyboard-parity rule](../adr/0052-let-a-local-agent-drive-a-granted-window.md#keyboard-parity):
+in the granted window an agent can press any key or shortcut the user can,
+except the grant toggle.
+
 ## Finding the endpoint
 
 A client needs the profile directory (Electron userData):
@@ -122,9 +127,11 @@ window (`t2`). Both are valid for this grant only.
 Slice 1 returns `panes` at the top level, without tabs. Titles are the
 display-only tab titles (ADR 0010), so they are untrusted text.
 
-### `send` (slice 1; mode-aware keys in slice 6)
+### `send` (slice 1)
 
-`text`, `keys` or both; with both, the text comes first, in one write.
+`text`, `keys` or both; with both, the text comes first, in one write. `send`
+writes bytes to the PTY and never matches shortcuts; keys that depend on the
+pane's mode, and shortcuts, are [`press`](#press-slice-4).
 
 ```json
 { "id": 2, "cmd": "send", "args": { "pane": "s1", "text": "npm test" } }
@@ -135,7 +142,7 @@ display-only tab titles (ADR 0010), so they are untrusted text.
   paste framing is applied.
 - `keys` in slice 1: `Enter`, `Tab`, `Escape`, `Backspace`, `Space` and
   `Ctrl+A` … `Ctrl+Z`, in any letter case, at most 64 per request. Other names
-  answer `unsupported-key` until slice 6.
+  answer `unsupported-key`.
 - The whole write is at most 64 KiB, or the request answers `too-large`.
 
 ```json
@@ -209,22 +216,47 @@ the result adds `exitCode`). A timeout is a normal result, not an error. Later:
 `command-end` with `exitCode` (slice 8). Clients must ignore reasons and fields
 they don't know.
 
+### `press` (slice 4)
+
+Keys and shortcuts, as the user would press them in the granted window. The
+wire shape is not settled yet.
+
+- Named keys for a pane: arrows, `Home`, `End`, `PageUp`, `PageDown`,
+  `Insert`, `Delete`, `F1` … `F12`, `Enter`, `Tab`, `Escape`, `Backspace` and
+  `Space`, with any combination of `Ctrl`, `Alt` and `Shift`. The bytes are
+  encoded for the pane's current mode (application cursor keys, Kitty
+  keyboard flags) exactly as the user's key would be, and it works while the
+  granted window isn't the selected one
+  ([#1048](https://github.com/luizomf/omxterm/issues/1048)).
+- A chord that matches one of the window's effective shortcuts (defaults plus
+  the user's rebinds) runs that action in the granted window on the pane
+  `press` names: main focuses that pane first, as a user clicks a pane and
+  presses, so `press s3 Cmd+W` closes `s3`. The result names the action and
+  the pane. Tab and pane actions
+  come first ([#1050](https://github.com/luizomf/omxterm/issues/1050)), the
+  rest later ([#1052](https://github.com/luizomf/omxterm/issues/1052)); until
+  an action is covered, its chord goes to the pane.
+- The grant toggle is refused, whatever chord it is bound to. The Command
+  Palette, Settings, Find, extension panels and native dialogs answer "not
+  yet" in one sentence.
+- A close that would ask to confirm a Busy Session answers that it needs the
+  user and does nothing; that confirmation stays the user's.
+- An ungranted window or an ended grant refuses as `send` does.
+
+### `keys` (slice 4)
+
+Lists the granted window's effective shortcuts, including the user's rebinds,
+and marks the ones that are refused or "not yet", so agents look there
+instead of guessing ([#1051](https://github.com/luizomf/omxterm/issues/1051)).
+
 ### Tabs and panes (slice 4)
 
-| Command      | Arguments                                  | Result                          |
-| ------------ | ------------------------------------------ | ------------------------------- |
-| `tab.new`    | none                                       | `{ "tab": "t3", "pane": "s7" }` |
-| `tab.select` | `tab`                                      | `{}`                            |
-| `tab.close`  | `tab`, `force?`                            | `{}`                            |
-| `pane.split` | `pane`, `direction`: `"right"` or `"down"` | `{ "pane": "s8" }`              |
-| `pane.focus` | `pane`                                     | `{}`                            |
-| `pane.close` | `pane`, `force?`                           | `{}`                            |
-
-A new tab or pane starts the Default Shell, in the source pane's folder for a
-split, exactly like the user's own New Tab and Split. There is no command
-argument: the agent types what it wants to run. Closing something with a Busy
-Session answers `busy` unless `force` is true. Closing the last tab closes the
-window and ends the grant.
+There are no tab or pane commands. An agent opens, splits, selects and closes
+tabs and panes with the user's own shortcuts through `press`, then sees the
+result in `list`. A new tab or pane starts the Default Shell, in the source
+pane's folder for a split, exactly like the user's New Tab and Split; the
+agent types what it wants to run. Closing the last tab closes the window and
+ends the grant.
 
 ## Errors
 
@@ -233,11 +265,9 @@ window and ends the grant.
 | `invalid-request` | Not JSON, too long, unknown command, or a wrong argument shape.   |
 | `revoked`         | The grant ended. The connection closes after this response.       |
 | `unknown-pane`    | No such pane in this window (also used for another window's ids). |
-| `unknown-tab`     | No such tab in this window.                                       |
 | `not-live`        | The pane's program has ended or the pane is still starting.       |
 | `unsupported-key` | A key name this version can't encode.                             |
 | `too-large`       | The text to send or the text to return is over its limit.         |
-| `busy`            | Closing needs `force`.                                            |
 | `limit`           | Too many tabs, panes, connections or pending waits.               |
 | `unavailable`     | The window couldn't answer in time (a read or a tree request).    |
 
@@ -261,9 +291,8 @@ omxterm-ctl wait s1 --after 48211 --idle 800 --timeout 120000
 omxterm-ctl wait s1 --match 'Tests passed' --timeout 120000   # slice 3
 omxterm-ctl read s1 --lines 200
 omxterm-ctl read s1 --screen               # slice 3
-omxterm-ctl split s1 --down                # slice 4
-omxterm-ctl new-tab                        # slice 4
-omxterm-ctl close s8 --force               # slice 4
+omxterm-ctl press s1 Up                    # slice 4
+omxterm-ctl keys                           # slice 4
 ```
 
 - Inside a pane, agents call it as `"$OMXTERM_CTL"`; window and profile come
@@ -306,6 +335,8 @@ as Codex does). It offers tools only.
 | `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `timeout?`, `window?` |
 | `read`   | `pane`, `lines?`, `window?`                                                        |
 | `wait`   | `pane`, `after?`, `idle?`, `timeout?`, `window?`                                   |
+
+Slice 4 adds `press` and `keys` with the same names.
 
 - A tool call is the CLI command of the same name, with the arguments as its
   options, on its own connection. The tools are always listed; the grant is
@@ -353,19 +384,20 @@ instead.
 
 ## Where it lives
 
-| Area                     | Where                                                                                           |
-| ------------------------ | ----------------------------------------------------------------------------------------------- |
-| Wire limits and keys     | `src/shared/agent-api.ts`, shared by main and the client                                        |
-| Grants and credentials   | `src/main/agent-access.ts`                                                                      |
-| Socket and handshake     | `src/main/agent-endpoint.ts`                                                                    |
-| Commands and waits       | `src/main/agent-commands.ts`                                                                    |
-| Agent input and outputs  | `agentSessions` in `src/main/terminal-ipc-controller.ts` (the only agent write)                 |
-| Pane environment         | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                          |
-| Reads and marks (window) | `src/renderer/agent-access.ts`, `src/renderer/state-marks.ts`, `src/preload/agent-bridge.ts`    |
-| Accent tone              | `src/renderer/ui.css`, `src/renderer/terminal-window-theme.ts`                                  |
-| Toggle                   | `src/main/action-catalog.ts`, `src/main/application-menu.ts`, `src/shared/terminal-keybinds.ts` |
-| Client and launcher      | `src/agent-ctl/` (built to `dist/agent-ctl/`, packaged under `resources/agent-ctl/`)            |
-| Agent guide              | `src/agent-ctl/SKILL.md`, bundled into the client as text                                       |
-| MCP server               | `src/agent-ctl/mcp.ts`, over the CLI's commands in `src/agent-ctl/commands.ts`                  |
-| Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`               |
-| Tab and pane commands    | slice 4: `src/shared/terminal-panes.ts`, `src/renderer/terminal-pane-operations.ts`             |
+| Area                     | Where                                                                                                          |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| Wire limits and keys     | `src/shared/agent-api.ts`, shared by main and the client                                                       |
+| Grants and credentials   | `src/main/agent-access.ts`                                                                                     |
+| Socket and handshake     | `src/main/agent-endpoint.ts`                                                                                   |
+| Commands and waits       | `src/main/agent-commands.ts`                                                                                   |
+| Agent input and outputs  | `agentSessions` in `src/main/terminal-ipc-controller.ts` (the only agent write)                                |
+| Pane environment         | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                                         |
+| Reads and marks (window) | `src/renderer/agent-access.ts`, `src/renderer/state-marks.ts`, `src/preload/agent-bridge.ts`                   |
+| Accent tone              | `src/renderer/ui.css`, `src/renderer/terminal-window-theme.ts`                                                 |
+| Toggle                   | `src/main/action-catalog.ts`, `src/main/application-menu.ts`, `src/shared/terminal-keybinds.ts`                |
+| Client and launcher      | `src/agent-ctl/` (built to `dist/agent-ctl/`, packaged under `resources/agent-ctl/`)                           |
+| Agent guide              | `src/agent-ctl/SKILL.md`, bundled into the client as text                                                      |
+| MCP server               | `src/agent-ctl/mcp.ts`, over the CLI's commands in `src/agent-ctl/commands.ts`                                 |
+| Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`                              |
+| Shortcuts for `press`    | slice 4: `src/main/action-catalog.ts`, `terminalActionForKeyboardInput()` in `src/shared/terminal-keybinds.ts` |
+| Mode-aware key encoding  | slice 4: Restty's encoder, `scripts/restty-application-cursor-corrections.mjs`                                 |

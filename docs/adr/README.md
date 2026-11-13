@@ -107,7 +107,10 @@ setup page.
 lets an outside program type, read and wait in a window the user granted, shown
 as an accent State Mark, through a user-only local socket owned by main. Its
 first two slices (macOS and Linux: drive the window, then an agent guide and an
-MCP server) are accepted and implemented; later slices remain proposed. It amends ADRs 0004, 0013 and 0050. The
+MCP server) are accepted and implemented. Its keyboard-parity rule is accepted
+for slice 4: in that window the agent may press what the user can press,
+except the grant toggle, and the mark turns to the error tone. Other later
+slices remain proposed. It amends ADRs 0004, 0013 and 0050. The
 [Agent API reference](../dev/agent-api.md) holds the protocol and CLI.
 
 [ADR0053: Mark program progress and attention](0053-mark-program-progress-and-attention.md)
