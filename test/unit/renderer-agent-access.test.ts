@@ -1,5 +1,8 @@
 import { expect, it, vi } from "vitest";
-import { subscribeToAgentAccess } from "../../src/renderer/agent-access";
+import {
+  encodeAgentKeys,
+  subscribeToAgentAccess,
+} from "../../src/renderer/agent-access";
 import type {
   AgentAccessBridge,
   AgentAccessState,
@@ -114,4 +117,36 @@ it("answers main's presses with the pane's encoded bytes", () => {
   main.press({ id, sessionId: "s2", keys });
   expect(tabs.encodeSessionKeys).toHaveBeenCalledWith(id, "s2", keys);
   expect(main.bridge.pressResult).toHaveBeenCalledWith({ id, data: "\x1bOA" });
+});
+
+it("joins a press's keys from the pane's Surface, or says why it can't", () => {
+  const id = "00000000-0000-0000-0000-000000000005";
+  const up = { key: "Up", ctrl: false, alt: false, shift: false };
+  const f5 = { key: "F5", ctrl: true, alt: false, shift: false };
+  const surface = {
+    encodeKeyPress: vi.fn(
+      (key: { key: string; ctrlKey: boolean }) =>
+        `<${key.ctrlKey ? "C-" : ""}${key.key}>`,
+    ),
+  };
+  expect(encodeAgentKeys(id, surface, [up, f5, up])).toEqual({
+    id,
+    data: "<ArrowUp><C-F5><ArrowUp>",
+  });
+  expect(encodeAgentKeys(id, undefined, [up])).toEqual({
+    id,
+    error: "unknown-pane",
+  });
+  expect(
+    encodeAgentKeys(id, { encodeKeyPress: () => undefined }, [up]),
+  ).toEqual({ id, error: "unavailable" });
+  const broken = {
+    encodeKeyPress: () => {
+      throw new Error("core gone");
+    },
+  };
+  expect(encodeAgentKeys(id, broken, [up])).toEqual({
+    id,
+    error: "unavailable",
+  });
 });

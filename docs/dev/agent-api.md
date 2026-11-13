@@ -238,7 +238,9 @@ Keys and shortcuts, as the user would press them in the granted window.
   `Delete`, `F1` … `F12`, `Enter`, `Tab`, `Escape`, `Backspace` or `Space`,
   after any of `Ctrl+`, `Alt+` and `Shift+`, each at most once
   (`Ctrl+Shift+Up`), in any letter case. Anything else answers
-  `unsupported-key` and nothing is written.
+  `unsupported-key` and nothing is written. So does `Ctrl+Space` (with any
+  other modifier) on macOS, which keeps it for switching input sources: the
+  user's own press sends the pane nothing.
 - The window encodes each key for the pane's current modes (application
   cursor keys, Kitty keyboard flags) with the same encoder as the user's key,
   and main writes the bytes, so a press is exactly a user press and release:
@@ -247,9 +249,10 @@ Keys and shortcuts, as the user would press them in the granted window.
   flags, modifiers on `PageUp`, `PageDown`, `Insert`, `Delete` and the
   function keys are dropped, and `Ctrl+Left`/`Ctrl+Right` send `ESC b`/`ESC f`.
   `Alt` is the terminal's Alt, whatever `optionKeyMode` says.
-- Like `read`, it first waits up to 1 s for the window to consume what main
-  already sent, so a press right after starting a program sees the modes it
-  set. The answer is `send`'s: `offset` for `wait`'s `after`. A window that
+- Like `read`, it first waits up to 1 s for the window to consume the output
+  main has already received from the pane, so the modes that output set are
+  in place. Output still on its way can change them later. All keys of one
+  press are encoded against the same modes. The answer is `send`'s: `offset` for `wait`'s `after`. A window that
   can't encode in time, or a pane that can't take input yet, answers
   `unavailable`.
 - It works while the granted window isn't the selected one. Like `send`, it

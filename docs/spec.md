@@ -1269,7 +1269,8 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   text and the mode-independent keys `Enter`, `Tab`, `Escape`, `Backspace`,
   `Space` and `Ctrl+A`–`Ctrl+Z`, press named keys (arrows, `Home`, `End`,
   `PageUp`, `PageDown`, `Insert`, `Delete`, `F1`–`F12`, `Enter`, `Tab`,
-  `Escape`, `Backspace`, `Space`, with any of `Ctrl`, `Alt` and `Shift`)
+  `Escape`, `Backspace`, `Space`, with any of `Ctrl`, `Alt` and `Shift`,
+  except `Ctrl+Space` on macOS, which sends nothing there)
   encoded for the pane's current cursor and Kitty keyboard modes exactly as
   the user's own key, read the last lines of a pane's scrollback
   and screen (including output from before the grant), and wait until a pane

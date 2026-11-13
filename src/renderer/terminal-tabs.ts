@@ -12,7 +12,8 @@ import {
   type AgentPressResult,
   type AgentReadResult,
 } from "../shared/agent-access";
-import { agentChordKey, type AgentKeyChord } from "../shared/agent-api";
+import type { AgentKeyChord } from "../shared/agent-api";
+import { encodeAgentKeys } from "./agent-access";
 import { createPaneAttention } from "./pane-attention";
 import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
@@ -571,14 +572,11 @@ export function createTerminalTabs(
       const pane = disposed
         ? undefined
         : findPaneBySession(terminalTabs(), sessionId);
-      if (!pane?.surface || pane.removed) return { id, error: "unknown-pane" };
-      let data = "";
-      for (const chord of keys) {
-        const bytes = pane.surface.encodeKeyPress?.(agentChordKey(chord));
-        if (bytes === undefined) return { id, error: "unavailable" };
-        data += bytes;
-      }
-      return { id, data };
+      return encodeAgentKeys(
+        id,
+        pane && !pane.removed ? pane.surface : undefined,
+        keys,
+      );
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

@@ -322,3 +322,35 @@ posix("drops a press in flight when the user stops the grant", async () => {
   expect(pressed.stderr).toMatch(/stopped agent access/u);
   expect(port.writes).toEqual([]);
 });
+
+posix("settles a read and a press only with their own answers", async () => {
+  const { profile, pane, access, window, contents, port, ipc, event, shown } =
+    setup();
+  access.toggle(window);
+  await shown();
+  // The window answers each request first on the other channel, then on its own.
+  contents.send.mockImplementation((channel: string, payload: unknown) => {
+    const { id } = payload as { id: string };
+    const read = () =>
+      ipc.listeners.get(agentIpc.readResult)!(event, {
+        id,
+        text: "text",
+        truncated: false,
+      });
+    const press = () =>
+      ipc.listeners.get(agentIpc.pressResult)!(event, { id, data: "<ok>" });
+    if (channel === agentIpc.press)
+      setImmediate(() => {
+        read();
+        press();
+      });
+    if (channel === agentIpc.read)
+      setImmediate(() => {
+        press();
+        read();
+      });
+  });
+  expect((await ctl(profile, ["press", "s1", "Up"], pane)).code).toBe(0);
+  expect(port.writes).toEqual([["s1", "<ok>"]]);
+  expect((await ctl(profile, ["read", "s1"], pane)).stdout).toBe("text\n");
+});

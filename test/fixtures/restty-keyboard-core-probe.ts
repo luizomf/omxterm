@@ -5,7 +5,13 @@ import { preparedCprRuntime, runtimeSection } from "./restty-cpr-core-probe";
 
 // Production output ingestion, core state providers, DOM key binding and final
 // PTY mapping. Only the transport, focus host and render notifications are fakes.
-export async function keyboardCoreFixture(claimKeys = false) {
+export async function keyboardCoreFixture(
+  claimKeys = false,
+  platform: { mac: boolean; optionKeyMode: string } = {
+    mac: false,
+    optionKeyMode: "none",
+  },
+) {
   const source = preparedCprRuntime();
   const listeners = new Map<string, (event: KeyboardEvent) => void>();
   const window = {
@@ -129,8 +135,8 @@ export async function keyboardCoreFixture(claimKeys = false) {
     cleanupFns,
     interaction: { imeState: { composing: false } },
     getCanvas: () => canvas,
-    getOptionKeyMode: () => "none",
-    isMacPlatform: false,
+    getOptionKeyMode: () => platform.optionKeyMode,
+    isMacPlatform: platform.mac,
     KITTY_FLAG_REPORT_EVENTS: 2,
   });
   pty.connectPty();

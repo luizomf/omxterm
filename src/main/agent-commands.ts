@@ -1,4 +1,5 @@
 import {
+  agentChordSendsNothing,
   agentKeyBytes,
   DEFAULT_AGENT_IDLE_MS,
   DEFAULT_AGENT_READ_LINES,
@@ -54,6 +55,8 @@ export interface AgentCommandsOptions {
     keys: readonly AgentKeyChord[],
     signal: AbortSignal,
   ) => Promise<string>;
+  /** Decides which chords the user's own press would send; process.platform. */
+  readonly platform?: string;
   readonly now?: () => number;
   /** How long a read or press waits for the window to consume sent output. */
   readonly catchUpMs?: number;
@@ -113,10 +116,12 @@ function keyNames(value: unknown): string[] {
   return value as string[];
 }
 
-function pressChords(value: unknown): AgentKeyChord[] {
+// A chord the user's press turns into nothing is refused like an unknown key.
+function pressChords(value: unknown, platform: string): AgentKeyChord[] {
   return keyNames(value).map((name) => {
     const chord = parseAgentChord(name);
-    if (!chord) throw unsupportedPress();
+    if (!chord || agentChordSendsNothing(chord, platform))
+      throw unsupportedPress();
     return chord;
   });
 }
@@ -318,7 +323,10 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     async press(args, caller) {
       const value = argumentsOf(args, ["pane", "keys"]);
       const sessionId = pane(value.pane);
-      const keys = pressChords(value.keys);
+      const keys = pressChords(
+        value.keys,
+        options.platform ?? process.platform,
+      );
       await caughtUp(sessionId, caller.signal);
       const data = await options.encode(sessionId, keys, caller.signal);
       // The grant may have ended while the window encoded.

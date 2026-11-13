@@ -377,3 +377,22 @@ it("writes nothing when the grant ends while the window encodes", async () => {
   expect(await failure(pressed)).toBe("revoked");
   expect(window.writes).toEqual([]);
 });
+
+it("refuses Ctrl+Space on macOS, where the user's press sends nothing", async () => {
+  const run = (platform: string, key: string) => {
+    const window = fakeWindow();
+    const commands = createAgentCommands({
+      sessions: window.sessions,
+      read: vi.fn(),
+      encode: async () => "x",
+      platform,
+    });
+    return failure(
+      commands.run("press", { pane: "s1", keys: [key] }, caller()),
+    );
+  };
+  expect(await run("darwin", "Ctrl+Space")).toBe("unsupported-key");
+  expect(await run("darwin", "Ctrl+Alt+Space")).toBe("unsupported-key");
+  expect(await run("darwin", "Alt+Space")).toBeUndefined();
+  expect(await run("linux", "Ctrl+Space")).toBeUndefined();
+});

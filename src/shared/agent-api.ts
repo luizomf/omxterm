@@ -182,6 +182,17 @@ export function isAgentKeyChord(value: unknown): value is AgentKeyChord {
   );
 }
 
+/**
+ * A chord the user's own press turns into no terminal input: macOS keeps
+ * Ctrl+Space (with any other modifier) for switching input sources.
+ */
+export function agentChordSendsNothing(
+  chord: AgentKeyChord,
+  platform: string,
+): boolean {
+  return platform === "darwin" && chord.key === "Space" && chord.ctrl;
+}
+
 /** The key description the Surface encodes, shaped like a DOM key event. */
 export function agentChordKey(chord: AgentKeyChord) {
   const [key, code] = PRESS_KEYS[chord.key]!;

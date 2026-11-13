@@ -88,7 +88,7 @@ What the code gives us today:
 | or any client |  NDJSON   |  auth: grant token  |<---------->|  on every pane and tab   |
 +---------------+           |  scope: one window  |  marks,    | Surface text reads       |
                             |                     |  reads,    | tab and pane commands    |
-                            |  agentInput() ------+--> PTY     +--------------------------+
+                            |  agent write -------+--> PTY     +--------------------------+
                             |  output positions   |<-- PTY
                             +---------------------+
 ```
@@ -177,10 +177,11 @@ What the code gives us today:
 
 ### Input
 
-- Agent input enters at one function in main, `agentInput(grant, pane, data)`,
-  which checks the grant and the pane's window and calls `writeTracked()`.
-  It is the only place agent bytes are written, so a later record of what the
-  agent typed has one place to attach.
+- Agent input enters at one place in main: the granted window's commands
+  check the grant and the pane's window, then call the window controller's
+  `agentSessions.write()`, which calls the session's `writeTracked()`. It is
+  the only place agent bytes are written, so a later record of what the agent
+  typed has one place to attach.
 - It bypasses the Surface. Consequences, all intended: agent bytes never reach
   `routeKeyInput`, so they never enter a Mirror Typing route and never stop
   one; they skip Protected Paste and its confirmation; they don't scroll the
@@ -217,7 +218,7 @@ matching lands, every chord goes to the pane.
                        renderer encodes for the pane's mode
                                               |
                                               v
-                                   agentInput() --> PTY
+                                   agent write --> PTY
 ```
 
 - **`press` is the route.** It takes named keys and chords for a pane of the
@@ -226,7 +227,7 @@ matching lands, every chord goes to the pane.
   key event is synthesized and nothing enters Chromium's input path. A match
   runs that catalog action and `press` says which one ran. Anything else is
   encoded by the renderer for the pane's current mode, exactly as the user's
-  key would be, and written by `agentInput()`, so like `send` it never
+  key would be, and written by main's agent write, so like `send` it never
   reaches `routeKeyInput`, Mirror Typing or Protected Paste. Restty's
   encoder runs without a DOM key event
   ([Slice 4 as built](#slice-4-as-built)).
@@ -417,7 +418,7 @@ a command name, its duration and an error code.
 - **Routing agent input through the Surface** (`inject()`): it would revoke
   Mirror Typing routes, trigger Protected Paste and depend on a live renderer
   for every byte. `press` asks the renderer only to encode a key; the bytes
-  still go through `agentInput()`.
+  still go through main's agent write.
 - **Synthesizing native key events** for `press`
   (`webContents.sendInputEvent`): they would go through the user's keyboard
   handling, could reach the menu and the Command Palette, and would make the
@@ -469,7 +470,7 @@ a command name, its duration and an error code.
 6. **Paste by mode.** Text sent as a paste that honors bracketed paste mode.
 7. **A record of what the agent typed.** Session-only, in memory, bounded,
    shown to the user in the window and dropped with the grant; attached at
-   `agentInput()`, never in operational logs.
+   main's agent write, never in operational logs.
 8. **Command boundaries.** With #1027: `command-end`, exit codes and
    per-command output.
 
@@ -567,13 +568,17 @@ So far, `press` with named keys
   through the same PTY mapping as the user's key. So a press is exactly a
   user press and release, and nothing is sent by the renderer.
 - **The round trip** is `read`'s: main asks the granted window for the bytes
-  with a correlation id and a timeout, then writes them with `agentInput()`
-  in one write. Main first waits, bounded, until the window consumed what it
-  already sent, so a press right after starting a program sees the modes that
-  program set. A press in flight when the grant ends writes nothing.
+  with a correlation id and a timeout, then writes them in one write through
+  `agentSessions.write()`, like `send`. Main first waits, bounded, until the
+  window consumed the output main already received from the pane, so the
+  modes that output set are in place; output still on its way can change them
+  later. All keys of one press are encoded against the same modes. A press in
+  flight when the grant ends writes nothing.
 - **Named keys only**: arrows, `Home`, `End`, `PageUp`, `PageDown`, `Insert`,
   `Delete`, `F1`–`F12`, `Enter`, `Tab`, `Escape`, `Backspace` and `Space`,
-  with `Ctrl`, `Alt` and `Shift`. `Alt` is the terminal's Alt: on macOS the
+  with `Ctrl`, `Alt` and `Shift`. On macOS, `Ctrl+Space` is refused: macOS
+  keeps it for switching input sources, and the user's press sends nothing.
+  `Alt` is the terminal's Alt: on macOS the
   user's Option+Space types native text when `optionKeyMode` leaves Option
   alone, but the agent's `Alt+Space` sends `ESC` and a space.
 

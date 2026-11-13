@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { agentChordKey, parseAgentChord } from "../../src/shared/agent-api";
+import {
+  agentChordKey,
+  agentChordSendsNothing,
+  parseAgentChord,
+} from "../../src/shared/agent-api";
 import { keyboardCoreFixture } from "../fixtures/restty-keyboard-core-probe";
 
 // Every key press names, under every Ctrl/Alt/Shift combination.
@@ -46,6 +50,30 @@ describe("press encodes like the user's key", () => {
       }
     },
   );
+
+  it("sends nothing on macOS exactly where press refuses", async () => {
+    const f = await keyboardCoreFixture(false, {
+      mac: true,
+      optionKeyMode: "none",
+    });
+    try {
+      for (const chord of chords) {
+        const key = agentChordKey(chord);
+        f.sent.length = 0;
+        f.key(key.key, { ...key, code: key.code });
+        f.key(key.key, { ...key, code: key.code, type: "keyup" });
+        const user = f.sent.join("");
+        if (agentChordSendsNothing(chord, "darwin"))
+          expect(user, JSON.stringify(chord)).toBe("");
+        // Option types native text here; press's Alt is the terminal's
+        // (documented in the agent API reference).
+        else if (chord.key === "Space" && chord.alt) continue;
+        else expect(f.press(key), JSON.stringify(chord)).toBe(user);
+      }
+    } finally {
+      f.dispose();
+    }
+  });
 
   it("follows application cursor mode for Up", async () => {
     const f = await keyboardCoreFixture();

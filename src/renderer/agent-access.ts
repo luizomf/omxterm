@@ -1,4 +1,10 @@
-import type { AgentAccessBridge, AgentRefusal } from "../shared/agent-access";
+import type {
+  AgentAccessBridge,
+  AgentPressResult,
+  AgentRefusal,
+} from "../shared/agent-access";
+import { agentChordKey, type AgentKeyChord } from "../shared/agent-api";
+import type { TerminalSurface } from "../terminal-surface/terminal-surface";
 import type { MessageKey } from "../shared/i18n";
 import type { TerminalTabs } from "./terminal-tabs";
 
@@ -54,4 +60,28 @@ export function subscribeToAgentAccess(
     removeRead();
     removePress();
   };
+}
+
+/**
+ * One press's bytes from a pane's Surface, all keys against the same modes,
+ * joined for one write. A Surface that can't take input, or whose encoder
+ * fails, answers unavailable at once.
+ */
+export function encodeAgentKeys(
+  id: string,
+  surface: Pick<TerminalSurface, "encodeKeyPress"> | undefined,
+  keys: readonly AgentKeyChord[],
+): AgentPressResult {
+  if (!surface) return { id, error: "unknown-pane" };
+  try {
+    let data = "";
+    for (const chord of keys) {
+      const bytes = surface.encodeKeyPress?.(agentChordKey(chord));
+      if (bytes === undefined) return { id, error: "unavailable" };
+      data += bytes;
+    }
+    return { id, data };
+  } catch {
+    return { id, error: "unavailable" };
+  }
 }

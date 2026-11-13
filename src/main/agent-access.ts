@@ -74,9 +74,14 @@ interface Entry {
   cleanup(): void;
 }
 
+// Each request remembers its channel: only that channel's answer settles it.
 type PendingRequests = Map<
   string,
-  { resolve(value: unknown): void; reject(error: Error): void }
+  {
+    readonly channel: string;
+    resolve(value: unknown): void;
+    reject(error: Error): void;
+  }
 >;
 
 export interface AgentAccessOptions {
@@ -145,6 +150,7 @@ function requestWindow<T>(
       reject(READ_TIMEOUT());
     }, READ_TIMEOUT_MS);
     pending.set(id, {
+      channel,
       resolve: (value) => {
         finish();
         resolve(value as T);
@@ -165,7 +171,7 @@ function requestWindow<T>(
 
 function settlePress(pending: PendingRequests, result: AgentPressResult) {
   const request = pending.get(result.id);
-  if (!request) return;
+  if (request?.channel !== agentIpc.press) return;
   if ("error" in result)
     request.reject(
       result.error === "unknown-pane"
@@ -177,7 +183,7 @@ function settlePress(pending: PendingRequests, result: AgentPressResult) {
 
 function settleRead(reads: PendingRequests, result: AgentReadResult) {
   const pending = reads.get(result.id);
-  if (!pending) return;
+  if (pending?.channel !== agentIpc.read) return;
   if ("error" in result)
     pending.reject(
       result.error === "unknown-pane"
