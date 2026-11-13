@@ -26,6 +26,7 @@ only by the user and removed when the grant ends:
 ```json
 {
   "version": 1,
+  "instance": "5f0c9a1e2b3d4c6f",
   "window": 3,
   "endpoint": "…/agent-api/ctl.sock",
   "token": "<64 hex>"
@@ -37,13 +38,17 @@ window.
 
 A client started inside a pane doesn't need any of that. Every pane has:
 
-| Variable          | Value                                             |
-| ----------------- | ------------------------------------------------- |
-| `OMXTERM_CTL`     | Absolute path of the `omxterm-ctl` launcher.      |
-| `OMXTERM_PROFILE` | The profile directory.                            |
-| `OMXTERM_PANE`    | The pane's window and session id, such as `3:s4`. |
+| Variable          | Value                                                                         |
+| ----------------- | ----------------------------------------------------------------------------- |
+| `OMXTERM_CTL`     | Absolute path of the `omxterm-ctl` launcher.                                  |
+| `OMXTERM_PROFILE` | The profile directory.                                                        |
+| `OMXTERM_PANE`    | The process instance, window and session id, such as `5f0c9a1e2b3d4c6f:3:s4`. |
 
-None is secret and all three exist whether or not the window is granted.
+None is secret and all three exist whether or not the window is granted. The
+instance is 16 random hex digits chosen when OMXTerm starts. A source run and
+the installed app can share a profile and both have a window 3; a client in a
+pane only uses a grant file with its own `instance`, and main refuses a hello
+for another instance.
 
 ## Framing
 
@@ -63,13 +68,14 @@ The token never crosses the connection. Both sides prove they hold it.
 
 ```
 client                                       main
-  | {"hello":1,"window":3,"pane":"s4","nonce":C} >|
+  | {"hello":1,"instance":I,"window":3,"pane":"s4","nonce":C} >|
   | <------- {"hello":1,"nonce":S,"proof":P1}   |   P1 = HMAC(token, "server" + C + S)
   | {"proof":P2}  --------------------------->  |   P2 = HMAC(token, "client" + C + S)
   | <------- {"ok":true,"window":3,"protocol":1}|
 ```
 
-`pane` is optional: a client inside a pane sends its own id from
+`instance` is the grant file's; main closes a hello for another instance as
+it does an unknown window. `pane` is optional: a client inside a pane sends its own id from
 `OMXTERM_PANE`, and `list` then marks that pane as `self`. HMAC is HMAC-SHA-256
 keyed with the token's 32 bytes over the ASCII text shown; nonces are 32 random
 bytes in lowercase hex. Each handshake line is at most 1 KiB and the handshake

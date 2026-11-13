@@ -131,7 +131,8 @@ What the code gives us today:
   and ungranted windows alike, none of them secret: `OMXTERM_CTL` (the
   absolute path of the `omxterm-ctl` launcher inside the installed app),
   `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE` (window and
-  session id, such as `3:s4`). This is how an agent learns it is inside
+  session id, such as `3:s4`; slice 1 prefixes the process's instance id).
+  This is how an agent learns it is inside
   OMXTerm, where the client is and which pane is its own, with nothing on
   `PATH` and nothing configured.
 - The client run inside a pane needs no arguments: it reads those variables,
@@ -354,12 +355,27 @@ building it:
 - **The grant starts after the marks.** The toggle asks the window to show its
   marks; only when the renderer confirms does main listen and write the
   credential file, and only then does the handshake accept the token. A
-  window that doesn't confirm within 5 s ends the attempt. A renderer message
-  can confirm or stop a grant, never create one.
-- **A credential belongs to the process that wrote it.** A source run and the
-  installed app share a profile and can both have window 1. A refused grant
-  never removes a credential it didn't write, and leftovers are removed at
-  startup only when no live process answers on the socket.
+  window that doesn't confirm within 5 s ends the attempt. Confirmations are
+  admitted one at a time, so a repeated one can't touch a grant being
+  admitted.
+- **The renderer can grant.** The Command Palette runs in the window's
+  renderer, and it can invoke **Allow Agents in This Window** like any other
+  action, so a compromised renderer could grant its own window without the
+  user. That adds little: such a renderer can already type into its own
+  panes' PTYs. The palette entry stays because it is a real user surface. The
+  boundary that holds is the rest: no terminal output, extension, launch
+  argument, configuration or API call can grant, and the agent API can't
+  reach the window's keyboard handling.
+- **Each process has an instance id.** A source run and the installed app
+  share a profile and can both have window 1, so window ids alone would let
+  an agent in one process's ungranted window drive the other's granted
+  window 1. Main picks a random 64-bit instance id at startup; it leads
+  `OMXTERM_PANE` (`<instance>:<window>:<pane>`), sits in the credential file
+  and in the client's hello, and main refuses a hello for another instance.
+  A client in a pane only uses a credential of its own instance.
+- **A credential belongs to the process that wrote it.** A refused grant never
+  removes a credential it didn't write, and leftovers are removed at startup
+  only when no live process answers on the socket.
 - **`list` is built in main.** The flat pane list of slice 1 needs only the
   window's live sessions, their last grid and the focused pane, which main
   already has. The renderer round trip arrives with the tree in slice 4.
@@ -370,6 +386,8 @@ building it:
   page header's buttons stay clear. Unverified: an extension tab's native
   view may cover the page corner, which would leave a granted window with the
   tab strip hidden and an extension tab selected without a visible mark.
+- **A held shortcut toggles once.** A bound `toggleAgentAccess` owns one
+  physical press, so key repeat can't flip the grant back and forth.
 - **Windows** refuses the toggle with one sentence, and its panes get no
   variables, until slice 5.
 - **The launcher** is a POSIX script at `<resources>/agent-ctl/omxterm-ctl`

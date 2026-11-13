@@ -47,7 +47,8 @@ isn't its process working directory.
 
 On macOS and Linux every pane's PTY also gets `OMXTERM_CTL` (the absolute path
 of the bundled `omxterm-ctl` launcher), `OMXTERM_PROFILE` (the profile
-directory) and `OMXTERM_PANE` (window and session id, such as `3:s4`), in
+directory) and `OMXTERM_PANE` (process instance, window and session id, such
+as `5f0c9a1e2b3d4c6f:3:s4`), in
 granted and ungranted windows alike, so an agent running in a pane can find
 the [agent API](0052-let-a-local-agent-drive-a-granted-window.md) with nothing
 configured. They are values in the environment, not shell integration: no

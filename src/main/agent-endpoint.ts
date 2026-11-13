@@ -9,6 +9,7 @@ import {
   AGENT_PROTOCOL,
   agentProofMessage,
   hasOnlyKeys,
+  isAgentInstance,
   isAgentNonce,
   isAgentPaneId,
   isAgentRequestId,
@@ -117,12 +118,14 @@ const proof = (token: Buffer, message: string) =>
 
 function parseHello(message: unknown) {
   return isPlainRecord(message) &&
-    hasOnlyKeys(message, ["hello", "window", "nonce"], ["pane"]) &&
+    hasOnlyKeys(message, ["hello", "instance", "window", "nonce"], ["pane"]) &&
     message.hello === AGENT_PROTOCOL &&
+    isAgentInstance(message.instance) &&
     isAgentWindowId(message.window) &&
     isAgentNonce(message.nonce) &&
     (message.pane === undefined || isAgentPaneId(message.pane))
     ? {
+        instance: message.instance,
         window: message.window,
         nonce: message.nonce,
         ...(typeof message.pane === "string" ? { pane: message.pane } : {}),
@@ -196,6 +199,7 @@ function readLines(
  */
 export function createAgentEndpoint(
   socketPath: string,
+  instance: string,
   handlers: AgentEndpointHandlers,
 ) {
   const connections = new Set<Connection>();
@@ -242,7 +246,9 @@ export function createAgentEndpoint(
     if (connection.stage === "hello") {
       const hello = parseHello(message);
       if (!hello) return refuse(connection, "invalid-payload");
-      const token = handlers.token(hello.window);
+      // Another OMXTerm process's window with the same id isn't this one.
+      const token =
+        hello.instance === instance ? handlers.token(hello.window) : undefined;
       if (!token) return refuse(connection, "untrusted-sender");
       const bound = [...connections].filter(
         (other) => other.stage === "ready" && other.window === hello.window,

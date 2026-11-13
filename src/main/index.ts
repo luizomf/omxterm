@@ -521,12 +521,12 @@ app
                   applicationVersionProvider: app,
                   environment: process.env,
                   chromiumStartupVariables,
-                  ...(agentPlatform && sessionId
+                  ...(agentPlatform && agentAccess && sessionId
                     ? {
                         agentEnvironment: {
                           OMXTERM_CTL: agentClient,
                           OMXTERM_PROFILE: profile,
-                          OMXTERM_PANE: `${lifecycle.windowId}:${sessionId}`,
+                          OMXTERM_PANE: `${agentAccess.instance}:${lifecycle.windowId}:${sessionId}`,
                         },
                       }
                     : {}),

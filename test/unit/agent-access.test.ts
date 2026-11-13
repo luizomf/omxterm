@@ -45,7 +45,7 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
-function ctl(profile: string, args: string[], pane = "1:s1") {
+function ctl(profile: string, args: string[], pane?: string) {
   return new Promise<{ code: number; stdout: string; stderr: string }>(
     (resolve) =>
       execFile(
@@ -138,8 +138,10 @@ function setup(platform: NodeJS.Platform = process.platform) {
       return [];
     }
   };
+  const pane = `${access.instance}:1:s1`;
   return {
     profile,
+    pane,
     ipc,
     event,
     window,
@@ -157,8 +159,9 @@ function setup(platform: NodeJS.Platform = process.platform) {
 posix(
   "grants only after the window shows its marks, then a pane's client drives it",
   async () => {
-    const { profile, access, window, states, shown, grants, port } = setup();
-    expect((await ctl(profile, ["status"])).code).toBe(3);
+    const { profile, pane, access, window, states, shown, grants, port } =
+      setup();
+    expect((await ctl(profile, ["status"], pane)).code).toBe(3);
 
     access.toggle(window);
     expect(states()).toEqual([{ state: "pending" }]);
@@ -173,20 +176,23 @@ posix(
     const credential = JSON.parse(readFileSync(grantFile, "utf8")) as object;
     expect(Object.keys(credential)).toEqual([
       "version",
+      "instance",
       "window",
       "endpoint",
       "token",
     ]);
 
-    const status = await ctl(profile, ["status"]);
+    const status = await ctl(profile, ["status"], pane);
     expect(status).toMatchObject({ code: 0 });
-    const list = await ctl(profile, ["list", "--json"]);
+    const list = await ctl(profile, ["list", "--json"], pane);
     const { panes } = JSON.parse(list.stdout) as { panes: { self: boolean }[] };
     expect(panes.map((pane) => pane.self)).toEqual([true, false]);
-    await ctl(profile, ["send", "s2", "--text", "ls -la", "--enter"]);
+    await ctl(profile, ["send", "s2", "--text", "ls -la", "--enter"], pane);
     expect(port.writes).toEqual([["s2", "ls -la\r"]]);
-    expect((await ctl(profile, ["read", "s2"])).stdout).toBe("text of s2\n");
-    expect((await ctl(profile, ["read", "2:s2"])).code).toBe(2);
+    expect((await ctl(profile, ["read", "s2"], pane)).stdout).toBe(
+      "text of s2\n",
+    );
+    expect((await ctl(profile, ["read", "2:s2"], pane)).code).toBe(2);
   },
 );
 
@@ -195,6 +201,7 @@ posix(
   async () => {
     const {
       profile,
+      pane,
       access,
       window,
       ipc,
@@ -212,7 +219,7 @@ posix(
     expect(existsSync(agentSocketPath(profile))).toBe(false);
     expect(grants()).toEqual([]);
     expect(changed).toHaveBeenCalled();
-    expect((await ctl(profile, ["status"])).code).toBe(3);
+    expect((await ctl(profile, ["status"], pane)).code).toBe(3);
   },
 );
 
@@ -316,3 +323,70 @@ posix(
     expect(crashed.grants()).toEqual(["notes.txt"]);
   },
 );
+
+posix(
+  "keeps a pane's agent on its own process when another shares the profile",
+  async () => {
+    // Process A grants its window 1.
+    const a = setup();
+    a.access.toggle(a.window);
+    await a.shown();
+    // Process B, a source run on the same profile, also has a window 1 and s1.
+    const b = startAgentAccess({
+      ipc: createIpcHarness().ipcMain,
+      trusted: () => true,
+      profile: a.profile,
+      platform: process.platform,
+    });
+    cleanups.push(() => b.dispose());
+    expect(b.instance).not.toBe(a.access.instance);
+    const fromB = `${b.instance}:1:s1`;
+    expect(await ctl(a.profile, ["status"], fromB)).toMatchObject({ code: 3 });
+    expect(
+      (
+        await ctl(
+          a.profile,
+          ["send", "s2", "--text", "rm -rf ~", "--enter"],
+          fromB,
+        )
+      ).code,
+    ).toBe(3);
+    // Naming A's window explicitly from B's pane changes nothing.
+    expect(
+      (
+        await ctl(
+          a.profile,
+          ["send", "s2", "--window", "1", "--text", "x"],
+          fromB,
+        )
+      ).code,
+    ).toBe(3);
+    expect(a.port.writes).toEqual([]);
+    // A's own pane still drives it.
+    expect((await ctl(a.profile, ["status"], a.pane)).code).toBe(0);
+  },
+);
+
+posix("admits once when the window confirms twice", async () => {
+  const { profile, pane, access, window, ipc, event, states, grants } = setup();
+  access.toggle(window);
+  const shown = ipc.listeners.get(agentIpc.shown)!;
+  shown(event);
+  shown(event);
+  await vi.waitFor(() => expect(states().at(-1)).toEqual({ state: "granted" }));
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(states()).toEqual([{ state: "pending" }, { state: "granted" }]);
+  expect(grants()).toEqual(["1.json"]);
+  expect((await ctl(profile, ["status"], pane)).code).toBe(0);
+});
+
+posix("sends nothing to a crashed window while ending its grant", async () => {
+  const { access, window, contents, shown } = setup();
+  access.toggle(window);
+  await shown();
+  const sent = contents.send.mock.calls.length;
+  Object.assign(contents, { isCrashed: () => true });
+  contents.emit("render-process-gone");
+  expect(access.granted(window)).toBe(false);
+  expect(contents.send.mock.calls).toHaveLength(sent);
+});

@@ -1252,7 +1252,9 @@ the user allows, on macOS and Linux
 and CLI in the [Agent API reference](dev/agent-api.md)).
 
 - **Allow Agents in This Window** (Window menu and Command Palette, with the
-  `toggleAgentAccess` shortcut, unbound by default) is the only way to grant.
+  `toggleAgentAccess` shortcut, unbound by default) is the only way to grant;
+  terminal output, extensions, configuration, launch arguments and the API
+  itself can't. A held shortcut toggles once.
   Its check mark follows the focused window. Turning it on flashes "Agents can
   now control and read this window. Click ◆ to stop." with no confirmation
   dialog.
@@ -1286,8 +1288,10 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   after the marks are on screen and removed when the grant ends; leftovers
   from a crash are removed at startup unless another live OMXTerm holds the
   socket. Connections prove the token both ways without sending it and stay
-  bound to their window. A profile path too long for a socket, or a socket
-  another OMXTerm process holds, refuses the grant with one sentence.
+  bound to their window and to this OMXTerm process: a pane of another
+  process on the same profile can't reach it. A profile path too long for a
+  socket, or a socket another OMXTerm process holds, refuses the grant with
+  one sentence.
 - Windows isn't supported yet: the toggle answers with one sentence and panes
   get no agent variables.
 - Other processes of the same user can read the token, as they can read the
@@ -1480,7 +1484,8 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
   `TERM_PROGRAM=OMXTerm` and the installed version in `TERM_PROGRAM_VERSION`.
 - On macOS and Linux it also sets `OMXTERM_CTL` (the bundled `omxterm-ctl`
   launcher), `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE`
-  (window and session id, such as `3:s4`) for [agent access](#agent-access),
+  (process instance, window and session id, such as `5f0c9a1e2b3d4c6f:3:s4`) for
+  [agent access](#agent-access),
   replacing any inherited values. None is secret.
 - Everything else comes from OMXTerm's own environment. On Linux under an
   AppImage (an absolute `APPDIR`), sessions do not inherit the AppImage
@@ -2777,8 +2782,10 @@ the portable Terminal Surface.
   configuration, logs, clipboard capabilities, external-link opening,
   bounded Local Image Preview reads
   ([ADR 0006](adr/0006-isolate-the-renderer-from-local-capabilities.md)), and
-  the [agent access](#agent-access) socket. The renderer only shows the grant's
-  marks, reports a click on them, and answers main's reads of pane text.
+  the [agent access](#agent-access) socket. The renderer shows the grant's
+  marks, reports a click on them and answers main's reads of pane text; like
+  any palette action it can invoke the toggle, which gives a compromised
+  renderer nothing it couldn't already do by typing into its own panes.
 - The renderer runs with context isolation and without Node integration. Main
   validates IPC request senders and payloads; the preload validates response and
   event payloads exposed by its minimal typed bridge.

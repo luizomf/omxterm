@@ -239,7 +239,7 @@ describe("local PTY Adapter environment for the agent API", () => {
       OMXTERM_CTL:
         "/Applications/OMXTerm.app/Contents/Resources/agent-ctl/omxterm-ctl",
       OMXTERM_PROFILE: "/home/example/profile",
-      OMXTERM_PANE: "3:s4",
+      OMXTERM_PANE: "5f0c9a1e2b3d4c6f:3:s4",
     };
     expect(
       sessionEnvironment("darwin", inherited, { agentEnvironment }),

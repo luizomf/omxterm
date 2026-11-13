@@ -23,7 +23,7 @@ export function agentSocketPath(profile: string) {
  * A profile's grant credentials (ADR 0052): one user-only file per granted
  * window, which exists while the grant does and which OMXTerm never reads.
  */
-export function createGrantFiles(profile: string) {
+export function createGrantFiles(profile: string, instance: string) {
   const socketPath = agentSocketPath(profile);
   const directory = path.join(agentApiDirectory(profile), "grants");
   const file = (windowId: number) => path.join(directory, `${windowId}.json`);
@@ -43,6 +43,7 @@ export function createGrantFiles(profile: string) {
         temporary,
         `${JSON.stringify({
           version: AGENT_GRANT_VERSION,
+          instance,
           window: windowId,
           endpoint: socketPath,
           token: token.toString("hex"),

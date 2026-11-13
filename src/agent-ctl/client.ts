@@ -29,6 +29,7 @@ export class CtlError extends Error {
 }
 
 export interface Grant {
+  readonly instance: string;
   readonly window: number;
   readonly endpoint: string;
   readonly token: Buffer;
@@ -123,6 +124,7 @@ export class Client {
       const clientNonce = randomBytes(32).toString("hex");
       this.#write({
         hello: AGENT_PROTOCOL,
+        instance: grant.instance,
         window: grant.window,
         nonce: clientNonce,
         ...(pane ? { pane } : {}),

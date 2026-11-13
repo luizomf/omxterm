@@ -53,6 +53,27 @@ export function isAgentWindowId(value: unknown): value is number {
   return Number.isSafeInteger(value) && (value as number) > 0;
 }
 
+/**
+ * One running OMXTerm process. A source run and the installed app can share a
+ * profile and both have a window 1; the instance keeps a pane's agent on its
+ * own process.
+ */
+export function isAgentInstance(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{16}$/u.test(value);
+}
+
+/** OMXTERM_PANE: `<instance>:<window>:<pane>`, such as `5f0c9a1e2b3d4c6f:3:s4`. */
+export function parseAgentPane(
+  value: string | undefined,
+): { instance: string; window: number; pane: string } | undefined {
+  const match = /^([0-9a-f]{16}):(\d{1,15}):(s\d{1,10})$/u.exec(value ?? "");
+  if (!match) return undefined;
+  const window = Number(match[2]);
+  return isAgentWindowId(window) && isAgentPaneId(match[3])
+    ? { instance: match[1]!, window, pane: match[3]! }
+    : undefined;
+}
+
 export function isAgentNonce(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
 }

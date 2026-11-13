@@ -26,6 +26,7 @@ function socketPath() {
 }
 
 const token = randomBytes(32);
+const INSTANCE = "0123456789abcdef";
 const hmac = (key: Buffer, message: string) =>
   createHmac("sha256", key).update(message).digest("hex");
 
@@ -39,7 +40,7 @@ async function endpoint(handlers: Partial<AgentEndpointHandlers> = {}) {
       })),
   );
   const rejected = vi.fn<AgentEndpointHandlers["rejected"]>();
-  const server = createAgentEndpoint(file, {
+  const server = createAgentEndpoint(file, INSTANCE, {
     token: handlers.token ?? ((window) => (window === 3 ? token : undefined)),
     request,
     rejected,
@@ -90,9 +91,14 @@ function connect(file: string) {
     next,
     send,
     closed: closedPromise,
-    async handshake(window = 3, key = token, pane?: string) {
+    async handshake(
+      window = 3,
+      key = token,
+      pane?: string,
+      instance = INSTANCE,
+    ) {
       const nonce = randomBytes(32).toString("hex");
-      send({ hello: 1, window, nonce, ...(pane ? { pane } : {}) });
+      send({ hello: 1, instance, window, nonce, ...(pane ? { pane } : {}) });
       const hello = (await next()) as
         { nonce: string; proof: string } | undefined;
       if (!hello) return { hello, ready: undefined };
@@ -158,12 +164,24 @@ describe.skipIf(process.platform === "win32")("agent endpoint", () => {
     expect((await unknown.handshake(4)).hello).toBeUndefined();
     await unknown.closed;
 
+    // The same window id in another OMXTerm process isn't this one.
+    const elsewhere = connect(file);
+    const other = await elsewhere.handshake(
+      3,
+      token,
+      undefined,
+      "fedcba9876543210",
+    );
+    expect(other.hello).toBeUndefined();
+    await elsewhere.closed;
+
     const long = connect(file);
     long.socket.write("x".repeat(4096));
     await long.closed;
 
     expect(request).not.toHaveBeenCalled();
     expect(rejected.mock.calls.map((call) => call[0])).toEqual([
+      "untrusted-sender",
       "untrusted-sender",
       "untrusted-sender",
       "invalid-payload",
@@ -217,7 +235,7 @@ describe.skipIf(process.platform === "win32")("agent endpoint", () => {
 
   it("refuses a socket another live process holds and replaces a stale one", async () => {
     const { file, server } = await endpoint();
-    const second = createAgentEndpoint(file, {
+    const second = createAgentEndpoint(file, INSTANCE, {
       token: () => undefined,
       request: vi.fn(),
       rejected: vi.fn(),

@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import type { AgentErrorCode } from "../shared/agent-api";
+import type { AgentCommand, AgentErrorCode } from "../shared/agent-api";
 import {
   agentIpc,
   isAgentReadResult,
@@ -49,7 +49,8 @@ interface Emitter {
   ): unknown;
 }
 export interface AgentAccessWindow extends Emitter {
-  readonly webContents: TrustedWebContents & Emitter;
+  readonly webContents: TrustedWebContents &
+    Emitter & { isCrashed?(): boolean };
   isDestroyed(): boolean;
 }
 
@@ -65,6 +66,8 @@ interface Entry {
   credential?: boolean;
   commands?: AgentCommands;
   confirmTimer?: ReturnType<typeof setTimeout>;
+  admitting?: boolean;
+  readmit?: boolean;
   readonly reads: PendingReads;
   cleanup(): void;
 }
@@ -86,6 +89,31 @@ export interface AgentAccessOptions {
 }
 
 export { agentSocketPath } from "./agent-grant-files";
+
+// A command's envelope, never its arguments or result (ADR 0004).
+async function logged(
+  log: Pick<OperationalEventLog, "write"> | undefined,
+  windowId: number,
+  command: AgentCommand,
+  run: () => Promise<unknown>,
+) {
+  const started = Date.now();
+  let outcome: "ok" | AgentErrorCode = "ok";
+  try {
+    return await run();
+  } catch (error) {
+    outcome = error instanceof AgentApiError ? error.code : "unavailable";
+    throw error;
+  } finally {
+    log?.write({
+      name: "agent.command",
+      windowId,
+      command,
+      outcome,
+      durationMs: Math.max(0, Date.now() - started),
+    });
+  }
+}
 
 const READ_TIMEOUT = () =>
   new AgentApiError("unavailable", "The window didn't answer in time.");
@@ -157,7 +185,9 @@ function settleRead(reads: PendingReads, result: AgentReadResult) {
  */
 export function startAgentAccess(options: AgentAccessOptions) {
   const entries = new Map<object, Entry>();
-  const files = createGrantFiles(options.profile);
+  // This process, as OMXTERM_PANE, the credential and the handshake name it.
+  const instance = randomBytes(8).toString("hex");
+  const files = createGrantFiles(options.profile, instance);
   const socketPath = files.socketPath;
   const log = options.operationalEvents;
   const byWindowId = (windowId: number) =>
@@ -167,14 +197,15 @@ export function startAgentAccess(options: AgentAccessOptions) {
 
   const sendState = (entry: Entry, state: AgentAccessState) => {
     try {
-      if (!entry.contents.isDestroyed())
+      // A crashed renderer has no frame to receive it.
+      if (!entry.contents.isDestroyed() && !entry.contents.isCrashed?.())
         entry.contents.send(agentIpc.state, state);
     } catch {
       // A window being torn down has no marks left to update.
     }
   };
 
-  const endpoint = createAgentEndpoint(socketPath, {
+  const endpoint = createAgentEndpoint(socketPath, instance, {
     token: (windowId) => {
       const entry = byWindowId(windowId);
       return entry?.state === "granted" ? entry.token : undefined;
@@ -183,22 +214,10 @@ export function startAgentAccess(options: AgentAccessOptions) {
       const entry = byWindowId(windowId);
       if (entry?.state !== "granted" || !entry.commands)
         throw new AgentApiError("revoked", "The user stopped agent access.");
-      const started = Date.now();
-      let outcome: "ok" | AgentErrorCode = "ok";
-      try {
-        return await entry.commands.run(command, args, caller);
-      } catch (error) {
-        outcome = error instanceof AgentApiError ? error.code : "unavailable";
-        throw error;
-      } finally {
-        log?.write({
-          name: "agent.command",
-          windowId,
-          command,
-          outcome,
-          durationMs: Math.max(0, Date.now() - started),
-        });
-      }
+      const commands = entry.commands;
+      return logged(log, windowId, command, () =>
+        commands.run(command, args, caller),
+      );
     },
     rejected: (reason) => log?.write({ name: "agent.rejected", reason }),
   });
@@ -267,25 +286,28 @@ export function startAgentAccess(options: AgentAccessOptions) {
 
   // The renderer showed the marks: only now does the endpoint listen and
   // the credential exist (no mark, no access).
-  const admit = async (entry: Entry) => {
+  const admitOnce = async (entry: Entry) => {
     clearTimeout(entry.confirmTimer);
+    // Each toggle has its own token: a later attempt isn't this one.
+    const token = entry.token!;
+    const current = () => entry.state === "pending" && entry.token === token;
     try {
       await endpoint.listen(() => {
         for (const other of entries.values())
           if (other.state !== "off") end(other, "endpoint-failed");
       });
-      if (entry.state !== "pending") return;
-      await files.write(entry.windowId, entry.token!);
+      if (!current()) return;
+      await files.write(entry.windowId, token);
       entry.credential = true;
     } catch (error) {
-      if (entry.state === "pending")
+      if (current())
         refuse(
           entry,
           error instanceof AgentEndpointInUseError ? "in-use" : "unavailable",
         );
       return;
     }
-    if (entry.state !== "pending") {
+    if (!current()) {
       removeGrantFile(entry);
       return;
     }
@@ -308,6 +330,24 @@ export function startAgentAccess(options: AgentAccessOptions) {
       reason: "user",
     });
     options.changed?.();
+  };
+  // One admission at a time per window, so a repeated confirmation can't
+  // write or remove a credential under a grant that is being admitted.
+  const admit = async (entry: Entry): Promise<void> => {
+    if (entry.admitting) {
+      entry.readmit = true;
+      return;
+    }
+    entry.admitting = true;
+    try {
+      await admitOnce(entry);
+    } finally {
+      entry.admitting = false;
+      if (entry.readmit) {
+        entry.readmit = false;
+        if (entry.state === "pending") await admit(entry);
+      }
+    }
   };
 
   const ownerFor = (event: IpcEvent) => {
@@ -333,6 +373,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
   options.ipc.on(agentIpc.readResult, readResultListener);
 
   return {
+    instance,
     register(
       window: AgentAccessWindow,
       windowId: number,

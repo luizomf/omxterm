@@ -8,9 +8,11 @@ import {
   AGENT_GRANT_ITEM,
   AGENT_GRANT_VERSION,
   agentNotGrantedSentence,
+  isAgentInstance,
   isAgentPaneId,
   isAgentWindowId,
   isPlainRecord,
+  parseAgentPane,
 } from "../shared/agent-api";
 import { Client, CtlError, EXIT, type Grant } from "./client";
 
@@ -143,15 +145,8 @@ function defaultProfile(): string {
   );
 }
 
-// "3:s4" from OMXTERM_PANE: the caller's own window and pane.
-function ownPane(): { window: number; pane: string } | undefined {
-  const match = /^(\d+):(s\d+)$/u.exec(process.env.OMXTERM_PANE ?? "");
-  if (!match) return undefined;
-  const window = Number(match[1]);
-  return isAgentWindowId(window) && isAgentPaneId(match[2])
-    ? { window, pane: match[2]! }
-    : undefined;
-}
+// The caller's own process, window and pane, inside an OMXTerm pane.
+const ownPane = () => parseAgentPane(process.env.OMXTERM_PANE);
 
 const grantsDirectory = (profile: string) =>
   path.join(profile, "agent-api", "grants");
@@ -171,7 +166,12 @@ function grantedWindows(profile: string): number[] {
     .sort((a, b) => a - b);
 }
 
-function readGrant(profile: string, window: number): Grant | undefined {
+// Inside a pane, only a grant of this pane's own process counts.
+function readGrant(
+  profile: string,
+  window: number,
+  instance: string | undefined,
+): Grant | undefined {
   const file = path.join(grantsDirectory(profile), `${window}.json`);
   let content: string;
   try {
@@ -197,12 +197,15 @@ function readGrant(profile: string, window: number): Grant | undefined {
     !isPlainRecord(value) ||
     value.version !== AGENT_GRANT_VERSION ||
     value.window !== window ||
+    !isAgentInstance(value.instance) ||
+    (instance !== undefined && value.instance !== instance) ||
     typeof value.endpoint !== "string" ||
     typeof value.token !== "string" ||
     !/^[0-9a-f]{64}$/u.test(value.token)
   )
     return undefined;
   return {
+    instance: value.instance,
     window,
     endpoint: value.endpoint,
     token: Buffer.from(value.token, "hex"),
@@ -255,9 +258,10 @@ async function main(argv: readonly string[]): Promise<number> {
     throw new CtlError(EXIT.usage, `Unknown command ${options.command}.`);
 
   const window = chooseWindow(options, profile);
-  const grant = readGrant(profile, window);
+  // An explicit --profile looks past the pane's own process.
+  const own = options.profile === undefined ? ownPane() : undefined;
+  const grant = readGrant(profile, window, own?.instance);
   if (!grant) throw new CtlError(EXIT.absent, agentNotGrantedSentence());
-  const own = ownPane();
   const client = await Client.connect(grant.endpoint);
   try {
     await client.handshake(

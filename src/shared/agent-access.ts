@@ -10,8 +10,8 @@ import {
 } from "./agent-api";
 
 // Main ⇄ renderer contract for a window's agent grant (ADR 0052). The
-// renderer can confirm the marks, stop the grant and answer reads; nothing it
-// sends can create a grant.
+// renderer confirms the marks, stops the grant and answers reads. A grant
+// starts only from the toggle action (menu, shortcut or Command Palette).
 export const agentIpc = {
   state: "agent:state",
   shown: "agent:shown",
