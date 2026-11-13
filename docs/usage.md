@@ -148,7 +148,7 @@ sleep 3; printf '\e]777;notify;Build;Finished\e\\'
 On macOS and Linux, you can let a program you run, such as a coding agent in one pane, work the panes of its window: type commands, read their output and wait for them to finish. It only ever reaches the windows you allow.
 
 1. Choose **Window → Allow Agents in This Window** (or find it in the Command Palette). A `◆` appears on every pane and tab of that window.
-2. Ask the agent to use OMXTerm. Every pane has `OMXTERM_CTL`, the path of OMXTerm's small client, so the agent can run `"$OMXTERM_CTL" status` and `"$OMXTERM_CTL" --help` to find its way. Before you allow it, `status` tells the agent which menu item to ask you for.
+2. Ask the agent to use OMXTerm. Every pane has `OMXTERM_CTL`, the path of OMXTerm's small client, so the agent can run `"$OMXTERM_CTL" guide` to learn how, and `"$OMXTERM_CTL" status` to check. Before you allow it, `status` tells the agent which menu item to ask you for.
 3. To stop, click any pane's `◆`, or choose the menu item again. Closing the window or quitting OMXTerm also stops it.
 
 For example, from one pane an agent can run a command in the pane next to it:
@@ -158,6 +158,8 @@ For example, from one pane an agent can run a command in the pane next to it:
 "$OMXTERM_CTL" send s2 --text 'npm test' --enter --wait
 "$OMXTERM_CTL" read s2 --lines 40
 ```
+
+Agents that speak MCP, such as Claude Code and Codex, can also use OMXTerm as an MCP server, `"$OMXTERM_CTL" mcp`. The guide says how to register it. Register it once from an OMXTerm pane and start a new agent session; from then on it works in every window you allow, and allowing a window later needs no restart.
 
 Allowing a window lets an agent do what you could do at its keyboard, including in SSH sessions open there, and read its scrollback. Keep sensitive sessions in another window. The [Agent API reference](dev/agent-api.md) has every command.
 

@@ -106,8 +106,8 @@ setup page.
 [ADR0052: Let a local agent drive a window the user grants](0052-let-a-local-agent-drive-a-granted-window.md)
 lets an outside program type, read and wait in a window the user granted, shown
 as an accent State Mark, through a user-only local socket owned by main. Its
-first slice (macOS and Linux) is accepted and implemented; later slices remain
-proposed. It amends ADRs 0004, 0013 and 0050. The
+first two slices (macOS and Linux: drive the window, then an agent guide and an
+MCP server) are accepted and implemented; later slices remain proposed. It amends ADRs 0004, 0013 and 0050. The
 [Agent API reference](../dev/agent-api.md) holds the protocol and CLI.
 
 [ADR0053: Mark program progress and attention](0053-mark-program-progress-and-attention.md)

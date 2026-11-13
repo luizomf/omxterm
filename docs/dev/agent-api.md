@@ -1,11 +1,11 @@
 # Agent API reference
 
 The wire protocol and CLI of
-[ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slice 1
-(macOS and Linux) is implemented: the handshake, `list`, `send`, `read`,
-`wait` and the `omxterm-ctl` commands without a slice mark. Each later command
-says which slice of the ADR's plan it belongs to; until then, names and shapes
-can still change.
+[ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slices 1
+and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
+`read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
+and its [MCP server](#mcp). Each later command says which slice of the ADR's
+plan it belongs to; until then, names and shapes can still change.
 
 ## Finding the endpoint
 
@@ -251,8 +251,8 @@ grant file itself; a token is never passed as an argument.
 
 ```sh
 omxterm-ctl status                         # granted or not, in one sentence
-omxterm-ctl guide                          # the agent guide (slice 2)
-omxterm-ctl mcp                            # MCP server on stdio (slice 2)
+omxterm-ctl guide                          # the agent guide, a SKILL.md
+omxterm-ctl mcp                            # MCP server on stdio
 omxterm-ctl grants                         # granted windows of this profile
 omxterm-ctl list
 omxterm-ctl send s1 --text 'npm test' --enter --wait --idle 800
@@ -268,14 +268,19 @@ omxterm-ctl close s8 --force               # slice 4
 
 - Inside a pane, agents call it as `"$OMXTERM_CTL"`; window and profile come
   from the environment. Elsewhere, `--window <id>` picks a grant when there
-  are several and `--profile <dir>` picks a profile. `--json` prints the raw
-  result.
+  are several and `--profile <dir>` picks a profile. A `--profile` other than
+  the pane's own `OMXTERM_PROFILE` ignores the pane, so nothing is marked
+  `self`. `--json` prints the raw result.
+- When the client's own pane is unknown (no `OMXTERM_PANE`, or another
+  profile), `status` and `list` add one sentence saying no pane is marked
+  `self` and the caller may be in one of them; `--json` adds it as `note`.
 - `status` exits 0 when this window is granted. Otherwise it prints one
   sentence naming **Allow Agents in This Window** and exits 3, so an agent
   can pass the sentence on to the user.
-- `mcp` exposes `list`, `send`, `read` and `wait` (and later commands) as
-  tools with the same arguments. The tools are always listed; without a grant
-  they answer with the `status` sentence.
+- `guide` prints `src/agent-ctl/SKILL.md` as is, frontmatter included, so
+  `"$OMXTERM_CTL" guide > <skills>/omxterm/SKILL.md` installs it as a skill.
+  It needs no grant.
+- `mcp` serves the commands as MCP tools; see [MCP](#mcp).
 - `send` remembers nothing between calls. `--keys` takes a comma-separated
   list, `--enter` appends `Enter` in the same request, and `send … --wait`
   runs `wait` with the returned `offset` on the same connection, which is the
@@ -285,6 +290,66 @@ omxterm-ctl close s8 --force               # slice 4
 - `read` prints the text and nothing else, so it pipes.
 - Exit status: 0 for a result (a `wait` timeout prints `timeout` and exits
   124), 1 for an API error, 2 for usage, 3 when no grant or endpoint was found.
+
+## MCP
+
+`omxterm-ctl mcp` is an MCP server on stdio, in the same dependency-free
+script. It answers both the per-request protocol (`2026-07-28`, opened with
+`server/discover` or any request whose `_meta` names its version, as Claude
+Code does) and the `initialize` handshake (`2025-11-25` back to `2024-11-05`,
+as Codex does). It offers tools only.
+
+| Tool     | Arguments                                                                          |
+| -------- | ---------------------------------------------------------------------------------- |
+| `status` | `window?`                                                                          |
+| `list`   | `window?`                                                                          |
+| `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `timeout?`, `window?` |
+| `read`   | `pane`, `lines?`, `window?`                                                        |
+| `wait`   | `pane`, `after?`, `idle?`, `timeout?`, `window?`                                   |
+
+- A tool call is the CLI command of the same name, with the arguments as its
+  options, on its own connection. The tools are always listed; the grant is
+  looked up on every call, so a grant given or ended mid-session counts from
+  the next call.
+- The result is one text block with what the CLI would print. `send` without
+  `wait` answers its receipt as JSON, for the `offset`. A `wait` timeout is a
+  normal result (`timeout`).
+- No grant, an API error or a bad argument is a tool error (`isError`) whose
+  text is the CLI's message; without a grant that's the `status` sentence. An
+  unknown tool or method is a JSON-RPC error.
+- `timeout` defaults to 50000 here, not 60000, so a wait answers before
+  Codex's default 60 s tool timeout.
+- `--profile` on the `mcp` command line applies to every call; `--window`
+  applies to every call that doesn't pass its own `window`. The several-windows
+  error names the `window` argument.
+- A `pane` must be a pane id (`s4` or `3:s4`); anything else is a tool error.
+- Calls run concurrently; `notifications/cancelled` drops that call's
+  connection. The server exits when stdin closes.
+
+Register it from an OMXTerm pane, so the client path is known. The tools
+appear in the agent's next session. The guide has the same commands.
+
+```sh
+claude mcp add --scope user omxterm -- "$OMXTERM_CTL" mcp
+```
+
+Claude Code passes its whole environment to the server. Codex passes only a
+short default list, so the server can't see its pane unless the variables are
+in the server's `env_vars`. `codex mcp add` has no option for that, so the
+second line adds it (rerunning both is safe: `add` rewrites the table):
+
+```sh
+codex mcp add omxterm -- "$OMXTERM_CTL" mcp &&
+  sed -i.bak '/^\[mcp_servers\.omxterm\]$/a\
+env_vars = ["OMXTERM_PROFILE", "OMXTERM_PANE", "OMXTERM_CTL"]
+' "${CODEX_HOME:-$HOME/.codex}/config.toml"
+```
+
+Without `OMXTERM_PANE` the server acts like a client outside OMXTerm: the
+default profile, the only granted window, and no `self` pane, which `status`
+and `list` say. Registration stores the expanded path; on an AppImage it
+changes with every launch, so register `sh -c 'exec "$OMXTERM_CTL" mcp'` there
+instead.
 
 ## Where it lives
 
@@ -300,5 +365,7 @@ omxterm-ctl close s8 --force               # slice 4
 | Accent tone              | `src/renderer/ui.css`, `src/renderer/terminal-window-theme.ts`                                  |
 | Toggle                   | `src/main/action-catalog.ts`, `src/main/application-menu.ts`, `src/shared/terminal-keybinds.ts` |
 | Client and launcher      | `src/agent-ctl/` (built to `dist/agent-ctl/`, packaged under `resources/agent-ctl/`)            |
+| Agent guide              | `src/agent-ctl/SKILL.md`, bundled into the client as text                                       |
+| MCP server               | `src/agent-ctl/mcp.ts`, over the CLI's commands in `src/agent-ctl/commands.ts`                  |
 | Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`               |
 | Tab and pane commands    | slice 4: `src/shared/terminal-panes.ts`, `src/renderer/terminal-pane-operations.ts`             |

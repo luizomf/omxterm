@@ -106,7 +106,8 @@ restored or granted by anything but that gesture.
 type text and mode-independent keys, read a pane's last lines and wait for it
 to go quiet or end. `omxterm-ctl`, the bundled client, finds it from the
 `OMXTERM_CTL`, `OMXTERM_PROFILE` and `OMXTERM_PANE` variables every pane gets
-on macOS and Linux. See [ADR 0052](docs/adr/0052-let-a-local-agent-drive-a-granted-window.md)
+on macOS and Linux, prints an agent guide (`guide`) and serves the same
+commands as MCP tools (`mcp`). See [ADR 0052](docs/adr/0052-let-a-local-agent-drive-a-granted-window.md)
 and the [reference](docs/dev/agent-api.md).
 
 **Always-on-Top Window** — A window temporarily kept above ordinary windows by

@@ -1,160 +1,18 @@
-import { execFile } from "node:child_process";
-import { EventEmitter } from "node:events";
 import {
   existsSync,
   mkdirSync,
-  mkdtempSync,
-  readdirSync,
   readFileSync,
-  rmSync,
   statSync,
   writeFileSync,
 } from "node:fs";
-import os from "node:os";
 import path from "node:path";
-import { build } from "esbuild";
-import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
+import { expect, vi } from "vitest";
 import { agentSocketPath, startAgentAccess } from "../../src/main/agent-access";
-import type { AgentSessionPort } from "../../src/main/terminal-ipc-types";
-import { agentIpc, type AgentReadRequest } from "../../src/shared/agent-access";
+import { agentIpc } from "../../src/shared/agent-access";
+import { useAgentHarness } from "../fixtures/agent-access-harness";
 import { createIpcHarness } from "../fixtures/terminal-ipc-harness";
 
-let client: string;
-const scratch = mkdtempSync(path.join(os.tmpdir(), "oa-"));
-beforeAll(async () => {
-  // The real client, bundled the way the app ships it.
-  client = path.join(scratch, "omxterm-ctl.cjs");
-  await build({
-    entryPoints: [
-      path.resolve(import.meta.dirname, "../../src/agent-ctl/omxterm-ctl.ts"),
-    ],
-    bundle: true,
-    platform: "node",
-    format: "cjs",
-    outfile: client,
-    logLevel: "silent",
-  });
-});
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
-
-// Unix sockets; the Windows named pipe is a later slice (ADR 0052).
-const posix = it.skipIf(process.platform === "win32");
-
-const cleanups: (() => void)[] = [];
-afterEach(() => {
-  for (const cleanup of cleanups.splice(0)) cleanup();
-});
-
-function ctl(profile: string, args: string[], pane?: string) {
-  return new Promise<{ code: number; stdout: string; stderr: string }>(
-    (resolve) =>
-      execFile(
-        process.execPath,
-        [client, ...args],
-        {
-          env: {
-            PATH: process.env.PATH,
-            OMXTERM_PROFILE: profile,
-            OMXTERM_PANE: pane,
-          },
-          encoding: "utf8",
-        },
-        (error, stdout, stderr) =>
-          resolve({ code: Number(error?.code ?? 0), stdout, stderr }),
-      ),
-  );
-}
-
-function sessions(): AgentSessionPort & { writes: [string, string][] } {
-  const writes: [string, string][] = [];
-  return {
-    writes,
-    sessions: () => [
-      { sessionId: "s1", focused: true, cols: 80, rows: 24 },
-      { sessionId: "s2", focused: false, cols: 80, rows: 24 },
-    ],
-    position: (id) =>
-      id === "s1" || id === "s2" ? { sent: 10, acknowledged: 10 } : undefined,
-    write(id, data) {
-      writes.push([id, data]);
-      return "accepted";
-    },
-    observe: () => () => {},
-  };
-}
-
-function setup(platform: NodeJS.Platform = process.platform) {
-  const profile = mkdtempSync(path.join(scratch, "p"));
-  const ipc = createIpcHarness();
-  const contents = Object.assign(new EventEmitter(), {
-    mainFrame: {},
-    isDestroyed: () => false,
-    send: vi.fn<(channel: string, payload: unknown) => void>(),
-  });
-  const window = Object.assign(new EventEmitter(), {
-    webContents: contents,
-    isDestroyed: () => false,
-  });
-  const event = { sender: contents, senderFrame: contents.mainFrame };
-  const changed = vi.fn();
-  const write = vi.fn();
-  const access = startAgentAccess({
-    ipc: ipc.ipcMain,
-    trusted: (candidate) => candidate.sender === contents,
-    profile,
-    platform,
-    operationalEvents: { write },
-    changed,
-  });
-  cleanups.push(() => access.dispose());
-  const port = sessions();
-  access.register(window, 1, port);
-  const states = () =>
-    contents.send.mock.calls
-      .filter(([channel]) => channel === agentIpc.state)
-      .map(([, state]) => state);
-  // The window answers reads like the renderer would.
-  contents.send.mockImplementation((channel: string, payload: unknown) => {
-    if (channel !== agentIpc.read) return;
-    const request = payload as AgentReadRequest;
-    setImmediate(() =>
-      ipc.listeners.get(agentIpc.readResult)!(event, {
-        id: request.id,
-        text: `text of ${request.sessionId}`,
-        truncated: false,
-      }),
-    );
-  });
-  const shown = async () => {
-    ipc.listeners.get(agentIpc.shown)!(event);
-    await vi.waitFor(() =>
-      expect(states().at(-1)).toEqual({ state: "granted" }),
-    );
-  };
-  const grants = () => {
-    try {
-      return readdirSync(path.join(profile, "agent-api", "grants"));
-    } catch {
-      return [];
-    }
-  };
-  const pane = `${access.instance}:1:s1`;
-  return {
-    profile,
-    pane,
-    ipc,
-    event,
-    window,
-    contents,
-    access,
-    port,
-    states,
-    shown,
-    grants,
-    changed,
-    write,
-  };
-}
+const { posix, cleanups, ctl, sessions, setup } = useAgentHarness();
 
 posix(
   "grants only after the window shows its marks, then a pane's client drives it",

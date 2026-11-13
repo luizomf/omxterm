@@ -73,6 +73,8 @@ await Promise.all([
       bundle: true,
       format: "cjs",
       platform: "node",
+      // The agent guide is SKILL.md, printed as is by `omxterm-ctl guide`.
+      loader: { ".md": "text" },
       outfile: "dist/agent-ctl/omxterm-ctl.cjs",
     });
     await cp("src/agent-ctl/omxterm-ctl", "dist/agent-ctl/omxterm-ctl");

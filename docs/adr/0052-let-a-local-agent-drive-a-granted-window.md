@@ -1,7 +1,8 @@
 # Let a local agent drive a window the user grants
 
-Status: accepted for slice 1, "Drive what's there" (macOS and Linux), which is
-implemented; the later slices are still proposed
+Status: accepted for slice 1, "Drive what's there", and slice 2, "Agents plug
+in by themselves" (macOS and Linux), which are implemented; the later slices
+are still proposed
 ([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
 [#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
 [ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md) (one accent tone,
@@ -10,8 +11,9 @@ window-scoped marks),
 payloads join the excluded content) and
 [ADR 0013](0013-do-not-inject-shell-integration.md) (three non-secret
 environment variables in every pane). The wire protocol and CLI are in the
-[Agent API reference](../dev/agent-api.md). Where slice 1 differs from the text
-below, [Slice 1 as built](#slice-1-as-built) says so.
+[Agent API reference](../dev/agent-api.md). Where slices 1 and 2 differ from the
+text below, [Slice 1 as built](#slice-1-as-built) and
+[Slice 2 as built](#slice-2-as-built) say so.
 
 ## Context
 
@@ -401,13 +403,39 @@ building it:
   minimized and the pane's tab wasn't selected. Linux is unverified.
 - The HMAC key is the token's 32 bytes; the grant file stores them as hex.
 
+## Slice 2 as built
+
+- **One text.** The guide is `src/agent-ctl/SKILL.md`, bundled into the
+  client as text. `guide` prints the whole file, frontmatter included, so
+  redirecting it into an agent's skills folder installs it; nothing else
+  ships a copy.
+- **The MCP server is the CLI.** Each tool call becomes the CLI command of
+  the same name, parsed by the same code, on its own connection. That's what
+  makes a grant given after the agent started work on the next call, and an
+  ended grant fail cleanly, with no session state in the server.
+- **Two protocol eras.** The current MCP revision (`2026-07-28`) has no
+  `initialize`; each request names its version, and Claude Code already opens
+  with `server/discover`. Codex still sends `initialize` (`2025-06-18`). The
+  server answers both, chosen per request.
+- **Codex hides the pane.** Codex starts stdio servers with a short default
+  environment, so `OMXTERM_PANE` and `OMXTERM_PROFILE` don't reach the server
+  unless its configuration lists them in `env_vars`. Without them the server
+  behaves like a client outside OMXTerm, and `status` and `list` say that no
+  pane could be marked `self`. The guide gives one block that registers the
+  server and adds them.
+- **A shorter wait.** An MCP `wait` defaults to a 50 s timeout instead of the
+  CLI's 60 s, so it answers before Codex's default 60 s tool timeout.
+
 ## Open questions
 
 - Windows: accept the default pipe descriptor behind the token, or pay for a
   native pipe server?
 - Registering the MCP server in an agent's own configuration is still one
   step per agent. Should OMXTerm offer it (`omxterm-ctl setup <agent>`, or a
-  Command Palette action), or leave it to the guide?
+  Command Palette action), or leave it to the guide? Slice 2 leaves it to the
+  guide: it's one command per agent, and Codex's `env_vars` shows that each
+  agent's configuration has its own rules, which a `setup` command would have
+  to track. Worth revisiting if users trip on it.
 - Should `omxterm-ctl` also be offered on `PATH` for agents and scripts that
   run outside OMXTerm?
 - Does a read work in a minimized or fully covered window on Linux and

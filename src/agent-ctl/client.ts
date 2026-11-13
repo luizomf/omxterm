@@ -185,4 +185,9 @@ export class Client {
   end() {
     this.#socket.end();
   }
+
+  /** Drops the connection now; whatever is in flight fails. */
+  destroy() {
+    this.#socket.destroy();
+  }
 }
