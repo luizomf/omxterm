@@ -284,8 +284,8 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `RUNTIME_DIGEST` |
-| Embedded-core chunk       | `CORE_DIGEST` |
+| Restty JavaScript runtime | `db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c` |
+| Embedded-core chunk       | `fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `a12d667486bd69cafb426af016e819f7d44d588f2da7db96b77e568ea95da011` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
