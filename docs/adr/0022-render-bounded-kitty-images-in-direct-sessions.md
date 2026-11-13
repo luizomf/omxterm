@@ -47,13 +47,44 @@ PTY-to-Terminal-Surface path and never become Operational Events, clipboard
 transport, files, or application network traffic.
 
 OMXTerm carries checksum-guarded source patches in the reproducible
-Restty build: direct input is limited to 33,554,432 decoded bytes, source area is
-limited to 4,194,304 pixels before completed-image allocation, and exact Chafa
-RGBA length is validated. The native one-pending-image-per-screen model replaces
-unfinished state on new metadata and clears it on malformed, cancelled, failed,
-reset, alternate-screen-exit and disposal paths. Completed decoded image data is
-limited to 64,000,000 bytes per screen using Ghostty's native eviction policy.
-Pi deletion and reset use the same core-owned image and placement state.
+Restty build: direct input and decoded pixels are limited to 64,000,000 bytes,
+source area is limited to 16,000,000 pixels before completed-image allocation,
+and exact Chafa RGBA length is validated. The native one-pending-image-per-screen
+model replaces unfinished state on new metadata and clears it on malformed,
+cancelled, failed, reset, alternate-screen-exit and disposal paths. Completed
+decoded image data is limited to 128,000,000 bytes per screen using Ghostty's
+native eviction policy. Pi deletion and reset use the same core-owned image and
+placement state.
+
+Amended for [#1034](https://github.com/luizomf/omxterm/issues/1034): the
+original 4,194,304-pixel and 33,554,432-byte limits silently dropped icat's
+photos on wide HiDPI windows, because icat scales a photo to the window's width
+in device pixels and sends `q=2`. A full-screen 16" Retina window (3456 device
+pixels wide) gets a 3456×2592 RGB photo (9 MP, 26.9 MB), and an unscaled phone
+portrait is 3024×4032 (12.2 MP, 36.6 MB). The limits now come from three
+measurements:
+
+- **Allocator classes.** Restty's core uses Zig's WASM allocator, which
+  rounds large allocations up to a power of two and keeps freed blocks for
+  reuse, and the WASM memory never shrinks. 16,000,000 pixels of RGBA
+  (64,000,000 bytes) is the largest image that fits one 64 MiB block;
+  4096×4096 (67,108,864 bytes) lands in a 128 MiB block.
+- **One byte limit.** Input, inflated pixels and PNG output share the
+  64,000,000-byte limit, so RGBA, RGB, `o=z` and PNG reach the same pixel
+  limit. PNG decoding gets twice that, since WUFFS needs a work buffer about
+  the size of its output.
+- **Two images per screen.** The 128,000,000-byte store keeps two images at
+  the limit, or four 9 MP photos.
+
+Measured on the real core, all panes of a window share one WASM memory: one
+image at the limit takes it to about 260 MiB, a stream of them holds one screen
+at about 390 MiB, and both screens of a pane at about 520 MiB. The old limits
+already reached 162 MiB while rejecting these photos, because input and
+inflation happen before the pixel check. Ghostty and kitty allow 400 MB input
+and 320 MB per screen. Downscaling on decode was rejected: the full-size input
+and inflation peak would stay, it would soften the image, and it would need
+logical-size bookkeeping in the core's placement code. Images above the limits
+still render nothing; `q=2` leaves the protocol no way to report it.
 
 Restty's browser/WebGL rendering copies visible decoded RGBA outside core storage
 accounting, while decode and Base64 operations may allocate transient data.

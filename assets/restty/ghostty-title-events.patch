@@ -89,18 +89,19 @@ index b1b968b28..273c14e7a 100644
 +            return err;
 +        };
 diff --git a/src/terminal/kitty/graphics_image.zig b/src/terminal/kitty/graphics_image.zig
-index a4fc24a80..92fd30cd7 100644
+index a4fc24a80..db6e8133e 100644
 --- a/src/terminal/kitty/graphics_image.zig
 +++ b/src/terminal/kitty/graphics_image.zig
-@@ -20,2 +20,5 @@ const max_dimension = 10000;
+@@ -20,2 +20,6 @@ const max_dimension = 10000;
 -/// Maximum size in bytes, taken from Kitty.
 -const max_size = 400 * 1024 * 1024; // 400MB
-+/// Maximum accepted direct load/decode input for OMXTerm's bounded paths.
-+const max_size = 32 * 1024 * 1024; // 32 MiB
++/// Maximum accepted decoded source area for OMXTerm's bounded paths.
++const max_pixels = 16_000_000;
 +
-+/// Maximum accepted decoded source area for OMXTerm's Pi/Chafa subset.
-+const max_pixels = 4_194_304;
-@@ -530,2 +533,6 @@ pub const LoadingImage = struct {
++/// Maximum accepted direct input and decoded image bytes: RGBA at
++/// max_pixels, which also keeps it inside one 64 MiB WASM allocator class.
++const max_size = max_pixels * 4; // 64,000,000 bytes
+@@ -530,2 +534,6 @@ pub const LoadingImage = struct {
 -        // Decode the png if we have to
 -        if (img.format == .png) try self.decodePng(alloc);
 +        // Reject oversized PNG dimensions from the fixed IHDR before the
@@ -109,10 +110,10 @@ index a4fc24a80..92fd30cd7 100644
 +            try self.validatePngDimensions();
 +            try self.decodePng(alloc);
 +        }
-@@ -535,0 +543,2 @@ pub const LoadingImage = struct {
+@@ -535,0 +544,2 @@ pub const LoadingImage = struct {
 +        if (@as(u64, img.width) * @as(u64, img.height) > max_pixels)
 +            return error.DimensionsTooLarge;
-@@ -623,0 +633,19 @@ pub const LoadingImage = struct {
+@@ -623,0 +634,19 @@ pub const LoadingImage = struct {
 +    fn validatePngDimensions(self: *const LoadingImage) !void {
 +        const data = self.data.items;
 +        const signature = "\x89PNG\r\n\x1a\n";
@@ -132,6 +133,10 @@ index a4fc24a80..92fd30cd7 100644
 +            return error.DimensionsTooLarge;
 +    }
 +
+@@ -631 +660,2 @@ pub const LoadingImage = struct {
+-        var limited: LimitedAllocator = .init(alloc, max_size);
++        // WUFFS needs a work buffer about the size of the decoded image.
++        var limited: LimitedAllocator = .init(alloc, 2 * max_size);
 diff --git a/src/terminal/kitty/graphics_storage.zig b/src/terminal/kitty/graphics_storage.zig
 index 897c8944a..fd780d5c7 100644
 --- a/src/terminal/kitty/graphics_storage.zig

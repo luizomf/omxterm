@@ -116,9 +116,10 @@ plus a positive enabled-menu control; do not substitute its container-only
 
 The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and eviction for Pi (`f=100` PNG), Chafa (`-f kitty`, `f=32` RGBA), kitten icat, timg, yazi and snacks.nvim (`f=24`/`f=32`/`f=100`, optionally `o=z`, placement IDs and `U=1` placeholders):
 
-- Max decoded transmission input: 33,554,432 bytes.
-- Max image dimensions: 4,194,304 source pixels (Chafa RGBA max: 16,777,216 bytes).
-- Max completed image storage: 64,000,000 bytes per screen (at most one unfinished image per screen).
+- Max transmission input and decoded pixels: 64,000,000 bytes (PNG decode budget: 128,000,000 bytes).
+- Max image dimensions: 16,000,000 source pixels and 10,000 pixels per side.
+- Max completed image storage: 128,000,000 bytes per screen (at most one unfinished image per screen).
+- All panes in a window share one WASM memory, which never shrinks; see [ADR 0022](../adr/0022-render-bounded-kitty-images-in-direct-sessions.md) for the measured high-water marks.
 - Images stay cell-anchored across resize, font zoom, tab switching, and theme reload, and `CSI 16 t` reports current device-pixel cell metrics.
 - `ghostty-title-events.patch` continues a pending image on an `a=T` that carries only `q` and `m`, the shape of kitten icat's later chunks; any other `a=T` replaces it.
 - Each PTY resize carries `pixelWidth`/`pixelHeight` (columns × cell width, rows × cell height, device pixels, no padding) from `surface-transport.ts` to `node-pty`, so `TIOCGWINSZ` agrees with `CSI 16 t`. The post-start replay reuses the last cell size.
@@ -285,9 +286,9 @@ Prepared SHA-256 digests:
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
 | Restty JavaScript runtime | `db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c` |
-| Embedded-core chunk       | `fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a` |
+| Embedded-core chunk       | `4cc1f9dfd38d232c0e057e89b42443d31fa37b6685336d4fdf0bc421b2b9f23f` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core         | `a12d667486bd69cafb426af016e819f7d44d588f2da7db96b77e568ea95da011` |
+| Tracked WASM core         | `ae9308ae75c437d675e5e8a47a3cab773abf2024a9f6020208f27205cf23e082` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
 | Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
 | Windows terminal          | `4ceeb76ee0c99ec013678828a3fdf309a612c4613190e5ce16840f5096f7e162` |

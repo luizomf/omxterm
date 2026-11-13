@@ -1562,7 +1562,9 @@ authority; OMXTerm adds no second parser.
   `--transfer-mode=stream`, timg 1.6 `-pk`, yazi 26.9 previews and snacks.nvim
   in Neovim 0.12 send it. icat's 128 KiB chunks repeat `a=T,q=2` and its last
   chunk omits `m`; a chunk that repeats only `a=T` and `q` continues the
-  pending image. Photo-sized payloads are covered, within the limits below.
+  pending image. Photo-sized payloads are covered, within the limits below:
+  icat's 3456×2592 photo for a full-screen 16" Retina window (about 9 MP) and
+  an unscaled 12 MP phone portrait both fit.
 - Placing a stored image again (`a=p`) under placement IDs (`p`), and Unicode
   placeholders (`U=1`) with two or three diacritics.
 - The same producers inside tmux 3.7 with `allow-passthrough on`, when they
@@ -1587,9 +1589,12 @@ authority; OMXTerm adds no second parser.
 
 **Limits and cleanup**
 
-- A direct transmission holds at most 33,554,432 decoded bytes, and source
-  dimensions at most 4,194,304 pixels, checked before decode allocates the
-  image (so Chafa RGBA is at most 16,777,216 bytes).
+- A direct transmission holds at most 64,000,000 decoded bytes, and source
+  dimensions at most 16,000,000 pixels (4000×4000) and 10,000 pixels per
+  side, checked before decode allocates the image. Inflated and PNG-decoded
+  pixels share the 64,000,000-byte limit (RGBA at the pixel limit). PNG
+  decoding may allocate up to 128,000,000 bytes, output and work buffer
+  together.
 - Invalid Base64, malformed or cancelled APC, invalid dimensions, length
   mismatch, decode failure or an exceeded limit renders nothing, clears
   unfinished state and does not block later output.
@@ -1597,8 +1602,8 @@ authority; OMXTerm adds no second parser.
   transmission (including Chafa's prelude) replaces it, while a chunk that
   repeats only `a=T` and `q` continues it. Completion, reset, alternate-buffer
   exit and Surface disposal release it.
-- Each screen stores at most 64,000,000 bytes of completed decoded image data,
-  with Ghostty's native eviction.
+- Each screen stores at most 128,000,000 bytes of completed decoded image data
+  (two images at the limit), with Ghostty's native eviction.
 - Pi image-ID, all-image and all-placement deletion and reset release their
   native resources. Deletion, reset, alternate-buffer exit and disposal also
   release cached renderer resources while hidden.
@@ -1606,6 +1611,10 @@ authority; OMXTerm adds no second parser.
   renderer copies may be dropped while hidden.
 - Decoding has transient allocations, and the renderer may copy visible RGBA
   into browser and GPU resources outside core storage accounting.
+- A window's panes share one WASM core, whose memory grows to its high-water
+  mark and never shrinks while the window is open. One image at the limit
+  takes it to about 260 MiB; a stream of them keeps one screen at about
+  390 MiB, and both screens of a pane at about 520 MiB.
 
 **Unsupported**
 
