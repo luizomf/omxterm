@@ -4,9 +4,11 @@ Status: proposed ([#1025](https://github.com/luizomf/omxterm/issues/1025),
 building on [#330](https://github.com/luizomf/omxterm/issues/330)). Nothing
 here is implemented. When it is, it amends
 [ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md) (one accent tone,
-window-scoped marks) and
+window-scoped marks),
 [ADR 0004](0004-log-the-operational-envelope-not-terminal-payload.md) (API
-payloads join the excluded content). The wire protocol and CLI are sketched in
+payloads join the excluded content) and
+[ADR 0013](0013-do-not-inject-shell-integration.md) (three non-secret
+environment variables in every pane). The wire protocol and CLI are sketched in
 the [Agent API reference](../dev/agent-api.md).
 
 ## Context
@@ -20,6 +22,11 @@ The owner's decisions are settled in #1025: the grant covers one window; inside
 it the agent has full autonomy; it stays until the user stops it; it is visible
 as an accent State Mark; core owns it in Electron `main`. This record makes
 those concrete against the code and says where they don't hold as written.
+
+The audience is someone who will never touch tmux. They click to allow, the
+agent already in the pane finds out by itself that it can drive the window,
+and one click turns it off. So discovery with no setup is part of the decision,
+not a later convenience.
 
 What the code gives us today:
 
@@ -39,9 +46,13 @@ What the code gives us today:
   session; the renderer acknowledges a position only after the chunk was
   submitted to the Surface. Hidden tabs keep ingesting.
 - **Tabs and panes belong to the renderer.** Main knows a window's live
-  sessions and the selected tab's sessions, not the tree. Pane commands
-  (`split`, `close-pane`, `new`) act on the focused pane, return nothing, and
-  move the selection.
+  sessions and the selected tab's sessions, not the tree. Tab and pane
+  commands (`new`, `split`, `close-pane`) act on the selected tab's focused
+  pane and return nothing; New Tab selects the tab it creates.
+- **A pane's environment already names the terminal.** Main sets
+  `TERM_PROGRAM=OMXTerm` and its version when it spawns the PTY
+  (`src/main/local-terminal-session.ts`), and knows the window and the session
+  id at that point.
 - **One process per profile** when packaged (ADR 0048); the hand-off to it is
   one-way, with no reply channel. A source run skips the lock and shares the
   installed app's profile directory.
@@ -62,7 +73,7 @@ What the code gives us today:
 
 ### Grant
 
-- A grant belongs to one Terminal Window and lives in main's memory only.
+- A grant belongs to one Terminal Window and is state in main's memory only.
   **Allow Agents in This Window** is a toggle in the Window menu and the
   Command Palette, with a rebindable shortcut that has no default. Turning it
   on flashes one sentence; there is no confirmation dialog.
@@ -76,9 +87,10 @@ What the code gives us today:
   is lost or reloads, or the endpoint can't be held. Ending closes every
   connection of that grant; in-flight waits fail with `revoked`. Switching
   tabs, modals, blur, hide and minimize don't end it.
-- It is never written to disk as state, never restored by reopen-at-startup
-  (ADR 0047) or Saved Layout, and never activated by `config.json`, a launch
-  argument or an extension.
+- It is never restored by reopen-at-startup (ADR 0047) or Saved Layout, and
+  never activated by `config.json`, a launch argument or an extension. The
+  only thing on disk is the grant's credential file below, which exists while
+  the grant does and is never read back by OMXTerm.
 
 ### Transport and discovery
 
@@ -86,6 +98,10 @@ What the code gives us today:
   process: a Unix socket at `<profile>/agent-api/ctl.sock` on macOS and Linux
   (directory `0700`, socket `0600`), and the named pipe
   `\\.\pipe\omxterm-agent-<hash of the profile path>` on Windows. No TCP.
+- A Unix socket path is limited to about 104 bytes on macOS and 108 on Linux.
+  The default profile fits. A long `--user-data-dir` profile (tests, packaged
+  verification) may not, and then the grant is refused with one sentence
+  rather than moved somewhere a client would have to guess.
 - The profile is the Electron userData directory, the same key as the
   single-instance lock, so "the right running process" is "the one that owns
   this profile". A client derives the default profile path per platform or
@@ -95,7 +111,9 @@ What the code gives us today:
 - A grant has a random 256-bit token. Main writes
   `<profile>/agent-api/grants/<window>.json` (`0600`: endpoint, window id,
   token) and deletes it when the grant ends; leftovers are removed at startup.
-  The token never travels in argv or environment variables.
+  The token never travels in argv or environment variables. On Windows the
+  file is protected by the profile directory's inherited ACL under
+  `%APPDATA%`; a custom profile path carries no such guarantee.
 - A connection authenticates with a mutual HMAC challenge over the token, so
   neither side sends it and a client can tell a real endpoint from something
   squatting on the name. An authenticated connection is bound to that grant's
@@ -104,6 +122,35 @@ What the code gives us today:
   the contract; `omxterm-ctl` is a small dependency-free client over it,
   run by the bundled runtime in Node mode (the mechanism ADR 0040 uses) or by
   any Node.
+
+### Discovery without setup
+
+- Every pane's PTY gets three more environment variables at spawn, in granted
+  and ungranted windows alike, none of them secret: `OMXTERM_CTL` (the
+  absolute path of the `omxterm-ctl` launcher inside the installed app),
+  `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE` (window and
+  session id, such as `3:s4`). This is how an agent learns it is inside
+  OMXTerm, where the client is and which pane is its own, with nothing on
+  `PATH` and nothing configured.
+- The client run inside a pane needs no arguments: it reads those variables,
+  finds its window's grant file and connects. `list` marks the caller's own
+  pane as `self`, so an agent doesn't type into itself by accident.
+- Without a grant, `"$OMXTERM_CTL" status` says so in one sentence that names
+  the menu item, and exits non-zero. The agent can relay that sentence; after
+  the click the same command works. Nothing else changes for the agent, so
+  the grant can come before or after the agent starts.
+- `"$OMXTERM_CTL" guide` prints the short agent guide (the same text as the
+  `SKILL.md`), so an agent that has never heard of OMXTerm can learn the
+  commands from the variable alone. `"$OMXTERM_CTL" mcp` serves the same
+  commands as MCP tools over stdio from the same script; the tools are always
+  listed and answer "not granted" until the user clicks.
+- The variables are not shell integration: no startup file, prompt or shell
+  command changes (ADR 0013 keeps that rule), but its sentence about the
+  inherited environment is amended. They don't cross SSH by default, so a
+  remote agent doesn't believe it has a local API. A multiplexer started
+  inside a pane keeps the variables of the pane that started its server.
+- An agent running outside OMXTerm has no variables: it uses the default
+  profile path, and needs `--window` when more than one window is granted.
 
 ### Input
 
@@ -130,10 +177,12 @@ What the code gives us today:
   timeout, like layout capture. Before asking, main waits (bounded) until the
   renderer has acknowledged everything main has sent for that session, so a
   read after a `send` doesn't race the parser.
-- `screen` needs one more read-only runtime accessor beside `getBufferText()`:
-  the active screen's rows, independent of where the user scrolled.
-  `scrollback` reuses the export path and its bound, returned as a tail of N
-  lines. Text only; no colors or cell attributes.
+- The first read is a tail: the last N lines of retained scrollback plus
+  screen, through the existing export path and its bound, with no runtime
+  change. An exact `screen` read (the active screen's rows, independent of
+  where the user scrolled) needs one more read-only accessor beside
+  `getBufferText()` in the checksum-guarded runtime corrections, so it comes
+  later. Text only; no colors or cell attributes.
 - **Scrollback from before the grant is readable.** Restty has no stable row
   marker to fence it (rows reflow on resize and are evicted), and an agent
   that can type can print any file the user can read, so hiding earlier
@@ -141,7 +190,7 @@ What the code gives us today:
 - `wait` is built in main on the output positions it already keeps. `send`
   returns the session's position; `wait` takes `after` (only output past that
   position counts), `idleMs` (no output for that long, and the renderer caught
-  up), an optional literal `match` checked against the screen text, and a
+  up), an optional literal `match` checked against the pane's text, and a
   required bounded `timeoutMs`. It answers with a tagged `reason`: `idle`,
   `match`, `timeout` or `exited`. OSC 133
   ([#1027](https://github.com/luizomf/omxterm/issues/1027)) later adds
@@ -233,17 +282,29 @@ a command name, its duration and an error code.
 - **The token is not a wall between same-user processes.** See above. Handing
   it to the agent by hand (show it once, the user pastes it) would be one,
   at the cost of the friction the feature exists to remove.
-- **`omxterm ctl` as a subcommand of the app doesn't work well.** The app
-  binary starts Chromium, hands off one-way and quits (ADR 0048), is a GUI
-  executable on Windows, and is an AppImage mount on Linux. The client is a
-  separate small script, `omxterm-ctl`; nothing installs a command on `PATH`
-  today on any platform, and that stays an open question.
+- **`omxterm ctl` can't go through the app's normal launch.** A second
+  launch starts Chromium, hands its request to the running process one-way
+  and quits (ADR 0048, `claimSingleInstance`): there is no channel for an
+  answer. The client is a separate script, `omxterm-ctl`, run by the same
+  binary in Node mode, which skips both. This is a disagreement about the
+  mechanism, not the name. Unverified: its output on an interactive Windows
+  console (the binary is a GUI executable) and the per-call cost of the
+  AppImage mount. The installers put no command on `PATH` today (the Linux
+  script installs the AppImage, an icon and a desktop entry; the NSIS include
+  doesn't touch `PATH`), which is why discovery uses `OMXTERM_CTL`.
+- **The accent has no contrast guarantee.** `terminalPaneAccent()` falls back
+  to the foreground color when cyan is too close to the background, and a
+  custom palette or transparency can still leave it weak. The mark can't be
+  switched off, but a theme can make it as quiet as any other mark.
 - **"Visible" holds only while the window is.** A minimized, hidden or
   covered window keeps its grant, by decision, and shows nothing anywhere
   else. The menu item's check mark is the only other trace.
 - **Full autonomy includes the user's focus.** New tabs and selections made
   by the agent move what the user sees. Creating without selecting depends on
   panes that were never shown being mounted and sized, which is unverified.
+- **Environment variables in every pane** are visible to every program the
+  user runs there, and say only where OMXTerm is. That is the price of an
+  agent finding the API by itself.
 - **A flash instead of a confirmation** keeps the product quiet and accepts
   that a mis-click grants access until the user notices the marks.
 
@@ -261,24 +322,25 @@ a command name, its duration and an error code.
 ## First version and follow-up slices
 
 1. **Drive what's there (macOS and Linux).** The grant toggle, window-scoped
-   accent mark with click-to-stop, endpoint, token and handshake,
-   `list` (flat panes), `send` (text and mode-independent keys), `read`
-   (screen), `wait` (`idle`, `timeout`, `exited`), `omxterm-ctl`, and the
-   spec, glossary, ADR 0050 and ADR 0004 amendments. It proves the security
-   and visibility shape with no new renderer commands.
-2. **Read more, wait better.** `read` scrollback tails and `wait` with
-   `match`.
-3. **Shape the window.** The tab and pane tree in `list`; create, split,
+   accent mark with click-to-stop, endpoint, token and handshake, the three
+   environment variables, `status`, `list` (flat panes), `send` (text and
+   mode-independent keys), `read` (a tail), `wait` (`idle`, `timeout`,
+   `exited`), `omxterm-ctl`, and the spec, glossary and ADR 0050, 0004 and
+   0013 amendments. It proves the security, visibility and discovery shape
+   with no new tab or pane commands and no runtime patch.
+2. **Agents plug in by themselves.** `omxterm-ctl guide`, a `SKILL.md`, and
+   `omxterm-ctl mcp`, a thin MCP server over the same client for agents that
+   speak MCP (Claude Code, Codex).
+3. **Read and wait better.** The exact `screen` read and `wait` with `match`.
+4. **Shape the window.** The tab and pane tree in `list`; create, split,
    close and select by id.
-4. **Windows.** The pipe endpoint, console behavior of the client, and the
+5. **Windows.** The pipe endpoint, console behavior of the client, and the
    decision on native hardening.
-5. **Keys and paste by mode.** Renderer-encoded named keys and paste that
+6. **Keys and paste by mode.** Renderer-encoded named keys and paste that
    honors bracketed paste.
-6. **A record of what the agent typed.** Session-only, in memory, bounded,
+7. **A record of what the agent typed.** Session-only, in memory, bounded,
    shown to the user in the window and dropped with the grant; attached at
    `agentInput()`, never in operational logs.
-7. **MCP and an agent guide.** A thin MCP server over the same client, and a
-   `SKILL.md` that teaches an agent the commands.
 8. **Command boundaries.** With #1027: `command-end`, exit codes and
    per-command output.
 
@@ -286,9 +348,11 @@ a command name, its duration and an error code.
 
 - Windows: accept the default pipe descriptor behind the token, or pay for a
   native pipe server?
-- Where does `omxterm-ctl` live for the user: an explicit "install the
-  command" action, a documented path per platform, or a non-secret
-  environment variable in every pane that points at it?
+- Registering the MCP server in an agent's own configuration is still one
+  step per agent. Should OMXTerm offer it (`omxterm-ctl setup <agent>`, or a
+  Command Palette action), or leave it to the guide?
+- Should `omxterm-ctl` also be offered on `PATH` for agents and scripts that
+  run outside OMXTerm?
 - Does a read work in a minimized or fully covered window on all three
   platforms? Output ingestion continues for hidden tabs, but the read depends
   on the runtime's render state. To verify in slice 1.
@@ -296,5 +360,5 @@ a command name, its duration and an error code.
   a rate limit on input?
 - Should the grant show anywhere outside its window (Dock, tray, another
   window's menu) for the overnight case?
-- With several granted windows, how does an agent running inside one learn
-  which is its own without an environment variable?
+- `OMXTERM_CTL` points into the installed app. What should it point at when
+  the app is an AppImage, whose mount path changes per run?

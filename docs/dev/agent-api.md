@@ -33,6 +33,16 @@ only by the user and removed when the grant ends:
 No grant file means no window is granted. With several, the client must pick a
 window.
 
+A client started inside a pane doesn't need any of that. Every pane has:
+
+| Variable          | Value                                             |
+| ----------------- | ------------------------------------------------- |
+| `OMXTERM_CTL`     | Absolute path of the `omxterm-ctl` launcher.      |
+| `OMXTERM_PROFILE` | The profile directory.                            |
+| `OMXTERM_PANE`    | The pane's window and session id, such as `3:s4`. |
+
+None is secret and all three exist whether or not the window is granted.
+
 ## Framing
 
 UTF-8, one JSON object per line, in both directions. A request line is at most
@@ -51,13 +61,14 @@ The token never crosses the connection. Both sides prove they hold it.
 
 ```
 client                                       main
-  | {"hello":1,"window":3,"nonce":C}  ------->  |
+  | {"hello":1,"window":3,"pane":"s4","nonce":C} >|
   | <------- {"hello":1,"nonce":S,"proof":P1}   |   P1 = HMAC(token, "server" + C + S)
   | {"proof":P2}  --------------------------->  |   P2 = HMAC(token, "client" + C + S)
   | <------- {"ok":true,"window":3,"protocol":1}|
 ```
 
-HMAC is HMAC-SHA-256; nonces are 32 random bytes in hex. A client that gets a
+`pane` is optional: a client inside a pane sends its own id from
+`OMXTERM_PANE`, and `list` then marks that pane as `self`. HMAC is HMAC-SHA-256; nonces are 32 random bytes in hex. A client that gets a
 wrong `P1` must close: the endpoint isn't OMXTerm. A wrong `P2`, an unknown
 window or a silent client closes the connection after a short delay with no
 detail. After the handshake the connection is bound to that window until the
@@ -68,7 +79,7 @@ grant ends.
 Pane ids are the window's session ids (`s4`); tab ids are assigned by the
 window (`t2`). Both are valid for this grant only.
 
-### `list` (slice 1; tree in slice 3)
+### `list` (slice 1; tree in slice 4)
 
 ```json
 { "id": 1, "cmd": "list" }
@@ -83,7 +94,14 @@ window (`t2`). Both are valid for this grant only.
       "title": "zsh",
       "selected": true,
       "panes": [
-        { "pane": "s1", "focused": true, "cols": 120, "rows": 32, "live": true }
+        {
+          "pane": "s1",
+          "focused": true,
+          "self": false,
+          "cols": 120,
+          "rows": 32,
+          "live": true
+        }
       ]
     }
   ]
@@ -93,7 +111,7 @@ window (`t2`). Both are valid for this grant only.
 Slice 1 returns `panes` at the top level, without tabs. Titles are the
 display-only tab titles (ADR 0010), so they are untrusted text.
 
-### `send` (slice 1; mode-aware keys in slice 5)
+### `send` (slice 1; mode-aware keys in slice 6)
 
 Exactly one of `text` or `keys`.
 
@@ -105,7 +123,7 @@ Exactly one of `text` or `keys`.
 - `text` is written as is, at most 64 KiB of UTF-8. No newline is added and no
   paste framing is applied.
 - `keys` in slice 1: `Enter`, `Tab`, `Escape`, `Backspace`, `Space` and
-  `Ctrl+A` … `Ctrl+Z`. Other names answer `unsupported-key` until slice 5.
+  `Ctrl+A` … `Ctrl+Z`. Other names answer `unsupported-key` until slice 6.
 
 ```json
 { "receipt": "accepted", "offset": 48211 }
@@ -116,16 +134,17 @@ Exactly one of `text` or `keys`.
 partly happened; it is never retried). A refused write is the error
 `not-live`.
 
-### `read` (screen in slice 1; scrollback in slice 2)
+### `read` (tail in slice 1; exact screen in slice 3)
 
 ```json
-{ "id": 4, "cmd": "read", "args": { "pane": "s1", "source": "screen" } }
-{ "id": 5, "cmd": "read", "args": { "pane": "s1", "source": "scrollback", "lines": 200 } }
+{ "id": 4, "cmd": "read", "args": { "pane": "s1", "lines": 200 } }
+{ "id": 5, "cmd": "read", "args": { "pane": "s1", "source": "screen" } }
 ```
 
-- `screen` (default): the active screen's rows, wherever the user scrolled.
-- `scrollback`: the last `lines` lines of retained history plus screen
+- `tail` (default): the last `lines` lines of retained history plus screen
   (default 200, at most 10,000). It includes output from before the grant.
+- `screen` (slice 3): exactly the active screen's rows, wherever the user
+  scrolled.
 - Text only, trailing spaces trimmed per row. The alternate screen reads only
   its own contents.
 
@@ -136,7 +155,7 @@ partly happened; it is never retried). A refused write is the error
 Later, without changing these fields: `"source": "command"` for one command's
 output once OSC 133 lands (slice 8).
 
-### `wait` (slice 1; `match` in slice 2)
+### `wait` (slice 1; `match` in slice 3)
 
 ```json
 {
@@ -158,7 +177,7 @@ output once OSC 133 lands (slice 8).
 - `idleMs` (default 500, 100 to 60,000): satisfied when output has moved past
   `after`, none arrived for that long, and the window has consumed it all.
 - `match`: a literal string of at most 1,024 characters, looked for in the
-  screen text. Not a regular expression.
+  pane's screen text. Not a regular expression.
 - The first condition met answers. At least one of `idleMs` or `match`
   applies; with only `match`, idleness is ignored.
 
@@ -171,7 +190,7 @@ the result adds `exitCode`). A timeout is a normal result, not an error. Later:
 `command-end` with `exitCode` (slice 8). Clients must ignore reasons and fields
 they don't know.
 
-### Tabs and panes (slice 3)
+### Tabs and panes (slice 4)
 
 | Command      | Arguments                                  | Result                          |
 | ------------ | ------------------------------------------ | ------------------------------- |
@@ -212,20 +231,31 @@ scripts. Programs should branch on `code`.
 grant file itself; a token is never passed as an argument.
 
 ```sh
+omxterm-ctl status                         # granted or not, in one sentence
+omxterm-ctl guide                          # the agent guide (slice 2)
+omxterm-ctl mcp                            # MCP server on stdio (slice 2)
 omxterm-ctl grants                         # granted windows of this profile
 omxterm-ctl list
 omxterm-ctl send s1 --text 'npm test' --enter
 omxterm-ctl send s1 --keys Ctrl+C
 omxterm-ctl wait s1 --idle 800 --match 'Tests passed' --timeout 120000
-omxterm-ctl read s1
-omxterm-ctl read s1 --scrollback 200
-omxterm-ctl split s1 --down                # slice 3
-omxterm-ctl new-tab                        # slice 3
-omxterm-ctl close s8 --force               # slice 3
+omxterm-ctl read s1 --lines 200
+omxterm-ctl read s1 --screen               # slice 3
+omxterm-ctl split s1 --down                # slice 4
+omxterm-ctl new-tab                        # slice 4
+omxterm-ctl close s8 --force               # slice 4
 ```
 
-- `--window <id>` picks a grant when there are several; `--profile <dir>`
-  picks a profile. `--json` prints the raw result.
+- Inside a pane, agents call it as `"$OMXTERM_CTL"`; window and profile come
+  from the environment. Elsewhere, `--window <id>` picks a grant when there
+  are several and `--profile <dir>` picks a profile. `--json` prints the raw
+  result.
+- `status` exits 0 when this window is granted. Otherwise it prints one
+  sentence naming **Allow Agents in This Window** and exits 3, so an agent
+  can pass the sentence on to the user.
+- `mcp` exposes `list`, `send`, `read` and `wait` (and later commands) as
+  tools with the same arguments. The tools are always listed; without a grant
+  they answer with the `status` sentence.
 - `send` remembers nothing between calls. `--enter` appends `Enter` in the
   same request, and `send … --wait` runs `wait` with the returned `offset` on
   the same connection, which is the reliable way to type a command and wait
@@ -239,6 +269,7 @@ omxterm-ctl close s8 --force               # slice 3
 | Area                   | Where                                                                                           |
 | ---------------------- | ----------------------------------------------------------------------------------------------- |
 | Endpoint, grants, auth | new modules in `src/main/`                                                                      |
+| Pane environment       | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                          |
 | Agent input            | `agentInput()` in main, calling `LocalTerminalSession.writeTracked()`                           |
 | Output positions       | `src/main/terminal-output-flow.ts` (expose sent and acknowledged positions, last output)        |
 | Reads                  | a correlated request like `src/main/terminal-layout-ipc.ts`; `TerminalSurface.exportText`       |
