@@ -182,8 +182,9 @@ export function createLocalTerminalSession(
         width: initialSize.pixelWidth,
         height: initialSize.pixelHeight,
       });
-    } catch {
+    } catch (error) {
       // The Surface's first resize carries the same size again.
+      options.onResizeFailure?.(resizeFailure(error, options.platform));
     }
   }
 
@@ -280,14 +281,9 @@ export function createLocalTerminalSession(
           });
         else pty.resize(size.cols, size.rows);
       } catch (error) {
-        // Pinned Unix node-pty can close its descriptor before delivering exit.
-        // Only that exact native error is an expected teardown race. Neither
-        // failure completes the session: the real exit subscription still owns it.
-        const closedPty =
-          (options.platform === "darwin" || options.platform === "linux") &&
-          error instanceof Error &&
-          error.message === "ioctl(2) failed, EBADF";
-        options.onResizeFailure?.(closedPty ? "closed-pty" : "native-failure");
+        // Neither failure completes the session: the real exit subscription
+        // still owns it.
+        options.onResizeFailure?.(resizeFailure(error, options.platform));
       }
     },
     acknowledgeOutput(bytes) {
@@ -356,6 +352,19 @@ export function createLocalTerminalSession(
       if (!exited) pty.kill();
     },
   };
+}
+
+// Pinned Unix node-pty can close its descriptor before delivering exit; only
+// that exact native error is an expected teardown race.
+function resizeFailure(
+  error: unknown,
+  platform: NodeJS.Platform | string,
+): TerminalResizeFailureReason {
+  return (platform === "darwin" || platform === "linux") &&
+    error instanceof Error &&
+    error.message === "ioctl(2) failed, EBADF"
+    ? "closed-pty"
+    : "native-failure";
 }
 
 // A login shell may report itself with a leading dash (e.g. "-zsh").
