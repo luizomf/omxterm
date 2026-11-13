@@ -1,6 +1,5 @@
 import {
   agentKeyBytes,
-  parseAgentChord,
   DEFAULT_AGENT_IDLE_MS,
   DEFAULT_AGENT_READ_LINES,
   hasOnlyKeys,
@@ -12,6 +11,7 @@ import {
   MAX_AGENT_SEND_BYTES,
   MAX_AGENT_WAIT_MS,
   MIN_AGENT_IDLE_MS,
+  parseAgentChord,
   utf8Length,
   type AgentCommand,
   type AgentErrorCode,
@@ -173,9 +173,9 @@ function watch<T>(
 }
 
 /**
- * list, send, read, wait and press for one granted window (ADR 0052). Every pane id
- * is checked against this window's live sessions; another window's ids are
- * simply unknown here.
+ * list, send, read, wait and press for one granted window (ADR 0052). Every
+ * pane id is checked against this window's live sessions; another window's
+ * ids are simply unknown here.
  */
 export function createAgentCommands(options: AgentCommandsOptions) {
   const now = options.now ?? Date.now;
