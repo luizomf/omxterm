@@ -335,6 +335,7 @@ export function createTerminalTabs(
     mirror?.changed();
   };
 
+  let agentSelection = false;
   const select = (
     index: number,
     passive = false,
@@ -369,7 +370,15 @@ export function createTerminalTabs(
       mirrorReady?.ready();
     };
     if (options.selectContent) options.selectContent(tab, activate, passive);
-    else hosted.select(tab.kind === "hosted" ? tab : undefined, activate, tab);
+    else
+      hosted.select(
+        tab.kind === "hosted" ? tab : undefined,
+        activate,
+        tab,
+        // An agent's shortcut never pulls native focus into a window the
+        // user isn't in (ADR 0052): an extension's view would raise it.
+        !agentSelection || elements.container.ownerDocument.hasFocus(),
+      );
   };
 
   const removeTab = (tab: ApplicationTab, notify = true) => {
@@ -620,12 +629,17 @@ export function createTerminalTabs(
       if (!pane || pane.removed || pane.tab.removed)
         return { id, error: "unknown-pane" };
       if (closing) return { id, error: "unavailable" };
-      revealSession(sessionId);
-      // A dialog over the window keeps its selection; never act elsewhere.
-      if (selectedTab() !== pane.tab || pane.tab.focused !== pane)
-        return { id, error: "unavailable" };
-      commands.handle(command);
-      return { id };
+      agentSelection = true;
+      try {
+        revealSession(sessionId);
+        // A dialog over the window keeps its selection; never act elsewhere.
+        if (selectedTab() !== pane.tab || pane.tab.focused !== pane)
+          return { id, error: "unavailable" };
+        commands.handle(command);
+        return { id };
+      } finally {
+        agentSelection = false;
+      }
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

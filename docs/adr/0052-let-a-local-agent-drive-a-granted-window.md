@@ -615,6 +615,10 @@ Tab and pane shortcuts, and the mark in the error tone
   window whose selection didn't move (a dialog over it) answers `unavailable`,
   so a close never lands on another pane. That leaves the user's Close Pane
   and its popup checks unchanged.
+- **No focus theft.** Selecting an extension tab focuses its native view,
+  which on macOS raises its window over the one the user is in (seen on a
+  macOS guest). A tab an agent's shortcut selects takes native focus only
+  when its window already has it.
 - **The Busy Session check is on the named panes.** Main's idea of the
   focused pane trails the window, so a close asks
   `agentCloseNeedsUser()` in the application, which owns `confirmClose`,

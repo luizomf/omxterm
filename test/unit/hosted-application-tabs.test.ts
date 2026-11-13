@@ -538,3 +538,24 @@ it("keeps the window's mark clickable over an extension tab, with or without the
   await settle();
   expect(corner()).toBeNull();
 });
+
+it("lets an agent select an extension tab without taking native focus from another window", async () => {
+  const h = harness();
+  await h.tabs.ready;
+  h.open();
+  await settle();
+  h.tabs.handleCommand({ action: "previous" });
+  await settle();
+  const present = vi.mocked(h.bridge.present);
+  present.mockClear();
+  // The user is in another window.
+  vi.spyOn(document, "hasFocus").mockReturnValue(false);
+  expect(h.tabs.runSessionCommand("one", "s1", { action: "next" })).toEqual({
+    id: "one",
+  });
+  await settle();
+  expect(selectedStates(h.strip)).toEqual(["1:false", "view-a:true"]);
+  expect(present).toHaveBeenLastCalledWith(
+    expect.objectContaining({ id: "view-a", focus: false }),
+  );
+});
