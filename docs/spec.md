@@ -1443,8 +1443,11 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 - Ghostty answers cursor-position queries (`CSI 6 n`) from its parser cursor at
   the query's place in the output stream, including wide/combining text and
   pending-wrap resize, without a render frame or JavaScript cursor hint.
-  Origin-mode reports are relative to the scrolling margins. Replies keep stream
-  order with later DA1, DA2 and cell-size replies.
+  Origin-mode reports are relative to the scrolling margins.
+- Replies keep stream order. DA1, DA2, XTVERSION, window-size and color replies
+  wait for the core's replies to earlier queries, such as a Kitty graphics
+  query (`a=q`), mode reports (DECRQM) and DECRQSS, so a probe that stops
+  reading at DA1 still sees them.
 - `CSI 16 t` gets the cell size from the Surface metrics once the Surface opens.
 - Not every xterm extension is guaranteed. OMXTerm installs no custom terminfo,
   does not touch shell startup files. Inline-image support does not

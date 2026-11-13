@@ -137,6 +137,49 @@ describe("Restty actual-core cursor position reports", () => {
     }
   });
 
+  // viu and kitten icat send a Kitty query, then DA1, and stop reading at DA1.
+  it.each([
+    ["DA1", "\u001b[c", "\u001b[?1;2c"],
+    ["DA2", "\u001b[>c", "\u001b[>0;0;0c"],
+    ["XTVERSION", "\u001b[>q", "\u001bP>|ghostty 1.0\u001b\\"],
+    ["a cell-size report", "\u001b[16t", "\u001b[6;20;10t"],
+  ])(
+    "answers a Kitty query before a following %s at every split",
+    async (_label, query, reply) => {
+      const stream = `\u001b_Gi=31,s=1,v=1,a=q,t=d,f=24;AAAA\u001b\\${query}`;
+      for (let split = 0; split <= stream.length; split++) {
+        const f = await cprCoreFixture();
+        try {
+          f.write(stream.slice(0, split));
+          f.write(stream.slice(split));
+          expect(f.replies.join(""), `split ${split}`).toBe(
+            `\u001b_Gi=31;OK\u001b\\${reply}`,
+          );
+        } finally {
+          f.dispose();
+        }
+      }
+    },
+  );
+
+  it("keeps yazi's startup probe replies in stream order", async () => {
+    const f = await cprCoreFixture();
+    try {
+      f.write(
+        "\u001b[>q\u001b_Gi=7,s=1,v=1,a=q,t=d,f=24;AAAA\u001b\\\u001b[16t\u001b[?12$p\u001b[0c",
+      );
+      expect(f.replies).toEqual([
+        "\u001bP>|ghostty 1.0\u001b\\",
+        "\u001b_Gi=7;OK\u001b\\",
+        "\u001b[6;20;10t",
+        expect.stringMatching(/^\u001b\[\?12;\d\$y$/u),
+        "\u001b[?1;2c",
+      ]);
+    } finally {
+      f.dispose();
+    }
+  });
+
   it("retains parsed title and bell delivery on both sides of a prefix commit", async () => {
     const f = await cprCoreFixture();
     try {
