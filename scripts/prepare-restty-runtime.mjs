@@ -70,9 +70,9 @@ const priorKittyContinuationCoreDigest =
 const priorImageLimitCoreDigest =
   "fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a";
 const correctedCoreDigest =
-  "4cc1f9dfd38d232c0e057e89b42443d31fa37b6685336d4fdf0bc421b2b9f23f";
+  "8e7740a25a02af36f2183fd2de6312c10b807803d98292973b191f18952c2b08";
 const correctedCoreWasmDigest =
-  "ae9308ae75c437d675e5e8a47a3cab773abf2024a9f6020208f27205cf23e082";
+  "0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =

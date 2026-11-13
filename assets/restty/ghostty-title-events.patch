@@ -89,7 +89,7 @@ index b1b968b28..273c14e7a 100644
 +            return err;
 +        };
 diff --git a/src/terminal/kitty/graphics_image.zig b/src/terminal/kitty/graphics_image.zig
-index a4fc24a80..db6e8133e 100644
+index a4fc24a80..e3e7e13e8 100644
 --- a/src/terminal/kitty/graphics_image.zig
 +++ b/src/terminal/kitty/graphics_image.zig
 @@ -20,2 +20,6 @@ const max_dimension = 10000;
@@ -133,10 +133,12 @@ index a4fc24a80..db6e8133e 100644
 +            return error.DimensionsTooLarge;
 +    }
 +
-@@ -631 +660,2 @@ pub const LoadingImage = struct {
+@@ -631 +660,4 @@ pub const LoadingImage = struct {
 -        var limited: LimitedAllocator = .init(alloc, max_size);
-+        // WUFFS needs a work buffer about the size of the decoded image.
-+        var limited: LimitedAllocator = .init(alloc, 2 * max_size);
++        // The limit applies to each allocation. WUFFS's work buffer holds the
++        // filtered source rows: up to 8 bytes per pixel (16-bit RGBA) plus a
++        // filter byte per row, so allow that for every image within the limits.
++        var limited: LimitedAllocator = .init(alloc, 2 * max_size + max_dimension);
 diff --git a/src/terminal/kitty/graphics_storage.zig b/src/terminal/kitty/graphics_storage.zig
 index 897c8944a..fd780d5c7 100644
 --- a/src/terminal/kitty/graphics_storage.zig

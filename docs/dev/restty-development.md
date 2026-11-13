@@ -116,7 +116,7 @@ plus a positive enabled-menu control; do not substitute its container-only
 
 The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and eviction for Pi (`f=100` PNG), Chafa (`-f kitty`, `f=32` RGBA), kitten icat, timg, yazi and snacks.nvim (`f=24`/`f=32`/`f=100`, optionally `o=z`, placement IDs and `U=1` placeholders):
 
-- Max transmission input and decoded pixels: 64,000,000 bytes (PNG decode budget: 128,000,000 bytes).
+- Max transmission input and decoded pixels: 64,000,000 bytes (PNG decode: 128,010,000 bytes per allocation).
 - Max image dimensions: 16,000,000 source pixels and 10,000 pixels per side.
 - Max completed image storage: 128,000,000 bytes per screen (at most one unfinished image per screen).
 - All panes in a window share one WASM memory, which never shrinks; see [ADR 0022](../adr/0022-render-bounded-kitty-images-in-direct-sessions.md) for the measured high-water marks.
@@ -286,9 +286,9 @@ Prepared SHA-256 digests:
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
 | Restty JavaScript runtime | `db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c` |
-| Embedded-core chunk       | `4cc1f9dfd38d232c0e057e89b42443d31fa37b6685336d4fdf0bc421b2b9f23f` |
+| Embedded-core chunk       | `8e7740a25a02af36f2183fd2de6312c10b807803d98292973b191f18952c2b08` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core         | `ae9308ae75c437d675e5e8a47a3cab773abf2024a9f6020208f27205cf23e082` |
+| Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
 | Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
 | Windows terminal          | `4ceeb76ee0c99ec013678828a3fdf309a612c4613190e5ce16840f5096f7e162` |

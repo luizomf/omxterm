@@ -71,8 +71,9 @@ measurements:
   4096×4096 (67,108,864 bytes) lands in a 128 MiB block.
 - **One byte limit.** Input, inflated pixels and PNG output share the
   64,000,000-byte limit, so RGBA, RGB, `o=z` and PNG reach the same pixel
-  limit. PNG decoding gets twice that, since WUFFS needs a work buffer about
-  the size of its output.
+  limit. Each PNG decode allocation may take twice that plus a byte per row
+  (128,010,000 bytes), since WUFFS's work buffer holds the filtered source
+  rows, up to 8 bytes per pixel for 16-bit PNGs.
 - **Two images per screen.** The 128,000,000-byte store keeps two images at
   the limit, or four 9 MP photos.
 
@@ -80,10 +81,11 @@ All panes of a window share one WASM memory. Measured on the real core, one
 image at the limit takes it to about 260 MiB, a stream of them holds one screen
 at about 390 MiB, and both screens of a pane at about 520 MiB. The old limits
 already reached 162 MiB while rejecting these photos, because input and
-inflation happen before the pixel check. Ghostty and kitty allow 400 MB input
-and 320 MB per screen. Downscaling on decode was rejected: the full-size input
-and inflation peak would stay, it would soften the image, and it would need
-logical-size bookkeeping in the core's placement code. Images above the limits
+inflation happen before the pixel check. Native Ghostty allows 400 MB per
+transmission (a value it takes from kitty) and 320 MB per screen. Downscaling
+on decode was rejected: the full-size input and inflation peak would stay, it
+would soften the image, and it would need logical-size bookkeeping in the
+core's placement code. Images above the limits
 still render nothing; `q=2` leaves the protocol no way to report it.
 
 Restty's browser/WebGL rendering copies visible decoded RGBA outside core storage

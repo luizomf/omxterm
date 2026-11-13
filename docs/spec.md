@@ -1592,9 +1592,9 @@ authority; OMXTerm adds no second parser.
 - A direct transmission holds at most 64,000,000 decoded bytes, and source
   dimensions at most 16,000,000 pixels (4000×4000) and 10,000 pixels per
   side, checked before decode allocates the image. Inflated and PNG-decoded
-  pixels share the 64,000,000-byte limit (RGBA at the pixel limit). PNG
-  decoding may allocate up to 128,000,000 bytes, output and work buffer
-  together.
+  pixels share the 64,000,000-byte limit (RGBA at the pixel limit). A single
+  PNG decode allocation may reach 128,010,000 bytes, room for the work buffer
+  of a 16-bit PNG at the pixel limit.
 - Invalid Base64, malformed or cancelled APC, invalid dimensions, length
   mismatch, decode failure or an exceeded limit renders nothing, clears
   unfinished state and does not block later output.

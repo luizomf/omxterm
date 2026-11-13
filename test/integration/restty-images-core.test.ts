@@ -165,12 +165,16 @@ function placementSnapshots(
   });
 }
 
-function createCompressedSolidPng(width: number, height: number): Uint8Array {
-  const scanlines = new Uint8Array((width * 4 + 1) * height);
+function createCompressedSolidPng(
+  width: number,
+  height: number,
+  bitDepth: 8 | 16 = 8,
+): Uint8Array {
+  const scanlines = new Uint8Array(((width * 4 * bitDepth) / 8 + 1) * height);
   const header = new Uint8Array(13);
   new DataView(header.buffer).setUint32(0, width);
   new DataView(header.buffer).setUint32(4, height);
-  header.set([8, 6, 0, 0, 0], 8);
+  header.set([bitDepth, 6, 0, 0, 0], 8);
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     pngChunk("IHDR", header),
@@ -319,19 +323,23 @@ describe("pinned Restty/Ghostty inline images", () => {
     120_000,
   );
 
-  it("decodes a PNG of 16,000,000 source pixels", () => {
-    transmit(
-      core.exports,
-      core.handle,
-      createCompressedSolidPng(4_000, 4_000),
-      "a=T,f=100,q=2,c=1,r=1,i=262",
-    );
+  it.each([8, 16] as const)(
+    "decodes a %i-bit PNG of 16,000,000 source pixels",
+    (bitDepth) => {
+      transmit(
+        core.exports,
+        core.handle,
+        createCompressedSolidPng(4_000, 4_000, bitDepth),
+        "a=T,f=100,q=2,c=1,r=1,i=262",
+      );
 
-    expect(placementImageIds(core.exports, core.handle)).toEqual([262]);
-    expect(core.exports.restty_debug_kitty_total_bytes(core.handle)).toBe(
-      64_000_000,
-    );
-  }, 120_000);
+      expect(placementImageIds(core.exports, core.handle)).toEqual([262]);
+      expect(core.exports.restty_debug_kitty_total_bytes(core.handle)).toBe(
+        64_000_000,
+      );
+    },
+    120_000,
+  );
 
   it("rejects direct encoded input above 64,000,000 bytes without blocking a later image", () => {
     transmit(
