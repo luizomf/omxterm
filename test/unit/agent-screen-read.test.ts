@@ -2,6 +2,7 @@ import { runInNewContext } from "node:vm";
 import { loadResttyWasm } from "restty/internal";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  cprCoreFixture,
   preparedCprRuntime,
   runtimeSection,
 } from "../fixtures/restty-cpr-core-probe";
@@ -103,4 +104,26 @@ describe("the screen read", () => {
       "x",
     ]);
   });
+
+  // A match wait counts copies per screen by this flag (ADR 0052), so it
+  // must follow every switch the core makes, through the production output
+  // path into the real core.
+  it.each([1049, 47, 1047])(
+    "says the alternate screen is open while CSI ?%ih is in effect",
+    async (mode) => {
+      const t = await cprCoreFixture(10, 4);
+      try {
+        t.write("main");
+        expect(t.altScreen()).toBe(false);
+        t.write(`\u001b[?${mode}h\u001b[Hfull`);
+        expect(t.altScreen()).toBe(true);
+        expect(t.text()).toBe("full\n\n\n");
+        t.write(`\u001b[?${mode}l`);
+        expect(t.altScreen()).toBe(false);
+        expect(t.text()).toBe("main\n\n\n");
+      } finally {
+        t.dispose();
+      }
+    },
+  );
 });

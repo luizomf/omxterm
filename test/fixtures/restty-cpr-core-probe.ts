@@ -143,6 +143,8 @@ export async function cprCoreFixture(
       wasm.resize(handle, nextCols, nextRows);
       controller.flushWasmOutputToPty();
     },
+    // The filter's own screen flag, which the window reports with a read.
+    altScreen: () => inputHandler.isAltScreen(),
     cursor() {
       // Final-state control only, never the query oracle or reply provider.
       wasm.renderUpdate(handle);
