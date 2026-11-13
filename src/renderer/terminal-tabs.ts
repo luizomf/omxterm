@@ -110,6 +110,8 @@ export interface TerminalTabsOptions {
     tab: ApplicationTab,
     activate: (focusAllowed?: boolean) => void,
     passive: boolean,
+    // False keeps an extension's view from taking native focus.
+    nativeFocus?: boolean,
   ) => void;
   readonly isSshSourceForeground?: (id: string) => boolean;
   // The hosted dialog shown over the selected tab, if any.
@@ -369,15 +371,18 @@ export function createTerminalTabs(
       );
       mirrorReady?.ready();
     };
-    if (options.selectContent) options.selectContent(tab, activate, passive);
+    // An agent's shortcut never pulls native focus into a window the user
+    // isn't in (ADR 0052): focusing an extension's view would raise it.
+    const nativeFocus =
+      !agentSelection || elements.container.ownerDocument.hasFocus();
+    if (options.selectContent)
+      options.selectContent(tab, activate, passive, nativeFocus);
     else
       hosted.select(
         tab.kind === "hosted" ? tab : undefined,
         activate,
         tab,
-        // An agent's shortcut never pulls native focus into a window the
-        // user isn't in (ADR 0052): an extension's view would raise it.
-        !agentSelection || elements.container.ownerDocument.hasFocus(),
+        nativeFocus,
       );
   };
 
