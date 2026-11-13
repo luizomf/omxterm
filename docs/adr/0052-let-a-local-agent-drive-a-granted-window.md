@@ -610,8 +610,9 @@ Tab and pane shortcuts, and the mark in the error tone
 - **Focus and act are one step in the window.** The actions don't go through
   the catalog's selected-window callbacks. Main sends the granted window one
   correlated request, like `read`, with the pane and the tab or pane command;
-  the window focuses that pane (selecting its tab) and runs the command in the
-  same task, and answers. A pane that is gone answers `unknown-pane`, and a
+  the window focuses that pane (selecting its tab), runs the command once that
+  tab shows (leaving an extension's view waits for main to hide it; split and
+  directional focus measure the tab), and answers. A pane that is gone answers `unknown-pane`, and a
   window whose selection didn't move (a dialog over it) answers `unavailable`,
   so a close never lands on another pane. That leaves the user's Close Pane
   and its popup checks unchanged.

@@ -26,7 +26,7 @@ export function cleanupSnippetsWindows() {
 export async function snippetsWindow(
   hosted: Pick<
     Parameters<typeof mountTerminalWindowPage>[1],
-    "hostedContent" | "sshPane" | "extensions"
+    "hostedContent" | "sshPane" | "extensions" | "attention"
   > = {},
   includeSnippets = true,
   auxiliaryPanelSide: "left" | "right" = "right",

@@ -20,6 +20,9 @@ import {
 } from "../shared/agent-access";
 import type { AgentKeyChord } from "../shared/agent-api";
 import { encodeAgentKeys } from "./agent-access";
+
+// Below main's 3 s window answer, so a late command never runs after it.
+const AGENT_ACTIVATION_MS = 2000;
 import { createPaneAttention } from "./pane-attention";
 import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
@@ -197,7 +200,7 @@ export interface TerminalTabs {
     id: string,
     sessionId: TerminalSessionId,
     command: AgentWindowCommand,
-  ): AgentActionResult;
+  ): Promise<AgentActionResult>;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -338,6 +341,8 @@ export function createTerminalTabs(
   };
 
   let agentSelection = false;
+  // Agent commands waiting for their tab's content to show.
+  const activated = new Set<() => void>();
   const select = (
     index: number,
     passive = false,
@@ -370,6 +375,7 @@ export function createTerminalTabs(
         notifyFocus,
       );
       mirrorReady?.ready();
+      for (const shown of [...activated]) shown();
     };
     // An agent's shortcut never pulls native focus into a window the user
     // isn't in (ADR 0052): focusing an extension's view would raise it.
@@ -632,19 +638,52 @@ export function createTerminalTabs(
         ? undefined
         : findPaneBySession(terminalTabs(), sessionId);
       if (!pane || pane.removed || pane.tab.removed)
-        return { id, error: "unknown-pane" };
-      if (closing) return { id, error: "unavailable" };
+        return Promise.resolve({ id, error: "unknown-pane" });
+      if (closing) return Promise.resolve({ id, error: "unavailable" });
+      const unavailable = { id, error: "unavailable" } as const;
       agentSelection = true;
       try {
         revealSession(sessionId);
-        // A dialog over the window keeps its selection; never act elsewhere.
-        if (selectedTab() !== pane.tab || pane.tab.focused !== pane)
-          return { id, error: "unavailable" };
-        commands.handle(command);
-        return { id };
       } finally {
         agentSelection = false;
       }
+      // A dialog over the window keeps its selection; never act elsewhere.
+      const run = (): AgentActionResult => {
+        if (
+          disposed ||
+          closing ||
+          pane.removed ||
+          selectedTab() !== pane.tab ||
+          pane.tab.focused !== pane
+        )
+          return unavailable;
+        agentSelection = true;
+        try {
+          commands.handle(command);
+        } finally {
+          agentSelection = false;
+        }
+        return { id };
+      };
+      if (contentReady || selectedTab() !== pane.tab)
+        return Promise.resolve(run());
+      // The tab shows only after a native view hid: split and directional
+      // focus measure it, so the command waits for that, within a bound.
+      const page = elements.container.ownerDocument.defaultView!;
+      return new Promise((resolve) => {
+        // Settles once: the command may select again, which activates again.
+        const finish = (result: () => AgentActionResult) => {
+          activated.delete(shown);
+          page.clearTimeout(timer);
+          resolve(result());
+        };
+        const shown = () => finish(run);
+        const timer = page.setTimeout(
+          () => finish(() => unavailable),
+          AGENT_ACTIVATION_MS,
+        );
+        activated.add(shown);
+      });
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

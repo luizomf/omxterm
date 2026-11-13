@@ -428,16 +428,16 @@ describe("renderer Terminal Tabs for agents", () => {
     expect(selectedStates(harness.strip)).toEqual(["1:false", "2:true"]);
 
     // s1 sits in the hidden first tab: the close lands there, not on s2.
-    expect(
+    await expect(
       harness.tabs.runSessionCommand("one", "s1", { action: "close" }),
-    ).toEqual({ id: "one" });
+    ).resolves.toEqual({ id: "one" });
     expect(harness.surfaces[0]!.dispose).toHaveBeenCalledOnce();
     expect(harness.surfaces[1]!.dispose).not.toHaveBeenCalled();
 
     // An unknown pane runs nothing.
-    expect(
+    await expect(
       harness.tabs.runSessionCommand("two", "s9", { action: "close" }),
-    ).toEqual({ id: "two", error: "unknown-pane" });
+    ).resolves.toEqual({ id: "two", error: "unknown-pane" });
     expect(harness.surfaces[1]!.dispose).not.toHaveBeenCalled();
     harness.tabs.dispose();
   });

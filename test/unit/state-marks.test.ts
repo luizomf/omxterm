@@ -120,20 +120,21 @@ it("shows a window mark on every pane, later panes and every tab, and in the cor
   marks.set(panes[0]!, "mirror", { glyph: "mirror", label: "Source" });
   marks.setWindow("agent", {
     glyph: "agent",
-    label: "Agents can control and read this window.",
-    action: { label: "Click to stop.", run: stop },
+    label: "Agents can do anything you can in this window.",
+    action: { label: "Click this mark to stop them.", run: stop },
   });
-  const agent = "Agents can control and read this window. Click to stop.";
+  const agent =
+    "Agents can do anything you can in this window. Click this mark to stop them.";
   // The window's mark sits at the edge, after the pane's own.
   expect(paneLabels(panes[0]!)).toEqual(["Source", agent]);
   expect(paneLabels(panes[1]!)).toEqual([agent]);
   expect(labels(marks.tab(tab))).toEqual([
     "Source",
-    "Agents can control and read this window.",
+    "Agents can do anything you can in this window.",
   ]);
   // An Application Tab carries only the window's mark.
   expect(labels(marks.tab(undefined))).toEqual([
-    "Agents can control and read this window.",
+    "Agents can do anything you can in this window.",
   ]);
 
   const later = document.createElement("main");

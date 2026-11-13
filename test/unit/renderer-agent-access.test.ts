@@ -147,19 +147,21 @@ it("answers main's tab requests with the window's tabs", () => {
   expect(main.bridge.tabsResult).toHaveBeenCalledWith(result);
 });
 
-it("runs main's shortcut actions on the pane they name and answers", () => {
+it("runs main's shortcut actions on the pane they name and answers", async () => {
   const main = bridge();
   const id = "00000000-0000-0000-0000-000000000009";
   const tabs = {
     ...fakeTabs(),
-    runSessionCommand: vi.fn(() => ({ id })),
+    runSessionCommand: vi.fn(async () => ({ id })),
   };
   subscribeToAgentAccess(main.bridge, tabs);
   main.action({ id, sessionId: "s3", command: { action: "close-pane" } });
   expect(tabs.runSessionCommand).toHaveBeenCalledWith(id, "s3", {
     action: "close-pane",
   });
-  expect(main.bridge.actionResult).toHaveBeenCalledWith({ id });
+  await vi.waitFor(() =>
+    expect(main.bridge.actionResult).toHaveBeenCalledWith({ id }),
+  );
 });
 
 it("answers main's presses with the pane's encoded bytes", () => {

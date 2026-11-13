@@ -65,10 +65,11 @@ export function subscribeToAgentAccess(
   const removeTabs = bridge.onTabs((request) =>
     bridge.tabsResult(tabs.agentTabs(request.id)),
   );
-  const removeAction = bridge.onAction((request) =>
-    bridge.actionResult(
-      tabs.runSessionCommand(request.id, request.sessionId, request.command),
-    ),
+  const removeAction = bridge.onAction(
+    (request) =>
+      void tabs
+        .runSessionCommand(request.id, request.sessionId, request.command)
+        .then((result) => bridge.actionResult(result)),
   );
   return () => {
     removeAction();
