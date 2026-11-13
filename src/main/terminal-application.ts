@@ -10,6 +10,7 @@ import type {
   TerminalClipboardAction,
   TerminalContextMenuTarget,
   TerminalExportContext,
+  TerminalSessionId,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
 import type {
@@ -65,6 +66,8 @@ export interface TerminalSessionActivity {
   hasBusyFocusedSession?(): boolean;
   claimContextMenuTarget?(target: TerminalContextMenuTarget): boolean;
   hasBusySession(): boolean;
+  // Any Busy Session among these, wherever they are (an agent's close).
+  hasBusySessionAmong?(sessionIds: readonly TerminalSessionId[]): boolean;
 }
 
 interface TerminalWindowInstance<Window extends NativeTerminalWindow> {
@@ -133,6 +136,10 @@ export interface TerminalApplication<
   closeSelectedWindow(): Promise<void>;
   requestWindowClose(window: Window): Promise<void>;
   mayCloseWindow(window: Window): boolean;
+  agentCloseNeedsUser(
+    window: Window,
+    sessionIds: readonly TerminalSessionId[],
+  ): boolean;
   forceCloseWindow(window: Window): void;
   requestQuit(): Promise<void>;
   newTabInSelectedWindow(): void;
@@ -347,6 +354,9 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         !state.sessionActivity.hasBusySession()
       );
     },
+    agentCloseNeedsUser: (window, sessionIds) =>
+      window.isDestroyed() ||
+      agentCloseNeedsUser(windows.get(window), confirmCloseEnabled, sessionIds),
     forceCloseWindow,
     requestQuit() {
       if (quitting) return Promise.resolve();
@@ -433,6 +443,22 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     },
     isQuitting: () => quitting,
   };
+}
+
+// An agent's close never raises the Busy Session confirmation (ADR 0052):
+// with confirmClose on, a Busy Session among the panes it would close, or a
+// close the user is already confirming, leaves it to the user.
+function agentCloseNeedsUser(
+  state: TerminalWindowState | undefined,
+  confirmClose: boolean,
+  sessionIds: readonly TerminalSessionId[],
+): boolean {
+  if (!state || state.closeRequest || state.tabCloseRequest) return true;
+  if (!confirmClose) return false;
+  return (
+    state.sessionActivity.hasBusySessionAmong?.(sessionIds) ??
+    state.sessionActivity.hasBusySession()
+  );
 }
 
 function confirmTabClose<Window extends NativeTerminalWindow>(

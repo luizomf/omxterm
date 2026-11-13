@@ -2,6 +2,8 @@ import type { IpcRenderer, IpcRendererEvent } from "electron";
 import {
   agentIpc,
   isAgentAccessState,
+  isAgentActionRequest,
+  isAgentActionResult,
   isAgentPressRequest,
   isAgentPressResult,
   isAgentReadRequest,
@@ -11,10 +13,9 @@ import {
   type AgentAccessBridge,
 } from "../shared/agent-access";
 
-// A window's agent grant (ADR 0052): main's state, reads, tab lists and
-// presses in; confirmations, stops, read results, tab lists and encoded
-// presses out. Payloads are
-// checked both ways.
+// A window's agent grant (ADR 0052): main's state, reads, tab lists, presses
+// and shortcut actions in; confirmations, stops, read results, tab lists,
+// encoded presses and action results out. Payloads are checked both ways.
 export function createAgentBridge(
   ipcRenderer: Pick<IpcRenderer, "send" | "on" | "removeListener">,
 ): AgentAccessBridge {
@@ -63,6 +64,18 @@ export function createAgentBridge(
       if (!isAgentTabsResult(result))
         throw new TypeError("Invalid agent tabs result");
       ipcRenderer.send(agentIpc.tabsResult, result);
+    },
+    onAction(listener) {
+      const handler = (_event: IpcRendererEvent, payload: unknown) => {
+        if (isAgentActionRequest(payload)) listener(payload);
+      };
+      ipcRenderer.on(agentIpc.action, handler);
+      return () => ipcRenderer.removeListener(agentIpc.action, handler);
+    },
+    actionResult(result) {
+      if (!isAgentActionResult(result))
+        throw new TypeError("Invalid agent action result");
+      ipcRenderer.send(agentIpc.actionResult, result);
     },
   };
 }

@@ -18,8 +18,13 @@ import {
   type AgentErrorCode,
   type AgentKeyChord,
 } from "../shared/agent-api";
-import type { AgentWindowTab } from "../shared/agent-access";
+import type {
+  AgentWindowCommand,
+  AgentWindowTab,
+} from "../shared/agent-access";
 import type { TerminalSessionId } from "../shared/terminal-contract";
+import type { TerminalActionName } from "../shared/terminal-keybinds";
+import { AGENT_SHORTCUTS } from "./agent-shortcuts";
 import type { AgentSessionPort } from "./terminal-ipc-types";
 
 export class AgentApiError extends Error {
@@ -58,6 +63,21 @@ export interface AgentCommandsOptions {
   ) => Promise<string>;
   /** The window's tabs and the session ids of their panes, as it shows them. */
   readonly tabs: (signal: AbortSignal) => Promise<readonly AgentWindowTab[]>;
+  /** The action a press chord runs, from the window's effective shortcuts. */
+  readonly shortcut?: (chord: string) => TerminalActionName | undefined;
+  /**
+   * Focuses the pane in the window, selecting its tab, then runs the
+   * command; rejects with an AgentApiError.
+   */
+  readonly act?: (
+    sessionId: TerminalSessionId,
+    command: AgentWindowCommand,
+    signal: AbortSignal,
+  ) => Promise<void>;
+  /** Whether closing these sessions would ask the user (ADR 0017). */
+  readonly closeNeedsUser?: (
+    sessionIds: readonly TerminalSessionId[],
+  ) => boolean;
   /** Decides which chords the user's own press would send; process.platform. */
   readonly platform?: string;
   readonly now?: () => number;
@@ -104,8 +124,10 @@ function argumentsOf(
 const unsupportedPress = () =>
   new AgentApiError(
     "unsupported-key",
-    "press takes Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, with any of Ctrl+, Alt+ and Shift+.",
+    "press sends Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, with any of Ctrl+, Alt+ and Shift+, to the pane; any other chord must be one of the window's tab or pane shortcuts.",
   );
+const revoked = () =>
+  new AgentApiError("revoked", "The user stopped agent access.");
 
 // 1 to MAX_AGENT_KEYS key names, for send and press.
 function keyNames(value: unknown): string[] {
@@ -127,6 +149,51 @@ function pressChords(value: unknown, platform: string): AgentKeyChord[] {
       throw unsupportedPress();
     return chord;
   });
+}
+
+// The one tab or pane action a press runs, if any. A refused or parked
+// shortcut answers before anything happens, whatever else the press holds.
+function pressedShortcut(
+  names: readonly string[],
+  shortcut: AgentCommandsOptions["shortcut"],
+): TerminalActionName | undefined {
+  const actions = names.map((name) =>
+    name.length <= 64 ? shortcut?.(name) : undefined,
+  );
+  const kinds = actions.map((action) =>
+    action === undefined ? undefined : AGENT_SHORTCUTS[action].kind,
+  );
+  if (kinds.includes("refused"))
+    throw new AgentApiError(
+      "refused",
+      "Only the user can allow or stop agents in this window.",
+    );
+  const parked = actions[kinds.indexOf("not-yet")];
+  if (parked)
+    throw new AgentApiError(
+      "not-yet",
+      `${parked} opens UI that agents can't use yet.`,
+    );
+  const run = actions[kinds.indexOf("run")];
+  if (run && names.length > 1)
+    throw invalid("Press a tab or pane shortcut on its own.");
+  return run;
+}
+
+// The panes a close would take: the named one, or every pane of its tab.
+async function closedBy(
+  closes: "pane" | "tab",
+  sessionId: TerminalSessionId,
+  tabs: AgentCommandsOptions["tabs"],
+  signal: AbortSignal,
+): Promise<readonly TerminalSessionId[]> {
+  if (closes === "pane") return [sessionId];
+  const tab = (await tabs(signal)).find((entry) =>
+    entry.panes.includes(sessionId),
+  );
+  if (!tab)
+    throw new AgentApiError("unknown-pane", "No such pane in this window.");
+  return tab.panes;
 }
 
 // Settles when check() returns a value, the signal aborts or time runs out.
@@ -246,6 +313,32 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     );
   };
 
+  // The user's click on a pane, then their press: the window focuses the pane
+  // (selecting its tab) and runs the action there. A close that would ask
+  // to confirm a Busy Session is the user's to make.
+  const runShortcut = async (
+    sessionId: TerminalSessionId,
+    action: TerminalActionName,
+    signal: AbortSignal,
+  ) => {
+    const shortcut = AGENT_SHORTCUTS[action];
+    if (shortcut.kind !== "run" || !options.act) throw unsupportedPress();
+    position(sessionId);
+    if (
+      shortcut.closes &&
+      options.closeNeedsUser?.(
+        await closedBy(shortcut.closes, sessionId, options.tabs, signal),
+      ) !== false
+    )
+      throw new AgentApiError(
+        "needs-user",
+        "This close needs the user: a program is still running there.",
+      );
+    if (disposed) throw revoked();
+    await options.act(sessionId, shortcut.command, signal);
+    return { action, pane: sessionId };
+  };
+
   const commands: Record<
     AgentCommand,
     (args: unknown, caller: AgentCaller) => unknown
@@ -335,20 +428,20 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       };
     },
 
-    // Named keys, encoded by the window for the pane's current modes as the
-    // user's key would be, then written here in one write like send.
+    // A chord that is one of the window's shortcuts runs its action (#1050);
+    // named keys are encoded by the window for the pane's current modes, as
+    // the user's key would be, then written here in one write like send.
     async press(args, caller) {
       const value = argumentsOf(args, ["pane", "keys"]);
       const sessionId = pane(value.pane);
-      const keys = pressChords(
-        value.keys,
-        options.platform ?? process.platform,
-      );
+      const names = keyNames(value.keys);
+      const action = pressedShortcut(names, options.shortcut);
+      if (action) return runShortcut(sessionId, action, caller.signal);
+      const keys = pressChords(names, options.platform ?? process.platform);
       await caughtUp(sessionId, caller.signal);
       const data = await options.encode(sessionId, keys, caller.signal);
       // The grant may have ended while the window encoded.
-      if (disposed)
-        throw new AgentApiError("revoked", "The user stopped agent access.");
+      if (disposed) throw revoked();
       if (data === "") throw unsupportedPress();
       const offset = position(sessionId).sent;
       const receipt = options.sessions.write(sessionId, data);

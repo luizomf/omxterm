@@ -60,6 +60,7 @@ export function subscribeToWindowAttention(
     | "readSession"
     | "encodeSessionKeys"
     | "agentTabs"
+    | "runSessionCommand"
   >,
 ): () => void {
   const removeAttention = bridge.onSessionAttention((sessionId, pending) =>

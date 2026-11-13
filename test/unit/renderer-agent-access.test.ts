@@ -6,6 +6,7 @@ import {
 import type {
   AgentAccessBridge,
   AgentAccessState,
+  AgentActionRequest,
   AgentPressRequest,
   AgentReadRequest,
   AgentTabsRequest,
@@ -18,6 +19,7 @@ function bridge() {
   let read: ((value: AgentReadRequest) => void) | undefined;
   let press: ((value: AgentPressRequest) => void) | undefined;
   let tabsListener: ((value: AgentTabsRequest) => void) | undefined;
+  let action: ((value: AgentActionRequest) => void) | undefined;
   const value = {
     onState: vi.fn((listener: (value: AgentAccessState) => void) => {
       state = listener;
@@ -40,6 +42,11 @@ function bridge() {
       return () => (tabsListener = undefined);
     }),
     tabsResult: vi.fn(),
+    onAction: vi.fn((listener: (value: AgentActionRequest) => void) => {
+      action = listener;
+      return () => (action = undefined);
+    }),
+    actionResult: vi.fn(),
   } satisfies AgentAccessBridge;
   return {
     bridge: value,
@@ -47,11 +54,13 @@ function bridge() {
     read: (next: AgentReadRequest) => read?.(next),
     press: (next: AgentPressRequest) => press?.(next),
     tabs: (next: AgentTabsRequest) => tabsListener?.(next),
+    action: (next: AgentActionRequest) => action?.(next),
     subscribed: () =>
       state !== undefined ||
       read !== undefined ||
       press !== undefined ||
-      tabsListener !== undefined,
+      tabsListener !== undefined ||
+      action !== undefined,
   };
 }
 
@@ -63,9 +72,10 @@ const fakeTabs = () => ({
   readSession: vi.fn(),
   encodeSessionKeys: vi.fn(),
   agentTabs: vi.fn(),
+  runSessionCommand: vi.fn(),
 });
 
-it("shows the accent mark before confirming, flashes once and stops on click", () => {
+it("shows the mark before confirming, flashes once and stops on click", () => {
   const main = bridge();
   const tabs = fakeTabs();
   const unsubscribe = subscribeToAgentAccess(main.bridge, tabs);
@@ -81,8 +91,12 @@ it("shows the accent mark before confirming, flashes once and stops on click", (
 
   main.state({ state: "granted" });
   expect(tabs.flash.mock.calls.map(([text]) => say(text))).toEqual([
-    "Agents can now control and read this window. Click ◆ to stop.",
+    "Agents can now do anything you can in this window. Click ◆ to stop them.",
   ]);
+  expect(say(mark!.label)).toBe(
+    "Agents can do anything you can in this window.",
+  );
+  expect(say(mark!.action!.label)).toBe("Click this mark to stop them.");
   mark?.action?.run();
   expect(main.bridge.stop).toHaveBeenCalledOnce();
 
@@ -111,6 +125,7 @@ it("answers main's reads with the pane's text", () => {
     readSession: vi.fn(() => result),
     encodeSessionKeys: vi.fn(),
     agentTabs: vi.fn(),
+    runSessionCommand: vi.fn(),
   };
   subscribeToAgentAccess(main.bridge, tabs);
   main.read({ id: result.id, sessionId: "s2", lines: 5 });
@@ -130,6 +145,21 @@ it("answers main's tab requests with the window's tabs", () => {
   main.tabs({ id });
   expect(tabs.agentTabs).toHaveBeenCalledWith(id);
   expect(main.bridge.tabsResult).toHaveBeenCalledWith(result);
+});
+
+it("runs main's shortcut actions on the pane they name and answers", () => {
+  const main = bridge();
+  const id = "00000000-0000-0000-0000-000000000009";
+  const tabs = {
+    ...fakeTabs(),
+    runSessionCommand: vi.fn(() => ({ id })),
+  };
+  subscribeToAgentAccess(main.bridge, tabs);
+  main.action({ id, sessionId: "s3", command: { action: "close-pane" } });
+  expect(tabs.runSessionCommand).toHaveBeenCalledWith(id, "s3", {
+    action: "close-pane",
+  });
+  expect(main.bridge.actionResult).toHaveBeenCalledWith({ id });
 });
 
 it("answers main's presses with the pane's encoded bytes", () => {

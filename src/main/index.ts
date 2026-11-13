@@ -22,6 +22,7 @@ import { registerExtensionViewScheme } from "./extension-view-host";
 import { sendExtensionAwareClipboard } from "./extension-view-ipc";
 import { coreActionMenuTemplate } from "./application-menu";
 import {
+  coreActionKeybinds,
   createCoreActionCatalog,
   type CoreActionCatalog,
 } from "./action-catalog";
@@ -40,6 +41,7 @@ import {
 import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
 import { startAgentAccess, type AgentAccess } from "./agent-access";
+import { agentShortcutAction } from "./agent-shortcuts";
 import { displayAccelerator } from "../shared/terminal-keybinds";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import {
@@ -306,6 +308,13 @@ app
           platform: process.platform,
           operationalEvents: operationalEvents!,
           changed: syncAgentMenu,
+          // The live catalog, as before-input-event matches: rebinds count.
+          shortcut: (chord) =>
+            agentShortcutAction(
+              coreActionKeybinds(actionCatalog),
+              chord,
+              process.platform,
+            ),
         });
         void agentAccess.removeLeftovers().catch(() => {});
         app.on("browser-window-focus", syncAgentMenu);
@@ -622,6 +631,9 @@ app
               window,
               lifecycle.windowId,
               controller.agentSessions,
+              (sessionIds) =>
+                terminalApplication?.agentCloseNeedsUser(window, sessionIds) ??
+                true,
             );
             semanticInput.register(window);
             extensions!.registerWindow(window, (source, context) =>

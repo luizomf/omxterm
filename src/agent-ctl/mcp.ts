@@ -34,7 +34,7 @@ const CAPABILITIES = { tools: {} };
 const MCP_WAIT_TIMEOUT_MS = 50_000;
 const MAX_LINE_CHARS = 4 * 1024 * 1024;
 
-const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
+const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press; press also runs the window's tab and pane shortcuts (new tab, split, close pane) on the pane it names, then list shows the result. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
 
 const window = {
   type: "integer",
@@ -127,7 +127,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "press",
-    "Press keys in a pane, encoded for the pane's current modes exactly as the user's own keys, for full-screen programs and menus (arrows in vim, less, htop). Answers the output offset to pass to wait as after.",
+    "Press keys in a pane, encoded for the pane's current modes exactly as the user's own keys, for full-screen programs and menus (arrows in vim, less, htop); answers the output offset to pass to wait as after. A key that is one of the window's tab or pane shortcuts (new, close, next, previous or select tab, split, close pane, focus or swap panes, equalize; Cmd+T on macOS, Ctrl+Shift+T on Linux) runs that action on the pane instead, pressed alone, and answers the action and pane. Closing a pane whose program is still running answers needs-user; the grant toggle is refused.",
     {
       pane,
       keys: {
@@ -135,7 +135,7 @@ const TOOLS: readonly Tool[] = [
         items: { type: "string" },
         minItems: 1,
         description:
-          "Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, each with any of Ctrl+, Alt+ and Shift+, such as Ctrl+Shift+Up.",
+          "Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, each with any of Ctrl+, Alt+ and Shift+, such as Ctrl+Shift+Up; or one shortcut chord such as Cmd+T or Ctrl+Shift+E.",
       },
       window,
     },
@@ -257,10 +257,11 @@ async function callTool(
   try {
     const options = toolOptions(params.name, params.arguments, defaults);
     const outcome = await execute(options, signal);
-    // send without wait and press print nothing; the offset is what wait needs.
+    // send without wait prints nothing; the offset is what wait needs. press
+    // answers its receipt or the action it ran, as JSON either way.
     return text(
-      outcome.output === "" &&
-        (options.command === "send" || options.command === "press")
+      options.command === "press" ||
+        (outcome.output === "" && options.command === "send")
         ? JSON.stringify(outcome.result)
         : outcome.output,
       false,

@@ -512,3 +512,29 @@ it("retains Settings draft and focus, but activates it only after native hide", 
   expect(editor.value).toBe("retained draft");
   expect(document.activeElement).toBe(editor);
 });
+
+it("keeps the window's mark clickable over an extension tab, with or without the tab strip", async () => {
+  const h = harness();
+  await h.tabs.ready;
+  const stop = vi.fn();
+  h.tabs.setWindowMark("agent", {
+    glyph: "agent",
+    label: "Agents can do anything you can in this window.",
+    action: { label: "Click this mark to stop them.", run: stop },
+  });
+  h.open();
+  await settle();
+  // Every tab carries the glyph, but a tab button's can't be clicked.
+  expect(selectedStates(h.strip)).toEqual(["◆1:false", "◆view-a:true"]);
+  const corner = () =>
+    document.querySelector<HTMLButtonElement>(".state-marks-corner button");
+  expect(h.strip.hidden).toBe(false);
+  corner()!.click();
+  h.tabs.toggleTabBar();
+  expect(h.strip.hidden).toBe(true);
+  corner()!.click();
+  expect(stop).toHaveBeenCalledTimes(2);
+  h.tabs.handleCommand({ action: "previous" });
+  await settle();
+  expect(corner()).toBeNull();
+});

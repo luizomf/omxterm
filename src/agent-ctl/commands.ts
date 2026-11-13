@@ -373,8 +373,19 @@ async function run(
         EXIT.usage,
         "press needs at least one key, such as Up.",
       );
-    const result = await client.request("press", { pane, keys });
-    return done(options.json ? JSON.stringify(result) : "", result);
+    const result = (await client.request("press", { pane, keys })) as {
+      action?: string;
+      pane?: string;
+    };
+    // A shortcut says which action ran on which pane; keys print nothing.
+    return done(
+      options.json
+        ? JSON.stringify(result)
+        : result.action
+          ? `${result.action}\t${result.pane}`
+          : "",
+      result,
+    );
   }
   if (options.command === "read") {
     const result = (await client.request("read", {

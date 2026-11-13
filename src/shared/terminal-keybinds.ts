@@ -382,6 +382,26 @@ export interface AcceleratorKeyboardInput {
   readonly shift: boolean;
 }
 
+// The key press an accelerator spells, as data: an agent's press chord
+// ("Cmd+T", "Ctrl+Shift+]") goes through the same matcher as a real key
+// (ADR 0052). Chords the grammar refuses, such as a bare "Up", name no
+// shortcut.
+export function keyboardInputForAccelerator(
+  value: string,
+  platform: string = "darwin",
+): AcceleratorKeyboardInput | undefined {
+  const parsed = parseAccelerator(value, platform);
+  if (!parsed) return undefined;
+  return {
+    key: parsed.key,
+    control: parsed.modifiers.has("ctrl"),
+    meta: parsed.modifiers.has("cmd"),
+    alt: parsed.modifiers.has("alt"),
+    altGr: parsed.modifiers.has("altgr"),
+    shift: parsed.modifiers.has("shift"),
+  };
+}
+
 // Resolves the same native identity as duplicate detection. Shifted symbols
 // require their logical character and native position to agree; this does not
 // infer arbitrary layout characters from physical positions. Plus additionally

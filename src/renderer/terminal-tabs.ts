@@ -9,6 +9,8 @@ import {
 } from "./state-marks";
 import {
   agentTail,
+  type AgentActionResult,
+  type AgentWindowCommand,
   type AgentPressResult,
   type AgentReadResult,
   type AgentTabsResult,
@@ -187,6 +189,13 @@ export interface TerminalTabs {
   // The window's tabs for the agent API: ids, titles and the sessions of
   // each tab's panes (settings and hosted tabs have none).
   agentTabs(id: string): AgentTabsResult;
+  // An agent's tab or pane shortcut: focus the session's pane, selecting its
+  // tab, then run the command there, as the user's click and press would.
+  runSessionCommand(
+    id: string,
+    sessionId: TerminalSessionId,
+    command: AgentWindowCommand,
+  ): AgentActionResult;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -264,10 +273,11 @@ export function createTerminalTabs(
     {
       panes: () => terminalTabs().flatMap(tabPanes),
       corner: elements.container,
-      // Only when nothing else carries them: no tab strip, no pane.
+      // Whenever no pane shows them: a tab button's glyph can't be clicked,
+      // and the grant's mark is the one-click stop (ADR 0052).
       cornerShown: () => {
         const tab = selectedApplicationTab();
-        return elements.strip.hidden && !!tab && tab.kind !== "terminal";
+        return !!tab && tab.kind !== "terminal";
       },
     },
   );
@@ -602,6 +612,20 @@ export function createTerminalTabs(
               : [],
         })),
       };
+    },
+    runSessionCommand(id, sessionId, command) {
+      const pane = disposed
+        ? undefined
+        : findPaneBySession(terminalTabs(), sessionId);
+      if (!pane || pane.removed || pane.tab.removed)
+        return { id, error: "unknown-pane" };
+      if (closing) return { id, error: "unavailable" };
+      revealSession(sessionId);
+      // A dialog over the window keeps its selection; never act elsewhere.
+      if (selectedTab() !== pane.tab || pane.tab.focused !== pane)
+        return { id, error: "unavailable" };
+      commands.handle(command);
+      return { id };
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

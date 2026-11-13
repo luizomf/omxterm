@@ -2,10 +2,12 @@ import { randomBytes, randomUUID } from "node:crypto";
 import type { AgentCommand, AgentErrorCode } from "../shared/agent-api";
 import {
   agentIpc,
+  isAgentActionResult,
   isAgentPressResult,
   isAgentReadResult,
   isAgentTabsResult,
   type AgentAccessState,
+  type AgentActionResult,
   type AgentPressResult,
   type AgentReadResult,
   type AgentTabsResult,
@@ -25,6 +27,8 @@ import {
 } from "./agent-endpoint";
 import { createGrantFiles } from "./agent-grant-files";
 import type { OperationalEventLog } from "./operational-events";
+import type { TerminalSessionId } from "../shared/terminal-contract";
+import type { TerminalActionName } from "../shared/terminal-keybinds";
 import type {
   AgentSessionPort,
   IpcEvent,
@@ -63,6 +67,9 @@ interface Entry {
   readonly contents: AgentAccessWindow["webContents"];
   readonly windowId: number;
   readonly sessions: AgentSessionPort;
+  readonly closeNeedsUser?: (
+    sessionIds: readonly TerminalSessionId[],
+  ) => boolean;
   state: "off" | "pending" | "granted";
   token?: Buffer;
   // Only a credential this process wrote is ours to remove: another process
@@ -72,7 +79,7 @@ interface Entry {
   confirmTimer?: ReturnType<typeof setTimeout>;
   admitting?: boolean;
   readmit?: boolean;
-  // Reads, tab lists and presses the window hasn't answered yet.
+  // Reads, tab lists, presses and actions the window hasn't answered yet.
   readonly pending: PendingRequests;
   cleanup(): void;
 }
@@ -96,6 +103,8 @@ export interface AgentAccessOptions {
   readonly operationalEvents?: Pick<OperationalEventLog, "write">;
   /** A window's grant changed; the Window menu's check mark follows it. */
   readonly changed?: () => void;
+  /** The action a press chord runs, from the effective shortcuts. */
+  readonly shortcut?: (chord: string) => TerminalActionName | undefined;
 }
 
 export { agentSocketPath } from "./agent-grant-files";
@@ -184,6 +193,18 @@ function settlePress(pending: PendingRequests, result: AgentPressResult) {
   else request.resolve(result.data);
 }
 
+function settleAction(pending: PendingRequests, result: AgentActionResult) {
+  const request = pending.get(result.id);
+  if (request?.channel !== agentIpc.action) return;
+  if ("error" in result)
+    request.reject(
+      result.error === "unknown-pane"
+        ? new AgentApiError("unknown-pane", "No such pane in this window.")
+        : new AgentApiError("unavailable", "The window can't run that now."),
+    );
+  else request.resolve(undefined);
+}
+
 function settleTabs(pending: PendingRequests, result: AgentTabsResult) {
   const request = pending.get(result.id);
   if (request?.channel !== agentIpc.tabs) return;
@@ -225,18 +246,36 @@ function answerListener<R>(
   };
 }
 
-// A granted window's commands; its reads, tab lists and presses are asked of the window.
-function commandsFor(entry: Entry): AgentCommands {
+// A granted window's commands; its reads, tab lists, presses and shortcut
+// actions are asked of the window.
+function commandsFor(
+  entry: Entry,
+  shortcut: AgentAccessOptions["shortcut"],
+): AgentCommands {
   const ask = <T>(channel: string, request: object, signal: AbortSignal) =>
     requestWindow<T>(entry.contents, entry.pending, channel, request, signal);
   return createAgentCommands({
     sessions: entry.sessions,
+    ...(shortcut ? { shortcut } : {}),
+    ...(entry.closeNeedsUser ? { closeNeedsUser: entry.closeNeedsUser } : {}),
+    act: (sessionId, command, signal) =>
+      ask<void>(agentIpc.action, { sessionId, command }, signal),
     read: (sessionId, lines, signal) =>
       ask<AgentPaneText>(agentIpc.read, { sessionId, lines }, signal),
     encode: (sessionId, keys, signal) =>
       ask<string>(agentIpc.press, { sessionId, keys }, signal),
     tabs: (signal) => ask<readonly AgentWindowTab[]>(agentIpc.tabs, {}, signal),
   });
+}
+
+function sendState(entry: Entry, state: AgentAccessState) {
+  try {
+    // A crashed renderer has no frame to receive it.
+    if (!entry.contents.isDestroyed() && !entry.contents.isCrashed?.())
+      entry.contents.send(agentIpc.state, state);
+  } catch {
+    // A window being torn down has no marks left to update.
+  }
 }
 
 /**
@@ -255,16 +294,6 @@ export function startAgentAccess(options: AgentAccessOptions) {
     [...entries.values()].find((entry) => entry.windowId === windowId);
   const active = () =>
     [...entries.values()].some((entry) => entry.state !== "off");
-
-  const sendState = (entry: Entry, state: AgentAccessState) => {
-    try {
-      // A crashed renderer has no frame to receive it.
-      if (!entry.contents.isDestroyed() && !entry.contents.isCrashed?.())
-        entry.contents.send(agentIpc.state, state);
-    } catch {
-      // A window being torn down has no marks left to update.
-    }
-  };
 
   const endpoint = createAgentEndpoint(socketPath, instance, {
     token: (windowId) => {
@@ -373,7 +402,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
       return;
     }
     entry.state = "granted";
-    entry.commands = commandsFor(entry);
+    entry.commands = commandsFor(entry, options.shortcut);
     sendState(entry, { state: "granted" });
     log?.write({
       name: "agent.grant",
@@ -429,6 +458,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
     listen(agentIpc.readResult, isAgentReadResult, settleRead),
     listen(agentIpc.pressResult, isAgentPressResult, settlePress),
     listen(agentIpc.tabsResult, isAgentTabsResult, settleTabs),
+    listen(agentIpc.actionResult, isAgentActionResult, settleAction),
   ];
   options.ipc.on(agentIpc.shown, shownListener);
   options.ipc.on(agentIpc.stop, stopListener);
@@ -439,6 +469,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
       window: AgentAccessWindow,
       windowId: number,
       sessions: AgentSessionPort | undefined,
+      closeNeedsUser?: (sessionIds: readonly TerminalSessionId[]) => boolean,
     ) {
       if (!sessions) return;
       const contents = window.webContents;
@@ -458,6 +489,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
         contents,
         windowId,
         sessions,
+        ...(closeNeedsUser ? { closeNeedsUser } : {}),
         state: "off",
         pending: new Map(),
         cleanup() {

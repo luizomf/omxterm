@@ -9,7 +9,9 @@ import { EventEmitter } from "node:events";
 import path from "node:path";
 import { expect, vi } from "vitest";
 import { agentSocketPath, startAgentAccess } from "../../src/main/agent-access";
+import { agentShortcutAction } from "../../src/main/agent-shortcuts";
 import { agentIpc } from "../../src/shared/agent-access";
+import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 import { useAgentHarness } from "../fixtures/agent-access-harness";
 import { createIpcHarness } from "../fixtures/terminal-ipc-harness";
 
@@ -367,3 +369,55 @@ posix("settles a read and a press only with their own answers", async () => {
   expect(port.writes).toEqual([["s1", "<ok>"]]);
   expect((await ctl(profile, ["read", "s1"], pane)).stdout).toBe("text\n");
 });
+
+posix(
+  "runs a tab shortcut on the pane the client names, and a stop fails one in flight",
+  async () => {
+    const { profile, pane, access, window, contents, port, ipc, event, shown } =
+      setup("darwin", {
+        shortcut: (chord) =>
+          agentShortcutAction(
+            terminalDefaultKeybinds("darwin"),
+            chord,
+            "darwin",
+          ),
+        closeNeedsUser: () => false,
+      });
+    access.toggle(window);
+    await shown();
+    contents.send.mockImplementation((channel: string, payload: unknown) => {
+      if (channel === agentIpc.action)
+        setImmediate(() =>
+          ipc.listeners.get(agentIpc.actionResult)!(event, {
+            id: (payload as { id: string }).id,
+          }),
+        );
+    });
+    const ran = await ctl(profile, ["press", "s2", "Cmd+T"], pane);
+    expect(ran).toMatchObject({ code: 0, stdout: "newTab\ts2\n" });
+    expect(
+      contents.send.mock.calls.filter(
+        ([channel]) => channel === agentIpc.action,
+      ),
+    ).toEqual([
+      [
+        agentIpc.action,
+        {
+          id: expect.any(String) as unknown,
+          sessionId: "s2",
+          command: { action: "new" },
+        },
+      ],
+    ]);
+    expect(port.writes).toEqual([]);
+
+    // The user clicks the mark while the window is still running it.
+    contents.send.mockImplementation((channel: string) => {
+      if (channel === agentIpc.action)
+        setImmediate(() => ipc.listeners.get(agentIpc.stop)!(event));
+    });
+    const stopped = await ctl(profile, ["press", "s1", "Cmd+Alt+W"], pane);
+    expect(stopped.code).toBe(1);
+    expect(stopped.stderr).toMatch(/stopped agent access/u);
+  },
+);
