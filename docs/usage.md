@@ -129,7 +129,7 @@ If the window is in the background, or the program's tab isn't selected, OMXTerm
 
 Most agents only send these to terminals they recognize, so you may need to tell them to:
 
-- **Claude Code:** set `preferredNotifChannel` to `iterm2` (OSC 9) or `ghostty` (OSC 777, with a title) in `/config` or `~/.claude.json`. Claude Code shows its own progress only in terminals it recognizes, so its working mark doesn't appear in OMXTerm.
+- **Claude Code:** set `preferredNotifChannel` to `iterm2` (OSC 9) or `ghostty` (OSC 777, with a title) in `~/.claude/settings.json`. Claude Code shows its own progress only in terminals it recognizes, so its working mark doesn't appear in OMXTerm.
 - **Codex:** in `~/.codex/config.toml`, under `[tui]`, set `notification_method = "osc9"`.
 - **Gemini CLI:** turn on `general.enableNotifications`; it sends OSC 777 by default.
 
