@@ -33,6 +33,7 @@ they did. Don't look for another way in.
 "$OMXTERM_CTL" list                     # tabs, each with its panes: id, size, focused, self
 "$OMXTERM_CTL" send s2 --text 'npm test' --enter --wait --timeout 300000
 "$OMXTERM_CTL" read s2 --lines 100      # the last 100 lines of s2
+"$OMXTERM_CTL" read s2 --screen         # exactly what s2's screen shows, one line per row
 "$OMXTERM_CTL" wait s2 --idle 2000 --timeout 60000
 "$OMXTERM_CTL" send s2 --keys Ctrl+C    # interrupt
 "$OMXTERM_CTL" press s2 Down Down Enter # move in a menu, then choose
@@ -44,6 +45,10 @@ they did. Don't look for another way in.
   types, presses Enter and waits until the pane goes quiet. It prints `idle`,
   `exited <code>` or `timeout` (exit 124). Then `read` the pane to see what
   happened.
+- `read --screen` answers the rows of the pane's screen, blank ones included,
+  even when the user scrolled back in it. Use it for full-screen programs
+  (vim, less, htop, a menu) and to see a prompt; use `--lines` for the output
+  of a command that scrolled. Not both.
 - `idle` only means no output for a while (500 ms by default, `--idle` to
   change it). A slow command can pause; on `timeout` it is still running. If
   in doubt, `wait` again or `read` and look.
@@ -98,7 +103,8 @@ they did. Don't look for another way in.
 `"$OMXTERM_CTL" mcp` serves the same commands as MCP tools on stdio: `status`,
 `list`, `keys`, `send`, `press`, `read` and `wait`. Their arguments are the CLI's
 options: `pane`, `text`, `keys` (for `press`, the keys to press), `enter`,
-`wait`, `idle`, `timeout`, `lines`, `window`
+`wait`, `idle`, `timeout`, `lines`, `screen` (true reads the screen),
+`window`
 (only needed when several windows are allowed and you aren't in one of them)
 and `after` (the `offset` that `send` returned; only output past it counts).
 The tools work as soon as the user allows the window; until then they answer

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep each agent command's argument checks beside its handler in one table. */
 import {
   agentChordSendsNothing,
   agentKeyBytes,
@@ -19,6 +20,7 @@ import {
   type AgentKeyChord,
 } from "../shared/agent-api";
 import type {
+  AgentPaneRead,
   AgentWindowCommand,
   AgentWindowTab,
 } from "../shared/agent-access";
@@ -57,7 +59,7 @@ export interface AgentCommandsOptions {
   /** The renderer's text for one pane; rejects with an AgentApiError. */
   readonly read: (
     sessionId: TerminalSessionId,
-    lines: number,
+    read: AgentPaneRead,
     signal: AbortSignal,
   ) => Promise<AgentPaneText>;
   /**
@@ -436,18 +438,26 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     async read(args, caller) {
       const value = argumentsOf(args, ["pane"], ["lines", "source"]);
       const sessionId = pane(value.pane);
-      if (value.source !== undefined && value.source !== "tail")
-        throw invalid('Only the "tail" source is available in this version.');
-      const lines = integer(
-        value.lines,
-        "lines",
-        1,
-        MAX_AGENT_READ_LINES,
-        DEFAULT_AGENT_READ_LINES,
-      );
+      let read: AgentPaneRead;
+      if (value.source === "screen") {
+        if (value.lines !== undefined)
+          throw invalid("lines is only for the tail source.");
+        read = { source: "screen" };
+      } else if (value.source === undefined || value.source === "tail") {
+        read = {
+          source: "tail",
+          lines: integer(
+            value.lines,
+            "lines",
+            1,
+            MAX_AGENT_READ_LINES,
+            DEFAULT_AGENT_READ_LINES,
+          ),
+        };
+      } else throw invalid('source must be "tail" or "screen".');
       await caughtUp(sessionId, caller.signal);
       const acknowledged = position(sessionId).acknowledged;
-      const text = await options.read(sessionId, lines, caller.signal);
+      const text = await options.read(sessionId, read, caller.signal);
       return {
         text: text.text,
         ...(text.cols === undefined

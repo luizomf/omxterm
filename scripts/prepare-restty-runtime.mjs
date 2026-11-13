@@ -11,7 +11,10 @@ import { blinkCorrections } from "./restty-blink-corrections.mjs";
 import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
-import { bufferTextCorrections } from "./restty-buffer-text-corrections.mjs";
+import {
+  bufferTextCorrections,
+  screenTextCorrections,
+} from "./restty-buffer-text-corrections.mjs";
 import { idleRenderCorrections } from "./restty-idle-render-corrections.mjs";
 import { idleBlinkCorrections } from "./restty-idle-blink-corrections.mjs";
 import { attentionOscCorrections } from "./restty-attention-osc-corrections.mjs";
@@ -171,8 +174,10 @@ const priorReplyOrderDigest =
   "056d91bbc23901c0bf57d1584bf53502fdd9c25b9f4ce6a3b34ccd7577b83faf";
 const priorKeyPressDigest =
   "db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c";
-const correctedDigest =
+const priorScreenTextDigest =
   "4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321";
+const correctedDigest =
+  "a88f9718d4156431d25df6553ee2942a4c2dea2a0f33ba63f4f9c3560343aa14";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -2062,6 +2067,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, replyOrderCorrections);
       case priorKeyPressDigest:
         source = applyCorrections(source, keyPressCorrections);
+      case priorScreenTextDigest:
+        source = applyCorrections(source, screenTextCorrections);
         break;
       default:
         throw new Error(

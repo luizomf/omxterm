@@ -1280,7 +1280,8 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   except `Ctrl+Space` on macOS, which sends nothing there)
   encoded for the pane's current cursor and Kitty keyboard modes exactly as
   the user's own key, read the last lines of a pane's scrollback
-  and screen (including output from before the grant), and wait until a pane
+  and screen (including output from before the grant) or exactly the rows of
+  its active screen wherever the user scrolled, and wait until a pane
   goes quiet, its program ends or a timeout passes. Panes in hidden tabs
   answer too. The API can't grant, see other windows, or type anywhere but a
   pane's PTY.

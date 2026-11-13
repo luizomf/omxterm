@@ -3,7 +3,10 @@ import { createHash } from "node:crypto";
 import { inputRoutingCorrections } from "../../scripts/restty-input-routing-corrections.mjs";
 import { applicationCursorCorrections } from "../../scripts/restty-application-cursor-corrections.mjs";
 import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
-import { bufferTextCorrections } from "../../scripts/restty-buffer-text-corrections.mjs";
+import {
+  bufferTextCorrections,
+  screenTextCorrections,
+} from "../../scripts/restty-buffer-text-corrections.mjs";
 import { idleRenderCorrections } from "../../scripts/restty-idle-render-corrections.mjs";
 import { idleBlinkCorrections } from "../../scripts/restty-idle-blink-corrections.mjs";
 import { attentionOscCorrections } from "../../scripts/restty-attention-osc-corrections.mjs";
@@ -76,7 +79,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(occurrences + 1);
         return value.replaceAll(corrected, original);
       }, text);
-    const preKeyPress = reverse(source, keyPressCorrections);
+    const preScreenText = reverse(source, screenTextCorrections);
+    expect(hash(preScreenText)).toBe(
+      "4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321",
+    );
+    const preKeyPress = reverse(preScreenText, keyPressCorrections);
     expect(hash(preKeyPress)).toBe(
       "db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c",
     );

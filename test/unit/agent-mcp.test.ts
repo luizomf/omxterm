@@ -64,7 +64,11 @@ posix(
     expect(JSON.parse(sent.text)).toEqual({ receipt: "accepted", offset: 10 });
     expect(port.writes).toEqual([["s2", "ls -la\r"]]);
     expect(await server.call("read", { pane: "s2" })).toEqual({
-      text: "text of s2",
+      text: "tail of s2",
+      isError: false,
+    });
+    expect(await server.call("read", { pane: "s2", screen: true })).toEqual({
+      text: "screen of s2",
       isError: false,
     });
     const pressed = await server.call("press", {

@@ -16,12 +16,19 @@ export function resttyClipboardActions(
     | {
         getSelectionText(): string;
         getBufferText(): string;
+        getScreenText(): string;
         selectAll(): boolean;
       }
     | undefined,
 ): Pick<
   TerminalSurface,
-  "copy" | "paste" | "inject" | "injectTracked" | "selectAll" | "exportText"
+  | "copy"
+  | "paste"
+  | "inject"
+  | "injectTracked"
+  | "selectAll"
+  | "exportText"
+  | "readScreen"
 > {
   return {
     async copy() {
@@ -56,6 +63,7 @@ export function resttyClipboardActions(
         ? interaction.getSelectionText()
         : interaction.getBufferText();
     },
+    readScreen: () => liveSelection()?.getScreenText() ?? "",
   };
 }
 

@@ -264,16 +264,14 @@ it("refuses what later versions add and out-of-range limits", async () => {
     ].map((args) => failure(commands.run("wait", args, caller()))),
   );
   expect(codes).toEqual(Array(5).fill("invalid-request"));
-  expect(
-    await failure(
-      commands.run("read", { pane: "s1", source: "screen" }, caller()),
-    ),
-  ).toBe("invalid-request");
-  expect(
-    await failure(
-      commands.run("read", { pane: "s1", lines: 10_001 }, caller()),
-    ),
-  ).toBe("invalid-request");
+  const reads = await Promise.all(
+    [
+      { pane: "s1", source: "command" },
+      { pane: "s1", source: "screen", lines: 5 },
+      { pane: "s1", lines: 10_001 },
+    ].map((args) => failure(commands.run("read", args, caller()))),
+  );
+  expect(reads).toEqual(Array(3).fill("invalid-request"));
 });
 
 it("reads after the window caught up and reports the consumed offset", async () => {
@@ -303,7 +301,25 @@ it("reads after the window caught up and reports the consumed offset", async () 
     offset: 12,
     truncated: false,
   });
-  expect(read).toHaveBeenCalledWith("s1", 2, expect.any(AbortSignal));
+  expect(read).toHaveBeenCalledWith(
+    "s1",
+    { source: "tail", lines: 2 },
+    expect.any(AbortSignal),
+  );
+  await expect(
+    commands.run("read", { pane: "s1", source: "screen" }, caller()),
+  ).resolves.toMatchObject({ offset: 12 });
+  expect(read).toHaveBeenLastCalledWith(
+    "s1",
+    { source: "screen" },
+    expect.any(AbortSignal),
+  );
+  await commands.run("read", { pane: "s1", source: "tail" }, caller());
+  expect(read).toHaveBeenLastCalledWith(
+    "s1",
+    { source: "tail", lines: 200 },
+    expect.any(AbortSignal),
+  );
 });
 
 it("ends a pending wait when the caller goes away and stops observing on dispose", async () => {

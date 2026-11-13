@@ -44,6 +44,7 @@ const harness = vi.hoisted(() => {
           focus: vi.fn(),
           getSelectionText: this.getSelectionText,
           getBufferText: this.getBufferText,
+          getScreenText: vi.fn(() => ""),
           getVisibleLinkAtClientPoint: vi.fn(() => ({
             id: "visible-1",
             url: "https://example.test",

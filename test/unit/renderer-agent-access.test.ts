@@ -137,8 +137,16 @@ it("answers main's reads with the pane's text", () => {
     cancelAgentCommands: vi.fn(),
   };
   subscribeToAgentAccess(main.bridge, tabs);
-  main.read({ id: result.id, sessionId: "s2", lines: 5 });
-  expect(tabs.readSession).toHaveBeenCalledWith(result.id, "s2", 5);
+  main.read({ id: result.id, sessionId: "s2", source: "tail", lines: 5 });
+  expect(tabs.readSession).toHaveBeenCalledWith(result.id, "s2", {
+    source: "tail",
+    lines: 5,
+  });
+  main.read({ id: result.id, sessionId: "s2", source: "screen" });
+  expect(tabs.readSession).toHaveBeenLastCalledWith(result.id, "s2", {
+    source: "screen",
+  });
+  expect(main.bridge.readResult).toHaveBeenCalledTimes(2);
   expect(main.bridge.readResult).toHaveBeenCalledWith(result);
 });
 

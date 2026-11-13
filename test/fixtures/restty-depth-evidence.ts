@@ -12,7 +12,7 @@ export type DepthPhase = Awaited<
 export function depthExperimentSource(source: string): string {
   if (
     createHash("sha256").update(source).digest("hex") !==
-    "4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321"
+    "a88f9718d4156431d25df6553ee2942a4c2dea2a0f33ba63f4f9c3560343aa14"
   )
     throw new Error("Unreviewed depth experiment runtime");
   const variant = process.env.OMXTERM_DEPTH_VARIANT;

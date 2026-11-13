@@ -83,6 +83,8 @@ Stable 0.32.0 uses the frozen cut `27ea9f7a`; the next development baseline is
 `0.32.1-dev.0`. Its bridge admits ranges that accept both `0.32.0` and
 `0.32.1`. Every catalog archive stays installable unchanged.
 
+The agent API's exact screen read, `read --screen` (#1067), follows: `0.32.1-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

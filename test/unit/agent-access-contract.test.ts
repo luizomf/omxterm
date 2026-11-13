@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import { createAgentBridge } from "../../src/preload/agent-bridge";
 import {
   agentIpc,
+  agentScreen,
   agentTail,
   isAgentAccessState,
   MAX_AGENT_PRESS_CHARS,
@@ -19,6 +20,16 @@ it("reads a tail without the blank rows below the cursor or trailing spaces", ()
   expect(long.truncated).toBe(true);
   expect(long.text.length).toBeLessThanOrEqual(MAX_AGENT_READ_CHARS);
   expect(long.text.codePointAt(0)).toBe(0x1f600);
+});
+
+it("reads every screen row, blank ones included, without trailing spaces", () => {
+  expect(agentScreen("$ ls   \nfile\n\n  \n")).toEqual({
+    text: "$ ls\nfile\n\n\n",
+    truncated: false,
+  });
+  const long = agentScreen("x".repeat(MAX_AGENT_READ_CHARS + 5));
+  expect(long.truncated).toBe(true);
+  expect(long.text.length).toBe(MAX_AGENT_READ_CHARS);
 });
 
 it("lets the window confirm, stop and answer, but passes only valid messages", () => {
@@ -53,9 +64,19 @@ it("lets the window confirm, stop and answer, but passes only valid messages", (
   const reads: unknown[] = [];
   bridge.onRead((request) => reads.push(request));
   const id = "00000000-0000-0000-0000-000000000002";
-  listeners.get(agentIpc.read)!({}, { id, sessionId: "s1", lines: 0 });
-  listeners.get(agentIpc.read)!({}, { id, sessionId: "s1", lines: 5 });
-  expect(reads).toEqual([{ id, sessionId: "s1", lines: 5 }]);
+  for (const payload of [
+    { id, sessionId: "s1", source: "tail", lines: 0 },
+    { id, sessionId: "s1", lines: 5 },
+    { id, sessionId: "s1", source: "screen", lines: 5 },
+    { id, sessionId: "s1", source: "command" },
+    { id, sessionId: "s1", source: "tail", lines: 5 },
+    { id, sessionId: "s1", source: "screen" },
+  ])
+    listeners.get(agentIpc.read)!({}, payload);
+  expect(reads).toEqual([
+    { id, sessionId: "s1", source: "tail", lines: 5 },
+    { id, sessionId: "s1", source: "screen" },
+  ]);
 
   bridge.shown();
   bridge.stop();

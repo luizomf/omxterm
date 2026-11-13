@@ -26,6 +26,7 @@ export type Options = {
   timeout?: number;
   after?: number;
   lines?: number;
+  screen: boolean;
   window?: number;
   profile?: string;
   json: boolean;
@@ -40,6 +41,7 @@ export function parse(argv: readonly string[]): Options {
     keys: [],
     enter: false,
     wait: false,
+    screen: false,
     json: false,
     help: false,
     windowName: "--window",
@@ -82,6 +84,9 @@ export function parse(argv: readonly string[]): Options {
         break;
       case "--lines":
         options.lines = number(argument, value());
+        break;
+      case "--screen":
+        options.screen = true;
         break;
       case "--window":
         options.window = number(argument, value());
@@ -415,6 +420,7 @@ async function run(
   if (options.command === "read") {
     const result = (await client.request("read", {
       pane,
+      ...(options.screen ? { source: "screen" } : {}),
       ...(options.lines === undefined ? {} : { lines: options.lines }),
     })) as { text: string };
     return done(options.json ? JSON.stringify(result) : result.text, result);
