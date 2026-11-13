@@ -133,6 +133,7 @@ it("Close Tab confirms the busy sibling while its focused pane is still mounting
     isFullScreen: () => false,
     setFullScreen: vi.fn(),
     isAlwaysOnTop: () => false,
+    isFocused: () => true,
     setAlwaysOnTop: vi.fn(),
   };
   let answer!: (confirmed: boolean) => void;

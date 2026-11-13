@@ -8,6 +8,7 @@ import {
   app,
   BrowserWindow,
   clipboard,
+  dialog,
   ipcMain,
   Menu,
   screen,
@@ -42,6 +43,7 @@ import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
 import { startAgentAccess, type AgentAccess } from "./agent-access";
 import { agentShortcutAction } from "./agent-shortcuts";
+import { trackWindowDialogs } from "./window-dialogs";
 import { displayAccelerator } from "../shared/terminal-keybinds";
 import { terminalContextMenuTemplate } from "./terminal-context-menu";
 import {
@@ -174,6 +176,8 @@ let layouts: ReturnType<typeof startApplicationLayout>;
 let layoutSession: ReturnType<typeof startLayoutSession> | undefined;
 let mirrors: ReturnType<typeof registerMirrorTypingIpc>;
 let agentAccess: AgentAccess | undefined;
+// Every window-modal dialog counts, so an agent never closes under one.
+const windowDialogs = trackWindowDialogs(dialog);
 let semanticInput: ReturnType<typeof registerSemanticInputIpc>;
 const shutdown = registerTerminalShutdown(app, {
   application: () => terminalApplication,
@@ -636,6 +640,10 @@ app
                 terminalApplication
                   ? terminalApplication.agentCloseNeedsUser(window, sessionIds)
                   : "closing",
+              (action) =>
+                terminalApplication
+                  ? terminalApplication.agentWindowAction(window, action)
+                  : "closing",
             );
             semanticInput.register(window);
             extensions!.registerWindow(window, (source, context) =>
@@ -677,6 +685,7 @@ app
             BrowserWindow.getFocusedWindow() ?? undefined,
           showQuitConfirmation: nativeDialogs.confirmQuit,
           showCloseWindowConfirmation: nativeDialogs.confirmCloseWindow,
+          hasOpenDialog: windowDialogs.hasOpenDialog,
           showCloseTabConfirmation: nativeDialogs.confirmCloseTab,
           showClosePaneConfirmation: nativeDialogs.confirmClosePane,
           showSessionFailure: nativeDialogs.sessionFailure,

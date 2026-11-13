@@ -11,11 +11,11 @@ import {
 
 /**
  * What an agent's press of a shortcut does (ADR 0052, keyboard parity):
- * - run: the tab or pane action, on the pane the press names;
+ * - run: in the window, on the pane the press names (`command`), or in main
+ *   on the granted window itself (`native`);
  * - refused: the grant toggle, which only the user turns on or off;
- * - not-yet: UI the agent can't read yet (Command Palette, Find, and the
- *   Snippets, Files and SSH Connect panels);
- * - key: the chord still goes to the pane as a key (#1052 decides these).
+ * - not-yet: UI the agent can't read yet, or an action that would reach past
+ *   this window; `why` finishes the answer's sentence.
  * Every action is listed, so a new one can't run for agents by default.
  */
 export type AgentShortcut =
@@ -25,14 +25,23 @@ export type AgentShortcut =
       // A close checks for Busy Sessions first: a pane's, or its whole tab's.
       readonly closes?: "pane" | "tab";
     }
-  | { readonly kind: "refused" | "not-yet" | "key" };
+  | { readonly kind: "run"; readonly native: AgentNativeAction }
+  | { readonly kind: "refused" }
+  | { readonly kind: "not-yet"; readonly why: string };
+
+/** What main does to the granted window itself, or for it. */
+export type AgentNativeAction = "full-screen" | "close-window" | "quit";
 
 const run = (
   command: AgentWindowCommand,
   closes?: "pane" | "tab",
 ): AgentShortcut => ({ kind: "run", command, ...(closes ? { closes } : {}) });
-const key: AgentShortcut = { kind: "key" };
-const notYet: AgentShortcut = { kind: "not-yet" };
+const native = (action: AgentNativeAction): AgentShortcut => ({
+  kind: "run",
+  native: action,
+});
+const notYet = (why: string): AgentShortcut => ({ kind: "not-yet", why });
+const opensUi = notYet("opens UI that agents can't use yet.");
 const select = (position: number) => run({ action: "select", position });
 
 export const AGENT_SHORTCUTS: Readonly<
@@ -66,28 +75,39 @@ export const AGENT_SHORTCUTS: Readonly<
   swapPaneDown: run({ action: "swap-pane", direction: "down" }),
   equalizePanes: run({ action: "equalize-panes" }),
   toggleAgentAccess: { kind: "refused" },
-  commandPalette: notYet,
-  find: notYet,
-  quit: key,
-  copy: key,
-  paste: key,
-  selectAll: key,
-  newWindow: key,
-  closeWindow: key,
-  zoomIn: key,
-  zoomOut: key,
-  actualSize: key,
-  toggleFullScreen: key,
-  toggleSnippets: notYet,
-  toggleFiles: notYet,
-  toggleSshConnect: notYet,
-  toggleMirrorTyping: key,
-  saveLayout: key,
-  toggleTabBar: key,
-  toggleAuxiliaryPanel: key,
-  moveAuxiliaryPanel: key,
-  toggleTitleBar: key,
-  reloadConfig: key,
+  zoomIn: run({ action: "zoom", zoom: "in" }),
+  zoomOut: run({ action: "zoom", zoom: "out" }),
+  actualSize: run({ action: "zoom", zoom: "reset" }),
+  // A pane program can already write the clipboard (OSC 52).
+  copy: run({ action: "copy" }),
+  selectAll: run({ action: "select-all" }),
+  toggleTabBar: run({ action: "toggle-tab-bar" }),
+  toggleTitleBar: run({ action: "toggle-title-bar" }),
+  toggleFullScreen: native("full-screen"),
+  closeWindow: native("close-window"),
+  quit: native("quit"),
+  paste: notYet(
+    "brings in the clipboard, which comes from outside this window, and can ask the user to confirm; type text with send.",
+  ),
+  commandPalette: opensUi,
+  find: opensUi,
+  toggleSnippets: opensUi,
+  toggleAuxiliaryPanel: opensUi,
+  moveAuxiliaryPanel: notYet("moves a panel that agents can't use yet."),
+  toggleFiles: opensUi,
+  toggleSshConnect: opensUi,
+  toggleMirrorTyping: opensUi,
+  // The granted window is the agent's workspace; a new one would take the
+  // user's focus (and their toggle shortcut with it).
+  newWindow: notYet(
+    "opens a window that would take the user's focus; work in this one.",
+  ),
+  saveLayout: notYet(
+    "replaces the user's saved layout through an extension, which agents can't use yet.",
+  ),
+  reloadConfig: notYet(
+    "applies the configuration file to every window, not just this one.",
+  ),
 };
 
 /** The action a press chord runs in a window with these effective shortcuts. */
@@ -103,7 +123,7 @@ export function agentShortcutAction(
 /**
  * What `keys` tells an agent: every action `press` runs, refuses or answers
  * "not yet", with the chord the window's shortcuts give it (null when the user
- * unbound it). Actions whose chords still go to the pane as keys aren't there.
+ * unbound it).
  */
 export function agentShortcutList(window: {
   readonly keybinds?: () => TerminalKeybinds;
@@ -111,17 +131,13 @@ export function agentShortcutList(window: {
 }) {
   const platform = window.platform ?? process.platform;
   const keybinds = window.keybinds?.() ?? terminalDefaultKeybinds(platform);
-  return TERMINAL_ACTION_NAMES.flatMap((action) => {
+  return TERMINAL_ACTION_NAMES.map((action) => {
     const { kind } = AGENT_SHORTCUTS[action];
-    if (kind === "key") return [];
     const accelerator = keybinds[action];
-    return [
-      {
-        action,
-        chord:
-          (accelerator && displayAccelerator(accelerator, platform)) || null,
-        status: kind === "run" ? ("available" as const) : kind,
-      },
-    ];
+    return {
+      action,
+      chord: (accelerator && displayAccelerator(accelerator, platform)) || null,
+      status: kind === "run" ? ("available" as const) : kind,
+    };
   });
 }

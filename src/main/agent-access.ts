@@ -23,7 +23,8 @@ import {
 } from "./agent-endpoint";
 import { createGrantFiles } from "./agent-grant-files";
 import type { OperationalEventLog } from "./operational-events";
-import type { AgentCloseBlock } from "./terminal-application";
+import type { AgentNativeAction } from "./agent-shortcuts";
+import type { AgentNeedsUser } from "./terminal-application";
 import type { TerminalSessionId } from "../shared/terminal-contract";
 import type {
   TerminalActionName,
@@ -76,7 +77,8 @@ interface Entry {
   readonly sessions: AgentSessionPort;
   readonly closeNeedsUser?: (
     sessionIds: readonly TerminalSessionId[],
-  ) => AgentCloseBlock | undefined;
+  ) => AgentNeedsUser | undefined;
+  readonly native?: (action: AgentNativeAction) => AgentNeedsUser | undefined;
   state: "off" | "pending" | "granted";
   token?: Buffer;
   // Only a credential this process wrote is ours to remove: another process
@@ -159,6 +161,19 @@ function commandsFor(
     ...(shortcut ? { shortcut } : {}),
     ...(keybinds ? { keybinds } : {}),
     ...(entry.closeNeedsUser ? { closeNeedsUser: entry.closeNeedsUser } : {}),
+    // Main runs these itself: a stop main has heard always wins.
+    ...(entry.native
+      ? {
+          native: (action: AgentNativeAction) => {
+            if (entry.state !== "granted")
+              throw new AgentApiError(
+                "revoked",
+                "The user stopped agent access.",
+              );
+            return entry.native!(action);
+          },
+        }
+      : {}),
     act: (sessionId, command, signal) =>
       ask<void>(agentIpc.action, { sessionId, command }, signal),
     read: (sessionId, lines, signal) =>
@@ -372,7 +387,9 @@ export function startAgentAccess(options: AgentAccessOptions) {
       sessions: AgentSessionPort | undefined,
       closeNeedsUser?: (
         sessionIds: readonly TerminalSessionId[],
-      ) => AgentCloseBlock | undefined,
+      ) => AgentNeedsUser | undefined,
+      // Full Screen, New Window, Close Window and Quit, for this window.
+      native?: (action: AgentNativeAction) => AgentNeedsUser | undefined,
     ) {
       if (!sessions) return;
       const contents = window.webContents;
@@ -393,6 +410,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
         windowId,
         sessions,
         ...(closeNeedsUser ? { closeNeedsUser } : {}),
+        ...(native ? { native } : {}),
         state: "off",
         pending: new Map(),
         cleanup() {

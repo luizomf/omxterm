@@ -22,6 +22,7 @@ function nativeWindow(): NativeTerminalWindow {
     isFullScreen: () => false,
     setFullScreen: vi.fn(),
     isAlwaysOnTop: () => false,
+    isFocused: () => true,
     setAlwaysOnTop: vi.fn(),
   };
 }

@@ -265,6 +265,7 @@ export function mountTerminalWindowPage(
       ...(options.onBell ? { notifyBell: options.onBell } : {}),
       ...(options.attention ? { notifyDesktop: options.attention.notify } : {}),
       syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
+      toggleTitleBar: () => chrome?.toggleTitleBar() ?? false,
     },
   );
 

@@ -101,6 +101,7 @@ async function harness(confirmClose = true) {
     isFullScreen: () => false,
     setFullScreen() {},
     isAlwaysOnTop: () => false,
+    isFocused: () => true,
     setAlwaysOnTop() {},
   };
   let disposeWindow = () => {};

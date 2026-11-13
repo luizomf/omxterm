@@ -2,10 +2,9 @@
 
 Status: accepted for slice 1, "Drive what's there", and slice 2, "Agents plug
 in by themselves" (macOS and Linux), which are implemented. The
-[keyboard-parity rule](#keyboard-parity) is accepted; slice 4 builds it
-([#1047](https://github.com/luizomf/omxterm/issues/1047)), and so far only
-`press` with named keys is built
-([#1048](https://github.com/luizomf/omxterm/issues/1048)). The
+[keyboard-parity rule](#keyboard-parity) is accepted, and slice 4 builds it
+([#1047](https://github.com/luizomf/omxterm/issues/1047)): `press` with named
+keys and every shortcut decided, the tab tree in `list`, and `keys`. The
 other later slices are still proposed
 ([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
 [#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
@@ -101,12 +100,14 @@ What the code gives us today:
   on flashes one sentence; there is no confirmation dialog.
 - Only that gesture creates a grant. The API has no command that grants or
   reaches another window, and agent input never passes the window's keyboard
-  handling. Until slice 4 it runs no application action at all; after it, the
-  agent presses shortcuts in its window and the grant toggle is refused by
-  action, not by key ([Keyboard parity](#keyboard-parity)).
+  handling. New Window is "not yet" for agents: the granted window is their
+  workspace. Until slice 4 it runs no application action at all; after
+  it, the agent presses shortcuts in its window and the grant toggle is
+  refused by action, not by key ([Keyboard parity](#keyboard-parity)).
 - It ends when the user clicks a mark, uses the toggle, closes the window or
-  quits, and also when main can't keep its side of the bargain: the renderer
-  is lost or reloads, or the endpoint can't be held. Ending closes every
+  quits (the agent's Close Window and Quit too), and also when main can't
+  keep its side of the bargain: the renderer is lost or reloads, or the
+  endpoint can't be held. Ending closes every
   connection of that grant; in-flight waits fail with `revoked`. Switching
   tabs, modals, blur, hide and minimize don't end it.
 - It is never restored by reopen-at-startup (ADR 0047) or Saved Layout, and
@@ -251,8 +252,10 @@ matching lands, every chord goes to the pane.
 - **UI the agent can't read yet answers "not yet"** in one sentence and does
   nothing, until its own decision: the Command Palette (which lists **Allow
   Agents in This Window**), Settings, Find, extension panels and native
-  dialogs. About, Settings, Open Local Image, Always on Top and Developer
-  Tools have no shortcut, so `press` can't reach them. Developer Tools stays
+  dialogs. So does an action that would reach past the window. Each
+  shortcut's decision is in [Slice 4 as built](#slice-4-as-built). About,
+  Settings, Open Local Image, Always on Top and Developer Tools have no
+  shortcut, so `press` can't reach them. Developer Tools stays
   out of reach even if it gets one: it runs code in the renderer, and the
   renderer can grant ([Slice 1 as built](#slice-1-as-built)).
 - **`send` stays as it is**: literal text and mode-independent keys, never
@@ -327,8 +330,9 @@ matching lands, every chord goes to the pane.
   a terminal tab whose panes wait for an extension's view to hide), a copy
   with the same click sits in the page's top-right corner, tab strip or not.
   Marks are `app-region: no-drag`, so a hidden title bar's drag area doesn't
-  take the click. The tab-bar and title-bar toggles stay closed to agents
-  until [#1052](https://github.com/luizomf/omxterm/issues/1052) decides them.
+  take the click. That holds in every state an agent's shortcut can make: tab
+  strip and title bar hidden, full screen, any zoom
+  ([#1052](https://github.com/luizomf/omxterm/issues/1052)).
 - The click stops the window at once: it drops every agent command the window
   holds before main hears of it, so nothing already handed over runs after.
 - Main admits commands only while the renderer has confirmed the marks are
@@ -368,7 +372,9 @@ a command name, its duration and an error code.
   window without a grant.
 - **The agent itself** has, inside the window, what the user has at that
   keyboard, including whatever the open SSH sessions can do. From slice 4
-  that includes the window's shortcuts, except the grant toggle.
+  that includes the window's shortcuts, except the grant toggle, and Copy
+  onto the system clipboard, which OSC 52 already allowed. Paste, which reads
+  it, is not yet.
 
 ## Tradeoffs and disagreements with #1025
 
@@ -457,7 +463,8 @@ a command name, its duration and an error code.
    - [#1052](https://github.com/luizomf/omxterm/issues/1052): the remaining
      shortcut actions, each decided, including the Snippets sidebar, the
      auxiliary panel toggle and move, Reload Configuration and the extension
-     slots; a window the agent opens starts ungranted.
+     slots. New Window stays "not yet": the granted window is the agent's
+     workspace.
 
    It replaces the id-based tab and pane commands first planned here and
    takes the named keys of slice 6.
@@ -641,8 +648,8 @@ Tab and pane shortcuts, and the mark in the error tone
   bar's drag area doesn't swallow the click. An extension tab's native view
   sits below its page header and doesn't reach the corner (checked on a
   macOS guest), which settles slice 1's open question. The tab-bar and
-  title-bar toggles, and every other action, still don't run for agents
-  ([#1052](https://github.com/luizomf/omxterm/issues/1052)).
+  title-bar toggles, and every other action, waited for
+  [#1052](https://github.com/luizomf/omxterm/issues/1052) below.
 
 `keys`, so agents look instead of guess
 ([#1051](https://github.com/luizomf/omxterm/issues/1051)):
@@ -651,9 +658,64 @@ Tab and pane shortcuts, and the mark in the error tone
   `src/main/agent-shortcuts.ts` and reads the catalog's effective shortcuts,
   so a rebind shows up and a new action is listed as soon as the table decides
   it. Each entry has the action, its chord (null when the user unbound it)
-  and a status: `available`, `refused` (the grant toggle) or `not-yet`. Actions
-  that still go to the pane as keys aren't listed, since `press` doesn't run
-  them.
+  and a status: `available`, `refused` (the grant toggle) or `not-yet`. Since
+  #1052 every action is in the table, so every action is listed.
+
+The remaining shortcuts
+([#1052](https://github.com/luizomf/omxterm/issues/1052)). Every action is
+now decided in `src/main/agent-shortcuts.ts`; none still goes to the pane as a
+key. Each runs in the granted window or answers "not yet":
+
+- **Run, in the window on the named pane:** Zoom In, Zoom Out and Actual
+  Size (the window's font zoom), Select All (text `read` already returns),
+  and Copy, which writes the pane's selection to the system clipboard: any
+  program in a pane can already do that with OSC 52, so it gives an agent
+  that can type nothing new. Toggle Tab Bar and Toggle Title Bar are
+  window-local, and the mark stays visible and one click with them hidden
+  (checked below).
+- **Run, from main on the granted window:** Toggle Full Screen, only from
+  the window the user is in; otherwise it needs the user, since on macOS it
+  moves them to the window's Space (seen on a macOS guest). Close Window, like
+  Close Tab: a Busy Session anywhere in the window, a close or quit being
+  confirmed, or any native dialog open over the window (Protected Paste, an
+  export or extension install, a session failure) needs the user; closing out
+  from under a dialog is their call, and so is Close Tab or Close Pane then.
+  Quit, only when the granted window is the last one: other windows aren't
+  the agent's to close, so it needs the user then, and under the same
+  conditions. Both end the grant. Main checks the window's grant right
+  before acting, so a stop main has heard always wins.
+- **Not yet:** Paste brings the clipboard, filled from other windows and
+  apps, into a pane the agent can `read`, and can raise Protected Paste's
+  native dialog; agents type with `send`, and paste by mode is slice 6.
+  Reload Configuration applies the file to every window, including
+  `confirmClose`, which guards the agent's own closes. Save layout replaces
+  the user's saved snapshot through an extension that acts on the selected
+  window. Find, the Command Palette, the Snippets, Files and SSH Connect
+  panels, the Auxiliary Panel's toggle and move, and Mirror Typing (a setup
+  dialog) are UI the agent can't read. New Window (owner decision): the
+  granted window is the agent's workspace. A new window takes the user's
+  keyboard, and the focus check races with the window being created; at
+  worst the user's toggle shortcut, which acts on the focused window, would
+  grant the agent's new window instead of stopping the old grant. Opening
+  windows without taking focus is a later decision.
+- **Window commands, two routes.** Zoom, Copy, Select All and the bar
+  toggles ride the window request `press` already uses for tab and pane
+  actions: the window focuses the named pane, then runs them, and a stop
+  still drops one in flight. A toggle a preview holds answers `unavailable`.
+  Full Screen, Close Window and Quit are main's: the application
+  acts on the granted window it was given, never the selected one, and never
+  through a confirmation dialog.
+- **The mark at any zoom.** Pane marks follow the terminal's font size, which
+  Zoom Out takes down to 1px, so the glyph never shrinks below the UI's meta
+  text (`max(var(--terminal-font-size), var(--ui-text-meta))` in `ui.css`).
+- **The mark, checked.** On a macOS guest, after the agent hid the tab strip
+  and title bar: one pane, a split, zoomed out to the smallest font,
+  Settings (the corner copy), and full screen. Every mark was on screen and topmost, also
+  with the pointer resting on it and the hidden title bar's drag handle shown
+  beside a split's middle mark, and one window-server click on it ended the
+  grant each time. With the user in another window, the agent's zoom, copy
+  and bar toggles changed only the granted window, without raising it. An
+  extension tab with both bars hidden was checked in #1050; Linux wasn't run.
 
 ## Open questions
 

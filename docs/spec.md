@@ -1264,9 +1264,10 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
 - While a window is granted, every pane and tab shows the `◆`
   [State Mark](#state-marks) in the error tone, and so does the page corner
   when a Settings or extension tab is selected; no state of the window hides
-  it. The pane's and the corner's mark are buttons: their tooltip says
-  "Agents can do anything you can in this window. Click this mark to stop
-  them." The grant ends on
+  it, including a hidden tab strip or title bar, full screen and any zoom
+  (pane marks never shrink below the UI's meta text size).
+  The pane's and the corner's mark are buttons: their tooltip says "Agents
+  can do anything you can in this window. Click this mark to stop them." The grant ends on
   that click, the toggle, closing the window, quitting, a renderer reload or
   crash, or when main can't keep its socket. Switching tabs, modals, blur,
   hide and minimize keep it. It is never restored at startup, by Saved Layout,
@@ -1283,23 +1284,30 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   goes quiet, its program ends or a timeout passes. Panes in hidden tabs
   answer too. The API can't grant, see other windows, or type anywhere but a
   pane's PTY.
-- A pressed chord that is one of the window's tab or pane shortcuts (its
-  defaults and the user's rebinds: new, close, next, previous and select tab,
-  split, close pane, focus and swap panes, equalize) runs that action in the
-  granted window, even when another window is selected: the window first
-  focuses the pane the press names, selecting its tab, so `press s3 Cmd+W`
-  closes the tab holding `s3`. The press answers the action and the pane, and
-  must hold that one chord. A close that would ask to confirm a Busy Session
-  (with `confirmClose` on), or that comes while the user is confirming one,
-  answers that it needs the user, saying why, and does nothing. A click on the
-  mark stops the window at once: an action already handed to it doesn't run. The **Allow Agents in This
-  Window** shortcut is refused, whatever it is bound to, and the Command
-  Palette, Find, Snippets, Files and SSH Connect shortcuts answer "not yet". Other shortcuts aren't run for
-  agents yet: a named-key chord goes to the pane as a key, any other is
-  refused as an unsupported key. `"$OMXTERM_CTL" keys` lists the window's
-  shortcuts that `press` runs, with the user's rebinds (chord, action), and
-  marks the refused and "not yet" ones; the guide and `--help` send agents there
-  instead of guessing.
+- A pressed chord that is one of the window's shortcuts (its defaults and the
+  user's rebinds) runs that action in the granted window, even when another
+  window is selected. Tab and pane actions, zoom, Copy, Select All and the
+  tab-bar and title-bar toggles run in the window after it focuses the pane
+  the press names, selecting its tab, so `press s3 Cmd+W` closes the tab
+  holding `s3` and Copy takes `s3`'s selection. Full Screen, Close Window and
+  Quit act on the granted window from main. Full Screen runs only while the
+  user is in that window, so it never pulls the user away from another one.
+  The press answers the action and the pane, and must hold that one chord. A
+  close or quit that would ask to confirm a Busy Session (with `confirmClose`
+  on), that comes while the user is confirming a close or quit or while a
+  native dialog is open over the window, a quit while other windows are open,
+  or Full Screen while the user is in another window, answers that it needs
+  the user, saying why, and does nothing. A click on the mark stops the window
+  at once: an action already handed to it doesn't run. The **Allow Agents in
+  This Window** shortcut is refused, whatever it is bound to. The Command
+  Palette, Find, Paste, New Window (the granted window is the agent's
+  workspace), Reload Configuration, the Snippets, Files and SSH Connect
+  panels, the Auxiliary Panel's toggle and move, Mirror Typing and Save layout
+  answer "not yet", saying why. A named-key chord that is no shortcut goes to
+  the pane as a key; any other is refused as an unsupported key.
+  `"$OMXTERM_CTL" keys` lists every shortcut with the user's rebinds (chord,
+  action) and marks the refused and "not yet" ones; the guide and `--help`
+  send agents there instead of guessing.
 - Agent input is written to the PTY in main. It never passes the window's
   keyboard handling, so it never starts or stops Mirror Typing, skips
   Protected Paste, doesn't jump the view to the bottom the way typing does,

@@ -44,6 +44,7 @@ it("commits applicable application state and current visual state without touchi
     isFullScreen: () => false,
     setFullScreen: vi.fn(),
     isAlwaysOnTop: () => false,
+    isFocused: () => true,
     setAlwaysOnTop: vi.fn(),
   } satisfies NativeTerminalWindow & {
     setBackgroundColor(color: string): void;

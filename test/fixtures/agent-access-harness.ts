@@ -7,7 +7,10 @@ import os from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
-import { startAgentAccess } from "../../src/main/agent-access";
+import {
+  startAgentAccess,
+  type AgentAccess,
+} from "../../src/main/agent-access";
 import type {
   AgentSessionObserver,
   AgentSessionPort,
@@ -18,6 +21,13 @@ import {
   type AgentReadRequest,
 } from "../../src/shared/agent-access";
 import { createIpcHarness } from "./terminal-ipc-harness";
+
+type Register = Parameters<AgentAccess["register"]>;
+// The window's shortcuts, and main's answers about closes and window actions.
+type HarnessShortcuts = Pick<
+  Parameters<typeof startAgentAccess>[0],
+  "shortcut" | "keybinds"
+> & { closeNeedsUser?: Register[3]; native?: Register[4] };
 
 /** Registers the harness's hooks; call it once at a test file's top level. */
 export function useAgentHarness() {
@@ -175,14 +185,7 @@ export function useAgentHarness() {
 
   function setup(
     platform: NodeJS.Platform = process.platform,
-    shortcuts: Pick<
-      Parameters<typeof startAgentAccess>[0],
-      "shortcut" | "keybinds"
-    > & {
-      closeNeedsUser?: (
-        sessionIds: readonly string[],
-      ) => "busy" | "confirming" | "closing" | undefined;
-    } = {},
+    shortcuts: HarnessShortcuts = {},
   ) {
     const profile = mkdtempSync(path.join(scratch, "p"));
     const ipc = createIpcHarness();
@@ -209,7 +212,13 @@ export function useAgentHarness() {
     });
     cleanups.push(() => access.dispose());
     const port = sessions();
-    access.register(window, 1, port, shortcuts.closeNeedsUser);
+    access.register(
+      window,
+      1,
+      port,
+      shortcuts.closeNeedsUser,
+      shortcuts.native,
+    );
     const states = () =>
       contents.send.mock.calls
         .filter(([channel]) => channel === agentIpc.state)

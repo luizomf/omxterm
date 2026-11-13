@@ -127,6 +127,7 @@ async function harness(failure?: "rendering" | "spawn") {
     isFullScreen: () => false,
     setFullScreen() {},
     isAlwaysOnTop: () => false,
+    isFocused: () => true,
     setAlwaysOnTop() {},
   };
   let mounts = 0;

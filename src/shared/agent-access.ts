@@ -1,6 +1,8 @@
 import {
+  isTerminalFontZoom,
   isTerminalSessionId,
   isTerminalTabCommand,
+  type TerminalFontZoom,
   type TerminalSessionId,
   type TerminalTabCommand,
 } from "./terminal-contract";
@@ -211,11 +213,16 @@ export function isAgentTabsResult(value: unknown): value is AgentTabsResult {
 }
 
 /**
- * The tab and pane commands an agent's shortcut runs (#1050). Close Pane
- * never carries a popup target: the pane it closes is the one the request
- * names.
+ * The tab, pane and window commands an agent's shortcut runs in the window
+ * (#1050, #1052). Close Pane never carries a popup target: the pane it closes
+ * is the one the request names. Copy and Select All act on that pane too.
  */
 export type AgentWindowCommand =
+  | { readonly action: "zoom"; readonly zoom: TerminalFontZoom }
+  | {
+      readonly action:
+        "copy" | "select-all" | "toggle-tab-bar" | "toggle-title-bar";
+    }
   | Extract<
       TerminalTabCommand,
       {
@@ -246,9 +253,26 @@ const AGENT_WINDOW_ACTIONS = new Set<string>([
   "close-pane",
 ]);
 
+const AGENT_WINDOW_OWN_ACTIONS = new Set<string>([
+  "copy",
+  "select-all",
+  "toggle-tab-bar",
+  "toggle-title-bar",
+]);
+
 export function isAgentWindowCommand(
   value: unknown,
 ): value is AgentWindowCommand {
+  if (isPlainRecord(value) && value.action === "zoom")
+    return (
+      hasOnlyKeys(value, ["action", "zoom"]) && isTerminalFontZoom(value.zoom)
+    );
+  if (
+    isPlainRecord(value) &&
+    typeof value.action === "string" &&
+    AGENT_WINDOW_OWN_ACTIONS.has(value.action)
+  )
+    return hasOnlyKeys(value, ["action"]);
   return (
     isTerminalTabCommand(value) &&
     AGENT_WINDOW_ACTIONS.has(value.action) &&

@@ -316,7 +316,7 @@ posix(
     expect(selected.webContents.send).not.toHaveBeenCalled();
     expect(other.writes).toEqual([]);
 
-    const unknown = await ctl(profile, ["press", "s2", "Cmd+Q"], pane);
+    const unknown = await ctl(profile, ["press", "s2", "Cmd+K"], pane);
     expect(unknown.code).toBe(1);
     expect(port.writes).toHaveLength(1);
   },
@@ -369,6 +369,40 @@ posix("settles a read and a press only with their own answers", async () => {
   expect(port.writes).toEqual([["s1", "<ok>"]]);
   expect((await ctl(profile, ["read", "s1"], pane)).stdout).toBe("text\n");
 });
+
+posix(
+  "ends the grant when the agent closes its window, and runs nothing after a stop",
+  async () => {
+    const native = vi.fn((action: string) => {
+      if (action === "close-window") harness.window.emit("closed");
+      return undefined;
+    });
+    const harness = setup("darwin", {
+      shortcut: (chord) =>
+        agentShortcutAction(terminalDefaultKeybinds("darwin"), chord, "darwin"),
+      native,
+    });
+    const { profile, pane, access, window, ipc, event, shown } = harness;
+    access.toggle(window);
+    await shown();
+    // A new window would take the user's focus: not yet.
+    const opened = await ctl(profile, ["press", "s1", "Cmd+N"], pane);
+    expect(opened.stderr).toMatch(/not-yet/u);
+    // The user clicks the mark; main has heard it, so the agent's quit
+    // never runs.
+    ipc.listeners.get(agentIpc.stop)!(event);
+    expect((await ctl(profile, ["press", "s1", "Cmd+Q"], pane)).code).toBe(3);
+    expect(native).not.toHaveBeenCalled();
+
+    access.toggle(window);
+    await shown();
+    const closed = await ctl(profile, ["press", "s1", "Cmd+Shift+W"], pane);
+    expect(closed.code).not.toBe(2);
+    expect(native).toHaveBeenCalledExactlyOnceWith("close-window");
+    expect(access.granted(window)).toBe(false);
+    expect((await ctl(profile, ["read", "s1"], pane)).code).not.toBe(0);
+  },
+);
 
 posix(
   "runs a tab shortcut on the pane the client names, and a stop fails one in flight",

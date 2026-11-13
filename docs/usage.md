@@ -161,7 +161,7 @@ For example, from one pane an agent can run a command in the pane next to it:
 
 Agents that speak MCP, such as Claude Code and Codex, can also use OMXTerm as an MCP server, `"$OMXTERM_CTL" mcp`. The guide says how to register it. Register it once from an OMXTerm pane and start a new agent session; from then on it works in every window you allow, and allowing a window later needs no restart.
 
-Allowing a window lets an agent do what you could do at its keyboard, including in SSH sessions open there, and read its scrollback. Keep sensitive sessions in another window. The [Agent API reference](dev/agent-api.md) has every command.
+Allowing a window lets an agent do what you could do at its keyboard, including in SSH sessions open there, and read its scrollback. That includes the window's shortcuts, such as opening tabs, zooming, copying or closing the window, but not allowing or stopping agents, pasting your clipboard, or closing anything still running: those stay yours. Keep sensitive sessions in another window. The [Agent API reference](dev/agent-api.md) has every command.
 
 ## About and credits
 

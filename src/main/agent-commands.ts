@@ -27,8 +27,12 @@ import type {
   TerminalActionName,
   TerminalKeybinds,
 } from "../shared/terminal-keybinds";
-import { AGENT_SHORTCUTS, agentShortcutList } from "./agent-shortcuts";
-import type { AgentCloseBlock } from "./terminal-application";
+import {
+  AGENT_SHORTCUTS,
+  agentShortcutList,
+  type AgentNativeAction,
+} from "./agent-shortcuts";
+import type { AgentNeedsUser } from "./terminal-application";
 import type { AgentSessionPort } from "./terminal-ipc-types";
 
 export class AgentApiError extends Error {
@@ -83,7 +87,12 @@ export interface AgentCommandsOptions {
   /** Why closing these sessions is the user's to do, if it is (ADR 0017). */
   readonly closeNeedsUser?: (
     sessionIds: readonly TerminalSessionId[],
-  ) => AgentCloseBlock | undefined;
+  ) => AgentNeedsUser | undefined;
+  /**
+   * Runs a window action in main on the granted window, unless it's the
+   * user's to do; then it runs nothing and says why.
+   */
+  readonly native?: (action: AgentNativeAction) => AgentNeedsUser | undefined;
   /** Decides which chords the user's own press would send; process.platform. */
   readonly platform?: string;
   readonly now?: () => number;
@@ -130,13 +139,16 @@ function argumentsOf(
 const unsupportedPress = () =>
   new AgentApiError(
     "unsupported-key",
-    "press sends Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, with any of Ctrl+, Alt+ and Shift+, to the pane; any other chord must be one of the window's tab or pane shortcuts.",
+    "press sends Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, with any of Ctrl+, Alt+ and Shift+, to the pane; any other chord must be one of the window's shortcuts.",
   );
-const NEEDS_USER: Readonly<Record<AgentCloseBlock, string>> = {
-  busy: "This close needs the user: a program is still running there.",
-  confirming:
-    "This close needs the user: they are already confirming a close in this window.",
-  closing: "This close needs the user: the window is closing.",
+const NEEDS_USER: Readonly<Record<AgentNeedsUser, string>> = {
+  busy: "This needs the user: a program is still running there.",
+  confirming: "This needs the user: they are already confirming a close.",
+  closing: "This needs the user: the window is closing.",
+  "other-windows": "This needs the user: it would close other windows too.",
+  dialog: "This needs the user: a dialog is open in this window.",
+  elsewhere:
+    "This needs the user: they are in another window, and this would take them from it.",
 };
 const revoked = () =>
   new AgentApiError("revoked", "The user stopped agent access.");
@@ -163,7 +175,7 @@ function pressChords(value: unknown, platform: string): AgentKeyChord[] {
   });
 }
 
-// The one tab or pane action a press runs, if any. A refused or parked
+// The one shortcut action a press runs, if any. A refused or parked
 // shortcut answers before anything happens, whatever else the press holds.
 function pressedShortcut(
   names: readonly string[],
@@ -181,15 +193,47 @@ function pressedShortcut(
       "Only the user can allow or stop agents in this window.",
     );
   const parked = actions[kinds.indexOf("not-yet")];
-  if (parked)
-    throw new AgentApiError(
-      "not-yet",
-      `${parked} opens UI that agents can't use yet.`,
-    );
+  const parkedShortcut = parked && AGENT_SHORTCUTS[parked];
+  if (parkedShortcut && parkedShortcut.kind === "not-yet")
+    throw new AgentApiError("not-yet", `${parked} ${parkedShortcut.why}`);
   const run = actions[kinds.indexOf("run")];
-  if (run && names.length > 1)
-    throw invalid("Press a tab or pane shortcut on its own.");
+  if (run && names.length > 1) throw invalid("Press a shortcut on its own.");
   return run;
+}
+
+// The user's click on a pane, then their press: the window focuses the pane
+// (selecting its tab) and runs the action there, or main acts on the granted
+// window. A close that would ask to confirm a Busy Session is the user's.
+async function runShortcut(
+  options: AgentCommandsOptions,
+  disposed: () => boolean,
+  sessionId: TerminalSessionId,
+  action: TerminalActionName,
+  signal: AbortSignal,
+) {
+  const shortcut = AGENT_SHORTCUTS[action];
+  if (shortcut.kind !== "run") throw unsupportedPress();
+  // Full screen, a new window, closing this one or quitting: main acts on
+  // the granted window, whichever one is selected.
+  if ("native" in shortcut) {
+    if (!options.native) throw unsupportedPress();
+    if (disposed()) throw revoked();
+    const block = options.native(shortcut.native);
+    if (block) throw new AgentApiError("needs-user", NEEDS_USER[block]);
+    return { action, pane: sessionId };
+  }
+  if (!options.act) throw unsupportedPress();
+  if (shortcut.closes) {
+    // Without a check, assume the close would ask.
+    const block =
+      options.closeNeedsUser?.(
+        await closedBy(shortcut.closes, sessionId, options.tabs, signal),
+      ) ?? (options.closeNeedsUser ? undefined : "busy");
+    if (block) throw new AgentApiError("needs-user", NEEDS_USER[block]);
+  }
+  if (disposed()) throw revoked();
+  await options.act(sessionId, shortcut.command, signal);
+  return { action, pane: sessionId };
 }
 
 // The panes a close would take: the named one, or every pane of its tab.
@@ -325,30 +369,6 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     );
   };
 
-  // The user's click on a pane, then their press: the window focuses the pane
-  // (selecting its tab) and runs the action there. A close that would ask
-  // to confirm a Busy Session is the user's to make.
-  const runShortcut = async (
-    sessionId: TerminalSessionId,
-    action: TerminalActionName,
-    signal: AbortSignal,
-  ) => {
-    const shortcut = AGENT_SHORTCUTS[action];
-    if (shortcut.kind !== "run" || !options.act) throw unsupportedPress();
-    position(sessionId);
-    if (shortcut.closes) {
-      // Without a check, assume the close would ask.
-      const block =
-        options.closeNeedsUser?.(
-          await closedBy(shortcut.closes, sessionId, options.tabs, signal),
-        ) ?? (options.closeNeedsUser ? undefined : "busy");
-      if (block) throw new AgentApiError("needs-user", NEEDS_USER[block]);
-    }
-    if (disposed) throw revoked();
-    await options.act(sessionId, shortcut.command, signal);
-    return { action, pane: sessionId };
-  };
-
   const commands: Record<
     AgentCommand,
     (args: unknown, caller: AgentCaller) => unknown
@@ -446,7 +466,16 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       const sessionId = pane(value.pane);
       const names = keyNames(value.keys);
       const action = pressedShortcut(names, options.shortcut);
-      if (action) return runShortcut(sessionId, action, caller.signal);
+      if (action) {
+        position(sessionId);
+        return runShortcut(
+          options,
+          () => disposed,
+          sessionId,
+          action,
+          caller.signal,
+        );
+      }
       const keys = pressChords(names, options.platform ?? process.platform);
       await caughtUp(sessionId, caller.signal);
       const data = await options.encode(sessionId, keys, caller.signal);

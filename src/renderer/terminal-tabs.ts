@@ -156,6 +156,8 @@ export interface TerminalTabsOptions {
     notification: import("../shared/terminal-attention").TerminalNotification,
   ) => void;
   readonly syncTitle?: (sessionId: TerminalSessionId) => void;
+  // The window's title bar, for an agent's shortcut; false when it can't.
+  readonly toggleTitleBar?: () => boolean;
 }
 
 export interface TerminalTabs {
@@ -345,6 +347,39 @@ export function createTerminalTabs(
       : (focused.adapter.sessionId() ?? null);
     options.notifySelection?.(sessionId, tabSessionIds(tab));
     mirror?.changed();
+  };
+
+  const toggleTabBar = () => {
+    if (disposed) return;
+    tabBarEnabled = !tabBarEnabled;
+    renderStrip();
+    focusPane(focusedPane(), options, true);
+  };
+  // An agent's shortcut, once its pane is focused (ADR 0052). Copy and
+  // Select All take that pane, as the user's would after a click on it.
+  const runAgentCommand = (
+    pane: TerminalPane,
+    command: AgentWindowCommand,
+  ): boolean => {
+    switch (command.action) {
+      case "zoom":
+        configuration.zoom(command.zoom);
+        return true;
+      case "copy":
+        void pane.surface?.copy();
+        return true;
+      case "select-all":
+        pane.surface?.selectAll();
+        return true;
+      case "toggle-tab-bar":
+        toggleTabBar();
+        return true;
+      case "toggle-title-bar":
+        return options.toggleTitleBar?.() ?? false;
+      default:
+        commands.handle(command);
+        return true;
+    }
   };
 
   let agentSelection = false;
@@ -671,11 +706,10 @@ export function createTerminalTabs(
           return unavailable;
         agentSelection = true;
         try {
-          commands.handle(command);
+          return runAgentCommand(pane, command) ? { id } : unavailable;
         } finally {
           agentSelection = false;
         }
-        return { id };
       };
       if (contentReady || selectedTab() !== pane.tab)
         return Promise.resolve(run());
@@ -789,12 +823,7 @@ export function createTerminalTabs(
         () => actionGeneration,
         () => !disposed && !closing,
       ),
-    toggleTabBar() {
-      if (disposed) return;
-      tabBarEnabled = !tabBarEnabled;
-      renderStrip();
-      focusPane(focusedPane(), options, true);
-    },
+    toggleTabBar,
     focusSelected() {
       automaticFocusAllowed = true;
       focusApplicationTab(selectedApplicationTab(), options, hosted.focus);
