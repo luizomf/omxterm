@@ -25,6 +25,10 @@ export function createAttentionSound(
           const source = audio.createBufferSource();
           source.buffer = buffer;
           source.connect(audio.destination);
+          // Release the output device once the sound ends.
+          source.addEventListener("ended", () => void audio.suspend(), {
+            once: true,
+          });
           source.start();
         })
         .catch(() => {});
