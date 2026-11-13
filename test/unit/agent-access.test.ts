@@ -5,6 +5,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
+import { EventEmitter } from "node:events";
 import path from "node:path";
 import { expect, vi } from "vitest";
 import { agentSocketPath, startAgentAccess } from "../../src/main/agent-access";
@@ -247,4 +248,77 @@ posix("sends nothing to a crashed window while ending its grant", async () => {
   contents.emit("render-process-gone");
   expect(access.granted(window)).toBe(false);
   expect(contents.send.mock.calls).toHaveLength(sent);
+});
+
+posix(
+  "presses into the granted window's pane, whichever window is selected",
+  async () => {
+    const { profile, pane, access, window, contents, port, shown } = setup();
+    // Not granted yet: refused like send.
+    expect((await ctl(profile, ["press", "s2", "Up"], pane)).code).toBe(3);
+    access.toggle(window);
+    await shown();
+    // Another window of the same process, the one the user is in; never asked.
+    const selected = Object.assign(new EventEmitter(), {
+      webContents: Object.assign(new EventEmitter(), {
+        mainFrame: {},
+        isDestroyed: () => false,
+        send: vi.fn(),
+      }),
+      isDestroyed: () => false,
+    });
+    const other = sessions();
+    access.register(selected, 2, other);
+
+    const pressed = await ctl(
+      profile,
+      ["press", "s2", "Up", "Ctrl+Down", "--json"],
+      pane,
+    );
+    expect(pressed.code).toBe(0);
+    expect(JSON.parse(pressed.stdout)).toEqual({
+      receipt: "accepted",
+      offset: 10,
+    });
+    expect(port.writes).toEqual([["s2", "<Up><C-Down>"]]);
+    expect(
+      contents.send.mock.calls.filter(
+        ([channel]) => channel === agentIpc.press,
+      ),
+    ).toEqual([
+      [
+        agentIpc.press,
+        {
+          id: expect.any(String) as unknown,
+          sessionId: "s2",
+          keys: [
+            { key: "Up", ctrl: false, alt: false, shift: false },
+            { key: "Down", ctrl: true, alt: false, shift: false },
+          ],
+        },
+      ],
+    ]);
+    expect(selected.webContents.send).not.toHaveBeenCalled();
+    expect(other.writes).toEqual([]);
+
+    const unknown = await ctl(profile, ["press", "s2", "Cmd+Q"], pane);
+    expect(unknown.code).toBe(1);
+    expect(port.writes).toHaveLength(1);
+  },
+);
+
+posix("drops a press in flight when the user stops the grant", async () => {
+  const { profile, pane, access, window, contents, port, ipc, event, shown } =
+    setup();
+  access.toggle(window);
+  await shown();
+  // The window takes its time to encode; the user clicks the mark meanwhile.
+  contents.send.mockImplementation((channel: string) => {
+    if (channel === agentIpc.press)
+      setImmediate(() => ipc.listeners.get(agentIpc.stop)!(event));
+  });
+  const pressed = await ctl(profile, ["press", "s1", "Up"], pane);
+  expect(pressed.code).toBe(1);
+  expect(pressed.stderr).toMatch(/stopped agent access/u);
+  expect(port.writes).toEqual([]);
 });

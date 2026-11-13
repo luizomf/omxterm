@@ -2,8 +2,10 @@
 
 Status: accepted for slice 1, "Drive what's there", and slice 2, "Agents plug
 in by themselves" (macOS and Linux), which are implemented. The
-[keyboard-parity rule](#keyboard-parity) is accepted and not built yet; slice
-4 builds it ([#1047](https://github.com/luizomf/omxterm/issues/1047)). The
+[keyboard-parity rule](#keyboard-parity) is accepted; slice 4 builds it
+([#1047](https://github.com/luizomf/omxterm/issues/1047)), and so far only
+`press` with named keys is built
+([#1048](https://github.com/luizomf/omxterm/issues/1048)). The
 other later slices are still proposed
 ([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
 [#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
@@ -15,8 +17,9 @@ payloads join the excluded content) and
 environment variables in every pane). Slice 4 amends ADR 0050 again (the
 mark's error tone). The wire protocol and CLI are in the
 [Agent API reference](../dev/agent-api.md). Where slices 1 and 2 differ from the
-text below, [Slice 1 as built](#slice-1-as-built) and
-[Slice 2 as built](#slice-2-as-built) say so.
+text below, [Slice 1 as built](#slice-1-as-built),
+[Slice 2 as built](#slice-2-as-built) and
+[Slice 4 as built](#slice-4-as-built) say so.
 
 ## Context
 
@@ -197,7 +200,9 @@ Owner decision (2026-11-13, #1025): **inside a window the user granted, the
 agent can press what the user can press, keys and shortcuts alike**, with one
 exception, the grant toggle. Only the user turns a grant on or off, one click
 on the mark stops everything at once, and a grant is never restored
-automatically. Slice 4 builds it; until then agent input is `send` only.
+automatically. Slice 4 builds it. `press` with named keys came first
+([#1048](https://github.com/luizomf/omxterm/issues/1048)); until shortcut
+matching lands, every chord goes to the pane.
 
 ```
  press(pane, chord)
@@ -222,9 +227,9 @@ automatically. Slice 4 builds it; until then agent input is `send` only.
   runs that catalog action and `press` says which one ran. Anything else is
   encoded by the renderer for the pane's current mode, exactly as the user's
   key would be, and written by `agentInput()`, so like `send` it never
-  reaches `routeKeyInput`, Mirror Typing or Protected Paste. Unverified:
-  that Restty's encoder runs without a real DOM key event (#1048 starts with
-  that spike).
+  reaches `routeKeyInput`, Mirror Typing or Protected Paste. Restty's
+  encoder runs without a DOM key event
+  ([Slice 4 as built](#slice-4-as-built)).
 - **The exception is enforced by action, not by key.** A chord that resolves
   to `toggleAgentAccess` is refused, whatever key the user bound it to, and
   is not sent to the pane either. The API reaches actions only through that
@@ -546,6 +551,31 @@ building it:
   server and adds them.
 - **A shorter wait.** An MCP `wait` defaults to a 50 s timeout instead of the
   CLI's 60 s, so it answers before Codex's default 60 s tool timeout.
+
+## Slice 4 as built
+
+So far, `press` with named keys
+([#1048](https://github.com/luizomf/omxterm/issues/1048)):
+
+- **No DOM event needed.** Restty's keymap reads only a key event's `key`,
+  `code`, modifier flags, `type`, `repeat` and `isComposing`, and its input
+  handler reads the pane's DECCKM and Kitty flags from the core when it
+  encodes. One checksum-guarded runtime correction
+  (`scripts/restty-key-press-corrections.mjs`, no WASM change) adds
+  `encodeKeyPress()` beside it: a plain key description in, the keydown's
+  bytes out, plus the keyup's when Kitty asked for release events, each
+  through the same PTY mapping as the user's key. So a press is exactly a
+  user press and release, and nothing is sent by the renderer.
+- **The round trip** is `read`'s: main asks the granted window for the bytes
+  with a correlation id and a timeout, then writes them with `agentInput()`
+  in one write. Main first waits, bounded, until the window consumed what it
+  already sent, so a press right after starting a program sees the modes that
+  program set. A press in flight when the grant ends writes nothing.
+- **Named keys only**: arrows, `Home`, `End`, `PageUp`, `PageDown`, `Insert`,
+  `Delete`, `F1`–`F12`, `Enter`, `Tab`, `Escape`, `Backspace` and `Space`,
+  with `Ctrl`, `Alt` and `Shift`. `Alt` is the terminal's Alt: on macOS the
+  user's Option+Space types native text when `optionKeyMode` leaves Option
+  alone, but the agent's `Alt+Space` sends `ESC` and a space.
 
 ## Open questions
 

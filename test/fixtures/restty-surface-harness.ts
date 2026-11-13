@@ -22,6 +22,7 @@ const harness = vi.hoisted(() => {
     readonly setLigatures = vi.fn();
     readonly setOptionKeyMode = vi.fn();
     readonly setScrollbackLines = vi.fn();
+    readonly encodeKeyPress = vi.fn((key: { key: string }) => `<${key.key}>`);
     readonly applyTheme = vi.fn();
     readonly updateSize = vi.fn();
     readonly openSearch = vi.fn();
@@ -88,6 +89,7 @@ const harness = vi.hoisted(() => {
         },
         terminal: {
           isBracketedPasteEnabled: (): boolean => false,
+          encodeKeyPress: this.encodeKeyPress,
           setFontSize: this.setFontSize,
           setLigatures: this.setLigatures,
           setOptionKeyMode: this.setOptionKeyMode,

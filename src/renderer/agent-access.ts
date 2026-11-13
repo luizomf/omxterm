@@ -11,12 +11,16 @@ const refusals: Readonly<Record<AgentRefusal, MessageKey>> = {
 
 /**
  * The window's agent grant (ADR 0052): one accent mark on every pane and
- * tab while it lasts, a click on a pane's mark to stop it, and the pane text
- * main asks for. Main admits agents only after shown() confirms the marks.
+ * tab while it lasts, a click on a pane's mark to stop it, the pane text
+ * main asks for, and presses encoded for a pane's modes. Main admits agents
+ * only after shown() confirms the marks.
  */
 export function subscribeToAgentAccess(
   bridge: AgentAccessBridge,
-  tabs: Pick<TerminalTabs, "setWindowMark" | "flash" | "readSession">,
+  tabs: Pick<
+    TerminalTabs,
+    "setWindowMark" | "flash" | "readSession" | "encodeSessionKeys"
+  >,
 ): () => void {
   let granted = false;
   const removeState = bridge.onState((state) => {
@@ -40,8 +44,14 @@ export function subscribeToAgentAccess(
       tabs.readSession(request.id, request.sessionId, request.lines),
     ),
   );
+  const removePress = bridge.onPress((request) =>
+    bridge.pressResult(
+      tabs.encodeSessionKeys(request.id, request.sessionId, request.keys),
+    ),
+  );
   return () => {
     removeState();
     removeRead();
+    removePress();
   };
 }

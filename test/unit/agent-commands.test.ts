@@ -74,6 +74,7 @@ it("lists the window's panes and marks the caller's own", async () => {
   const commands = createAgentCommands({
     sessions: window.sessions,
     read: vi.fn(),
+    encode: vi.fn(),
   });
   await expect(commands.run("list", undefined, caller("s2"))).resolves.toEqual({
     panes: [
@@ -106,6 +107,7 @@ it("types text and mode-independent keys in one write and returns the offset", a
   const commands = createAgentCommands({
     sessions: window.sessions,
     read: vi.fn(),
+    encode: vi.fn(),
   });
   await expect(
     commands.run(
@@ -149,6 +151,7 @@ it("waits for output past the offset to go quiet, and reports time-outs", async 
   const commands = createAgentCommands({
     sessions: window.sessions,
     read: vi.fn(),
+    encode: vi.fn(),
   });
   const idle = commands.run(
     "wait",
@@ -185,6 +188,7 @@ it("answers exited with the code, during a wait and after it", async () => {
   const commands = createAgentCommands({
     sessions: window.sessions,
     read: vi.fn(),
+    encode: vi.fn(),
   });
   const waiting = commands.run(
     "wait",
@@ -212,6 +216,7 @@ it("refuses what later versions add and out-of-range limits", async () => {
   const commands = createAgentCommands({
     sessions: window.sessions,
     read: vi.fn(),
+    encode: vi.fn(),
   });
   const codes = await Promise.all(
     [
@@ -244,7 +249,11 @@ it("reads after the window caught up and reports the consumed offset", async () 
     cols: 80,
     rows: 24,
   }));
-  const commands = createAgentCommands({ sessions: window.sessions, read });
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read,
+    encode: vi.fn(),
+  });
   window.output("s1", 12, false);
   const result = commands.run("read", { pane: "s1", lines: 2 }, caller());
   await vi.advanceTimersByTimeAsync(100);
@@ -265,6 +274,7 @@ it("ends a pending wait when the caller goes away and stops observing on dispose
   const commands = createAgentCommands({
     sessions: window.sessions,
     read: vi.fn(),
+    encode: vi.fn(),
   });
   const controller = new AbortController();
   const waiting = commands.run(
@@ -277,4 +287,93 @@ it("ends a pending wait when the caller goes away and stops observing on dispose
   expect(await failure(waiting)).toBe("revoked");
   commands.dispose();
   expect(window.observed()).toBe(false);
+});
+
+it("presses named keys with the window's bytes for the pane, after it caught up", async () => {
+  vi.useFakeTimers();
+  const window = fakeWindow();
+  // Stands in for the Surface: the bytes depend on the chord, not on main.
+  const encode = vi.fn(
+    async (_id: string, keys: readonly { key: string; ctrl: boolean }[]) =>
+      keys.map((key) => `<${key.ctrl ? "C-" : ""}${key.key}>`).join(""),
+  );
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode,
+  });
+  window.output("s2", 30, false);
+  const pressed = commands.run(
+    "press",
+    { pane: "s2", keys: ["up", "Ctrl+Shift+F5", "SPACE"] },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(100);
+  expect(encode).not.toHaveBeenCalled();
+  window.acknowledge("s2");
+  await expect(pressed).resolves.toEqual({ receipt: "accepted", offset: 30 });
+  expect(encode).toHaveBeenCalledWith(
+    "s2",
+    [
+      { key: "Up", ctrl: false, alt: false, shift: false },
+      { key: "F5", ctrl: true, alt: false, shift: true },
+      { key: "Space", ctrl: false, alt: false, shift: false },
+    ],
+    expect.any(AbortSignal),
+  );
+  expect(window.writes).toEqual([["s2", "<Up><C-F5><Space>"]]);
+});
+
+it("refuses keys press can't name and never writes for them", async () => {
+  const window = fakeWindow();
+  const encode = vi.fn(async () => "x");
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode,
+  });
+  const codes = await Promise.all(
+    [
+      { pane: "s1", keys: ["a"] },
+      { pane: "s1", keys: ["Cmd+Up"] },
+      { pane: "s1", keys: ["F13"] },
+      { pane: "s1", keys: ["Ctrl+Ctrl+Up"] },
+      { pane: "s1", keys: ["Up+Ctrl"] },
+      { pane: "s1", keys: [] },
+      { pane: "s1", keys: Array(65).fill("Up") },
+      { pane: "s1", keys: "Up" },
+      { pane: "s1" },
+      { pane: "s9", keys: ["Up"] },
+    ].map((args) => failure(commands.run("press", args, caller()))),
+  );
+  expect(codes).toEqual([
+    "unsupported-key",
+    "unsupported-key",
+    "unsupported-key",
+    "unsupported-key",
+    "unsupported-key",
+    "invalid-request",
+    "invalid-request",
+    "invalid-request",
+    "invalid-request",
+    "unknown-pane",
+  ]);
+  expect(encode).not.toHaveBeenCalled();
+  expect(window.writes).toEqual([]);
+});
+
+it("writes nothing when the grant ends while the window encodes", async () => {
+  const window = fakeWindow();
+  let answer!: (bytes: string) => void;
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode: () => new Promise<string>((resolve) => (answer = resolve)),
+  });
+  const pressed = commands.run("press", { pane: "s1", keys: ["Up"] }, caller());
+  await vi.waitFor(() => expect(answer).toBeDefined());
+  commands.dispose();
+  answer("\x1b[A");
+  expect(await failure(pressed)).toBe("revoked");
+  expect(window.writes).toEqual([]);
 });

@@ -23,7 +23,13 @@ export const MAX_AGENT_WAIT_MS = 600_000;
 
 export const AGENT_GRANT_ITEM = "Allow Agents in This Window";
 
-export const AGENT_COMMANDS = ["list", "send", "read", "wait"] as const;
+export const AGENT_COMMANDS = [
+  "list",
+  "send",
+  "read",
+  "wait",
+  "press",
+] as const;
 export type AgentCommand = (typeof AGENT_COMMANDS)[number];
 
 export const AGENT_ERROR_CODES = [
@@ -86,9 +92,9 @@ export function isAgentRequestId(value: unknown): value is AgentRequestId {
 }
 
 /**
- * Mode-independent keys: their bytes are the same whatever the program asked
- * the terminal for. Arrow and function keys depend on cursor and Kitty modes
- * and wait for a renderer-encoded route.
+ * Mode-independent keys for `send`: their bytes are the same whatever the
+ * program asked the terminal for. Keys whose bytes depend on cursor and Kitty
+ * modes are `press`, which the window encodes.
  */
 export function agentKeyBytes(name: string): string | undefined {
   const key = name.toLowerCase();
@@ -102,6 +108,90 @@ export function agentKeyBytes(name: string): string | undefined {
   if (Object.hasOwn(fixed, key)) return fixed[key];
   const control = /^ctrl\+([a-z])$/u.exec(key)?.[1];
   return control ? String.fromCharCode(control.charCodeAt(0) - 96) : undefined;
+}
+
+/**
+ * Keys `press` names, with the DOM key and physical code the Surface's encoder
+ * expects, so a press is encoded as the user's own key would be (#1048).
+ */
+const PRESS_KEYS: Readonly<Record<string, readonly [string, string]>> = {
+  Up: ["ArrowUp", "ArrowUp"],
+  Down: ["ArrowDown", "ArrowDown"],
+  Left: ["ArrowLeft", "ArrowLeft"],
+  Right: ["ArrowRight", "ArrowRight"],
+  Home: ["Home", "Home"],
+  End: ["End", "End"],
+  PageUp: ["PageUp", "PageUp"],
+  PageDown: ["PageDown", "PageDown"],
+  Insert: ["Insert", "Insert"],
+  Delete: ["Delete", "Delete"],
+  Enter: ["Enter", "Enter"],
+  Tab: ["Tab", "Tab"],
+  Escape: ["Escape", "Escape"],
+  Backspace: ["Backspace", "Backspace"],
+  Space: [" ", "Space"],
+  ...Object.fromEntries(
+    Array.from({ length: 12 }, (_, index) => [
+      `F${index + 1}`,
+      [`F${index + 1}`, `F${index + 1}`],
+    ]),
+  ),
+};
+const PRESS_KEY_NAMES = new Map(
+  Object.keys(PRESS_KEYS).map((name) => [name.toLowerCase(), name]),
+);
+
+/** One named key with its modifiers, as `press` and the window carry it. */
+export interface AgentKeyChord {
+  readonly key: string;
+  readonly ctrl: boolean;
+  readonly alt: boolean;
+  readonly shift: boolean;
+}
+
+/** `Up`, `ctrl+shift+F5`: modifiers then one named key, in any letter case. */
+export function parseAgentChord(name: string): AgentKeyChord | undefined {
+  if (name.length > 32) return undefined;
+  const parts = name.split("+");
+  const key = PRESS_KEY_NAMES.get(parts.pop()!.toLowerCase());
+  if (!key) return undefined;
+  const modifiers = new Set<string>();
+  for (const part of parts) {
+    const modifier = part.toLowerCase();
+    if (!["ctrl", "alt", "shift"].includes(modifier) || modifiers.has(modifier))
+      return undefined;
+    modifiers.add(modifier);
+  }
+  return {
+    key,
+    ctrl: modifiers.has("ctrl"),
+    alt: modifiers.has("alt"),
+    shift: modifiers.has("shift"),
+  };
+}
+
+export function isAgentKeyChord(value: unknown): value is AgentKeyChord {
+  return (
+    isPlainRecord(value) &&
+    hasOnlyKeys(value, ["key", "ctrl", "alt", "shift"]) &&
+    typeof value.key === "string" &&
+    Object.hasOwn(PRESS_KEYS, value.key) &&
+    typeof value.ctrl === "boolean" &&
+    typeof value.alt === "boolean" &&
+    typeof value.shift === "boolean"
+  );
+}
+
+/** The key description the Surface encodes, shaped like a DOM key event. */
+export function agentChordKey(chord: AgentKeyChord) {
+  const [key, code] = PRESS_KEYS[chord.key]!;
+  return {
+    key,
+    code,
+    ctrlKey: chord.ctrl,
+    altKey: chord.alt,
+    shiftKey: chord.shift,
+  };
 }
 
 /** The text an HMAC proof covers; the token itself never crosses. */

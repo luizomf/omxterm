@@ -12,7 +12,7 @@ in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
 `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N`,
-`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N` and `0.31.1-dev.N` bridges have distinct
+`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N` and `0.32.0-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
@@ -62,6 +62,10 @@ Swap panes (#1022) is the first feature of this cycle, so main moved to
 Stable 0.31.0 uses the frozen cut `dda89897`; the next development baseline is
 `0.31.1-dev.0`. Its bridge admits ranges that accept both `0.31.0` and
 `0.31.1`. Every catalog archive stays installable unchanged.
+
+The agent API's `press` command (#1048) is the first feature of this cycle,
+so main moved to `0.32.0-dev.0`. Its bridge admits ranges that accept both
+`0.31.0` and `0.32.0`, and every catalog archive stays installable unchanged.
 
 ## Public contract
 

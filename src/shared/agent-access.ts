@@ -4,13 +4,17 @@ import {
 } from "./terminal-contract";
 import {
   hasOnlyKeys,
+  isAgentKeyChord,
   isPlainRecord,
+  MAX_AGENT_KEYS,
   MAX_AGENT_READ_CHARS,
   MAX_AGENT_READ_LINES,
+  type AgentKeyChord,
 } from "./agent-api";
 
 // Main ⇄ renderer contract for a window's agent grant (ADR 0052). The
-// renderer confirms the marks, stops the grant and answers reads. A grant
+// renderer confirms the marks, stops the grant, answers reads and encodes
+// presses for a pane's modes (main writes the bytes). A grant
 // starts only from the toggle action (menu, shortcut or Command Palette).
 export const agentIpc = {
   state: "agent:state",
@@ -18,7 +22,12 @@ export const agentIpc = {
   stop: "agent:stop",
   read: "agent:read",
   readResult: "agent:read-result",
+  press: "agent:press",
+  pressResult: "agent:press-result",
 } as const;
+
+/** The encoded bytes of one press request; each key is a few bytes. */
+export const MAX_AGENT_PRESS_CHARS = MAX_AGENT_KEYS * 64;
 
 export const AGENT_REFUSALS = [
   "in-use",
@@ -99,6 +108,46 @@ export function isAgentReadResult(value: unknown): value is AgentReadResult {
   );
 }
 
+export interface AgentPressRequest {
+  readonly id: string;
+  readonly sessionId: TerminalSessionId;
+  readonly keys: readonly AgentKeyChord[];
+}
+
+/** The bytes the pane's Surface encoded, or why it couldn't. */
+export type AgentPressResult =
+  | { readonly id: string; readonly data: string }
+  | { readonly id: string; readonly error: "unknown-pane" | "unavailable" };
+
+export function isAgentPressRequest(
+  value: unknown,
+): value is AgentPressRequest {
+  return (
+    isPlainRecord(value) &&
+    hasOnlyKeys(value, ["id", "sessionId", "keys"]) &&
+    isReadId(value.id) &&
+    isTerminalSessionId(value.sessionId) &&
+    Array.isArray(value.keys) &&
+    value.keys.length >= 1 &&
+    value.keys.length <= MAX_AGENT_KEYS &&
+    value.keys.every(isAgentKeyChord)
+  );
+}
+
+export function isAgentPressResult(value: unknown): value is AgentPressResult {
+  if (!isPlainRecord(value) || !isReadId(value.id)) return false;
+  if ("error" in value)
+    return (
+      hasOnlyKeys(value, ["id", "error"]) &&
+      (value.error === "unknown-pane" || value.error === "unavailable")
+    );
+  return (
+    hasOnlyKeys(value, ["id", "data"]) &&
+    typeof value.data === "string" &&
+    value.data.length <= MAX_AGENT_PRESS_CHARS
+  );
+}
+
 /**
  * The last `lines` rows of exported text, without trailing spaces or the
  * blank rows below the cursor, cut at its start to the read limit.
@@ -129,4 +178,6 @@ export interface AgentAccessBridge {
   stop(): void;
   onRead(listener: (request: AgentReadRequest) => void): () => void;
   readResult(result: AgentReadResult): void;
+  onPress(listener: (request: AgentPressRequest) => void): () => void;
+  pressResult(result: AgentPressResult): void;
 }

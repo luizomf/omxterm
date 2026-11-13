@@ -39,7 +39,20 @@ export interface TerminalSurface {
   find(): void;
   // Reads selection or retained screen/history without changing interaction state.
   exportText(kind: TerminalExportKind): string;
+  // The bytes this key would send now, for the terminal's current cursor and
+  // Kitty keyboard modes, exactly as the user's own key press; nothing is
+  // sent. undefined while the Surface can't take input.
+  encodeKeyPress?(key: TerminalKeyPress): string | undefined;
   dispose(): void;
+}
+
+// A key as a DOM key event names it, without the event.
+export interface TerminalKeyPress {
+  readonly key: string;
+  readonly code: string;
+  readonly ctrlKey: boolean;
+  readonly altKey: boolean;
+  readonly shiftKey: boolean;
 }
 
 export interface TerminalClipboard {

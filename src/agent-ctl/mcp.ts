@@ -34,7 +34,7 @@ const CAPABILITIES = { tools: {} };
 const MCP_WAIT_TIMEOUT_MS = 50_000;
 const MAX_LINE_CHARS = 4 * 1024 * 1024;
 
-const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
+const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
 
 const window = {
   type: "integer",
@@ -82,7 +82,9 @@ const tool = (
   inputSchema: {
     type: "object",
     properties,
-    ...("pane" in properties ? { required: ["pane"] } : {}),
+    ...("pane" in properties
+      ? { required: name === "press" ? ["pane", "keys"] : ["pane"] }
+      : {}),
     additionalProperties: false,
   },
   annotations: readOnly
@@ -119,6 +121,22 @@ const TOOLS: readonly Tool[] = [
       wait: { type: "boolean", description: "Then wait, as the wait tool." },
       idle,
       timeout,
+      window,
+    },
+    false,
+  ),
+  tool(
+    "press",
+    "Press keys in a pane, encoded for the pane's current modes exactly as the user's own keys, for full-screen programs and menus (arrows in vim, less, htop). Answers the output offset to pass to wait as after.",
+    {
+      pane,
+      keys: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 1,
+        description:
+          "Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, each with any of Ctrl+, Alt+ and Shift+, such as Ctrl+Shift+Up.",
+      },
       window,
     },
     false,
@@ -239,9 +257,10 @@ async function callTool(
   try {
     const options = toolOptions(params.name, params.arguments, defaults);
     const outcome = await execute(options, signal);
-    // send without wait prints nothing; its offset is what wait needs.
+    // send without wait and press print nothing; the offset is what wait needs.
     return text(
-      outcome.output === "" && options.command === "send"
+      outcome.output === "" &&
+        (options.command === "send" || options.command === "press")
         ? JSON.stringify(outcome.result)
         : outcome.output,
       false,

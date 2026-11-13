@@ -4,6 +4,7 @@ import {
   agentIpc,
   agentTail,
   isAgentAccessState,
+  MAX_AGENT_PRESS_CHARS,
 } from "../../src/shared/agent-access";
 import { MAX_AGENT_READ_CHARS } from "../../src/shared/agent-api";
 
@@ -68,5 +69,45 @@ it("lets the window confirm, stop and answer, but passes only valid messages", (
     [agentIpc.shown],
     [agentIpc.stop],
     [agentIpc.readResult, { id, text: "hi", truncated: false }],
+  ]);
+});
+
+it("passes only valid presses and bounded encoded bytes", () => {
+  const listeners = new Map<
+    string,
+    (event: unknown, payload: unknown) => void
+  >();
+  const ipc = {
+    send: vi.fn(),
+    on: vi.fn(
+      (channel: string, listener: (event: unknown, payload: unknown) => void) =>
+        listeners.set(channel, listener),
+    ),
+    removeListener: vi.fn(),
+  };
+  const bridge = createAgentBridge(ipc as never);
+  const presses: unknown[] = [];
+  bridge.onPress((request) => presses.push(request));
+  const id = "00000000-0000-0000-0000-000000000004";
+  const up = { key: "Up", ctrl: false, alt: false, shift: true };
+  for (const keys of [
+    [],
+    [{ ...up, key: "ArrowUp" }],
+    [{ ...up, meta: true }],
+    [{ ...up, ctrl: "yes" }],
+    Array(65).fill(up),
+    [up],
+  ])
+    listeners.get(agentIpc.press)!({}, { id, sessionId: "s1", keys });
+  expect(presses).toEqual([{ id, sessionId: "s1", keys: [up] }]);
+
+  bridge.pressResult({ id, data: "\x1b[1;2A" });
+  bridge.pressResult({ id, error: "unavailable" });
+  expect(() =>
+    bridge.pressResult({ id, data: "x".repeat(MAX_AGENT_PRESS_CHARS + 1) }),
+  ).toThrow(TypeError);
+  expect(ipc.send.mock.calls).toEqual([
+    [agentIpc.pressResult, { id, data: "\x1b[1;2A" }],
+    [agentIpc.pressResult, { id, error: "unavailable" }],
   ]);
 });

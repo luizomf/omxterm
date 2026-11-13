@@ -137,6 +137,13 @@ export async function keyboardCoreFixture(claimKeys = false) {
   return {
     sent,
     routed,
+    // An agent's press, from the same prepared handler and core modes.
+    press: (key: Record<string, unknown>) =>
+      (
+        inputHandler as unknown as {
+          encodeKeyPress(key: Record<string, unknown>): string;
+        }
+      ).encodeKeyPress(key),
     write(text: string) {
       assert(callbacks);
       callbacks.onData(text);

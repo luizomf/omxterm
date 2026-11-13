@@ -213,6 +213,27 @@ describe("Restty Terminal Surface", () => {
     expect(adapter.close).not.toHaveBeenCalled();
   });
 
+  it("encodes a key press through the live core, sending nothing, until disposed", async () => {
+    const { adapter } = createAdapter();
+    const surface = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    const restty = harness.instances[0]!;
+    const up = {
+      key: "ArrowUp",
+      code: "ArrowUp",
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: true,
+    };
+    expect(surface.encodeKeyPress?.(up)).toBe("<ArrowUp>");
+    expect(restty.encodeKeyPress).toHaveBeenCalledExactlyOnceWith(up);
+    expect(adapter.write).not.toHaveBeenCalled();
+    surface.dispose();
+    expect(surface.encodeKeyPress?.(up)).toBeUndefined();
+  });
+
   it("forwards parsed title and bell events once and ignores them after disposal", async () => {
     const { adapter } = createAdapter();
     const onTitleRequest = vi.fn();

@@ -16,6 +16,7 @@ import { idleRenderCorrections } from "./restty-idle-render-corrections.mjs";
 import { idleBlinkCorrections } from "./restty-idle-blink-corrections.mjs";
 import { attentionOscCorrections } from "./restty-attention-osc-corrections.mjs";
 import { replyOrderCorrections } from "./restty-reply-order-corrections.mjs";
+import { keyPressCorrections } from "./restty-key-press-corrections.mjs";
 import { wasmAddressCorrections } from "./restty-wasm-address-corrections.mjs";
 import {
   applicationCursorCorrections,
@@ -168,8 +169,10 @@ const priorAttentionOscDigest =
   "3194723adecac1901096c384e9a9687fcf0c979dab64fcae22886353354facff";
 const priorReplyOrderDigest =
   "056d91bbc23901c0bf57d1584bf53502fdd9c25b9f4ce6a3b34ccd7577b83faf";
-const correctedDigest =
+const priorKeyPressDigest =
   "db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c";
+const correctedDigest =
+  "4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -2057,6 +2060,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, attentionOscCorrections);
       case priorReplyOrderDigest:
         source = applyCorrections(source, replyOrderCorrections);
+      case priorKeyPressDigest:
+        source = applyCorrections(source, keyPressCorrections);
         break;
       default:
         throw new Error(
