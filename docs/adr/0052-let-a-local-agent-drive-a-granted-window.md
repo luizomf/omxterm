@@ -332,7 +332,10 @@ matching lands, every chord goes to the pane.
   Marks are `app-region: no-drag`, so a hidden title bar's drag area doesn't
   take the click. That holds in every state an agent's shortcut can make: tab
   strip and title bar hidden, full screen, any zoom
-  ([#1052](https://github.com/luizomf/omxterm/issues/1052)).
+  ([#1052](https://github.com/luizomf/omxterm/issues/1052)). A dialog or
+  overlay the user opens (the Command Palette, an image preview, an extension
+  dialog) sits above the mark until the user closes it; agents can't open
+  those, and their closes and quit wait for the user meanwhile.
 - The click stops the window at once: it drops every agent command the window
   holds before main hears of it, so nothing already handed over runs after.
 - Main admits commands only while the renderer has confirmed the marks are
