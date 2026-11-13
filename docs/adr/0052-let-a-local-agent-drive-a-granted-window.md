@@ -1,8 +1,10 @@
 # Let a local agent drive a window the user grants
 
 Status: accepted for slice 1, "Drive what's there", and slice 2, "Agents plug
-in by themselves" (macOS and Linux), which are implemented; the later slices
-are still proposed
+in by themselves" (macOS and Linux), which are implemented. The
+[keyboard-parity rule](#keyboard-parity) is accepted and not built yet; slice
+4 builds it ([#1047](https://github.com/luizomf/omxterm/issues/1047)). The
+other later slices are still proposed
 ([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
 [#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
 [ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md) (one accent tone,
@@ -10,7 +12,8 @@ window-scoped marks),
 [ADR 0004](0004-log-the-operational-envelope-not-terminal-payload.md) (API
 payloads join the excluded content) and
 [ADR 0013](0013-do-not-inject-shell-integration.md) (three non-secret
-environment variables in every pane). The wire protocol and CLI are in the
+environment variables in every pane). Slice 4 amends ADR 0050 again (the
+mark's error tone). The wire protocol and CLI are in the
 [Agent API reference](../dev/agent-api.md). Where slices 1 and 2 differ from the
 text below, [Slice 1 as built](#slice-1-as-built) and
 [Slice 2 as built](#slice-2-as-built) say so.
@@ -23,9 +26,11 @@ missing piece is a first-class route for an outside program to do what a tmux
 client does: open tabs and panes, type, read the screen, and wait.
 
 The owner's decisions are settled in #1025: the grant covers one window; inside
-it the agent has full autonomy; it stays until the user stops it; it is visible
-as an accent State Mark; core owns it in Electron `main`. This record makes
-those concrete against the code and says where they don't hold as written.
+it the agent can press what the user can press, keys and shortcuts alike
+(keyboard parity, which on 2026-11-13 replaced "full autonomy"); it stays
+until the user stops it; it is visible as a State Mark; core owns it in
+Electron `main`. This record makes those concrete against the code and says
+where they don't hold as written.
 
 The audience is someone who will never touch tmux. They click to allow, the
 agent already in the pane finds out by itself that it can drive the window,
@@ -53,6 +58,16 @@ What the code gives us today:
   sessions and the selected tab's sessions, not the tree. Tab and pane
   commands (`new`, `split`, `close-pane`) act on the selected tab's focused
   pane and return nothing; New Tab selects the tab it creates.
+- **Shortcuts are actions matched in main.** Every shortcut, menu item and
+  palette entry is one entry of `src/main/action-catalog.ts`, and each acts
+  on the selected window. Main matches the effective keybinds (defaults plus
+  the user's rebinds) in the window's `before-input-event`
+  (`src/main/keybind-delivery.ts`); a key that matches nothing goes on to the
+  Surface.
+- **Mode-aware key encoding lives in the renderer.** Restty encodes a key for
+  the pane's application-cursor and Kitty keyboard modes when it is pressed
+  (`scripts/restty-application-cursor-corrections.mjs`); main never sees
+  those modes.
 - **A pane's environment already names the terminal.** Main sets
   `TERM_PROGRAM=OMXTerm` and its version when it spawns the PTY
   (`src/main/local-terminal-session.ts`), and knows the window and the session
@@ -81,11 +96,11 @@ What the code gives us today:
   **Allow Agents in This Window** is a toggle in the Window menu and the
   Command Palette, with a rebindable shortcut that has no default. Turning it
   on flashes one sentence; there is no confirmation dialog.
-- Only that gesture creates a grant. The API has no command that grants, lists
-  other windows, runs an application action, or types into anything but a PTY.
-  Agent bytes are written to the PTY in main and never pass the window's
-  keyboard handling, so an agent can't press the shortcut that would grant
-  another window.
+- Only that gesture creates a grant. The API has no command that grants or
+  reaches another window, and agent input never passes the window's keyboard
+  handling. Until slice 4 it runs no application action at all; after it, the
+  agent presses shortcuts in its window and the grant toggle is refused by
+  action, not by key ([Keyboard parity](#keyboard-parity)).
 - It ends when the user clicks a mark, uses the toggle, closes the window or
   quits, and also when main can't keep its side of the bargain: the renderer
   is lost or reloads, or the endpoint can't be held. Ending closes every
@@ -170,11 +185,65 @@ What the code gives us today:
 - The user's keyboard keeps working in every pane. Each request is one bounded
   write, so a request isn't split by a keystroke, but requests and keystrokes
   interleave freely. There is no input lock.
-- Main doesn't know terminal modes. The first slice sends literal text and a
-  fixed table of mode-independent keys (`Enter`, `Tab`, `Escape`,
-  `Backspace`, `Space`, `Ctrl+<letter>`). Arrow and function keys, whose bytes depend
-  on application-cursor and Kitty modes, and paste that honors bracketed
-  paste mode, need a renderer-encoded route and come later.
+- Main doesn't know terminal modes. `send` writes literal text and a fixed
+  table of mode-independent keys (`Enter`, `Tab`, `Escape`, `Backspace`,
+  `Space`, `Ctrl+<letter>`), and stays that way. Arrow and function keys,
+  whose bytes depend on application-cursor and Kitty modes, are `press` in
+  slice 4; paste that honors bracketed paste mode is slice 6.
+
+### Keyboard parity
+
+Owner decision (2026-11-13, #1025): **inside a window the user granted, the
+agent can press what the user can press, keys and shortcuts alike**, with one
+exception, the grant toggle. Only the user turns a grant on or off, one click
+on the mark stops everything at once, and a grant is never restored
+automatically. Slice 4 builds it; until then agent input is `send` only.
+
+```
+ press(pane, chord)
+        |
+        v
+ main: effective shortcuts --- match ---> toggleAgentAccess --> refused
+ (defaults + rebinds)            |------> parked UI ---------> "not yet"
+                                 |------> other action ------> runs in the
+                                 |                             granted window
+                                 '------> no match
+                                              |
+                       renderer encodes for the pane's mode
+                                              |
+                                              v
+                                   agentInput() --> PTY
+```
+
+- **`press` is the route.** It takes named keys and chords for a pane of the
+  granted window. Main matches each one against that window's effective
+  shortcuts with the same matcher `before-input-event` uses, from data: no
+  key event is synthesized and nothing enters Chromium's input path. A match
+  runs that catalog action and `press` says which one ran. Anything else is
+  encoded by the renderer for the pane's current mode, exactly as the user's
+  key would be, and written by `agentInput()`, so like `send` it never
+  reaches `routeKeyInput`, Mirror Typing or Protected Paste. Unverified:
+  that Restty's encoder runs without a real DOM key event (#1048 starts with
+  that spike).
+- **The exception is enforced by action, not by key.** A chord that resolves
+  to `toggleAgentAccess` is refused, whatever key the user bound it to, and
+  is not sent to the pane either. The API reaches actions only through that
+  lookup, never through the menu, the Command Palette or a native dialog, so
+  rebinding the toggle can't route around it.
+- **Presses act on the granted window**, even when another window is
+  selected. Keys go to the pane `press` names; a matched action runs on that
+  window's selected tab and focused pane, as the user's own press there
+  would. They never type into the selected window or through the user's
+  keyboard handling. Today every catalog action takes the selected window,
+  so slice 4 gives the actions it covers an explicit window.
+- **UI the agent can't read yet answers "not yet"** in one sentence and does
+  nothing, until its own decision: the Command Palette (which lists **Allow
+  Agents in This Window**), Settings, Find, extension panels and native
+  dialogs.
+- **`send` stays as it is**: literal text and mode-independent keys, never
+  matched against shortcuts.
+- **The mark turns to the error tone** once shortcuts land
+  ([Visible state](#visible-state)).
 
 ### Reading and waiting
 
@@ -208,14 +277,15 @@ What the code gives us today:
 ### Tabs and panes
 
 - Ids are the window's session ids for panes and renderer-assigned ids for
-  tabs, valid for that grant only. `list` is a renderer round trip that
-  returns the tree.
-- Creating, splitting, closing and selecting need new renderer commands that
-  take a pane or tab id and answer with the new id; today's commands act on
-  the focused pane and answer nothing. Closing a Busy Session refuses unless
-  the request says `force`. Closing the last tab closes the window and the
-  grant with it.
-- An agent that selects a tab or pane moves the user's selection, and tab
+  tabs, valid for that grant only. In slice 4 `list` returns the tree of
+  tabs and panes, with the selected tab and focused pane, so an agent can see
+  what its presses did.
+- The agent shapes the window with the user's own shortcuts through `press`:
+  new, close, next, previous and select tab, split, close pane, focus and
+  swap panes, equalize. This replaces the commands taking a pane or tab id
+  that this record first proposed. Closing the last tab closes the window and
+  the grant with it.
+- An agent that selects a tab or pane moves that window's selection, and tab
   selection stops a Mirror Typing group as it does for the user (ADR 0043).
 
 ### Visible state
@@ -234,6 +304,10 @@ What the code gives us today:
   never pass a color. It doesn't reuse `--terminal-pane-accent`, because a
   theme can set `appearance.activePaneHighlight` to `null` and a consent
   indicator can't be something a theme switches off.
+- Once agents can press shortcuts (slice 4), the same mark takes the theme's
+  error tone (`--ui-error-accent`, the theme's red) and its label reads
+  "Agents can do anything you can in this window. Click this mark to stop
+  them." Same glyph, same click, no banner. Until then it keeps the accent.
 - With the tab strip hidden, the selected tab's panes still carry the mark,
   so the window always shows it, with one exception that needs a fix: an
   Application Tab has no pane. A window-scoped mark also renders at the page's
@@ -274,7 +348,8 @@ a command name, its duration and an error code.
   the containment is the window boundary, so sensitive sessions belong in a
   window without a grant.
 - **The agent itself** has, inside the window, what the user has at that
-  keyboard, including whatever the open SSH sessions can do.
+  keyboard, including whatever the open SSH sessions can do. From slice 4
+  that includes the window's shortcuts, except the grant toggle.
 
 ## Tradeoffs and disagreements with #1025
 
@@ -300,13 +375,20 @@ a command name, its duration and an error code.
 - **The accent has no contrast guarantee.** `terminalPaneAccent()` falls back
   to the foreground color when cyan is too close to the background, and a
   custom palette or transparency can still leave it weak. The mark can't be
-  switched off, but a theme can make it as quiet as any other mark.
+  switched off, but a theme can make it as quiet as any other mark. The
+  error tone of slice 4 has even less: it is the theme's red as is, with no
+  fallback.
 - **"Visible" holds only while the window is.** A minimized, hidden or
   covered window keeps its grant, by decision, and shows nothing anywhere
   else. The menu item's check mark is the only other trace.
-- **Full autonomy includes the user's focus.** New tabs and selections made
-  by the agent move what the user sees. Creating without selecting depends on
-  panes that were never shown being mounted and sized, which is unverified.
+- **Parity includes the window's selection.** The agent's New Tab selects
+  the new tab, as the user's does, so what the user sees in that window moves
+  with the agent.
+- **Parity reaches the mark's blind spot.** Once an agent can hide the tab
+  strip and select tabs, it can reach the unverified case in
+  [Slice 1 as built](#slice-1-as-built): tab strip hidden and an extension
+  tab selected, where the corner mark may be covered. That needs checking
+  before the tab-bar toggle is open to agents.
 - **Environment variables in every pane** are visible to every program the
   user runs there, and say only where OMXTerm is. That is the price of an
   agent finding the API by itself.
@@ -319,7 +401,12 @@ a command name, its duration and an error code.
   to keep identical to Ghostty's.
 - **Routing agent input through the Surface** (`inject()`): it would revoke
   Mirror Typing routes, trigger Protected Paste and depend on a live renderer
-  for every byte. A renderer-encoded route stays possible for mode-aware keys.
+  for every byte. `press` asks the renderer only to encode a key; the bytes
+  still go through `agentInput()`.
+- **Synthesizing native key events** for `press`
+  (`webContents.sendInputEvent`): they would go through the user's keyboard
+  handling, could reach the menu and the Command Palette, and would make the
+  grant toggle's refusal depend on keys instead of actions.
 - **Loopback TCP or HTTP**: reachable by every local user and by browsers.
 - **Putting the token in the pane's environment**: the PTY is already running
   when the grant is given, and every child process would inherit it.
@@ -337,17 +424,38 @@ a command name, its duration and an error code.
    `omxterm-ctl mcp`, a thin MCP server over the same client for agents that
    speak MCP (Claude Code, Codex).
 3. **Read and wait better.** The exact `screen` read and `wait` with `match`.
-4. **Shape the window.** The tab and pane tree in `list`; create, split,
-   close and select by id.
+4. **Press what the user can press.** The
+   [keyboard-parity rule](#keyboard-parity), in this order (sub-issues of
+   #1025, after this amendment, #1047):
+   - [#1048](https://github.com/luizomf/omxterm/issues/1048): `press` with
+     named keys, encoded for the pane's mode, also in an unselected granted
+     window. No shortcut matching yet: every chord goes to the pane.
+   - [#1049](https://github.com/luizomf/omxterm/issues/1049): the tab and
+     pane tree in `list`.
+   - [#1050](https://github.com/luizomf/omxterm/issues/1050): tab and pane
+     shortcuts run in the granted window, the grant toggle is refused by
+     action, parked UI answers "not yet", and the mark takes the error tone.
+     Other chords still go to the pane.
+   - [#1051](https://github.com/luizomf/omxterm/issues/1051): `keys` lists
+     the window's effective shortcuts, marking the refused and "not yet"
+     ones.
+   - [#1052](https://github.com/luizomf/omxterm/issues/1052): the remaining
+     shortcut actions, each decided; a window the agent opens starts
+     ungranted.
+
+   It replaces the id-based tab and pane commands first planned here and
+   takes the named keys of slice 6.
+
 5. **Windows.** The pipe endpoint, console behavior of the client, and the
    decision on native hardening.
-6. **Keys and paste by mode.** Renderer-encoded named keys and paste that
-   honors bracketed paste.
+6. **Paste by mode.** Text sent as a paste that honors bracketed paste mode.
 7. **A record of what the agent typed.** Session-only, in memory, bounded,
    shown to the user in the window and dropped with the grant; attached at
    `agentInput()`, never in operational logs.
 8. **Command boundaries.** With #1027: `command-end`, exit codes and
    per-command output.
+
+Numbers name slices, not their order; #1025 tracks the order.
 
 ## Slice 1 as built
 
@@ -442,6 +550,16 @@ building it:
   Windows? It does on macOS (slice 1).
 - Limits: how many tabs and panes may an agent create, and does a grant need
   a rate limit on input?
+- Closing a tab or pane with a Busy Session asks for confirmation in a native
+  dialog (ADR 0017), which is parked UI. What does the agent's close chord do
+  there: answer "not yet", or leave the dialog to the user? (#1050)
+- Shortcut actions that neither #1050 nor #1052 names: the Snippets sidebar,
+  the auxiliary panel toggle and move, Reload Configuration, and the
+  extension slots (Files, SSH Connect, Mirror Typing, Save layout). About,
+  Settings, Open Local Image, Always on Top and Developer Tools have no
+  shortcut, so `press` can't reach them. If Developer Tools ever gets one, it
+  must stay out of reach: it runs code in the renderer, and the renderer can
+  grant ([Slice 1 as built](#slice-1-as-built)).
 - Should the grant show anywhere outside its window (Dock, tray, another
   window's menu) for the overnight case?
 - `OMXTERM_CTL` points into the AppImage's current mount. A multiplexer server
