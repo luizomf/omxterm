@@ -420,7 +420,9 @@ building it:
 - **Codex hides the pane.** Codex starts stdio servers with a short default
   environment, so `OMXTERM_PANE` and `OMXTERM_PROFILE` don't reach the server
   unless its configuration lists them in `env_vars`. Without them the server
-  behaves like a client outside OMXTerm. The guide says how to add them.
+  behaves like a client outside OMXTerm, and `status` and `list` say that no
+  pane could be marked `self`. The guide gives one block that registers the
+  server and adds them.
 - **A shorter wait.** An MCP `wait` defaults to a 50 s timeout instead of the
   CLI's 60 s, so it answers before Codex's default 60 s tool timeout.
 

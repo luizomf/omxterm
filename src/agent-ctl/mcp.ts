@@ -34,7 +34,7 @@ const CAPABILITIES = { tools: {} };
 const MCP_WAIT_TIMEOUT_MS = 50_000;
 const MAX_LINE_CHARS = 4 * 1024 * 1024;
 
-const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. Never send to the pane list marks self: it is your own. "$OMXTERM_CTL" guide prints the full guide.`;
+const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
 
 const window = {
   type: "integer",
@@ -169,40 +169,54 @@ class RpcError extends Error {
 
 type Id = string | number;
 
+const wrong = (key: string, kind: string) =>
+  new CtlError(EXIT.usage, `${key} must be ${kind}.`);
+
+// Positional, so it must never look like an option such as --profile.
+function paneValue(value: unknown): string {
+  if (typeof value !== "string" || !/^(?:\d+:)?s\d+$/u.test(value))
+    throw wrong("pane", "a pane id from list, such as s2");
+  return value;
+}
+
+// One tool argument as the CLI option of the same name.
+function option(key: string, value: unknown, schema: Schema): string[] {
+  if (schema.type === "string") {
+    if (typeof value !== "string") throw wrong(key, "a string");
+    return [`--${key}`, value];
+  }
+  if (schema.type === "boolean") {
+    if (typeof value !== "boolean") throw wrong(key, "true or false");
+    return value ? [`--${key}`] : [];
+  }
+  if (schema.type === "integer") {
+    if (!Number.isSafeInteger(value) || (value as number) < 0)
+      throw wrong(key, "a whole number");
+    return [`--${key}`, String(value)];
+  }
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string"))
+    throw wrong(key, "a list of key names");
+  return [`--${key}`, value.join(",")];
+}
+
 // A tool call's arguments as the CLI's own argv, so both share one parser.
 function toolOptions(name: string, args: unknown, defaults: Options): Options {
   const definition = TOOLS.find((candidate) => candidate.name === name);
   if (!definition) throw new RpcError(-32602, `Unknown tool: ${name}`);
-  if (args !== undefined && !isPlainRecord(args))
+  if (args !== undefined && args !== null && !isPlainRecord(args))
     throw new RpcError(-32602, "Tool arguments must be an object.");
   const argv = [name];
   for (const [key, value] of Object.entries(args ?? {})) {
     const schema = definition.inputSchema.properties[key];
-    const wrong = (kind: string) =>
-      new CtlError(EXIT.usage, `${key} must be ${kind}.`);
     if (!schema) throw new CtlError(EXIT.usage, `${name} takes no ${key}.`);
-    if (schema.type === "string") {
-      if (typeof value !== "string") throw wrong("a string");
-      if (key === "pane") argv.splice(1, 0, value);
-      else argv.push(`--${key}`, value);
-    } else if (schema.type === "boolean") {
-      if (typeof value !== "boolean") throw wrong("true or false");
-      if (value) argv.push(`--${key}`);
-    } else if (schema.type === "integer") {
-      if (!Number.isSafeInteger(value) || (value as number) < 0)
-        throw wrong("a whole number");
-      argv.push(`--${key}`, String(value));
-    } else {
-      if (
-        !Array.isArray(value) ||
-        !value.every((item) => typeof item === "string")
-      )
-        throw wrong("a list of key names");
-      argv.push(`--${key}`, value.join(","));
-    }
+    // A pane is positional, after the command.
+    if (key === "pane") argv.splice(1, 0, paneValue(value));
+    else argv.push(...option(key, value, schema));
   }
   const options = parse(argv);
-  // The server's own --profile and --window apply to every call.
+  options.windowName = "the window argument";
+  // The server's own --profile applies to every call, and its --window to
+  // every call that doesn't name one.
   if (options.profile === undefined && defaults.profile !== undefined)
     options.profile = defaults.profile;
   if (options.window === undefined && defaults.window !== undefined)
@@ -325,7 +339,7 @@ export function serveMcp(
       return;
     }
     if (typeof id !== "string" && typeof id !== "number") {
-      write({ id: null, error: { code: -32600, message: "Invalid id." } });
+      write({ error: { code: -32600, message: "Invalid id." } });
       return;
     }
     const controller = new AbortController();
@@ -361,14 +375,11 @@ export function serveMcp(
       try {
         message = JSON.parse(text);
       } catch {
-        write({ id: null, error: { code: -32700, message: "Parse error." } });
+        write({ error: { code: -32700, message: "Parse error." } });
         return;
       }
       if (!isPlainRecord(message)) {
-        write({
-          id: null,
-          error: { code: -32600, message: "Not a JSON-RPC message." },
-        });
+        write({ error: { code: -32600, message: "Not a JSON-RPC message." } });
         return;
       }
       const task = handle(message);
@@ -385,14 +396,19 @@ export function serveMcp(
       }
       if (buffer.length > MAX_LINE_CHARS) {
         buffer = "";
-        write({ id: null, error: { code: -32600, message: "Line too long." } });
+        write({ error: { code: -32600, message: "Line too long." } });
       }
     });
-    input.on("end", () => {
+    let ended = false;
+    const end = () => {
+      if (ended) return;
+      ended = true;
       if (buffer) line(buffer);
       // The client is gone: stop what's in flight and leave.
       for (const controller of inFlight.values()) controller.abort();
       void Promise.allSettled([...pending]).then(() => resolve());
-    });
+    };
+    input.on("end", end);
+    input.on("error", end);
   });
 }

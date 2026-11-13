@@ -1288,6 +1288,9 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   The tools are always listed; without a grant they answer with the `status`
   sentence as a tool error, and they work from the next call once the user
   allows the window, with no restart.
+- When the client can't tell its own pane (no `OMXTERM_PANE`, as under an
+  agent that hides it, or another profile), `status` and `list` add one
+  sentence saying no pane is marked `self`.
 - Main listens on `<profile>/agent-api/ctl.sock` (directory `0700`, socket
   `0600`) only while a grant exists, and never on TCP. Each grant has a random
   256-bit token in `<profile>/agent-api/grants/<window>.json` (`0600`), written

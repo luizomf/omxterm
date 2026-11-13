@@ -30,6 +30,8 @@ export type Options = {
   profile?: string;
   json: boolean;
   help: boolean;
+  /** How messages name the window choice: `--window`, or MCP's argument. */
+  windowName: string;
 };
 
 export function parse(argv: readonly string[]): Options {
@@ -40,6 +42,7 @@ export function parse(argv: readonly string[]): Options {
     wait: false,
     json: false,
     help: false,
+    windowName: "--window",
   };
   const number = (name: string, value: string | undefined) => {
     if (value === undefined || !/^\d+$/u.test(value))
@@ -118,8 +121,21 @@ function defaultProfile(): string {
   );
 }
 
-// The caller's own process, window and pane, inside an OMXTerm pane.
-const ownPane = () => parseAgentPane(process.env.OMXTERM_PANE);
+// The caller's own process, window and pane, inside an OMXTerm pane. Another
+// profile than the pane's own looks past it.
+function ownPane(options: Options) {
+  const own = parseAgentPane(process.env.OMXTERM_PANE);
+  if (!own || options.profile === undefined) return own;
+  const profile = process.env.OMXTERM_PROFILE;
+  return profile !== undefined &&
+    path.resolve(options.profile) === path.resolve(profile)
+    ? own
+    : undefined;
+}
+
+/** Said by status and list when no pane can be marked self. */
+export const SELF_UNKNOWN =
+  "OMXTerm can't tell which pane of this window is yours, so none is marked self; you may be running in one of them.";
 
 const grantsDirectory = (profile: string) =>
   path.join(profile, "agent-api", "grants");
@@ -187,15 +203,15 @@ function readGrant(
 
 function chooseWindow(options: Options, profile: string): number {
   if (options.window !== undefined) return options.window;
-  const own = ownPane();
-  if (own && options.profile === undefined) return own.window;
+  const own = ownPane(options);
+  if (own) return own.window;
   const windows = grantedWindows(profile);
   if (windows.length === 0)
     throw new CtlError(EXIT.absent, agentNotGrantedSentence());
   if (windows.length > 1)
     throw new CtlError(
       EXIT.usage,
-      `Several windows allow agents (${windows.join(", ")}); pick one with --window.`,
+      `Several windows allow agents (${windows.join(", ")}); pick one with ${options.windowName}.`,
     );
   return windows[0]!;
 }
@@ -245,8 +261,7 @@ export async function execute(
     throw new CtlError(EXIT.usage, `Unknown command ${options.command}.`);
 
   const window = chooseWindow(options, profile);
-  // An explicit --profile looks past the pane's own process.
-  const own = options.profile === undefined ? ownPane() : undefined;
+  const own = ownPane(options);
   const grant = readGrant(profile, window, own?.instance);
   if (!grant) throw new CtlError(EXIT.absent, agentNotGrantedSentence());
   const client = await Client.connect(grant.endpoint);
@@ -258,7 +273,7 @@ export async function execute(
       grant,
       own && own.window === window ? own.pane : undefined,
     );
-    return await run(client, options, window);
+    return await run(client, options, window, own !== undefined);
   } finally {
     signal?.removeEventListener("abort", drop);
     client.end();
@@ -273,20 +288,26 @@ type Pane = {
   self: boolean;
 };
 
-async function list(client: Client, options: Options): Promise<Outcome> {
-  const result = (await client.request("list")) as { panes: Pane[] };
+async function list(
+  client: Client,
+  options: Options,
+  selfKnown: boolean,
+): Promise<Outcome> {
+  const listed = (await client.request("list")) as { panes: Pane[] };
+  const result = selfKnown ? listed : { ...listed, note: SELF_UNKNOWN };
   if (options.json) return done(JSON.stringify(result), result);
   return done(
-    result.panes
-      .map((pane) =>
+    [
+      ...result.panes.map((pane) =>
         [
           pane.pane,
           pane.cols ? `${pane.cols}x${pane.rows}` : "-",
           ...(pane.focused ? ["focused"] : []),
           ...(pane.self ? ["self"] : []),
         ].join("\t"),
-      )
-      .join("\n"),
+      ),
+      ...(selfKnown ? [] : [SELF_UNKNOWN]),
+    ].join("\n"),
     result,
   );
 }
@@ -316,15 +337,25 @@ async function run(
   client: Client,
   options: Options,
   window: number,
+  selfKnown: boolean,
 ): Promise<Outcome> {
-  if (options.command === "status")
+  if (options.command === "status") {
+    const result = {
+      granted: true,
+      window,
+      ...(selfKnown ? {} : { note: SELF_UNKNOWN }),
+    };
     return done(
       options.json
-        ? JSON.stringify({ granted: true, window })
-        : `Agents can control and read this OMXTerm window (${window}).`,
-      { granted: true, window },
+        ? JSON.stringify(result)
+        : [
+            `Agents can control and read this OMXTerm window (${window}).`,
+            ...(selfKnown ? [] : [SELF_UNKNOWN]),
+          ].join("\n"),
+      result,
     );
-  if (options.command === "list") return list(client, options);
+  }
+  if (options.command === "list") return list(client, options, selfKnown);
   const pane = paneArgument(options, window);
   if (options.command === "send") return send(client, options, pane);
   if (options.command === "read") {

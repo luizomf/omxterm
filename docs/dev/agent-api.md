@@ -268,8 +268,12 @@ omxterm-ctl close s8 --force               # slice 4
 
 - Inside a pane, agents call it as `"$OMXTERM_CTL"`; window and profile come
   from the environment. Elsewhere, `--window <id>` picks a grant when there
-  are several and `--profile <dir>` picks a profile. `--json` prints the raw
-  result.
+  are several and `--profile <dir>` picks a profile. A `--profile` other than
+  the pane's own `OMXTERM_PROFILE` ignores the pane, so nothing is marked
+  `self`. `--json` prints the raw result.
+- When the client's own pane is unknown (no `OMXTERM_PANE`, or another
+  profile), `status` and `list` add one sentence saying no pane is marked
+  `self` and the caller may be in one of them; `--json` adds it as `note`.
 - `status` exits 0 when this window is granted. Otherwise it prints one
   sentence naming **Allow Agents in This Window** and exits 3, so an agent
   can pass the sentence on to the user.
@@ -315,30 +319,37 @@ as Codex does). It offers tools only.
   unknown tool or method is a JSON-RPC error.
 - `timeout` defaults to 50000 here, not 60000, so a wait answers before
   Codex's default 60 s tool timeout.
-- `--profile` and `--window` on the `mcp` command line apply to every call.
+- `--profile` on the `mcp` command line applies to every call; `--window`
+  applies to every call that doesn't pass its own `window`. The several-windows
+  error names the `window` argument.
+- A `pane` must be a pane id (`s4` or `3:s4`); anything else is a tool error.
 - Calls run concurrently; `notifications/cancelled` drops that call's
   connection. The server exits when stdin closes.
 
-Register it from an OMXTerm pane, so the client path is known:
+Register it from an OMXTerm pane, so the client path is known. The tools
+appear in the agent's next session. The guide has the same commands.
 
 ```sh
 claude mcp add --scope user omxterm -- "$OMXTERM_CTL" mcp
-codex mcp add omxterm -- "$OMXTERM_CTL" mcp
 ```
 
 Claude Code passes its whole environment to the server. Codex passes only a
-short default list, so the server can't see its pane without this line under
-`[mcp_servers.omxterm]` in `~/.codex/config.toml`:
+short default list, so the server can't see its pane unless the variables are
+in the server's `env_vars`. `codex mcp add` has no option for that, so the
+second line adds it (rerunning both is safe: `add` rewrites the table):
 
-```toml
-env_vars = ["OMXTERM_PROFILE", "OMXTERM_PANE"]
+```sh
+codex mcp add omxterm -- "$OMXTERM_CTL" mcp &&
+  sed -i.bak '/^\[mcp_servers\.omxterm\]$/a\
+env_vars = ["OMXTERM_PROFILE", "OMXTERM_PANE", "OMXTERM_CTL"]
+' "${CODEX_HOME:-$HOME/.codex}/config.toml"
 ```
 
 Without `OMXTERM_PANE` the server acts like a client outside OMXTerm: the
-default profile, the only granted window, and no `self` pane. Registration
-stores the expanded path; on an AppImage it changes with every launch, so
-register `sh -c 'exec "$OMXTERM_CTL" mcp'` there instead (and add
-`OMXTERM_CTL` to Codex's `env_vars`).
+default profile, the only granted window, and no `self` pane, which `status`
+and `list` say. Registration stores the expanded path; on an AppImage it
+changes with every launch, so register `sh -c 'exec "$OMXTERM_CTL" mcp'` there
+instead.
 
 ## Where it lives
 
