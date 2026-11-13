@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- Keep the Surface's runtime wiring and the methods it returns in one mount scope. */
 import { surfaceTransport } from "./surface-transport";
 import {
   PatchedRestty,
@@ -397,6 +398,10 @@ export async function mountResttyTerminalSurface(
         options,
       ),
       find: () => openSearch(disposed ? undefined : restty),
+      encodeKeyPress: (key) =>
+        isInactive() || ended || !ready
+          ? undefined
+          : pane?.runtime.terminal.encodeKeyPress(key),
       dispose,
     };
   } catch (cause) {

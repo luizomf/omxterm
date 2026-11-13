@@ -68,6 +68,16 @@ hard reset and the pinned core's soft-reset behavior without waiting for a frame
 npx vitest run test/integration/restty-keyboard-core.test.ts test/unit/restty-input-routing.test.ts test/unit/restty-dependency-contract.test.ts
 ```
 
+An agent's `press`
+([ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md)) uses the
+same encoder through `encodeKeyPress()` in
+`scripts/restty-key-press-corrections.mjs`: a plain key description against the
+core's current modes, the keydown plus the keyup only when Kitty reports
+release events, each through the final PTY mapping. Nothing is sent; main
+writes the bytes. `test/unit/agent-press-encoding.test.ts` compares it with the
+DOM key path above for every named key and modifier in normal,
+application-cursor and Kitty modes.
+
 A bounded local-PTY diagnosis with htop 3.5.3 linked CSI arrows in application
 mode to synthetic-target nice increases; SS3 Down navigated correctly. This is
 not owner-desktop/native-event qualification. A separate macOS ARM64 source
@@ -285,7 +295,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c` |
+| Restty JavaScript runtime | `4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321` |
 | Embedded-core chunk       | `9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |

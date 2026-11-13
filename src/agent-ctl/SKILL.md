@@ -1,14 +1,14 @@
 ---
 name: omxterm
-description: Drive the OMXTerm terminal window you run in. List its panes, type commands into them, read their output and wait for them. Use when OMXTERM_CTL is set and the user wants something run, watched or checked in another pane.
+description: Drive the OMXTerm terminal window you run in. List its panes, type commands and press keys in them, read their output and wait for them. Use when OMXTERM_CTL is set and the user wants something run, watched or checked in another pane.
 ---
 
 # OMXTerm
 
 OMXTerm is a desktop terminal with no built-in AI. When the user chooses
 **Allow Agents in This Window** (Window menu or Command Palette), a program in
-that window, like you, can list its panes, type into them, read them and wait
-for them. Every pane then shows ◆; the user clicks it to stop.
+that window, like you, can list its panes, type and press keys in them, read
+them and wait for them. Every pane then shows ◆; the user clicks it to stop.
 
 ## Are you inside OMXTerm?
 
@@ -34,6 +34,7 @@ they did. Don't look for another way in.
 "$OMXTERM_CTL" read s2 --lines 100      # the last 100 lines of s2
 "$OMXTERM_CTL" wait s2 --idle 2000 --timeout 60000
 "$OMXTERM_CTL" send s2 --keys Ctrl+C    # interrupt
+"$OMXTERM_CTL" press s2 Down Down Enter # move in a menu, then choose
 ```
 
 - `send --text … --enter --wait` is the reliable way to run a command: it
@@ -50,6 +51,13 @@ they did. Don't look for another way in.
 - `--keys` takes a comma-separated list of `Enter`, `Tab`, `Escape`,
   `Backspace`, `Space` and `Ctrl+A` to `Ctrl+Z`. `--text` is typed as is,
   with nothing added.
+- `press` is for keys whose bytes depend on what the program asked for, as
+  in vim, less, htop or a menu: `Up`, `Down`, `Left`, `Right`, `Home`, `End`,
+  `PageUp`, `PageDown`, `Insert`, `Delete`, `F1` to `F12`, `Enter`, `Tab`,
+  `Escape`, `Backspace` and `Space`, each with any of `Ctrl+`, `Alt+` and
+  `Shift+` (`Ctrl+Shift+Up`). They arrive exactly as the user's own keys
+  would. `press` never runs OMXTerm's shortcuts: every key goes to the pane.
+  To see what a key did, `read` the pane.
 - Pane ids such as `s2` come from `list` and last as long as the grant.
 - Sends to the same pane at the same time arrive in no guaranteed order. Send
   one at a time.
@@ -60,8 +68,9 @@ they did. Don't look for another way in.
 ## MCP
 
 `"$OMXTERM_CTL" mcp` serves the same commands as MCP tools on stdio: `status`,
-`list`, `send`, `read` and `wait`. Their arguments are the CLI's options:
-`pane`, `text`, `keys`, `enter`, `wait`, `idle`, `timeout`, `lines`, `window`
+`list`, `send`, `press`, `read` and `wait`. Their arguments are the CLI's
+options: `pane`, `text`, `keys` (for `press`, the keys to press), `enter`,
+`wait`, `idle`, `timeout`, `lines`, `window`
 (only needed when several windows are allowed and you aren't in one of them)
 and `after` (the `offset` that `send` returned; only output past it counts).
 The tools work as soon as the user allows the window; until then they answer

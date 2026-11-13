@@ -257,7 +257,11 @@ export async function execute(
       { windows },
     );
   }
-  if (!["status", "list", "send", "read", "wait"].includes(options.command!))
+  if (
+    !["status", "list", "send", "read", "wait", "press"].includes(
+      options.command!,
+    )
+  )
     throw new CtlError(EXIT.usage, `Unknown command ${options.command}.`);
 
   const window = chooseWindow(options, profile);
@@ -358,6 +362,16 @@ async function run(
   if (options.command === "list") return list(client, options, selfKnown);
   const pane = paneArgument(options, window);
   if (options.command === "send") return send(client, options, pane);
+  if (options.command === "press") {
+    const keys = [...options.positional.slice(1), ...options.keys];
+    if (keys.length === 0)
+      throw new CtlError(
+        EXIT.usage,
+        "press needs at least one key, such as Up.",
+      );
+    const result = await client.request("press", { pane, keys });
+    return done(options.json ? JSON.stringify(result) : "", result);
+  }
   if (options.command === "read") {
     const result = (await client.request("read", {
       pane,

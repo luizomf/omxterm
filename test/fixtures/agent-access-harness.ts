@@ -12,7 +12,11 @@ import type {
   AgentSessionObserver,
   AgentSessionPort,
 } from "../../src/main/terminal-ipc-types";
-import { agentIpc, type AgentReadRequest } from "../../src/shared/agent-access";
+import {
+  agentIpc,
+  type AgentPressRequest,
+  type AgentReadRequest,
+} from "../../src/shared/agent-access";
 import { createIpcHarness } from "./terminal-ipc-harness";
 
 /** Registers the harness's hooks; call it once at a test file's top level. */
@@ -199,8 +203,20 @@ export function useAgentHarness() {
       contents.send.mock.calls
         .filter(([channel]) => channel === agentIpc.state)
         .map(([, state]) => state);
-    // The window answers reads like the renderer would.
+    // The window answers reads and presses like the renderer would; a
+    // press's bytes name its keys here, the Surface's encoder is tested apart.
     contents.send.mockImplementation((channel: string, payload: unknown) => {
+      if (channel === agentIpc.press) {
+        const request = payload as AgentPressRequest;
+        setImmediate(() =>
+          ipc.listeners.get(agentIpc.pressResult)!(event, {
+            id: request.id,
+            data: request.keys
+              .map((key) => `<${key.ctrl ? "C-" : ""}${key.key}>`)
+              .join(""),
+          }),
+        );
+      }
       if (channel !== agentIpc.read) return;
       const request = payload as AgentReadRequest;
       setImmediate(() =>

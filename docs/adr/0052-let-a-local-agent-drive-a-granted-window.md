@@ -2,8 +2,10 @@
 
 Status: accepted for slice 1, "Drive what's there", and slice 2, "Agents plug
 in by themselves" (macOS and Linux), which are implemented. The
-[keyboard-parity rule](#keyboard-parity) is accepted and not built yet; slice
-4 builds it ([#1047](https://github.com/luizomf/omxterm/issues/1047)). The
+[keyboard-parity rule](#keyboard-parity) is accepted; slice 4 builds it
+([#1047](https://github.com/luizomf/omxterm/issues/1047)), and so far only
+`press` with named keys is built
+([#1048](https://github.com/luizomf/omxterm/issues/1048)). The
 other later slices are still proposed
 ([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
 [#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
@@ -15,8 +17,9 @@ payloads join the excluded content) and
 environment variables in every pane). Slice 4 amends ADR 0050 again (the
 mark's error tone). The wire protocol and CLI are in the
 [Agent API reference](../dev/agent-api.md). Where slices 1 and 2 differ from the
-text below, [Slice 1 as built](#slice-1-as-built) and
-[Slice 2 as built](#slice-2-as-built) say so.
+text below, [Slice 1 as built](#slice-1-as-built),
+[Slice 2 as built](#slice-2-as-built) and
+[Slice 4 as built](#slice-4-as-built) say so.
 
 ## Context
 
@@ -85,7 +88,7 @@ What the code gives us today:
 | or any client |  NDJSON   |  auth: grant token  |<---------->|  on every pane and tab   |
 +---------------+           |  scope: one window  |  marks,    | Surface text reads       |
                             |                     |  reads,    | tab and pane commands    |
-                            |  agentInput() ------+--> PTY     +--------------------------+
+                            |  agent write -------+--> PTY     +--------------------------+
                             |  output positions   |<-- PTY
                             +---------------------+
 ```
@@ -174,10 +177,11 @@ What the code gives us today:
 
 ### Input
 
-- Agent input enters at one function in main, `agentInput(grant, pane, data)`,
-  which checks the grant and the pane's window and calls `writeTracked()`.
-  It is the only place agent bytes are written, so a later record of what the
-  agent typed has one place to attach.
+- Agent input enters at one place in main: the granted window's commands
+  check the grant and the pane's window, then call the window controller's
+  `agentSessions.write()`, which calls the session's `writeTracked()`. It is
+  the only place agent bytes are written, so a later record of what the agent
+  typed has one place to attach.
 - It bypasses the Surface. Consequences, all intended: agent bytes never reach
   `routeKeyInput`, so they never enter a Mirror Typing route and never stop
   one; they skip Protected Paste and its confirmation; they don't scroll the
@@ -197,7 +201,9 @@ Owner decision (2026-11-13, #1025): **inside a window the user granted, the
 agent can press what the user can press, keys and shortcuts alike**, with one
 exception, the grant toggle. Only the user turns a grant on or off, one click
 on the mark stops everything at once, and a grant is never restored
-automatically. Slice 4 builds it; until then agent input is `send` only.
+automatically. Slice 4 builds it. `press` with named keys came first
+([#1048](https://github.com/luizomf/omxterm/issues/1048)); until shortcut
+matching lands, every chord goes to the pane.
 
 ```
  press(pane, chord)
@@ -212,7 +218,7 @@ automatically. Slice 4 builds it; until then agent input is `send` only.
                        renderer encodes for the pane's mode
                                               |
                                               v
-                                   agentInput() --> PTY
+                                   agent write --> PTY
 ```
 
 - **`press` is the route.** It takes named keys and chords for a pane of the
@@ -221,10 +227,10 @@ automatically. Slice 4 builds it; until then agent input is `send` only.
   key event is synthesized and nothing enters Chromium's input path. A match
   runs that catalog action and `press` says which one ran. Anything else is
   encoded by the renderer for the pane's current mode, exactly as the user's
-  key would be, and written by `agentInput()`, so like `send` it never
-  reaches `routeKeyInput`, Mirror Typing or Protected Paste. Unverified:
-  that Restty's encoder runs without a real DOM key event (#1048 starts with
-  that spike).
+  key would be, and written by main's agent write, so like `send` it never
+  reaches `routeKeyInput`, Mirror Typing or Protected Paste. Restty's
+  encoder runs without a DOM key event
+  ([Slice 4 as built](#slice-4-as-built)).
 - **The exception is enforced by action, not by key.** A chord that resolves
   to `toggleAgentAccess` is refused, whatever key the user bound it to, and
   is not sent to the pane either. The API reaches actions only through that
@@ -412,7 +418,7 @@ a command name, its duration and an error code.
 - **Routing agent input through the Surface** (`inject()`): it would revoke
   Mirror Typing routes, trigger Protected Paste and depend on a live renderer
   for every byte. `press` asks the renderer only to encode a key; the bytes
-  still go through `agentInput()`.
+  still go through main's agent write.
 - **Synthesizing native key events** for `press`
   (`webContents.sendInputEvent`): they would go through the user's keyboard
   handling, could reach the menu and the Command Palette, and would make the
@@ -464,7 +470,7 @@ a command name, its duration and an error code.
 6. **Paste by mode.** Text sent as a paste that honors bracketed paste mode.
 7. **A record of what the agent typed.** Session-only, in memory, bounded,
    shown to the user in the window and dropped with the grant; attached at
-   `agentInput()`, never in operational logs.
+   main's agent write, never in operational logs.
 8. **Command boundaries.** With #1027: `command-end`, exit codes and
    per-command output.
 
@@ -546,6 +552,35 @@ building it:
   server and adds them.
 - **A shorter wait.** An MCP `wait` defaults to a 50 s timeout instead of the
   CLI's 60 s, so it answers before Codex's default 60 s tool timeout.
+
+## Slice 4 as built
+
+So far, `press` with named keys
+([#1048](https://github.com/luizomf/omxterm/issues/1048)):
+
+- **No DOM event needed.** Restty's keymap reads only a key event's `key`,
+  `code`, modifier flags, `type`, `repeat` and `isComposing`, and its input
+  handler reads the pane's DECCKM and Kitty flags from the core when it
+  encodes. One checksum-guarded runtime correction
+  (`scripts/restty-key-press-corrections.mjs`, no WASM change) adds
+  `encodeKeyPress()` beside it: a plain key description in, the keydown's
+  bytes out, plus the keyup's when Kitty asked for release events, each
+  through the same PTY mapping as the user's key. So a press is exactly a
+  user press and release, and nothing is sent by the renderer.
+- **The round trip** is `read`'s: main asks the granted window for the bytes
+  with a correlation id and a timeout, then writes them in one write through
+  `agentSessions.write()`, like `send`. Main first waits, bounded, until the
+  window consumed the output main already received from the pane, so the
+  modes that output set are in place; output still on its way can change them
+  later. All keys of one press are encoded against the same modes. A press in
+  flight when the grant ends writes nothing.
+- **Named keys only**: arrows, `Home`, `End`, `PageUp`, `PageDown`, `Insert`,
+  `Delete`, `F1`–`F12`, `Enter`, `Tab`, `Escape`, `Backspace` and `Space`,
+  with `Ctrl`, `Alt` and `Shift`. On macOS, `Ctrl+Space` is refused: macOS
+  keeps it for switching input sources, and the user's press sends nothing.
+  `Alt` is the terminal's Alt: on macOS the
+  user's Option+Space types native text when `optionKeyMode` leaves Option
+  alone, but the agent's `Alt+Space` sends `ESC` and a space.
 
 ## Open questions
 

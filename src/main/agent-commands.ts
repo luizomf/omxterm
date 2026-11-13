@@ -1,4 +1,5 @@
 import {
+  agentChordSendsNothing,
   agentKeyBytes,
   DEFAULT_AGENT_IDLE_MS,
   DEFAULT_AGENT_READ_LINES,
@@ -11,9 +12,11 @@ import {
   MAX_AGENT_SEND_BYTES,
   MAX_AGENT_WAIT_MS,
   MIN_AGENT_IDLE_MS,
+  parseAgentChord,
   utf8Length,
   type AgentCommand,
   type AgentErrorCode,
+  type AgentKeyChord,
 } from "../shared/agent-api";
 import type { TerminalSessionId } from "../shared/terminal-contract";
 import type { AgentSessionPort } from "./terminal-ipc-types";
@@ -43,8 +46,19 @@ export interface AgentCommandsOptions {
     lines: number,
     signal: AbortSignal,
   ) => Promise<AgentPaneText>;
+  /**
+   * The bytes the pane's Surface encodes for these keys in its current modes;
+   * rejects with an AgentApiError.
+   */
+  readonly encode: (
+    sessionId: TerminalSessionId,
+    keys: readonly AgentKeyChord[],
+    signal: AbortSignal,
+  ) => Promise<string>;
+  /** Decides which chords the user's own press would send; process.platform. */
+  readonly platform?: string;
   readonly now?: () => number;
-  /** How long a read waits for the window to consume sent output. */
+  /** How long a read or press waits for the window to consume sent output. */
   readonly catchUpMs?: number;
 }
 
@@ -84,13 +98,93 @@ function argumentsOf(
   return value;
 }
 
+const unsupportedPress = () =>
+  new AgentApiError(
+    "unsupported-key",
+    "press takes Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, with any of Ctrl+, Alt+ and Shift+.",
+  );
+
+// 1 to MAX_AGENT_KEYS key names, for send and press.
+function keyNames(value: unknown): string[] {
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.length > MAX_AGENT_KEYS ||
+    !value.every((key) => typeof key === "string")
+  )
+    throw invalid(`keys must list 1 to ${MAX_AGENT_KEYS} key names.`);
+  return value as string[];
+}
+
+// A chord the user's press turns into nothing is refused like an unknown key.
+function pressChords(value: unknown, platform: string): AgentKeyChord[] {
+  return keyNames(value).map((name) => {
+    const chord = parseAgentChord(name);
+    if (!chord || agentChordSendsNothing(chord, platform))
+      throw unsupportedPress();
+    return chord;
+  });
+}
+
+// Settles when check() returns a value, the signal aborts or time runs out.
+// Every change in the window runs the watchers again.
+function watch<T>(
+  watchers: Set<() => void>,
+  signal: AbortSignal,
+  timeoutMs: number,
+  check: () => T | undefined,
+  onTimeout: () => T,
+  nextCheckIn?: () => number | undefined,
+) {
+  return new Promise<T>((resolve, reject) => {
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    const finish = () => {
+      watchers.delete(run);
+      clearTimeout(timer);
+      clearTimeout(idleTimer);
+      signal.removeEventListener("abort", abort);
+    };
+    const run = () => {
+      let result: T | undefined;
+      try {
+        result = check();
+      } catch (error) {
+        finish();
+        reject(error);
+        return;
+      }
+      if (result !== undefined) {
+        finish();
+        resolve(result);
+        return;
+      }
+      clearTimeout(idleTimer);
+      const delay = nextCheckIn?.();
+      if (delay !== undefined) idleTimer = setTimeout(run, Math.max(0, delay));
+    };
+    const abort = () => {
+      finish();
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      finish();
+      resolve(onTimeout());
+    }, timeoutMs);
+    if (signal.aborted) return abort();
+    signal.addEventListener("abort", abort, { once: true });
+    watchers.add(run);
+    run();
+  });
+}
+
 /**
- * list, send, read and wait for one granted window (ADR 0052). Every pane id
- * is checked against this window's live sessions; another window's ids are
- * simply unknown here.
+ * list, send, read, wait and press for one granted window (ADR 0052). Every
+ * pane id is checked against this window's live sessions; another window's
+ * ids are simply unknown here.
  */
 export function createAgentCommands(options: AgentCommandsOptions) {
   const now = options.now ?? Date.now;
+  let disposed = false;
   const lastOutput = new Map<TerminalSessionId, number>();
   // The last position seen per session survives its exit, for `exited`.
   const lastSent = new Map<TerminalSessionId, number>();
@@ -132,54 +226,22 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     throw new AgentApiError("unknown-pane", "No such pane in this window.");
   };
 
-  // Settles when check() returns a value, the signal aborts or time runs out.
-  const watch = <T>(
-    signal: AbortSignal,
-    timeoutMs: number,
-    check: () => T | undefined,
-    onTimeout: () => T,
-    nextCheckIn?: () => number | undefined,
-  ) =>
-    new Promise<T>((resolve, reject) => {
-      let idleTimer: ReturnType<typeof setTimeout> | undefined;
-      const finish = () => {
-        watchers.delete(run);
-        clearTimeout(timer);
-        clearTimeout(idleTimer);
-        signal.removeEventListener("abort", abort);
-      };
-      const run = () => {
-        let result: T | undefined;
-        try {
-          result = check();
-        } catch (error) {
-          finish();
-          reject(error);
-          return;
-        }
-        if (result !== undefined) {
-          finish();
-          resolve(result);
-          return;
-        }
-        clearTimeout(idleTimer);
-        const delay = nextCheckIn?.();
-        if (delay !== undefined)
-          idleTimer = setTimeout(run, Math.max(0, delay));
-      };
-      const abort = () => {
-        finish();
-        reject(signal.reason);
-      };
-      const timer = setTimeout(() => {
-        finish();
-        resolve(onTimeout());
-      }, timeoutMs);
-      if (signal.aborted) return abort();
-      signal.addEventListener("abort", abort, { once: true });
-      watchers.add(run);
-      run();
-    });
+  // Let the window's parser take everything main already sent, so a read
+  // right after a send sees its echo and a press its mode. A busy window
+  // still answers.
+  const caughtUp = (sessionId: TerminalSessionId, signal: AbortSignal) => {
+    position(sessionId);
+    return watch(
+      watchers,
+      signal,
+      options.catchUpMs ?? 1000,
+      () => {
+        const current = position(sessionId);
+        return current.acknowledged >= current.sent ? true : undefined;
+      },
+      () => false,
+    );
+  };
 
   const commands: Record<
     AgentCommand,
@@ -212,14 +274,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
         throw invalid("text must be a non-empty string.");
       let data = (value.text as string | undefined) ?? "";
       if (value.keys !== undefined) {
-        if (
-          !Array.isArray(value.keys) ||
-          value.keys.length === 0 ||
-          value.keys.length > MAX_AGENT_KEYS ||
-          !value.keys.every((key) => typeof key === "string")
-        )
-          throw invalid(`keys must list 1 to ${MAX_AGENT_KEYS} key names.`);
-        for (const key of value.keys as string[]) {
+        for (const key of keyNames(value.keys)) {
           const bytes = key.length <= 32 ? agentKeyBytes(key) : undefined;
           if (bytes === undefined)
             throw new AgentApiError(
@@ -250,18 +305,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
         MAX_AGENT_READ_LINES,
         DEFAULT_AGENT_READ_LINES,
       );
-      position(sessionId);
-      // Let the window's parser take everything main already sent, so a
-      // read right after a send sees its echo. A busy window still answers.
-      await watch(
-        caller.signal,
-        options.catchUpMs ?? 1000,
-        () => {
-          const current = position(sessionId);
-          return current.acknowledged >= current.sent ? true : undefined;
-        },
-        () => false,
-      );
+      await caughtUp(sessionId, caller.signal);
       const acknowledged = position(sessionId).acknowledged;
       const text = await options.read(sessionId, lines, caller.signal);
       return {
@@ -272,6 +316,28 @@ export function createAgentCommands(options: AgentCommandsOptions) {
         offset: acknowledged,
         truncated: text.truncated,
       };
+    },
+
+    // Named keys, encoded by the window for the pane's current modes as the
+    // user's key would be, then written here in one write like send.
+    async press(args, caller) {
+      const value = argumentsOf(args, ["pane", "keys"]);
+      const sessionId = pane(value.pane);
+      const keys = pressChords(
+        value.keys,
+        options.platform ?? process.platform,
+      );
+      await caughtUp(sessionId, caller.signal);
+      const data = await options.encode(sessionId, keys, caller.signal);
+      // The grant may have ended while the window encoded.
+      if (disposed)
+        throw new AgentApiError("revoked", "The user stopped agent access.");
+      if (data === "") throw unsupportedPress();
+      const offset = position(sessionId).sent;
+      const receipt = options.sessions.write(sessionId, data);
+      if (receipt === "rejected")
+        throw new AgentApiError("not-live", "The pane isn't accepting input.");
+      return { receipt, offset };
     },
 
     wait(args, caller) {
@@ -306,6 +372,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       const after = integer(value.after, "after", 0, start.sent, start.sent);
       let last = start;
       return watch<object>(
+        watchers,
         caller.signal,
         timeoutMs,
         () => {
@@ -339,6 +406,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       return Promise.resolve().then(() => commands[command](args, caller));
     },
     dispose() {
+      disposed = true;
       unobserve();
       watchers.clear();
     },

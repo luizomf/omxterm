@@ -22,6 +22,12 @@ Commands:
               [--wait [--idle MS] [--timeout MS]]
                                Type into a pane. Keys: Enter, Tab, Escape,
                                Backspace, Space, Ctrl+A ... Ctrl+Z.
+  press <pane> KEY...          Press keys in a pane, encoded for its modes as
+                               the user's own keys: Up, Down, Left, Right,
+                               Home, End, PageUp, PageDown, Insert, Delete,
+                               F1 ... F12, Enter, Tab, Escape, Backspace,
+                               Space, with any of Ctrl+, Alt+ and Shift+
+                               (Ctrl+Shift+Up). Never matched to shortcuts.
   read <pane> [--lines N]      Print the last N lines (default 200).
   wait <pane> [--after OFFSET] [--idle MS] [--timeout MS]
                                Wait until the pane goes quiet or its program

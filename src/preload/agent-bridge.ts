@@ -2,13 +2,16 @@ import type { IpcRenderer, IpcRendererEvent } from "electron";
 import {
   agentIpc,
   isAgentAccessState,
+  isAgentPressRequest,
+  isAgentPressResult,
   isAgentReadRequest,
   isAgentReadResult,
   type AgentAccessBridge,
 } from "../shared/agent-access";
 
-// A window's agent grant (ADR 0052): main's state and read requests in,
-// confirmations, stops and read results out. Payloads are checked both ways.
+// A window's agent grant (ADR 0052): main's state, reads and presses in;
+// confirmations, stops, read results and encoded presses out. Payloads are
+// checked both ways.
 export function createAgentBridge(
   ipcRenderer: Pick<IpcRenderer, "send" | "on" | "removeListener">,
 ): AgentAccessBridge {
@@ -33,6 +36,18 @@ export function createAgentBridge(
       if (!isAgentReadResult(result))
         throw new TypeError("Invalid agent read result");
       ipcRenderer.send(agentIpc.readResult, result);
+    },
+    onPress(listener) {
+      const handler = (_event: IpcRendererEvent, payload: unknown) => {
+        if (isAgentPressRequest(payload)) listener(payload);
+      };
+      ipcRenderer.on(agentIpc.press, handler);
+      return () => ipcRenderer.removeListener(agentIpc.press, handler);
+    },
+    pressResult(result) {
+      if (!isAgentPressResult(result))
+        throw new TypeError("Invalid agent press result");
+      ipcRenderer.send(agentIpc.pressResult, result);
     },
   };
 }

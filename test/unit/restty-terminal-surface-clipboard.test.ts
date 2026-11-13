@@ -57,6 +57,7 @@ const harness = vi.hoisted(() => {
         terminal: {
           applyTheme: vi.fn(),
           isBracketedPasteEnabled: () => this.bracketedPaste,
+          encodeKeyPress: vi.fn(() => ""),
           setFontSize: vi.fn(),
           setLigatures: vi.fn(),
           setOptionKeyMode: vi.fn(),

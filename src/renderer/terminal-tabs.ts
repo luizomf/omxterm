@@ -7,7 +7,13 @@ import {
   type StateMark,
   type StateText,
 } from "./state-marks";
-import { agentTail, type AgentReadResult } from "../shared/agent-access";
+import {
+  agentTail,
+  type AgentPressResult,
+  type AgentReadResult,
+} from "../shared/agent-access";
+import type { AgentKeyChord } from "../shared/agent-api";
+import { encodeAgentKeys } from "./agent-access";
 import { createPaneAttention } from "./pane-attention";
 import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
@@ -167,6 +173,13 @@ export interface TerminalTabs {
     sessionId: TerminalSessionId,
     lines: number,
   ): AgentReadResult;
+  // An agent's keys encoded for one session's current modes, hidden tabs
+  // included; main writes them.
+  encodeSessionKeys(
+    id: string,
+    sessionId: TerminalSessionId,
+    keys: readonly AgentKeyChord[],
+  ): AgentPressResult;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -554,6 +567,16 @@ export function createTerminalTabs(
         // Core text extraction can fail (e.g. a WASM allocation).
         return { id, error: "failed" };
       }
+    },
+    encodeSessionKeys(id, sessionId, keys) {
+      const pane = disposed
+        ? undefined
+        : findPaneBySession(terminalTabs(), sessionId);
+      return encodeAgentKeys(
+        id,
+        pane && !pane.removed ? pane.surface : undefined,
+        keys,
+      );
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

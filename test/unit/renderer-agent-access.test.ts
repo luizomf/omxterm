@@ -1,8 +1,12 @@
 import { expect, it, vi } from "vitest";
-import { subscribeToAgentAccess } from "../../src/renderer/agent-access";
+import {
+  encodeAgentKeys,
+  subscribeToAgentAccess,
+} from "../../src/renderer/agent-access";
 import type {
   AgentAccessBridge,
   AgentAccessState,
+  AgentPressRequest,
   AgentReadRequest,
 } from "../../src/shared/agent-access";
 import { translatorFor } from "../../src/shared/i18n";
@@ -11,6 +15,7 @@ import type { StateMark, StateText } from "../../src/renderer/state-marks";
 function bridge() {
   let state: ((value: AgentAccessState) => void) | undefined;
   let read: ((value: AgentReadRequest) => void) | undefined;
+  let press: ((value: AgentPressRequest) => void) | undefined;
   const value = {
     onState: vi.fn((listener: (value: AgentAccessState) => void) => {
       state = listener;
@@ -23,12 +28,19 @@ function bridge() {
       return () => (read = undefined);
     }),
     readResult: vi.fn(),
+    onPress: vi.fn((listener: (value: AgentPressRequest) => void) => {
+      press = listener;
+      return () => (press = undefined);
+    }),
+    pressResult: vi.fn(),
   } satisfies AgentAccessBridge;
   return {
     bridge: value,
     state: (next: AgentAccessState) => state?.(next),
     read: (next: AgentReadRequest) => read?.(next),
-    subscribed: () => state !== undefined || read !== undefined,
+    press: (next: AgentPressRequest) => press?.(next),
+    subscribed: () =>
+      state !== undefined || read !== undefined || press !== undefined,
   };
 }
 
@@ -38,6 +50,7 @@ const fakeTabs = () => ({
   setWindowMark: vi.fn<(owner: string, mark: StateMark | undefined) => void>(),
   flash: vi.fn<(text: StateText) => void>(),
   readSession: vi.fn(),
+  encodeSessionKeys: vi.fn(),
 });
 
 it("shows the accent mark before confirming, flashes once and stops on click", () => {
@@ -84,9 +97,56 @@ it("answers main's reads with the pane's text", () => {
     setWindowMark: vi.fn(),
     flash: vi.fn(),
     readSession: vi.fn(() => result),
+    encodeSessionKeys: vi.fn(),
   };
   subscribeToAgentAccess(main.bridge, tabs);
   main.read({ id: result.id, sessionId: "s2", lines: 5 });
   expect(tabs.readSession).toHaveBeenCalledWith(result.id, "s2", 5);
   expect(main.bridge.readResult).toHaveBeenCalledWith(result);
+});
+
+it("answers main's presses with the pane's encoded bytes", () => {
+  const main = bridge();
+  const id = "00000000-0000-0000-0000-000000000003";
+  const keys = [{ key: "Up", ctrl: false, alt: false, shift: false }];
+  const tabs = {
+    ...fakeTabs(),
+    encodeSessionKeys: vi.fn(() => ({ id, data: "\x1bOA" })),
+  };
+  subscribeToAgentAccess(main.bridge, tabs);
+  main.press({ id, sessionId: "s2", keys });
+  expect(tabs.encodeSessionKeys).toHaveBeenCalledWith(id, "s2", keys);
+  expect(main.bridge.pressResult).toHaveBeenCalledWith({ id, data: "\x1bOA" });
+});
+
+it("joins a press's keys from the pane's Surface, or says why it can't", () => {
+  const id = "00000000-0000-0000-0000-000000000005";
+  const up = { key: "Up", ctrl: false, alt: false, shift: false };
+  const f5 = { key: "F5", ctrl: true, alt: false, shift: false };
+  const surface = {
+    encodeKeyPress: vi.fn(
+      (key: { key: string; ctrlKey: boolean }) =>
+        `<${key.ctrlKey ? "C-" : ""}${key.key}>`,
+    ),
+  };
+  expect(encodeAgentKeys(id, surface, [up, f5, up])).toEqual({
+    id,
+    data: "<ArrowUp><C-F5><ArrowUp>",
+  });
+  expect(encodeAgentKeys(id, undefined, [up])).toEqual({
+    id,
+    error: "unknown-pane",
+  });
+  expect(
+    encodeAgentKeys(id, { encodeKeyPress: () => undefined }, [up]),
+  ).toEqual({ id, error: "unavailable" });
+  const broken = {
+    encodeKeyPress: () => {
+      throw new Error("core gone");
+    },
+  };
+  expect(encodeAgentKeys(id, broken, [up])).toEqual({
+    id,
+    error: "unavailable",
+  });
 });

@@ -54,7 +54,11 @@ export function subscribeToWindowAttention(
   bridge: WindowAttentionBridge,
   tabs: Pick<
     import("./terminal-tabs").TerminalTabs,
-    "setSessionAttention" | "setWindowMark" | "flash" | "readSession"
+    | "setSessionAttention"
+    | "setWindowMark"
+    | "flash"
+    | "readSession"
+    | "encodeSessionKeys"
   >,
 ): () => void {
   const removeAttention = bridge.onSessionAttention((sessionId, pending) =>

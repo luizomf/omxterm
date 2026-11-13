@@ -40,7 +40,7 @@ posix(
     const { result: listed } = await server.request("tools/list");
     expect(
       (listed as { tools: { name: string }[] }).tools.map((tool) => tool.name),
-    ).toEqual(["status", "list", "send", "read", "wait"]);
+    ).toEqual(["status", "list", "send", "press", "read", "wait"]);
 
     // Listed, but not granted yet: the status sentence, as a tool error.
     expect(await server.call("list")).toEqual({
@@ -66,6 +66,16 @@ posix(
     expect(await server.call("read", { pane: "s2" })).toEqual({
       text: "text of s2",
       isError: false,
+    });
+    const pressed = await server.call("press", {
+      pane: "s2",
+      keys: ["Down", "Ctrl+Up"],
+    });
+    expect(pressed.isError).toBe(false);
+    expect(JSON.parse(pressed.text)).toMatchObject({ receipt: "accepted" });
+    expect(port.writes.at(-1)).toEqual(["s2", "<Down><C-Up>"]);
+    expect(await server.call("press", { pane: "s2" })).toMatchObject({
+      isError: true,
     });
     expect(
       await server.call("send", {
@@ -125,7 +135,7 @@ posix("serves per-request MCP clients without a handshake", async () => {
     _meta: meta,
   });
   expect(listed).toMatchObject({ resultType: "complete" });
-  expect((listed as { tools: unknown[] }).tools).toHaveLength(5);
+  expect((listed as { tools: unknown[] }).tools).toHaveLength(6);
   expect(await server.call("status", {}, meta)).toMatchObject({
     isError: false,
   });

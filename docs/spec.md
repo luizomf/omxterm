@@ -1267,7 +1267,12 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   configuration, a launch argument or an extension.
 - Agents get only what's in that window: list its live panes, type literal
   text and the mode-independent keys `Enter`, `Tab`, `Escape`, `Backspace`,
-  `Space` and `Ctrl+A`–`Ctrl+Z`, read the last lines of a pane's scrollback
+  `Space` and `Ctrl+A`–`Ctrl+Z`, press named keys (arrows, `Home`, `End`,
+  `PageUp`, `PageDown`, `Insert`, `Delete`, `F1`–`F12`, `Enter`, `Tab`,
+  `Escape`, `Backspace`, `Space`, with any of `Ctrl`, `Alt` and `Shift`,
+  except `Ctrl+Space` on macOS, which sends nothing there)
+  encoded for the pane's current cursor and Kitty keyboard modes exactly as
+  the user's own key, read the last lines of a pane's scrollback
   and screen (including output from before the grant), and wait until a pane
   goes quiet, its program ends or a timeout passes. Panes in hidden tabs
   answer too. The API can't grant, see other windows, run application
@@ -1284,7 +1289,8 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   exits 3.
 - `"$OMXTERM_CTL" guide` prints a short agent guide, which is also a
   `SKILL.md` an agent can keep. `"$OMXTERM_CTL" mcp` serves `status`, `list`,
-  `send`, `read` and `wait` as MCP tools on stdio, with the CLI's arguments.
+  `send`, `press`, `read` and `wait` as MCP tools on stdio, with the CLI's
+  arguments.
   The tools are always listed; without a grant they answer with the `status`
   sentence as a tool error, and they work from the next call once the user
   allows the window, with no restart.
@@ -2939,7 +2945,7 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N` or `0.31.1-dev.N` host admit a
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N` or `0.32.0-dev.N` host admit a
   range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.

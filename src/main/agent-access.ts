@@ -2,12 +2,13 @@ import { randomBytes, randomUUID } from "node:crypto";
 import type { AgentCommand, AgentErrorCode } from "../shared/agent-api";
 import {
   agentIpc,
+  isAgentPressResult,
   isAgentReadResult,
   type AgentAccessState,
+  type AgentPressResult,
   type AgentReadResult,
   type AgentRefusal,
 } from "../shared/agent-access";
-import type { TerminalSessionId } from "../shared/terminal-contract";
 import {
   AgentApiError,
   createAgentCommands,
@@ -68,13 +69,19 @@ interface Entry {
   confirmTimer?: ReturnType<typeof setTimeout>;
   admitting?: boolean;
   readmit?: boolean;
-  readonly reads: PendingReads;
+  // Reads and presses the window hasn't answered yet.
+  readonly pending: PendingRequests;
   cleanup(): void;
 }
 
-type PendingReads = Map<
+// Each request remembers its channel: only that channel's answer settles it.
+type PendingRequests = Map<
   string,
-  { resolve(text: AgentPaneText): void; reject(error: Error): void }
+  {
+    readonly channel: string;
+    resolve(value: unknown): void;
+    reject(error: Error): void;
+  }
 >;
 
 export interface AgentAccessOptions {
@@ -118,19 +125,21 @@ async function logged(
 const READ_TIMEOUT = () =>
   new AgentApiError("unavailable", "The window didn't answer in time.");
 
-// One pane's text from the window, correlated by id and bounded in time.
-function requestPaneText(
+// One request to the window (a pane's text, a press's bytes), correlated by
+// id and bounded in time.
+function requestWindow<T>(
   contents: TrustedWebContents,
-  reads: PendingReads,
-  request: { sessionId: TerminalSessionId; lines: number },
+  pending: PendingRequests,
+  channel: string,
+  request: object,
   signal: AbortSignal,
 ) {
-  return new Promise<AgentPaneText>((resolve, reject) => {
+  return new Promise<T>((resolve, reject) => {
     const id = randomUUID();
     const finish = () => {
       clearTimeout(timer);
       signal.removeEventListener("abort", abort);
-      reads.delete(id);
+      pending.delete(id);
     };
     const abort = () => {
       finish();
@@ -140,10 +149,11 @@ function requestPaneText(
       finish();
       reject(READ_TIMEOUT());
     }, READ_TIMEOUT_MS);
-    reads.set(id, {
-      resolve: (text) => {
+    pending.set(id, {
+      channel,
+      resolve: (value) => {
         finish();
-        resolve(text);
+        resolve(value as T);
       },
       reject: (error) => {
         finish();
@@ -152,16 +162,28 @@ function requestPaneText(
     });
     signal.addEventListener("abort", abort, { once: true });
     try {
-      contents.send(agentIpc.read, { id, ...request });
+      contents.send(channel, { id, ...request });
     } catch {
-      reads.get(id)?.reject(READ_TIMEOUT());
+      pending.get(id)?.reject(READ_TIMEOUT());
     }
   });
 }
 
-function settleRead(reads: PendingReads, result: AgentReadResult) {
+function settlePress(pending: PendingRequests, result: AgentPressResult) {
+  const request = pending.get(result.id);
+  if (request?.channel !== agentIpc.press) return;
+  if ("error" in result)
+    request.reject(
+      result.error === "unknown-pane"
+        ? new AgentApiError("unknown-pane", "No such pane in this window.")
+        : new AgentApiError("unavailable", "The pane isn't ready for keys."),
+    );
+  else request.resolve(result.data);
+}
+
+function settleRead(reads: PendingRequests, result: AgentReadResult) {
   const pending = reads.get(result.id);
-  if (!pending) return;
+  if (pending?.channel !== agentIpc.read) return;
   if ("error" in result)
     pending.reject(
       result.error === "unknown-pane"
@@ -176,6 +198,19 @@ function settleRead(reads: PendingReads, result: AgentReadResult) {
         ? {}
         : { cols: result.cols, rows: result.rows }),
     });
+}
+
+// A granted window's commands; its reads and presses are asked of the window.
+function commandsFor(entry: Entry): AgentCommands {
+  const ask = <T>(channel: string, request: object, signal: AbortSignal) =>
+    requestWindow<T>(entry.contents, entry.pending, channel, request, signal);
+  return createAgentCommands({
+    sessions: entry.sessions,
+    read: (sessionId, lines, signal) =>
+      ask<AgentPaneText>(agentIpc.read, { sessionId, lines }, signal),
+    encode: (sessionId, keys, signal) =>
+      ask<string>(agentIpc.press, { sessionId, keys }, signal),
+  });
 }
 
 /**
@@ -240,11 +275,11 @@ export function startAgentAccess(options: AgentAccessOptions) {
     entry.commands?.dispose();
     delete entry.commands;
     delete entry.token;
-    for (const read of entry.reads.values())
-      read.reject(
+    for (const request of entry.pending.values())
+      request.reject(
         new AgentApiError("revoked", "The user stopped agent access."),
       );
-    entry.reads.clear();
+    entry.pending.clear();
     removeGrantFile(entry);
     if (!active()) endpoint.close();
     if (refused) {
@@ -312,16 +347,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
       return;
     }
     entry.state = "granted";
-    entry.commands = createAgentCommands({
-      sessions: entry.sessions,
-      read: (sessionId, lines, signal) =>
-        requestPaneText(
-          entry.contents,
-          entry.reads,
-          { sessionId, lines },
-          signal,
-        ),
-    });
+    entry.commands = commandsFor(entry);
     sendState(entry, { state: "granted" });
     log?.write({
       name: "agent.grant",
@@ -366,11 +392,17 @@ export function startAgentAccess(options: AgentAccessOptions) {
   };
   const readResultListener = (event: IpcEvent, payload?: unknown) => {
     const entry = ownerFor(event);
-    if (entry && isAgentReadResult(payload)) settleRead(entry.reads, payload);
+    if (entry && isAgentReadResult(payload)) settleRead(entry.pending, payload);
+  };
+  const pressResultListener = (event: IpcEvent, payload?: unknown) => {
+    const entry = ownerFor(event);
+    if (entry && isAgentPressResult(payload))
+      settlePress(entry.pending, payload);
   };
   options.ipc.on(agentIpc.shown, shownListener);
   options.ipc.on(agentIpc.stop, stopListener);
   options.ipc.on(agentIpc.readResult, readResultListener);
+  options.ipc.on(agentIpc.pressResult, pressResultListener);
 
   return {
     instance,
@@ -398,7 +430,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
         windowId,
         sessions,
         state: "off",
-        reads: new Map(),
+        pending: new Map(),
         cleanup() {
           unsubscribe();
           contents.removeListener("did-start-navigation", navigation);
@@ -449,6 +481,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
       options.ipc.removeListener(agentIpc.shown, shownListener);
       options.ipc.removeListener(agentIpc.stop, stopListener);
       options.ipc.removeListener(agentIpc.readResult, readResultListener);
+      options.ipc.removeListener(agentIpc.pressResult, pressResultListener);
     },
   };
 }

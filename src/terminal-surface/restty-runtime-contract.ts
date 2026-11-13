@@ -6,6 +6,7 @@ import {
 } from "restty";
 import type { ResttyRuntime as UpstreamRuntime } from "restty/internal/runtime";
 import type { OptionKeyMode } from "../shared/user-configuration";
+import type { TerminalKeyPress } from "./terminal-surface";
 import type { ResttyVisibleLinkInteraction } from "./restty-visible-links";
 import type { VisibleLinkMatch } from "./visible-links";
 
@@ -32,6 +33,9 @@ export type PatchedResttyRuntime = {
     "applyTheme" | "setFontSize" | "setLigatures"
   > & {
     isBracketedPasteEnabled(): boolean;
+    // The keymap's bytes for one press (and its release when Kitty reports
+    // them) in the core's current modes; it sends nothing.
+    encodeKeyPress(key: TerminalKeyPress): string;
     setOptionKeyMode(value: OptionKeyMode): void;
     setScrollbackLines(value: number): void;
   };

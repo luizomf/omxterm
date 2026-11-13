@@ -4,7 +4,8 @@ The wire protocol and CLI of
 [ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slices 1
 and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
-and its [MCP server](#mcp). Each later command says which slice of the ADR's
+and its [MCP server](#mcp). From slice 4, [`press`](#press-slice-4) with
+named keys is implemented; its shortcuts are not yet. Each later command says which slice of the ADR's
 plan it belongs to; until then, names and shapes can still change.
 
 Slice 4 follows the ADR's
@@ -218,16 +219,44 @@ they don't know.
 
 ### `press` (slice 4)
 
-Keys and shortcuts, as the user would press them in the granted window. The
-wire shape is not settled yet.
+Keys and shortcuts, as the user would press them in the granted window.
 
-- Named keys for a pane: arrows, `Home`, `End`, `PageUp`, `PageDown`,
-  `Insert`, `Delete`, `F1` … `F12`, `Enter`, `Tab`, `Escape`, `Backspace` and
-  `Space`, with any combination of `Ctrl`, `Alt` and `Shift`. The bytes are
-  encoded for the pane's current mode (application cursor keys, Kitty
-  keyboard flags) exactly as the user's key would be, and it works while the
-  granted window isn't the selected one
-  ([#1048](https://github.com/luizomf/omxterm/issues/1048)).
+```json
+{
+  "id": 7,
+  "cmd": "press",
+  "args": { "pane": "s1", "keys": ["Down", "Down", "Enter"] }
+}
+```
+
+```json
+{ "receipt": "accepted", "offset": 51877 }
+```
+
+- `keys`: 1 to 64 names, pressed in order in one write. A name is `Up`,
+  `Down`, `Left`, `Right`, `Home`, `End`, `PageUp`, `PageDown`, `Insert`,
+  `Delete`, `F1` … `F12`, `Enter`, `Tab`, `Escape`, `Backspace` or `Space`,
+  after any of `Ctrl+`, `Alt+` and `Shift+`, each at most once
+  (`Ctrl+Shift+Up`), in any letter case. Anything else answers
+  `unsupported-key` and nothing is written. So does `Ctrl+Space` (with any
+  other modifier) on macOS, which keeps it for switching input sources: the
+  user's own press sends the pane nothing.
+- The window encodes each key for the pane's current modes (application
+  cursor keys, Kitty keyboard flags) with the same encoder as the user's key,
+  and main writes the bytes, so a press is exactly a user press and release:
+  `Up` is `ESC [ A`, or `ESC O A` once the program asked for application
+  cursor keys. That includes the encoder's legacy choices: without Kitty
+  flags, modifiers on `PageUp`, `PageDown`, `Insert`, `Delete` and the
+  function keys are dropped, and `Ctrl+Left`/`Ctrl+Right` send `ESC b`/`ESC f`.
+  `Alt` is the terminal's Alt, whatever `optionKeyMode` says.
+- Like `read`, it first waits up to 1 s for the window to consume the output
+  main has already received from the pane, so the modes that output set are
+  in place. Output still on its way can change them later. All keys of one
+  press are encoded against the same modes. The answer is `send`'s: `offset` for `wait`'s `after`. A window that
+  can't encode in time, or a pane that can't take input yet, answers
+  `unavailable`.
+- It works while the granted window isn't the selected one. Like `send`, it
+  never passes the window's keyboard handling.
 - A chord that matches one of the window's effective shortcuts (defaults plus
   the user's rebinds) runs that action in the granted window on the pane
   `press` names: main focuses that pane first, as a user clicks a pane and
@@ -235,7 +264,7 @@ wire shape is not settled yet.
   the pane. Tab and pane actions
   come first ([#1050](https://github.com/luizomf/omxterm/issues/1050)), the
   rest later ([#1052](https://github.com/luizomf/omxterm/issues/1052)); until
-  an action is covered, its chord goes to the pane.
+  an action is covered, its chord goes to the pane. Today every chord does.
 - The grant toggle is refused, whatever chord it is bound to. The Command
   Palette, Settings, Find, extension panels and native dialogs answer "not
   yet" in one sentence.
@@ -260,16 +289,16 @@ ends the grant.
 
 ## Errors
 
-| Code              | Meaning                                                           |
-| ----------------- | ----------------------------------------------------------------- |
-| `invalid-request` | Not JSON, too long, unknown command, or a wrong argument shape.   |
-| `revoked`         | The grant ended. The connection closes after this response.       |
-| `unknown-pane`    | No such pane in this window (also used for another window's ids). |
-| `not-live`        | The pane's program has ended or the pane is still starting.       |
-| `unsupported-key` | A key name this version can't encode.                             |
-| `too-large`       | The text to send or the text to return is over its limit.         |
-| `limit`           | Too many tabs, panes, connections or pending waits.               |
-| `unavailable`     | The window couldn't answer in time (a read or a tree request).    |
+| Code              | Meaning                                                                 |
+| ----------------- | ----------------------------------------------------------------------- |
+| `invalid-request` | Not JSON, too long, unknown command, or a wrong argument shape.         |
+| `revoked`         | The grant ended. The connection closes after this response.             |
+| `unknown-pane`    | No such pane in this window (also used for another window's ids).       |
+| `not-live`        | The pane's program has ended or the pane is still starting.             |
+| `unsupported-key` | A key name this version can't encode.                                   |
+| `too-large`       | The text to send or the text to return is over its limit.               |
+| `limit`           | Too many tabs, panes, connections or pending waits.                     |
+| `unavailable`     | The window couldn't answer in time (a read, a press or a tree request). |
 
 `message` is one English sentence for people reading logs of their own
 scripts. Programs should branch on `code`.
@@ -291,7 +320,7 @@ omxterm-ctl wait s1 --after 48211 --idle 800 --timeout 120000
 omxterm-ctl wait s1 --match 'Tests passed' --timeout 120000   # slice 3
 omxterm-ctl read s1 --lines 200
 omxterm-ctl read s1 --screen               # slice 3
-omxterm-ctl press s1 Up                    # slice 4
+omxterm-ctl press s1 Down Down Enter       # slice 4
 omxterm-ctl keys                           # slice 4
 ```
 
@@ -316,6 +345,9 @@ omxterm-ctl keys                           # slice 4
   reliable way to type a command and wait for it. `--timeout` defaults to
   60000 for `wait` and `send --wait`.
 - A pane may be named `s4` or `3:s4`; the window part must match.
+- `press` takes the keys as arguments after the pane (`--keys` with a
+  comma-separated list works too) and prints nothing; `--json` prints the
+  receipt.
 - `read` prints the text and nothing else, so it pipes.
 - Exit status: 0 for a result (a `wait` timeout prints `timeout` and exits
   124), 1 for an API error, 2 for usage, 3 when no grant or endpoint was found.
@@ -333,17 +365,18 @@ as Codex does). It offers tools only.
 | `status` | `window?`                                                                          |
 | `list`   | `window?`                                                                          |
 | `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `timeout?`, `window?` |
+| `press`  | `pane`, `keys` (list), `window?`                                                   |
 | `read`   | `pane`, `lines?`, `window?`                                                        |
 | `wait`   | `pane`, `after?`, `idle?`, `timeout?`, `window?`                                   |
 
-Slice 4 adds `press` and `keys` with the same names.
+Slice 4 adds `keys` with the same name.
 
 - A tool call is the CLI command of the same name, with the arguments as its
   options, on its own connection. The tools are always listed; the grant is
   looked up on every call, so a grant given or ended mid-session counts from
   the next call.
 - The result is one text block with what the CLI would print. `send` without
-  `wait` answers its receipt as JSON, for the `offset`. A `wait` timeout is a
+  `wait`, and `press`, answer their receipt as JSON, for the `offset`. A `wait` timeout is a
   normal result (`timeout`).
 - No grant, an API error or a bad argument is a tool error (`isError`) whose
   text is the CLI's message; without a grant that's the `status` sentence. An
@@ -400,4 +433,4 @@ instead.
 | MCP server               | `src/agent-ctl/mcp.ts`, over the CLI's commands in `src/agent-ctl/commands.ts`                                 |
 | Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`                              |
 | Shortcuts for `press`    | slice 4: `src/main/action-catalog.ts`, `terminalActionForKeyboardInput()` in `src/shared/terminal-keybinds.ts` |
-| Mode-aware key encoding  | slice 4: Restty's encoder, `scripts/restty-application-cursor-corrections.mjs`                                 |
+| Mode-aware key encoding  | `encodeKeyPress` in `scripts/restty-key-press-corrections.mjs`, through the Surface and `terminal-tabs.ts`     |
