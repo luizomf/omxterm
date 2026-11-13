@@ -30,6 +30,8 @@ import {
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import type { TerminalSnippetsResponse } from "../shared/terminal-snippets";
 import type {
+  AgentSessionObserver,
+  AgentSessionPort,
   IpcEvent,
   IpcHandler,
   IpcListener,
@@ -391,6 +393,8 @@ interface RoutedSessionState {
   readonly session: LocalTerminalSession;
   readonly terminalSurfaceFontConfiguration?: TerminalSurfaceFontConfiguration;
   readonly outputFlow: TerminalOutputFlow;
+  // The grid last requested for the PTY, for the agent API's pane list.
+  size?: { readonly cols: number; readonly rows: number };
   closed: boolean;
   closeReason?: "rendering-failure";
   exited: boolean;
@@ -497,6 +501,10 @@ function createTerminalIpcController(
     show: options.showClipboardContextMenu,
   });
   const workingDirectories = createWorkingDirectoryTracker();
+  const agentObservers = new Set<AgentSessionObserver>();
+  const notifyAgent = (event: (observer: AgentSessionObserver) => void) => {
+    for (const observer of [...agentObservers]) event(observer);
+  };
 
   // A session-scoped payload is rejected before it is routed: an invalid shape
   // never reaches a session, and a well-formed message may only address a
@@ -569,7 +577,9 @@ function createTerminalIpcController(
             } catch {
               if (sessions.has(sessionId)) closeSession(sessionId);
               else ownerLostBeforeRegistration = true;
+              return;
             }
+            notifyAgent((observer) => observer.output(sessionId));
           },
           onExit(exit, reportedLaunchKind) {
             if (disposed) return;
@@ -605,6 +615,9 @@ function createTerminalIpcController(
               // Failure acknowledgement owns only the immutable context, not the
               // ended session/native wrapper. Native shutdown observes exit first.
               sessions.delete(sessionId);
+              notifyAgent((observer) =>
+                observer.exited(sessionId, exit.exitCode),
+              );
               if (state?.terminalSurfaceFontConfiguration)
                 options.onSurfaceFontConfigurationsChanged?.();
               workingDirectories.forget(sessionId);
@@ -614,6 +627,7 @@ function createTerminalIpcController(
         ssh ? undefined : workingDirectory,
         ssh,
         restored,
+        sessionId,
       );
     } catch (cause) {
       if (windowId !== undefined)
@@ -714,14 +728,44 @@ function createTerminalIpcController(
         rows: payload.rows,
       });
     options.onLayoutActivity?.();
+    state.size = { cols: payload.cols, rows: payload.rows };
     state.session.resize(terminalSize(payload));
   };
-  const acknowledgeOutput = (payload?: unknown) =>
-    acknowledgeTerminalOutput(
+  const acknowledgeOutput = (payload?: unknown) => {
+    const sessionId = acknowledgeTerminalOutput(
       payload,
-      (sessionId) => sessions.get(sessionId),
+      (id) => sessions.get(id),
       reject,
     );
+    if (sessionId) notifyAgent((observer) => observer.acknowledged(sessionId));
+  };
+  const liveSession = (sessionId: TerminalSessionId) => {
+    const state = sessions.get(sessionId);
+    return state && !state.closed && !state.exited ? state : undefined;
+  };
+  // The only route agent bytes take to a PTY (ADR 0052). It skips the user's
+  // interaction hooks, so typing by an agent never clears attention.
+  const agentSessions: AgentSessionPort = {
+    sessions: () =>
+      [...sessions.entries()]
+        .filter(([id]) => liveSession(id))
+        .map(([sessionId, state]) => ({
+          sessionId,
+          focused: selection.isFocusedSession(sessionId),
+          ...(state.size ?? {}),
+        })),
+    position: (sessionId) => liveSession(sessionId)?.outputFlow.position(),
+    write(sessionId, data) {
+      const state = liveSession(sessionId);
+      if (disposed || !state?.session.writeTracked) return "rejected";
+      const receipt = state.session.writeTracked(data);
+      return isTerminalWriteReceipt(receipt) ? receipt : "unknown";
+    },
+    observe(observer) {
+      agentObservers.add(observer);
+      return () => agentObservers.delete(observer);
+    },
+  };
   const close = (payload?: unknown) => {
     if (!isTerminalSessionClose(payload)) {
       reject("ipc", "invalid-payload");
@@ -811,6 +855,7 @@ function createTerminalIpcController(
     start,
     input,
     trackedInput,
+    agentSessions,
     mirrorTyping,
     resize,
     acknowledgeOutput,
@@ -880,6 +925,7 @@ function createTerminalIpcController(
       if (disposed) return;
       disposed = true;
       mirrorTyping.revoke();
+      agentObservers.clear();
       contextMenu.selectionChanged();
       surfaceFonts.dispose();
       localImageBoundary.dispose();

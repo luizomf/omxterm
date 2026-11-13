@@ -50,6 +50,7 @@ function menuActions() {
     closeSelectedPane: vi.fn(),
     focusSelectedPane: vi.fn(),
     swapSelectedPane: vi.fn(),
+    toggleAgentAccess: vi.fn(),
     equalizeSelectedPanes: vi.fn(),
   };
 }

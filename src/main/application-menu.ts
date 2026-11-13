@@ -136,6 +136,13 @@ export function coreActionMenuTemplate(
       submenu: [
         { role: "minimize", label: t("menu.minimize") },
         item("alwaysOnTop"),
+        // Checked for the focused window; main keeps it in sync.
+        {
+          ...item("toggleAgentAccess"),
+          id: "toggleAgentAccess",
+          type: "checkbox",
+          checked: false,
+        },
         { type: "separator" },
         item("nextTab"),
         item("previousTab"),

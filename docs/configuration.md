@@ -228,6 +228,7 @@ Every shortcut needs a key and at least one modifier other than Shift. Function 
 | `toggleAuxiliaryPanel`                | unbound                                                               | unbound                                    |
 | `toggleMirrorTyping`                  | `Cmd+Shift+M`                                                         | `Ctrl+Shift+M`                             |
 | `saveLayout`                          | `Cmd+Shift+L`                                                         | `Ctrl+Shift+L`                             |
+| `toggleAgentAccess`                   | unbound                                                               | unbound                                    |
 | `moveAuxiliaryPanel`                  | `Cmd+Shift+Option+P`                                                  | `Ctrl+Shift+Alt+P`                         |
 | `toggleTabBar` / `toggleTitleBar`     | `Cmd+Shift+B` / `Cmd+Shift+D`                                         | `Ctrl+Shift+B` / `Ctrl+Shift+D`            |
 | `reloadConfig`                        | `Cmd+Shift+,`                                                         | `Ctrl+Shift+,`                             |

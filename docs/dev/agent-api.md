@@ -1,9 +1,11 @@
-# Agent API reference (proposed)
+# Agent API reference
 
-A sketch of the wire protocol and CLI for
-[ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Nothing
-here is implemented; names and shapes can still change. Each command says which
-slice of the ADR's plan it belongs to.
+The wire protocol and CLI of
+[ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slice 1
+(macOS and Linux) is implemented: the handshake, `list`, `send`, `read`,
+`wait` and the `omxterm-ctl` commands without a slice mark. Each later command
+says which slice of the ADR's plan it belongs to; until then, names and shapes
+can still change.
 
 ## Finding the endpoint
 
@@ -68,7 +70,10 @@ client                                       main
 ```
 
 `pane` is optional: a client inside a pane sends its own id from
-`OMXTERM_PANE`, and `list` then marks that pane as `self`. HMAC is HMAC-SHA-256; nonces are 32 random bytes in hex. A client that gets a
+`OMXTERM_PANE`, and `list` then marks that pane as `self`. HMAC is HMAC-SHA-256
+keyed with the token's 32 bytes over the ASCII text shown; nonces are 32 random
+bytes in lowercase hex. Each handshake line is at most 1 KiB and the handshake
+must finish within 5 s. A client that gets a
 wrong `P1` must close: the endpoint isn't OMXTerm. A wrong `P2`, an unknown
 window or a silent client closes the connection after a short delay with no
 detail. After the handshake the connection is bound to that window until the
@@ -113,7 +118,7 @@ display-only tab titles (ADR 0010), so they are untrusted text.
 
 ### `send` (slice 1; mode-aware keys in slice 6)
 
-Exactly one of `text` or `keys`.
+`text`, `keys` or both; with both, the text comes first, in one write.
 
 ```json
 { "id": 2, "cmd": "send", "args": { "pane": "s1", "text": "npm test" } }
@@ -123,7 +128,9 @@ Exactly one of `text` or `keys`.
 - `text` is written as is, at most 64 KiB of UTF-8. No newline is added and no
   paste framing is applied.
 - `keys` in slice 1: `Enter`, `Tab`, `Escape`, `Backspace`, `Space` and
-  `Ctrl+A` … `Ctrl+Z`. Other names answer `unsupported-key` until slice 6.
+  `Ctrl+A` … `Ctrl+Z`, in any letter case, at most 64 per request. Other names
+  answer `unsupported-key` until slice 6.
+- The whole write is at most 64 KiB, or the request answers `too-large`.
 
 ```json
 { "receipt": "accepted", "offset": 48211 }
@@ -142,7 +149,10 @@ partly happened; it is never retried). A refused write is the error
 ```
 
 - `tail` (default): the last `lines` lines of retained history plus screen
-  (default 200, at most 10,000). It includes output from before the grant.
+  (default 200, at most 10,000), without the blank rows below the cursor. It
+  includes output from before the grant. A tail longer than 2 MiB of text is
+  cut at its start and answers `"truncated": true`. The read first waits up
+  to 1 s for the window to consume what main already sent.
 - `screen` (slice 3): exactly the active screen's rows, wherever the user
   scrolled.
 - Text only, trailing spaces trimmed per row. The alternate screen reads only
@@ -151,6 +161,8 @@ partly happened; it is never retried). A refused write is the error
 ```json
 { "text": "…", "cols": 120, "rows": 32, "offset": 51877, "truncated": false }
 ```
+
+`offset` is the position the window had consumed when the text was read.
 
 Later, without changing these fields: `"source": "command"` for one command's
 output once OSC 133 lands (slice 8).
@@ -176,8 +188,9 @@ output once OSC 133 lands (slice 8).
   when the request arrived is used.
 - `idleMs` (default 500, 100 to 60,000): satisfied when output has moved past
   `after`, none arrived for that long, and the window has consumed it all.
-- `match`: a literal string of at most 1,024 characters, looked for in the
-  pane's screen text. Not a regular expression.
+- `match` (slice 3): a literal string of at most 1,024 characters, looked for
+  in the pane's screen text. Not a regular expression. Slice 1 answers
+  `invalid-request`.
 - The first condition met answers. At least one of `idleMs` or `match`
   applies; with only `match`, idleness is ignored.
 
@@ -236,9 +249,10 @@ omxterm-ctl guide                          # the agent guide (slice 2)
 omxterm-ctl mcp                            # MCP server on stdio (slice 2)
 omxterm-ctl grants                         # granted windows of this profile
 omxterm-ctl list
-omxterm-ctl send s1 --text 'npm test' --enter
+omxterm-ctl send s1 --text 'npm test' --enter --wait --idle 800
 omxterm-ctl send s1 --keys Ctrl+C
-omxterm-ctl wait s1 --idle 800 --match 'Tests passed' --timeout 120000
+omxterm-ctl wait s1 --after 48211 --idle 800 --timeout 120000
+omxterm-ctl wait s1 --match 'Tests passed' --timeout 120000   # slice 3
 omxterm-ctl read s1 --lines 200
 omxterm-ctl read s1 --screen               # slice 3
 omxterm-ctl split s1 --down                # slice 4
@@ -256,24 +270,29 @@ omxterm-ctl close s8 --force               # slice 4
 - `mcp` exposes `list`, `send`, `read` and `wait` (and later commands) as
   tools with the same arguments. The tools are always listed; without a grant
   they answer with the `status` sentence.
-- `send` remembers nothing between calls. `--enter` appends `Enter` in the
-  same request, and `send … --wait` runs `wait` with the returned `offset` on
-  the same connection, which is the reliable way to type a command and wait
-  for it.
+- `send` remembers nothing between calls. `--keys` takes a comma-separated
+  list, `--enter` appends `Enter` in the same request, and `send … --wait`
+  runs `wait` with the returned `offset` on the same connection, which is the
+  reliable way to type a command and wait for it. `--timeout` defaults to
+  60000 for `wait` and `send --wait`.
+- A pane may be named `s4` or `3:s4`; the window part must match.
 - `read` prints the text and nothing else, so it pipes.
 - Exit status: 0 for a result (a `wait` timeout prints `timeout` and exits
   124), 1 for an API error, 2 for usage, 3 when no grant or endpoint was found.
 
-## What an implementation touches
+## Where it lives
 
-| Area                   | Where                                                                                           |
-| ---------------------- | ----------------------------------------------------------------------------------------------- |
-| Endpoint, grants, auth | new modules in `src/main/`                                                                      |
-| Pane environment       | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                          |
-| Agent input            | `agentInput()` in main, calling `LocalTerminalSession.writeTracked()`                           |
-| Output positions       | `src/main/terminal-output-flow.ts` (expose sent and acknowledged positions, last output)        |
-| Reads                  | a correlated request like `src/main/terminal-layout-ipc.ts`; `TerminalSurface.exportText`       |
-| Screen-only read       | one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`                        |
-| Marks and tone         | `src/renderer/state-marks.ts`, `src/renderer/ui.css`, `src/renderer/terminal-window-theme.ts`   |
-| Toggle                 | `src/main/action-catalog.ts`, `src/main/application-menu.ts`, `src/shared/terminal-keybinds.ts` |
-| Tab and pane commands  | `src/shared/terminal-panes.ts`, `src/renderer/terminal-pane-operations.ts`                      |
+| Area                     | Where                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------- |
+| Wire limits and keys     | `src/shared/agent-api.ts`, shared by main and the client                                        |
+| Grants and credentials   | `src/main/agent-access.ts`                                                                      |
+| Socket and handshake     | `src/main/agent-endpoint.ts`                                                                    |
+| Commands and waits       | `src/main/agent-commands.ts`                                                                    |
+| Agent input and outputs  | `agentSessions` in `src/main/terminal-ipc-controller.ts` (the only agent write)                 |
+| Pane environment         | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                          |
+| Reads and marks (window) | `src/renderer/agent-access.ts`, `src/renderer/state-marks.ts`, `src/preload/agent-bridge.ts`    |
+| Accent tone              | `src/renderer/ui.css`, `src/renderer/terminal-window-theme.ts`                                  |
+| Toggle                   | `src/main/action-catalog.ts`, `src/main/application-menu.ts`, `src/shared/terminal-keybinds.ts` |
+| Client and launcher      | `src/agent-ctl/` (built to `dist/agent-ctl/`, packaged under `resources/agent-ctl/`)            |
+| Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`               |
+| Tab and pane commands    | slice 4: `src/shared/terminal-panes.ts`, `src/renderer/terminal-pane-operations.ts`             |

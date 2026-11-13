@@ -1,15 +1,17 @@
 # Let a local agent drive a window the user grants
 
-Status: proposed ([#1025](https://github.com/luizomf/omxterm/issues/1025),
-building on [#330](https://github.com/luizomf/omxterm/issues/330)). Nothing
-here is implemented. When it is, it amends
+Status: accepted for slice 1, "Drive what's there" (macOS and Linux), which is
+implemented; the later slices are still proposed
+([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
+[#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
 [ADR 0050](0050-show-ongoing-states-as-quiet-state-marks.md) (one accent tone,
 window-scoped marks),
 [ADR 0004](0004-log-the-operational-envelope-not-terminal-payload.md) (API
 payloads join the excluded content) and
 [ADR 0013](0013-do-not-inject-shell-integration.md) (three non-secret
-environment variables in every pane). The wire protocol and CLI are sketched in
-the [Agent API reference](../dev/agent-api.md).
+environment variables in every pane). The wire protocol and CLI are in the
+[Agent API reference](../dev/agent-api.md). Where slice 1 differs from the text
+below, [Slice 1 as built](#slice-1-as-built) says so.
 
 ## Context
 
@@ -167,7 +169,7 @@ What the code gives us today:
   interleave freely. There is no input lock.
 - Main doesn't know terminal modes. The first slice sends literal text and a
   fixed table of mode-independent keys (`Enter`, `Tab`, `Escape`,
-  `Backspace`, `Ctrl+<letter>`). Arrow and function keys, whose bytes depend
+  `Backspace`, `Space`, `Ctrl+<letter>`). Arrow and function keys, whose bytes depend
   on application-cursor and Kitty modes, and paste that honors bracketed
   paste mode, need a renderer-encoded route and come later.
 
@@ -344,6 +346,43 @@ a command name, its duration and an error code.
 8. **Command boundaries.** With #1027: `command-end`, exit codes and
    per-command output.
 
+## Slice 1 as built
+
+What shipped matches the decision above, with these differences found while
+building it:
+
+- **The grant starts after the marks.** The toggle asks the window to show its
+  marks; only when the renderer confirms does main listen and write the
+  credential file, and only then does the handshake accept the token. A
+  window that doesn't confirm within 5 s ends the attempt. A renderer message
+  can confirm or stop a grant, never create one.
+- **A credential belongs to the process that wrote it.** A source run and the
+  installed app share a profile and can both have window 1. A refused grant
+  never removes a credential it didn't write, and leftovers are removed at
+  startup only when no live process answers on the socket.
+- **`list` is built in main.** The flat pane list of slice 1 needs only the
+  window's live sessions, their last grid and the focused pane, which main
+  already has. The renderer round trip arrives with the tree in slice 4.
+- **`send` takes text, keys or both** (text first, in one write), so the
+  CLI's `--enter` stays one request. `Space` is in the key table.
+- **The corner mark** shows only when the selected tab has no pane and the tab
+  strip is hidden; otherwise the tab buttons already carry the mark, and a
+  page header's buttons stay clear. Unverified: an extension tab's native
+  view may cover the page corner, which would leave a granted window with the
+  tab strip hidden and an extension tab selected without a visible mark.
+- **Windows** refuses the toggle with one sentence, and its panes get no
+  variables, until slice 5.
+- **The launcher** is a POSIX script at `<resources>/agent-ctl/omxterm-ctl`
+  beside its bundled script `omxterm-ctl.cjs`, outside the archive. It runs
+  `Contents/MacOS/OMXTerm` (macOS) or `omxterm` (Linux) next to it in Node
+  mode; an unpackaged build names its Electron binary in a `runtime` file. On
+  an AppImage, `OMXTERM_CTL` points into the current mount, which lives as
+  long as the panes that received it.
+- **Reads in hidden tabs and minimized windows** work on macOS (verified on a
+  macOS 27 guest): `send`, `wait` and `read` answered while the window was
+  minimized and the pane's tab wasn't selected. Linux is unverified.
+- The HMAC key is the token's 32 bytes; the grant file stores them as hex.
+
 ## Open questions
 
 - Windows: accept the default pipe descriptor behind the token, or pay for a
@@ -353,12 +392,12 @@ a command name, its duration and an error code.
   Command Palette action), or leave it to the guide?
 - Should `omxterm-ctl` also be offered on `PATH` for agents and scripts that
   run outside OMXTerm?
-- Does a read work in a minimized or fully covered window on all three
-  platforms? Output ingestion continues for hidden tabs, but the read depends
-  on the runtime's render state. To verify in slice 1.
+- Does a read work in a minimized or fully covered window on Linux and
+  Windows? It does on macOS (slice 1).
 - Limits: how many tabs and panes may an agent create, and does a grant need
   a rate limit on input?
 - Should the grant show anywhere outside its window (Dock, tray, another
   window's menu) for the overnight case?
-- `OMXTERM_CTL` points into the installed app. What should it point at when
-  the app is an AppImage, whose mount path changes per run?
+- `OMXTERM_CTL` points into the AppImage's current mount. A multiplexer server
+  started in a pane outlives the app and keeps a dead path; is a stable copy
+  (or a `PATH` entry) worth it?

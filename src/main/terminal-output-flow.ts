@@ -4,6 +4,8 @@ export interface TerminalOutputFlow {
   bind(session: LocalTerminalSession): void;
   record(data: string): number | undefined;
   acknowledge(end: number): boolean;
+  /** Cumulative UTF-8 bytes sent to the renderer, and the part it consumed. */
+  position(): { readonly sent: number; readonly acknowledged: number };
 }
 
 export function createTerminalOutputFlow(): TerminalOutputFlow {
@@ -33,5 +35,6 @@ export function createTerminalOutputFlow(): TerminalOutputFlow {
       acknowledgedEnd = end;
       return true;
     },
+    position: () => ({ sent: sentEnd, acknowledged: acknowledgedEnd }),
   };
 }

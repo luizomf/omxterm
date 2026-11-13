@@ -1,0 +1,15 @@
+#!/bin/sh
+# omxterm-ctl: drive a Terminal Window the user allowed (ADR 0052). It runs
+# OMXTerm's own runtime in Node mode, so nothing else needs to be installed.
+here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P) || exit 3
+if [ -f "$here/runtime" ]; then
+  # An unpackaged build names its Electron binary here.
+  IFS= read -r runtime < "$here/runtime"
+elif [ "$(uname -s)" = Darwin ]; then
+  runtime="$here/../../MacOS/OMXTerm"
+else
+  runtime="$here/../../omxterm"
+fi
+ELECTRON_RUN_AS_NODE=1
+export ELECTRON_RUN_AS_NODE
+exec "$runtime" "$here/omxterm-ctl.cjs" "$@"

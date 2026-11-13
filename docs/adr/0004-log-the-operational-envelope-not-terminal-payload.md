@@ -22,3 +22,14 @@ collection. Scrollback Search stays in memory; Explicit Export may persist the
 requested text through the normal native save chooser without another opt-in
 toggle. Neither puts that content in diagnostic logs or authorizes automatic
 recording or network transmission.
+
+## Amendment: the agent API (ADR 0052)
+
+The [agent API](0052-let-a-local-agent-drive-a-granted-window.md) adds content
+that is excluded the same way: its requests and responses, grant tokens and
+handshake proofs, the text an agent sends and the pane text it reads. Its
+Operational Events carry only the envelope: `agent.grant` (a window started,
+ended or was refused a grant, with a fixed reason) and, at debug level,
+`agent.command` (the command name, its outcome code and duration) and
+`agent.rejected` (a client that failed the handshake or hit a limit, with a
+fixed reason).

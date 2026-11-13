@@ -99,6 +99,7 @@ export async function exerciseExtensionViews(options: {
       showAbout: options.showAbout,
       showSettings: settings.show,
       showCommandPalette: () => palette.show(),
+      toggleAgentAccess: unexpected,
     },
     { ...terminalDefaultKeybinds(process.platform), commandPalette: "F6" },
   );

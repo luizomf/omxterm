@@ -25,6 +25,7 @@ export interface TerminalBridge {
   readonly semanticInput?: import("./semantic-input").SemanticInputBridge;
   readonly filesTerminalDrag?: import("./files-terminal-drag").FilesTerminalDragBridge;
   readonly mirrorTyping?: import("./mirror-typing").MirrorTypingBridge;
+  readonly agent?: import("./agent-access").AgentAccessBridge;
   readonly layout?: import("./terminal-layout").TerminalLayoutBridge;
   readonly hostedContent?: import("./extension-view").HostedContentBridge;
   readonly palette?: import("./command-palette").CommandPaletteBridge;

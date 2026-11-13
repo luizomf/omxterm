@@ -52,6 +52,8 @@ export interface TerminalApplicationMenuActions {
   readonly focusSelectedPane: (target: TerminalPaneFocusTarget) => void;
   readonly swapSelectedPane: (direction: TerminalPaneDirection) => void;
   readonly equalizeSelectedPanes: () => void;
+  // The one gesture that grants agents a window (ADR 0052).
+  readonly toggleAgentAccess: () => void;
 }
 export type CoreActionId =
   | TerminalActionName
@@ -122,6 +124,7 @@ export function createCoreActionCatalog(
     toggleFiles: action(t("menu.toggleFiles"), () => {}, false),
     toggleSshConnect: action(t("menu.toggleSshConnect"), () => {}, false),
     toggleMirrorTyping: action(t("mirrorTyping.title"), () => {}, false),
+    toggleAgentAccess: action(t("menu.allowAgents"), actions.toggleAgentAccess),
     saveLayout: action(t("menu.saveLayout"), () => {}, false),
     toggleSnippets: action(
       t("menu.toggleSnippets"),

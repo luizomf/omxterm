@@ -52,6 +52,7 @@ const MENU_KEYS: Readonly<
   toggleFiles: "menu.toggleFiles",
   toggleSshConnect: "menu.toggleSshConnect",
   toggleMirrorTyping: "mirrorTyping.title",
+  toggleAgentAccess: "menu.allowAgents",
   saveLayout: "menu.saveLayout",
   toggleTabBar: "menu.toggleTabBar",
   toggleAuxiliaryPanel: "menu.toggleAuxiliaryPanel",

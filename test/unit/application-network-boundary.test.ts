@@ -56,6 +56,17 @@ describe("Application Network Boundary", () => {
         source = source.replace(validationImport, "");
       }
       if (
+        ["main/agent-endpoint.ts", "agent-ctl/client.ts"].includes(
+          path.relative(root, file).split(path.sep).join("/"),
+        )
+      ) {
+        // The agent API's user-only Unix socket (ADR 0052): a path, never a
+        // port; agent-endpoint tests cover the boundary.
+        const socketImport = 'import net from "node:net";';
+        expect(source.split(socketImport)).toHaveLength(2);
+        source = source.replace(socketImport, "");
+      }
+      if (
         path.relative(root, file).split(path.sep).join("/") ===
         "main/extension-view-host.ts"
       ) {

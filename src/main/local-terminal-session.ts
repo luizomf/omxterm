@@ -73,12 +73,37 @@ export interface LocalTerminalSessionOptions {
   readonly environment: NodeJS.ProcessEnv;
   // The launch values of the variables Chromium changes in main on Linux.
   readonly chromiumStartupVariables?: ChromiumStartupVariables | undefined;
+  // Where the agent API's client, profile and this pane are (ADR 0052).
+  readonly agentEnvironment?: AgentEnvironment | undefined;
   readonly onOutput: (data: string) => void;
   readonly onResizeFailure?: (reason: TerminalResizeFailureReason) => void;
   readonly onExit: (
     exit: TerminalExit,
     launchKind: TerminalSessionLaunchKind,
   ) => void;
+}
+
+export interface AgentEnvironment {
+  readonly OMXTERM_CTL: string;
+  readonly OMXTERM_PROFILE: string;
+  readonly OMXTERM_PANE: string;
+}
+
+const AGENT_VARIABLES = [
+  "OMXTERM_CTL",
+  "OMXTERM_PROFILE",
+  "OMXTERM_PANE",
+] as const;
+
+// A pane never inherits another OMXTerm's values (a source run started from
+// a pane): this process sets its own or none.
+function withAgentEnvironment(
+  environment: NodeJS.ProcessEnv,
+  agent: AgentEnvironment | undefined,
+): NodeJS.ProcessEnv {
+  const result = { ...environment };
+  for (const name of AGENT_VARIABLES) delete result[name];
+  return agent ? { ...result, ...agent } : result;
 }
 
 export type SpawnPty = (
@@ -106,9 +131,12 @@ export function createLocalTerminalSession(
     pty = spawnPty(executable, arguments_, {
       cwd: options.workingDirectory ?? options.homeDirectory,
       env: {
-        ...restoreChromiumStartupVariables(
-          withoutAppImageRuntime(options.environment, options.platform),
-          options.chromiumStartupVariables,
+        ...withAgentEnvironment(
+          restoreChromiumStartupVariables(
+            withoutAppImageRuntime(options.environment, options.platform),
+            options.chromiumStartupVariables,
+          ),
+          options.agentEnvironment,
         ),
         TERM: "xterm-256color",
         COLORTERM: "truecolor",

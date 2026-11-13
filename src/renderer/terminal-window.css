@@ -50,6 +50,14 @@ body {
   transform: translateY(-50%);
 }
 
+/* Without a pane or a tab strip, the window's marks sit in the page's
+   top-right corner, clear of a page header's buttons. */
+.state-marks-corner {
+  top: var(--ui-space-1);
+  right: var(--ui-space-1);
+  transform: none;
+}
+
 .state-notice {
   position: fixed;
   z-index: 5;
@@ -107,6 +115,8 @@ body:has(> .ui-dialog:modal) > :not(dialog, script, style, link) {
 }
 
 #terminal-tabs {
+  /* Anchors the window's marks when the selected tab has no pane. */
+  position: relative;
   display: flex;
   flex: 1 1 auto;
   min-height: 0;
