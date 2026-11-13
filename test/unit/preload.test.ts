@@ -162,6 +162,36 @@ describe("isolated preload terminal bridge requests", () => {
     await expect(bridge.start()).rejects.toThrow(TypeError);
   });
 
+  it("sends the measured size with start and refuses an invalid one", async () => {
+    const bridge = electron.bridge!;
+    const size = { cols: 118, rows: 37, pixelWidth: 944, pixelHeight: 592 };
+    electron.invoke.mockResolvedValueOnce("s2");
+    await expect(
+      bridge.start(undefined, "s1", undefined, undefined, size),
+    ).resolves.toBe("s2");
+    expect(electron.invoke).toHaveBeenLastCalledWith(terminalIpc.start, {
+      workingDirectoryOf: "s1",
+      size,
+    });
+    electron.invoke.mockResolvedValueOnce("s3");
+    await bridge.start(undefined, undefined, undefined, undefined, {
+      cols: 80,
+      rows: 24,
+    });
+    expect(electron.invoke).toHaveBeenLastCalledWith(terminalIpc.start, {
+      size: { cols: 80, rows: 24 },
+    });
+    const calls = electron.invoke.mock.calls.length;
+    await expect(
+      bridge.start(undefined, undefined, undefined, undefined, {
+        cols: 80,
+        rows: 24,
+        pixelWidth: 640,
+      } as never),
+    ).rejects.toThrow(TypeError);
+    expect(electron.invoke.mock.calls).toHaveLength(calls);
+  });
+
   it("validates narrow Surface ownership identities before registration, start and release", async () => {
     const bridge = electron.bridge!;
     const configurationId = "11111111-1111-4111-8111-111111111111";

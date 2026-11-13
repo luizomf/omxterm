@@ -257,7 +257,7 @@ export async function mountResttyTerminalSurface(
     }
   };
 
-  const { transport, output } = surfaceTransport(
+  const { transport, output, start } = surfaceTransport(
     adapter,
     () => !isInactive() && !ended,
     () => ready,
@@ -265,6 +265,7 @@ export async function mountResttyTerminalSurface(
       geometry.record(meta);
       settledSize = size;
     },
+    () => container.getBoundingClientRect().width > 0,
   );
 
   try {
@@ -341,7 +342,7 @@ export async function mountResttyTerminalSurface(
 
     // Allow parser replies before startup output can replay synchronously.
     ready = true;
-    await adapter.start({
+    await start({
       onOutput(data) {
         if (!isInactive() && !ended) {
           visibleLinkController?.invalidate();

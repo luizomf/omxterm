@@ -11,7 +11,7 @@ import {
   createIpcHarness,
 } from "../fixtures/terminal-ipc-harness";
 
-function ptyHarness() {
+function ptyHarness(start?: object) {
   const ipc = createIpcHarness();
   const mainFrame = {};
   const webContents = { mainFrame, isDestroyed: () => false, send: vi.fn() };
@@ -23,6 +23,7 @@ function ptyHarness() {
     onData: () => ({ dispose() {} }),
     onExit: () => ({ dispose() {} }),
   };
+  const spawn = vi.fn(() => pty as unknown as IPty);
   const events: OperationalEvent[] = [];
   const router = registerTerminalIpcRouter(ipc.ipcMain, {
     write(event) {
@@ -34,9 +35,10 @@ function ptyHarness() {
     ...clipboardOptions(),
     windowId: 1,
     webContents,
-    createSession: (callbacks) =>
-      createLocalTerminalSession(() => pty as unknown as IPty, {
+    createSession: (callbacks, _cwd, _ssh, _restored, _id, size) =>
+      createLocalTerminalSession(spawn, {
         shell: "/bin/example-shell",
+        initialSize: size,
         platform: "linux",
         homeDirectory: "/example",
         environment: {},
@@ -46,9 +48,14 @@ function ptyHarness() {
     onSessionExit: vi.fn(),
     onSessionStartError: vi.fn(),
   });
-  ipc.handlers.get(terminalIpc.start)!(trusted);
+  try {
+    ipc.handlers.get(terminalIpc.start)!(trusted, start);
+  } catch {
+    // A refused start is observed through spawn and the operational events.
+  }
   return {
     pty,
+    spawn,
     events,
     resize: (payload: object) =>
       ipc.listeners.get(terminalIpc.resize)!(trusted, {
@@ -59,6 +66,47 @@ function ptyHarness() {
 }
 
 describe("terminal pixel size", () => {
+  it("starts the PTY at the Surface's size so a program that runs at once reads it", () => {
+    const h = ptyHarness({
+      size: { cols: 118, rows: 37, pixelWidth: 944, pixelHeight: 592 },
+    });
+    expect(h.spawn).toHaveBeenCalledExactlyOnceWith(
+      "/bin/example-shell",
+      ["-l"],
+      expect.objectContaining({ cols: 118, rows: 37 }),
+    );
+    // Spawning leaves winsize pixels at 0×0; they're set before start returns.
+    expect(h.pty.resize).toHaveBeenCalledExactlyOnceWith(118, 37, {
+      width: 944,
+      height: 592,
+    });
+  });
+
+  it("starts at 80×24 when the Surface hasn't measured a grid", () => {
+    const h = ptyHarness();
+    expect(h.spawn).toHaveBeenCalledExactlyOnceWith(
+      "/bin/example-shell",
+      ["-l"],
+      expect.objectContaining({ cols: 80, rows: 24 }),
+    );
+    expect(h.pty.resize).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["no rows", { cols: 118 }],
+    ["zero columns", { cols: 0, rows: 37 }],
+    ["a lone pixel width", { cols: 118, rows: 37, pixelWidth: 944 }],
+    ["an unknown field", { cols: 118, rows: 37, dpr: 2 }],
+  ])("refuses a start whose size has %s", (_label, size) => {
+    const h = ptyHarness({ size });
+    expect(h.spawn).not.toHaveBeenCalled();
+    expect(h.events).toContainEqual({
+      name: "boundary.rejected",
+      boundary: "ipc",
+      reason: "invalid-payload",
+    });
+  });
+
   it("gives the PTY the grid's pixel size so TIOCGWINSZ is not 0×0", () => {
     const h = ptyHarness();
     h.resize({ cols: 118, rows: 37, pixelWidth: 944, pixelHeight: 592 });

@@ -37,8 +37,8 @@ The portable Terminal Surface owns protocol parsing, browser/WebGL rendering,
 cell anchoring, resize, font-rescaling behavior and cleanup. Restty implements
 the claimed paths inside its pinned Ghostty core. Cell-size reports
 remain enabled so `CSI 16 t` returns the dimensions image-producing applications
-need, and each resize gives the PTY the grid's size in device pixels (columns ×
-cell width, padding excluded), the same cell size. File, temporary-file and
+need, and the PTY starts at, and each resize gives it, the grid's size in
+device pixels (columns × cell width, padding excluded), the same cell size. File, temporary-file and
 shared-memory media stay refused, so main never reads local files or shared
 memory on behalf of output that may come from SSH. Image rendering uses no JavaScript eval, remote fetch, object source,
 renderer Node access or image-specific preload/IPC capability.

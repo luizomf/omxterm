@@ -25,6 +25,20 @@ async function split(
   harness.sessionAdapters.at(-1)!.resize({ cols: 120, rows: 40 });
 }
 
+it("starts each pane's session at the size its Surface measured", async () => {
+  const startSize = { cols: 118, rows: 37, pixelWidth: 944, pixelHeight: 592 };
+  const harness = createTabsHarness({ startSize });
+  await harness.tabs.ready;
+  harness.sessionAdapters[0]!.resize(startSize);
+  harness.tabs.handleCommand({ action: "split", direction: "right" });
+  await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+  for (const adapter of harness.adapters)
+    expect(adapter.start).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(),
+      startSize,
+    );
+});
+
 const tab = (harness: ReturnType<typeof createTabsHarness>) =>
   harness.container.querySelector<HTMLElement>(".terminal-tab")!;
 

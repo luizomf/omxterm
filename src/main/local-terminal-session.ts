@@ -69,6 +69,9 @@ export interface LocalTerminalSessionOptions {
   readonly homeDirectory: string;
   // A split pane's inherited local directory; otherwise the home directory.
   readonly workingDirectory?: string;
+  // The Surface's grid when it was already measured; otherwise 80×24 until
+  // the first resize.
+  readonly initialSize?: TerminalSize | undefined;
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
   // The launch values of the variables Chromium changes in main on Linux.
@@ -126,6 +129,10 @@ export function createLocalTerminalSession(
     : options.platform === "win32"
       ? []
       : ["-l"];
+  const initialSize =
+    options.initialSize !== undefined && isTerminalSize(options.initialSize)
+      ? options.initialSize
+      : { cols: 80, rows: 24 };
   let pty: IPty;
   try {
     pty = spawnPty(executable, arguments_, {
@@ -143,8 +150,8 @@ export function createLocalTerminalSession(
         TERM_PROGRAM: "OMXTerm",
         TERM_PROGRAM_VERSION: options.applicationVersionProvider.getVersion(),
       },
-      cols: 80,
-      rows: 24,
+      cols: initialSize.cols,
+      rows: initialSize.rows,
       // The OS-provided ConPTY can consume Kitty APCs before they reach Restty.
       // Use the already-packaged ConPTY runtime that preserves this payload.
       ...(options.platform === "win32" ? { useConptyDll: true } : {}),
@@ -160,6 +167,23 @@ export function createLocalTerminalSession(
       `Failed to start the Default Shell at ${options.shell}`,
       { cause: error },
     );
+  }
+
+  // node-pty spawns with 0×0 pixels, so set them before the new process can
+  // read TIOCGWINSZ (#1038). ConPTY has no pixel size.
+  if (
+    initialSize.pixelWidth !== undefined &&
+    initialSize.pixelHeight !== undefined &&
+    options.platform !== "win32"
+  ) {
+    try {
+      pty.resize(initialSize.cols, initialSize.rows, {
+        width: initialSize.pixelWidth,
+        height: initialSize.pixelHeight,
+      });
+    } catch {
+      // The Surface's first resize carries the same size again.
+    }
   }
 
   let closed = false;

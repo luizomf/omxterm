@@ -81,6 +81,7 @@ it("consumes a restored token once, explicitly selects Default Shell and keeps p
     undefined,
     true,
     "s1",
+    undefined,
   ]);
   expect(commandAvailable).toBe(true);
   expect(controller.layoutDirectory!("s1")).toEqual({
