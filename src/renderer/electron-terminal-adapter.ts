@@ -65,7 +65,7 @@ export function createElectronTerminalAdapter(
 
   return {
     sessionId: () => sessionId,
-    async start(handlers: TerminalSessionHandlers) {
+    async start(handlers: TerminalSessionHandlers, size) {
       if (started || closed)
         throw new Error("Terminal Adapter cannot be started twice");
       started = true;
@@ -108,15 +108,16 @@ export function createElectronTerminalAdapter(
       });
       const owner = retention ? await retention : undefined;
       if (closed) throw new Error("Terminal Adapter was closed before start");
-      const startedSessionId = await (restoreToken !== undefined
-        ? bridge.start(owner, undefined, undefined, restoreToken)
-        : launchToken !== undefined
-          ? bridge.start(owner, undefined, launchToken)
-          : workingDirectoryOf !== undefined
-            ? bridge.start(owner, workingDirectoryOf)
-            : owner === undefined
-              ? bridge.start()
-              : bridge.start(owner));
+      const sized =
+        size !== undefined && isTerminalSize(size) ? size : undefined;
+      const startedSessionId = await bridge.start(
+        owner,
+        // An SSH launch token takes precedence over a source directory.
+        launchToken === undefined ? workingDirectoryOf : undefined,
+        launchToken,
+        restoreToken,
+        sized,
+      );
       const closedBeforeStart = closed;
       sessionId = startedSessionId;
       for (const event of pendingEvents) {

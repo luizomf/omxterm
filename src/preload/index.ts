@@ -219,7 +219,7 @@ const terminal: TerminalBridge = {
   filesTerminalDrag: createFilesTerminalDragBridge(ipcRenderer),
   mirrorTyping: createMirrorTypingBridge(ipcRenderer),
   agent: createAgentBridge(ipcRenderer),
-  async start(surfaceId, workingDirectoryOf, launchToken, restoreToken) {
+  async start(surfaceId, workingDirectoryOf, launchToken, restoreToken, size) {
     if (surfaceId !== undefined && !isSurfaceIdentity(surfaceId))
       throw new TypeError("Invalid Surface identity");
     if (
@@ -239,24 +239,25 @@ const terminal: TerminalBridge = {
         workingDirectoryOf !== undefined)
     )
       throw new TypeError("Invalid layout restore token");
-    const sessionId: unknown = await (restoreToken !== undefined
-      ? ipcRenderer.invoke(terminalIpc.start, {
+    if (size !== undefined && !isTerminalSize(size))
+      throw new TypeError("Invalid terminal size");
+    const intent =
+      restoreToken !== undefined
+        ? { restoreToken }
+        : launchToken !== undefined
+          ? { launchToken }
+          : workingDirectoryOf !== undefined
+            ? { workingDirectoryOf }
+            : undefined;
+    const sessionId: unknown = await (intent === undefined && size === undefined
+      ? surfaceId === undefined
+        ? ipcRenderer.invoke(terminalIpc.start)
+        : ipcRenderer.invoke(terminalIpc.start, surfaceId)
+      : ipcRenderer.invoke(terminalIpc.start, {
           ...(surfaceId === undefined ? {} : { surfaceId }),
-          restoreToken,
-        })
-      : launchToken !== undefined
-        ? ipcRenderer.invoke(terminalIpc.start, {
-            ...(surfaceId === undefined ? {} : { surfaceId }),
-            launchToken,
-          })
-        : workingDirectoryOf !== undefined
-          ? ipcRenderer.invoke(terminalIpc.start, {
-              ...(surfaceId === undefined ? {} : { surfaceId }),
-              workingDirectoryOf,
-            })
-          : surfaceId === undefined
-            ? ipcRenderer.invoke(terminalIpc.start)
-            : ipcRenderer.invoke(terminalIpc.start, surfaceId));
+          ...intent,
+          ...(size === undefined ? {} : { size: terminalSize(size) }),
+        }));
     if (!isTerminalSessionId(sessionId))
       throw new TypeError("Invalid Live Terminal Session identifier");
     return sessionId;

@@ -4,6 +4,7 @@ import {
   type TerminalTabsOptions,
 } from "../../src/renderer/terminal-tabs";
 import type { ElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
+import type { TerminalSize } from "../../src/shared/terminal-contract";
 import type {
   TerminalSessionAdapter,
   TerminalSessionHandlers,
@@ -47,6 +48,8 @@ export function createTabsHarness(
     surfaceGeometry?: TerminalSurfaceGeometry;
     surfaceOptions?: TerminalTabsOptions["surfaceOptions"];
     tabsOptions?: Partial<TerminalTabsOptions>;
+    // The grid each fake Surface already measured when it starts its session.
+    startSize?: TerminalSize;
   } = {},
 ) {
   document.body.innerHTML = "";
@@ -98,7 +101,10 @@ export function createTabsHarness(
       mountedSurfaceOptions.push(surfaceOptions);
       sessionAdapters.push(adapter);
       await options.beforeStart?.(mountCount);
-      await adapter.start({ onOutput: vi.fn(), onExit: vi.fn() });
+      await adapter.start(
+        { onOutput: vi.fn(), onExit: vi.fn() },
+        options.startSize,
+      );
       const surface = createFakeSurface();
       if (options.surfaceGeometry)
         surface.geometry.mockReturnValue(options.surfaceGeometry);

@@ -628,6 +628,7 @@ function createTerminalIpcController(
         ssh,
         restored,
         sessionId,
+        launch.size,
       );
     } catch (cause) {
       if (windowId !== undefined)

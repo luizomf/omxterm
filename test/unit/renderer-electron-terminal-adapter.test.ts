@@ -106,6 +106,7 @@ describe("renderer Electron terminal adapter", () => {
       undefined,
       undefined,
       token,
+      undefined,
     );
     mounting.close();
     h.startSession("s1");
@@ -148,7 +149,13 @@ describe("renderer Electron terminal adapter", () => {
     const adapter = createElectronTerminalAdapter(bridge, "configuration");
     const started = adapter.start({ onOutput: vi.fn(), onExit: vi.fn() });
     await vi.waitFor(() =>
-      expect(harness.calls.start).toHaveBeenCalledExactlyOnceWith("surface"),
+      expect(harness.calls.start).toHaveBeenCalledExactlyOnceWith(
+        "surface",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ),
     );
     adapter.close();
     harness.startSession("s1");
@@ -300,6 +307,47 @@ describe("renderer Electron terminal adapter", () => {
     expect(harness.calls.close).toHaveBeenCalledWith("s1", undefined);
     expect(harness.removeOutputListener).toHaveBeenCalledOnce();
     expect(harness.removeExitListener).toHaveBeenCalledOnce();
+  });
+
+  it("starts the session at the size the Surface measured", async () => {
+    const harness = createBridgeHarness();
+    const adapter = createElectronTerminalAdapter(
+      harness.bridge,
+      undefined,
+      "s1",
+    );
+    const size = { cols: 118, rows: 37, pixelWidth: 944, pixelHeight: 592 };
+    const started = adapter.start({ onOutput: vi.fn(), onExit: vi.fn() }, size);
+    harness.startSession("s2");
+    await started;
+    expect(harness.calls.start).toHaveBeenCalledExactlyOnceWith(
+      undefined,
+      "s1",
+      undefined,
+      undefined,
+      size,
+    );
+  });
+
+  it("sends an SSH launch without the source pane's directory", async () => {
+    const harness = createBridgeHarness();
+    const token = "00000000-0000-0000-0000-000000000002";
+    const adapter = createElectronTerminalAdapter(
+      harness.bridge,
+      undefined,
+      "s1",
+      token,
+    );
+    const started = adapter.start({ onOutput: vi.fn(), onExit: vi.fn() });
+    harness.startSession("s2");
+    await started;
+    expect(harness.calls.start).toHaveBeenCalledExactlyOnceWith(
+      undefined,
+      undefined,
+      token,
+      undefined,
+      undefined,
+    );
   });
 
   it("cannot start twice and stops writing after close", async () => {

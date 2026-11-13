@@ -46,12 +46,14 @@ export interface TerminalBridge {
   retainSurface(configurationId: string): Promise<string>;
   releaseSurface(surfaceId: string): void;
   // workingDirectoryOf names the session whose reported directory a split
-  // pane inherits; main resolves and validates it.
+  // pane inherits; main resolves and validates it. size is the Surface's
+  // measured grid, which the PTY starts with.
   start(
     surfaceId?: string,
     workingDirectoryOf?: TerminalSessionId,
     launchToken?: string,
     restoreToken?: string,
+    size?: TerminalSize,
   ): Promise<TerminalSessionId>;
   sshPane?(token: string, accepted: boolean | null): void;
   input(sessionId: TerminalSessionId, data: string): void;

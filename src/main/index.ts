@@ -508,6 +508,7 @@ app
                 ssh,
                 restored,
                 sessionId,
+                size,
               ) {
                 return shutdown.createSession(nodePty.spawn, {
                   shell: resolveCurrentDefaultShell(),
@@ -518,6 +519,7 @@ app
                   platform: process.platform,
                   homeDirectory: account.homedir,
                   ...(workingDirectory ? { workingDirectory } : {}),
+                  ...(size ? { initialSize: size } : {}),
                   applicationVersionProvider: app,
                   environment: process.env,
                   chromiumStartupVariables,

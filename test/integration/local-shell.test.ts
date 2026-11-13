@@ -196,6 +196,48 @@ describe.skipIf(!supportedEnvironment)("real local PTY", () => {
     25_000,
   );
 
+  // Without pixels nothing resizes after the spawn, so this pins the spawn grid.
+  it.each([
+    ["cells only", { cols: 118, rows: 37 }],
+    [
+      "cells and pixels",
+      { cols: 118, rows: 37, pixelWidth: 1_888, pixelHeight: 1_184 },
+    ],
+  ])("starts a command at the measured size (%s)", async (_label, size) => {
+    let terminalPayload = "";
+    const exited = new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Initial size check timed out")),
+        10_000,
+      );
+      createLocalTerminalSession(nodePty.spawn, {
+        shell: "/bin/sh",
+        launchRequest: {
+          kind: "explicit-command",
+          executable: process.execPath,
+          arguments: [
+            "-e",
+            "process.stdout.write(`__SIZE__${process.stdout.columns}x${process.stdout.rows}__`)",
+          ],
+        },
+        initialSize: size,
+        platform: process.platform,
+        homeDirectory: process.cwd(),
+        applicationVersionProvider: { getVersion: () => "size-test" },
+        environment: process.env,
+        onOutput(data) {
+          terminalPayload += data;
+        },
+        onExit() {
+          clearTimeout(timer);
+          resolve();
+        },
+      });
+    });
+    await exited;
+    expect(terminalPayload).toContain("__SIZE__118x37__");
+  });
+
   it.skipIf(process.platform !== "darwin")(
     "owns a disposable macOS PTY through startup, resize, and clean exit",
     async () => {

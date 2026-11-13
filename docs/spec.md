@@ -1583,6 +1583,13 @@ authority; OMXTerm adds no second parser.
   excluded, so `ws_xpixel / ws_col` is the cell width `CSI 16 t` reports. Tools
   then size images to the window, and tmux to the real cell. Windows ConPTY has
   no pixel size.
+- A session starts at the grid and pixel size its Surface already measured, so a
+  program that runs at once, such as a Launch Request or a line in a shell
+  startup file, reads the real size. The pixels follow the spawn in the same
+  tick, so on Linux a native program that reads them in its first instant can
+  still see 0×0 (#1043). A Surface that hasn't measured a grid yet starts its
+  session at 80×24 until its first resize. A pane in a background tab gets a
+  placeholder grid until the tab is shown (#1041).
 
 **Placement**
 

@@ -69,6 +69,9 @@ export interface LocalTerminalSessionOptions {
   readonly homeDirectory: string;
   // A split pane's inherited local directory; otherwise the home directory.
   readonly workingDirectory?: string;
+  // The Surface's grid when it was already measured; otherwise 80×24 until
+  // the first resize.
+  readonly initialSize?: TerminalSize | undefined;
   readonly applicationVersionProvider: ApplicationVersionProvider;
   readonly environment: NodeJS.ProcessEnv;
   // The launch values of the variables Chromium changes in main on Linux.
@@ -126,6 +129,10 @@ export function createLocalTerminalSession(
     : options.platform === "win32"
       ? []
       : ["-l"];
+  const initialSize =
+    options.initialSize !== undefined && isTerminalSize(options.initialSize)
+      ? options.initialSize
+      : { cols: 80, rows: 24 };
   let pty: IPty;
   try {
     pty = spawnPty(executable, arguments_, {
@@ -143,8 +150,8 @@ export function createLocalTerminalSession(
         TERM_PROGRAM: "OMXTerm",
         TERM_PROGRAM_VERSION: options.applicationVersionProvider.getVersion(),
       },
-      cols: 80,
-      rows: 24,
+      cols: initialSize.cols,
+      rows: initialSize.rows,
       // The OS-provided ConPTY can consume Kitty APCs before they reach Restty.
       // Use the already-packaged ConPTY runtime that preserves this payload.
       ...(options.platform === "win32" ? { useConptyDll: true } : {}),
@@ -160,6 +167,25 @@ export function createLocalTerminalSession(
       `Failed to start the Default Shell at ${options.shell}`,
       { cause: error },
     );
+  }
+
+  // node-pty spawns with 0×0 pixels, so set them in the same tick (#1038). On
+  // Linux a child that reads TIOCGWINSZ at once can still miss them (#1043).
+  // ConPTY has no pixel size.
+  if (
+    initialSize.pixelWidth !== undefined &&
+    initialSize.pixelHeight !== undefined &&
+    options.platform !== "win32"
+  ) {
+    try {
+      pty.resize(initialSize.cols, initialSize.rows, {
+        width: initialSize.pixelWidth,
+        height: initialSize.pixelHeight,
+      });
+    } catch (error) {
+      // The Surface's first resize carries the same size again.
+      options.onResizeFailure?.(resizeFailure(error, options.platform));
+    }
   }
 
   let closed = false;
@@ -255,14 +281,9 @@ export function createLocalTerminalSession(
           });
         else pty.resize(size.cols, size.rows);
       } catch (error) {
-        // Pinned Unix node-pty can close its descriptor before delivering exit.
-        // Only that exact native error is an expected teardown race. Neither
-        // failure completes the session: the real exit subscription still owns it.
-        const closedPty =
-          (options.platform === "darwin" || options.platform === "linux") &&
-          error instanceof Error &&
-          error.message === "ioctl(2) failed, EBADF";
-        options.onResizeFailure?.(closedPty ? "closed-pty" : "native-failure");
+        // Neither failure completes the session: the real exit subscription
+        // still owns it.
+        options.onResizeFailure?.(resizeFailure(error, options.platform));
       }
     },
     acknowledgeOutput(bytes) {
@@ -331,6 +352,19 @@ export function createLocalTerminalSession(
       if (!exited) pty.kill();
     },
   };
+}
+
+// Pinned Unix node-pty can close its descriptor before delivering exit; only
+// that exact native error is an expected teardown race.
+function resizeFailure(
+  error: unknown,
+  platform: NodeJS.Platform | string,
+): TerminalResizeFailureReason {
+  return (platform === "darwin" || platform === "linux") &&
+    error instanceof Error &&
+    error.message === "ioctl(2) failed, EBADF"
+    ? "closed-pty"
+    : "native-failure";
 }
 
 // A login shell may report itself with a leading dash (e.g. "-zsh").

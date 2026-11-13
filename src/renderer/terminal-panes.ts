@@ -144,16 +144,19 @@ export function paneSessionAdapter(
 ): TerminalSessionAdapter {
   const { adapter } = pane;
   return {
-    start: async (handlers: TerminalSessionHandlers) => {
+    start: async (handlers: TerminalSessionHandlers, size) => {
       pane.startRequested = true;
-      await adapter.start({
-        onOutput: handlers.onOutput,
-        onExit(exit) {
-          endPane(pane);
-          handlers.onExit(exit);
-          onSessionEnd(pane, exit);
+      await adapter.start(
+        {
+          onOutput: handlers.onOutput,
+          onExit(exit) {
+            endPane(pane);
+            handlers.onExit(exit);
+            onSessionEnd(pane, exit);
+          },
         },
-      });
+        size,
+      );
       onStarted();
     },
     write: (data) => adapter.write(data),

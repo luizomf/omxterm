@@ -1,8 +1,10 @@
 import {
   isTerminalSessionId,
   isTerminalContextMenuTarget,
+  isTerminalSize,
   type TerminalContextMenuTarget,
   type TerminalSessionId,
+  type TerminalSize,
 } from "./terminal-contract";
 
 // A Terminal Tab holds one or more Terminal Panes, each with its own Terminal
@@ -55,12 +57,14 @@ export interface TerminalTabSelection {
 
 // Starting a pane's session may name the session whose last local OSC 7
 // directory it inherits. Main resolves that intent; the renderer never sends a
-// path (ADR 0006).
+// path (ADR 0006). size is the Surface's measured grid, when it already has
+// one, so a program that runs at once reads its real size (#1038).
 export interface TerminalSessionStart {
   readonly surfaceId?: string;
   readonly launchToken?: string;
   readonly restoreToken?: string;
   readonly workingDirectoryOf?: TerminalSessionId;
+  readonly size?: TerminalSize;
 }
 
 export const MAX_WORKING_DIRECTORY_REPORT_LENGTH = 4_096;
@@ -133,7 +137,8 @@ export function isTerminalSessionStart(
         key === "surfaceId" ||
         key === "workingDirectoryOf" ||
         key === "launchToken" ||
-        key === "restoreToken",
+        key === "restoreToken" ||
+        key === "size",
     ) &&
     (record.launchToken === undefined ||
       (typeof record.launchToken === "string" &&
@@ -148,7 +153,8 @@ export function isTerminalSessionStart(
         record.workingDirectoryOf === undefined)) &&
     (record.surfaceId === undefined || isSurfaceIdentity(record.surfaceId)) &&
     (record.workingDirectoryOf === undefined ||
-      isTerminalSessionId(record.workingDirectoryOf))
+      isTerminalSessionId(record.workingDirectoryOf)) &&
+    (record.size === undefined || isTerminalSize(record.size))
   );
 }
 

@@ -87,6 +87,8 @@ export interface TerminalIpcControllerOptions {
     ssh?: import("./ssh-terminal-launch").SshLaunch,
     restored?: boolean,
     sessionId?: TerminalSessionId,
+    // The Surface's measured grid, validated at the IPC boundary.
+    size?: import("../shared/terminal-contract").TerminalSize,
   ) => LocalTerminalSession;
   readonly consumeSshLaunch?: (
     token: string,

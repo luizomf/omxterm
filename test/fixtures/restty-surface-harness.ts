@@ -9,6 +9,9 @@ const harness = vi.hoisted(() => {
   const instances: FakeRestty[] = [];
   let initError: Error | undefined;
   let initGate: Promise<void> | undefined;
+  // Like Restty, connecting reports a grid it already measured.
+  let connectGrid:
+    { cols: number; rows: number; cellW: number; cellH: number } | undefined;
   class FakeRestty {
     readonly canvas = document.createElement("canvas");
     readonly listeners = new Set<(event: ResttyRuntimeEvent) => void>();
@@ -57,6 +60,15 @@ const harness = vi.hoisted(() => {
               void transport.connect({
                 url: "",
                 callbacks: {
+                  onConnect: () => {
+                    if (connectGrid)
+                      transport.resize(connectGrid.cols, connectGrid.rows, {
+                        widthPx: connectGrid.cols * connectGrid.cellW + 7,
+                        heightPx: connectGrid.rows * connectGrid.cellH + 5,
+                        cellW: connectGrid.cellW,
+                        cellH: connectGrid.cellH,
+                      });
+                  },
                   onData: (data) => {
                     this.sendInput(data, "pty");
                   },
@@ -104,6 +116,9 @@ const harness = vi.hoisted(() => {
     },
     setInitError: (error: Error | undefined) => {
       initError = error;
+    },
+    setConnectGrid: (grid: typeof connectGrid) => {
+      connectGrid = grid;
     },
   };
 });
