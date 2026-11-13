@@ -20,6 +20,8 @@ export const DEFAULT_AGENT_IDLE_MS = 500;
 export const MIN_AGENT_IDLE_MS = 100;
 export const MAX_AGENT_IDLE_MS = 60_000;
 export const MAX_AGENT_WAIT_MS = 600_000;
+/** Characters in a wait's literal `match`. */
+export const MAX_AGENT_MATCH_CHARS = 1024;
 
 export const AGENT_GRANT_ITEM = "Allow Agents in This Window";
 

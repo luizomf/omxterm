@@ -89,6 +89,8 @@ export type AgentReadResult =
       readonly truncated: boolean;
       readonly cols?: number;
       readonly rows?: number;
+      /** A screen read's: whether it is the alternate screen. */
+      readonly alternate?: boolean;
     }
   | { readonly id: string; readonly error: "unknown-pane" | "failed" };
 
@@ -124,7 +126,12 @@ export function isAgentReadResult(value: unknown): value is AgentReadResult {
       (value.error === "unknown-pane" || value.error === "failed")
     );
   return (
-    hasOnlyKeys(value, ["id", "text", "truncated"], ["cols", "rows"]) &&
+    hasOnlyKeys(
+      value,
+      ["id", "text", "truncated"],
+      ["cols", "rows", "alternate"],
+    ) &&
+    (value.alternate === undefined || typeof value.alternate === "boolean") &&
     typeof value.text === "string" &&
     value.text.length <= MAX_AGENT_READ_CHARS &&
     typeof value.truncated === "boolean" &&

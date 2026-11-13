@@ -97,3 +97,16 @@ export const screenTextCorrections = [
     scrollToBottom: interaction.scrollToBottom,`,
   },
 ];
+
+// Which screen the agent's screen read saw (ADR 0052): a `wait` with `match`
+// counts copies per screen, so a main screen that comes back after a
+// full-screen program isn't new text. The input handler already tracks it.
+export const altScreenCorrections = [
+  {
+    original: `    encodeKeyPress: (key) => inputHandler.encodeKeyPress(key),
+    applyTheme,`,
+    corrected: `    encodeKeyPress: (key) => inputHandler.encodeKeyPress(key),
+    isAltScreen: () => inputHandler.isAltScreen(),
+    applyTheme,`,
+  },
+];

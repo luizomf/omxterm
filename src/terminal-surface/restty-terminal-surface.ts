@@ -147,6 +147,7 @@ function paintFontMetrics(
   container.style.setProperty("--terminal-line-height", `${lineHeight}`);
 }
 
+// eslint-disable-next-line max-lines-per-function -- Every Surface method closes over the one mounted pane's lifecycle state.
 export async function mountResttyTerminalSurface(
   container: HTMLElement,
   adapter: TerminalSessionAdapter,
@@ -402,6 +403,8 @@ export async function mountResttyTerminalSurface(
         isInactive() || ended || !ready
           ? undefined
           : pane?.runtime.terminal.encodeKeyPress(key),
+      isAlternateScreen: () =>
+        disposed || !ready ? undefined : pane?.runtime.terminal.isAltScreen(),
       dispose,
     };
   } catch (cause) {

@@ -43,6 +43,9 @@ export interface TerminalSurface {
   // scrolled, without changing selection, scroll or cursor. undefined while
   // the Surface has no screen to read.
   readScreen?(): string | undefined;
+  // Whether readScreen reads the alternate screen (a full-screen program's).
+  // undefined while the Surface has no screen to read.
+  isAlternateScreen?(): boolean | undefined;
   // The bytes this key would send now, for the terminal's current cursor and
   // Kitty keyboard modes, exactly as the user's own key press; nothing is
   // sent. undefined while the Surface can't take input.

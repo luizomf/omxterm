@@ -648,7 +648,11 @@ export function createTerminalTabs(
           // A Surface with no screen to read fails rather than answer blank.
           const screen = surface.readScreen?.();
           if (screen === undefined) return { id, error: "failed" };
-          text = agentScreen(screen);
+          const alternate = surface.isAlternateScreen?.();
+          text = {
+            ...agentScreen(screen),
+            ...(alternate === undefined ? {} : { alternate }),
+          };
         }
         return {
           id,

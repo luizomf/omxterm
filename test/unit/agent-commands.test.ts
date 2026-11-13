@@ -246,7 +246,7 @@ it("answers exited with the code, during a wait and after it", async () => {
   ).toBe("not-live");
 });
 
-it("refuses what later versions add and out-of-range limits", async () => {
+it("refuses malformed matches and out-of-range limits", async () => {
   const window = fakeWindow();
   const commands = createAgentCommands({
     tabs: tabs(),
@@ -256,14 +256,16 @@ it("refuses what later versions add and out-of-range limits", async () => {
   });
   const codes = await Promise.all(
     [
-      { pane: "s1", timeoutMs: 1000, match: "done" },
+      { pane: "s1", timeoutMs: 1000, match: "" },
+      { pane: "s1", timeoutMs: 1000, match: "é".repeat(1025) },
+      { pane: "s1", timeoutMs: 1000, match: 7 },
       { pane: "s1" },
       { pane: "s1", timeoutMs: 600_001 },
       { pane: "s1", timeoutMs: 1000, idleMs: 50 },
       { pane: "s1", timeoutMs: 1000, after: 99 },
     ].map((args) => failure(commands.run("wait", args, caller()))),
   );
-  expect(codes).toEqual(Array(5).fill("invalid-request"));
+  expect(codes).toEqual(Array(7).fill("invalid-request"));
   const reads = await Promise.all(
     [
       { pane: "s1", source: "command" },

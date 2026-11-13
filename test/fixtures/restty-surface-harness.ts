@@ -23,6 +23,7 @@ const harness = vi.hoisted(() => {
     readonly setOptionKeyMode = vi.fn();
     readonly setScrollbackLines = vi.fn();
     readonly encodeKeyPress = vi.fn((key: { key: string }) => `<${key.key}>`);
+    readonly isAltScreen = vi.fn(() => false);
     readonly getScreenText = vi.fn((): string | null => "screen\n");
     readonly applyTheme = vi.fn();
     readonly updateSize = vi.fn();
@@ -92,6 +93,7 @@ const harness = vi.hoisted(() => {
         terminal: {
           isBracketedPasteEnabled: (): boolean => false,
           encodeKeyPress: this.encodeKeyPress,
+          isAltScreen: this.isAltScreen,
           setFontSize: this.setFontSize,
           setLigatures: this.setLigatures,
           setOptionKeyMode: this.setOptionKeyMode,

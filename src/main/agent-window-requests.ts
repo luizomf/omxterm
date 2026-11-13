@@ -138,5 +138,8 @@ export function settleRead(reads: PendingRequests, result: AgentReadResult) {
       ...(result.cols === undefined
         ? {}
         : { cols: result.cols, rows: result.rows }),
+      ...(result.alternate === undefined
+        ? {}
+        : { alternate: result.alternate }),
     });
 }

@@ -9,6 +9,7 @@ import {
   DEFAULT_AGENT_IDLE_MS,
   DEFAULT_AGENT_READ_LINES,
   MAX_AGENT_IDLE_MS,
+  MAX_AGENT_MATCH_CHARS,
   MAX_AGENT_READ_LINES,
   MAX_AGENT_WAIT_MS,
   MIN_AGENT_IDLE_MS,
@@ -34,7 +35,7 @@ const CAPABILITIES = { tools: {} };
 const MCP_WAIT_TIMEOUT_MS = 50_000;
 const MAX_LINE_CHARS = 4 * 1024 * 1024;
 
-const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait, then read the pane. For arrows and function keys, call press; press also runs the window's shortcuts (new tab, split, close pane, zoom, close window) on the pane it names, then list shows the result; call keys to see which shortcuts, as the user set them, instead of guessing. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
+const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait (or match, to wait for text it should print), then read the pane. For arrows and function keys, call press; press also runs the window's shortcuts (new tab, split, close pane, zoom, close window) on the pane it names, then list shows the result; call keys to see which shortcuts, as the user set them, instead of guessing. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
 
 const window = {
   type: "integer",
@@ -50,6 +51,13 @@ const idle = {
   minimum: MIN_AGENT_IDLE_MS,
   maximum: MAX_AGENT_IDLE_MS,
   description: `Milliseconds without output that count as quiet (default ${DEFAULT_AGENT_IDLE_MS}).`,
+};
+const match = {
+  type: "string",
+  minLength: 1,
+  maxLength: MAX_AGENT_MATCH_CHARS,
+  description:
+    "Literal text, not a pattern, to wait for on the pane's screen; answers match when a new copy shows up past after. With match and no idle, quiet doesn't count.",
 };
 const timeout = {
   type: "integer",
@@ -107,7 +115,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "send",
-    "Type into a pane. With text, enter and wait it runs a command and waits until the pane goes quiet, answering idle, exited <code> or timeout; then read the pane. Without wait it answers the output offset to pass to wait as after.",
+    "Type into a pane. With text, enter and wait it runs a command and waits until the pane goes quiet, answering idle, exited <code> or timeout; then read the pane. With match it waits for that text instead, answering match when it shows up. Without wait or match it answers the output offset to pass to wait as after.",
     {
       pane,
       text: { type: "string", description: "Typed as is; nothing is added." },
@@ -120,6 +128,7 @@ const TOOLS: readonly Tool[] = [
       enter: { type: "boolean", description: "Press Enter after the text." },
       wait: { type: "boolean", description: "Then wait, as the wait tool." },
       idle,
+      match,
       timeout,
       window,
     },
@@ -169,7 +178,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "wait",
-    "Wait until a pane goes quiet or its program ends. Answers idle, exited <code> or timeout; on timeout the program is still running.",
+    "Wait until a pane goes quiet, given text shows up on its screen, or its program ends. Answers idle, match, exited <code> or timeout; on timeout the program is still running.",
     {
       pane,
       after: {
@@ -179,6 +188,7 @@ const TOOLS: readonly Tool[] = [
           "Only output past this offset counts (from send). Default: now.",
       },
       idle,
+      match,
       timeout,
       window,
     },

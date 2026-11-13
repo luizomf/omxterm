@@ -40,6 +40,8 @@ export type PatchedResttyRuntime = {
     // The keymap's bytes for one press (and its release when Kitty reports
     // them) in the core's current modes; it sends nothing.
     encodeKeyPress(key: TerminalKeyPress): string;
+    // Whether the alternate screen is the active one.
+    isAltScreen(): boolean;
     setOptionKeyMode(value: OptionKeyMode): void;
     setScrollbackLines(value: number): void;
   };

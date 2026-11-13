@@ -88,6 +88,9 @@ feature of this cycle, so main moved to `0.33.0-dev.0`. Its bridge admits
 ranges that accept both `0.32.0` and `0.33.0`, and every catalog archive stays
 installable unchanged.
 
+`wait --match`, which waits for given text on a pane's screen (#1068), follows:
+`0.33.0-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

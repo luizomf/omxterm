@@ -4,6 +4,7 @@ import { inputRoutingCorrections } from "../../scripts/restty-input-routing-corr
 import { applicationCursorCorrections } from "../../scripts/restty-application-cursor-corrections.mjs";
 import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-corrections.mjs";
 import {
+  altScreenCorrections,
   bufferTextCorrections,
   screenTextCorrections,
 } from "../../scripts/restty-buffer-text-corrections.mjs";
@@ -79,7 +80,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(occurrences + 1);
         return value.replaceAll(corrected, original);
       }, text);
-    const preScreenText = reverse(source, screenTextCorrections);
+    const preAltScreen = reverse(source, altScreenCorrections);
+    expect(hash(preAltScreen)).toBe(
+      "2dea1f31028c175bf08139bdc0f716c00f763ba602968f1fb43f4a6883fafdaa",
+    );
+    const preScreenText = reverse(preAltScreen, screenTextCorrections);
     expect(hash(preScreenText)).toBe(
       "4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321",
     );
