@@ -530,11 +530,13 @@ quietest form that works:
   agent grant `◆` ([agent access](#agent-access)).
 - A window-wide state puts its mark on every pane of the window, panes opened
   later included, after each pane's own marks, and once on every tab, Settings
-  and extension tabs included. When Settings is selected and the tab strip is
-  hidden, it sits in the page's top-right corner instead.
-- Marks use the secondary text color, except the agent grant's `◆`, which is
-  the window's one accent: the theme's cyan, or its foreground when cyan lacks
-  contrast. `appearance.activePaneHighlight` doesn't change it.
+  and extension tabs included. When a Settings or extension tab is selected,
+  so no pane shows it, it also sits in the page's top-right corner, where it
+  can be clicked like a pane's.
+- Marks use the secondary text color, except the agent grant's `◆`, which
+  takes the theme's error tone: its red, or its foreground when the red lacks
+  contrast against the background. `appearance.activePaneHighlight` doesn't
+  change it.
 - A surprise, or that confirmation, is one transient overlay sentence that
   disappears after four seconds.
 - Something that needs the user is one overlay sentence without counts that
@@ -1256,11 +1258,14 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   terminal output, extensions, configuration, launch arguments and the API
   itself can't. A held shortcut toggles once.
   Its check mark follows the focused window. Turning it on flashes "Agents can
-  now control and read this window. Click ◆ to stop." with no confirmation
-  dialog.
-- While a window is granted, every pane and tab shows the accent `◆`
-  [State Mark](#state-marks). The pane's mark is a button: its tooltip says
-  "Agents can control and read this window. Click to stop." The grant ends on
+  now do anything you can in this window. Click ◆ to stop them." with no
+  confirmation dialog.
+- While a window is granted, every pane and tab shows the `◆`
+  [State Mark](#state-marks) in the error tone, and so does the page corner
+  when a Settings or extension tab is selected; no state of the window hides
+  it. The pane's and the corner's mark are buttons: their tooltip says
+  "Agents can do anything you can in this window. Click this mark to stop
+  them." The grant ends on
   that click, the toggle, closing the window, quitting, a renderer reload or
   crash, or when main can't keep its socket. Switching tabs, modals, blur,
   hide and minimize keep it. It is never restored at startup, by Saved Layout,
@@ -1275,13 +1280,26 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   the user's own key, read the last lines of a pane's scrollback
   and screen (including output from before the grant), and wait until a pane
   goes quiet, its program ends or a timeout passes. Panes in hidden tabs
-  answer too. The API can't grant, see other windows, run application
-  actions, or type anywhere but a pane's PTY.
+  answer too. The API can't grant, see other windows, or type anywhere but a
+  pane's PTY.
+- A pressed chord that is one of the window's tab or pane shortcuts (its
+  defaults and the user's rebinds: new, close, next, previous and select tab,
+  split, close pane, focus and swap panes, equalize) runs that action in the
+  granted window, even when another window is selected: the window first
+  focuses the pane the press names, selecting its tab, so `press s3 Cmd+W`
+  closes the tab holding `s3`. The press answers the action and the pane, and
+  must hold that one chord. A close that would ask to confirm a Busy Session
+  (with `confirmClose` on), or that comes while the user is confirming one,
+  answers that it needs the user and does nothing. The **Allow Agents in This
+  Window** shortcut is refused, whatever it is bound to, and the Command
+  Palette and Find shortcuts answer "not yet". Other shortcuts aren't run for
+  agents yet: a named-key chord goes to the pane as a key, any other is
+  refused as an unsupported key.
 - Agent input is written to the PTY in main. It never passes the window's
   keyboard handling, so it never starts or stops Mirror Typing, skips
   Protected Paste, doesn't jump the view to the bottom the way typing does,
-  doesn't clear attention, and can't press
-  OMXTerm's shortcuts. The user's typing keeps working; the two interleave.
+  and doesn't clear attention. The user's typing keeps working; the two
+  interleave.
 - Every pane's environment carries `OMXTERM_CTL`, `OMXTERM_PROFILE` and
   `OMXTERM_PANE` (see [terminal identity](#terminal-identity-and-replies)), so
   an agent in a pane runs `"$OMXTERM_CTL" status` with no setup. Without a

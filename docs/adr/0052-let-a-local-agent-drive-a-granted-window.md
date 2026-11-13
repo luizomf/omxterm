@@ -512,9 +512,9 @@ building it:
   CLI's `--enter` stays one request. `Space` is in the key table.
 - **The corner mark** shows only when the selected tab has no pane and the tab
   strip is hidden; otherwise the tab buttons already carry the mark, and a
-  page header's buttons stay clear. Unverified: an extension tab's native
-  view may cover the page corner, which would leave a granted window with the
-  tab strip hidden and an extension tab selected without a visible mark.
+  page header's buttons stay clear. Slice 4 shows it whenever the selected
+  tab has no pane, since a tab button's glyph can't be clicked
+  ([Slice 4 as built](#slice-4-as-built)).
 - **A held shortcut toggles once.** A bound `toggleAgentAccess` owns one
   physical press, so key repeat can't flip the grant back and forth.
 - **Windows** refuses the toggle with one sentence, and its panes get no
@@ -592,6 +592,47 @@ So far, `press` with named keys
   for `send`, `read`, `wait` and `press`.
 - Tab ids (`t1`, ...) are handed out when `list` first shows a tab and stay
   with the tab while it lives. Titles are untrusted text.
+
+Tab and pane shortcuts, and the mark in the error tone
+([#1050](https://github.com/luizomf/omxterm/issues/1050)):
+
+- **A chord is an accelerator, as data.** `press` parses each chord with the
+  accelerator grammar (so it may name `Cmd` and character keys: `Cmd+T`,
+  `Ctrl+Shift+]`) and runs it through `terminalActionForKeyboardInput()`
+  against the live catalog's shortcuts, the matcher `before-input-event`
+  uses. One table (`src/main/agent-shortcuts.ts`) decides every action: run,
+  refused (`toggleAgentAccess`), not yet (Command Palette, Find), or still a
+  key for the pane, so a new action never runs for agents by default.
+  Refusals answer before anything happens, whatever else the press holds; a
+  shortcut that runs must be the press's only key. A named-key chord of an
+  action not covered yet still goes to the pane; any other unrun chord is
+  `unsupported-key`, since the encoder takes named keys only.
+- **Focus and act are one step in the window.** The actions don't go through
+  the catalog's selected-window callbacks. Main sends the granted window one
+  correlated request, like `read`, with the pane and the tab or pane command;
+  the window focuses that pane (selecting its tab) and runs the command in the
+  same task, and answers. A pane that is gone answers `unknown-pane`, and a
+  window whose selection didn't move (a dialog over it) answers `unavailable`,
+  so a close never lands on another pane. That leaves the user's Close Pane
+  and its popup checks unchanged.
+- **The Busy Session check is on the named panes.** Main's idea of the
+  focused pane trails the window, so a close asks
+  `agentCloseNeedsUser()` in the application, which owns `confirmClose`,
+  about the named pane, or for Close Tab every pane of its tab (from the
+  window's tab list). A close the user is already confirming in that window
+  also needs the user.
+- **The mark** takes `--ui-agent`, the theme's red or its foreground when the
+  red has a contrast below 3 against the background, the accent's rule. The
+  `--ui-accent` token had no other use and is gone. Its label reads "Agents
+  can do anything you can in this window. Click this mark to stop them."
+- **Always visible, always one click.** A tab button's glyph can't be a
+  button, so the corner copy now shows whenever the selected tab has no pane,
+  tab strip or not, and marks are `app-region: no-drag`, so a hidden title
+  bar's drag area doesn't swallow the click. An extension tab's native view
+  sits below its page header and doesn't reach the corner (checked on a
+  macOS guest), which settles slice 1's open question. The tab-bar and
+  title-bar toggles, and every other action, still don't run for agents
+  ([#1052](https://github.com/luizomf/omxterm/issues/1052)).
 
 ## Open questions
 

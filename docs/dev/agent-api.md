@@ -4,9 +4,11 @@ The wire protocol and CLI of
 [ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slices 1
 and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
-and its [MCP server](#mcp). From slice 4, the tab tree in [`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
-named keys are implemented; its shortcuts are not yet. Each later command says which slice of the ADR's
-plan it belongs to; until then, names and shapes can still change.
+and its [MCP server](#mcp). From slice 4, the tab tree in
+[`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
+named keys and the window's tab and pane shortcuts are implemented. Each later
+command says which slice of the ADR's plan it belongs to; until then, names
+and shapes can still change.
 
 Slice 4 follows the ADR's
 [keyboard-parity rule](../adr/0052-let-a-local-agent-drive-a-granted-window.md#keyboard-parity):
@@ -280,19 +282,44 @@ Keys and shortcuts, as the user would press them in the granted window.
   `unavailable`.
 - It works while the granted window isn't the selected one. Like `send`, it
   never passes the window's keyboard handling.
-- A chord that matches one of the window's effective shortcuts (defaults plus
-  the user's rebinds) runs that action in the granted window on the pane
-  `press` names: main focuses that pane first, as a user clicks a pane and
-  presses, so `press s3 Cmd+W` closes `s3`. The result names the action and
-  the pane. Tab and pane actions
-  come first ([#1050](https://github.com/luizomf/omxterm/issues/1050)), the
-  rest later ([#1052](https://github.com/luizomf/omxterm/issues/1052)); until
-  an action is covered, its chord goes to the pane. Today every chord does.
-- The grant toggle is refused, whatever chord it is bound to. The Command
-  Palette, Settings, Find, extension panels and native dialogs answer "not
-  yet" in one sentence.
-- A close that would ask to confirm a Busy Session answers that it needs the
-  user and does nothing; that confirmation stays the user's.
+
+**Shortcuts** ([#1050](https://github.com/luizomf/omxterm/issues/1050)).
+Main matches each chord against the window's effective shortcuts (defaults
+plus the user's rebinds, the same matcher a real key goes through). A chord
+here may also name a character key and `Cmd` (macOS Command, Super
+elsewhere), as accelerators do: `Cmd+T`, `Ctrl+Shift+]`, `Cmd+Ctrl+=`,
+`Cmd+Plus`.
+
+```json
+{ "id": 8, "cmd": "press", "args": { "pane": "s3", "keys": ["Cmd+Alt+W"] } }
+{ "id": 8, "ok": true, "result": { "action": "closePane", "pane": "s3" } }
+```
+
+- A tab or pane action (`newTab`, `closeTab`, `nextTab`, `previousTab`,
+  `selectTab1` … `selectTab9`, `splitRight`, `splitDown`, `closePane`,
+  `focusNextPane`, `focusPreviousPane`, `focusPaneLeft` … `focusPaneDown`,
+  `swapPaneLeft` … `swapPaneDown`, `equalizePanes`) runs in the granted window
+  on the pane `press` names, even when another window is selected: the window
+  first focuses that pane, selecting its tab, as a user clicks a pane and
+  presses, so `press s3 Cmd+W` closes the tab holding `s3`. The result names
+  the action and the pane; nothing is written to the PTY. The chord must be
+  the press's only key (`invalid-request` otherwise). A window that can't take
+  it now (a dialog over it) answers `unavailable`.
+- A close (`closeTab`, `closePane`) that would ask to confirm a Busy Session,
+  with `confirmClose` on, answers `needs-user` and does nothing; so does one
+  while the user is confirming a close in that window. The confirmation stays
+  the user's. With `confirmClose` off it closes, as the user's press would.
+  Closing the last tab closes the window and ends the grant, so the answer may
+  be `revoked`, or the connection may close, instead.
+- The **Allow Agents in This Window** shortcut answers `refused`, whatever
+  chord it is bound to, and nothing is written. The Command Palette and Find
+  shortcuts answer `not-yet`. Settings, About and the rest have no default
+  shortcut.
+- The window's other shortcuts aren't run for agents yet
+  ([#1052](https://github.com/luizomf/omxterm/issues/1052)): a named-key chord
+  goes to the pane as a key, as before; any other chord answers
+  `unsupported-key`, and so does a character or `Cmd` chord that is no
+  shortcut at all.
 - An ungranted window or an ended grant refuses as `send` does.
 
 ### `keys` (slice 4)
@@ -322,6 +349,9 @@ ends the grant.
 | `too-large`       | The text to send or the text to return is over its limit.               |
 | `limit`           | Too many tabs, panes, connections or pending waits.                     |
 | `unavailable`     | The window couldn't answer in time (a read, a press or a tree request). |
+| `refused`         | The press named the grant toggle's shortcut; only the user toggles it.  |
+| `not-yet`         | The shortcut opens UI agents can't use yet (Command Palette, Find).     |
+| `needs-user`      | The close would ask the user to confirm a Busy Session.                 |
 
 `message` is one English sentence for people reading logs of their own
 scripts. Programs should branch on `code`.
@@ -344,6 +374,7 @@ omxterm-ctl wait s1 --match 'Tests passed' --timeout 120000   # slice 3
 omxterm-ctl read s1 --lines 200
 omxterm-ctl read s1 --screen               # slice 3
 omxterm-ctl press s1 Down Down Enter       # slice 4
+omxterm-ctl press s3 Cmd+Alt+W             # slice 4: closePane on s3
 omxterm-ctl keys                           # slice 4
 ```
 
@@ -369,8 +400,8 @@ omxterm-ctl keys                           # slice 4
   60000 for `wait` and `send --wait`.
 - A pane may be named `s4` or `3:s4`; the window part must match.
 - `press` takes the keys as arguments after the pane (`--keys` with a
-  comma-separated list works too) and prints nothing; `--json` prints the
-  receipt.
+  comma-separated list works too) and prints nothing for keys; a shortcut
+  prints the action and the pane, tab-separated. `--json` prints the result.
 - `read` prints the text and nothing else, so it pipes.
 - Exit status: 0 for a result (a `wait` timeout prints `timeout` and exits
   124), 1 for an API error, 2 for usage, 3 when no grant or endpoint was found.
@@ -399,7 +430,8 @@ Slice 4 adds `keys` with the same name.
   looked up on every call, so a grant given or ended mid-session counts from
   the next call.
 - The result is one text block with what the CLI would print. `send` without
-  `wait`, and `press`, answer their receipt as JSON, for the `offset`. A `wait` timeout is a
+  `wait` answers its receipt as JSON, for the `offset`, and `press` its
+  receipt or the action and pane it ran, as JSON. A `wait` timeout is a
   normal result (`timeout`).
 - No grant, an API error or a bad argument is a tool error (`isError`) whose
   text is the CLI's message; without a grant that's the `status` sentence. An
@@ -440,20 +472,21 @@ instead.
 
 ## Where it lives
 
-| Area                     | Where                                                                                                          |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| Wire limits and keys     | `src/shared/agent-api.ts`, shared by main and the client                                                       |
-| Grants and credentials   | `src/main/agent-access.ts`                                                                                     |
-| Socket and handshake     | `src/main/agent-endpoint.ts`                                                                                   |
-| Commands and waits       | `src/main/agent-commands.ts`                                                                                   |
-| Agent input and outputs  | `agentSessions` in `src/main/terminal-ipc-controller.ts` (the only agent write)                                |
-| Pane environment         | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                                         |
-| Reads and marks (window) | `src/renderer/agent-access.ts`, `src/renderer/state-marks.ts`, `src/preload/agent-bridge.ts`                   |
-| Accent tone              | `src/renderer/ui.css`, `src/renderer/terminal-window-theme.ts`                                                 |
-| Toggle                   | `src/main/action-catalog.ts`, `src/main/application-menu.ts`, `src/shared/terminal-keybinds.ts`                |
-| Client and launcher      | `src/agent-ctl/` (built to `dist/agent-ctl/`, packaged under `resources/agent-ctl/`)                           |
-| Agent guide              | `src/agent-ctl/SKILL.md`, bundled into the client as text                                                      |
-| MCP server               | `src/agent-ctl/mcp.ts`, over the CLI's commands in `src/agent-ctl/commands.ts`                                 |
-| Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`                              |
-| Shortcuts for `press`    | slice 4: `src/main/action-catalog.ts`, `terminalActionForKeyboardInput()` in `src/shared/terminal-keybinds.ts` |
-| Mode-aware key encoding  | `encodeKeyPress` in `scripts/restty-key-press-corrections.mjs`, through the Surface and `terminal-tabs.ts`     |
+| Area                     | Where                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Wire limits and keys     | `src/shared/agent-api.ts`, shared by main and the client                                                   |
+| Grants and credentials   | `src/main/agent-access.ts`                                                                                 |
+| Socket and handshake     | `src/main/agent-endpoint.ts`                                                                               |
+| Commands and waits       | `src/main/agent-commands.ts`                                                                               |
+| Agent input and outputs  | `agentSessions` in `src/main/terminal-ipc-controller.ts` (the only agent write)                            |
+| Pane environment         | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                                     |
+| Reads and marks (window) | `src/renderer/agent-access.ts`, `src/renderer/state-marks.ts`, `src/preload/agent-bridge.ts`               |
+| Mark tone                | `src/renderer/ui.css`, `src/renderer/terminal-window-theme.ts`, `src/renderer/terminal-pane-accent.ts`     |
+| Toggle                   | `src/main/action-catalog.ts`, `src/main/application-menu.ts`, `src/shared/terminal-keybinds.ts`            |
+| Client and launcher      | `src/agent-ctl/` (built to `dist/agent-ctl/`, packaged under `resources/agent-ctl/`)                       |
+| Agent guide              | `src/agent-ctl/SKILL.md`, bundled into the client as text                                                  |
+| MCP server               | `src/agent-ctl/mcp.ts`, over the CLI's commands in `src/agent-ctl/commands.ts`                             |
+| Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`                          |
+| Shortcuts for `press`    | `src/main/agent-shortcuts.ts`, `keyboardInputForAccelerator()` in `src/shared/terminal-keybinds.ts`        |
+| Running them in a window | `runSessionCommand` in `src/renderer/terminal-tabs.ts`; `agentCloseNeedsUser` in `terminal-application.ts` |
+| Mode-aware key encoding  | `encodeKeyPress` in `scripts/restty-key-press-corrections.mjs`, through the Surface and `terminal-tabs.ts` |

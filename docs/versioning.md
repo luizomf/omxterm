@@ -70,6 +70,9 @@ so main moved to `0.32.0-dev.0`. Its bridge admits ranges that accept both
 `list` returning the window's tabs and panes (#1049) is the next change in this
 family: `0.32.0-dev.1`.
 
+Tab and pane shortcuts for `press` and the agent mark's error tone (#1050)
+follow: `0.32.0-dev.2`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

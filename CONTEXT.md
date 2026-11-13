@@ -94,17 +94,20 @@ click to stop). It never changes the terminal grid. Idle and success show
 nothing; surprises and problems use one overlay sentence instead, and so does
 the confirmation of an explicit action with no other visible result (Save
 Layout). A window-wide state, such as an Agent Grant, marks every pane and
-tab of the window; its `◆` is the only mark in the accent color.
+tab of the window; its `◆` is the only mark with a tone of its own, the
+theme's error tone.
 
 **Agent Grant** — The user's per-window, in-memory consent (**Allow Agents in
 This Window**) that lets a local program drive that Terminal Window through the
-Agent API. It shows as an accent State Mark on every pane and tab, and ends on
-a click on that mark, the toggle, closing the window or quitting. It is never
+Agent API. It shows as a State Mark in the error tone on every pane and tab,
+always visible while it lasts, and ends on a click on that mark, the toggle,
+closing the window or quitting. It is never
 restored or granted by anything but that gesture.
 
 **Agent API** — Main's user-only local socket for granted windows: list tabs and
 panes, type text and mode-independent keys, press named keys encoded for the pane's
-modes, read a pane's last lines and wait for it to go quiet or end. `omxterm-ctl`, the bundled client, finds it from the
+modes or the window's tab and pane shortcuts on a named pane, read a pane's
+last lines and wait for it to go quiet or end. `omxterm-ctl`, the bundled client, finds it from the
 `OMXTERM_CTL`, `OMXTERM_PROFILE` and `OMXTERM_PANE` variables every pane gets
 on macOS and Linux, prints an agent guide (`guide`) and serves the same
 commands as MCP tools (`mcp`). See [ADR 0052](docs/adr/0052-let-a-local-agent-drive-a-granted-window.md)
