@@ -1453,8 +1453,8 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 
 ### Inline Terminal Images
 
-A direct Live Terminal Session renders two bounded static-image paths through
-the Kitty graphics protocol
+A Live Terminal Session renders bounded static images sent with the Kitty
+graphics protocol
 ([ADR 0022](adr/0022-render-bounded-kitty-images-in-direct-sessions.md)). The
 pinned Ghostty core is the Kitty parser, decoder, image store and placement
 authority; OMXTerm adds no second parser.
@@ -1478,6 +1478,22 @@ authority; OMXTerm adds no second parser.
   pixel is accepted.
 - For Pi versions that do not recognize `TERM_PROGRAM=OMXTerm`, select Kitty
   explicitly; OMXTerm does not configure Pi.
+- Direct transmission (`t=d`) of PNG (`f=100`), RGB (`f=24`) or RGBA (`f=32`),
+  optionally zlib-compressed (`o=z`), as kitten icat 0.47
+  `--transfer-mode=stream`, timg 1.6 `-pk`, yazi 26.9 previews and snacks.nvim
+  in Neovim 0.12 send it. icat's 128 KiB chunks repeat `a=T,q=2` and its last
+  chunk omits `m`; a chunk that repeats only `a=T` and `q` continues the
+  pending image. Photo-sized payloads are covered, within the limits below.
+- Placing a stored image again (`a=p`) under placement IDs (`p`), and Unicode
+  placeholders (`U=1`) with two or three diacritics.
+- The same producers inside tmux 3.7 with `allow-passthrough on`, when they
+  wrap their output for tmux (icat, timg, yazi and snacks.nvim do; Chafa needs
+  `--passthrough tmux`).
+- The PTY reports the cell grid's pixel size (`TIOCGWINSZ`) on macOS and Linux:
+  columns × cell width by rows × cell height in device pixels, padding
+  excluded, so `ws_xpixel / ws_col` is the cell width `CSI 16 t` reports. Tools
+  then size images to the window, and tmux to the real cell. Windows ConPTY has
+  no pixel size.
 
 **Placement**
 
@@ -1499,8 +1515,9 @@ authority; OMXTerm adds no second parser.
   mismatch, decode failure or an exceeded limit renders nothing, clears
   unfinished state and does not block later output.
 - Each screen keeps at most one unfinished image; a new metadata-bearing
-  transmission (including Chafa's prelude) replaces it. Completion, reset,
-  alternate-buffer exit and Surface disposal release it.
+  transmission (including Chafa's prelude) replaces it, while a chunk that
+  repeats only `a=T` and `q` continues it. Completion, reset, alternate-buffer
+  exit and Surface disposal release it.
 - Each screen stores at most 64,000,000 bytes of completed decoded image data,
   with Ghostty's native eviction.
 - Pi image-ID, all-image and all-placement deletion and reset release their
@@ -1513,11 +1530,12 @@ authority; OMXTerm adds no second parser.
 
 **Unsupported**
 
-- SIXEL, the iTerm2 Inline Image Protocol, raw RGB (`f=24`), compressed raw
-  pixels (`o=z`), placement IDs, animation, remote or filesystem image sources
-  inside Kitty Terminal Payload, downloads, persistence, and images through
-  `tmux`, `screen` or another multiplexer. Other Kitty and Chafa paths the core
-  exposes are unclaimed.
+- SIXEL, the iTerm2 Inline Image Protocol, animation, downloads, persistence,
+  and file, temporary-file or shared-memory transmission (`t=f`, `t=t`, `t=s`);
+  the core answers those with `EINVAL: unsupported medium`. Images through
+  `screen` or another multiplexer, and tmux without `allow-passthrough`. viu
+  inside tmux and ranger's `kitty` method. Other Kitty and Chafa paths the
+  core exposes are unclaimed.
 - Local Image Preview is not an Inline Terminal Image or a Kitty source.
 - Image bytes stay opaque, memory-only Terminal Payload on the PTY output path.
   They add no main-process, preload, IPC, Adapter, clipboard, filesystem,

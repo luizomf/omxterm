@@ -63,6 +63,85 @@ function write(exports: CoreExports, handle: number, value: string): void {
   }
 }
 
+interface PlacementDetail {
+  readonly imageId: number;
+  readonly format: number;
+  readonly imageWidth: number;
+  readonly imageHeight: number;
+  readonly data: Uint8Array;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly placementId: number;
+}
+
+// Field offsets follow Restty's extern KittyPlacementAbi.
+function placementDetails(
+  exports: CoreExports,
+  handle: number,
+): PlacementDetail[] {
+  expect(exports.restty_render_update(handle)).toBe(0);
+  const count = exports.restty_kitty_placement_count(handle);
+  const pointer = exports.restty_kitty_placements_ptr(handle);
+  const stride = exports.restty_kitty_placement_stride();
+  const view = new DataView(exports.memory.buffer);
+  return Array.from({ length: count }, (_, index) => {
+    const offset = pointer + index * stride;
+    const dataPointer = view.getUint32(offset + 16, true);
+    const dataLength = view.getUint32(offset + 20, true);
+    return {
+      imageId: view.getUint32(offset, true),
+      format: view.getUint8(offset + 4),
+      imageWidth: view.getUint32(offset + 8, true),
+      imageHeight: view.getUint32(offset + 12, true),
+      data: new Uint8Array(
+        exports.memory.buffer,
+        dataPointer,
+        dataLength,
+      ).slice(),
+      x: view.getInt32(offset + 24, true),
+      y: view.getInt32(offset + 28, true),
+      width: view.getUint32(offset + 36, true),
+      height: view.getUint32(offset + 40, true),
+      placementId: view.getUint32(offset + 68, true),
+    };
+  });
+}
+
+// Deterministic bytes that zlib cannot shrink, like a photo's pixels.
+function noise(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  let state = 0x2545_f491;
+  for (let index = 0; index < length; index += 1) {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    bytes[index] = state & 0xff;
+  }
+  return bytes;
+}
+
+// kitten icat 0.47 (`WriteWithPayloadTo`): unpadded Base64 in 128 KiB chunks.
+// The first chunk carries the metadata; every later chunk repeats only a=T
+// and q, and the last one omits m.
+function icatChunks(payload: Uint8Array, metadata: string): string[] {
+  const encoded = Buffer.from(payload).toString("base64").replace(/=+$/u, "");
+  const chunkSize = 128 * 1024;
+  const chunks: string[] = [];
+  for (let offset = 0; offset < encoded.length; offset += chunkSize) {
+    const more = offset + chunkSize < encoded.length;
+    const controls =
+      offset === 0
+        ? `a=T,q=2,${metadata}${more ? ",m=1" : ""}`
+        : `a=T,q=2${more ? ",m=1" : ""}`;
+    chunks.push(
+      `\u001b_G${controls};${encoded.slice(offset, offset + chunkSize)}\u001b\\`,
+    );
+  }
+  return chunks;
+}
+
 function placementImageIds(exports: CoreExports, handle: number): number[] {
   return placementSnapshots(exports, handle).map(({ imageId }) => imageId);
 }
@@ -367,4 +446,163 @@ describe("pinned Restty/Ghostty inline images", () => {
     expect(core.exports.restty_render_update(core.handle)).toBe(0);
     expect(core.exports.restty_kitty_placement_count(core.handle)).toBe(1);
   }, 120_000);
+});
+
+// Shapes emitted by kitten icat, timg, yazi and snacks.nvim.
+describe("pinned Restty/Ghostty Kitty producer paths", () => {
+  let core: Awaited<ReturnType<typeof loadCore>>;
+
+  beforeEach(async () => {
+    core = await loadCore();
+  });
+
+  afterEach(() => {
+    core.exports.restty_destroy(core.handle);
+  });
+
+  it("completes kitten icat's chunked stream that repeats a=T on every chunk", () => {
+    const rgb = noise(944 * 629 * 3);
+    const chunks = icatChunks(deflateSync(rgb), "f=24,o=z,s=944,v=629");
+    expect(chunks.length).toBeGreaterThan(10);
+    expect(chunks.at(1)).toMatch(/^\u001b_Ga=T,q=2,m=1;/u);
+    expect(chunks.at(-1)).toMatch(/^\u001b_Ga=T,q=2;/u);
+
+    for (const chunk of chunks) write(core.exports, core.handle, chunk);
+
+    expect(core.exports.restty_debug_kitty_has_loading(core.handle)).toBe(0);
+    const [placement, ...others] = placementDetails(core.exports, core.handle);
+    expect(others).toEqual([]);
+    expect(placement).toMatchObject({ imageWidth: 944, imageHeight: 629 });
+    expect(Buffer.from(placement!.data).equals(Buffer.from(rgb))).toBe(true);
+  }, 120_000);
+
+  it("still replaces a pending icat stream when a new image starts", () => {
+    const [first, second] = icatChunks(
+      deflateSync(noise(400 * 400 * 3)),
+      "f=24,o=z,s=400,v=400,i=310",
+    );
+    write(core.exports, core.handle, first!);
+    write(core.exports, core.handle, second!);
+    expect(core.exports.restty_debug_kitty_has_loading(core.handle)).toBe(1);
+
+    for (const chunk of icatChunks(
+      new Uint8Array([9, 8, 7]),
+      "f=24,s=1,v=1,c=1,r=1,i=311",
+    ))
+      write(core.exports, core.handle, chunk);
+
+    expect(core.exports.restty_debug_kitty_has_loading(core.handle)).toBe(0);
+    expect(placementImageIds(core.exports, core.handle)).toEqual([311]);
+  });
+
+  it.each([
+    ["RGB", "f=24", 3],
+    ["zlib RGB", "f=24,o=z", 3],
+    ["zlib RGBA", "f=32,o=z", 4],
+  ])("stores and places %s pixels unchanged", (_label, format, channels) => {
+    const pixels = noise(3 * 2 * channels);
+    const payload = format.endsWith("o=z") ? deflateSync(pixels) : pixels;
+    transmit(
+      core.exports,
+      core.handle,
+      payload,
+      `a=T,${format},q=2,s=3,v=2,c=3,r=1,i=320`,
+    );
+
+    const [placement] = placementDetails(core.exports, core.handle);
+    expect(placement).toMatchObject({
+      imageId: 320,
+      imageWidth: 3,
+      imageHeight: 2,
+      width: 30,
+      height: 20,
+    });
+    expect(Buffer.from(placement!.data).equals(Buffer.from(pixels))).toBe(true);
+  });
+
+  it("places an image again under separate placement IDs", () => {
+    transmit(
+      core.exports,
+      core.handle,
+      new Uint8Array([1, 2, 3, 255]),
+      "a=t,f=32,q=2,s=1,v=1,i=330",
+    );
+    expect(placementDetails(core.exports, core.handle)).toEqual([]);
+
+    write(
+      core.exports,
+      core.handle,
+      "\u001b_Ga=p,i=330,p=1,c=2,r=1,q=2\u001b\\",
+    );
+    write(core.exports, core.handle, "\u001b[5;10H");
+    write(
+      core.exports,
+      core.handle,
+      "\u001b_Ga=p,i=330,p=2,c=1,r=1,q=2\u001b\\",
+    );
+    const pick = ({ imageId, placementId, x, y }: PlacementDetail) => ({
+      imageId,
+      placementId,
+      x,
+      y,
+    });
+    expect(placementDetails(core.exports, core.handle).map(pick)).toEqual([
+      { imageId: 330, placementId: 1, x: 0, y: 0 },
+      { imageId: 330, placementId: 2, x: 9, y: 4 },
+    ]);
+
+    // Placing an existing placement ID moves it instead of adding another.
+    write(core.exports, core.handle, "\u001b[10;20H");
+    write(core.exports, core.handle, "\u001b_Ga=p,i=330,p=1,q=2\u001b\\");
+    expect(
+      placementDetails(core.exports, core.handle)
+        .map(pick)
+        .sort((a, b) => a.placementId - b.placementId),
+    ).toEqual([
+      { imageId: 330, placementId: 1, x: 19, y: 9 },
+      { imageId: 330, placementId: 2, x: 9, y: 4 },
+    ]);
+
+    write(core.exports, core.handle, "\u001b_Ga=d,d=i,i=330,p=1,q=2\u001b\\");
+    expect(placementDetails(core.exports, core.handle).map(pick)).toEqual([
+      { imageId: 330, placementId: 2, x: 9, y: 4 },
+    ]);
+  });
+
+  it.each([
+    // Two diacritics give row and column; the foreground color is the image ID.
+    ["two diacritics", 7, "\u001b[38;5;7m", "\u0305"],
+    // A third diacritic carries the image ID's most significant byte.
+    ["three diacritics", (2 << 24) | 7, "\u001b[38;5;7m", "\u0305\u030e"],
+  ])(
+    "places Unicode placeholders with %s",
+    (_label, imageId, color, firstCellSuffix) => {
+      transmit(
+        core.exports,
+        core.handle,
+        new Uint8Array([10, 20, 30, 255, 40, 50, 60, 255]),
+        `a=T,U=1,f=32,q=2,s=2,v=1,c=2,r=1,i=${imageId}`,
+      );
+      expect(placementDetails(core.exports, core.handle)).toEqual([]);
+
+      // Row 0 / column 0, then row 0 / column 1.
+      write(
+        core.exports,
+        core.handle,
+        `\u001b[3;4H${color}\u{10eeee}\u0305${firstCellSuffix}\u{10eeee}\u0305\u030d\u001b[39m`,
+      );
+      const [placement, ...others] = placementDetails(
+        core.exports,
+        core.handle,
+      );
+      expect(others).toEqual([]);
+      expect(placement).toMatchObject({
+        imageId,
+        imageWidth: 2,
+        imageHeight: 1,
+        x: 3,
+        y: 2,
+      });
+    },
+  );
 });

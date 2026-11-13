@@ -296,10 +296,9 @@ partial delivery. It is not command validation; clipboard contents remain privat
 OS clipboard after OMXTerm forwards its shortcut. Image bytes do not pass
 through the PTY.
 
-**Inline Terminal Image** — A bounded, memory-only PNG or raw-RGBA image
-rendered as cell-anchored output through the supported Kitty protocol subset.
-The supported Pi and Chafa paths use direct sessions rather than multiplexer
-passthrough.
+**Inline Terminal Image** — A bounded, memory-only PNG, RGB or RGBA image
+rendered as cell-anchored output through the supported Kitty protocol subset,
+directly or through tmux passthrough.
 
 **Local Image Preview** — A temporary overlay for a local static PNG or JPEG,
 explicitly chosen or activated from a visible path reference or `file:///` URL.

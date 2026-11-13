@@ -100,11 +100,13 @@ OMXTerm can preview local PNG and JPEG files in an overlay. Hold **Cmd** (macOS)
 
 ## Inline terminal images
 
-OMXTerm supports a subset of the Kitty graphics protocol for inline images in direct sessions (outside `tmux` or `screen`). With [Chafa](https://hpjansson.org/chafa/), run:
+OMXTerm supports a subset of the Kitty graphics protocol for inline images. Tools that speak it include `kitten icat --transfer-mode=stream`, `timg -pk`, yazi previews and snacks.nvim in Neovim. With [Chafa](https://hpjansson.org/chafa/), run:
 
 ```sh
 chafa -f kitty /path/to/image.png
 ```
+
+Inside tmux, turn on passthrough with `set -g allow-passthrough on` in `~/.tmux.conf`. Chafa also needs `--passthrough tmux` there; the other tools above wrap their output for tmux themselves. `screen` isn't supported.
 
 With Pi, enable Kitty images in its settings (this option works across shells):
 

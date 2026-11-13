@@ -114,12 +114,18 @@ plus a positive enabled-menu control; do not substitute its container-only
 
 ### Inline Kitty images
 
-The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and eviction for direct Pi (`f=100` PNG) and Chafa (`-f kitty`, `f=32` RGBA) sessions:
+The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and eviction for Pi (`f=100` PNG), Chafa (`-f kitty`, `f=32` RGBA), kitten icat, timg, yazi and snacks.nvim (`f=24`/`f=32`/`f=100`, optionally `o=z`, placement IDs and `U=1` placeholders):
 
 - Max decoded transmission input: 33,554,432 bytes.
 - Max image dimensions: 4,194,304 source pixels (Chafa RGBA max: 16,777,216 bytes).
 - Max completed image storage: 64,000,000 bytes per screen (at most one unfinished image per screen).
 - Images stay cell-anchored across resize, font zoom, tab switching, and theme reload, and `CSI 16 t` reports current device-pixel cell metrics.
+- `ghostty-title-events.patch` continues a pending image on an `a=T` that carries only `q` and `m`, the shape of kitten icat's later chunks; any other `a=T` replaces it.
+- Each PTY resize carries `pixelWidth`/`pixelHeight` (columns × cell width, rows × cell height, device pixels, no padding) from `surface-transport.ts` to `node-pty`, so `TIOCGWINSZ` agrees with `CSI 16 t`. The post-start replay reuses the last cell size.
+
+```sh
+npx vitest run test/integration/restty-images-core.test.ts test/unit/terminal-pixel-size.test.ts
+```
 
 ### Terminal capability replies
 
@@ -267,9 +273,9 @@ Prepared SHA-256 digests:
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
 | Restty JavaScript runtime | `056d91bbc23901c0bf57d1584bf53502fdd9c25b9f4ce6a3b34ccd7577b83faf` |
-| Embedded-core chunk       | `0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307` |
+| Embedded-core chunk       | `fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core         | `a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513` |
+| Tracked WASM core         | `a12d667486bd69cafb426af016e819f7d44d588f2da7db96b77e568ea95da011` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
 | Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
 | Windows terminal          | `4ceeb76ee0c99ec013678828a3fdf309a612c4613190e5ce16840f5096f7e162` |

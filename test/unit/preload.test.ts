@@ -70,6 +70,22 @@ describe("isolated preload terminal bridge requests", () => {
     expect(() => bridge.input("session-1", "hello")).toThrow(TypeError);
     expect(() => bridge.resize("s1", { cols: 0, rows: 24 })).toThrow(TypeError);
     expect(() => bridge.resize("", { cols: 80, rows: 24 })).toThrow(TypeError);
+    expect(() =>
+      bridge.resize("s1", { cols: 80, rows: 24, pixelWidth: 640 }),
+    ).toThrow(TypeError);
+    bridge.resize("s3", {
+      cols: 80,
+      rows: 24,
+      pixelWidth: 640,
+      pixelHeight: 384,
+    });
+    expect(electron.send).toHaveBeenCalledWith(terminalIpc.resize, {
+      sessionId: "s3",
+      cols: 80,
+      rows: 24,
+      pixelWidth: 640,
+      pixelHeight: 384,
+    });
     expect(() => bridge.close("s0")).toThrow(TypeError);
 
     expect(electron.send).toHaveBeenCalledWith(terminalIpc.input, {

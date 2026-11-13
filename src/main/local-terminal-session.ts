@@ -218,7 +218,14 @@ export function createLocalTerminalSession(
     resize(size) {
       if (closed || exited || !isTerminalSize(size)) return;
       try {
-        pty.resize(size.cols, size.rows);
+        // Without pixels TIOCGWINSZ reports 0×0, and Kitty image tools
+        // (kitten icat, snacks.nvim) cannot size images; tmux then guesses.
+        if (size.pixelWidth !== undefined && size.pixelHeight !== undefined)
+          pty.resize(size.cols, size.rows, {
+            width: size.pixelWidth,
+            height: size.pixelHeight,
+          });
+        else pty.resize(size.cols, size.rows);
       } catch (error) {
         // Pinned Unix node-pty can close its descriptor before delivering exit.
         // Only that exact native error is an expected teardown race. Neither

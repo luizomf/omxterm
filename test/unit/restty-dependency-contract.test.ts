@@ -133,7 +133,7 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
     expect(digest(core)).toBe(
-      "0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307",
+      "fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a",
     );
     expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
     expect(core.toString("utf8")).toContain("restty_event_consume");
