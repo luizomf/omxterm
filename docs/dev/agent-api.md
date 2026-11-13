@@ -252,8 +252,8 @@ Keys and shortcuts, as the user would press them in the granted window.
   set. The answer is `send`'s: `offset` for `wait`'s `after`. A window that
   can't encode in time, or a pane that can't take input yet, answers
   `unavailable`.
-- It works while the granted window isn't the selected one and on a pane in
-  a hidden tab. Like `send`, it never passes the window's keyboard handling.
+- It works while the granted window isn't the selected one. Like `send`, it
+  never passes the window's keyboard handling.
 - A chord that matches one of the window's effective shortcuts (defaults plus
   the user's rebinds) runs that action in the granted window on the pane
   `press` names: main focuses that pane first, as a user clicks a pane and
