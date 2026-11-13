@@ -35,6 +35,16 @@ query without changing selection, hover, cursor or render state. The alternate
 screen reads only its active contents. The host owns explicit saving and its
 inclusive 16 MiB UTF-8 limit; the core storage ceiling is not an export-size guarantee.
 
+An agent's screen read
+([ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md)) uses the
+same query through `getScreenText()` (`screenTextCorrections` in
+`scripts/restty-buffer-text-corrections.mjs`): the active screen's rows, one
+line per row, wherever the viewport is scrolled. One query over the screen
+joins soft-wrapped rows, so it reads row by row. A row whose last cell is the
+spacer a wrapped wide character left also returns that character, so each row
+but the last comes from the query of it and the next row, minus the next row's
+own query. `test/unit/agent-screen-read.test.ts` runs it against the real core.
+
 ### Pending-wrap resize coverage
 
 The bundled-core reflow tests preserve exact pending-wrap insertion/copy across
