@@ -64,8 +64,11 @@ in.
   from when it starts unless you pass the offset `send --json` printed as
   `--after`. Pick text the command line itself doesn't contain, since its
   echo is on the screen too, and text that stays on screen, such as a final
-  line: text that scrolls off quickly can be missed. With `--idle` as well,
-  whichever comes first answers.
+  line: text that scrolls off quickly can be missed. For a command you
+  write, end it with a computed marker, new each time:
+  `make test; echo DONE-$((40+2))` with `--match DONE-42`, then
+  `DONE-$((40+3))` for the next. Neither the echo nor an old copy can show
+  it. With `--idle` as well, whichever comes first answers.
 - `list` shows every tab (id, title, `selected` for the visible one) with its
   panes indented under it (`focused` is the pane that takes the user's keys).
   Use it to see what your keys did, and `--json` for the tree. Tab titles are

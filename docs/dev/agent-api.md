@@ -236,18 +236,26 @@ output once OSC 133 lands (slice 8).
 - `match`: a literal string of 1 to 1,024 characters, not a regular
   expression, looked for in the pane's screen text (what `read` with
   `source: "screen"` answers, rows joined by `\n`). It answers once the
-  window has shown output past `after` and the screen holds more copies of
-  the text than it did at `after`, so an old copy still on screen doesn't
-  count, and one that scrolled off doesn't hide a new one. The screen at
-  `after` is known when `after` is the offset the pane's latest `send` or
-  `press` returned, or the current position; for any other `after`, every
-  copy counts once output moved past it.
+  window has shown output past `after` and a screen holds more copies of
+  the text than the fewest it held since `after`. So an old copy still on
+  screen doesn't count, one that scrolled off doesn't hide a new one, and
+  one that leaves and comes back on the same screen counts again.
+  - The main and alternate screens are counted apart. The screen at `after`
+    starts from its count then, the alternate screen (when the main one was
+    there) starts empty, and any other screen starts from its first look:
+    an old result doesn't answer when the main screen comes back after an
+    editor or pager quits. A resize starts the count again from a look.
+  - The screen at `after` is known when `after` is the offset the pane's
+    latest `send` or `press` returned, or the current position. For any
+    other `after` it isn't, and the count starts from the first look.
   - Run a command and wait for its output with `send` then `wait`, passing
     the `send`'s offset as `after` (`omxterm-ctl send … --match TEXT` does
     both). A `wait` without `after` counts from its own arrival, so it can
     miss output that came first.
-  - The echo of the typed command is new output too: expect text the
-    command line doesn't contain.
+  - The echo of the typed command is new output too. For a command you
+    write, print a marker the command line doesn't contain and that is new
+    each time, such as `echo DONE-$((40+2))` matched as `DONE-42`, with a
+    different number for each command.
   - A line wider than the pane is split across rows, and so is a match on
     it.
   - Main looks at the screen each time the window shows more output, at

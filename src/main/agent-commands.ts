@@ -54,6 +54,8 @@ export interface AgentPaneText {
   readonly truncated: boolean;
   readonly cols?: number;
   readonly rows?: number;
+  /** A screen read's: whether it is the alternate screen. */
+  readonly alternate?: boolean;
 }
 
 export interface AgentCommandsOptions {

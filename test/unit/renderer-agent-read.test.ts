@@ -18,6 +18,12 @@ it("reads a pane's screen for an agent, and fails when the Surface has none", as
     text: "$ ls\n\nfile",
     truncated: false,
   });
+  // It says which screen it read, when the Surface can tell.
+  Object.assign(surface, { isAlternateScreen: () => true });
+  expect(harness.tabs.readSession("b2", "s1", screen)).toMatchObject({
+    id: "b2",
+    alternate: true,
+  });
   readScreen.mockReturnValueOnce(undefined);
   expect(harness.tabs.readSession("c", "s1", screen)).toEqual({
     id: "c",

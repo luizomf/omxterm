@@ -1,26 +1,33 @@
 // `wait`'s `match` (ADR 0052): looks at the pane's screen as the window
-// shows output past `after`, and finds the text once the screen holds more
-// copies of it than it did at `after`. An old copy still on screen never
-// answers; a new one does, even if it landed before the wait arrived.
+// shows output past `after`, and finds the text once a screen holds more
+// copies of it than the fewest it held since `after`. Each screen (main and
+// alternate) keeps its own count, so text that was there before a
+// full-screen program and comes back after it isn't new; a screen whose
+// count isn't known takes it from its first look. When in doubt the wait
+// runs on to its timeout rather than answer for an old copy.
 
 import type { TerminalSessionId } from "../shared/terminal-contract";
 
 /** Least time between two looks at a busy pane's screen. */
 const LOOK_GAP_MS = 50;
 
+/** One screen read, as `read` with `source: "screen"` answers it. */
+export interface ScreenText {
+  readonly text: string;
+  readonly alternate?: boolean;
+  readonly cols?: number;
+  readonly rows?: number;
+}
+
 export interface ScreenMatchOptions {
   readonly match: string;
   /** Only output past this position counts. */
   readonly after: number;
-  /**
-   * The screen at `after`. Without one, or if it couldn't be read, every
-   * copy counts once the window shows output past `after`.
-   */
-  readonly baseline?: Promise<string | undefined> | undefined;
+  /** The screen at `after`, if known; undefined when it isn't. */
+  readonly baseline?: Promise<ScreenText | undefined> | undefined;
   /** How far the window has shown the pane's output; undefined once gone. */
   readonly shown: () => number | undefined;
-  /** The pane's screen text, as `read` with `source: "screen"` answers it. */
-  readonly look: () => Promise<string>;
+  readonly look: () => Promise<ScreenText>;
   /** A look settled: check the wait again. */
   readonly changed: () => void;
   readonly now: () => number;
@@ -37,13 +44,47 @@ export function copiesOf(text: string, match: string): number {
   return copies;
 }
 
+type Floor = { readonly copies: number; readonly size?: string | undefined };
+const screenOf = (screen: ScreenText) =>
+  screen.alternate ? "alternate" : "main";
+const sizeOf = (screen: ScreenText) =>
+  screen.cols === undefined ? undefined : `${screen.cols}x${screen.rows}`;
+
+// The fewest copies each screen held since `after`. The screen that was
+// there at `after` starts from its count then; the alternate screen, when
+// the main one was there, starts empty (a program switched to it since).
+// Any other screen, or one resized since (rows reflow), starts from a look.
+function createFloors(match: string) {
+  const floors = new Map<string, Floor>();
+  return {
+    seed(baseline: ScreenText | undefined) {
+      if (!baseline) return;
+      floors.set(screenOf(baseline), {
+        copies: copiesOf(baseline.text, match),
+        size: sizeOf(baseline),
+      });
+      if (baseline.alternate === false) floors.set("alternate", { copies: 0 });
+    },
+    /** Whether this look shows a copy more than its screen's floor. */
+    rises(screen: ScreenText): boolean {
+      const key = screenOf(screen);
+      const size = sizeOf(screen);
+      const floor = floors.get(key);
+      const copies = copiesOf(screen.text, match);
+      const resized =
+        floor?.size !== undefined && size !== undefined && floor.size !== size;
+      if (floor && !resized && copies > floor.copies) return true;
+      floors.set(key, { copies, size: size ?? floor?.size });
+      return false;
+    },
+  };
+}
+
 export function createScreenMatch(options: ScreenMatchOptions) {
+  const floors = createFloors(options.match);
   const baseline = (options.baseline ?? Promise.resolve(undefined)).then(
-    (text) => (text === undefined ? 0 : copiesOf(text, options.match)),
+    (screen) => floors.seed(screen),
   );
-  // The fewest copies seen since `after`: an old copy that scrolled off
-  // stops counting, so a new one isn't hidden behind it.
-  let fewest: number | undefined;
   let found: number | undefined;
   let failure: unknown;
   let looking = false;
@@ -68,13 +109,11 @@ export function createScreenMatch(options: ScreenMatchOptions) {
     looking = true;
     lookedAt = shown;
     lastLook = options.now();
-    Promise.all([baseline, options.look()]).then(
-      ([before, text]) => {
+    Promise.all([options.look(), baseline]).then(
+      ([screen]) => {
         looking = false;
         if (stopped) return;
-        const copies = copiesOf(text, options.match);
-        fewest = Math.min(fewest ?? before, copies);
-        if (copies > fewest) found = lookedAt;
+        if (floors.rises(screen)) found = lookedAt;
         options.changed();
       },
       (error: unknown) => {
@@ -106,7 +145,7 @@ export interface ScreenMatchesOptions {
     sessionId: TerminalSessionId,
     read: { readonly source: "screen" },
     signal: AbortSignal,
-  ) => Promise<{ readonly text: string }>;
+  ) => Promise<ScreenText>;
   readonly shown: (sessionId: TerminalSessionId) => number | undefined;
   readonly changed: () => void;
   readonly now: () => number;
@@ -116,19 +155,23 @@ export interface ScreenMatchesOptions {
  * Match waits for one window. It keeps the screen just before each pane's
  * latest send or press, for a wait's `after`: read before the write, so the
  * window answers it before the program can echo anything. A failed read is
- * no baseline.
+ * no baseline: the first look sets the count.
  */
 export function createScreenMatches(options: ScreenMatchesOptions) {
   const read = (sessionId: TerminalSessionId, signal: AbortSignal) =>
-    options
-      .read(sessionId, { source: "screen" }, signal)
-      .then((screen) => screen.text);
+    options.read(sessionId, { source: "screen" }, signal);
   const lifetime = new AbortController();
   const screens = new Map<
     TerminalSessionId,
-    { readonly offset: number; readonly screen: Promise<string | undefined> }
+    {
+      readonly offset: number;
+      readonly screen: Promise<ScreenText | undefined>;
+    }
   >();
-  const quietly = (sessionId: TerminalSessionId, signal: AbortSignal) => {
+  const quietly = (
+    sessionId: TerminalSessionId,
+    signal: AbortSignal,
+  ): Promise<ScreenText | undefined> => {
     try {
       return read(sessionId, signal).catch(() => undefined);
     } catch {

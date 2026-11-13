@@ -12,6 +12,7 @@ import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import {
+  altScreenCorrections,
   bufferTextCorrections,
   screenTextCorrections,
 } from "./restty-buffer-text-corrections.mjs";
@@ -176,8 +177,10 @@ const priorKeyPressDigest =
   "db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c";
 const priorScreenTextDigest =
   "4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321";
-const correctedDigest =
+const priorAltScreenDigest =
   "2dea1f31028c175bf08139bdc0f716c00f763ba602968f1fb43f4a6883fafdaa";
+const correctedDigest =
+  "eee63b0f502ea478e43d10d35a7df0d12243c223be341e85603fe047afcbabe8";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -2069,6 +2072,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, keyPressCorrections);
       case priorScreenTextDigest:
         source = applyCorrections(source, screenTextCorrections);
+      case priorAltScreenDigest:
+        source = applyCorrections(source, altScreenCorrections);
         break;
       default:
         throw new Error(

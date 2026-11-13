@@ -81,6 +81,7 @@ it("lets the window confirm, stop and answer, but passes only valid messages", (
   bridge.shown();
   bridge.stop();
   bridge.readResult({ id, text: "hi", truncated: false });
+  bridge.readResult({ id, text: "hi", truncated: false, alternate: true });
   expect(() =>
     bridge.readResult({
       id,
@@ -88,10 +89,22 @@ it("lets the window confirm, stop and answer, but passes only valid messages", (
       truncated: false,
     }),
   ).toThrow(TypeError);
+  expect(() =>
+    bridge.readResult({
+      id,
+      text: "hi",
+      truncated: false,
+      alternate: "yes" as unknown as boolean,
+    }),
+  ).toThrow(TypeError);
   expect(ipc.send.mock.calls).toEqual([
     [agentIpc.shown],
     [agentIpc.stop],
     [agentIpc.readResult, { id, text: "hi", truncated: false }],
+    [
+      agentIpc.readResult,
+      { id, text: "hi", truncated: false, alternate: true },
+    ],
   ]);
 });
 

@@ -296,25 +296,37 @@ matching lands, every chord goes to the pane.
   and the timeout exist.
 - `match` is looked for in the screen text of the `screen` read, so an
   agent can copy what it expects from a read. A screen can't tell an old
-  copy from a new one, so the wait compares it with the screen at `after`:
-  it answers `match` once the window has shown output past `after` and its
-  screen holds more copies than it did then. The fewest copies seen since
-  then count, so an old copy that scrolled off doesn't hide a new one. The
-  screen at `after` is known when `after` is the offset a `send` or `press`
-  just returned (main reads the screen right before writing, so the window
-  answers before the program can echo anything) or the current position
-  (the wait reads it first). Any other `after` has no baseline, and every
-  copy counts once output moved past it. Main keeps that one screen per
-  pane in memory, never in logs, until the pane's next `send` or `press`,
-  its exit or the grant's end.
+  copy from a new one, so the wait counts copies: it answers `match` once
+  the window has shown output past `after` and a screen holds more copies
+  than the fewest it held since `after`. An old copy that scrolled off
+  stops counting, so it doesn't hide a new one, and a copy that leaves and
+  comes back on the same screen (a pager scrolled away and back) counts as
+  new.
+- The main and alternate screens are counted apart, and the window says
+  which one each read saw (`isAltScreen()` beside `getScreenText()` in the
+  runtime corrections). The screen at `after` starts from its count then;
+  the alternate screen, when the main one was there, starts empty, since a
+  program switched to it since. A screen whose count isn't known (the main
+  screen coming back after a full-screen program, or any screen when the
+  screen at `after` is unknown) and a screen resized since (rows reflow)
+  start from their first look. So an old result on the main screen doesn't
+  answer when an editor or pager in front of it quits.
+- The screen at `after` is known when `after` is the offset a `send` or
+  `press` just returned (main reads the screen right before writing, so the
+  window answers before the program can echo anything) or the current
+  position (the wait reads it first). For any other `after`, or when that
+  read failed, it is unknown. Main keeps that one screen per pane in
+  memory, never in logs, until the pane's next `send` or `press`, its exit
+  or the grant's end.
 - Main looks again each time the window shows more output, at most every
-  50 ms, so what a match misses is between two looks: text that appears and
-  scrolls off, or a burst that scrolls an old copy off and prints a new one
-  (the count stays). Both end in `timeout`, never a false `match`; text that
-  stays on screen, such as a final line, is the reliable thing to wait for.
-  Matching the output stream instead would miss full-screen programs that
-  redraw only the cells that changed, and would need a second escape-sequence
-  parser in main.
+  50 ms. What it misses happens between two looks, or before the first look
+  at a screen it had no count for: text that appears and scrolls off, a
+  burst that swaps an old copy for a new one, or new text already there
+  when the main screen comes back. Those end in `timeout`, not `match`;
+  text that stays on screen, such as a final line, is the reliable thing to
+  wait for. Matching the output stream instead would miss full-screen
+  programs that redraw only the cells that changed, and would need a second
+  escape-sequence parser in main.
 
 ### Tabs and panes
 
