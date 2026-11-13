@@ -5,6 +5,8 @@ import {
   agentTail,
   isAgentAccessState,
   MAX_AGENT_PRESS_CHARS,
+  MAX_AGENT_TAB_TITLE,
+  MAX_AGENT_TABS,
 } from "../../src/shared/agent-access";
 import { MAX_AGENT_READ_CHARS } from "../../src/shared/agent-api";
 
@@ -109,5 +111,48 @@ it("passes only valid presses and bounded encoded bytes", () => {
   expect(ipc.send.mock.calls).toEqual([
     [agentIpc.pressResult, { id, data: "\x1b[1;2A" }],
     [agentIpc.pressResult, { id, error: "unavailable" }],
+  ]);
+});
+
+it("passes only valid tab requests and bounded tab trees", () => {
+  const listeners = new Map<
+    string,
+    (event: unknown, payload: unknown) => void
+  >();
+  const ipc = {
+    send: vi.fn(),
+    on: vi.fn(
+      (channel: string, listener: (event: unknown, payload: unknown) => void) =>
+        listeners.set(channel, listener),
+    ),
+    removeListener: vi.fn(),
+  };
+  const bridge = createAgentBridge(ipc as never);
+  const requests: unknown[] = [];
+  bridge.onTabs((request) => requests.push(request));
+  const id = "00000000-0000-0000-0000-000000000006";
+  for (const payload of [{}, { id: "x" }, { id, extra: 1 }, { id }])
+    listeners.get(agentIpc.tabs)!({}, payload);
+  expect(requests).toEqual([{ id }]);
+
+  const tab = { tab: "t1", title: "zsh", selected: true, panes: ["s1"] };
+  bridge.tabsResult({ id, tabs: [tab] });
+  bridge.tabsResult({ id, error: "failed" });
+  for (const bad of [
+    { ...tab, tab: "1" },
+    { ...tab, panes: ["pane-1"] },
+    { ...tab, title: "x".repeat(MAX_AGENT_TAB_TITLE + 1) },
+    { ...tab, selected: "yes" },
+    { ...tab, extra: true },
+  ])
+    expect(() => bridge.tabsResult({ id, tabs: [bad] } as never)).toThrow(
+      TypeError,
+    );
+  expect(() =>
+    bridge.tabsResult({ id, tabs: Array(MAX_AGENT_TABS + 1).fill(tab) }),
+  ).toThrow(TypeError);
+  expect(ipc.send.mock.calls).toEqual([
+    [agentIpc.tabsResult, { id, tabs: [tab] }],
+    [agentIpc.tabsResult, { id, error: "failed" }],
   ]);
 });

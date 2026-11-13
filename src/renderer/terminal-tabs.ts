@@ -11,6 +11,10 @@ import {
   agentTail,
   type AgentPressResult,
   type AgentReadResult,
+  type AgentTabsResult,
+  MAX_AGENT_TABS,
+  MAX_AGENT_TAB_PANES,
+  MAX_AGENT_TAB_TITLE,
 } from "../shared/agent-access";
 import type { AgentKeyChord } from "../shared/agent-api";
 import { encodeAgentKeys } from "./agent-access";
@@ -180,6 +184,9 @@ export interface TerminalTabs {
     sessionId: TerminalSessionId,
     keys: readonly AgentKeyChord[],
   ): AgentPressResult;
+  // The window's tabs for the agent API: ids, titles and the sessions of
+  // each tab's panes (settings and hosted tabs have none).
+  agentTabs(id: string): AgentTabsResult;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -578,6 +585,24 @@ export function createTerminalTabs(
         keys,
       );
     },
+    agentTabs(id) {
+      if (disposed) return { id, error: "failed" };
+      return {
+        id,
+        tabs: tabs.slice(0, MAX_AGENT_TABS).map((tab, index) => ({
+          tab: agentTabId(tab),
+          title: tabLabel(tab, index, language).slice(0, MAX_AGENT_TAB_TITLE),
+          selected: index === selectedIndex,
+          panes:
+            tab.kind === "terminal"
+              ? tabPanes(tab)
+                  .filter((pane) => !pane.removed)
+                  .flatMap((pane) => pane.adapter.sessionId() ?? [])
+                  .slice(0, MAX_AGENT_TAB_PANES)
+              : [],
+        })),
+      };
+    },
     setSessionTitle(sessionId, title) {
       if (disposed) return;
       const pane = findPaneBySession(terminalTabs(), sessionId);
@@ -689,6 +714,20 @@ export function createTerminalTabs(
       disposeTabContent(tabs);
     },
   };
+}
+
+// Tab ids are the window's own, handed out when an agent first sees a tab and
+// kept while the tab lives.
+const agentTabIds = new WeakMap<object, string>();
+let agentTabCount = 0;
+function agentTabId(tab: ApplicationTab): string {
+  let id = agentTabIds.get(tab);
+  if (!id) {
+    agentTabCount += 1;
+    id = `t${agentTabCount}`;
+    agentTabIds.set(tab, id);
+  }
+  return id;
 }
 
 function tabLabel(

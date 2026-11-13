@@ -291,25 +291,29 @@ type Pane = {
   focused: boolean;
   self: boolean;
 };
+type Tab = { tab: string; title: string; selected: boolean; panes: Pane[] };
 
 async function list(
   client: Client,
   options: Options,
   selfKnown: boolean,
 ): Promise<Outcome> {
-  const listed = (await client.request("list")) as { panes: Pane[] };
+  const listed = (await client.request("list")) as { tabs: Tab[] };
   const result = selfKnown ? listed : { ...listed, note: SELF_UNKNOWN };
   if (options.json) return done(JSON.stringify(result), result);
   return done(
     [
-      ...result.panes.map((pane) =>
-        [
-          pane.pane,
-          pane.cols ? `${pane.cols}x${pane.rows}` : "-",
-          ...(pane.focused ? ["focused"] : []),
-          ...(pane.self ? ["self"] : []),
-        ].join("\t"),
-      ),
+      ...result.tabs.flatMap((tab) => [
+        [tab.tab, tab.title, ...(tab.selected ? ["selected"] : [])].join("\t"),
+        ...tab.panes.map((pane) =>
+          [
+            `  ${pane.pane}`,
+            pane.cols ? `${pane.cols}x${pane.rows}` : "-",
+            ...(pane.focused ? ["focused"] : []),
+            ...(pane.self ? ["self"] : []),
+          ].join("\t"),
+        ),
+      ]),
       ...(selfKnown ? [] : [SELF_UNKNOWN]),
     ].join("\n"),
     result,

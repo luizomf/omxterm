@@ -4,9 +4,12 @@ import {
   agentIpc,
   isAgentPressResult,
   isAgentReadResult,
+  isAgentTabsResult,
   type AgentAccessState,
   type AgentPressResult,
   type AgentReadResult,
+  type AgentTabsResult,
+  type AgentWindowTab,
   type AgentRefusal,
 } from "../shared/agent-access";
 import {
@@ -69,7 +72,7 @@ interface Entry {
   confirmTimer?: ReturnType<typeof setTimeout>;
   admitting?: boolean;
   readmit?: boolean;
-  // Reads and presses the window hasn't answered yet.
+  // Reads, tab lists and presses the window hasn't answered yet.
   readonly pending: PendingRequests;
   cleanup(): void;
 }
@@ -181,6 +184,16 @@ function settlePress(pending: PendingRequests, result: AgentPressResult) {
   else request.resolve(result.data);
 }
 
+function settleTabs(pending: PendingRequests, result: AgentTabsResult) {
+  const request = pending.get(result.id);
+  if (request?.channel !== agentIpc.tabs) return;
+  if ("error" in result)
+    request.reject(
+      new AgentApiError("unavailable", "The window's tabs couldn't be read."),
+    );
+  else request.resolve(result.tabs);
+}
+
 function settleRead(reads: PendingRequests, result: AgentReadResult) {
   const pending = reads.get(result.id);
   if (pending?.channel !== agentIpc.read) return;
@@ -200,7 +213,19 @@ function settleRead(reads: PendingRequests, result: AgentReadResult) {
     });
 }
 
-// A granted window's commands; its reads and presses are asked of the window.
+// A window's answer settles only the request of its own channel.
+function answerListener<R>(
+  ownerFor: (event: IpcEvent) => Entry | undefined,
+  valid: (payload: unknown) => payload is R,
+  settle: (pending: PendingRequests, result: R) => void,
+) {
+  return (event: IpcEvent, payload?: unknown) => {
+    const entry = ownerFor(event);
+    if (entry && valid(payload)) settle(entry.pending, payload);
+  };
+}
+
+// A granted window's commands; its reads, tab lists and presses are asked of the window.
 function commandsFor(entry: Entry): AgentCommands {
   const ask = <T>(channel: string, request: object, signal: AbortSignal) =>
     requestWindow<T>(entry.contents, entry.pending, channel, request, signal);
@@ -210,6 +235,7 @@ function commandsFor(entry: Entry): AgentCommands {
       ask<AgentPaneText>(agentIpc.read, { sessionId, lines }, signal),
     encode: (sessionId, keys, signal) =>
       ask<string>(agentIpc.press, { sessionId, keys }, signal),
+    tabs: (signal) => ask<readonly AgentWindowTab[]>(agentIpc.tabs, {}, signal),
   });
 }
 
@@ -390,19 +416,22 @@ export function startAgentAccess(options: AgentAccessOptions) {
     if (entry && payload === undefined && entry.state !== "off")
       end(entry, "user");
   };
-  const readResultListener = (event: IpcEvent, payload?: unknown) => {
-    const entry = ownerFor(event);
-    if (entry && isAgentReadResult(payload)) settleRead(entry.pending, payload);
+  const listen = <R>(
+    channel: string,
+    valid: (payload: unknown) => payload is R,
+    settle: (pending: PendingRequests, result: R) => void,
+  ) => {
+    const listener = answerListener(ownerFor, valid, settle);
+    options.ipc.on(channel, listener);
+    return () => options.ipc.removeListener(channel, listener);
   };
-  const pressResultListener = (event: IpcEvent, payload?: unknown) => {
-    const entry = ownerFor(event);
-    if (entry && isAgentPressResult(payload))
-      settlePress(entry.pending, payload);
-  };
+  const stopAnswers = [
+    listen(agentIpc.readResult, isAgentReadResult, settleRead),
+    listen(agentIpc.pressResult, isAgentPressResult, settlePress),
+    listen(agentIpc.tabsResult, isAgentTabsResult, settleTabs),
+  ];
   options.ipc.on(agentIpc.shown, shownListener);
   options.ipc.on(agentIpc.stop, stopListener);
-  options.ipc.on(agentIpc.readResult, readResultListener);
-  options.ipc.on(agentIpc.pressResult, pressResultListener);
 
   return {
     instance,
@@ -480,8 +509,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
       endpoint.close();
       options.ipc.removeListener(agentIpc.shown, shownListener);
       options.ipc.removeListener(agentIpc.stop, stopListener);
-      options.ipc.removeListener(agentIpc.readResult, readResultListener);
-      options.ipc.removeListener(agentIpc.pressResult, pressResultListener);
+      for (const stop of stopAnswers) stop();
     },
   };
 }

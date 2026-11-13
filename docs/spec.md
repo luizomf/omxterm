@@ -1265,7 +1265,7 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   crash, or when main can't keep its socket. Switching tabs, modals, blur,
   hide and minimize keep it. It is never restored at startup, by Saved Layout,
   configuration, a launch argument or an extension.
-- Agents get only what's in that window: list its live panes, type literal
+- Agents get only what's in that window: list its tabs (title, selected) with their panes (size, focused), type literal
   text and the mode-independent keys `Enter`, `Tab`, `Escape`, `Backspace`,
   `Space` and `Ctrl+A`–`Ctrl+Z`, press named keys (arrows, `Home`, `End`,
   `PageUp`, `PageDown`, `Insert`, `Delete`, `F1`–`F12`, `Enter`, `Tab`,

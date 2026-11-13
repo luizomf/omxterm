@@ -102,8 +102,8 @@ Agent API. It shows as an accent State Mark on every pane and tab, and ends on
 a click on that mark, the toggle, closing the window or quitting. It is never
 restored or granted by anything but that gesture.
 
-**Agent API** — Main's user-only local socket for granted windows: list panes,
-type text and mode-independent keys, press named keys encoded for the pane's
+**Agent API** — Main's user-only local socket for granted windows: list tabs and
+panes, type text and mode-independent keys, press named keys encoded for the pane's
 modes, read a pane's last lines and wait for it to go quiet or end. `omxterm-ctl`, the bundled client, finds it from the
 `OMXTERM_CTL`, `OMXTERM_PROFILE` and `OMXTERM_PANE` variables every pane gets
 on macOS and Linux, prints an agent guide (`guide`) and serves the same

@@ -101,7 +101,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "list",
-    "List the window's panes, one per line: id, size, and focused or self. Never send to the self pane: it is your own.",
+    "List the window's tabs and their panes: each tab with its id and title (selected marks the visible one), then its panes indented with id, size, and focused or self. Never send to the self pane: it is your own.",
     { window },
     true,
   ),

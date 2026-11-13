@@ -59,6 +59,13 @@ function fakeWindow() {
   };
 }
 
+// The window's tabs: s1 and s2 side by side in the selected tab, s3 hidden.
+const windowTabs = [
+  { tab: "t1", title: "zsh", selected: true, panes: ["s1", "s2"] },
+  { tab: "t2", title: "vim", selected: false, panes: ["s3"] },
+] as const;
+const tabs = () => vi.fn(() => Promise.resolve(windowTabs));
+
 const caller = (pane?: string) => ({
   signal: new AbortController().signal,
   ...(pane ? { pane } : {}),
@@ -69,30 +76,32 @@ const failure = (promise: Promise<unknown>) =>
     (error: unknown) => (error instanceof AgentApiError ? error.code : error),
   );
 
-it("lists the window's panes and marks the caller's own", async () => {
+it("lists the window's tabs with their panes and marks the caller's own", async () => {
   const window = fakeWindow();
   const commands = createAgentCommands({
     sessions: window.sessions,
     read: vi.fn(),
     encode: vi.fn(),
+    tabs: tabs(),
   });
+  const grid = { cols: 80, rows: 24, live: true };
   await expect(commands.run("list", undefined, caller("s2"))).resolves.toEqual({
-    panes: [
+    tabs: [
       {
-        pane: "s1",
-        focused: true,
-        self: false,
-        cols: 80,
-        rows: 24,
-        live: true,
+        tab: "t1",
+        title: "zsh",
+        selected: true,
+        panes: [
+          { pane: "s1", focused: true, self: false, ...grid },
+          { pane: "s2", focused: false, self: true, ...grid },
+        ],
       },
       {
-        pane: "s2",
-        focused: false,
-        self: true,
-        cols: 80,
-        rows: 24,
-        live: true,
+        tab: "t2",
+        title: "vim",
+        selected: false,
+        // The window lists it, but its program has ended.
+        panes: [{ pane: "s3", focused: false, self: false, live: false }],
       },
     ],
   });
@@ -101,10 +110,34 @@ it("lists the window's panes and marks the caller's own", async () => {
   );
 });
 
+it("lists a tab title as plain text and passes the window's failure on", async () => {
+  const window = fakeWindow();
+  const asked = vi
+    .fn()
+    .mockResolvedValueOnce([
+      { tab: "t1", title: "a\x1b[2J\nb\u202ec", selected: true, panes: [] },
+    ])
+    .mockRejectedValueOnce(new AgentApiError("unavailable", "slow"));
+  const commands = createAgentCommands({
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode: vi.fn(),
+    tabs: asked,
+  });
+  const listed = (await commands.run("list", undefined, caller())) as {
+    tabs: { title: string }[];
+  };
+  expect(listed.tabs[0]!.title).toBe("a [2J b c");
+  expect(await failure(commands.run("list", undefined, caller()))).toBe(
+    "unavailable",
+  );
+});
+
 it("types text and mode-independent keys in one write and returns the offset", async () => {
   const window = fakeWindow();
   window.output("s1", 40);
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode: vi.fn(),
@@ -149,6 +182,7 @@ it("waits for output past the offset to go quiet, and reports time-outs", async 
   vi.useFakeTimers();
   const window = fakeWindow();
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode: vi.fn(),
@@ -186,6 +220,7 @@ it("answers exited with the code, during a wait and after it", async () => {
   vi.useFakeTimers();
   const window = fakeWindow();
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode: vi.fn(),
@@ -214,6 +249,7 @@ it("answers exited with the code, during a wait and after it", async () => {
 it("refuses what later versions add and out-of-range limits", async () => {
   const window = fakeWindow();
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode: vi.fn(),
@@ -250,6 +286,7 @@ it("reads after the window caught up and reports the consumed offset", async () 
     rows: 24,
   }));
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read,
     encode: vi.fn(),
@@ -272,6 +309,7 @@ it("reads after the window caught up and reports the consumed offset", async () 
 it("ends a pending wait when the caller goes away and stops observing on dispose", async () => {
   const window = fakeWindow();
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode: vi.fn(),
@@ -298,6 +336,7 @@ it("presses named keys with the window's bytes for the pane, after it caught up"
       keys.map((key) => `<${key.ctrl ? "C-" : ""}${key.key}>`).join(""),
   );
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode,
@@ -328,6 +367,7 @@ it("refuses keys press can't name and never writes for them", async () => {
   const window = fakeWindow();
   const encode = vi.fn(async () => "x");
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode,
@@ -366,6 +406,7 @@ it("writes nothing when the grant ends while the window encodes", async () => {
   const window = fakeWindow();
   let answer!: (bytes: string) => void;
   const commands = createAgentCommands({
+    tabs: tabs(),
     sessions: window.sessions,
     read: vi.fn(),
     encode: () => new Promise<string>((resolve) => (answer = resolve)),
@@ -382,6 +423,7 @@ it("refuses Ctrl+Space on macOS, where the user's press sends nothing", async ()
   const run = (platform: string, key: string) => {
     const window = fakeWindow();
     const commands = createAgentCommands({
+      tabs: tabs(),
       sessions: window.sessions,
       read: vi.fn(),
       encode: async () => "x",

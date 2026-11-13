@@ -8,6 +8,7 @@ import type {
   AgentAccessState,
   AgentPressRequest,
   AgentReadRequest,
+  AgentTabsRequest,
 } from "../../src/shared/agent-access";
 import { translatorFor } from "../../src/shared/i18n";
 import type { StateMark, StateText } from "../../src/renderer/state-marks";
@@ -16,6 +17,7 @@ function bridge() {
   let state: ((value: AgentAccessState) => void) | undefined;
   let read: ((value: AgentReadRequest) => void) | undefined;
   let press: ((value: AgentPressRequest) => void) | undefined;
+  let tabsListener: ((value: AgentTabsRequest) => void) | undefined;
   const value = {
     onState: vi.fn((listener: (value: AgentAccessState) => void) => {
       state = listener;
@@ -33,14 +35,23 @@ function bridge() {
       return () => (press = undefined);
     }),
     pressResult: vi.fn(),
+    onTabs: vi.fn((listener: (value: AgentTabsRequest) => void) => {
+      tabsListener = listener;
+      return () => (tabsListener = undefined);
+    }),
+    tabsResult: vi.fn(),
   } satisfies AgentAccessBridge;
   return {
     bridge: value,
     state: (next: AgentAccessState) => state?.(next),
     read: (next: AgentReadRequest) => read?.(next),
     press: (next: AgentPressRequest) => press?.(next),
+    tabs: (next: AgentTabsRequest) => tabsListener?.(next),
     subscribed: () =>
-      state !== undefined || read !== undefined || press !== undefined,
+      state !== undefined ||
+      read !== undefined ||
+      press !== undefined ||
+      tabsListener !== undefined,
   };
 }
 
@@ -51,6 +62,7 @@ const fakeTabs = () => ({
   flash: vi.fn<(text: StateText) => void>(),
   readSession: vi.fn(),
   encodeSessionKeys: vi.fn(),
+  agentTabs: vi.fn(),
 });
 
 it("shows the accent mark before confirming, flashes once and stops on click", () => {
@@ -98,11 +110,26 @@ it("answers main's reads with the pane's text", () => {
     flash: vi.fn(),
     readSession: vi.fn(() => result),
     encodeSessionKeys: vi.fn(),
+    agentTabs: vi.fn(),
   };
   subscribeToAgentAccess(main.bridge, tabs);
   main.read({ id: result.id, sessionId: "s2", lines: 5 });
   expect(tabs.readSession).toHaveBeenCalledWith(result.id, "s2", 5);
   expect(main.bridge.readResult).toHaveBeenCalledWith(result);
+});
+
+it("answers main's tab requests with the window's tabs", () => {
+  const main = bridge();
+  const id = "00000000-0000-0000-0000-000000000007";
+  const result = {
+    id,
+    tabs: [{ tab: "t1", title: "zsh", selected: true, panes: ["s1"] }],
+  };
+  const tabs = { ...fakeTabs(), agentTabs: vi.fn(() => result) };
+  subscribeToAgentAccess(main.bridge, tabs as never);
+  main.tabs({ id });
+  expect(tabs.agentTabs).toHaveBeenCalledWith(id);
+  expect(main.bridge.tabsResult).toHaveBeenCalledWith(result);
 });
 
 it("answers main's presses with the pane's encoded bytes", () => {

@@ -52,7 +52,7 @@ posix(
     await shown();
     expect(await server.call("status")).toMatchObject({ isError: false });
     expect(await server.call("list")).toEqual({
-      text: "s1\t80x24\tfocused\tself\ns2\t80x24",
+      text: "t1\tzsh\tselected\n  s1\t80x24\tfocused\tself\nt2\tvim\n  s2\t80x24",
       isError: false,
     });
     const sent = await server.call("send", {
@@ -213,7 +213,9 @@ posix("says when it can't tell which pane is the caller's", async () => {
   // Naming the pane's own profile keeps its pane.
   const inside = JSON.parse(
     (await ctl(profile, ["list", "--json", "--profile", profile], pane)).stdout,
-  ) as { note?: string; panes: { self: boolean }[] };
+  ) as { note?: string; tabs: { panes: { self: boolean }[] }[] };
   expect(inside.note).toBeUndefined();
-  expect(inside.panes.map((entry) => entry.self)).toEqual([true, false]);
+  expect(
+    inside.tabs.flatMap((tab) => tab.panes.map((entry) => entry.self)),
+  ).toEqual([true, false]);
 });

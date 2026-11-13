@@ -582,6 +582,17 @@ So far, `press` with named keys
   user's Option+Space types native text when `optionKeyMode` leaves Option
   alone, but the agent's `Alt+Space` sends `ESC` and a space.
 
+`list` returns the tree
+([#1049](https://github.com/luizomf/omxterm/issues/1049)):
+
+- **The window knows its tabs; main knows each pane's size and focus.** Main
+  asks the window for tab ids, titles, the selected tab and each tab's pane
+  session ids (the same correlated, bounded round trip as `read`), then joins
+  the live sessions it already has. Pane ids are unchanged, so they stay valid
+  for `send`, `read`, `wait` and `press`.
+- Tab ids (`t1`, ...) are handed out when `list` first shows a tab and stay
+  with the tab while it lives. Titles are untrusted text.
+
 ## Open questions
 
 - Windows: accept the default pipe descriptor behind the token, or pay for a
