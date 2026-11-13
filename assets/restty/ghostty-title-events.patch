@@ -58,16 +58,22 @@ index 1ae70f5f1..fdd524e54 100644
 +    }
 +
 diff --git a/src/terminal/kitty/graphics_exec.zig b/src/terminal/kitty/graphics_exec.zig
-index b1b968b28..ae5e99da5 100644
+index b1b968b28..273c14e7a 100644
 --- a/src/terminal/kitty/graphics_exec.zig
 +++ b/src/terminal/kitty/graphics_exec.zig
-@@ -196,0 +197,13 @@ fn transmit(
-+    // A transmit-and-display command starts a new image. Both Pi's first PNG
-+    // chunk and Chafa's anonymous metadata-only prelude use a=T; bare m chunks
-+    // remain continuations. Replace an unfinished transmission before any new
-+    // payload can be appended to it.
+@@ -196,0 +197,19 @@ fn transmit(
++    // A transmit-and-display command with metadata starts a new image. Both
++    // Pi's first PNG chunk and Chafa's anonymous metadata-only prelude use a=T;
++    // bare m chunks remain continuations, and so do kitten icat's chunks, which
++    // repeat only a=T and q (its last chunk omits m). Replace an unfinished
++    // transmission before any new payload can be appended to it.
 +    const starts_new_image = switch (cmd.control) {
-+        .transmit_and_display => true,
++        .transmit_and_display => |td| starts: {
++            var transmission = td.transmission;
++            transmission.more_chunks = false;
++            break :starts !std.meta.eql(transmission, command.Transmission{}) or
++                !std.meta.eql(td.display, command.Display{});
++        },
 +        else => false,
 +    };
 +    if (storage.loading != null and starts_new_image) {
@@ -75,7 +81,7 @@ index b1b968b28..ae5e99da5 100644
 +        storage.loading = null;
 +    }
 +
-@@ -1003 +1016,5 @@ fn loadAndAddImage(
+@@ -1003 +1022,5 @@ fn loadAndAddImage(
 -        try loading.addData(alloc, cmd.data);
 +        loading.addData(alloc, cmd.data) catch |err| {
 +            loading.destroy(alloc);

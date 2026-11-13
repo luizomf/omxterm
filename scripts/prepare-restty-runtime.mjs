@@ -62,10 +62,13 @@ const priorPaletteCoreDigest =
   "1fb03cc8360942c613ca98973658de362852a60d88942c482de4b0dc429660fa";
 const priorApplicationCursorCoreDigest =
   "03d79d4c745e3c74dd90082a100cbf85e5060e23ff9d16fba338b11d2db1e6be";
-const correctedCoreDigest =
+// Already carries every JavaScript core correction; only its WASM changed.
+const priorKittyContinuationCoreDigest =
   "0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307";
+const correctedCoreDigest =
+  "fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a";
 const correctedCoreWasmDigest =
-  "a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513";
+  "a12d667486bd69cafb426af016e819f7d44d588f2da7db96b77e568ea95da011";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -1810,6 +1813,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorReflowCoreDigest &&
     sourceDigest !== priorPaletteCoreDigest &&
     sourceDigest !== priorApplicationCursorCoreDigest &&
+    sourceDigest !== priorKittyContinuationCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1822,22 +1826,24 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     match[0],
     () => `var WASM_BINARY = \`${encodeWasmBinary(core)}\`;`,
   );
-  source = applyCorrections(
-    source,
-    sourceDigest === originalCoreDigest
-      ? coreRuntimeCorrections
-      : sourceDigest === priorImageCoreDigest ||
-          sourceDigest === priorResizeCoreDigest ||
-          sourceDigest === priorBackgroundCoreDigest ||
-          sourceDigest === priorGraphemeCoreDigest ||
-          sourceDigest === priorReflowCoreDigest ||
-          sourceDigest === priorPaletteCoreDigest ||
-          sourceDigest === priorApplicationCursorCoreDigest ||
-          sourceDigest === priorInteractionCoreDigest
-        ? []
-        : parsedEventCoreCorrections,
-  );
-  source = applyCorrections(source, applicationCursorCoreCorrections);
+  if (sourceDigest !== priorKittyContinuationCoreDigest) {
+    source = applyCorrections(
+      source,
+      sourceDigest === originalCoreDigest
+        ? coreRuntimeCorrections
+        : sourceDigest === priorImageCoreDigest ||
+            sourceDigest === priorResizeCoreDigest ||
+            sourceDigest === priorBackgroundCoreDigest ||
+            sourceDigest === priorGraphemeCoreDigest ||
+            sourceDigest === priorReflowCoreDigest ||
+            sourceDigest === priorPaletteCoreDigest ||
+            sourceDigest === priorApplicationCursorCoreDigest ||
+            sourceDigest === priorInteractionCoreDigest
+          ? []
+          : parsedEventCoreCorrections,
+    );
+    source = applyCorrections(source, applicationCursorCoreCorrections);
+  }
   if (digest(source) !== correctedCoreDigest)
     throw new Error(
       `Restty WASM correction did not produce reviewed bytes: ${digest(source)}`,

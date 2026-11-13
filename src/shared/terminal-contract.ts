@@ -7,10 +7,16 @@ import {
 export const MAX_TERMINAL_PAYLOAD_BYTES = 64 * 1024;
 export const MAX_TERMINAL_COLUMNS = 1_000;
 export const MAX_TERMINAL_ROWS = 1_000;
+// TIOCGWINSZ stores pixels in an unsigned short.
+export const MAX_TERMINAL_PIXELS = 65_535;
 
+// Pixels are the cell grid in device pixels (cols × cell width), padding
+// excluded, so `ws_xpixel / ws_col` is one cell, as CSI 16 t reports.
 export interface TerminalSize {
   readonly cols: number;
   readonly rows: number;
+  readonly pixelWidth?: number;
+  readonly pixelHeight?: number;
 }
 
 export interface TerminalExit {
@@ -39,10 +45,8 @@ export function isTerminalWriteReceipt(
   return value === "accepted" || value === "rejected" || value === "unknown";
 }
 
-export interface TerminalSessionResize {
+export interface TerminalSessionResize extends TerminalSize {
   readonly sessionId: TerminalSessionId;
-  readonly cols: number;
-  readonly rows: number;
 }
 
 export interface TerminalSessionReference {
@@ -164,10 +168,13 @@ export function isTerminalSessionInput(
 export function isTerminalSessionResize(
   value: unknown,
 ): value is TerminalSessionResize {
-  if (!isStrictRecord(value, ["sessionId", "cols", "rows"])) return false;
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const { sessionId, ...size } = value as Record<string, unknown>;
   return (
-    isTerminalSessionId(value.sessionId) &&
-    isTerminalSize({ cols: value.cols, rows: value.rows })
+    Object.hasOwn(value, "sessionId") &&
+    isTerminalSessionId(sessionId) &&
+    isTerminalSize(size)
   );
 }
 
@@ -342,15 +349,44 @@ export function splitTerminalPayload(
 }
 
 export function isTerminalSize(value: unknown): value is TerminalSize {
-  if (!isStrictRecord(value, ["cols", "rows"])) return false;
+  const withPixels = isStrictRecord(value, [
+    "cols",
+    "rows",
+    "pixelWidth",
+    "pixelHeight",
+  ]);
+  if (!withPixels && !isStrictRecord(value, ["cols", "rows"])) return false;
   return (
     Number.isInteger(value.cols) &&
     Number.isInteger(value.rows) &&
     (value.cols as number) >= 1 &&
     (value.cols as number) <= MAX_TERMINAL_COLUMNS &&
     (value.rows as number) >= 1 &&
-    (value.rows as number) <= MAX_TERMINAL_ROWS
+    (value.rows as number) <= MAX_TERMINAL_ROWS &&
+    (!withPixels ||
+      (isTerminalPixels(value.pixelWidth) &&
+        isTerminalPixels(value.pixelHeight)))
   );
+}
+
+function isTerminalPixels(value: unknown): boolean {
+  return (
+    Number.isInteger(value) &&
+    (value as number) >= 1 &&
+    (value as number) <= MAX_TERMINAL_PIXELS
+  );
+}
+
+// Copy only the size fields, keeping pixels only as a complete pair.
+export function terminalSize(size: TerminalSize): TerminalSize {
+  return size.pixelWidth !== undefined && size.pixelHeight !== undefined
+    ? {
+        cols: size.cols,
+        rows: size.rows,
+        pixelWidth: size.pixelWidth,
+        pixelHeight: size.pixelHeight,
+      }
+    : { cols: size.cols, rows: size.rows };
 }
 
 export function isTerminalExit(value: unknown): value is TerminalExit {

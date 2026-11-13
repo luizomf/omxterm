@@ -16,6 +16,7 @@ import {
   isTerminalSessionClose,
   isTerminalSessionReference,
   isTerminalSessionResize,
+  terminalSize,
   isTerminalWriteReceipt,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -713,7 +714,7 @@ function createTerminalIpcController(
         rows: payload.rows,
       });
     options.onLayoutActivity?.();
-    state.session.resize({ cols: payload.cols, rows: payload.rows });
+    state.session.resize(terminalSize(payload));
   };
   const acknowledgeOutput = (payload?: unknown) =>
     acknowledgeTerminalOutput(

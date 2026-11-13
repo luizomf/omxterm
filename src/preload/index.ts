@@ -34,6 +34,7 @@ import {
   isTerminalSessionOutputAck,
   isTerminalSessionTitle,
   isTerminalSize,
+  terminalSize,
   isTerminalTabCommand,
   isTerminalTitleRequest,
   isTerminalWriteReceipt,
@@ -282,8 +283,7 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid terminal resize payload");
     ipcRenderer.send(terminalIpc.resize, {
       sessionId,
-      cols: size.cols,
-      rows: size.rows,
+      ...terminalSize(size),
     });
   },
   close(sessionId: TerminalSessionId, reason?: "rendering-failure") {

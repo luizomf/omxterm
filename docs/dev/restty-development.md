@@ -267,9 +267,9 @@ Prepared SHA-256 digests:
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
 | Restty JavaScript runtime | `056d91bbc23901c0bf57d1584bf53502fdd9c25b9f4ce6a3b34ccd7577b83faf` |
-| Embedded-core chunk       | `0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307` |
+| Embedded-core chunk       | `fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core         | `a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513` |
+| Tracked WASM core         | `a12d667486bd69cafb426af016e819f7d44d588f2da7db96b77e568ea95da011` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
 | Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
 | Windows terminal          | `4ceeb76ee0c99ec013678828a3fdf309a612c4613190e5ce16840f5096f7e162` |
