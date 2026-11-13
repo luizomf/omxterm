@@ -1585,9 +1585,11 @@ authority; OMXTerm adds no second parser.
   no pixel size.
 - A session starts at the grid and pixel size its Surface already measured,
   so a program that runs at once, such as a Launch Request or a line in a
-  shell startup file, reads the real size. A Surface that hasn't measured a
-  grid yet, such as a pane in a background tab, starts its session at 80×24
-  until its first resize.
+  shell startup file, reads the real size. The pixels follow the spawn in the
+  same tick, so on Linux a native program that reads them in its first
+  instant can still see 0×0. A Surface that hasn't measured a grid yet, such
+  as a pane in a background tab, starts its session at 80×24 until its first
+  resize.
 
 **Placement**
 
