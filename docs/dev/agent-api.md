@@ -468,7 +468,9 @@ omxterm-ctl keys                           # slice 4: chords press runs
   reliable way to type a command and wait for it. `--match TEXT` on `send`
   waits the same way, for that text. `--timeout` defaults to 60000 for
   `wait` and `send --wait`.
-- A pane may be named `s4` or `3:s4`; the window part must match.
+- A pane may be named `s4`, `3:s4` or as `OMXTERM_PANE` spells it,
+  `5f0c9a1e2b3d4c6f:3:s4`; the window part must be the granted window's and the
+  instance part this OMXTerm process's, or the pane "belongs to another window".
 - `press` takes the keys as arguments after the pane (`--keys` with a
   comma-separated list works too) and prints nothing for keys; a shortcut
   prints the action and the pane, tab-separated. `--json` prints the result.
@@ -511,7 +513,7 @@ as Codex does). It offers tools only.
 - `--profile` on the `mcp` command line applies to every call; `--window`
   applies to every call that doesn't pass its own `window`. The several-windows
   error names the `window` argument.
-- A `pane` must be a pane id (`s4` or `3:s4`); anything else is a tool error.
+- A `pane` must be a pane id (`s4`, `3:s4` or `5f0c9a1e2b3d4c6f:3:s4`); anything else is a tool error.
 - Calls run concurrently; `notifications/cancelled` drops that call's
   connection. The server exits when stdin closes.
 

@@ -225,14 +225,24 @@ function chooseWindow(options: Options, profile: string): number {
   return windows[0]!;
 }
 
-function paneArgument(options: Options, window: number): string {
-  const value = options.positional[0];
-  const match = value ? /^(?:(\d+):)?(s\d+)$/u.exec(value) : null;
-  if (!match || !isAgentPaneId(match[2]))
+// A pane as `s4`, `3:s4` or as OMXTERM_PANE spells it, `<instance>:3:s4`. The
+// window and the instance must be the granted window's and this process's.
+export function paneArgument(
+  value: string | undefined,
+  window: number,
+  instance: string,
+): string {
+  const match = value
+    ? /^(?:(?:([0-9a-f]{16}):)?(\d+):)?(s\d+)$/u.exec(value)
+    : null;
+  if (!match || !isAgentPaneId(match[3]))
     throw new CtlError(EXIT.usage, "Name a pane, such as s1 (see list).");
-  if (match[1] !== undefined && Number(match[1]) !== window)
+  if (
+    (match[2] !== undefined && Number(match[2]) !== window) ||
+    (match[1] !== undefined && match[1] !== instance)
+  )
     throw new CtlError(EXIT.usage, "That pane belongs to another window.");
-  return match[2]!;
+  return match[3]!;
 }
 
 /** What a command answers: the text the CLI prints, and its exit status. */
@@ -286,7 +296,13 @@ export async function execute(
       grant,
       own && own.window === window ? own.pane : undefined,
     );
-    return await run(client, options, window, own !== undefined);
+    return await run(
+      client,
+      options,
+      window,
+      own !== undefined,
+      grant.instance,
+    );
   } finally {
     signal?.removeEventListener("abort", drop);
     client.end();
@@ -380,6 +396,7 @@ async function run(
   options: Options,
   window: number,
   selfKnown: boolean,
+  instance: string,
 ): Promise<Outcome> {
   if (options.command === "status") {
     const result = {
@@ -399,7 +416,7 @@ async function run(
   }
   if (options.command === "list") return list(client, options, selfKnown);
   if (options.command === "keys") return keys(client, options);
-  const pane = paneArgument(options, window);
+  const pane = paneArgument(options.positional[0], window, instance);
   if (options.command === "send") return send(client, options, pane);
   if (options.command === "press") {
     const keys = [...options.positional.slice(1), ...options.keys];
