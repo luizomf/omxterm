@@ -9,6 +9,8 @@ import {
 } from "./state-marks";
 import {
   agentTail,
+  type AgentActionResult,
+  type AgentWindowCommand,
   type AgentPressResult,
   type AgentReadResult,
   type AgentTabsResult,
@@ -81,6 +83,9 @@ import {
 } from "./terminal-panes";
 
 import { createApplicationTabStrip } from "./application-tab-strip";
+
+// Below main's 3 s window answer, so a late command never runs after it.
+const AGENT_ACTIVATION_MS = 2000;
 export { TERMINAL_TAB_DRAG_DATA_TYPE } from "./application-tab-strip";
 
 type MountTerminalSurface = (
@@ -108,6 +113,8 @@ export interface TerminalTabsOptions {
     tab: ApplicationTab,
     activate: (focusAllowed?: boolean) => void,
     passive: boolean,
+    // False keeps an extension's view from taking native focus.
+    nativeFocus?: boolean,
   ) => void;
   readonly isSshSourceForeground?: (id: string) => boolean;
   // The hosted dialog shown over the selected tab, if any.
@@ -187,6 +194,18 @@ export interface TerminalTabs {
   // The window's tabs for the agent API: ids, titles and the sessions of
   // each tab's panes (settings and hosted tabs have none).
   agentTabs(id: string): AgentTabsResult;
+  // An agent's tab or pane shortcut: focus the session's pane, selecting its
+  // tab, then run the command there, as the user's click and press would.
+  // allowed() is checked again right before the command runs: a stopped
+  // grant never runs a command it already handed over.
+  runSessionCommand(
+    id: string,
+    sessionId: TerminalSessionId,
+    command: AgentWindowCommand,
+    allowed?: () => boolean,
+  ): Promise<AgentActionResult>;
+  // Drops one waiting agent command, or all of them, as unavailable.
+  cancelAgentCommands(id?: string): void;
   applyConfiguration(configuration: TerminalSurfaceConfiguration): void;
   zoom(command: TerminalFontZoom): void;
   clipboardAction(
@@ -264,10 +283,13 @@ export function createTerminalTabs(
     {
       panes: () => terminalTabs().flatMap(tabPanes),
       corner: elements.container,
-      // Only when nothing else carries them: no tab strip, no pane.
+      // Whenever no pane shows them: a tab button's glyph can't be clicked,
+      // and the grant's mark is the one-click stop (ADR 0052).
+      // A terminal tab's panes show only once its content is ready (an
+      // extension's view hides first), so the corner stays until then.
       cornerShown: () => {
         const tab = selectedApplicationTab();
-        return elements.strip.hidden && !!tab && tab.kind !== "terminal";
+        return !!tab && (tab.kind !== "terminal" || !contentReady);
       },
     },
   );
@@ -325,6 +347,9 @@ export function createTerminalTabs(
     mirror?.changed();
   };
 
+  let agentSelection = false;
+  // Agent commands waiting for their tab's content to show.
+  const activated = new Map<string, { shown(): void; cancel(): void }>();
   const select = (
     index: number,
     passive = false,
@@ -343,6 +368,7 @@ export function createTerminalTabs(
     contextMenu.selectionChanged();
     if (tab.kind === "hosted") options.notifySelection?.(null, []);
     contentReady = false;
+    marks.refreshCorner();
     const activate = (focusAllowed = true) => {
       contentReady = true;
       automaticFocusAllowed = focusAllowed;
@@ -357,9 +383,22 @@ export function createTerminalTabs(
         notifyFocus,
       );
       mirrorReady?.ready();
+      marks.refreshCorner();
+      for (const waiter of [...activated.values()]) waiter.shown();
     };
-    if (options.selectContent) options.selectContent(tab, activate, passive);
-    else hosted.select(tab.kind === "hosted" ? tab : undefined, activate, tab);
+    // An agent's shortcut never pulls native focus into a window the user
+    // isn't in (ADR 0052): focusing an extension's view would raise it.
+    const nativeFocus =
+      !agentSelection || elements.container.ownerDocument.hasFocus();
+    if (options.selectContent)
+      options.selectContent(tab, activate, passive, nativeFocus);
+    else
+      hosted.select(
+        tab.kind === "hosted" ? tab : undefined,
+        activate,
+        tab,
+        nativeFocus,
+      );
   };
 
   const removeTab = (tab: ApplicationTab, notify = true) => {
@@ -602,6 +641,67 @@ export function createTerminalTabs(
               : [],
         })),
       };
+    },
+    runSessionCommand(id, sessionId, command, allowed = () => true) {
+      const pane = disposed
+        ? undefined
+        : findPaneBySession(terminalTabs(), sessionId);
+      if (!pane || pane.removed || pane.tab.removed)
+        return Promise.resolve({ id, error: "unknown-pane" });
+      const unavailable = { id, error: "unavailable" } as const;
+      if (closing || !allowed()) return Promise.resolve(unavailable);
+      agentSelection = true;
+      try {
+        revealSession(sessionId);
+      } finally {
+        agentSelection = false;
+      }
+      // A dialog over the window keeps its selection and takes the user's
+      // keys; never act elsewhere, or behind it, or once the grant ended.
+      const run = (): AgentActionResult => {
+        if (
+          disposed ||
+          closing ||
+          !allowed() ||
+          canFocus?.() === false ||
+          pane.removed ||
+          selectedTab() !== pane.tab ||
+          pane.tab.focused !== pane
+        )
+          return unavailable;
+        agentSelection = true;
+        try {
+          commands.handle(command);
+        } finally {
+          agentSelection = false;
+        }
+        return { id };
+      };
+      if (contentReady || selectedTab() !== pane.tab)
+        return Promise.resolve(run());
+      // The tab shows only after a native view hid: split and directional
+      // focus measure it, so the command waits for that, within a bound.
+      const page = elements.container.ownerDocument.defaultView!;
+      return new Promise((resolve) => {
+        // Settles once: the command may select again, which activates again.
+        const finish = (result: () => AgentActionResult) => {
+          activated.delete(id);
+          page.clearTimeout(timer);
+          resolve(result());
+        };
+        const timer = page.setTimeout(
+          () => finish(() => unavailable),
+          AGENT_ACTIVATION_MS,
+        );
+        activated.set(id, {
+          shown: () => finish(run),
+          cancel: () => finish(() => unavailable),
+        });
+      });
+    },
+    cancelAgentCommands(id) {
+      for (const [key, waiter] of [...activated])
+        if (id === undefined || key === id) waiter.cancel();
     },
     setSessionTitle(sessionId, title) {
       if (disposed) return;

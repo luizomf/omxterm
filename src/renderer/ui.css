@@ -17,9 +17,10 @@
   --ui-decoration: color-mix(in srgb, var(--ui-surface), var(--ui-text) 18%);
   --ui-input-border: color-mix(in srgb, var(--ui-surface), var(--ui-text) 55%);
   --ui-secondary: color-mix(in srgb, var(--ui-surface), var(--ui-text) 75%);
-  /* The one accent: "something other than you can act here" (ADR 0052).
-     Derived like the focused-pane line, but a theme can't switch it off. */
-  --ui-accent: var(--terminal-accent, var(--ui-text));
+  /* The agent mark's tone: agents can do anything you can here (ADR 0052).
+     The theme's red, or the text when the red is too faint; a theme can't
+     switch it off. */
+  --ui-agent: var(--terminal-agent, var(--ui-text));
   /* Paint alpha belongs to backgrounds, never text or whole controls. */
   --ui-overlay: rgb(
     from var(--ui-surface) r g b / var(--terminal-background-opacity, 1)
@@ -301,10 +302,11 @@
 .state-marks .ui-mark {
   font-size: var(--terminal-font-size, 16px);
 }
-/* An agent grant's mark is the only accent glyph, on hover too. */
+/* An agent grant's mark is the only glyph with a tone of its own, on hover
+   too. */
 .ui-mark[data-glyph="agent"],
 .ui-mark.ui-icon-button[data-glyph="agent"]:is(:hover, :focus-visible) {
-  color: var(--ui-accent);
+  color: var(--ui-agent);
 }
 .ui-tab .ui-mark {
   margin-inline-end: var(--ui-space-1);

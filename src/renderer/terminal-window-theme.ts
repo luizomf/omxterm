@@ -1,5 +1,9 @@
 import type { TerminalTheme } from "../shared/terminal-theme";
-import { luminance, terminalPaneAccent } from "./terminal-pane-accent";
+import {
+  luminance,
+  terminalAgentTone,
+  terminalPaneAccent,
+} from "./terminal-pane-accent";
 
 // Window-owned paint uses the complete validated theme, independently of
 // Surface configuration and separator interaction/geometry owners.
@@ -29,9 +33,9 @@ export function applyWindowTheme(
     if (color === undefined) style.removeProperty(property);
     else style.setProperty(property, color === null ? "transparent" : color);
   }
-  // A consent mark can't be something a theme turns off, so the accent
-  // ignores activePaneHighlight.
-  style.setProperty("--terminal-accent", terminalPaneAccent(theme));
+  // A consent mark can't be something a theme turns off: its tone ignores
+  // activePaneHighlight.
+  style.setProperty("--terminal-agent", terminalAgentTone(theme));
   const highlight = appearance?.activePaneHighlight;
   style.setProperty(
     "--terminal-pane-accent",

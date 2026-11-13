@@ -1,6 +1,8 @@
 import {
   isTerminalSessionId,
+  isTerminalTabCommand,
   type TerminalSessionId,
+  type TerminalTabCommand,
 } from "./terminal-contract";
 import {
   hasOnlyKeys,
@@ -14,7 +16,8 @@ import {
 
 // Main ⇄ renderer contract for a window's agent grant (ADR 0052). The
 // renderer confirms the marks, stops the grant, answers reads and tab lists, and encodes
-// presses for a pane's modes (main writes the bytes). A grant
+// presses for a pane's modes (main writes the bytes), and runs the tab and pane
+// shortcuts an agent presses on the pane it names. A grant
 // starts only from the toggle action (menu, shortcut or Command Palette).
 export const agentIpc = {
   state: "agent:state",
@@ -26,6 +29,9 @@ export const agentIpc = {
   pressResult: "agent:press-result",
   tabs: "agent:tabs",
   tabsResult: "agent:tabs-result",
+  action: "agent:action",
+  actionResult: "agent:action-result",
+  actionCancel: "agent:action-cancel",
 } as const;
 
 /** Bounds for the window's tab tree, whatever the renderer sends. */
@@ -205,6 +211,91 @@ export function isAgentTabsResult(value: unknown): value is AgentTabsResult {
 }
 
 /**
+ * The tab and pane commands an agent's shortcut runs (#1050). Close Pane
+ * never carries a popup target: the pane it closes is the one the request
+ * names.
+ */
+export type AgentWindowCommand =
+  | Extract<
+      TerminalTabCommand,
+      {
+        action:
+          | "new"
+          | "close"
+          | "next"
+          | "previous"
+          | "select"
+          | "split"
+          | "focus-pane"
+          | "swap-pane"
+          | "equalize-panes";
+      }
+    >
+  | { readonly action: "close-pane" };
+
+const AGENT_WINDOW_ACTIONS = new Set<string>([
+  "new",
+  "close",
+  "next",
+  "previous",
+  "select",
+  "split",
+  "focus-pane",
+  "swap-pane",
+  "equalize-panes",
+  "close-pane",
+]);
+
+export function isAgentWindowCommand(
+  value: unknown,
+): value is AgentWindowCommand {
+  return (
+    isTerminalTabCommand(value) &&
+    AGENT_WINDOW_ACTIONS.has(value.action) &&
+    !(value.action === "close-pane" && "target" in value)
+  );
+}
+
+/** Focus this pane (selecting its tab), then run the command. */
+export interface AgentActionRequest {
+  readonly id: string;
+  readonly sessionId: TerminalSessionId;
+  readonly command: AgentWindowCommand;
+}
+
+export type AgentActionResult =
+  | { readonly id: string }
+  | { readonly id: string; readonly error: "unknown-pane" | "unavailable" };
+
+export function isAgentActionCancel(value: unknown): value is { id: string } {
+  return (
+    isPlainRecord(value) && hasOnlyKeys(value, ["id"]) && isReadId(value.id)
+  );
+}
+
+export function isAgentActionRequest(
+  value: unknown,
+): value is AgentActionRequest {
+  return (
+    isPlainRecord(value) &&
+    hasOnlyKeys(value, ["id", "sessionId", "command"]) &&
+    isReadId(value.id) &&
+    isTerminalSessionId(value.sessionId) &&
+    isAgentWindowCommand(value.command)
+  );
+}
+
+export function isAgentActionResult(
+  value: unknown,
+): value is AgentActionResult {
+  if (!isPlainRecord(value) || !isReadId(value.id)) return false;
+  return "error" in value
+    ? hasOnlyKeys(value, ["id", "error"]) &&
+        (value.error === "unknown-pane" || value.error === "unavailable")
+    : hasOnlyKeys(value, ["id"]);
+}
+
+/**
  * The last `lines` rows of exported text, without trailing spaces or the
  * blank rows below the cursor, cut at its start to the read limit.
  */
@@ -238,4 +329,8 @@ export interface AgentAccessBridge {
   pressResult(result: AgentPressResult): void;
   onTabs(listener: (request: AgentTabsRequest) => void): () => void;
   tabsResult(result: AgentTabsResult): void;
+  onAction(listener: (request: AgentActionRequest) => void): () => void;
+  actionResult(result: AgentActionResult): void;
+  /** Main stopped waiting for this action: drop it if it hasn't run. */
+  onActionCancel(listener: (id: string) => void): () => void;
 }

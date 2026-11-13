@@ -18,7 +18,7 @@ export const stateGlyphs = {
   // not been seen since.
   attention: "●",
   // Something other than the user can act here: an agent grant (ADR 0052).
-  // The only glyph in the accent tone.
+  // The only glyph with a tone of its own, the theme's error tone.
   agent: "◆",
 } as const;
 export type StateGlyph = keyof typeof stateGlyphs;
@@ -46,7 +46,7 @@ const NOTICE_TIMEOUT = 4000;
 export interface StateMarksWindow {
   panes(): readonly TerminalPane[];
   readonly corner: HTMLElement;
-  /** True while neither a pane nor a tab button can carry the marks. */
+  /** True while no pane can carry the marks and their click. */
   cornerShown(): boolean;
 }
 

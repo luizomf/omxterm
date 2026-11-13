@@ -512,3 +512,94 @@ it("retains Settings draft and focus, but activates it only after native hide", 
   expect(editor.value).toBe("retained draft");
   expect(document.activeElement).toBe(editor);
 });
+
+it("keeps the window's mark clickable over an extension tab, with or without the tab strip", async () => {
+  const h = harness();
+  await h.tabs.ready;
+  const stop = vi.fn();
+  h.tabs.setWindowMark("agent", {
+    glyph: "agent",
+    label: "Agents can do anything you can in this window.",
+    action: { label: "Click this mark to stop them.", run: stop },
+  });
+  h.open();
+  await settle();
+  // Every tab carries the glyph, but a tab button's can't be clicked.
+  expect(selectedStates(h.strip)).toEqual(["◆1:false", "◆view-a:true"]);
+  const corner = () =>
+    document.querySelector<HTMLButtonElement>(".state-marks-corner button");
+  expect(h.strip.hidden).toBe(false);
+  corner()!.click();
+  h.tabs.toggleTabBar();
+  expect(h.strip.hidden).toBe(true);
+  corner()!.click();
+  expect(stop).toHaveBeenCalledTimes(2);
+  h.tabs.handleCommand({ action: "previous" });
+  await settle();
+  expect(corner()).toBeNull();
+});
+
+it("lets an agent select an extension tab without taking native focus from another window", async () => {
+  const h = harness();
+  await h.tabs.ready;
+  h.open();
+  await settle();
+  h.tabs.handleCommand({ action: "previous" });
+  await settle();
+  const present = vi.mocked(h.bridge.present);
+  present.mockClear();
+  // The user is in another window.
+  vi.spyOn(document, "hasFocus").mockReturnValue(false);
+  await expect(
+    h.tabs.runSessionCommand("one", "s1", { action: "next" }),
+  ).resolves.toEqual({ id: "one" });
+  await settle();
+  expect(selectedStates(h.strip)).toEqual(["1:false", "view-a:true"]);
+  expect(present).toHaveBeenLastCalledWith(
+    expect.objectContaining({ id: "view-a", focus: false }),
+  );
+});
+
+it("runs an agent's command on a tab only once it shows, and never after giving up", async () => {
+  const h = harness();
+  await h.tabs.ready;
+  h.tabs.handleCommand({ action: "new" });
+  await vi.waitFor(() => expect(h.surfaces).toHaveLength(2));
+  h.open();
+  await settle();
+  // Leaving the extension's view waits for main to hide it.
+  const hidden = deferred<boolean>();
+  vi.mocked(h.bridge.present).mockImplementationOnce(() => hidden.promise);
+  const closing = h.tabs.runSessionCommand("one", "s1", {
+    action: "close-pane",
+  });
+  await settle();
+  expect(h.surfaces[0]!.dispose).not.toHaveBeenCalled();
+  hidden.resolve(true);
+  await expect(closing).resolves.toEqual({ id: "one" });
+  expect(h.surfaces[0]!.dispose).toHaveBeenCalledOnce();
+
+  h.tabs.handleCommand({ action: "select", position: 2 });
+  await settle();
+  expect(selectedStates(h.strip).at(-1)).toBe("view-a:true");
+  vi.useFakeTimers();
+  vi.mocked(h.bridge.present).mockImplementationOnce(
+    () => new Promise<boolean>(() => {}),
+  );
+  const late = h.tabs.runSessionCommand("two", "s2", { action: "close-pane" });
+  await vi.advanceTimersByTimeAsync(2000);
+  await expect(late).resolves.toEqual({ id: "two", error: "unavailable" });
+  expect(h.surfaces[1]!.dispose).not.toHaveBeenCalled();
+  vi.useRealTimers();
+});
+
+it("answers unavailable for an agent's command while a dialog holds the window", async () => {
+  let blocked = false;
+  const h = harness(() => !blocked);
+  await h.tabs.ready;
+  blocked = true;
+  await expect(
+    h.tabs.runSessionCommand("one", "s1", { action: "close-pane" }),
+  ).resolves.toEqual({ id: "one", error: "unavailable" });
+  expect(h.surfaces[0]!.dispose).not.toHaveBeenCalled();
+});

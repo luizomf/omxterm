@@ -17,10 +17,11 @@ const refusals: Readonly<Record<AgentRefusal, MessageKey>> = {
 };
 
 /**
- * The window's agent grant (ADR 0052): one accent mark on every pane and
- * tab while it lasts, a click on a pane's mark to stop it, the pane text
- * and tab list main asks for, and presses encoded for a pane's modes. Main admits agents
- * only after shown() confirms the marks.
+ * The window's agent grant (ADR 0052): one mark in the error tone on every
+ * pane and tab while it lasts, a click on a pane's mark to stop it, the pane
+ * text and tab list main asks for, presses encoded for a pane's modes, and
+ * the tab and pane shortcuts an agent presses. Main admits agents only after
+ * shown() confirms the marks.
  */
 export function subscribeToAgentAccess(
   bridge: AgentAccessBridge,
@@ -31,12 +32,22 @@ export function subscribeToAgentAccess(
     | "readSession"
     | "encodeSessionKeys"
     | "agentTabs"
+    | "runSessionCommand"
+    | "cancelAgentCommands"
   >,
 ): () => void {
   let granted = false;
+  // Commands may run only while this is true. The user's click clears it at
+  // once, before main hears of it, so nothing already handed over still runs.
+  let live = false;
+  const halt = () => {
+    live = false;
+    tabs.cancelAgentCommands();
+  };
   const removeState = bridge.onState((state) => {
     if (state.state === "off") {
       granted = false;
+      halt();
       tabs.setWindowMark("agent", undefined);
       if (state.refused) tabs.flash((t) => t(refusals[state.refused!]));
       return;
@@ -44,11 +55,18 @@ export function subscribeToAgentAccess(
     tabs.setWindowMark("agent", {
       glyph: "agent",
       label: (t) => t("agent.mark"),
-      action: { label: (t) => t("agent.clickToStop"), run: bridge.stop },
+      action: {
+        label: (t) => t("agent.clickToStop"),
+        run() {
+          halt();
+          bridge.stop();
+        },
+      },
     });
     if (state.state === "pending") bridge.shown();
     else if (!granted) tabs.flash((t) => t("agent.allowed"));
     granted = state.state === "granted";
+    live = granted;
   });
   const removeRead = bridge.onRead((request) =>
     bridge.readResult(
@@ -63,7 +81,27 @@ export function subscribeToAgentAccess(
   const removeTabs = bridge.onTabs((request) =>
     bridge.tabsResult(tabs.agentTabs(request.id)),
   );
+  const removeAction = bridge.onAction((request) => {
+    if (!live) {
+      bridge.actionResult({ id: request.id, error: "unavailable" });
+      return;
+    }
+    void tabs
+      .runSessionCommand(
+        request.id,
+        request.sessionId,
+        request.command,
+        () => live,
+      )
+      .then((result) => bridge.actionResult(result));
+  });
+  // Main gave up on a command (the agent went away, or time ran out).
+  const removeCancel = bridge.onActionCancel((id) =>
+    tabs.cancelAgentCommands(id),
+  );
   return () => {
+    removeCancel();
+    removeAction();
     removeTabs();
     removeState();
     removeRead();

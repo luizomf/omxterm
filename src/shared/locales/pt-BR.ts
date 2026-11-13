@@ -319,10 +319,10 @@ export const brazilianPortugueseMessages: Readonly<
   "attention.working": "Trabalhando.",
   "attention.pending": "Pediu sua atenção.",
   "attention.bell": "Tocou a campainha.",
-  "agent.mark": "Agentes podem controlar e ler esta janela.",
-  "agent.clickToStop": "Clique para parar.",
+  "agent.mark": "Agentes podem fazer tudo o que você faz nesta janela.",
+  "agent.clickToStop": "Clique nesta marca para pará-los.",
   "agent.allowed":
-    "Agentes agora podem controlar e ler esta janela. Clique em ◆ para parar.",
+    "Agentes agora podem fazer tudo o que você faz nesta janela. Clique em ◆ para pará-los.",
   "agent.refused.in-use": "Outro OMXTerm já atende agentes neste perfil.",
   "agent.refused.path-too-long":
     "O caminho da pasta deste perfil é longo demais para o socket dos agentes.",

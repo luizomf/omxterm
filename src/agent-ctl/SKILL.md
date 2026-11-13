@@ -1,14 +1,15 @@
 ---
 name: omxterm
-description: Drive the OMXTerm terminal window you run in. List its panes, type commands and press keys in them, read their output and wait for them. Use when OMXTERM_CTL is set and the user wants something run, watched or checked in another pane.
+description: Drive the OMXTerm terminal window you run in. List its tabs and panes, type commands and press keys in them, open, split and close tabs and panes with the window's shortcuts, read their output and wait for them. Use when OMXTERM_CTL is set and the user wants something run, watched or checked in another pane.
 ---
 
 # OMXTerm
 
 OMXTerm is a desktop terminal with no built-in AI. When the user chooses
 **Allow Agents in This Window** (Window menu or Command Palette), a program in
-that window, like you, can list its panes, type and press keys in them, read
-them and wait for them. Every pane then shows ◆; the user clicks it to stop.
+that window, like you, can do anything the user can there: list its tabs and
+panes, type and press keys and shortcuts in them, read them and wait for them.
+Every pane then shows ◆; the user clicks it to stop you.
 
 ## Are you inside OMXTerm?
 
@@ -35,6 +36,7 @@ they did. Don't look for another way in.
 "$OMXTERM_CTL" wait s2 --idle 2000 --timeout 60000
 "$OMXTERM_CTL" send s2 --keys Ctrl+C    # interrupt
 "$OMXTERM_CTL" press s2 Down Down Enter # move in a menu, then choose
+"$OMXTERM_CTL" press s2 Cmd+T           # new tab, as the user's shortcut (Linux: Ctrl+Shift+T)
 ```
 
 - `send --text … --enter --wait` is the reliable way to run a command: it
@@ -60,8 +62,20 @@ they did. Don't look for another way in.
   `PageUp`, `PageDown`, `Insert`, `Delete`, `F1` to `F12`, `Enter`, `Tab`,
   `Escape`, `Backspace` and `Space`, each with any of `Ctrl+`, `Alt+` and
   `Shift+` (`Ctrl+Shift+Up`). They arrive exactly as the user's own keys
-  would. `press` never runs OMXTerm's shortcuts: every key goes to the pane.
-  To see what a key did, `read` the pane.
+  would. To see what a key did, `read` the pane.
+- `press` with one of the window's tab or pane shortcuts runs it on the pane
+  you name, as if the user clicked that pane and pressed it: new, close, next,
+  previous and select tab, split, close pane, focus and swap panes, equalize.
+  The defaults are `Cmd+T`, `Cmd+W`, `Cmd+D`, `Cmd+Shift+E`, `Cmd+Alt+W`,
+  `Cmd+1` … on macOS and `Ctrl+Shift+T`, `Ctrl+Shift+W`, `Ctrl+Shift+O`,
+  `Ctrl+Shift+E`, `Ctrl+Shift+K`, `Alt+1` … on Linux, unless the user rebound
+  them. Press a shortcut on its own; it prints the action and the pane. Then
+  `list` to see the result. A new tab or pane starts the user's shell.
+- Closing a pane or tab whose program is still running answers that it needs
+  the user, and nothing closes: ask them. Closing the last tab closes the
+  window and ends your access. The shortcut that allows or stops agents is
+  refused, and the Command Palette, Find and the Snippets, Files and SSH
+  Connect panels answer "not yet".
 - Pane ids such as `s2` come from `list` and last as long as the grant.
 - Sends to the same pane at the same time arrive in no guaranteed order. Send
   one at a time.

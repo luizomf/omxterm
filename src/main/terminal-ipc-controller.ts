@@ -900,6 +900,11 @@ function createTerminalIpcController(
     claimContextMenuTarget: contextMenu.claim,
     hasBusyFocusedSession: selection.hasBusyFocusedSession,
     hasBusySession,
+    hasBusySessionAmong: (sessionIds) =>
+      sessionIds.some((sessionId) => {
+        const state = sessions.get(sessionId);
+        return state !== undefined && isBusy(state);
+      }),
     ...clipboardRequests(
       {
         ...options,

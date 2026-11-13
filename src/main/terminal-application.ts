@@ -10,6 +10,7 @@ import type {
   TerminalClipboardAction,
   TerminalContextMenuTarget,
   TerminalExportContext,
+  TerminalSessionId,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
 import type {
@@ -22,6 +23,10 @@ import type { RestorationWindowOptions } from "./terminal-layout-transfer";
 import { createSelectedWindowAction } from "./terminal-window-action";
 
 export const DEFAULT_CONFIRM_CLOSE = true;
+
+// Why an agent's close is left to the user: a Busy Session would ask to
+// confirm, the user is already confirming a close, or the window is going.
+export type AgentCloseBlock = "busy" | "confirming" | "closing";
 export const DEFAULT_ALWAYS_ON_TOP = false;
 
 export interface NativeTerminalWindow {
@@ -65,6 +70,8 @@ export interface TerminalSessionActivity {
   hasBusyFocusedSession?(): boolean;
   claimContextMenuTarget?(target: TerminalContextMenuTarget): boolean;
   hasBusySession(): boolean;
+  // Any Busy Session among these, wherever they are (an agent's close).
+  hasBusySessionAmong?(sessionIds: readonly TerminalSessionId[]): boolean;
 }
 
 interface TerminalWindowInstance<Window extends NativeTerminalWindow> {
@@ -133,6 +140,10 @@ export interface TerminalApplication<
   closeSelectedWindow(): Promise<void>;
   requestWindowClose(window: Window): Promise<void>;
   mayCloseWindow(window: Window): boolean;
+  agentCloseNeedsUser(
+    window: Window,
+    sessionIds: readonly TerminalSessionId[],
+  ): AgentCloseBlock | undefined;
   forceCloseWindow(window: Window): void;
   requestQuit(): Promise<void>;
   newTabInSelectedWindow(): void;
@@ -347,6 +358,8 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
         !state.sessionActivity.hasBusySession()
       );
     },
+    agentCloseNeedsUser: (window, ids) =>
+      agentCloseNeedsUser(window, windows, confirmCloseEnabled, ids),
     forceCloseWindow,
     requestQuit() {
       if (quitting) return Promise.resolve();
@@ -433,6 +446,25 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     },
     isQuitting: () => quitting,
   };
+}
+
+// An agent's close never raises the Busy Session confirmation (ADR 0052):
+// with confirmClose on, a Busy Session among the panes it would close, or a
+// close the user is already confirming, leaves it to the user.
+function agentCloseNeedsUser<Window extends NativeTerminalWindow>(
+  window: Window,
+  windows: ReadonlyMap<Window, TerminalWindowState>,
+  confirmClose: boolean,
+  sessionIds: readonly TerminalSessionId[],
+): AgentCloseBlock | undefined {
+  const state = windows.get(window);
+  if (!state || window.isDestroyed()) return "closing";
+  if (state.closeRequest || state.tabCloseRequest) return "confirming";
+  if (!confirmClose) return undefined;
+  return (state.sessionActivity.hasBusySessionAmong?.(sessionIds) ??
+    state.sessionActivity.hasBusySession())
+    ? "busy"
+    : undefined;
 }
 
 function confirmTabClose<Window extends NativeTerminalWindow>(

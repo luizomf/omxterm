@@ -6,6 +6,7 @@ import {
 import type {
   AgentAccessBridge,
   AgentAccessState,
+  AgentActionRequest,
   AgentPressRequest,
   AgentReadRequest,
   AgentTabsRequest,
@@ -18,6 +19,8 @@ function bridge() {
   let read: ((value: AgentReadRequest) => void) | undefined;
   let press: ((value: AgentPressRequest) => void) | undefined;
   let tabsListener: ((value: AgentTabsRequest) => void) | undefined;
+  let action: ((value: AgentActionRequest) => void) | undefined;
+  let cancel: ((id: string) => void) | undefined;
   const value = {
     onState: vi.fn((listener: (value: AgentAccessState) => void) => {
       state = listener;
@@ -40,6 +43,15 @@ function bridge() {
       return () => (tabsListener = undefined);
     }),
     tabsResult: vi.fn(),
+    onAction: vi.fn((listener: (value: AgentActionRequest) => void) => {
+      action = listener;
+      return () => (action = undefined);
+    }),
+    actionResult: vi.fn(),
+    onActionCancel: vi.fn((listener: (id: string) => void) => {
+      cancel = listener;
+      return () => (cancel = undefined);
+    }),
   } satisfies AgentAccessBridge;
   return {
     bridge: value,
@@ -47,11 +59,15 @@ function bridge() {
     read: (next: AgentReadRequest) => read?.(next),
     press: (next: AgentPressRequest) => press?.(next),
     tabs: (next: AgentTabsRequest) => tabsListener?.(next),
+    action: (next: AgentActionRequest) => action?.(next),
+    cancel: (id: string) => cancel?.(id),
     subscribed: () =>
       state !== undefined ||
       read !== undefined ||
       press !== undefined ||
-      tabsListener !== undefined,
+      tabsListener !== undefined ||
+      action !== undefined ||
+      cancel !== undefined,
   };
 }
 
@@ -63,9 +79,11 @@ const fakeTabs = () => ({
   readSession: vi.fn(),
   encodeSessionKeys: vi.fn(),
   agentTabs: vi.fn(),
+  runSessionCommand: vi.fn(),
+  cancelAgentCommands: vi.fn(),
 });
 
-it("shows the accent mark before confirming, flashes once and stops on click", () => {
+it("shows the mark before confirming, flashes once and stops on click", () => {
   const main = bridge();
   const tabs = fakeTabs();
   const unsubscribe = subscribeToAgentAccess(main.bridge, tabs);
@@ -81,8 +99,12 @@ it("shows the accent mark before confirming, flashes once and stops on click", (
 
   main.state({ state: "granted" });
   expect(tabs.flash.mock.calls.map(([text]) => say(text))).toEqual([
-    "Agents can now control and read this window. Click ◆ to stop.",
+    "Agents can now do anything you can in this window. Click ◆ to stop them.",
   ]);
+  expect(say(mark!.label)).toBe(
+    "Agents can do anything you can in this window.",
+  );
+  expect(say(mark!.action!.label)).toBe("Click this mark to stop them.");
   mark?.action?.run();
   expect(main.bridge.stop).toHaveBeenCalledOnce();
 
@@ -111,6 +133,8 @@ it("answers main's reads with the pane's text", () => {
     readSession: vi.fn(() => result),
     encodeSessionKeys: vi.fn(),
     agentTabs: vi.fn(),
+    runSessionCommand: vi.fn(),
+    cancelAgentCommands: vi.fn(),
   };
   subscribeToAgentAccess(main.bridge, tabs);
   main.read({ id: result.id, sessionId: "s2", lines: 5 });
@@ -130,6 +154,58 @@ it("answers main's tab requests with the window's tabs", () => {
   main.tabs({ id });
   expect(tabs.agentTabs).toHaveBeenCalledWith(id);
   expect(main.bridge.tabsResult).toHaveBeenCalledWith(result);
+});
+
+it("runs main's shortcut actions only while granted, and never after the user's click", async () => {
+  const main = bridge();
+  const id = "00000000-0000-0000-0000-000000000009";
+  const tabs = {
+    ...fakeTabs(),
+    runSessionCommand: vi.fn(
+      async (
+        _id: string,
+        _session: string,
+        _command: unknown,
+        allowed?: () => boolean,
+      ) => (allowed?.() === false ? { id, error: "unavailable" } : { id }),
+    ),
+  };
+  subscribeToAgentAccess(main.bridge, tabs as never);
+  const close = { id, sessionId: "s3", command: { action: "close-pane" } };
+  // Before the grant, nothing runs.
+  main.action(close as never);
+  expect(tabs.runSessionCommand).not.toHaveBeenCalled();
+  expect(main.bridge.actionResult).toHaveBeenLastCalledWith({
+    id,
+    error: "unavailable",
+  });
+
+  main.state({ state: "granted" });
+  main.action(close as never);
+  expect(tabs.runSessionCommand).toHaveBeenCalledWith(
+    id,
+    "s3",
+    { action: "close-pane" },
+    expect.any(Function),
+  );
+  await vi.waitFor(() =>
+    expect(main.bridge.actionResult).toHaveBeenLastCalledWith({ id }),
+  );
+  const allowed = tabs.runSessionCommand.mock.calls[0]![3]!;
+  expect(allowed()).toBe(true);
+
+  // The click stops everything at once, before main answers.
+  const [, mark] = tabs.setWindowMark.mock.calls.at(-1)!;
+  mark!.action!.run();
+  expect(allowed()).toBe(false);
+  expect(tabs.cancelAgentCommands).toHaveBeenCalled();
+  expect(main.bridge.stop).toHaveBeenCalledOnce();
+  main.action(close as never);
+  expect(tabs.runSessionCommand).toHaveBeenCalledOnce();
+
+  // Main giving up on one action drops that one.
+  main.cancel(id);
+  expect(tabs.cancelAgentCommands).toHaveBeenLastCalledWith(id);
 });
 
 it("answers main's presses with the pane's encoded bytes", () => {

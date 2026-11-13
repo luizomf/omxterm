@@ -173,7 +173,14 @@ export function useAgentHarness() {
     };
   }
 
-  function setup(platform: NodeJS.Platform = process.platform) {
+  function setup(
+    platform: NodeJS.Platform = process.platform,
+    shortcuts: Pick<Parameters<typeof startAgentAccess>[0], "shortcut"> & {
+      closeNeedsUser?: (
+        sessionIds: readonly string[],
+      ) => "busy" | "confirming" | "closing" | undefined;
+    } = {},
+  ) {
     const profile = mkdtempSync(path.join(scratch, "p"));
     const ipc = createIpcHarness();
     const contents = Object.assign(new EventEmitter(), {
@@ -195,10 +202,11 @@ export function useAgentHarness() {
       platform,
       operationalEvents: { write },
       changed,
+      ...(shortcuts.shortcut ? { shortcut: shortcuts.shortcut } : {}),
     });
     cleanups.push(() => access.dispose());
     const port = sessions();
-    access.register(window, 1, port);
+    access.register(window, 1, port, shortcuts.closeNeedsUser);
     const states = () =>
       contents.send.mock.calls
         .filter(([channel]) => channel === agentIpc.state)

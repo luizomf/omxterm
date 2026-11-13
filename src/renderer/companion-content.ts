@@ -305,6 +305,7 @@ export function createCompanionContent(
       tab: ApplicationTab,
       activate: (focusAllowed?: boolean) => void,
       passive: boolean,
+      nativeFocus = true,
     ) {
       panel?.cancelDefaultOpen();
       application = tab;
@@ -320,7 +321,11 @@ export function createCompanionContent(
           activateApplication(focusAllowed);
         },
         tab,
-        tab.kind === "terminal" && target ? (passive ? false : "core") : true,
+        tab.kind === "terminal" && target
+          ? passive
+            ? false
+            : "core"
+          : nativeFocus,
       );
     },
     dialogShown: dialogs.shown,

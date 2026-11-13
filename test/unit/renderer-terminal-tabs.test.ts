@@ -419,6 +419,28 @@ describe("renderer Terminal Tabs for agents", () => {
       ids.toReversed(),
     );
   });
+
+  it("runs an agent's shortcut on the pane it names, selecting that pane's tab first", async () => {
+    const harness = createTabsHarness();
+    await harness.tabs.ready;
+    harness.tabs.handleCommand({ action: "new" });
+    await vi.waitFor(() => expect(harness.surfaces).toHaveLength(2));
+    expect(selectedStates(harness.strip)).toEqual(["1:false", "2:true"]);
+
+    // s1 sits in the hidden first tab: the close lands there, not on s2.
+    await expect(
+      harness.tabs.runSessionCommand("one", "s1", { action: "close" }),
+    ).resolves.toEqual({ id: "one" });
+    expect(harness.surfaces[0]!.dispose).toHaveBeenCalledOnce();
+    expect(harness.surfaces[1]!.dispose).not.toHaveBeenCalled();
+
+    // An unknown pane runs nothing.
+    await expect(
+      harness.tabs.runSessionCommand("two", "s9", { action: "close" }),
+    ).resolves.toEqual({ id: "two", error: "unknown-pane" });
+    expect(harness.surfaces[1]!.dispose).not.toHaveBeenCalled();
+    harness.tabs.dispose();
+  });
 });
 
 describe("renderer Terminal Tabs fatal Surface isolation", () => {

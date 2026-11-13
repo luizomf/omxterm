@@ -16,7 +16,9 @@ export function deferred<T>() {
   });
   return { promise, resolve };
 }
-export async function fixture() {
+export async function fixture(
+  window: Pick<Parameters<typeof snippetsWindow>[0] & object, "attention"> = {},
+) {
   const opens = new Set<(descriptor: HostedContentDescriptor) => void>();
   const retired = new Set<(id: string) => void>();
   const focuses = new Set<(id: string | null) => void>();
@@ -58,7 +60,7 @@ export async function fixture() {
     close: vi.fn(async () => {}),
   };
   const sshPane = vi.fn();
-  const f = await snippetsWindow({ hostedContent: bridge, sshPane });
+  const f = await snippetsWindow({ hostedContent: bridge, sshPane, ...window });
   return {
     ...f,
     bridge,

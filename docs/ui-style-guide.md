@@ -38,7 +38,7 @@ no separate rules.
 | `--ui-decoration`                                             | text at 18 %                              | hairlines                               |
 | `--ui-input-border`                                           | text at 55 %                              | field borders, scrollbars               |
 | `--ui-secondary`                                              | text at 75 %                              | secondary text                          |
-| `--ui-accent`                                                 | theme cyan, or foreground when too faint  | the agent grant's mark, nothing else    |
+| `--ui-agent`                                                  | theme red, or foreground when too faint   | the agent grant's mark, nothing else    |
 | `--ui-overlay`                                                | surface at window opacity                 | overlay surface                         |
 | `--ui-font`, `--ui-font-mono`                                 | `system-ui`, `ui-monospace`               | all chrome; mono only for keys and code |
 | `--ui-text-meta/chrome/body/title`                            | 12 / 13 / 14 / 18 px                      | metadata, chrome, body, page titles     |
@@ -136,8 +136,8 @@ a strip, badge or color of your own. Pick the quietest tier that works:
   1), repeated once before the
   title on its tab when the tab strip shows. A window-wide state
   (`setWindow()`, an agent grant) marks every pane and tab, and the page's
-  top-right corner when neither shows. Only the agent grant's `◆` takes
-  `--ui-accent`, because it means something other than you can act here;
+  top-right corner when no pane shows. Only the agent grant's `◆` takes a
+  tone, `--ui-agent`, because it means agents can do anything you can here;
 - a surprise (paste stopped mirroring): `flash()`, one `ui-overlay` sentence at
   the bottom right that goes away after 4 s;
 - something that needs the user: `notify()`, one sentence without counts and a

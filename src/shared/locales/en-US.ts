@@ -306,10 +306,10 @@ export const englishMessages = {
   "attention.working": "Working.",
   "attention.pending": "Asked for your attention.",
   "attention.bell": "Rang the bell.",
-  "agent.mark": "Agents can control and read this window.",
-  "agent.clickToStop": "Click to stop.",
+  "agent.mark": "Agents can do anything you can in this window.",
+  "agent.clickToStop": "Click this mark to stop them.",
   "agent.allowed":
-    "Agents can now control and read this window. Click ◆ to stop.",
+    "Agents can now do anything you can in this window. Click ◆ to stop them.",
   "agent.refused.in-use":
     "Another OMXTerm is already serving agents for this profile.",
   "agent.refused.path-too-long":

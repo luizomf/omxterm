@@ -189,6 +189,7 @@ export interface TerminalIpcController {
   claimContextMenuTarget(target: TerminalContextMenuTarget): boolean;
   hasBusyFocusedSession(): boolean;
   hasBusySession(): boolean;
+  hasBusySessionAmong(sessionIds: readonly TerminalSessionId[]): boolean;
   dispose(): void;
 }
 

@@ -156,3 +156,45 @@ it("passes only valid tab requests and bounded tab trees", () => {
     [agentIpc.tabsResult, { id, error: "failed" }],
   ]);
 });
+
+it("passes only the tab and pane commands a shortcut runs, never a popup's close", () => {
+  const listeners = new Map<
+    string,
+    (event: unknown, payload: unknown) => void
+  >();
+  const ipc = {
+    send: vi.fn(),
+    on: vi.fn(
+      (channel: string, listener: (event: unknown, payload: unknown) => void) =>
+        listeners.set(channel, listener),
+    ),
+    removeListener: vi.fn(),
+  };
+  const bridge = createAgentBridge(ipc as never);
+  const requests: unknown[] = [];
+  bridge.onAction((request) => requests.push(request));
+  const id = "00000000-0000-0000-0000-000000000008";
+  for (const command of [
+    { action: "open-extension", token: "00000000-0000-0000-0000-000000000001" },
+    { action: "close-pane", target: { sessionId: "s1", menuId: 1 } },
+    { action: "resolve-close", confirmed: true },
+    { action: "split", direction: "left" },
+    { action: "close-pane" },
+    { action: "select", position: 2 },
+  ])
+    listeners.get(agentIpc.action)!({}, { id, sessionId: "s1", command });
+  expect(requests).toEqual([
+    { id, sessionId: "s1", command: { action: "close-pane" } },
+    { id, sessionId: "s1", command: { action: "select", position: 2 } },
+  ]);
+
+  bridge.actionResult({ id });
+  bridge.actionResult({ id, error: "unknown-pane" });
+  expect(() => bridge.actionResult({ id, error: "failed" } as never)).toThrow(
+    TypeError,
+  );
+  expect(ipc.send.mock.calls).toEqual([
+    [agentIpc.actionResult, { id }],
+    [agentIpc.actionResult, { id, error: "unknown-pane" }],
+  ]);
+});

@@ -41,6 +41,9 @@ export const AGENT_ERROR_CODES = [
   "too-large",
   "limit",
   "unavailable",
+  "refused",
+  "not-yet",
+  "needs-user",
 ] as const;
 export type AgentErrorCode = (typeof AGENT_ERROR_CODES)[number];
 

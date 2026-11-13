@@ -11,6 +11,8 @@ function createWindowHarness(lifecycle: TerminalWindowLifecycle) {
   let alwaysOnTop = false;
   // Sessions count as Busy by default so confirmation tests exercise dialogs.
   const busy = { selected: true, any: true };
+  // Busy sessions by id, for an agent's close of named panes.
+  const busySessions = new Set<string>();
   const closeSession = vi.fn();
   const setFullScreen = vi.fn((value: boolean) => {
     fullScreen = value;
@@ -42,7 +44,10 @@ function createWindowHarness(lifecycle: TerminalWindowLifecycle) {
     sessionActivity: {
       hasBusySelectedSession: () => busy.selected,
       hasBusySession: () => busy.any,
+      hasBusySessionAmong: (ids: readonly string[]) =>
+        ids.some((id) => busySessions.has(id)),
     },
+    busySessions,
     setBusy(value: boolean) {
       busy.selected = value;
       busy.any = value;
@@ -834,5 +839,35 @@ describe("Terminal application window actions", () => {
 
     expect(harness.showQuitConfirmation).toHaveBeenCalledOnce();
     expect(harness.quit).toHaveBeenCalledOnce();
+  });
+
+  it("leaves an agent's close of a Busy Session, or one under confirmation, to the user", async () => {
+    const harness = createApplicationHarness();
+    await harness.application.newWindow();
+    const { window, busySessions } = harness.windows[0]!;
+    busySessions.add("s2");
+    const needsUser = (...ids: `s${number}`[]) =>
+      harness.application.agentCloseNeedsUser(window, ids);
+
+    // Only the named panes count, wherever the user's focus is.
+    expect(needsUser("s1")).toBeUndefined();
+    expect(needsUser("s1", "s2")).toBe("busy");
+
+    // A Close Tab the user is confirming keeps every agent close waiting.
+    const confirmation = deferred<boolean>();
+    harness.showCloseTabConfirmation.mockReturnValueOnce(confirmation.promise);
+    harness.select(window);
+    const closing = harness.application.closeSelectedTab();
+    expect(needsUser("s1")).toBe("confirming");
+    confirmation.resolve(false);
+    await closing;
+    expect(needsUser("s1")).toBeUndefined();
+
+    // With confirmClose off, a Busy Session closes as the user's press would.
+    harness.application.applyConfiguration({
+      confirmClose: false,
+      alwaysOnTopDefault: false,
+    });
+    expect(needsUser("s2")).toBeUndefined();
   });
 });
