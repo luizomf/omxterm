@@ -72,11 +72,15 @@ export function isAgentAccessState(value: unknown): value is AgentAccessState {
   );
 }
 
-export interface AgentReadRequest {
+/** What a read asks of a pane: its last `lines`, or its active screen. */
+export type AgentPaneRead =
+  | { readonly source: "tail"; readonly lines: number }
+  | { readonly source: "screen" };
+
+export type AgentReadRequest = {
   readonly id: string;
   readonly sessionId: TerminalSessionId;
-  readonly lines: number;
-}
+} & AgentPaneRead;
 
 export type AgentReadResult =
   | {
@@ -92,11 +96,17 @@ const isReadId = (value: unknown): value is string =>
   typeof value === "string" && /^[0-9a-f-]{36}$/u.test(value);
 
 export function isAgentReadRequest(value: unknown): value is AgentReadRequest {
+  if (
+    !isPlainRecord(value) ||
+    !isReadId(value.id) ||
+    !isTerminalSessionId(value.sessionId)
+  )
+    return false;
+  if (value.source === "screen")
+    return hasOnlyKeys(value, ["id", "sessionId", "source"]);
   return (
-    isPlainRecord(value) &&
-    hasOnlyKeys(value, ["id", "sessionId", "lines"]) &&
-    isReadId(value.id) &&
-    isTerminalSessionId(value.sessionId) &&
+    value.source === "tail" &&
+    hasOnlyKeys(value, ["id", "sessionId", "source", "lines"]) &&
     Number.isSafeInteger(value.lines) &&
     (value.lines as number) >= 1 &&
     (value.lines as number) <= MAX_AGENT_READ_LINES
@@ -319,6 +329,17 @@ export function isAgentActionResult(
     : hasOnlyKeys(value, ["id"]);
 }
 
+const trimmedRows = (text: string) =>
+  text.split(/\r?\n/u).map((row) => row.replace(/[ \t]+$/u, ""));
+
+// Cut at its start to the read limit, never on half of a surrogate pair.
+function readLimit(text: string): { text: string; truncated: boolean } {
+  if (text.length <= MAX_AGENT_READ_CHARS) return { text, truncated: false };
+  let cut = text.slice(text.length - MAX_AGENT_READ_CHARS);
+  if (/^[\uDC00-\uDFFF]/u.test(cut)) cut = cut.slice(1);
+  return { text: cut, truncated: true };
+}
+
 /**
  * The last `lines` rows of exported text, without trailing spaces or the
  * blank rows below the cursor, cut at its start to the read limit.
@@ -327,17 +348,20 @@ export function agentTail(
   text: string,
   lines: number,
 ): { text: string; truncated: boolean } {
-  const rows = text.split(/\r?\n/u).map((row) => row.replace(/[ \t]+$/u, ""));
+  const rows = trimmedRows(text);
   while (rows.length > 0 && rows.at(-1) === "") rows.pop();
-  let tail = rows.slice(-lines).join("\n");
-  let truncated = false;
-  if (tail.length > MAX_AGENT_READ_CHARS) {
-    tail = tail.slice(tail.length - MAX_AGENT_READ_CHARS);
-    // Never start on half of a surrogate pair.
-    if (/^[\uDC00-\uDFFF]/u.test(tail)) tail = tail.slice(1);
-    truncated = true;
-  }
-  return { text: tail, truncated };
+  return readLimit(rows.slice(-lines).join("\n"));
+}
+
+/**
+ * Every row of the active screen, blank ones included, without trailing
+ * spaces, cut at its start to the read limit.
+ */
+export function agentScreen(text: string): {
+  text: string;
+  truncated: boolean;
+} {
+  return readLimit(trimmedRows(text).join("\n"));
 }
 
 /** The window's side of the grant, exposed by preload. */

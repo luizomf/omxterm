@@ -4,7 +4,8 @@ The wire protocol and CLI of
 [ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slices 1
 and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
-and its [MCP server](#mcp). From slice 4, the tab tree in
+and its [MCP server](#mcp). From slice 3, the exact `screen` source of
+[`read`](#read-tail-and-screen) is implemented. From slice 4, the tab tree in
 [`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
 named keys and the window's shortcuts, and [`keys`](#keys-slice-4), are implemented. Each later
 command says which slice of the ADR's plan it belongs to; until then, names
@@ -180,7 +181,7 @@ pane's mode, and shortcuts, are [`press`](#press-slice-4).
 partly happened; it is never retried). A refused write is the error
 `not-live`.
 
-### `read` (tail in slice 1; exact screen in slice 3)
+### `read` (tail and screen)
 
 ```json
 { "id": 4, "cmd": "read", "args": { "pane": "s1", "lines": 200 } }
@@ -192,10 +193,14 @@ partly happened; it is never retried). A refused write is the error
   includes output from before the grant. A tail longer than 2 MiB of text is
   cut at its start and answers `"truncated": true`. The read first waits up
   to 1 s for the window to consume what main already sent.
-- `screen` (slice 3): exactly the active screen's rows, wherever the user
-  scrolled.
+- `screen`: exactly the active screen's rows, one line per row, blank rows
+  included, wherever the user scrolled the pane's view. A line that wraps
+  reads as one line per row it takes. It takes no `lines`; with `lines` it
+  answers `invalid-request`. Reading doesn't move the user's scroll position,
+  selection or cursor. The read first waits up to 1 s like a tail.
 - Text only, trailing spaces trimmed per row. The alternate screen reads only
   its own contents.
+- Any other `source` answers `invalid-request`.
 
 ```json
 { "text": "…", "cols": 120, "rows": 32, "offset": 51877, "truncated": false }
@@ -401,7 +406,7 @@ omxterm-ctl send s1 --keys Ctrl+C
 omxterm-ctl wait s1 --after 48211 --idle 800 --timeout 120000
 omxterm-ctl wait s1 --match 'Tests passed' --timeout 120000   # slice 3
 omxterm-ctl read s1 --lines 200
-omxterm-ctl read s1 --screen               # slice 3
+omxterm-ctl read s1 --screen               # the screen's rows, one line each
 omxterm-ctl press s1 Down Down Enter       # slice 4
 omxterm-ctl press s3 Cmd+Alt+W             # slice 4: closePane on s3
 omxterm-ctl keys                           # slice 4: chords press runs
@@ -449,7 +454,7 @@ as Codex does). It offers tools only.
 | `list`   | `window?`                                                                          |
 | `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `timeout?`, `window?` |
 | `press`  | `pane`, `keys` (list), `window?`                                                   |
-| `read`   | `pane`, `lines?`, `window?`                                                        |
+| `read`   | `pane`, `lines?`, `screen?`, `window?`                                             |
 | `wait`   | `pane`, `after?`, `idle?`, `timeout?`, `window?`                                   |
 
 | `keys` | `window?` |
@@ -516,7 +521,7 @@ instead.
 | Client and launcher      | `src/agent-ctl/` (built to `dist/agent-ctl/`, packaged under `resources/agent-ctl/`)                       |
 | Agent guide              | `src/agent-ctl/SKILL.md`, bundled into the client as text                                                  |
 | MCP server               | `src/agent-ctl/mcp.ts`, over the CLI's commands in `src/agent-ctl/commands.ts`                             |
-| Screen-only read         | slice 3: one runtime accessor beside `scripts/restty-buffer-text-corrections.mjs`                          |
+| Screen-only read         | `getScreenText` in `scripts/restty-buffer-text-corrections.mjs`, through the Surface's `readScreen()`      |
 | Shortcuts for `press`    | `src/main/agent-shortcuts.ts`, `keyboardInputForAccelerator()` in `src/shared/terminal-keybinds.ts`        |
 | Running them in a window | `runSessionCommand` in `src/renderer/terminal-tabs.ts`; `agentCloseNeedsUser` in `terminal-application.ts` |
 | Mode-aware key encoding  | `encodeKeyPress` in `scripts/restty-key-press-corrections.mjs`, through the Surface and `terminal-tabs.ts` |

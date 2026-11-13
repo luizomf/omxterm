@@ -64,7 +64,10 @@ posix(
     await ctl(profile, ["send", "s2", "--text", "ls -la", "--enter"], pane);
     expect(port.writes).toEqual([["s2", "ls -la\r"]]);
     expect((await ctl(profile, ["read", "s2"], pane)).stdout).toBe(
-      "text of s2\n",
+      "tail of s2\n",
+    );
+    expect((await ctl(profile, ["read", "s2", "--screen"], pane)).stdout).toBe(
+      "screen of s2\n",
     );
     expect((await ctl(profile, ["read", "2:s2"], pane)).code).toBe(2);
   },

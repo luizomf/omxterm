@@ -39,3 +39,61 @@ export const bufferTextCorrections = [
     scrollToBottom: interaction.scrollToBottom,`,
   },
 ];
+
+// An agent's screen read (ADR 0052): the active screen's rows, one line per
+// row, wherever the viewport is scrolled, through the same read-only core
+// selection text as getBufferText. A row's own read that ends on the cell
+// holding the place of a wide character wrapped to the next row also returns
+// that character, so each row but the last is taken from the read of it and
+// the next row, minus the next row's own read. null while the core can't
+// answer.
+export const screenTextCorrections = [
+  {
+    original: `    return wasm.getSelectionText(wasmHandle, -viewportOffset, 0, totalRows - viewportOffset - 1, renderState.cols - 1);
+  };
+  const selectWordAtClientPoint = (clientX, clientY) => {`,
+    corrected: `    return wasm.getSelectionText(wasmHandle, -viewportOffset, 0, totalRows - viewportOffset - 1, renderState.cols - 1);
+  };
+  const getScreenText = () => {
+    const wasm = getWasm();
+    const wasmExports = getWasmExports();
+    const wasmHandle = getWasmHandle();
+    // The core's grid changes only on render_update; commitTerminalResize
+    // keeps resize and renderUpdate together, so these match the screen.
+    const rows = wasmHandle ? wasmExports?.restty_rows?.(wasmHandle) ?? 0 : 0;
+    const cols = wasmHandle ? wasmExports?.restty_cols?.(wasmHandle) ?? 0 : 0;
+    // A core that isn't ready has no screen to read, not an empty one.
+    if (!wasm || !wasmHandle || rows <= 0 || cols <= 0)
+      return null;
+    const totalRows = wasmExports?.restty_scrollbar_total?.(wasmHandle) ?? rows;
+    const viewportOffset = wasmExports?.restty_scrollbar_offset?.(wasmHandle) ?? 0;
+    const top = totalRows - rows - viewportOffset;
+    const read = (first, last) => wasm.getSelectionText(wasmHandle, top + first, 0, top + last, cols - 1);
+    const lines = new Array(rows);
+    let next = read(rows - 1, rows - 1);
+    lines[rows - 1] = next;
+    for (let row = rows - 2; row >= 0; row -= 1) {
+      const own = read(row, row);
+      const pair = read(row, row + 1);
+      lines[row] = pair.endsWith(next) ? pair.slice(0, pair.length - next.length).replace(/\\n$/u, "") : own;
+      next = own;
+    }
+    return lines.join("\\n");
+  };
+  const selectWordAtClientPoint = (clientX, clientY) => {`,
+  },
+  {
+    original: `    getBufferText,
+    selectWordAtClientPoint,`,
+    corrected: `    getBufferText,
+    getScreenText,
+    selectWordAtClientPoint,`,
+  },
+  {
+    original: `    getBufferText: interaction.getBufferText,
+    scrollToBottom: interaction.scrollToBottom,`,
+    corrected: `    getBufferText: interaction.getBufferText,
+    getScreenText: interaction.getScreenText,
+    scrollToBottom: interaction.scrollToBottom,`,
+  },
+];

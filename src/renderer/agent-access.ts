@@ -70,7 +70,13 @@ export function subscribeToAgentAccess(
   });
   const removeRead = bridge.onRead((request) =>
     bridge.readResult(
-      tabs.readSession(request.id, request.sessionId, request.lines),
+      tabs.readSession(
+        request.id,
+        request.sessionId,
+        request.source === "tail"
+          ? { source: "tail", lines: request.lines }
+          : { source: "screen" },
+      ),
     ),
   );
   const removePress = bridge.onPress((request) =>

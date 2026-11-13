@@ -8,8 +8,10 @@ import {
   type StateText,
 } from "./state-marks";
 import {
+  agentScreen,
   agentTail,
   type AgentActionResult,
+  type AgentPaneRead,
   type AgentWindowCommand,
   type AgentPressResult,
   type AgentReadResult,
@@ -180,11 +182,11 @@ export interface TerminalTabs {
   // A mark on every pane and tab of the window (ADR 0052).
   setWindowMark(owner: string, mark: StateMark | undefined): void;
   flash(text: StateText): void;
-  // The last lines of one session's text, hidden tabs included.
+  // One session's last lines or active screen, hidden tabs included.
   readSession(
     id: string,
     sessionId: TerminalSessionId,
-    lines: number,
+    read: AgentPaneRead,
   ): AgentReadResult;
   // An agent's keys encoded for one session's current modes, hidden tabs
   // included; main writes them.
@@ -632,16 +634,25 @@ export function createTerminalTabs(
     flash: (text) => {
       if (!disposed) marks.flash(text);
     },
-    readSession(id, sessionId, lines) {
+    readSession(id, sessionId, read) {
       const pane = disposed
         ? undefined
         : findPaneBySession(terminalTabs(), sessionId);
       if (!pane?.surface || pane.removed) return { id, error: "unknown-pane" };
+      const surface = pane.surface;
       try {
-        const tail = agentTail(pane.surface.exportText("content"), lines);
+        let text;
+        if (read.source === "tail")
+          text = agentTail(surface.exportText("content"), read.lines);
+        else {
+          // A Surface with no screen to read fails rather than answer blank.
+          const screen = surface.readScreen?.();
+          if (screen === undefined) return { id, error: "failed" };
+          text = agentScreen(screen);
+        }
         return {
           id,
-          ...tail,
+          ...text,
           ...(pane.size ? { cols: pane.size.cols, rows: pane.size.rows } : {}),
         };
       } catch {

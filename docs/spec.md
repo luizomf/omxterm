@@ -1280,7 +1280,8 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   except `Ctrl+Space` on macOS, which sends nothing there)
   encoded for the pane's current cursor and Kitty keyboard modes exactly as
   the user's own key, read the last lines of a pane's scrollback
-  and screen (including output from before the grant), and wait until a pane
+  and screen (including output from before the grant) or exactly the rows of
+  its active screen wherever the user scrolled, and wait until a pane
   goes quiet, its program ends or a timeout passes. Panes in hidden tabs
   answer too. The API can't grant, see other windows, or type anywhere but a
   pane's PTY.
@@ -2976,7 +2977,7 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N` or `0.32.1-dev.N` host admit a
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N` or `0.33.0-dev.N` host admit a
   range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.

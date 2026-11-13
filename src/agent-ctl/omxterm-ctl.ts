@@ -34,6 +34,8 @@ Commands:
                                as the user set them (chord, action), with
                                refused or not-yet marked. Look here, don't guess.
   read <pane> [--lines N]      Print the last N lines (default 200).
+  read <pane> --screen         Print exactly the screen's rows, one line each,
+                               wherever the user scrolled.
   wait <pane> [--after OFFSET] [--idle MS] [--timeout MS]
                                Wait until the pane goes quiet or its program
                                ends. Prints idle, exited or timeout.

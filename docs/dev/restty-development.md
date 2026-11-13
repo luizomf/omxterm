@@ -35,6 +35,16 @@ query without changing selection, hover, cursor or render state. The alternate
 screen reads only its active contents. The host owns explicit saving and its
 inclusive 16 MiB UTF-8 limit; the core storage ceiling is not an export-size guarantee.
 
+An agent's screen read
+([ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md)) uses the
+same query through `getScreenText()` (`screenTextCorrections` in
+`scripts/restty-buffer-text-corrections.mjs`): the active screen's rows, one
+line per row, wherever the viewport is scrolled. One query over the screen
+joins soft-wrapped rows, so it reads row by row. A row whose last cell is the
+spacer a wrapped wide character left also returns that character, so each row
+but the last comes from the query of it and the next row, minus the next row's
+own query. `test/unit/agent-screen-read.test.ts` runs it against the real core.
+
 ### Pending-wrap resize coverage
 
 The bundled-core reflow tests preserve exact pending-wrap insertion/copy across
@@ -295,7 +305,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `4844f09bedb93e16f94d336e6ea24def7e5c93964720f5282f74596ca93b8321` |
+| Restty JavaScript runtime | `2dea1f31028c175bf08139bdc0f716c00f763ba602968f1fb43f4a6883fafdaa` |
 | Embedded-core chunk       | `9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |

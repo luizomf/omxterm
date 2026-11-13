@@ -255,7 +255,7 @@ export function useAgentHarness() {
       setImmediate(() =>
         ipc.listeners.get(agentIpc.readResult)!(event, {
           id: request.id,
-          text: `text of ${request.sessionId}`,
+          text: `${request.source} of ${request.sessionId}`,
           truncated: false,
         }),
       );

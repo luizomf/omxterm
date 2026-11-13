@@ -1,7 +1,8 @@
 # Let a local agent drive a window the user grants
 
 Status: accepted for slice 1, "Drive what's there", and slice 2, "Agents plug
-in by themselves" (macOS and Linux), which are implemented. The
+in by themselves" (macOS and Linux), which are implemented. Of slice 3, the
+exact `screen` read is implemented. The
 [keyboard-parity rule](#keyboard-parity) is accepted, and slice 4 builds it
 ([#1047](https://github.com/luizomf/omxterm/issues/1047)): `press` with named
 keys and every shortcut decided, the tab tree in `list`, and `keys`. The
@@ -271,10 +272,12 @@ matching lands, every chord goes to the pane.
   read after a `send` doesn't race the parser.
 - The first read is a tail: the last N lines of retained scrollback plus
   screen, through the existing export path and its bound, with no runtime
-  change. An exact `screen` read (the active screen's rows, independent of
-  where the user scrolled) needs one more read-only accessor beside
-  `getBufferText()` in the checksum-guarded runtime corrections, so it comes
-  later. Text only; no colors or cell attributes.
+  change. The exact `screen` read (the active screen's rows, independent of
+  where the user scrolled) is one more read-only accessor beside
+  `getBufferText()` in the checksum-guarded runtime corrections,
+  `getScreenText()`. It reads each row through the core's selection text, so
+  a wrapped line answers one line per row, and touches no selection, scroll,
+  cursor or rendering state. Text only; no colors or cell attributes.
 - **Scrollback from before the grant is readable.** Restty has no stable row
   marker to fence it (rows reflow on resize and are evicted), and an agent
   that can type can print any file the user can read, so hiding earlier

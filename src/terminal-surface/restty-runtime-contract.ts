@@ -25,6 +25,10 @@ export type PatchedResttyRuntime = {
       getSelectionText(): string;
       // Retained scrollback plus screen as text, leaving the selection as is.
       getBufferText(): string;
+      // The active screen's rows, one line each, wherever the view is
+      // scrolled, leaving selection, scroll and cursor as they are; null
+      // while the core isn't ready.
+      getScreenText(): string | null;
       selectAll(): boolean;
       scrollToBottom(): void;
     };

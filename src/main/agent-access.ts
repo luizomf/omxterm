@@ -176,8 +176,8 @@ function commandsFor(
       : {}),
     act: (sessionId, command, signal) =>
       ask<void>(agentIpc.action, { sessionId, command }, signal),
-    read: (sessionId, lines, signal) =>
-      ask<AgentPaneText>(agentIpc.read, { sessionId, lines }, signal),
+    read: (sessionId, read, signal) =>
+      ask<AgentPaneText>(agentIpc.read, { sessionId, ...read }, signal),
     encode: (sessionId, keys, signal) =>
       ask<string>(agentIpc.press, { sessionId, keys }, signal),
     tabs: (signal) => ask<readonly AgentWindowTab[]>(agentIpc.tabs, {}, signal),

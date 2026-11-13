@@ -234,6 +234,22 @@ describe("Restty Terminal Surface", () => {
     expect(surface.encodeKeyPress?.(up)).toBeUndefined();
   });
 
+  it("reads the screen through the live core while it has one", async () => {
+    const { adapter } = createAdapter();
+    const surface = await mountResttyTerminalSurface(
+      document.createElement("main"),
+      adapter,
+    );
+    const restty = harness.instances[0]!;
+    expect(surface.readScreen?.()).toBe("screen\n");
+    expect(restty.getScreenText).toHaveBeenCalledOnce();
+    restty.getScreenText.mockReturnValueOnce(null);
+    expect(surface.readScreen?.()).toBeUndefined();
+    surface.dispose();
+    expect(surface.readScreen?.()).toBeUndefined();
+    expect(restty.getScreenText).toHaveBeenCalledTimes(2);
+  });
+
   it("forwards parsed title and bell events once and ignores them after disposal", async () => {
     const { adapter } = createAdapter();
     const onTitleRequest = vi.fn();
