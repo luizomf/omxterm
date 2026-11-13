@@ -119,7 +119,7 @@ The pinned Ghostty core handles Kitty graphics parsing, decoding, placement, and
 - Max transmission input and decoded pixels: 64,000,000 bytes (PNG decode: 128,010,000 bytes per allocation).
 - Max image dimensions: 16,000,000 source pixels and 10,000 pixels per side.
 - Max completed image storage: 128,000,000 bytes per screen (at most one unfinished image per screen).
-- All panes in a window share one WASM memory, which never shrinks; see [ADR 0022](../adr/0022-render-bounded-kitty-images-in-direct-sessions.md) for the measured high-water marks.
+- All panes in a window share one WASM memory, which never shrinks, ratchets by power-of-two size class and tops out at 4 GiB. The prepared runtime reads every address an export returns as unsigned, so memory past 2 GiB keeps working. See [ADR 0022](../adr/0022-render-bounded-kitty-images-in-direct-sessions.md) for the measured high-water marks and worst cases.
 - Images stay cell-anchored across resize, font zoom, tab switching, and theme reload, and `CSI 16 t` reports current device-pixel cell metrics.
 - `ghostty-title-events.patch` continues a pending image on an `a=T` that carries only `q` and `m`, the shape of kitten icat's later chunks; any other `a=T` replaces it.
 - Each PTY resize carries `pixelWidth`/`pixelHeight` (columns × cell width, rows × cell height, device pixels, no padding) from `surface-transport.ts` to `node-pty`, so `TIOCGWINSZ` agrees with `CSI 16 t`. The post-start replay reuses the last cell size.
@@ -286,7 +286,7 @@ Prepared SHA-256 digests:
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
 | Restty JavaScript runtime | `db5dc2e02fc4529f9f01b2444557619914c87b0c6fdd3a49fc15bccdad110b3c` |
-| Embedded-core chunk       | `8e7740a25a02af36f2183fd2de6312c10b807803d98292973b191f18952c2b08` |
+| Embedded-core chunk       | `9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |

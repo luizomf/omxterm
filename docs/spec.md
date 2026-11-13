@@ -1595,6 +1595,8 @@ authority; OMXTerm adds no second parser.
   pixels share the 64,000,000-byte limit (RGBA at the pixel limit). A single
   PNG decode allocation may reach 128,010,000 bytes, room for the work buffer
   of a 16-bit PNG at the pixel limit.
+- A single unchunked APC holds at most 65 MiB of Base64 (Ghostty's APC
+  buffer), about 51 MB decoded. Compliant clients send chunks.
 - Invalid Base64, malformed or cancelled APC, invalid dimensions, length
   mismatch, decode failure or an exceeded limit renders nothing, clears
   unfinished state and does not block later output.
@@ -1612,9 +1614,15 @@ authority; OMXTerm adds no second parser.
 - Decoding has transient allocations, and the renderer may copy visible RGBA
   into browser and GPU resources outside core storage accounting.
 - A window's panes share one WASM core, whose memory grows to its high-water
-  mark and never shrinks while the window is open. One image at the limit
-  takes it to about 260 MiB; a stream of them keeps one screen at about
-  390 MiB, and both screens of a pane at about 520 MiB.
+  mark and never shrinks while the window is open, up to the 4 GiB wasm32
+  ceiling. One image at the limit takes it to about 260 MiB; a stream of them
+  keeps one screen at about 390 MiB, and both screens of a pane at about
+  520 MiB. Images just over a power of two cost up to twice their size, and
+  freed memory only serves later allocations of the same size class, so a
+  stream of many different sizes can take one pane past 2 GiB. Writes and
+  rendering keep working above 2 GiB. At 4 GiB, new images are dropped, and
+  a resize can trap the core
+  ([#1040](https://github.com/luizomf/omxterm/issues/1040)).
 
 **Unsupported**
 

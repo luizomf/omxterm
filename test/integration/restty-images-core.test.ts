@@ -296,6 +296,8 @@ describe("pinned Restty/Ghostty inline images", () => {
     expect(growthBytes).toBeLessThan(1_000_000);
   }, 120_000);
 
+  // RGB reaches the pixel check. For RGBA the extra row also passes
+  // 64,000,000 bytes, so the byte limit rejects it first.
   it.each([
     ["RGB", "f=24", 3],
     ["RGBA", "f=32", 4],

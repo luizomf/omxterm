@@ -66,9 +66,10 @@ measurements:
 
 - **Allocator classes.** Restty's core uses Zig's WASM allocator, which
   rounds large allocations up to a power of two and keeps freed blocks for
-  reuse, and the WASM memory never shrinks. 16,000,000 pixels of RGBA
-  (64,000,000 bytes) is the largest image that fits one 64 MiB block;
-  4096×4096 (67,108,864 bytes) lands in a 128 MiB block.
+  reuse, and the WASM memory never shrinks. An RGBA image fits one 64 MiB
+  block up to 16,777,215 pixels; 4096×4096 (67,108,864 bytes) is four bytes
+  over and lands in a 128 MiB block. 16,000,000 is a round number under
+  that.
 - **One byte limit.** Input, inflated pixels and PNG output share the
   64,000,000-byte limit, so RGBA, RGB, `o=z` and PNG reach the same pixel
   limit. Each PNG decode allocation may take twice that plus a byte per row
@@ -77,15 +78,35 @@ measurements:
 - **Two images per screen.** The 128,000,000-byte store keeps two images at
   the limit, or four 9 MP photos.
 
-All panes of a window share one WASM memory. Measured on the real core, one
-image at the limit takes it to about 260 MiB, a stream of them holds one screen
-at about 390 MiB, and both screens of a pane at about 520 MiB. The old limits
-already reached 162 MiB while rejecting these photos, because input and
-inflation happen before the pixel check. Native Ghostty allows 400 MB per
-transmission (a value it takes from kitty) and 320 MB per screen. Downscaling
-on decode was rejected: the full-size input and inflation peak would stay, it
-would soften the image, and it would need logical-size bookkeeping in the
-core's placement code. Images above the limits
+All panes of a window share one WASM memory, at most 4 GiB on wasm32.
+Measured on the real core, one image at the limit takes it to about 260 MiB,
+and a stream of them holds one screen at about 390 MiB and both screens of a
+pane at about 520 MiB. The old limits already reached 162 MiB while rejecting
+these photos, because input and inflation happen before the pixel check.
+
+These are not worst cases:
+
+- **Rounding.** Each block is a power of two, so images just over one (for
+  example 16.8 MB in a 32 MiB block) cost up to twice the store: about
+  7 × 32 MiB per screen, or about 450 MiB per pane.
+- **Ratcheting.** Freed blocks only serve their own size class and never
+  merge. A stream of images that fills the store once per size class, from
+  2^25 bytes down to 2^17, takes one pane to about 2.2 GiB (874 MiB with the
+  old limits). Ordinary use repeats a few sizes and plateaus, as the photo
+  stream above does.
+- **Past 2 GiB**, WASM exports return addresses that JavaScript reads as
+  negative. Restty used them as-is, so typed-array views threw and output
+  and rendering broke for every pane in the window. The prepared runtime
+  now reads every address an export returns as unsigned
+  (`scripts/restty-wasm-address-corrections.mjs`).
+- **At 4 GiB**, allocations fail. A new image is dropped like any other
+  rejected image, but `restty_render_update` after a resize can trap
+  ([#1040](https://github.com/luizomf/omxterm/issues/1040)).
+
+Native Ghostty allows 400 MB per transmission (a value it takes from kitty)
+and 320 MB per screen. Downscaling on decode was rejected: the full-size input
+and inflation peak would stay, it would soften the image, and it would need
+logical-size bookkeeping in the core's placement code. Images above the limits
 still render nothing; `q=2` leaves the protocol no way to report it.
 
 Restty's browser/WebGL rendering copies visible decoded RGBA outside core storage

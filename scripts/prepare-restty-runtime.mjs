@@ -16,6 +16,7 @@ import { idleRenderCorrections } from "./restty-idle-render-corrections.mjs";
 import { idleBlinkCorrections } from "./restty-idle-blink-corrections.mjs";
 import { attentionOscCorrections } from "./restty-attention-osc-corrections.mjs";
 import { replyOrderCorrections } from "./restty-reply-order-corrections.mjs";
+import { wasmAddressCorrections } from "./restty-wasm-address-corrections.mjs";
 import {
   applicationCursorCorrections,
   applicationCursorCoreCorrections,
@@ -70,7 +71,7 @@ const priorKittyContinuationCoreDigest =
 const priorImageLimitCoreDigest =
   "fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a";
 const correctedCoreDigest =
-  "8e7740a25a02af36f2183fd2de6312c10b807803d98292973b191f18952c2b08";
+  "9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9";
 const correctedCoreWasmDigest =
   "0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf";
 const originalEventTypesDigest =
@@ -1854,6 +1855,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     );
     source = applyCorrections(source, applicationCursorCoreCorrections);
   }
+  source = applyCorrections(source, wasmAddressCorrections);
   if (digest(source) !== correctedCoreDigest)
     throw new Error(
       `Restty WASM correction did not produce reviewed bytes: ${digest(source)}`,
