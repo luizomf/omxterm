@@ -109,9 +109,15 @@ State Mark lets an outside program type, read and wait through a user-only
 local socket owned by main. The [Agent API reference](../dev/agent-api.md)
 sketches the protocol and CLI.
 
+[ADR0053: Mark program progress and attention](0053-mark-program-progress-and-attention.md)
+reads OSC 9;4 progress as a "working" State Mark and BEL, OSC 9 and OSC 777 as
+an "attention" mark that replaces the bell's title marker, shows a native
+notification for attention out of sight, and amends ADR 0050's glyph
+vocabulary.
+
 ## Related boundaries
 
-- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051.
+- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051, 0053.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052 (proposed).

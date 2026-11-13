@@ -1,4 +1,5 @@
 /* eslint-disable max-lines, max-lines-per-function -- Keep session start, early native callbacks and retirement in the same controller lifetime. */
+import { isTerminalNotificationRequest } from "../shared/terminal-attention";
 import {
   exportBoundary,
   registerTerminalExportIpc,
@@ -113,6 +114,7 @@ interface RoutedTerminalIpcController
   showClipboardContextMenu(payload?: unknown): void;
   title(payload?: unknown): void;
   bell(payload?: unknown): void;
+  notification(payload?: unknown): void;
   openExternalLink(payload?: unknown): void;
   localImage(payload?: unknown): Promise<LocalImageData | null>;
   snippets(payload?: unknown): Promise<TerminalSnippetsResponse>;
@@ -196,6 +198,8 @@ export function registerTerminalIpcRouter(
     route(event, (controller) => controller.title(payload));
   const bell: IpcListener = (event, payload) =>
     route(event, (controller) => controller.bell(payload));
+  const notification: IpcListener = (event, payload) =>
+    route(event, (controller) => controller.notification(payload));
   const externalLink: IpcListener = (event, payload) =>
     route(event, (controller) => controller.openExternalLink(payload));
   const localImage: IpcHandler = async (event, payload) => {
@@ -303,6 +307,7 @@ export function registerTerminalIpcRouter(
   ipcMain.on(terminalIpc.tabsEmpty, tabsEmpty);
   ipcMain.on(terminalIpc.title, title);
   ipcMain.on(terminalIpc.bell, bell);
+  ipcMain.on(terminalIpc.notification, notification);
   ipcMain.on(terminalIpc.externalLink, externalLink);
   ipcMain.handle(terminalIpc.localImage, localImage);
   ipcMain.handle(terminalIpc.clipboardWrite, writeClipboardText);
@@ -367,6 +372,7 @@ export function registerTerminalIpcRouter(
       ipcMain.removeListener(terminalIpc.tabsEmpty, tabsEmpty);
       ipcMain.removeListener(terminalIpc.title, title);
       ipcMain.removeListener(terminalIpc.bell, bell);
+      ipcMain.removeListener(terminalIpc.notification, notification);
       ipcMain.removeListener(terminalIpc.externalLink, externalLink);
       ipcMain.removeHandler(terminalIpc.localImage);
       ipcMain.removeHandler(terminalIpc.clipboardWrite);
@@ -756,7 +762,23 @@ function createTerminalIpcController(
       return;
     }
     if (!routedSession(payload.sessionId)) return;
-    options.onBell(payload.sessionId);
+    options.onBell(
+      payload.sessionId,
+      selection.containsSessions([payload.sessionId]),
+    );
+  };
+  // Program text crosses here as plain, bounded data and is never logged.
+  const notification = (payload?: unknown) => {
+    if (!isTerminalNotificationRequest(payload)) {
+      reject("ipc", "invalid-payload");
+      return;
+    }
+    if (!routedSession(payload.sessionId)) return;
+    options.onNotification?.(
+      payload.sessionId,
+      { title: payload.title, body: payload.body },
+      selection.containsSessions([payload.sessionId]),
+    );
   };
   const openExternalLink = (payload?: unknown) =>
     requestExternalLink(payload, options, operationalEvents, reject);
@@ -844,6 +866,7 @@ function createTerminalIpcController(
       () => !disposed && !options.webContents.isDestroyed(),
     ),
     bell,
+    notification,
     openExternalLink,
     localImage: localImageBoundary.request,
     snippets,

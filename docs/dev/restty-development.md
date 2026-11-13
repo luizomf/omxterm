@@ -52,6 +52,7 @@ unexplained; separate checks do not qualify that combined ordering.
 - Copy/paste, Protected Paste, snippets, file-path insertion, local image previews, and write-only OSC 52 use OMXTerm host routes. Restty's built-in browser clipboard and URL-opening callbacks are disabled.
 - Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored). Link-only proof endpoints exclude a terminal wide-wrap spacer so selection expansion does not borrow the next grapheme; copy/selection semantics stay unchanged. Unknown viewport-edge continuity remains refused.
 - Parsed OSC 0/2 titles and silent BEL events flow from the Ghostty core to OMXTerm's per-session host controllers.
+- The output filter hands raw OSC 9 and OSC 777 payloads to the host's OSC route (`scripts/restty-attention-osc-corrections.mjs`); `src/terminal-surface/attention-osc.ts` tells OSC 9;4 progress from notifications ([ADR 0053](../adr/0053-mark-program-progress-and-attention.md)).
 
 ### Application-cursor keyboard coverage
 
@@ -265,7 +266,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `3194723adecac1901096c384e9a9687fcf0c979dab64fcae22886353354facff` |
+| Restty JavaScript runtime | `056d91bbc23901c0bf57d1584bf53502fdd9c25b9f4ce6a3b34ccd7577b83faf` |
 | Embedded-core chunk       | `0a8f6ef4c8c204a25199b51022a6d6c9d46e871526d79c300e5f31747d797307` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `a67bf4f562d895ea3580115e31f7c31117b2b3509582aa3744f262758e163513` |

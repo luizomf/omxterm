@@ -1,3 +1,7 @@
+import {
+  subscribeToWindowAttention,
+  type WindowAttentionBridge,
+} from "./window-attention";
 import type {
   InitialLayout,
   TerminalLayoutBridge,
@@ -110,6 +114,7 @@ interface TerminalWindowPageOptions extends TerminalWindowActionSubscriptions {
     request: string,
   ) => void;
   readonly onBell?: (sessionId: TerminalSessionId) => void;
+  readonly attention?: WindowAttentionBridge;
   readonly onExternalLink?: (url: string) => void;
   readonly loadLocalImage?: (
     source?: LocalImageActivation,
@@ -133,6 +138,7 @@ export function mountTerminalWindowPage(
   let disposed = false;
   let removeConfigurationUpdateListener: (() => void) | undefined;
   let removeTabTitleListener: (() => void) | undefined;
+  let removeAttentionListeners: (() => void) | undefined;
   let removeToolSubscriptions: (() => void) | undefined;
   let auxiliaryPanel: AuxiliaryPanel | undefined;
   let removeLocalImageOpenListener: (() => void) | undefined;
@@ -257,6 +263,7 @@ export function mountTerminalWindowPage(
         ? { notifyTitle: options.onTitleRequest }
         : {}),
       ...(options.onBell ? { notifyBell: options.onBell } : {}),
+      ...(options.attention ? { notifyDesktop: options.attention.notify } : {}),
       syncTitle: (sessionId) => options.syncTabTitle?.(sessionId),
     },
   );
@@ -326,6 +333,7 @@ export function mountTerminalWindowPage(
     removeConfigurationUpdateListener?.();
     pageLabels.dispose();
     removeTabTitleListener?.();
+    removeAttentionListeners?.();
     removeLocalImageOpenListener?.();
     palette?.dispose();
     dialogs.dispose();
@@ -380,6 +388,11 @@ export function mountTerminalWindowPage(
   removeTabTitleListener = options.subscribeToTabTitles?.((sessionId, title) =>
     tabs.setSessionTitle(sessionId, title),
   );
+  if (options.attention)
+    removeAttentionListeners = subscribeToWindowAttention(
+      options.attention,
+      tabs,
+    );
 
   // Command reception must not wait for the first Surface's mount settlement.
   // Pending tabs already own cancellation; unavailable Surface actions are no-ops.

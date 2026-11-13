@@ -46,6 +46,19 @@ In **Settings → Terminal**, clear **Terminal context menu** to disable the pop
 
 This hides the popup in all mouse modes. It does not disable terminal mouse input, clipboard actions or OSC 52. Existing context menu actions and keybindings remain available.
 
+### Notifications
+
+When a program in a tab you can't see asks for attention, OMXTerm shows a desktop notification. Clicking it brings you to that tab. In **Settings → Terminal**, clear **Desktop notifications** to turn them off, or turn on **Notification sound** to also hear them. Sound uses your system's notification sound unless **Sound file** names an audio file (WAV, MP3, OGG, FLAC or M4A, up to 4 MiB). OMXTerm doesn't include a sound. In JSON:
+
+```json
+{
+  "version": 1,
+  "notifications": { "sound": true, "soundFile": "/Users/me/Sounds/done.wav" }
+}
+```
+
+The path must be absolute. See [Program attention](usage.md#program-progress-and-attention) for what triggers a notification.
+
 ## Configuration file
 
 <a id="create-the-configuration-directory"></a>
@@ -84,6 +97,9 @@ All fields are optional except `version`. The built-in defaults are shown below.
 | `window.auxiliaryPanelSide`                | `"left"`, `"right"`                     | `"right"`                       |
 | `theme.path`                               | relative or absolute file path          | bundled theme                   |
 | `keybinds.<action>`                        | accelerator string or `null`            | built-in shortcut               |
+| `notifications.enabled`                    | boolean                                 | `true`                          |
+| `notifications.sound`                      | boolean                                 | `false`                         |
+| `notifications.soundFile`                  | absolute file path                      | system sound                    |
 
 `keyboard.optionAsAlt` affects terminal input on macOS. The `keybinds` options are listed in [Keyboard shortcuts](#keyboard-shortcuts).
 

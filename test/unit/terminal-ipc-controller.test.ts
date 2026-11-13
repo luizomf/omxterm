@@ -149,7 +149,7 @@ describe("terminal IPC controller", () => {
     expect(firstSession.close).toHaveBeenCalledOnce();
     expect(secondSession.close).not.toHaveBeenCalled();
     expect(ipc.handlers.size).toBe(12);
-    expect(ipc.listeners.size).toBe(13);
+    expect(ipc.listeners.size).toBe(14);
   });
 
   it("associates each started session with its selected shell fallback title", () => {
@@ -520,6 +520,7 @@ describe("terminal IPC controller", () => {
     };
     const title = vi.fn();
     const bell = vi.fn();
+    const notification = vi.fn();
     const interaction = vi.fn();
     const session: LocalTerminalSession = {
       write: vi.fn(),
@@ -536,6 +537,7 @@ describe("terminal IPC controller", () => {
       onSessionExit: vi.fn(),
       onTitleRequest: title,
       onBell: bell,
+      onNotification: notification,
       onUserInteraction: interaction,
     });
     const trusted = { sender: webContents, senderFrame: frame };
@@ -563,6 +565,27 @@ describe("terminal IPC controller", () => {
     ipc.listeners.get(terminalIpc.bell)?.(trusted, { sessionId: "s1" });
     ipc.listeners.get(terminalIpc.bell)?.(trusted, "malformed");
     ipc.listeners.get(terminalIpc.bell)?.(trusted, { sessionId: "s9" });
+    ipc.listeners.get(terminalIpc.notification)?.(trusted, {
+      sessionId: "s1",
+      title: "Agent",
+      body: "Done",
+    });
+    ipc.listeners.get(terminalIpc.notification)?.(trusted, {
+      sessionId: "s1",
+      title: "",
+      body: "x".repeat(513),
+    });
+    ipc.listeners.get(terminalIpc.notification)?.(trusted, {
+      sessionId: "s1",
+      title: "",
+      body: "CANARY",
+      extra: true,
+    });
+    ipc.listeners.get(terminalIpc.notification)?.(forged, {
+      sessionId: "s1",
+      title: "",
+      body: "forged",
+    });
     ipc.listeners.get(terminalIpc.input)?.(trusted, {
       sessionId: "s1",
       data: "key",
@@ -574,7 +597,13 @@ describe("terminal IPC controller", () => {
     ]);
     expect(JSON.stringify(title.mock.calls)).not.toContain("CANARY");
     expect(JSON.stringify(title.mock.calls)).not.toContain("unknown session");
-    expect(bell).toHaveBeenCalledExactlyOnceWith("s1");
+    // No tab selection was reported, so the session is not on screen.
+    expect(bell).toHaveBeenCalledExactlyOnceWith("s1", false);
+    expect(notification).toHaveBeenCalledExactlyOnceWith(
+      "s1",
+      { title: "Agent", body: "Done" },
+      false,
+    );
     expect(interaction).toHaveBeenCalledOnce();
     expect(session.write).toHaveBeenCalledOnce();
     expect(session.write).toHaveBeenCalledWith("key");

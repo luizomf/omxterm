@@ -1,7 +1,7 @@
+import type { TerminalNotification } from "../shared/terminal-attention";
 import type { TerminalSessionId } from "../shared/terminal-contract";
 
 export const DEFAULT_TERMINAL_TITLE = "OMXTerm";
-export const TERMINAL_BELL_MARKER = "🔔";
 export const MAX_TERMINAL_TITLE_CODE_POINTS = 256;
 
 interface TerminalTitleWindow {
@@ -23,6 +23,20 @@ export interface TerminalWindowTitleControllerOptions {
   ) => void;
   readonly onRejected?: (reason: TerminalTitleRejectionReason) => void;
   readonly onWindowTitle?: (title: string) => void;
+  // The session's attention State Mark appears or clears (ADR 0053).
+  readonly sendSessionAttention?: (
+    sessionId: TerminalSessionId,
+    pending: boolean,
+  ) => void;
+  // Attention the user can't see right now: the window is unfocused or the
+  // session's tab is not selected. A bell carries no text of its own.
+  readonly notify?: (
+    sessionId: TerminalSessionId,
+    notification: TerminalNotification,
+  ) => void;
+  // A pending attention was seen, or its session ended.
+  readonly clearNotification?: (sessionId: TerminalSessionId) => void;
+  readonly bellText?: () => string;
 }
 
 export interface TerminalWindowTitleController {
@@ -35,7 +49,14 @@ export interface TerminalWindowTitleController {
   selectSettings(title: string): void;
   syncSessionTitle(sessionId: TerminalSessionId): void;
   requestTitle(sessionId: TerminalSessionId, request: string): void;
-  ringBell(sessionId: TerminalSessionId): void;
+  // inSelectedTab: the session is a pane of the selected tab, so it is on
+  // screen. It defaults to whether it is the selected tab's focused pane.
+  ringBell(sessionId: TerminalSessionId, inSelectedTab?: boolean): void;
+  notify(
+    sessionId: TerminalSessionId,
+    notification: TerminalNotification,
+    inSelectedTab?: boolean,
+  ): void;
   resetAttention(): void;
   dispose(): void;
 }
@@ -70,7 +91,7 @@ export function sanitizedTerminalTitle(request: string): string | undefined {
 interface SessionTitleState {
   title: string | undefined;
   fallbackTitle: string;
-  bellPending: boolean;
+  attentionPending: boolean;
 }
 
 export function createTerminalWindowTitleController(
@@ -85,9 +106,7 @@ export function createTerminalWindowTitleController(
   const onRejected = options.onRejected ?? (() => {});
 
   const displayTitle = (state: SessionTitleState) =>
-    `${state.bellPending ? `${TERMINAL_BELL_MARKER} ` : ""}${
-      state.title ?? state.fallbackTitle
-    }`;
+    state.title ?? state.fallbackTitle;
 
   const pushSessionTitle = (sessionId: TerminalSessionId) => {
     const state = sessions.get(sessionId);
@@ -106,12 +125,38 @@ export function createTerminalWindowTitleController(
     options.onWindowTitle?.(title);
   };
 
-  const clearBell = (sessionId: TerminalSessionId | undefined) => {
+  const clearAttention = (sessionId: TerminalSessionId | undefined) => {
     const state = sessionId ? sessions.get(sessionId) : undefined;
-    if (!state || !state.bellPending) return;
-    state.bellPending = false;
-    pushSessionTitle(sessionId!);
-    if (sessionId === selectedSessionId) updateWindowTitle();
+    if (!state || !state.attentionPending) return;
+    state.attentionPending = false;
+    options.sendSessionAttention?.(sessionId!, false);
+    options.clearNotification?.(sessionId!);
+  };
+
+  const raiseAttention = (
+    sessionId: TerminalSessionId,
+    notification: TerminalNotification | undefined,
+    inSelectedTab: boolean,
+  ) => {
+    if (disposed) return;
+    const state = sessions.get(sessionId);
+    if (!state) return;
+    // The mark is unconditional: even the pane the user is looking at shows
+    // that it asked for attention, until focus or interaction clears it.
+    // Native attention and notifications are for what is out of sight.
+    if (!state.attentionPending) {
+      state.attentionPending = true;
+      options.sendSessionAttention?.(sessionId, true);
+    }
+    const focused = window.isFocused();
+    if (!focused && !cancelAttention) {
+      cancelAttention = options.requestAttention();
+    }
+    if (focused && inSelectedTab) return;
+    options.notify?.(sessionId, {
+      title: notification?.title || displayTitle(state),
+      body: notification ? notification.body : (options.bellText?.() ?? ""),
+    });
   };
 
   const cancelPendingAttention = () => {
@@ -123,7 +168,7 @@ export function createTerminalWindowTitleController(
   const resetAttention = () => {
     if (disposed) return;
     cancelPendingAttention();
-    clearBell(selectedSessionId);
+    clearAttention(selectedSessionId);
   };
   const onFocus = () => resetAttention();
 
@@ -136,12 +181,14 @@ export function createTerminalWindowTitleController(
       sessions.set(sessionId, {
         title: undefined,
         fallbackTitle: fallbackSessionTitle ?? options.fallbackSessionTitle,
-        bellPending: false,
+        attentionPending: false,
       });
       pushSessionTitle(sessionId);
     },
     sessionEnded(sessionId) {
       if (disposed) return;
+      if (sessions.get(sessionId)?.attentionPending)
+        options.clearNotification?.(sessionId);
       sessions.delete(sessionId);
       if (selectedSessionId === sessionId) {
         selectedSessionId = undefined;
@@ -158,8 +205,8 @@ export function createTerminalWindowTitleController(
       if (disposed || (sessionId !== null && !sessions.has(sessionId))) return;
       settingsTitle = undefined;
       selectedSessionId = sessionId ?? undefined;
-      // Selecting a ringing tab is looking at it: its marker is done.
-      if (window.isFocused()) clearBell(selectedSessionId);
+      // Selecting a ringing pane is looking at it: its mark is done.
+      if (window.isFocused()) clearAttention(selectedSessionId);
       updateWindowTitle();
     },
     syncSessionTitle(sessionId) {
@@ -177,21 +224,15 @@ export function createTerminalWindowTitleController(
       pushSessionTitle(sessionId);
       if (sessionId === selectedSessionId) updateWindowTitle();
     },
-    ringBell(sessionId) {
-      if (disposed) return;
-      const state = sessions.get(sessionId);
-      if (!state) return;
-      // The marker is unconditional: even the tab the user is looking at
-      // shows that its session rang, until focus or interaction clears it.
-      // Only native platform attention is reserved for an unfocused window.
-      if (!state.bellPending) {
-        state.bellPending = true;
-        pushSessionTitle(sessionId);
-        if (sessionId === selectedSessionId) updateWindowTitle();
-      }
-      if (!window.isFocused() && !cancelAttention) {
-        cancelAttention = options.requestAttention();
-      }
+    ringBell(sessionId, inSelectedTab = sessionId === selectedSessionId) {
+      raiseAttention(sessionId, undefined, inSelectedTab);
+    },
+    notify(
+      sessionId,
+      notification,
+      inSelectedTab = sessionId === selectedSessionId,
+    ) {
+      raiseAttention(sessionId, notification, inSelectedTab);
     },
     resetAttention,
     dispose() {

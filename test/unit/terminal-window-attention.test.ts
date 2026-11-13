@@ -12,11 +12,13 @@ function createHarness(platform: string, dock = createDock()) {
     removeListener: (_event: "focus", listener: () => void) =>
       listeners.delete(listener),
   };
+  const attention = vi.fn();
   const controller = createNativeTerminalWindowTitleController(
     window,
     {
       fallbackSessionTitle: "shell",
       sendSessionTitle: vi.fn(),
+      sendSessionAttention: attention,
     },
     dock,
     platform,
@@ -26,6 +28,7 @@ function createHarness(platform: string, dock = createDock()) {
   return {
     window,
     dock,
+    attention,
     controller,
     focus() {
       window.isFocused.mockReturnValue(true);
@@ -42,10 +45,11 @@ describe.each(["darwin", "linux", "win32"])(
   "native attention binding on %s",
   (platform) => {
     it("requests attention once per unfocused window and cancels on focus", () => {
-      const { controller, window, dock, focus } = createHarness(platform);
+      const { controller, window, dock, attention, focus } =
+        createHarness(platform);
       controller.ringBell("session");
       controller.ringBell("session");
-      expect(window.setTitle).toHaveBeenLastCalledWith("🔔 shell");
+      expect(attention.mock.calls).toEqual([["session", true]]);
       if (platform === "darwin") {
         expect(dock.bounce.mock.calls).toEqual([["informational"]]);
         expect(window.flashFrame).not.toHaveBeenCalled();
@@ -55,7 +59,10 @@ describe.each(["darwin", "linux", "win32"])(
       }
       focus();
       focus();
-      expect(window.setTitle).toHaveBeenLastCalledWith("shell");
+      expect(attention.mock.calls).toEqual([
+        ["session", true],
+        ["session", false],
+      ]);
       if (platform === "darwin") {
         expect(dock.cancelBounce.mock.calls).toEqual([[0]]);
         expect(window.flashFrame).not.toHaveBeenCalled();

@@ -62,6 +62,14 @@ export interface TerminalBridge {
   close(sessionId: TerminalSessionId, reason?: "rendering-failure"): void;
   title(sessionId: TerminalSessionId, request: string): void;
   bell(sessionId: TerminalSessionId): void;
+  notify(
+    sessionId: TerminalSessionId,
+    notification: import("./terminal-attention").TerminalNotification,
+  ): void;
+  onSessionAttention(
+    listener: (sessionId: TerminalSessionId, pending: boolean) => void,
+  ): () => void;
+  onAttentionSound(listener: (sound: Uint8Array) => void): () => void;
   openExternalLink(url: string): void;
   loadLocalImage(source?: LocalImageActivation): Promise<LocalImageData | null>;
   onLocalImageOpen(listener: () => void): () => void;

@@ -2,7 +2,9 @@
 
 Status: accepted. Amends
 [ADR 0043](0043-revoke-visible-mirror-typing-routes.md), whose in-flow status
-row and Stop button this replaces.
+row and Stop button this replaces. Amended by
+[ADR 0053](0053-mark-program-progress-and-attention.md), which adds the
+`working` and `attention` glyphs.
 
 ## Context
 

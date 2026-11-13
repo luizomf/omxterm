@@ -93,6 +93,8 @@ it.each([false, true])(
       onAuxiliaryPanelToggle: vi.fn(subscribe),
       onFind: subscribe,
       onTabTitle: subscribe,
+      onSessionAttention: subscribe,
+      onAttentionSound: subscribe,
       onLocalImageOpen: subscribe,
       onSnippetsToggle: subscribe,
       notifyTabSelection: vi.fn(),

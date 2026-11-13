@@ -46,6 +46,9 @@ export function createPaneMount(deps: {
   readonly fieldClipboard: (
     clipboard?: TerminalHostClipboard,
   ) => TerminalClipboard | undefined;
+  // OSC 9;4 progress, and any attention (BEL or notification) from the pane.
+  readonly onProgress?: (pane: TerminalPane, active: boolean) => void;
+  readonly onAttention?: (pane: TerminalPane) => void;
 }) {
   const { document, options } = deps;
   return async (pane: TerminalPane): Promise<void> => {
@@ -120,9 +123,20 @@ export function createPaneMount(deps: {
       ...(options.notifyTitle
         ? { onTitleRequest: withSession(options.notifyTitle) }
         : {}),
-      ...(options.notifyBell
-        ? { onBell: withSession(options.notifyBell) }
-        : {}),
+      onBell: () => {
+        if (deps.disposed() || pane.removed) return;
+        deps.onAttention?.(pane);
+        if (options.notifyBell) withSession(options.notifyBell)();
+      },
+      onProgress: (active) => {
+        if (!deps.disposed() && !pane.removed) deps.onProgress?.(pane, active);
+      },
+      onDesktopNotification: (notification) => {
+        if (deps.disposed() || pane.removed) return;
+        deps.onAttention?.(pane);
+        if (options.notifyDesktop)
+          withSession(options.notifyDesktop)(notification);
+      },
     };
 
     const focus = observeMountFocus(document, pane.mountAbort.signal);

@@ -131,6 +131,12 @@ export interface TerminalSurfaceOptions {
   readonly onSemanticInput?: () => void;
   readonly onTitleRequest?: (request: string) => void;
   readonly onBell?: () => void;
+  // OSC 9;4: true while the program reports progress, false when it clears.
+  readonly onProgress?: (active: boolean) => void;
+  // OSC 9 / OSC 777 notify, already bounded and sanitized as plain text.
+  readonly onDesktopNotification?: (
+    notification: import("../shared/terminal-attention").TerminalNotification,
+  ) => void;
   readonly linkHoverAvailability?: {
     isEnabled(): boolean;
     subscribe(listener: () => void): () => void;

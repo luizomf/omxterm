@@ -200,7 +200,7 @@ are the job of a session manager such as tmux.
 - Main accepts only a fixed, validated graphical selection identity, not an
   arbitrary renderer title. Settings supplies a localized native title.
   Background OSC/BEL still update terminal tabs without taking that title or
-  marking an unseen terminal bell as visited.
+  marking unseen attention as seen.
 
 ### Terminal panes
 
@@ -524,7 +524,9 @@ quietest form that works:
 - An ongoing state is a State Mark: one small glyph at the pane's top-right
   edge, in its top padding, with a tooltip and an accessible name and no
   on-screen text. With the tab strip visible, the tab shows each state's glyph
-  once before its title.
+  once before its title. Core owns the glyphs: Mirror Typing `↔`, a program
+  working `⋯`, and a program asking for attention `●`
+  ([program progress and attention](#program-progress-and-attention)).
 - A surprise, or that confirmation, is one transient overlay sentence that
   disappears after four seconds.
 - Something that needs the user is one overlay sentence without counts that
@@ -1039,15 +1041,45 @@ Both routes below share these rules:
   panel. Its foreground handoff acknowledges native focus returning to core
   while the panel stays visible; a background result does not steal focus.
 
-### Terminal bell
+### Program progress and attention
 
-- BEL is silent. A bell prepends a marker to the ringing session's title, visible
-  on its tab and, while that tab is selected, in the window title.
-- An unfocused window requests native attention once until the user focuses or
-  interacts with it: an informational Dock bounce on macOS, or per-window
-  attention on Linux and Windows. Focus, terminal interaction, or window
-  disposal cancels the outstanding request. Native desktop policy decides how
-  attention is shown.
+Programs report what they are doing with standard sequences
+([ADR 0053](adr/0053-mark-program-progress-and-attention.md)):
+
+- OSC 9;4 progress (`ESC ] 9 ; 4 ; state ; percent ST`, BEL or ST
+  terminated) shows a static "working" [State Mark](#state-marks) on the
+  reporting pane and its tab. States 1–4 show it; state 0 or a missing state
+  clears it. It also clears when the same pane asks for attention or its
+  session ends. There is no timeout. OSC 9;4 and ConEmu's other OSC 9
+  subcommands (`9;1` through `9;12`) are never notifications.
+- BEL, OSC 9 text (`ESC ] 9 ; text ST`) and OSC 777 notify
+  (`ESC ] 777 ; notify ; title ; body ST`, split at the first `;` after the
+  title) ask for attention. BEL stays silent and the title stays the
+  program's. The pane and its tab show an "attention" State Mark until the
+  pane is seen: selected in a focused window, focused again while selected, or
+  typed into. The mark appears even on the pane in front of the user.
+- Program text is untrusted plain text. Controls and line breaks become
+  spaces, bidirectional controls are removed, and titles and bodies are cut to
+  128 and 512 code points with an ellipsis. It never reaches logs.
+- When the window isn't focused, or the session isn't one of the selected
+  tab's panes, OMXTerm shows a native notification (`notifications.enabled`,
+  on by default). Its title is the OSC 777 title, or else the session's title.
+  Its body is the program's text, or "Rang the bell." for BEL. Each session
+  keeps at most one notification: a newer one replaces it, and repeats within
+  one second are dropped. Seeing the pane or ending its session closes it.
+  Clicking it brings the window forward and selects the session's tab and
+  pane. Linux bodies are markup-escaped.
+- `notifications.sound` (off by default) plays the system notification sound
+  with the notification, or the system alert sound when notifications are off.
+  With `notifications.soundFile`, an absolute path, OMXTerm plays that file
+  instead (at most 4 MiB, decoded in the window, skipped if unreadable or
+  undecodable, with the system alert sound when it can't be read). OMXTerm
+  ships no sound.
+- An unfocused window also requests native attention once until the user
+  focuses or interacts with it: an informational Dock bounce on macOS, or
+  per-window attention on Linux and Windows. Focus, terminal interaction, or
+  window disposal cancels the outstanding request. Native desktop policy
+  decides how attention and notifications are shown.
 
 ## Saved Layout
 
@@ -1315,8 +1347,10 @@ startup, shell exit, tab close and renderer-loss cleanup.
   and non-arrow keys keep their own encoding.
 - Restty passes Ghostty's parsed OSC 0/2 title and BEL events to the
   per-session host; it does not scan Terminal Payload with a second parser.
-  Title sanitization, fallback, ownership, the silent bell marker,
-  focus/interaction reset and platform attention are host policy. OSC BEL
+  Its output filter hands raw OSC 9 and OSC 777 payloads to the host's OSC
+  route, where OMXTerm's own parser reads progress and notifications. Title
+  sanitization, fallback, ownership, attention marks, focus/interaction reset,
+  notifications and platform attention are host policy. OSC BEL
   terminators and cancelled or malformed controls produce no extra title or bell
   event. Title-report queries get no reply.
 
@@ -1858,7 +1892,10 @@ A present file must contain `"version": 1` and only these keys:
   `window.showTabBar`, `window.blur`, `window.transparency`,
   `window.auxiliaryPanelSide`;
 - `theme.path`;
-- `keybinds.<action>` for the vocabulary under [Keybinds](#keybinds).
+- `keybinds.<action>` for the vocabulary under [Keybinds](#keybinds);
+- `notifications.enabled` (default `true`), `notifications.sound` (default
+  `false`) and `notifications.soundFile` (an absolute path; see
+  [program progress and attention](#program-progress-and-attention)).
 
 ### Fonts and padding
 
@@ -2319,7 +2356,8 @@ Controls:
   font fields, `terminal.padding`, `terminal.contextMenuEnabled`,
   `scrollback.lines`, `keyboard.optionAsAlt` (macOS), the new-window defaults
   (`showTitleBar`, `showTabBar`, `alwaysOnTop`), `auxiliaryPanelSide`,
-  `theme.path`, `transparency` and `blur`.
+  `theme.path`, `transparency`, `blur` and the `notifications` fields
+  (Terminal page).
 - A change saves immediately; clearing a field removes the entry. The language
   selector shows **English (United States)** and **Português (Brasil)** in any
   interface language.

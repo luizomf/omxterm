@@ -119,7 +119,16 @@ export interface TerminalIpcControllerOptions {
     sessionId: TerminalSessionId,
     request: string,
   ) => void;
-  readonly onBell: (sessionId: TerminalSessionId) => void;
+  // inSelectedTab: the session is one of the selected tab's panes.
+  readonly onBell: (
+    sessionId: TerminalSessionId,
+    inSelectedTab: boolean,
+  ) => void;
+  readonly onNotification?: (
+    sessionId: TerminalSessionId,
+    notification: import("../shared/terminal-attention").TerminalNotification,
+    inSelectedTab: boolean,
+  ) => void;
   readonly onUserInteraction: () => void;
   /** Something that can change the saved layout happened (ADR 0047). */
   readonly onLayoutActivity?: () => void;

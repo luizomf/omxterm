@@ -44,6 +44,7 @@ import {
   type TerminalTabCommand,
 } from "../shared/terminal-contract";
 import { terminalIpc } from "../shared/terminal-ipc";
+import { createAttentionBridge } from "./attention-bridge";
 import { isTerminalTabSelection } from "../shared/terminal-panes";
 import {
   formatFilePathInsertion,
@@ -306,6 +307,7 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid Terminal Bell signal");
     ipcRenderer.send(terminalIpc.bell, { sessionId });
   },
+  ...createAttentionBridge(ipcRenderer),
   openExternalLink(url: string) {
     if (typeof url !== "string" || url.length === 0)
       throw new TypeError("Invalid External Link request");

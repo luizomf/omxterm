@@ -39,6 +39,17 @@ export interface TerminalPadding {
   readonly left: number;
 }
 
+// Desktop notifications for attention the user can't see (ADR 0053). Sound is
+// the system's (soundFile absent) or the user's own file; OMXTerm ships none.
+export interface NotificationPreferences {
+  readonly enabled: boolean;
+  readonly sound: boolean;
+  readonly soundFile?: string;
+}
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences =
+  Object.freeze({ enabled: true, sound: false });
+
 export interface TerminalRendererConfiguration {
   // Startup composition policy, not a user setting. Standalone hosts retain built-in.
   readonly optionalSnippets?: boolean;
@@ -84,6 +95,7 @@ export interface UserConfiguration {
   readonly showTabBar: boolean;
   readonly terminalTheme: TerminalTheme;
   readonly keybinds: TerminalKeybinds;
+  readonly notifications: NotificationPreferences;
 }
 
 function hasValidOptionalRendererFields(

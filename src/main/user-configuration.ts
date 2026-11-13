@@ -1,4 +1,5 @@
 import { validateLanguage } from "./user-configuration-language";
+import { notificationPreferences } from "./user-configuration-notifications";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import type {
@@ -6,6 +7,7 @@ import type {
   UserConfiguration,
 } from "../shared/user-configuration";
 import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
   DEFAULT_SCROLLBACK_LINES,
   DEFAULT_TERMINAL_FONT_LIGATURES,
   DEFAULT_TERMINAL_LINE_HEIGHT,
@@ -72,6 +74,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   showTabBar: true,
   terminalTheme: DEFAULT_TERMINAL_THEME,
   keybinds: DEFAULT_TERMINAL_KEYBINDS,
+  notifications: DEFAULT_NOTIFICATION_PREFERENCES,
 });
 
 export interface LoadUserConfigurationOptions {
@@ -347,6 +350,7 @@ export function validateUserConfiguration(
     "window",
     "theme",
     "keybinds",
+    "notifications",
   ]);
   if (!("version" in root)) fail(configurationPath, "version", "is required");
   if (root.version !== USER_CONFIGURATION_VERSION)
@@ -524,7 +528,7 @@ export function validateUserConfiguration(
     language,
     confirmClose,
     logLevel,
-    ...windowsShellProperty(windowsShell),
+    ...(windowsShell === undefined ? {} : { windowsShell }),
     ...(fontFamily === undefined ? {} : { fontFamily }),
     fontSize,
     fontLineHeight,
@@ -541,6 +545,7 @@ export function validateUserConfiguration(
     ...windowPreferences(window, configurationPath),
     terminalTheme: DEFAULT_TERMINAL_THEME,
     keybinds: terminalKeybinds,
+    notifications: notificationPreferences(root, configurationPath, platform),
   });
 }
 
@@ -576,12 +581,6 @@ function windowPreferences(
     showTitleBar: read("showTitleBar", true),
     showTabBar: read("showTabBar", true),
   };
-}
-
-function windowsShellProperty(windowsShell: string | undefined): {
-  readonly windowsShell?: string;
-} {
-  return windowsShell === undefined ? {} : { windowsShell };
 }
 
 function validateWindowsShell(
