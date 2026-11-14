@@ -72,6 +72,8 @@ The palette searches actions in the selected interface language. It does not sea
 
 Select terminal text with the mouse, then choose **Edit → Copy**, use its shortcut, or right-click and choose **Copy**. If Vim or `tmux` captures mouse clicks, hold **Shift** while selecting. Use **Edit → Paste** or its shortcut to paste.
 
+Double-click selects a word, and triple-click selects the whole line, wrapped rows included. To fix a selection that's a little off, **Shift+click** (or Shift+drag): a click before the selection moves its start, a click after it moves its end, and a click inside moves the nearer end. The other end stays where it was. When Vim or `tmux` captures mouse clicks, Shift+click adjusts the same way, and Shift+drag starts a new selection.
+
 `Ctrl+C` interrupts the running command. `Ctrl+V` is sent to the terminal program. To hide the terminal context menu, clear **Terminal context menu** in **Settings → Terminal**; existing Edit actions and shortcuts remain available.
 
 ### Searching terminal history

@@ -64,6 +64,7 @@ unexplained; separate checks do not qualify that combined ordering.
 
 - Copy/paste, Protected Paste, snippets, file-path insertion, local image previews, and write-only OSC 52 use OMXTerm host routes. Restty's built-in browser clipboard and URL-opening callbacks are disabled.
 - Visible HTTP(S) URLs and local image paths are recognized from cell snapshots and Ghostty selection proofs across soft wraps (OSC 8 hyperlinks are ignored). Link-only proof endpoints exclude a terminal wide-wrap spacer so selection expansion does not borrow the next grapheme; copy/selection semantics stay unchanged. Unknown viewport-edge continuity remains refused.
+- Mouse selection (`scripts/restty-selection-corrections.mjs`): Restty already selects a word on double click and a row on triple click. The correction adds Shift+click/Shift+drag adjustment of the nearer end (under mouse reporting, Shift+drag still starts a new selection), a 3-pixel drag threshold so a click that slips across a cell border still counts toward a double or triple click, and triple-click lines that span soft wraps (detected by the core's selection text having no line break between rows). `test/unit/restty-mouse-selection.test.ts` drives the pinned interaction runtime against the real core.
 - Parsed OSC 0/2 titles and silent BEL events flow from the Ghostty core to OMXTerm's per-session host controllers.
 - The output filter hands raw OSC 9 and OSC 777 payloads to the host's OSC route (`scripts/restty-attention-osc-corrections.mjs`); `src/terminal-surface/attention-osc.ts` tells OSC 9;4 progress from notifications ([ADR 0053](../adr/0053-mark-program-progress-and-attention.md)).
 
@@ -308,7 +309,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `eee63b0f502ea478e43d10d35a7df0d12243c223be341e85603fe047afcbabe8` |
+| Restty JavaScript runtime | `76c74a23600aa3cc0e442ad95443e15a7118864e578513885e9d2da739e83222` |
 | Embedded-core chunk       | `9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |

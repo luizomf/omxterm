@@ -13,6 +13,7 @@ import { idleBlinkCorrections } from "../../scripts/restty-idle-blink-correction
 import { attentionOscCorrections } from "../../scripts/restty-attention-osc-corrections.mjs";
 import { replyOrderCorrections } from "../../scripts/restty-reply-order-corrections.mjs";
 import { keyPressCorrections } from "../../scripts/restty-key-press-corrections.mjs";
+import { selectionCorrections } from "../../scripts/restty-selection-corrections.mjs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
 import { describe, expect, it, vi } from "vitest";
@@ -80,7 +81,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(occurrences + 1);
         return value.replaceAll(corrected, original);
       }, text);
-    const preAltScreen = reverse(source, altScreenCorrections);
+    const preSelection = reverse(source, selectionCorrections);
+    expect(hash(preSelection)).toBe(
+      "eee63b0f502ea478e43d10d35a7df0d12243c223be341e85603fe047afcbabe8",
+    );
+    const preAltScreen = reverse(preSelection, altScreenCorrections);
     expect(hash(preAltScreen)).toBe(
       "2dea1f31028c175bf08139bdc0f716c00f763ba602968f1fb43f4a6883fafdaa",
     );

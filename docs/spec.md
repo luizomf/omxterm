@@ -1833,11 +1833,31 @@ paths open a Local Image Preview
   metadata as a local source, logs image paths or payload, writes or downloads
   image data, or persists the preview.
 
+### Mouse selection
+
+- Dragging selects text. A press counts as a click until the pointer moves at
+  least 3 CSS pixels into another cell, so a small slip across a cell border
+  doesn't start a drag.
+- Double click selects a word; triple click selects the whole line, including
+  rows it soft-wraps onto, also in scrollback. A hard line break ends it.
+- Shift+click moves one end of an existing selection: the start when the click
+  is before the selection, the end when it is after, and the nearer end when it
+  is inside. The other end stays, so Shift+clicks on either side keep growing
+  the same selection. Shift+drag does the same live. An adjusted selection is
+  kept even when it ends on a single cell.
+- While a program has mouse reporting on, plain clicks go to the program and
+  Shift selects: Shift+click adjusts as above, and Shift+drag starts a new
+  selection instead, since it is the only way to start over there.
+- Shift+click without a selection selects nothing. Only Shift alone adjusts;
+  Shift with Alt, Ctrl or Cmd acts as before (a click clears the selection).
+  A plain click still clears the selection.
+
 ### Mouse and context menu
 
 - Application mouse modes own button, motion and wheel reporting in normal and
-  alternate screens. Shift keeps the selection override. Explicit copy and
-  valid modified-link gestures (web or local image) produce no duplicate PTY
+  alternate screens. Shift keeps the selection override (see
+  [Mouse selection](#mouse-selection)). Explicit copy and valid modified-link
+  gestures (web or local image) produce no duplicate PTY
   mouse input.
 - `terminal.contextMenuEnabled` accepts only a boolean and defaults to true.
   Omission or true preserves eligibility for the native menu, even when Restty
