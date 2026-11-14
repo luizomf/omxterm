@@ -55,7 +55,12 @@ anywhere:
 - `.ui-overlay`, `.ui-dialog`: the `-tint` fills;
 - `.ui-card`: one step up, so a quiet button still reads on a card.
 
-Focus is a 2 px `--ui-text` outline, never a fill or border. Native controls
+Focus is a 2 px `--ui-secondary` outline on `:focus-visible`, never a fill.
+Text fields, selects and textareas differ, because they show `:focus-visible`
+on every click: their border turns `--ui-text` and they gain a 3 px
+`--ui-focus-halo` (text at 14 %). A surface that focuses itself (Settings
+opening) marks the control `data-quiet-focus`, which hides the outline until
+the next key press. Native controls
 take `color-scheme` from background luminance (light above 0.179).
 
 ## Components
