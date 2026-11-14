@@ -1,7 +1,8 @@
 // Desktop mouse selection that can be adjusted instead of restarted (#1102).
 // - Shift+click moves the selection end on the click's side (inside the
 //   selection, the nearer end); the other end stays, so later Shift+clicks on
-//   either side keep growing it. Shift+drag continues the same gesture live.
+//   either side keep growing it. Shift+drag continues the same gesture live,
+//   except under mouse reporting, where Shift+drag still starts over.
 // - A press must travel a few pixels before it becomes a drag, so pointer
 //   jitter across a cell border still counts as a click (and as part of a
 //   double or triple click).
@@ -31,13 +32,20 @@ export const selectionCorrections = [
       const end = forward ? selectionState.focus : selectionState.anchor;
       const at = order(cell);
       const movesStart = at < order(start) || at <= order(end) && at - order(start) < order(end) - at;
-      clearPendingDesktopSelection();
       selectionState.anchor = movesStart ? end : start;
       selectionState.focus = cell;
-      selectionState.dragging = true;
-      desktopSelectionState.extendingPointerId = event.pointerId;
-      canvas.setPointerCapture?.(event.pointerId);
       updateLinkHover(null);
+      if (inputHandler.isMouseActive()) {
+        // Under mouse reporting a Shift+drag is the only way to start over, so
+        // the press stays pending: a release keeps the adjustment, a drag
+        // starts a new selection.
+        desktopSelectionState.startedWithActiveSelection = false;
+      } else {
+        clearPendingDesktopSelection();
+        selectionState.dragging = true;
+        desktopSelectionState.extendingPointerId = event.pointerId;
+        canvas.setPointerCapture?.(event.pointerId);
+      }
       updateCanvasCursor();
       markNeedsRender();
     }

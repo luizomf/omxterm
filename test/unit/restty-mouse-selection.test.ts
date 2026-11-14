@@ -129,12 +129,12 @@ describe("Shift+click adjusts the selection", () => {
     expect(terminal.selectedText()).toBe("");
   });
 
-  it("leaves Cmd+Shift+click to links instead of extending", async () => {
+  it("adjusts only on Shift alone; a modified click clears as before", async () => {
     const terminal = await mount("one two three four");
     terminal.drag({ row: 0, col: 4 }, { row: 0, col: 6 });
     terminal.pause();
     terminal.click(16, 0, { shiftKey: true, metaKey: true });
-    expect(terminal.selectedText()).not.toBe("two three fou");
+    expect(terminal.selectedText()).toBe("");
   });
 });
 
@@ -152,6 +152,14 @@ describe("with mouse reporting on", () => {
     terminal.pause();
     terminal.click(6, 0, { shiftKey: true });
     expect(terminal.selectedText()).toBe("one two");
+    terminal.pause();
+    terminal.click(1, 0, { shiftKey: true });
+    expect(terminal.selectedText()).toBe("ne two");
+
+    // Shift+drag is the only way to start over while the program owns clicks.
+    terminal.pause();
+    terminal.drag({ row: 0, col: 8 }, { row: 0, col: 12 }, { shiftKey: true });
+    expect(terminal.selectedText()).toBe("three");
     expect(terminal.reports).toEqual([]);
   });
 });
