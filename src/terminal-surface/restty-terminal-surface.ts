@@ -162,6 +162,7 @@ export async function mountResttyTerminalSurface(
   let estimated = false;
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
+  let removeShowRefit: (() => void) | undefined;
   let visibleLinkController: ResttyVisibleLinkController | undefined;
   let restty: PatchedRestty | undefined;
   let fontLease: TerminalFontInputLease | undefined;
@@ -242,6 +243,7 @@ export async function mountResttyTerminalSurface(
       () => delivery.dispose(),
       () => container.removeEventListener("contextmenu", contextMenu.handle),
       () => removeRuntimeListener?.(),
+      () => removeShowRefit?.(),
       releaseSearchEscape,
       () => visibleLinkController?.dispose(),
       () => adapter.close(reason),
@@ -328,6 +330,7 @@ export async function mountResttyTerminalSurface(
     pane.runtime.io.connectPty();
     const canvas = pane.container.querySelector("canvas");
     if (!canvas) throw new Error("Restty did not create its rendering canvas");
+    removeShowRefit = refitWhenShown(container, refit);
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
@@ -450,6 +453,21 @@ function presizeHiddenCanvas(
   canvas.width = Math.floor(width * dpr);
   canvas.height = Math.floor(height * dpr);
   return true;
+}
+
+// Restty ignores font changes (zoom) while hidden and refits on show only if
+// the canvas size changed, so a pane shown at the size it was hidden with
+// would keep a stale grid. Refit whenever the container is laid out again.
+function refitWhenShown(container: HTMLElement, refit: () => void) {
+  if (typeof ResizeObserver === "undefined") return undefined;
+  let laidOut = container.getBoundingClientRect().width > 0;
+  const observer = new ResizeObserver(() => {
+    const next = container.getBoundingClientRect().width > 0;
+    if (next && !laidOut) refit();
+    laidOut = next;
+  });
+  observer.observe(container);
+  return () => observer.disconnect();
 }
 
 async function acquireSurfaceFonts(
