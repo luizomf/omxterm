@@ -60,7 +60,10 @@ it("serves MCP on stdio and starts working when the window is allowed", async ()
   });
   expect(sent.isError).toBe(false);
   expect(JSON.parse(sent.text)).toEqual({ receipt: "accepted", offset: 10 });
-  expect(port.writes).toEqual([["s2", "ls -la\r"]]);
+  expect(port.writes).toEqual([
+    ["s2", "ls -la"],
+    ["s2", "\r"],
+  ]);
   expect(await server.call("read", { pane: "s2" })).toEqual({
     text: "tail of s2",
     isError: false,
@@ -88,7 +91,10 @@ it("serves MCP on stdio and starts working when the window is allowed", async ()
       idle: 100,
     }),
   ).toEqual({ text: "idle", isError: false });
-  expect(port.writes.at(-1)).toEqual(["s2", "make\r"]);
+  expect(port.writes.slice(-2)).toEqual([
+    ["s2", "make"],
+    ["s2", "\r"],
+  ]);
   // A pane can't smuggle in an option such as another profile.
   const writes = port.writes.length;
   expect(

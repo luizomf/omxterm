@@ -70,7 +70,22 @@ it("grants only after the window shows its marks, then a pane's client drives it
     "t1\tzsh\tselected\n  s1\t80x24\tfocused\tself\nt2\tvim\n  s2\t80x24\n",
   );
   await ctl(profile, ["send", "s2", "--text", "ls -la", "--enter"], pane);
-  expect(port.writes).toEqual([["s2", "ls -la\r"]]);
+  expect(port.writes).toEqual([
+    ["s2", "ls -la"],
+    ["s2", "\r"],
+  ]);
+  // s2's program took bracketed paste: a script arrives as one paste, the
+  // way the user's own paste would, and Enter after it.
+  await ctl(
+    profile,
+    ["send", "s2", "--text", "read x\necho $x", "--enter"],
+    pane,
+  );
+  expect(port.writes.slice(2)).toEqual([
+    ["s2", "\x1b[200~read x\necho $x\x1b[201~"],
+    ["s2", "\r"],
+  ]);
+  port.writes.length = 0;
   // A split argument's tail is refused, not dropped after typing the head.
   expect(
     (
@@ -81,7 +96,7 @@ it("grants only after the window shows its marks, then a pane's client drives it
       )
     ).code,
   ).toBe(2);
-  expect(port.writes).toHaveLength(1);
+  expect(port.writes).toEqual([]);
   expect((await ctl(profile, ["read", "s2"], pane)).stdout).toBe(
     "tail of s2\n",
   );

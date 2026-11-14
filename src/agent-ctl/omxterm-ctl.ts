@@ -25,7 +25,10 @@ Commands:
                                --wait (or --match), then wait as below,
                                counting from before the typing. TEXT -
                                reads the text from stdin, as UTF-8, without
-                               one final line break.
+                               one final line break. A final line break
+                               in TEXT presses Enter. A line break inside
+                               it makes one paste where the program takes
+                               pastes.
   press <pane> KEY...          Press keys in a pane, encoded for its modes as
                                the user's own keys: Up, Down, Left, Right,
                                Home, End, PageUp, PageDown, Insert, Delete,

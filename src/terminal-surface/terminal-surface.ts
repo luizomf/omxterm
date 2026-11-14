@@ -46,6 +46,9 @@ export interface TerminalSurface {
   // Whether readScreen reads the alternate screen (a full-screen program's).
   // undefined while the Surface has no screen to read.
   isAlternateScreen?(): boolean | undefined;
+  // Whether the program enabled bracketed paste (DECSET 2004), the mode a
+  // paste is framed by. undefined while the Surface can't take input.
+  isBracketedPasteEnabled?(): boolean | undefined;
   // The bytes this key would send now, for the terminal's current cursor and
   // Kitty keyboard modes, exactly as the user's own key press; nothing is
   // sent. undefined while the Surface can't take input.

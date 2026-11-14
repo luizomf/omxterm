@@ -44,6 +44,8 @@ async function grantedWindow() {
     readResult: vi.fn(),
     onPress: () => () => {},
     pressResult: vi.fn(),
+    onModes: () => () => {},
+    modesResult: vi.fn(),
     onTabs: () => () => {},
     tabsResult: vi.fn(),
     onAction: (listener) => ((action = listener), () => {}),

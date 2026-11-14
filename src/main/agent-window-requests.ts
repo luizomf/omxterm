@@ -1,10 +1,11 @@
 // One correlated, time-bounded request to a granted window (a pane's text,
-// a press's bytes, its tabs, a shortcut's action), and the settling of each
+// a press's bytes, a pane's modes, its tabs, a shortcut's action), and the settling of each
 // answer by its own channel only (ADR 0052).
 import { randomUUID } from "node:crypto";
 import {
   agentIpc,
   type AgentActionResult,
+  type AgentModesResult,
   type AgentPressResult,
   type AgentReadResult,
   type AgentTabsResult,
@@ -95,6 +96,21 @@ export function settlePress(
         : new AgentApiError("unavailable", "The pane isn't ready for keys."),
     );
   else request.resolve(result.data);
+}
+
+export function settleModes(
+  pending: PendingRequests,
+  result: AgentModesResult,
+) {
+  const request = pending.get(result.id);
+  if (request?.channel !== agentIpc.modes) return;
+  if ("error" in result)
+    request.reject(
+      result.error === "unknown-pane"
+        ? new AgentApiError("unknown-pane", "No such pane in this window.")
+        : new AgentApiError("unavailable", "The pane isn't ready for text."),
+    );
+  else request.resolve({ bracketedPaste: result.bracketedPaste });
 }
 
 export function settleAction(

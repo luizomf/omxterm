@@ -405,6 +405,10 @@ export async function mountResttyTerminalSurface(
           : pane?.runtime.terminal.encodeKeyPress(key),
       isAlternateScreen: () =>
         disposed || !ready ? undefined : pane?.runtime.terminal.isAltScreen(),
+      isBracketedPasteEnabled: () =>
+        isInactive() || ended || !ready
+          ? undefined
+          : pane?.runtime.terminal.isBracketedPasteEnabled(),
       dispose,
     };
   } catch (cause) {

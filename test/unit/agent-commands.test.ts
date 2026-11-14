@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import {
   AgentApiError,
+  agentKeysGapMs,
   createAgentCommands,
 } from "../../src/main/agent-commands";
 import type {
@@ -133,7 +134,8 @@ it("lists a tab title as plain text and passes the window's failure on", async (
   );
 });
 
-it("types text and mode-independent keys in one write and returns the offset", async () => {
+it("types text, then writes its keys apart after a gap, and returns the offset", async () => {
+  vi.useFakeTimers();
   const window = fakeWindow();
   window.output("s1", 40);
   const commands = createAgentCommands({
@@ -142,14 +144,31 @@ it("types text and mode-independent keys in one write and returns the offset", a
     read: vi.fn(),
     encode: vi.fn(),
   });
-  await expect(
-    commands.run(
-      "send",
-      { pane: "s1", text: "npm test", keys: ["Enter", "ctrl+c", "Tab"] },
-      caller(),
-    ),
-  ).resolves.toEqual({ receipt: "accepted", offset: 40 });
-  expect(window.writes).toEqual([["s1", "npm test\r\x03\t"]]);
+  const sent = commands.run(
+    "send",
+    { pane: "s1", text: "npm test", keys: ["Enter", "ctrl+c", "Tab"] },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  // A program like Claude Code reads text and Enter in one chunk as a paste.
+  expect(window.writes).toEqual([["s1", "npm test"]]);
+  await vi.advanceTimersByTimeAsync(agentKeysGapMs(8) - 1);
+  expect(window.writes).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(1);
+  await expect(sent).resolves.toEqual({ receipt: "accepted", offset: 40 });
+  expect(window.writes).toEqual([
+    ["s1", "npm test"],
+    ["s1", "\r\x03\t"],
+  ]);
+  // Text or keys alone are one write, at once.
+  await commands.run("send", { pane: "s1", keys: ["Enter"] }, caller());
+  await commands.run("send", { pane: "s1", text: "ls" }, caller());
+  expect(window.writes.slice(2)).toEqual([
+    ["s1", "\r"],
+    ["s1", "ls"],
+  ]);
+  vi.useRealTimers();
+  window.writes.length = 0;
 
   const refusals = await Promise.all([
     failure(commands.run("send", { pane: "s1", keys: ["Up"] }, caller())),
@@ -175,7 +194,7 @@ it("types text and mode-independent keys in one write and returns the offset", a
     "invalid-request",
     "invalid-request",
   ]);
-  expect(window.writes).toHaveLength(1);
+  expect(window.writes).toEqual([]);
 });
 
 it("waits for output past the offset to go quiet, and reports time-outs", async () => {

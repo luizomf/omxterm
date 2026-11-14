@@ -1264,7 +1264,12 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   configuration, a launch argument or an extension.
 - Agents get only what's in that window: list its tabs (title, selected) with their panes (size, focused), type literal
   text and the mode-independent keys `Enter`, `Tab`, `Escape`, `Backspace`,
-  `Space` and `Ctrl+A`–`Ctrl+Z`, press named keys (arrows, `Home`, `End`,
+  `Space` and `Ctrl+A`–`Ctrl+Z` (keys sent with text follow it in their own
+  write about 200 ms later, so TUIs such as Claude Code and Codex submit
+  instead of adding a line; one final line break in the text is an Enter
+  after it; a text with a line break inside goes as one bracketed paste when
+  the pane's program enabled bracketed paste, and is typed otherwise), press
+  named keys (arrows, `Home`, `End`,
   `PageUp`, `PageDown`, `Insert`, `Delete`, `F1`–`F12`, `Enter`, `Tab`,
   `Escape`, `Backspace`, `Space`, with any of `Ctrl`, `Alt` and `Shift`,
   except `Ctrl+Space` on macOS, which sends nothing there)

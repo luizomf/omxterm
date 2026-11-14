@@ -7,7 +7,9 @@ which are implemented. The
 ([#1047](https://github.com/luizomf/omxterm/issues/1047)): `press` with named
 keys and every shortcut decided, the tab tree in `list`, and `keys`. Slice 5,
 Windows ([#1078](https://github.com/luizomf/omxterm/issues/1078)), is
-implemented with the default pipe descriptor. The
+implemented with the default pipe descriptor. Slice 6 has begun: a
+multi-line `send` goes as a paste where the pane's program takes one
+([Send's text and keys](#sends-text-and-keys-1109-1110)). The
 other later slices are still proposed
 ([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
 [#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
@@ -191,14 +193,17 @@ What the code gives us today:
   `routeKeyInput`, so they never enter a Mirror Typing route and never stop
   one; they skip Protected Paste and its confirmation; they don't scroll the
   user's viewport to the bottom; they don't clear a bell.
-- The user's keyboard keeps working in every pane. Each request is one bounded
-  write, so a request isn't split by a keystroke, but requests and keystrokes
-  interleave freely. There is no input lock.
-- Main doesn't know terminal modes. `send` writes literal text and a fixed
+- The user's keyboard keeps working in every pane. A request writes at most
+  two bounded writes (a `send`'s text, then its keys), and a pane's requests
+  write in turn, but requests and keystrokes interleave freely. There is no
+  input lock.
+- Main doesn't track terminal modes. `send` writes literal text and a fixed
   table of mode-independent keys (`Enter`, `Tab`, `Escape`, `Backspace`,
-  `Space`, `Ctrl+<letter>`), and stays that way. Arrow and function keys,
-  whose bytes depend on application-cursor and Kitty modes, are `press` in
-  slice 4; paste that honors bracketed paste mode is slice 6.
+  `Space`, `Ctrl+<letter>`). Arrow and function keys, whose bytes depend on
+  application-cursor and Kitty modes, are `press` in slice 4; a multi-line
+  text asks the window for bracketed paste mode
+  ([Send's text and keys](#sends-text-and-keys-1109-1110)), and an explicit
+  paste is the rest of slice 6.
 
 ### Keyboard parity
 
@@ -262,8 +267,8 @@ matching lands, every chord goes to the pane.
   shortcut, so `press` can't reach them. Developer Tools stays
   out of reach even if it gets one: it runs code in the renderer, and the
   renderer can grant ([Slice 1 as built](#slice-1-as-built)).
-- **`send` stays as it is**: literal text and mode-independent keys, never
-  matched against shortcuts.
+- **`send` never matches shortcuts**: literal text and mode-independent
+  keys.
 - **The mark turns to the error tone** once shortcuts land
   ([Visible state](#visible-state)).
 
@@ -517,6 +522,9 @@ a command name, its duration and an error code.
 5. **Windows.** The pipe endpoint, console behavior of the client, and the
    decision on native hardening.
 6. **Paste by mode.** Text sent as a paste that honors bracketed paste mode.
+   A multi-line `send` already goes as one
+   ([Send's text and keys](#sends-text-and-keys-1109-1110)); an explicit
+   paste option, for one-line text too, is what remains.
 7. **A record of what the agent typed.** Session-only, in memory, bounded,
    shown to the user in the window and dropped with the grant; attached at
    main's agent write, never in operational logs.
@@ -557,8 +565,10 @@ building it:
 - **`list` is built in main.** The flat pane list of slice 1 needs only the
   window's live sessions, their last grid and the focused pane, which main
   already has. The renderer round trip arrives with the tree in slice 4.
-- **`send` takes text, keys or both** (text first, in one write), so the
-  CLI's `--enter` stays one request. `Space` is in the key table.
+- **`send` takes text, keys or both** (text first), so the CLI's `--enter`
+  stays one request. They were one write until
+  [Send's text and keys](#sends-text-and-keys-1109-1110). `Space` is in the
+  key table.
 - **The corner mark** shows only when the selected tab has no pane and the tab
   strip is hidden; otherwise the tab buttons already carry the mark, and a
   page header's buttons stay clear. Slice 4 shows it whenever the selected
@@ -842,6 +852,66 @@ probe on a Windows 11 ARM64 guest
   line break (CRLF there) are dropped. Windows PowerShell 5.1 pipes ASCII
   unless `$OutputEncoding` is UTF-8, which the reference says. MCP passes
   its text as is: a text of `-` there is a dash.
+
+## Send's text and keys (#1109, #1110)
+
+Two field failures with 0.34.0 changed how `send` writes
+([#1109](https://github.com/luizomf/omxterm/issues/1109),
+[#1110](https://github.com/luizomf/omxterm/issues/1110)).
+
+- **Keys follow the text in their own write, after a gap.** With
+  `--enter`, `send` wrote `text\r` at once, and Claude Code reads a chunk
+  that holds text and `\r` as typed text with a newline in it, so Enter
+  added a line.
+  Now main writes the text, waits `200 ms + 2 ms per KiB of text`, and
+  writes the keys. Measured with a node-pty harness on macOS (a raw-mode
+  reader logging each `read()`), the transport merges two writes into one
+  read when they're close: about 3 in 100 at 0 ms direct, half at 0 ms
+  through `tmux -L`, and nearly all up to 5 ms over SSH to a LAN host, still
+  19 in 50 at 10 ms; none from 15 to 20 ms. Separate reads aren't enough
+  for Codex: its composer treats an Enter within 120 ms of a fast run of
+  typed characters as a newline (`PASTE_ENTER_SUPPRESS_WINDOW` in
+  `codex-rs/tui/src/bottom_pane/paste_burst.rs`). A long text keeps
+  draining after main's write, about 1 to 2 ms per KiB through tmux (65 KB
+  took 66 to 72 ms). With 200 ms plus 2 ms per KiB, the Enter reached the
+  reader at least 185 ms after the text's last byte through tmux, and 189 ms
+  through tmux then SSH, at 40 B, 16 KiB and 64 KiB, with no merged read.
+  150 ms plus 1 ms per KiB left only 110 ms at 64 KiB through tmux, and
+  150 ms plus 2 ms per KiB 127 ms at 16 KiB: too close to 120. Claude
+  Code's own driver of a child session waits 10 ms after a bracketed paste
+  before `\r`.
+- **The keys don't follow when the send can't finish.** If the grant ends,
+  the agent's request is cancelled or the pane ends during the gap, no keys
+  are written; a pane that ended answers `receipt: "unknown"`, since its
+  text was written. A pane's `send`s and `press`es write in turn, so another
+  request can't land between a send's text and its keys.
+- **A multi-line text goes as a paste where the program takes one.** A
+  multi-line `send` was typed: a shell ran its first line and the rest
+  waited as type-ahead, which the first program to read input (ssh, sudo,
+  `read`) took, while the user's own paste of the same script, one bracketed
+  paste, ran whole. Now a text with a CR or LF is written between
+  `ESC [200~` and `ESC [201~` when the pane's program enabled bracketed paste
+  (DECSET 2004), as Protected Paste frames it
+  ([ADR 0021](0021-insert-lexical-shell-quoted-paths-through-protected-paste.md)),
+  and a text holding `ESC [201~` is refused rather than rewritten. Only the
+  renderer's core knows the mode, so main asks the window, the way `press`
+  asks for encoded keys: it first waits (bounded) for the window to take
+  what main sent, then sends `agent:modes`, and the Surface answers
+  `isBracketedPasteEnabled()`. One-line text is always typed and needs no
+  round trip: in vim with 2004 on, a pasted `:wq` would be inserted
+  as text instead of run.
+- **One final line break still runs the text.** Agents and scripts send
+  `ls\n` to run a command, and pasted it would wait for Enter. So one final
+  `\n`, `\r\n` or `\r` is taken off and sent as `Enter` after the gap, as
+  `--enter` would (once, with `--enter` too), and only line breaks left
+  inside the text make it multi-line: `ls\n` is typed `ls`, then Enter, as
+  before; `a\nb\n` with bracketed paste is the paste `a\nb`, then Enter.
+- **Not knowing the mode writes nothing.** A window that doesn't answer
+  fails the send with `unavailable` instead of typing, since typing ahead is
+  the failure. A program without bracketed paste (sh, older bash, a REPL)
+  still gets the text typed; the guide says so and points to one line or a
+  script file. No confirmation is asked: agent input skips Protected Paste's
+  dialog ([Input](#input)).
 
 ## Open questions
 

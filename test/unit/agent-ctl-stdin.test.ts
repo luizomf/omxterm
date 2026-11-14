@@ -25,9 +25,13 @@ it("types stdin's text exactly, as UTF-8, without its final line break", async (
   expect(sent.code).toBe(0);
   // Only the last line break goes; the others are the text's own.
   await ctl(profile, ["send", "s2", "--text", "-"], pane, "a\nb\n\n");
+  // s2's program takes pastes, so the two lines arrive as one, and the
+  // line break after them runs it.
   expect(port.writes).toEqual([
-    ["s2", `${text}\r`],
-    ["s2", "a\nb\n"],
+    ["s2", text],
+    ["s2", "\r"],
+    ["s2", "\x1b[200~a\nb\x1b[201~"],
+    ["s2", "\r"],
   ]);
 });
 
