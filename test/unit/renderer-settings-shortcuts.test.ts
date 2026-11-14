@@ -15,6 +15,7 @@ import type {
   CapturedShortcut,
   SettingsKeybindChange,
 } from "../../src/shared/settings-keybinds";
+import { TERMINAL_ACTION_NAMES } from "../../src/shared/terminal-keybinds";
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function () {
@@ -358,5 +359,130 @@ describe("Shortcuts page", () => {
     ).toBe("App shortcuts get the key before terminal programs do.");
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
     expect(view.button("find", "record").textContent).toBe("Record");
+  });
+});
+
+describe("Shortcuts filter", () => {
+  const field = () =>
+    document.querySelector<HTMLInputElement>(
+      ".settings-shortcuts input[type=search]",
+    )!;
+  const type = (query: string) => {
+    field().value = query;
+    field().dispatchEvent(new Event("input"));
+  };
+  const press = (key: string) => {
+    const event = new KeyboardEvent("keydown", {
+      key,
+      bubbles: true,
+      cancelable: true,
+    });
+    field().dispatchEvent(event);
+    return event;
+  };
+  const shown = () =>
+    [...document.querySelectorAll<HTMLElement>(".settings-shortcut")]
+      .filter((row) => !row.hidden)
+      .map((row) => row.dataset.action);
+  const noMatch = () =>
+    document.querySelector<HTMLElement>(".settings-shortcuts [role=status]")!;
+
+  it("narrows the list by action name and keeps the list's order", async () => {
+    await open(createRendererLanguage("en-US"));
+    expect(shown()).toEqual([...TERMINAL_ACTION_NAMES]);
+    type("split");
+    expect(shown()).toEqual(["splitRight", "splitDown"]);
+    type("  PANE   swap ");
+    expect(shown()).toEqual([
+      "swapPaneLeft",
+      "swapPaneRight",
+      "swapPaneUp",
+      "swapPaneDown",
+    ]);
+    expect(noMatch().hidden).toBe(true);
+  });
+
+  it("follows the language and ignores accents", async () => {
+    const language = createRendererLanguage("pt-BR");
+    await open(language);
+    type("dividir a direita");
+    expect(shown()).toEqual(["splitRight"]);
+    language.set("en-US");
+    expect(shown()).toEqual([]);
+    expect(noMatch().hidden).toBe(false);
+    expect(noMatch().textContent).not.toBe("");
+    type("split right");
+    expect(shown()).toEqual(["splitRight"]);
+  });
+
+  it.each([
+    "⌘⌥⇧P",
+    "cmd+alt+shift+p",
+    "Shift+Option+Command+P",
+    "opt cmd p",
+    "⌥ p",
+    "cmd+",
+    "cmd+sh",
+  ])("finds a macOS binding by its keys typed as %s", async (query) => {
+    await open(createRendererLanguage("en-US"), "darwin");
+    type(query);
+    expect(shown()).toEqual(["moveAuxiliaryPanel"]);
+  });
+
+  it("reads one character as a whole key and more as a key being typed", async () => {
+    await open(createRendererLanguage("en-US"));
+    type("ctrl+shift");
+    expect(shown()).toEqual(["find", "newTab", "moveAuxiliaryPanel"]);
+    type("ctrl+shift+t");
+    expect(shown()).toEqual(["newTab"]);
+    type("ctrl+alt");
+    expect(shown()).toEqual(["moveAuxiliaryPanel"]);
+    type("ctrl+x");
+    expect(shown()).toEqual([]);
+    expect(noMatch().hidden).toBe(false);
+  });
+
+  it("finds changed shortcuts by their state", async () => {
+    const view = await open(createRendererLanguage("en-US"));
+    view.button("find", "unbind").click();
+    await view.settle();
+    type("unbound");
+    expect(shown()).toEqual(["find"]);
+  });
+
+  it("clears on Escape, and leaves Escape alone when already empty", async () => {
+    await open(createRendererLanguage("en-US"));
+    type("nothing has this name");
+    expect(shown()).toEqual([]);
+    expect(press("Escape").defaultPrevented).toBe(true);
+    expect(field().value).toBe("");
+    expect(shown()).toEqual([...TERMINAL_ACTION_NAMES]);
+    expect(noMatch().hidden).toBe(true);
+    expect(press("Escape").defaultPrevented).toBe(false);
+  });
+
+  it("keeps a row found by its keys in place while those keys change", async () => {
+    const view = await open(createRendererLanguage("en-US"));
+    type("ctrl+shift+f");
+    expect(shown()).toEqual(["find"]);
+    view.button("find", "record").click();
+    view.deliver({ accelerator: "F2" });
+    await view.settle();
+    expect(view.cells("find")).toEqual(["F2", "Custom"]);
+    expect(shown()).toEqual(["find"]);
+    type("f2");
+    expect(shown()).toEqual(["find"]);
+    type("ctrl+shift+f");
+    expect(shown()).toEqual([]);
+  });
+
+  it("is named for assistive technology in both languages", async () => {
+    const language = createRendererLanguage("en-US");
+    await open(language);
+    const english = field().getAttribute("aria-label");
+    expect(english).toBeTruthy();
+    language.set("pt-BR");
+    expect(field().getAttribute("aria-label")).toBeTruthy();
+    expect(field().getAttribute("aria-label")).not.toBe(english);
   });
 });

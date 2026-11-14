@@ -13,6 +13,10 @@ import {
   type TerminalActionName,
 } from "../../shared/terminal-keybinds";
 import type { Translate } from "../renderer-language";
+import {
+  matchesShortcutFilter,
+  type ShortcutFilterRow,
+} from "./shortcut-filter";
 
 // Action names reuse the menu's own translations.
 const MENU_KEYS: Readonly<
@@ -105,14 +109,47 @@ export function renderShortcuts(
   context.labels.push((t) => {
     hint.textContent = t("shortcuts.hint");
   });
-  panel.append(hint);
+  const filter = document.createElement("input");
+  filter.type = "search";
+  filter.className = "settings-shortcut-filter page-control";
+  filter.autocomplete = "off";
+  filter.spellcheck = false;
+  const empty = document.createElement("p");
+  empty.className = "settings-shortcut-empty ui-hint";
+  empty.setAttribute("role", "status");
+  empty.hidden = true;
+  panel.append(hint, filter);
   let recording: TerminalActionName | undefined;
   let stopCapture: (() => void) | undefined;
   let translate: Translate | undefined;
   const rows: ((t: Translate) => void)[] = [];
+  const filtered: {
+    readonly element: HTMLElement;
+    readonly describe: (t: Translate) => ShortcutFilterRow;
+  }[] = [];
   const syncAll = () => {
     if (translate) for (const row of rows) row(translate);
   };
+  // Runs when the query or the language changes, never on a save: a row found
+  // by its keys stays put while those keys are being changed.
+  const applyFilter = () => {
+    const t = translate;
+    if (!t) return;
+    let matches = 0;
+    for (const row of filtered) {
+      const match = matchesShortcutFilter(filter.value, row.describe(t));
+      row.element.hidden = !match;
+      if (match) matches += 1;
+    }
+    empty.hidden = matches > 0;
+  };
+  filter.addEventListener("input", applyFilter);
+  filter.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || filter.value === "") return;
+    event.preventDefault();
+    filter.value = "";
+    applyFilter();
+  });
   // Ends any capture: on a new recording, cancel, page close or disposal.
   const release = () => {
     const wasRecording = recording !== undefined;
@@ -230,6 +267,25 @@ export function renderShortcuts(
       unbind.disabled = keybind?.state === "unbound";
       inherit.disabled = keybind?.state === "inherit";
     });
+    filtered.push({
+      element: row,
+      describe: (t) => {
+        const keybind = context.snapshot()?.keybinds?.[action];
+        const text = [
+          shortcutActionName(action, t),
+          keybind && keybind.state !== "inherit"
+            ? t(STATES[keybind.state])
+            : "",
+        ].join(" ");
+        if (keybind?.effective == null) return { text };
+        return {
+          text,
+          binding:
+            displayAccelerator(keybind.effective, context.platform) ??
+            keybind.effective,
+        };
+      },
+    });
     const binding = document.createElement("div");
     binding.className = "settings-shortcut-binding";
     binding.append(value, state);
@@ -239,9 +295,14 @@ export function renderShortcuts(
     row.append(name, binding, actions);
     panel.append(row);
   }
+  panel.append(empty);
   context.labels.push((t) => {
     translate = t;
+    filter.placeholder = t("shortcuts.search");
+    filter.setAttribute("aria-label", t("shortcuts.search"));
+    empty.textContent = t("shortcuts.noMatch");
     syncAll();
+    applyFilter();
   });
   context.syncs.push(syncAll);
   return { element: panel, release };
