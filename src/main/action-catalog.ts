@@ -79,6 +79,10 @@ export type CoreActionCatalog = Readonly<
 >;
 type SelectTabAction = TerminalActionName & `selectTab${number}`;
 
+// The name people see in menus and the Command Palette. Electron's app.name
+// is the package name ("omxterm"), which also names the profile folder.
+export const PRODUCT_NAME = "OMXTerm";
+
 // The only behavior table. Menu layout references IDs; palette and key delivery
 // project this same snapshot. Rebuild it when language/effective bindings change.
 export function createCoreActionCatalog(

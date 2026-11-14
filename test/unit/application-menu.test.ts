@@ -69,7 +69,7 @@ function flattenMenuItems(template: MenuTemplate): MenuTemplate {
   return items;
 }
 
-it("uses the runtime application name for Quit independently of the branded dialog title", () => {
+it("labels Quit with the name it is given, independently of the branded dialog title", () => {
   const actions = menuActions();
   const items = flattenMenuItems(
     terminalApplicationMenuTemplate(

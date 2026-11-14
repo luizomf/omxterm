@@ -197,6 +197,6 @@ void (async () => {
   assert.equal(exited, 0, "All three native sessions must still be live");
   topologyChecked = true;
   closing = true;
-  if (quitMode) invokeMenu(`Quit ${app.name}`);
+  if (quitMode) invokeMenu("Quit OMXTerm");
   else for (const window of windows.toReversed()) window.close();
 })().catch(fail);
