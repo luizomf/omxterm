@@ -151,6 +151,9 @@ bracketed paste (#1114), moves main to `0.35.0-dev.1`.
 Shift+click adjusting a selection, and triple click selecting whole wrapped
 lines (#1115), move main to `0.35.0-dev.2`.
 
+`omxterm-ctl` refusing a `--timeout` under 100 ms (#1116) moves main to
+`0.35.0-dev.3`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
