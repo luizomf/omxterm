@@ -17,6 +17,7 @@ const calls = vi.hoisted(() => ({
     >(),
   blur: vi.fn(),
   optionShortcut: vi.fn(),
+  agentLauncher: vi.fn(),
 }));
 vi.mock("esbuild", () => ({ build: calls.build }));
 vi.mock("node:fs/promises", () => ({
@@ -35,6 +36,9 @@ vi.mock("../../scripts/build-macos-window-blur.mjs", () => ({
 }));
 vi.mock("../../scripts/build-macos-option-shortcut.mjs", () => ({
   buildMacOSOptionShortcut: calls.optionShortcut,
+}));
+vi.mock("../../scripts/build-agent-ctl-launcher.mjs", () => ({
+  buildAgentCtlLauncher: calls.agentLauncher,
 }));
 vi.mock("../../scripts/windows-msvc-environment.mjs", () => ({
   resolveMsvcEnvironment: () => ({ MSVC: "1" }),
@@ -67,6 +71,8 @@ it.each([
     const entry = "../../build.mjs";
     await import(entry);
     expect(calls.optionShortcut).toHaveBeenCalledOnce();
+    // The agent client's console launcher is Windows-only.
+    expect(calls.agentLauncher).toHaveBeenCalledTimes(os === "win32" ? 1 : 0);
     expect(calls.leases).toHaveBeenCalledTimes(runtime ? 1 : 0);
     expect(calls.native).toHaveBeenCalledTimes(move ? 1 : 0);
     if (move) {

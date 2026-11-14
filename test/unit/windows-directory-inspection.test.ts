@@ -19,6 +19,7 @@ afterEach(async () => {
   vi.doUnmock("node:fs/promises");
   vi.doUnmock("node:child_process");
   vi.doUnmock("node:url");
+  vi.doUnmock("../../scripts/verify-windows-agent-launcher.mjs");
   asar.uncacheAll();
   for (const directory of temporary.splice(0))
     await rm(directory, { recursive: true, force: true });
@@ -194,6 +195,10 @@ async function inspectWindowsDirectory(dotAncestor: boolean) {
     spawnSync: () => {
       throw new Error("Unexpected process");
     },
+  }));
+  // The launcher's own inspection runs a real program; it has its own test.
+  vi.doMock("../../scripts/verify-windows-agent-launcher.mjs", () => ({
+    inspectWindowsAgentLauncher: vi.fn(),
   }));
   const { verifyPackagedApplication } =
     await import("../../scripts/verify-packaged-app.mjs");

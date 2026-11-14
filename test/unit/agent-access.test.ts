@@ -190,7 +190,7 @@ it("names a pipe after the profile on Windows, however long its path", () => {
   expect(deep.states()).toEqual([{ state: "pending" }]);
 
   expect(path.basename(agentLauncherPath("resources", "win32"))).toBe(
-    "omxterm-ctl.cmd",
+    "omxterm-ctl.exe",
   );
   expect(path.basename(agentLauncherPath("resources", "darwin"))).toBe(
     "omxterm-ctl",

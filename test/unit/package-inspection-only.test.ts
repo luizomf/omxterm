@@ -79,6 +79,7 @@ afterEach(async () => {
   vi.doUnmock("node:path");
   vi.doUnmock("@electron/asar");
   vi.doUnmock("../../scripts/verify-linux-launcher.mjs");
+  vi.doUnmock("../../scripts/verify-windows-agent-launcher.mjs");
   realAsar.uncacheAll();
   for (const directory of temporary.splice(0))
     await rm(directory, { recursive: true, force: true });
@@ -475,6 +476,10 @@ it.each([
     vi.doMock("../../scripts/verify-linux-launcher.mjs", () => ({
       inspectLinuxAppRun: launcher,
     }));
+    const agentLauncher = vi.fn();
+    vi.doMock("../../scripts/verify-windows-agent-launcher.mjs", () => ({
+      inspectWindowsAgentLauncher: agentLauncher,
+    }));
     const { verifyPackagedApplication } =
       await import("../../scripts/verify-packaged-app.mjs");
     const stderr = vi
@@ -509,6 +514,9 @@ it.each([
       ).length;
     expect(nativeHelperCalls()).toBe(1);
     if (platform === "linux") expect(launcher).toHaveBeenCalledOnce();
+    expect(agentLauncher.mock.calls).toEqual(
+      platform === "win32" ? [[resources]] : [],
+    );
     for (const [archive, expectedError] of [
       [missingArchive, "was not found in this archive"],
       [

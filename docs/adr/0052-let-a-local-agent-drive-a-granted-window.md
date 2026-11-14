@@ -438,7 +438,7 @@ a command name, its duration and an error code.
   answer. The client is a separate script, `omxterm-ctl`, run by the same
   binary in Node mode, which skips both. This is a disagreement about the
   mechanism, not the name. On Windows the binary is a GUI executable, so a
-  `.cmd` launcher runs it ([Slice 5 as built](#slice-5-as-built)).
+  console launcher runs it ([Slice 5 as built](#slice-5-as-built)).
   Unverified: the per-call cost of the AppImage mount. The installers put no command on `PATH` today (the Linux
   script installs the AppImage, an icon and a desktop entry; the NSIS include
   doesn't touch `PATH`), which is why discovery uses `OMXTERM_CTL`.
@@ -797,32 +797,43 @@ probe on a Windows 11 ARM64 guest
   process holds fails the listen, and the grant is refused with the
   existing sentence; the name is free again when that process ends. Ending
   the last grant closes the pipe.
-- **The launcher is `omxterm-ctl.cmd`** beside `omxterm-ctl.cjs` in
-  `resources\agent-ctl`, and `OMXTERM_CTL` names it. It sets
-  `ELECTRON_RUN_AS_NODE=1` inside `setlocal`, runs `OMXTerm.exe` with the
-  script and every argument, and returns its exit code; an unpackaged build
-  names its Electron binary in the same `runtime` file as the POSIX launcher.
-  Run directly from PowerShell, the GUI executable gives no output, no exit
-  code and doesn't wait. The `.cmd` works from PowerShell
-  (`& $env:OMXTERM_CTL status`), cmd (`"%OMXTERM_CTL%" status`) and Git Bash
-  (`"$OMXTERM_CTL" status`), and `mcp` serves over its stdin.
-- **A `.cmd` re-parses its command line, so the CLI isn't for arbitrary
-  text on Windows.** Windows runs a batch file through cmd.exe, which reads
-  the whole command line again before the launcher starts, so no launcher
-  code can fix it. Checked from PowerShell 5.1 and Git Bash: `%NAME%`
-  expands even inside quotes, and in an argument without spaces (which
-  those shells pass unquoted) `^` disappears and `&` runs the rest as a
-  command. `&`, `|`, `<` and `>` are cmd.exe's operators there, so
-  `--text 'x&calc'` would start Calculator and `--text 'echo>notes.txt'`
-  would overwrite `notes.txt`: commands run as the caller, outside the granted window.
-  From PowerShell 5.1, an argument with spaces arrived intact unless it held
-  a double quote: `--text 'git commit -m "fix & test"'` arrived as
-  `git commit -m fix`, and cmd.exe tried to run `test""`. A batch script
-  must `call` the launcher, or it never returns to the script. MCP tool
-  arguments travel over stdin and never meet that parse, so MCP is the route
-  for text until [#1081](https://github.com/luizomf/omxterm/issues/1081)
-  (a console launcher, and text over stdin) lands; it blocks the 0.34.0
-  release.
+- **The launcher is `omxterm-ctl.exe`**, a console program beside
+  `omxterm-ctl.cjs` in `resources\agent-ctl`, and `OMXTERM_CTL` names it
+  ([#1081](https://github.com/luizomf/omxterm/issues/1081)). Run directly,
+  the GUI executable gives no output, no exit code and doesn't wait. The
+  launcher sets `ELECTRON_RUN_AS_NODE=1` for its child only and runs
+  `OMXTerm.exe` with the script and the rest of its own command line,
+  untouched, so the client parses exactly what the caller wrote. It hands
+  the child its own stdio, waits and returns the child's exit code. An
+  unpackaged build names its Electron binary in the same `runtime` file as
+  the POSIX launcher. MSVC builds it in `npm run build` for the machine's
+  architecture, as it builds the extension runtime, with a static C runtime
+  and `/Brepro`.
+- **A `.cmd` was the first launcher, and it re-parsed its command line.**
+  Windows runs a batch file through cmd.exe, which reads the whole command
+  line again before the launcher starts, so no batch code could fix it:
+  `%NAME%` expanded even inside quotes, and in an argument without spaces
+  `^` disappeared and `&`, `|`, `<` and `>` acted as operators, so
+  `--text 'x&calc'` started Calculator, outside the granted window. Programs
+  that pass an argument list (Python's `subprocess`, Node, Go) don't escape
+  for cmd.exe either. An executable has no such parse. Checked on a Windows
+  11 ARM64 guest from PowerShell 5.1, cmd, Git Bash, Python and Node: those
+  characters, `%PATH%`, quotes, a trailing backslash and emoji reached the
+  client as given. Only the caller's own shell still quotes: Windows
+  PowerShell 5.1 splits an argument that holds a double quote unless each
+  one is written `\"`.
+- **Ctrl+C ends the client, with no batch prompt.** The child writes to the
+  launcher's handles, so Electron doesn't attach it to the console and the
+  console's Ctrl+C, Ctrl+Break and close reach only the launcher, which ends
+  the child as the console would have (`STATUS_CONTROL_C_EXIT`). The child
+  runs in a kill-on-close job, so a host that kills the launcher, as agent
+  hosts do on a timeout, ends the client too.
+- **Text can come from stdin.** `send --text -` and `wait --match -` read it
+  as UTF-8 on every platform, so text never meets a shell's quoting. Leading
+  byte order marks (Windows PowerShell 5.1 pipes one or two) and one final
+  line break (CRLF there) are dropped. Windows PowerShell 5.1 pipes ASCII
+  unless `$OutputEncoding` is UTF-8, which the reference says. MCP passes
+  its text as is: a text of `-` there is a dash.
 
 ## Open questions
 

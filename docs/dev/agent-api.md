@@ -56,7 +56,7 @@ A client started inside a pane doesn't need any of that. Every pane has:
 
 | Variable          | Value                                                                         |
 | ----------------- | ----------------------------------------------------------------------------- |
-| `OMXTERM_CTL`     | Absolute path of the `omxterm-ctl` launcher (`omxterm-ctl.cmd` on Windows).   |
+| `OMXTERM_CTL`     | Absolute path of the `omxterm-ctl` launcher (`omxterm-ctl.exe` on Windows).   |
 | `OMXTERM_PROFILE` | The profile directory.                                                        |
 | `OMXTERM_PANE`    | The process instance, window and session id, such as `5f0c9a1e2b3d4c6f:3:s4`. |
 
@@ -443,6 +443,7 @@ omxterm-ctl grants                         # granted windows of this profile
 omxterm-ctl list
 omxterm-ctl send s1 --text 'npm test' --enter --wait --idle 800
 omxterm-ctl send s1 --keys Ctrl+C
+printf '%s' "$text" | omxterm-ctl send s1 --text - --enter
 omxterm-ctl wait s1 --after 48211 --idle 800 --timeout 120000
 omxterm-ctl send s1 --text 'npm test' --enter --match 'Tests passed' --timeout 120000
 omxterm-ctl wait s1 --after 48211 --match 'Tests passed' --timeout 120000
@@ -455,16 +456,18 @@ omxterm-ctl keys                           # slice 4: chords press runs
 
 - Inside a pane, agents call it as `"$OMXTERM_CTL"`; window and profile come
   from the environment. On Windows that is `& $env:OMXTERM_CTL` in
-  PowerShell, `"%OMXTERM_CTL%"` in cmd and `"$OMXTERM_CTL"` in Git Bash. The
-  `.cmd` runs the app's own executable in Node mode and returns its exit
-  code. cmd.exe reads its arguments again before the client sees them:
-  `%NAME%` expands, a double quote cuts an argument short, and in an
-  argument without spaces `^` disappears and `&`, `|`, `<` and `>` act as
-  shell operators, so `--text 'x&calc'` would start a program and
-  `--text 'echo>notes.txt'` would overwrite a file. Until
-  [#1081](https://github.com/luizomf/omxterm/issues/1081) lands, the CLI on
-  Windows is not for arbitrary text: send it through [MCP](#mcp), whose
-  arguments go over stdin.
+  PowerShell, `"%OMXTERM_CTL%"` in cmd and `"$OMXTERM_CTL"` in Git Bash. It
+  is `omxterm-ctl.exe`, a console program that runs the app's own executable
+  in Node mode with the caller's arguments untouched, shares its console,
+  ends the client on Ctrl+C or when it is killed itself, and returns the
+  client's exit code. Only the caller's own shell quotes: Windows PowerShell
+  5.1 splits an argument that holds a double quote unless each one is
+  written `\"`.
+- `send --text -` and `wait --match -` (or `send --match -`) read the text
+  from stdin as UTF-8, so it never meets a shell's quoting. Leading byte
+  order marks and one final line break are dropped; `--enter` presses Enter.
+  Windows PowerShell 5.1 pipes ASCII unless
+  `$OutputEncoding = [System.Text.UTF8Encoding]::new($false)` is set first.
   Elsewhere, `--window <id>` picks a grant when there
   are several and `--profile <dir>` picks a profile. A `--profile` other than
   the pane's own `OMXTERM_PROFILE` ignores the pane, so nothing is marked

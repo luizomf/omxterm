@@ -1,9 +1,9 @@
 // omxterm-ctl: a small, dependency-free client for OMXTerm's local agent API
 // (ADR 0052, docs/dev/agent-api.md). OMXTerm's own runtime runs it in Node
 // mode through the launcher that $OMXTERM_CTL names.
-import { AGENT_GRANT_ITEM } from "../shared/agent-api";
+import { AGENT_GRANT_ITEM, MAX_AGENT_REQUEST_BYTES } from "../shared/agent-api";
 import { CtlError, EXIT } from "./client";
-import { execute, parse } from "./commands";
+import { execute, parse, textFromStdin } from "./commands";
 import { serveMcp } from "./mcp";
 import guide from "./SKILL.md";
 
@@ -23,7 +23,9 @@ Commands:
                                Type into a pane. Keys: Enter, Tab, Escape,
                                Backspace, Space, Ctrl+A ... Ctrl+Z. With
                                --wait (or --match), then wait as below,
-                               counting from before the typing.
+                               counting from before the typing. TEXT -
+                               reads the text from stdin, as UTF-8, without
+                               one final line break.
   press <pane> KEY...          Press keys in a pane, encoded for its modes as
                                the user's own keys: Up, Down, Left, Right,
                                Home, End, PageUp, PageDown, Insert, Delete,
@@ -43,7 +45,8 @@ Commands:
                                not a pattern) shows up on its screen past
                                OFFSET, or its program ends. Prints idle,
                                match, exited or timeout. With --match alone,
-                               quiet doesn't count.
+                               quiet doesn't count. --match - reads TEXT from
+                               stdin, like send --text -.
 
 Options:
   --window ID      The granted window, when there is more than one.
@@ -52,6 +55,19 @@ Options:
 
 Exit status: 0 done, 1 API error, 2 usage, 3 no grant, 124 wait timeout.
 `;
+
+// Bounded: more than a request carries is a mistake, not text to send.
+async function readStdin(): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of process.stdin as AsyncIterable<Buffer>) {
+    size += chunk.length;
+    if (size > MAX_AGENT_REQUEST_BYTES)
+      throw new CtlError(EXIT.usage, "The text on stdin is too long.");
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
 
 function print(text: string) {
   process.stdout.write(text.endsWith("\n") || text === "" ? text : `${text}\n`);
@@ -71,6 +87,7 @@ async function main(argv: readonly string[]): Promise<number> {
     await serveMcp(options);
     return EXIT.ok;
   }
+  await textFromStdin(options, readStdin);
   const outcome = await execute(options);
   print(outcome.output);
   return outcome.code;

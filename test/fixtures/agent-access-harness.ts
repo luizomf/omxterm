@@ -29,6 +29,35 @@ type HarnessShortcuts = Pick<
   "shortcut" | "keybinds"
 > & { closeNeedsUser?: Register[3]; native?: Register[4] };
 
+// One omxterm-ctl run from a pane. With input, stdin carries it and then ends.
+function runCtl(
+  client: string,
+  profile: string,
+  args: string[],
+  pane?: string,
+  input?: string | Buffer,
+) {
+  return new Promise<{ code: number; stdout: string; stderr: string }>(
+    (resolve) => {
+      const child = execFile(
+        process.execPath,
+        [client, ...args],
+        {
+          env: {
+            PATH: process.env.PATH,
+            OMXTERM_PROFILE: profile,
+            OMXTERM_PANE: pane,
+          },
+          encoding: "utf8",
+        },
+        (error, stdout, stderr) =>
+          resolve({ code: Number(error?.code ?? 0), stdout, stderr }),
+      );
+      if (input !== undefined) child.stdin!.end(input);
+    },
+  );
+}
+
 /** Registers the harness's hooks; call it once at a test file's top level. */
 export function useAgentHarness() {
   let client: string;
@@ -55,25 +84,12 @@ export function useAgentHarness() {
     for (const cleanup of cleanups.splice(0)) cleanup();
   });
 
-  function ctl(profile: string, args: string[], pane?: string) {
-    return new Promise<{ code: number; stdout: string; stderr: string }>(
-      (resolve) =>
-        execFile(
-          process.execPath,
-          [client, ...args],
-          {
-            env: {
-              PATH: process.env.PATH,
-              OMXTERM_PROFILE: profile,
-              OMXTERM_PANE: pane,
-            },
-            encoding: "utf8",
-          },
-          (error, stdout, stderr) =>
-            resolve({ code: Number(error?.code ?? 0), stdout, stderr }),
-        ),
-    );
-  }
+  const ctl = (
+    profile: string,
+    args: string[],
+    pane?: string,
+    input?: string | Buffer,
+  ) => runCtl(client, profile, args, pane, input);
 
   // `omxterm-ctl mcp` over real stdio: send lines, await answers by id.
   function mcp(profile: string, pane?: string) {
