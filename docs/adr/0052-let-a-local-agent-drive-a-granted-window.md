@@ -900,6 +900,12 @@ Two field failures with 0.34.0 changed how `send` writes
   `isBracketedPasteEnabled()`. One-line text is always typed and needs no
   round trip: in vim with 2004 on, a pasted `:wq` would be inserted
   as text instead of run.
+- **One final line break still runs the text.** Agents and scripts send
+  `ls\n` to run a command, and pasted it would wait for Enter. So one final
+  `\n`, `\r\n` or `\r` is taken off and sent as `Enter` after the gap, as
+  `--enter` would (once, with `--enter` too), and only line breaks left
+  inside the text make it multi-line: `ls\n` is typed `ls`, then Enter, as
+  before; `a\nb\n` with bracketed paste is the paste `a\nb`, then Enter.
 - **Not knowing the mode writes nothing.** A window that doesn't answer
   fails the send with `unavailable` instead of typing, since typing ahead is
   the failure. A program without bracketed paste (sh, older bash, a REPL)

@@ -435,7 +435,7 @@ function sendRequest(args: unknown) {
     (typeof value.text !== "string" || value.text.length === 0)
   )
     throw invalid("text must be a non-empty string.");
-  const text = value.text as string | undefined;
+  let text = value.text as string | undefined;
   let keys = "";
   if (value.keys !== undefined) {
     for (const key of keyNames(value.keys)) {
@@ -448,7 +448,14 @@ function sendRequest(args: unknown) {
       keys += bytes;
     }
   }
-  // A text with a line break may go as a paste: count its markers.
+  // One final line break means "and run it", as it did when text was only
+  // typed: it becomes the Enter --enter would add, and only one.
+  const ending = /(?:\r\n|\r|\n)$/u.exec(text ?? "");
+  if (text !== undefined && ending) {
+    text = text.slice(0, ending.index) || undefined;
+    if (!keys.endsWith("\r")) keys += "\r";
+  }
+  // A line break left inside the text may make it a paste: count its markers.
   const multiLine = text !== undefined && /[\r\n]/u.test(text);
   const markers = multiLine ? PASTE_START.length + PASTE_END.length : 0;
   if (
@@ -579,7 +586,8 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     },
 
     // A multi-line text goes as a paste when the pane's program accepts one,
-    // as the user's paste would (#1110); any other text is typed. Keys follow
+    // as the user's paste would (#1110); any other text is typed. A final
+    // line break is an Enter after it. Keys follow
     // in their own write after a gap, so a program doesn't read them as part
     // of the text (#1109).
     send(args, caller) {

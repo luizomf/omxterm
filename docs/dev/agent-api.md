@@ -174,7 +174,11 @@ matches shortcuts; keys that depend on the pane's mode, and shortcuts, are
 ```
 
 - `text` is written as is, at most 64 KiB of UTF-8. No newline is added.
-- A `text` with a line break (CR or LF) is a paste when the pane's program
+- One final line break (`\n`, `\r\n` or `\r`) in `text` means "and run it":
+  it is taken off the text and sent as `Enter` after it, as `keys` would,
+  and keys that already end with `Enter` get no second one. `ls\n` is typed
+  `ls`, then Enter, as before #1110.
+- A `text` with a line break (CR or LF) left inside it is a paste when the pane's program
   enabled bracketed paste (DECSET 2004): it is written between `ESC [200~` and
   `ESC [201~`, as the user's paste arrives, so a shell takes all of it before
   running any of it (#1110). Main first waits (bounded) for the window to
@@ -183,9 +187,8 @@ matches shortcuts; keys that depend on the pane's mode, and shortcuts, are
   text to paste that contains `ESC [201~` is `invalid-request`. Without the
   mode, the text is typed: a shell runs its first line while the rest waits
   as type-ahead, which the next program that reads input (ssh, sudo, `read`)
-  takes. One-line texts are always typed, with no round trip. A text that
-  ends in a line break counts as multi-line: pasted, a shell doesn't run it
-  until Enter, so send `Enter` as a key (`--enter`, MCP `enter: true`).
+  takes. One-line texts are always typed, with no round trip. `a\nb\n` in a
+  pane with bracketed paste is the paste `a\nb`, then Enter.
 - Keys after a text wait 200 ms plus 2 ms per KiB of the text, then are
   written apart (#1109). Claude Code reads a chunk with text and Enter as a
   paste, so Enter adds a line; SSH merges writes up to about 10 ms apart;

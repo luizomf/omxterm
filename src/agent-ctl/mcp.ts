@@ -121,7 +121,7 @@ const TOOLS: readonly Tool[] = [
       text: {
         type: "string",
         description:
-          "Typed as is; nothing is added. A text with a line break is one paste where the program takes pastes, so a shell runs none of it until Enter; elsewhere it is typed, and a shell runs its first line at once.",
+          "Typed as is; nothing is added. One final line break presses Enter after it, like enter. A text with a line break inside is one paste where the program takes pastes, so a shell runs none of it until Enter; elsewhere it is typed, and a shell runs its first line at once.",
       },
       keys: {
         type: "array",

@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import {
   AgentApiError,
+  agentKeysGapMs,
   createAgentCommands,
 } from "../../src/main/agent-commands";
 import type {
@@ -64,9 +65,12 @@ function pane(initial: string) {
       live = false;
       observer?.exited("s1", code);
     },
+    // A final \r is an Enter written after send's gap.
     async send(text: string) {
-      const sent = await commands.run("send", { pane: "s1", text }, signal());
-      return (sent as { offset: number }).offset;
+      const sent = commands.run("send", { pane: "s1", text }, signal());
+      if (text.endsWith("\r"))
+        await vi.advanceTimersByTimeAsync(agentKeysGapMs(text.length));
+      return ((await sent) as { offset: number }).offset;
     },
     wait(args: object, caller = signal()) {
       const state: { value?: unknown } = {};
@@ -109,8 +113,10 @@ it("matches new text past a send, never an old copy or the echo", async () => {
 it("reads the screen before it writes, for send and for press", async () => {
   vi.useFakeTimers();
   const p = pane("$ ");
-  // The program answers as the bytes arrive.
-  p.state.onWrite = () => p.print("$ make\ndone");
+  // The program answers as the Enter arrives.
+  p.state.onWrite = (data) => {
+    if (data === "\r") p.print("$ make\ndone");
+  };
   const sent = await p.send("make\r");
   const typed = p.wait({ after: sent, match: "done", timeoutMs: 1000 });
   await vi.advanceTimersByTimeAsync(1000);
