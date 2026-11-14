@@ -162,6 +162,7 @@ int wmain(void) {
   STARTUPINFOEXW startup;
   PROCESS_INFORMATION process;
   ZeroMemory(&startup, sizeof startup);
+  ZeroMemory(&process, sizeof process);
   startup.StartupInfo.cb = sizeof startup;
   // No busy cursor for a GUI-subsystem child that never shows a window.
   startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_FORCEOFFFEEDBACK;
