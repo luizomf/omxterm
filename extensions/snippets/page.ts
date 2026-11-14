@@ -34,6 +34,8 @@ export function mountSnippetsPage(document: Document, bridge: SnippetsBridge) {
           ? {}
           : { description: snippet.description }),
         intent: snippet.execute ? "run" : "insert",
+        // Hosts up to 0.33.x require this field; newer hosts ignore false.
+        preview: false,
       })
       .catch(() => {
         /* Retirement/unavailable input never retries or redirects. */
