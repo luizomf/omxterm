@@ -1,7 +1,7 @@
 # One-time default Snippets
 
 Since **OMXTerm 0.25.0**, new **packaged** profiles on Linux ARM64/x64, macOS ARM64
-and Windows ARM64 try once to install **Snippets 0.1.3**, enabled but inactive
+and Windows ARM64 try once to install **Snippets 0.1.4**, enabled but inactive
 until opened. Existing profiles and disabled/removed choices stay intact; Windows
 x64 keeps built-in Snippets. The [availability note](../snippets-availability.md)
 is the user view. The policy below also applies
@@ -19,21 +19,21 @@ Missing/corrupt resource, store failure or uncertain publication consumes the cl
 
 ## Fixed source input and reproducible packaging
 
-The committed `assets/default-snippets/snippets-0.1.3.omxext` is the **unchanged public ZIP**, not a rebuild of current `extensions/snippets`. `assets/default-snippets.json` pins:
+The committed `assets/default-snippets/snippets-0.1.4.omxext` is the **unchanged public ZIP**, not a rebuild of current `extensions/snippets`. `assets/default-snippets.json` pins:
 
-- 82,380 bytes; SHA256 `9f331d1f5ace110db3d72858006cdc1090aa06c3ec4438062cbbba2fd5006c07`;
-- original source/tag commit `e18e16e512ebe5f3cc076ef9a8509be0719cd537`;
-- [immutable public archive](https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.3/snippets-0.1.3.omxext), with original host range `>=0.24.0-dev.8`, API `0.1.x` and semantic-input capability.
+- 82,514 bytes; SHA256 `2ab03c51b5a341323765195eaa459fd94a3c9f61b392719c965ecb60d9819557`;
+- original source/tag commit `b91350c575641031793b85ef8030ca4eb31f9059`;
+- [immutable public archive](https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.4/snippets-0.1.4.omxext), with original host range `>=0.24.0-dev.8`, API `0.1.x` and semantic-input capability.
 
 The ZIP contains its original license notices and package-owned `snippets.example.yaml`;
 normal extraction retains that example inside the immutable version, never creates
 or copies it to the user's `snippets.yaml`. Original release receipts remain `not-run`; retaining this input does not rewrite them. Host shared compatibility admits the current development family without changing that original manifest.
 
-A normal locked checkout already has the fixed input. `npm run prepare:default-snippets` verifies it offline. To restore an absent/damaged checkout input, separately obtain that **exact URL**, then run `npm run prepare:default-snippets -- /absolute/path/to/snippets-0.1.3.omxext`; only exact hash/size bytes can replace the fixed source input. No acquisition occurs inside this command, build, package preparation or application startup. Do not rebuild/rename a different archive as 0.1.3 or edit receipt qualification.
+A normal locked checkout already has the fixed input. `npm run prepare:default-snippets` verifies it offline. To restore an absent/damaged checkout input, separately obtain that **exact URL**, then run `npm run prepare:default-snippets -- /absolute/path/to/snippets-0.1.4.omxext`; only exact hash/size bytes can replace the fixed source input. No acquisition occurs inside this command, build, package preparation or application startup. Do not rebuild/rename a different archive as 0.1.4 or edit receipt qualification.
 
 On an assigned build environment, run the normal locked setup/build/package command for its native target. Electron-builder's `beforePack` hook verifies the existing Linux launcher prerequisite and stages only the pinned input to `dist/default-snippets/<builder-os>-<arch>/bundled-snippets`. Target-specific stages prevent ARM64/x64 hooks from sharing or clearing each other's payload. Supported-target missing/corrupt input **fails packaging**, clearing stale staging first. Unsupported targets clear the stage and require no archive. Source build/development needs no preparation and opts out of provisioning even if this input exists.
 
-The only external resource exception is `resources/bundled-snippets/snippets-0.1.3.omxext` (macOS `Contents/Resources/...`) for an optional target. Packaging filters copy that exact filename only; separate archive/receipt exclusions inside app.asar remain. Package verification checks target, exact directory contents, regular nonlinked file, byte count and SHA256 before its runtime probes; Windows x64 must have no bundled archive. Other `.omxext` archives/sidecars, lookalikes and an archive inside app.asar remain forbidden. This input is public data, readable by installed users, not a generated native binary.
+The only external resource exception is `resources/bundled-snippets/snippets-0.1.4.omxext` (macOS `Contents/Resources/...`) for an optional target. Packaging filters copy that exact filename only; separate archive/receipt exclusions inside app.asar remain. Package verification checks target, exact directory contents, regular nonlinked file, byte count and SHA256 before its runtime probes; Windows x64 must have no bundled archive. Other `.omxext` archives/sidecars, lookalikes and an archive inside app.asar remain forbidden. This input is public data, readable by installed users, not a generated native binary.
 
 ## Evidence boundaries and remaining gates
 
