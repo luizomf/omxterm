@@ -1,3 +1,4 @@
+import { onWindowClosed } from "./window-closed";
 import { BrowserWindow, ipcMain } from "electron";
 import { terminalIpc } from "../shared/terminal-ipc";
 import type { IpcEvent } from "./terminal-ipc-types";
@@ -41,7 +42,7 @@ export function registerSshTerminalLaunch(
   return {
     ...launch,
     register(window: BrowserWindow) {
-      window.once("closed", () => launch.cancel(window));
+      onWindowClosed(window, () => launch.cancel(window));
       window.webContents.on("render-process-gone", () => launch.cancel(window));
       window.webContents.on(
         "did-start-navigation",

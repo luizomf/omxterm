@@ -1,3 +1,4 @@
+import { onWindowClosed } from "./window-closed";
 import { randomUUID } from "node:crypto";
 import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import type { BrowserWindow } from "electron";
@@ -449,7 +450,7 @@ export function registerMirrorTypingIpc(options: {
         options.shortcut,
       );
       owners.set(value.contents, value);
-      window.once("closed", () => owners.delete(value.contents));
+      onWindowClosed(window, () => owners.delete(value.contents));
     },
     capture: (window: BrowserWindow, signal: AbortSignal, source?: string) =>
       owner(window).capture(signal, source),

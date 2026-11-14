@@ -1,3 +1,4 @@
+import { onWindowClosed } from "./window-closed";
 import { BrowserWindow } from "electron";
 import { randomUUID } from "node:crypto";
 import { terminalIpc } from "../shared/terminal-ipc";
@@ -159,7 +160,7 @@ export function createPanelDefault(options: {
       if (windows.has(window)) return;
       windows.add(window);
       window.on("blur", onWindowBlur);
-      window.once("closed", () => unregister(window));
+      onWindowClosed(window, () => unregister(window));
     },
     dispose() {
       for (const window of windows) unregister(window);

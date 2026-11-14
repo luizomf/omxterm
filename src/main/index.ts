@@ -1,4 +1,5 @@
 /* eslint-disable max-lines, max-lines-per-function -- Keep native startup composition and its captured application/window lifetimes together. */
+import { onWindowClosed } from "./window-closed";
 import { disableSessionSpellcheck } from "./session-spellcheck";
 import {
   captureDefaultProfile,
@@ -484,7 +485,7 @@ app
               },
               app.dock,
             );
-            window.once("closed", () => {
+            onWindowClosed(window, () => {
               titleController.dispose();
               notifications.dispose();
               layoutSession?.windowClosed();

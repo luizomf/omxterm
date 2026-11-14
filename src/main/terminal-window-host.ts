@@ -1,3 +1,4 @@
+import { onWindowClosed } from "./window-closed";
 import type { BrowserWindow } from "electron";
 import type { TerminalApplication } from "./terminal-application";
 import type { TerminalIpcController } from "./terminal-ipc-controller";
@@ -44,7 +45,7 @@ export interface TerminalWindowHost {
 export function registerTerminalWindowHost(
   window: HostedTerminalWindow,
   controller: Pick<TerminalIpcController, "applyFullScreen" | "dispose">,
-  onWindowClosed: () => void,
+  onClosedWindow: () => void,
 ): TerminalWindowHost {
   const webContents = window.webContents;
   let resourcesDisposed = false;
@@ -73,14 +74,14 @@ export function registerTerminalWindowHost(
     disposeResources();
     if (windowClosed) return;
     windowClosed = true;
-    onWindowClosed();
+    onClosedWindow();
   };
 
   webContents.once("render-process-gone", onRendererLoss);
   webContents.once("destroyed", onRendererLoss);
   window.on("enter-full-screen", onFullScreenChange);
   window.on("leave-full-screen", onFullScreenChange);
-  window.once("closed", onClosed);
+  onWindowClosed(window, onClosed);
 
   return { dispose: disposeResources };
 }
