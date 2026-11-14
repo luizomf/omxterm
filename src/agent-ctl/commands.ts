@@ -36,6 +36,9 @@ export type Options = {
   windowName: string;
 };
 
+/** Anything shorter is almost surely seconds typed as milliseconds. */
+export const MIN_TIMEOUT_MS = 100;
+
 export function parse(argv: readonly string[]): Options {
   const options: Options = {
     positional: [],
@@ -46,6 +49,14 @@ export function parse(argv: readonly string[]): Options {
     json: false,
     help: false,
     windowName: "--window",
+  };
+  const timeoutMs = (ms: number) => {
+    if (ms >= MIN_TIMEOUT_MS) return ms;
+    const hint = ms > 0 ? ` Did you mean ${ms * 1000} (${ms} s)?` : "";
+    throw new CtlError(
+      EXIT.usage,
+      `--timeout is in milliseconds and must be at least ${MIN_TIMEOUT_MS}, got ${ms}.${hint}`,
+    );
   };
   const number = (name: string, value: string | undefined) => {
     if (value === undefined || !/^\d+$/u.test(value))
@@ -81,7 +92,7 @@ export function parse(argv: readonly string[]): Options {
         options.match = value();
         break;
       case "--timeout":
-        options.timeout = number(argument, value());
+        options.timeout = timeoutMs(number(argument, value()));
         break;
       case "--after":
         options.after = number(argument, value());

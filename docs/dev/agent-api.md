@@ -516,8 +516,9 @@ omxterm-ctl keys                           # slice 4: chords press runs
   list, `--enter` adds `Enter` to the same request, and `send … --wait`
   runs `wait` with the returned `offset` on the same connection, which is the
   reliable way to type a command and wait for it. `--match TEXT` on `send`
-  waits the same way, for that text. `--timeout` defaults to 60000 for
-  `wait` and `send --wait`.
+  waits the same way, for that text. `--timeout` is in milliseconds, at least
+  100 (a smaller value is refused as probably seconds), and defaults to 60000
+  for `wait` and `send --wait`.
 - A pane may be named `s4`, `3:s4` or as `OMXTERM_PANE` spells it,
   `5f0c9a1e2b3d4c6f:3:s4`; the window part must be the granted window's and the
   instance part this OMXTerm process's, or the pane "belongs to another window".

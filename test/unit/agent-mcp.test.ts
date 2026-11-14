@@ -102,16 +102,20 @@ it("serves MCP on stdio and starts working when the window is allowed", async ()
   ).toMatchObject({ isError: true });
   expect(port.writes).toHaveLength(writes);
   // A wait that runs out is an answer, not an error.
-  expect(await server.call("wait", { pane: "s2", timeout: 50 })).toEqual({
+  expect(await server.call("wait", { pane: "s2", timeout: 100 })).toEqual({
     text: "timeout",
     isError: false,
   });
   expect(
-    await server.call("wait", { pane: "s2", match: "done", timeout: 50 }),
+    await server.call("wait", { pane: "s2", match: "done", timeout: 100 }),
   ).toEqual({ text: "timeout", isError: false });
   expect(
-    await server.call("wait", { pane: "s2", match: "", timeout: 50 }),
+    await server.call("wait", { pane: "s2", match: "", timeout: 100 }),
   ).toMatchObject({ isError: true });
+  // Seconds typed as milliseconds are refused, with the likely value.
+  const early = await server.call("wait", { pane: "s2", timeout: 30 });
+  expect(early.isError).toBe(true);
+  expect(early.text).toContain("30000");
   expect(await server.call("read", { pane: 2 })).toMatchObject({
     isError: true,
   });
