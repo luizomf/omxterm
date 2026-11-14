@@ -388,7 +388,7 @@ it("ends the grant when the agent closes its window, and runs nothing after a st
     if (action === "close-window") harness.window.emit("closed");
     return undefined;
   });
-  const harness = setup("darwin", {
+  const harness = setup(process.platform, {
     shortcut: (chord) =>
       agentShortcutAction(terminalDefaultKeybinds("darwin"), chord, "darwin"),
     native,
@@ -416,7 +416,7 @@ it("ends the grant when the agent closes its window, and runs nothing after a st
 
 it("runs a tab shortcut on the pane the client names, and a stop fails one in flight", async () => {
   const { profile, pane, access, window, contents, port, ipc, event, shown } =
-    setup("darwin", {
+    setup(process.platform, {
       shortcut: (chord) =>
         agentShortcutAction(terminalDefaultKeybinds("darwin"), chord, "darwin"),
       closeNeedsUser: () => undefined,

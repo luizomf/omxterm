@@ -5,7 +5,9 @@ in by themselves" (macOS and Linux), and slice 3, "Read and wait better",
 which are implemented. The
 [keyboard-parity rule](#keyboard-parity) is accepted, and slice 4 builds it
 ([#1047](https://github.com/luizomf/omxterm/issues/1047)): `press` with named
-keys and every shortcut decided, the tab tree in `list`, and `keys`. The
+keys and every shortcut decided, the tab tree in `list`, and `keys`. Slice 5,
+Windows ([#1078](https://github.com/luizomf/omxterm/issues/1078)), is
+implemented with the default pipe descriptor. The
 other later slices are still proposed
 ([#1025](https://github.com/luizomf/omxterm/issues/1025), building on
 [#330](https://github.com/luizomf/omxterm/issues/330)). Slice 1 amends
@@ -16,10 +18,11 @@ payloads join the excluded content) and
 [ADR 0013](0013-do-not-inject-shell-integration.md) (three non-secret
 environment variables in every pane). Slice 4 amends ADR 0050 again (the
 mark's error tone). The wire protocol and CLI are in the
-[Agent API reference](../dev/agent-api.md). Where slices 1 and 2 differ from the
+[Agent API reference](../dev/agent-api.md). Where slices differ from the
 text below, [Slice 1 as built](#slice-1-as-built),
-[Slice 2 as built](#slice-2-as-built) and
-[Slice 4 as built](#slice-4-as-built) say so.
+[Slice 2 as built](#slice-2-as-built),
+[Slice 4 as built](#slice-4-as-built) and
+[Slice 5 as built](#slice-5-as-built) say so.
 
 ## Context
 
@@ -391,8 +394,10 @@ a command name, its duration and an error code.
 ## Threat model
 
 - **Other users on the machine** are stopped by the profile directory and
-  socket permissions on macOS and Linux. On Windows the pipe uses the default
-  security descriptor, so the token is the authenticator (see Tradeoffs).
+  socket permissions on macOS and Linux. On Windows the pipe's default
+  security descriptor lets other users open it only for reading, which a
+  connection can't use, and the profile's inherited ACL keeps them from the
+  credential ([Slice 5 as built](#slice-5-as-built)).
 - **Other processes of the same user are not stopped**, and no local design
   here can stop them: they can read the grant file. The same user can already
   read the user's keys and shell startup files, and on X11 (the Linux default,
@@ -421,8 +426,9 @@ a command name, its duration and an error code.
   listening pipes with no security attributes and without
   `PIPE_REJECT_REMOTE_CLIENTS`, and Node exposes neither. An owner-only pipe
   means a native helper that owns the pipe I/O. This record chooses the token
-  with mutual proof as the Windows boundary and leaves the native hardening
-  as an open question, with Windows as the last platform slice.
+  with mutual proof as the Windows boundary. Slice 5 measured the default
+  descriptor and kept it, with no native helper
+  ([Slice 5 as built](#slice-5-as-built)).
 - **The token is not a wall between same-user processes.** See above. Handing
   it to the agent by hand (show it once, the user pastes it) would be one,
   at the cost of the friction the feature exists to remove.
@@ -431,9 +437,9 @@ a command name, its duration and an error code.
   and quits (ADR 0048, `claimSingleInstance`): there is no channel for an
   answer. The client is a separate script, `omxterm-ctl`, run by the same
   binary in Node mode, which skips both. This is a disagreement about the
-  mechanism, not the name. Unverified: its output on an interactive Windows
-  console (the binary is a GUI executable) and the per-call cost of the
-  AppImage mount. The installers put no command on `PATH` today (the Linux
+  mechanism, not the name. On Windows the binary is a GUI executable, so a
+  `.cmd` launcher runs it ([Slice 5 as built](#slice-5-as-built)).
+  Unverified: the per-call cost of the AppImage mount. The installers put no command on `PATH` today (the Linux
   script installs the AppImage, an icon and a desktop entry; the NSIS include
   doesn't touch `PATH`), which is why discovery uses `OMXTERM_CTL`.
 - **The accent has no contrast guarantee.** `terminalPaneAccent()` falls back
@@ -560,7 +566,7 @@ building it:
   ([Slice 4 as built](#slice-4-as-built)).
 - **A held shortcut toggles once.** A bound `toggleAgentAccess` owns one
   physical press, so key repeat can't flip the grant back and forth.
-- **Windows** refuses the toggle with one sentence, and its panes get no
+- **Windows** refused the toggle with one sentence, and its panes got no
   variables, until slice 5.
 - **The launcher** is a POSIX script at `<resources>/agent-ctl/omxterm-ctl`
   beside its bundled script `omxterm-ctl.cjs`, outside the archive. It runs
@@ -756,10 +762,45 @@ key. Each runs in the granted window or answers "not yet":
   and bar toggles changed only the granted window, without raising it. An
   extension tab with both bars hidden was checked in #1050; Linux wasn't run.
 
+## Slice 5 as built
+
+Windows ([#1078](https://github.com/luizomf/omxterm/issues/1078)), after a
+probe on a Windows 11 ARM64 guest
+([#1025](https://github.com/luizomf/omxterm/issues/1025#issuecomment-6868282883)):
+
+- **The default pipe descriptor, no native pipe server.** That settles the
+  open question. Node's descriptor gives the owner, SYSTEM and Administrators
+  full control and Everyone and Anonymous only read. A client opens the pipe
+  for reading and writing, so a second non-admin user gets `EPERM` on
+  connect, whether OMXTerm runs elevated or not. Administrators can connect,
+  as they can open anything of the user's. Same-user processes were never out
+  of reach on any platform, and the token still proves both sides.
+- **The credential is the same file.** `%APPDATA%\omxterm` inherits SYSTEM,
+  Administrators and the user only; the probe's second non-admin user
+  couldn't read a fresh file there. Windows has no mode bits, so the client
+  skips its `0600` check there and relies on that ACL. A custom profile path
+  still carries no such guarantee.
+- **The pipe is `\\.\pipe\omxterm-agent-<hash>`**, the first 16 hex digits of
+  the SHA-256 of the profile path. It has no file: nothing to prepare,
+  protect, replace or remove, and no path-length limit. A name another live
+  process holds fails the listen, and the grant is refused with the
+  existing sentence; the name is free again when that process ends. Ending
+  the last grant closes the pipe.
+- **The launcher is `omxterm-ctl.cmd`** beside `omxterm-ctl.cjs` in
+  `resources\agent-ctl`, and `OMXTERM_CTL` names it. It sets
+  `ELECTRON_RUN_AS_NODE=1` inside `setlocal`, runs `OMXTerm.exe` with the
+  script and every argument, and returns its exit code; an unpackaged build
+  names its Electron binary in the same `runtime` file as the POSIX launcher.
+  Run directly from PowerShell, the GUI executable gives no output, no exit
+  code and doesn't wait. The `.cmd` works from PowerShell
+  (`& $env:OMXTERM_CTL status`), cmd (`"%OMXTERM_CTL%" status`) and Git Bash
+  (`"$OMXTERM_CTL" status`), and `mcp` serves over its stdin. Its arguments
+  pass through cmd.exe's rules, so `%` and `^` in `--text` may not arrive as
+  typed; the guide's Windows wording is
+  [#1079](https://github.com/luizomf/omxterm/issues/1079)'s.
+
 ## Open questions
 
-- Windows: accept the default pipe descriptor behind the token, or pay for a
-  native pipe server?
 - Registering the MCP server in an agent's own configuration is still one
   step per agent. Should OMXTerm offer it (`omxterm-ctl setup <agent>`, or a
   Command Palette action), or leave it to the guide? Slice 2 leaves it to the
@@ -768,8 +809,8 @@ key. Each runs in the granted window or answers "not yet":
   to track. Worth revisiting if users trip on it.
 - Should `omxterm-ctl` also be offered on `PATH` for agents and scripts that
   run outside OMXTerm?
-- Does a read work in a minimized or fully covered window on Linux and
-  Windows? It does on macOS (slice 1).
+- Does a read work in a minimized or fully covered window on Linux? It does
+  on macOS (slice 1) and Windows (slice 5).
 - Limits: how many tabs and panes may an agent create, and does a grant need
   a rate limit on input?
 - Should the grant show anywhere outside its window (Dock, tray, another

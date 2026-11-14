@@ -53,5 +53,5 @@ granted and ungranted windows alike, so an agent running in a pane can find
 the [agent API](0052-let-a-local-agent-drive-a-granted-window.md) with nothing
 configured. They are values in the environment, not shell integration: no
 startup file, prompt or command changes. None is a secret: the grant's token
-never enters an environment. A pane never inherits another OMXTerm's values;
-on Windows, until its slice, panes get none.
+never enters an environment. A pane never inherits another OMXTerm's values.
+Windows panes got none until slice 5 of ADR 0052.

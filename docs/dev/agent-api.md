@@ -1,8 +1,8 @@
 # Agent API reference
 
 The wire protocol and CLI of
-[ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md). Slices 1
-and 2 (macOS and Linux) are implemented: the handshake, `list`, `send`,
+[ADR 0052](../adr/0052-let-a-local-agent-drive-a-granted-window.md), on
+macOS, Linux and Windows (slice 5). Slices 1 and 2 are implemented: the handshake, `list`, `send`,
 `read`, `wait`, the `omxterm-ctl` commands without a slice mark, its `guide`
 and its [MCP server](#mcp). Slice 3 is implemented too: the exact `screen`
 source of [`read`](#read-tail-and-screen) and `match` in
@@ -28,10 +28,13 @@ A client needs the profile directory (Electron userData):
 | Windows  | `%APPDATA%\omxterm`                     | `\\.\pipe\omxterm-agent-<hash>` |
 
 `<hash>` is the first 16 hex characters of the SHA-256 of the profile path. A
-non-default profile (`--user-data-dir`) is passed with `--profile`.
+non-default profile (`--user-data-dir`) is passed with `--profile`. The pipe
+uses Node's default security descriptor: other users can open it only for
+reading, which a connection can't use.
 
 Each grant has one file, `<profile>/agent-api/grants/<window>.json`, readable
-only by the user and removed when the grant ends:
+only by the user (mode `0600`; on Windows, the inherited ACL of
+`%APPDATA%\omxterm`) and removed when the grant ends:
 
 ```json
 {
@@ -50,7 +53,7 @@ A client started inside a pane doesn't need any of that. Every pane has:
 
 | Variable          | Value                                                                         |
 | ----------------- | ----------------------------------------------------------------------------- |
-| `OMXTERM_CTL`     | Absolute path of the `omxterm-ctl` launcher.                                  |
+| `OMXTERM_CTL`     | Absolute path of the `omxterm-ctl` launcher (`omxterm-ctl.cmd` on Windows).   |
 | `OMXTERM_PROFILE` | The profile directory.                                                        |
 | `OMXTERM_PANE`    | The process instance, window and session id, such as `5f0c9a1e2b3d4c6f:3:s4`. |
 
@@ -448,7 +451,11 @@ omxterm-ctl keys                           # slice 4: chords press runs
 ```
 
 - Inside a pane, agents call it as `"$OMXTERM_CTL"`; window and profile come
-  from the environment. Elsewhere, `--window <id>` picks a grant when there
+  from the environment. On Windows that is `& $env:OMXTERM_CTL` in
+  PowerShell, `"%OMXTERM_CTL%"` in cmd and `"$OMXTERM_CTL"` in Git Bash. The
+  `.cmd` runs the app's own executable in Node mode and returns its exit
+  code; its arguments pass through cmd.exe, so `%` and `^` in `--text` may
+  not arrive as typed. Elsewhere, `--window <id>` picks a grant when there
   are several and `--profile <dir>` picks a profile. A `--profile` other than
   the pane's own `OMXTERM_PROFILE` ignores the pane, so nothing is marked
   `self`. `--json` prints the raw result.
