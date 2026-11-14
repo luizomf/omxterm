@@ -110,7 +110,7 @@ in.
 - A `--text` with a line break goes as one paste when the program asked for
   pastes (bracketed paste: zsh, bash 5.1+, fish, vim, Claude Code, Codex),
   the way the user's paste arrives: a shell runs none of it until Enter, then
-  all of it. Otherwise it is typed: a shell runs the first line, and whatever
+  all of it. A final line break doesn't run it either: use `--enter`. Otherwise it is typed: a shell runs the first line, and whatever
   reads input next (ssh, sudo, `read`) takes the rest. For a shell you're not
   sure of, send one line (`a && b`) or write a script file and run it.
 - `press` is for keys whose bytes depend on what the program asked for, as

@@ -534,7 +534,9 @@ export function createAgentCommands(options: AgentCommandsOptions) {
 
   const inOrder = paneQueue();
   // One agent write, remembered for wait; its offset is the position before.
+  // A request queued behind another may reach it after the grant ended.
   const writeInput = (sessionId: TerminalSessionId, data: string) => {
+    if (disposed) throw revoked();
     const offset = position(sessionId).sent;
     screens.remember(sessionId, offset);
     const receipt = options.sessions.write(sessionId, data);

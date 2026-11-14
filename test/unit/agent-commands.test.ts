@@ -295,10 +295,15 @@ it("sends no keys once the grant ends, the agent goes or the pane ends during th
   await expect(ended).resolves.toEqual({ receipt: "unknown", offset: 0 });
 
   const revoked = failure(send("s1"));
+  // Queued behind it, so it reaches its write after the stop.
+  const queued = failure(
+    commands.run("send", { pane: "s1", text: "next" }, caller()),
+  );
   await vi.advanceTimersByTimeAsync(0);
   commands.dispose();
   await vi.advanceTimersByTimeAsync(1000);
   expect(await revoked).toBe("revoked");
+  expect(await queued).toBe("revoked");
   expect(window.writes).toEqual([
     ["s1", "hello"],
     ["s2", "hello"],

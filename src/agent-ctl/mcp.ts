@@ -118,7 +118,11 @@ const TOOLS: readonly Tool[] = [
     "Type into a pane. With text, enter and wait it runs a command and waits until the pane goes quiet, answering idle, exited <code> or timeout; then read the pane. With match it waits for that text instead, answering match when it shows up. Without wait or match it answers the output offset to pass to wait as after.",
     {
       pane,
-      text: { type: "string", description: "Typed as is; nothing is added." },
+      text: {
+        type: "string",
+        description:
+          "Typed as is; nothing is added. A text with a line break is one paste where the program takes pastes, so a shell runs none of it until Enter; elsewhere it is typed, and a shell runs its first line at once.",
+      },
       keys: {
         type: "array",
         items: { type: "string" },
