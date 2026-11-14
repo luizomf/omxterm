@@ -23,6 +23,8 @@ function createHarness(platform: string, dock = createDock()) {
     dock,
     platform,
   );
+  // A window the user has already used, then switched away from.
+  for (const listener of listeners) listener();
   controller.sessionStarted("session");
   controller.selectSession("session");
   return {

@@ -103,6 +103,9 @@ export function createTerminalWindowTitleController(
   let settingsTitle: string | undefined;
   let cancelAttention: (() => void) | undefined;
   let disposed = false;
+  // Output that arrives while the window opens (tmux replaying a pending bell
+  // on attach) is not news: native attention waits for the first focus.
+  let hasBeenFocused = window.isFocused();
   const onRejected = options.onRejected ?? (() => {});
 
   const displayTitle = (state: SessionTitleState) =>
@@ -143,11 +146,13 @@ export function createTerminalWindowTitleController(
     if (!state) return;
     // The mark is unconditional: even the pane the user is looking at shows
     // that it asked for attention, until focus or interaction clears it.
-    // Native attention and notifications are for what is out of sight.
+    // Native attention and notifications are for what is out of sight, and
+    // only once the user has had the window in front of them.
     if (!state.attentionPending) {
       state.attentionPending = true;
       options.sendSessionAttention?.(sessionId, true);
     }
+    if (!hasBeenFocused) return;
     const focused = window.isFocused();
     if (!focused && !cancelAttention) {
       cancelAttention = options.requestAttention();
@@ -170,7 +175,10 @@ export function createTerminalWindowTitleController(
     cancelPendingAttention();
     clearAttention(selectedSessionId);
   };
-  const onFocus = () => resetAttention();
+  const onFocus = () => {
+    hasBeenFocused = true;
+    resetAttention();
+  };
 
   window.on("focus", onFocus);
   updateWindowTitle();
