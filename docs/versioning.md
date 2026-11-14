@@ -223,6 +223,10 @@ it moves main to `0.36.1-dev.2`.
 Letting the appearance fixture's frame gate hold an idle Surface's next frame
 (#1144) moves main to `0.36.1-dev.3`.
 
+Comparing file identities as bigints, so Windows file IDs past 2^53 no longer
+let a replaced entry pass the Files delete and move checks or the Settings and
+package read checks (#1149), moves main to `0.36.1-dev.4`. Files goes to 0.9.3.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

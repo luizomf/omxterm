@@ -218,20 +218,20 @@ export async function readBoundedFile(
   file: string,
   maximum: number,
 ): Promise<Buffer> {
-  const before = await lstat(file);
-  if (!before.isFile() || before.size > maximum)
+  const before = await lstat(file, { bigint: true });
+  if (!before.isFile() || before.size > BigInt(maximum))
     throw new PackageError("invalid-package");
   const handle = await open(
     file,
     constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0),
   );
   try {
-    const stat = await handle.stat();
+    const stat = await handle.stat({ bigint: true });
     if (
       !stat.isFile() ||
       stat.dev !== before.dev ||
       stat.ino !== before.ino ||
-      stat.size > maximum
+      stat.size > BigInt(maximum)
     )
       throw new PackageError("invalid-package");
     // Do not use readFile after a size check: the file can grow during the read.

@@ -37,19 +37,19 @@ async function readBounded(
   maxBytes: number,
 ): Promise<Buffer> {
   const target = await realpath(filePath);
-  const before = await lstat(target);
+  const before = await lstat(target, { bigint: true });
   if (!before.isFile()) throw new LocalReadError("type");
-  if (before.size > maxBytes) throw new LocalReadError("size");
+  if (before.size > BigInt(maxBytes)) throw new LocalReadError("size");
   const handle = await open(
     target,
     constants.O_RDONLY | constants.O_NONBLOCK | (constants.O_NOFOLLOW ?? 0),
   );
   try {
-    const opened = await handle.stat();
+    const opened = await handle.stat({ bigint: true });
     if (!opened.isFile()) throw new LocalReadError("type");
     if (opened.dev !== before.dev || opened.ino !== before.ino)
       throw new LocalReadError("changed");
-    if (opened.size > maxBytes) throw new LocalReadError("size");
+    if (opened.size > BigInt(maxBytes)) throw new LocalReadError("size");
     const bytes = Buffer.allocUnsafe(maxBytes + 1);
     let length = 0;
     while (length < bytes.length) {
@@ -63,11 +63,11 @@ async function readBounded(
       length += read.bytesRead;
     }
     if (length > maxBytes) throw new LocalReadError("size");
-    const after = await handle.stat();
+    const after = await handle.stat({ bigint: true });
     if (
       opened.size !== after.size ||
-      opened.mtimeMs !== after.mtimeMs ||
-      opened.ctimeMs !== after.ctimeMs ||
+      opened.mtimeNs !== after.mtimeNs ||
+      opened.ctimeNs !== after.ctimeNs ||
       (await realpath(filePath)) !== target
     )
       throw new LocalReadError("changed");
@@ -216,11 +216,11 @@ async function equivalentEntry(
     if ((await realpath(path.dirname(source))) !== (await realpath(directory)))
       return undefined;
     const [configured, discovered] = await Promise.all([
-      lstat(source),
-      lstat(path.join(directory, matching[0]!)),
+      lstat(source, { bigint: true }),
+      lstat(path.join(directory, matching[0]!), { bigint: true }),
     ]);
     if (
-      configured.ino !== 0 &&
+      configured.ino !== 0n &&
       configured.dev === discovered.dev &&
       configured.ino === discovered.ino
     )
