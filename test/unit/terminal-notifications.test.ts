@@ -99,13 +99,43 @@ describe("native terminal notifications", () => {
       "two",
       "three",
     ]);
+    expect(h.created[1]!.close).not.toHaveBeenCalled();
+    expect(h.created[2]!.close).not.toHaveBeenCalled();
+  });
 
-    h.notifications.clear("s2");
-    expect(h.created[1]!.close).toHaveBeenCalledOnce();
+  it("leaves delivered notifications for the user when the session ends or the window goes", () => {
+    const h = harness();
+    h.notifications.show("s1", { title: "agent", body: "one" });
+    h.notifications.show("s2", { title: "other", body: "two" });
+    h.notifications.show("s3", { title: "third", body: "three" });
+    h.notifications.ended("s1");
     h.notifications.dispose();
-    expect(h.created[2]!.close).toHaveBeenCalledOnce();
-    h.notifications.show("s3", { title: "late", body: "late" });
+    for (const native of h.created) expect(native.close).not.toHaveBeenCalled();
+
+    // Clicks that outlive the session or window do nothing.
+    h.created[0]!.click();
+    h.created[1]!.click();
+    expect(h.reveal).not.toHaveBeenCalled();
+    h.notifications.show("s4", { title: "late", body: "late" });
     expect(h.created).toHaveLength(3);
+  });
+
+  it("still reveals a notification that outlived the attention mark", () => {
+    const h = harness();
+    h.notifications.show("s1", { title: "agent", body: "Done" });
+    h.created[0]!.click();
+    expect(h.reveal).toHaveBeenCalledExactlyOnceWith("s1");
+  });
+
+  it("ignores a click on a notification a newer one replaced", () => {
+    const h = harness();
+    h.notifications.show("s1", { title: "agent", body: "old" });
+    h.advance(NOTIFICATION_INTERVAL_MS);
+    h.notifications.show("s1", { title: "agent", body: "new" });
+    h.created[0]!.click();
+    expect(h.reveal).not.toHaveBeenCalled();
+    h.created[1]!.click();
+    expect(h.reveal).toHaveBeenCalledExactlyOnceWith("s1");
   });
 
   it("plays the system sound with the notification, or alone when notifications are off", () => {

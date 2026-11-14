@@ -34,8 +34,6 @@ export interface TerminalWindowTitleControllerOptions {
     sessionId: TerminalSessionId,
     notification: TerminalNotification,
   ) => void;
-  // A pending attention was seen, or its session ended.
-  readonly clearNotification?: (sessionId: TerminalSessionId) => void;
   readonly bellText?: () => string;
 }
 
@@ -134,7 +132,6 @@ export function createTerminalWindowTitleController(
     if (!state || !state.attentionPending) return;
     state.attentionPending = false;
     options.sendSessionAttention?.(sessionId!, false);
-    options.clearNotification?.(sessionId!);
   };
 
   const raiseAttention = (
@@ -196,8 +193,6 @@ export function createTerminalWindowTitleController(
     },
     sessionEnded(sessionId) {
       if (disposed) return;
-      if (sessions.get(sessionId)?.attentionPending)
-        options.clearNotification?.(sessionId);
       sessions.delete(sessionId);
       if (selectedSessionId === sessionId) {
         selectedSessionId = undefined;

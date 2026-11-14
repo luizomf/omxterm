@@ -42,7 +42,6 @@ function createControllerHarness(focused = false) {
   const chromeTitle = vi.fn();
   const attention = vi.fn();
   const notify = vi.fn();
-  const clearNotification = vi.fn();
   const controller = createTerminalWindowTitleController(fixture.window, {
     fallbackSessionTitle: "example-shell",
     requestAttention: dock,
@@ -51,7 +50,6 @@ function createControllerHarness(focused = false) {
     onWindowTitle: chromeTitle,
     sendSessionAttention: attention,
     notify,
-    clearNotification,
     bellText: () => "Rang the bell.",
   });
   return {
@@ -62,7 +60,6 @@ function createControllerHarness(focused = false) {
     chromeTitle,
     attention,
     notify,
-    clearNotification,
     controller,
   };
 }
@@ -263,7 +260,6 @@ describe("native Terminal Title and bell attention", () => {
 
     harness.controller.selectSession("s2");
     expect(harness.attention).toHaveBeenLastCalledWith("s2", false);
-    expect(harness.clearNotification).toHaveBeenLastCalledWith("s2");
     expect(harness.window.setTitle).toHaveBeenLastCalledWith("agent");
   });
 
@@ -316,7 +312,6 @@ describe("native Terminal Title and bell attention", () => {
 
     harness.focus();
     expect(harness.attention).toHaveBeenLastCalledWith("s1", false);
-    expect(harness.clearNotification).toHaveBeenCalledExactlyOnceWith("s1");
 
     harness.unfocus();
     harness.controller.ringBell("s1");
@@ -337,11 +332,6 @@ describe("native Terminal Title and bell attention", () => {
     harness.focus();
     harness.controller.selectSession("s2");
     expect(harness.attention).toHaveBeenLastCalledWith("s2", false);
-
-    // An ended session takes its notification with it.
-    harness.controller.ringBell("s1");
-    harness.controller.sessionEnded("s1");
-    expect(harness.clearNotification).toHaveBeenLastCalledWith("s1");
   });
 
   it("ignores late title and bell events after its Terminal Window closes", () => {

@@ -1067,7 +1067,9 @@ Programs report what they are doing with standard sequences
   on by default). Its title is the OSC 777 title, or else the session's title.
   Its body is the program's text, or "Rang the bell." for BEL. Each session
   keeps at most one notification: a newer one replaces it, and repeats within
-  one second are dropped. Seeing the pane or ending its session closes it.
+  one second are dropped. Seeing the pane, ending its session
+  or closing the window leaves it in the system's notification list until the
+  user clicks or dismisses it; only a newer one from the same session replaces it.
   Clicking it brings the window forward and selects the session's tab and
   pane. Linux bodies are markup-escaped.
 - `notifications.sound` (off by default) plays the system notification sound
