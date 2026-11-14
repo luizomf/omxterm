@@ -472,7 +472,10 @@ function roleBytes(
     readings.length === 0 ||
     (!addable && readings.length > 1) ||
     readings.some(
-      (reading) => reading.bytes === null || !Number.isFinite(reading.bytes),
+      (reading) =>
+        reading.bytes === null ||
+        !Number.isSafeInteger(reading.bytes) ||
+        reading.bytes < 0,
     )
   )
     return null;
@@ -492,19 +495,6 @@ function rolePids(sample: RawSample, role: string): number[] {
     .sort((a, b) => a - b);
 }
 
-function roleCpu(sample: RawSample, role: string): number | null {
-  const readings = sample.readings.filter((reading) => reading.role === role);
-  if (
-    readings.length === 0 ||
-    readings.some(
-      (reading) =>
-        reading.cpuSeconds === null || !Number.isFinite(reading.cpuSeconds),
-    )
-  )
-    return null;
-  return readings.reduce((total, reading) => total + reading.cpuSeconds!, 0);
-}
-
 // Only the application processes the issue asks about; fixture shells and short
 // lived helpers stay in their own rows and never enter the total.
 function applicationMemoryComplete(
@@ -522,7 +512,9 @@ function applicationMemoryComplete(
       sample.readings.every(
         (reading) =>
           !APPLICATION_ROLES.some((role) => role === reading.role) ||
-          (reading.bytes !== null && Number.isFinite(reading.bytes)),
+          (reading.bytes !== null &&
+            Number.isSafeInteger(reading.bytes) &&
+            reading.bytes >= 0),
       ),
   );
 }
@@ -540,19 +532,54 @@ function applicationTotal(sample: RawSample, addable: boolean): number | null {
     : complete.reduce((total, value) => total + value, 0);
 }
 
-function totalCpu(sample: RawSample): number | null {
-  const readings = sample.readings.filter((reading) =>
-    APPLICATION_ROLES.some((role) => role === reading.role),
-  );
-  if (
-    readings.length === 0 ||
-    readings.some(
-      (reading) =>
-        reading.cpuSeconds === null || !Number.isFinite(reading.cpuSeconds),
+function cpuDelta(samples: readonly RawSample[], role?: string): number | null {
+  if (samples.length < 2) return null;
+  let identities: string[] | null = null;
+  let previous = new Map<string, number>();
+  let firstTotal: number | null = null;
+  let lastTotal: number | null = null;
+  for (const sample of samples) {
+    const readings = sample.readings.filter((reading) =>
+      role === undefined
+        ? APPLICATION_ROLES.some((candidate) => candidate === reading.role)
+        : reading.role === role,
+    );
+    const keys = readings
+      .map((reading) => `${reading.role}:${reading.pid}`)
+      .sort();
+    if (
+      readings.length === 0 ||
+      new Set(keys).size !== keys.length ||
+      (identities !== null &&
+        (keys.length !== identities.length ||
+          keys.some((key, index) => key !== identities![index])))
     )
-  )
+      return null;
+    identities ??= keys;
+    let total = 0;
+    const next = new Map<string, number>();
+    for (const reading of readings) {
+      const value = reading.cpuSeconds;
+      const key = `${reading.role}:${reading.pid}`;
+      const prior = previous.get(key);
+      if (
+        value === null ||
+        !Number.isFinite(value) ||
+        value < 0 ||
+        (prior !== undefined && value < prior)
+      )
+        return null;
+      total += value;
+      next.set(key, value);
+    }
+    if (!Number.isFinite(total)) return null;
+    firstTotal ??= total;
+    lastTotal = total;
+    previous = next;
+  }
+  if (firstTotal === null || lastTotal === null || lastTotal < firstTotal)
     return null;
-  return readings.reduce((total, reading) => total + reading.cpuSeconds!, 0);
+  return lastTotal - firstTotal;
 }
 
 // The retained floor of the settled samples: garbage collection inflates
@@ -704,15 +731,13 @@ function idleSummary(
     const end = roleBytes(after, role, addable);
     growthBytes[role] =
       !timesValid || start === null || end === null ? null : end - start;
-    const startCpu = roleCpu(before, role);
-    const endCpu = roleCpu(after, role);
+    const deltaCpu = cpuDelta(window.samples, role);
     cpuPercentOneCore[role] =
-      !timesValid || startCpu === null || endCpu === null || elapsedMs <= 0
+      !timesValid || deltaCpu === null || elapsedMs <= 0
         ? null
-        : (100 * (endCpu - startCpu)) / (elapsedMs / 1000);
+        : (100 * deltaCpu) / (elapsedMs / 1000);
   }
-  const startCpu = totalCpu(before);
-  const endCpu = totalCpu(after);
+  const deltaCpu = cpuDelta(window.samples);
   const startApplication = applicationTotal(before, addable);
   const endApplication = applicationTotal(after, addable);
   return {
@@ -730,9 +755,9 @@ function idleSummary(
         : endApplication - startApplication,
     cpuPercentOneCore,
     totalCpuPercentOneCore:
-      !timesValid || startCpu === null || endCpu === null || elapsedMs <= 0
+      !timesValid || deltaCpu === null || elapsedMs <= 0
         ? null
-        : (100 * (endCpu - startCpu)) / (elapsedMs / 1000),
+        : (100 * deltaCpu) / (elapsedMs / 1000),
     draws: window.drawsDelta,
     quiescenceVerified: window.quiescence.verified,
     quiescenceScope: window.quiescence.scope,
@@ -769,7 +794,8 @@ function streamSummary(
     drawsAtFound: stream.drawsAtFound ?? null,
     bytesPerSecond:
       stream.found &&
-      Number.isFinite(stream.bytes) &&
+      Number.isSafeInteger(stream.bytes) &&
+      stream.bytes >= 0 &&
       Number.isFinite(stream.elapsedMs) &&
       stream.elapsedMs > 0 &&
       stream.bytes >= expectedBytes &&
@@ -846,8 +872,8 @@ function attributionSummary(
       retainedBytes: start === null || after === null ? null : after - start,
     };
   }
-  const startCpu = totalCpu(before);
-  const endCpu = totalCpu(final);
+  const cpuSamples = [...run.before, ...run.samples, ...endpoints];
+  const cpuSecondsDelta = cpuDelta(cpuSamples);
   const elapsed = final.atMs - before.atMs;
   const streams = run.streams ?? [];
   return {
@@ -867,9 +893,9 @@ function attributionSummary(
     ),
     roles,
     totalCpuPercentOneCore:
-      !timesValid || startCpu === null || endCpu === null || elapsed <= 0
+      !timesValid || cpuSecondsDelta === null || elapsed <= 0
         ? null
-        : (100 * (endCpu - startCpu)) / (elapsed / 1000),
+        : (100 * cpuSecondsDelta) / (elapsed / 1000),
     settleVerified: run.settle.verified,
   };
 }
@@ -1108,6 +1134,26 @@ function aggregateRuntime(runtime: RawRuntimeRun | null) {
           .sort((a, b) => a - b)
           .every((pid, i) => pid === ids[i]),
     );
+  const cpuCountersValid =
+    complete &&
+    ids.every((pid) => {
+      let previous: number | null = null;
+      for (const sample of runtime.samples) {
+        const value = sample.processes.find(
+          (process) => process.pid === pid,
+        )?.cpuSeconds;
+        if (
+          value === undefined ||
+          value === null ||
+          !Number.isFinite(value) ||
+          value < 0 ||
+          (previous !== null && value < previous)
+        )
+          return false;
+        previous = value;
+      }
+      return true;
+    });
   const sum = (
     sample: (typeof runtime.samples)[number],
     field: "bytes" | "cpuSeconds",
@@ -1115,6 +1161,7 @@ function aggregateRuntime(runtime: RawRuntimeRun | null) {
     const values = sample.processes.map((process) => process[field]);
     if (
       !complete ||
+      (field === "cpuSeconds" && !cpuCountersValid) ||
       values.length !== runtime.processCount ||
       values.some(
         (value) =>
