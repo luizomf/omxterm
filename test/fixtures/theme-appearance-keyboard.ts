@@ -1,4 +1,6 @@
 import type { WebContents } from "electron";
+import assert from "node:assert/strict";
+import type { TerminalSize } from "../../src/shared/terminal-contract";
 import { waitFor } from "./window-chrome-exercise";
 
 // Submission does not order renderer evaluation after Chromium's Tab default.
@@ -54,4 +56,56 @@ export async function focusThemeSeparator(
       delete globalThis.__themeKeyboardReceipt;
     })()`);
   }
+}
+
+// One keyboard step is 2% of the split, or 10 px for the panel, so it can be
+// smaller than a cell: the divider moves and no grid changes (#1024, a
+// 681-DIP-tall window). Step until a pane has moved more than one cell. Every
+// step must move a pane, and that much movement must refit a PTY.
+export async function stepUntilRefit(
+  scene: {
+    evaluate<T>(script: string): Promise<T>;
+    key(keyCode: string): void;
+    grid(): TerminalSize[];
+    changed(before: TerminalSize[]): boolean;
+    pane: string;
+  },
+  axis: "width" | "height",
+) {
+  const { evaluate, key, grid, changed, pane } = scene;
+  const before = grid();
+  const ratio = await evaluate<number>("devicePixelRatio");
+  // Grid pixels are device pixels without padding: pixels / cells is a cell.
+  const cell =
+    Math.max(
+      ...before.map((size) =>
+        axis === "width"
+          ? size.pixelWidth! / size.cols
+          : size.pixelHeight! / size.rows,
+      ),
+    ) / ratio;
+  assert.ok(Number.isFinite(cell) && cell > 0, "PTY grids report cell pixels");
+  const extents = () =>
+    evaluate<number[]>(
+      `[...document.querySelectorAll(${JSON.stringify(pane)})].map(e => e.getBoundingClientRect().${axis})`,
+    );
+  const start = await extents();
+  let current = start;
+  // One CSS px of slack covers device-pixel rounding in the fit.
+  while (
+    Math.max(...current.map((e, i) => Math.abs(e - start[i]!))) <=
+    cell + 1
+  ) {
+    if (changed(before)) return;
+    const previous = current;
+    key(axis === "height" ? "Up" : "Left");
+    await waitFor(async () => {
+      current = await extents();
+      return current.some((e, i) => e !== previous[i]);
+    }, "Keyboard step moves a hidden divider");
+  }
+  await waitFor(
+    () => changed(before),
+    "Keyboard resize of hidden divider refits PTYs",
+  );
 }

@@ -227,6 +227,9 @@ Comparing file identities as bigints, so Windows file IDs past 2^53 no longer
 let a replaced entry pass the Files delete and move checks or the Settings and
 package read checks (#1149), moves main to `0.36.1-dev.4`. Files goes to 0.9.3.
 
+Letting the theme case step a hidden divider until it moves past a cell
+(#1024) moves main to `0.36.1-dev.5`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
