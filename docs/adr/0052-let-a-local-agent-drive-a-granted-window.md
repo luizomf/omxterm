@@ -912,6 +912,18 @@ Two field failures with 0.34.0 changed how `send` writes
   still gets the text typed; the guide says so and points to one line or a
   script file. No confirmation is asked: agent input skips Protected Paste's
   dialog ([Input](#input)).
+- **Typed lines end with the Enter key** ([#1126](https://github.com/luizomf/omxterm/issues/1126)).
+  Windows PowerShell 5.1 never enables bracketed paste, so a multi-line
+  text reached it typed, with LF between lines. Through ConPTY a typed LF
+  arrives as Ctrl+Enter (`[Console]::ReadKey` saw `Enter/Control`, a CR
+  plain `Enter`), which PSReadLine binds to inserting a line above: three
+  lines ran in reverse order. cmd.exe drops the LF and joins the lines. So
+  the typed path sends each `\n` or `\r\n` as `\r`, the byte a keyboard's
+  Enter sends; checked on a Windows 11 ARM64 guest (PowerShell 5.1.26100,
+  PSReadLine 2.0.0), both then ran their lines in order. On macOS, zsh and
+  bash with bracketed paste off, and `cat` in canonical mode, gave the same
+  result with CR as with LF: the tty's `ICRNL` and their line editors take
+  both. A paste keeps its line breaks as they are.
 
 ## Open questions
 

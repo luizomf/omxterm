@@ -185,7 +185,9 @@ matches shortcuts; keys that depend on the pane's mode, and shortcuts, are
   take the output it sent, then asks it for the pane's mode; a window that
   doesn't answer fails the send with `unavailable` and nothing is written. A
   text to paste that contains `ESC [201~` is `invalid-request`. Without the
-  mode, the text is typed: a shell runs its first line while the rest waits
+  mode, the text is typed line by line, each line break (`\n` or `\r\n`) as
+  the Enter key (`\r`), as a keyboard sends it (#1126): a shell runs its
+  first line while the rest waits
   as type-ahead, which the next program that reads input (ssh, sudo, `read`)
   takes. One-line texts are always typed, with no round trip. `a\nb\n` in a
   pane with bracketed paste is the paste `a\nb`, then Enter.
