@@ -18,8 +18,11 @@
   width: 100%;
 }
 
+/* Rows bleed by their own padding so their text shares one inset with the
+   panel title and the search field's edge. */
 .snippets-view .snippets-results {
   min-height: 0;
+  margin-inline: calc(-1 * var(--ui-space-2));
   overflow: auto;
   overflow-anchor: none;
 }
@@ -37,10 +40,13 @@
   gap: 2px;
 }
 
+/* One line; the full name is the element's tooltip. */
 .snippets-view .snippet-name {
   max-width: 100%;
-  overflow-wrap: anywhere;
+  overflow: hidden;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .snippets-view .snippet-description {

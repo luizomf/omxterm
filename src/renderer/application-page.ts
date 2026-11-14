@@ -58,3 +58,17 @@ export function setPageNotice(
   element.textContent = message.text;
   element.hidden = !message.text;
 }
+
+/**
+ * A surface moving focus to itself is not keyboard navigation yet: the control
+ * takes focus without the outline, which returns with the next key press.
+ */
+export function focusQuietly(target: HTMLElement) {
+  target.dataset.quietFocus = "";
+  target.ownerDocument.addEventListener(
+    "keydown",
+    () => delete target.dataset.quietFocus,
+    { once: true, capture: true },
+  );
+  target.focus({ preventScroll: true });
+}

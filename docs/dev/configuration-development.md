@@ -56,12 +56,12 @@ terminal context menu and the font-read race during reload are in the
 - The final conflict checks reduce races with other editors but don't lock them
   out. A change right after a check can still interfere.
 
-### Config File page
+### Config file page
 
 If `config.json` changes on disk while the user edits it, the draft is kept and
-**Save** is refused until **Reload File**. Save and Reload File are disabled while
+**Save** is refused until **Reload file**. Save and Reload file are disabled while
 a request is pending. Typing continues, but newer text isn't part of the earlier
-Save. Reload File replaces the draft only if the user hasn't typed during its
+Save. Reload file replaces the draft only if the user hasn't typed during its
 read.
 
 ## Language

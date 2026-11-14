@@ -93,7 +93,7 @@ it.each([
       { saveText: vi.fn(async () => result as SettingsResult) },
       language,
     );
-    button("Config File").click();
+    button("Config file").click();
     const editor = view.query<HTMLTextAreaElement>("textarea");
     editor.value = "draft";
     editor.dispatchEvent(new Event("input"));
@@ -116,7 +116,7 @@ it.each([
 it("repaints a retained real saved notice from the current theme without disturbing focus or language", async () => {
   const language = createRendererLanguage();
   const view = await open({ saveText: async () => saved(base) }, language);
-  button("Config File").click();
+  button("Config file").click();
   button("Save").click();
   await view.settle();
   const editor = view.query<HTMLTextAreaElement>("textarea");
@@ -189,7 +189,7 @@ it("marks rejected raw transport distinctly, clearing severity on reload", async
   const notice = view.query(".settings-config-file [role=status]");
   expect(notice.dataset.severity).toBe("error");
   expect(editor.value).toBe("draft");
-  button("Reload File").click();
+  button("Reload file").click();
   await view.settle();
   expect(notice.hidden).toBe(true);
   expect(notice.dataset.severity).toBe("info");

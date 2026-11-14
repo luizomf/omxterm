@@ -55,7 +55,12 @@ anywhere:
 - `.ui-overlay`, `.ui-dialog`: the `-tint` fills;
 - `.ui-card`: one step up, so a quiet button still reads on a card.
 
-Focus is a 2 px `--ui-text` outline, never a fill or border. Native controls
+Focus is a 2 px `--ui-secondary` outline on `:focus-visible`, never a fill.
+Text fields, selects and textareas differ, because they show `:focus-visible`
+on every click: their border turns `--ui-text` and they gain a 3 px
+`--ui-focus-halo` (text at 14 %). A surface that focuses itself (Settings
+opening) marks the control `data-quiet-focus`, which hides the outline until
+the next key press. Native controls
 take `color-scheme` from background luminance (light above 0.179).
 
 ## Components
@@ -95,7 +100,9 @@ use the compact page from `extensions/shared/appearance.css` and add
 
 ## Surfaces
 
-**Window chrome and tabs.** Tabs are `ui-tab` buttons in a 12 px strip. The
+**Window chrome and tabs.** Tabs are `ui-tab` buttons in a 12 px strip whose
+side insets follow the terminal's left and right padding (never under 8 px),
+so the first tab lines up with the prompt. The
 Linux/Windows title bar (`window-chrome.css`) uses 13 px text. Pane dividers
 are 1 px hairlines; the focused pane in a split gets a 1 px accent line on top.
 Default terminal padding is 12 px.

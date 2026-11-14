@@ -75,6 +75,7 @@ export function createSnippetsView(
         const name = document.createElement("span");
         name.className = "snippet-name";
         name.textContent = snippet.name;
+        name.title = snippet.name;
         button.append(name);
         if (snippet.description) {
           const description = document.createElement("span");

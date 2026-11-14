@@ -68,7 +68,8 @@ export function shortcutActionName(
   const position = /^selectTab([1-9])$/u.exec(action)?.[1];
   if (position) return `${t("menu.selectTab")} ${position}`;
   const key = MENU_KEYS[action as keyof typeof MENU_KEYS];
-  return t(key, { name: "OMXTerm" });
+  // A menu's "…" promises a dialog; in a list of names it is only noise.
+  return t(key, { name: "OMXTerm" }).replace(/…$/u, "");
 }
 
 const STATES: Readonly<Record<KeybindState, MessageKey>> = {

@@ -2577,9 +2577,9 @@ Shortcuts page:
 - Record/Cancel, Unbind and Default have localized, action-specific accessible
   names that follow the current operation.
 
-Config File page and writes:
+Config file page and writes:
 
-- Shows the raw document with explicit **Save** and **Reload File**.
+- Shows the raw document with explicit **Save** and **Reload file**.
 - Every write validates fully and replaces the file atomically. Field changes
   keep all other entries. A raw save is refused when the file changed since the
   draft loaded, and a dirty draft is never overwritten.

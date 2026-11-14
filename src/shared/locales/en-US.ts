@@ -239,7 +239,7 @@ export const englishMessages = {
   "settings.page.appearance": "Appearance",
   "settings.page.terminal": "Terminal",
   "settings.page.window": "Window",
-  "settings.page.file": "Config File",
+  "settings.page.file": "Config file",
   "settings.page.extensions": "Extensions",
   "extensions.heading": "Extensions",
   "extensions.snippetsOptional":
@@ -416,7 +416,7 @@ export const englishMessages = {
   "settings.saving": "Saving…",
   "settings.requestError": "Not saved: the request failed.",
   "settings.fileGuidance":
-    "Graphical changes are checked against the whole file. Correct invalid values in Settings or edit Config File; if the file cannot be read, repair it externally and reload.",
+    "Graphical changes are checked against the whole file. Correct invalid values in Settings or edit Config file; if the file cannot be read, repair it externally and reload.",
   "settings.saved": "Saved.",
   "settings.choiceSuperseded":
     "A newer choice replaced this selection before it was saved.",
@@ -428,7 +428,7 @@ export const englishMessages = {
   "settings.lifetime.restart":
     "New tabs use it; restart OMXTerm to apply it to open tabs.",
   "settings.save": "Save",
-  "settings.reload": "Reload File",
+  "settings.reload": "Reload file",
   "settings.reloading": "Reloading…",
   "settings.reloadError": "Couldn't reload the file. Your draft is kept.",
   "settings.stale":

@@ -248,7 +248,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.page.appearance": "Aparência",
   "settings.page.terminal": "Terminal",
   "settings.page.window": "Janela",
-  "settings.page.file": "Arquivo de Configuração",
+  "settings.page.file": "Arquivo de configuração",
   "settings.page.extensions": "Extensões",
   "extensions.heading": "Extensões",
   "extensions.snippetsOptional":
@@ -428,7 +428,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.saving": "Salvando…",
   "settings.requestError": "Não salvo: a solicitação falhou.",
   "settings.fileGuidance":
-    "Alterações gráficas são verificadas no arquivo inteiro. Corrija valores inválidos em Configurações ou edite o Arquivo de Configuração; se não for possível ler o arquivo, repare-o externamente e recarregue.",
+    "Alterações gráficas são verificadas no arquivo inteiro. Corrija valores inválidos em Configurações ou edite o Arquivo de configuração; se não for possível ler o arquivo, repare-o externamente e recarregue.",
   "settings.saved": "Salvo.",
   "settings.choiceSuperseded":
     "Uma escolha mais recente substituiu esta seleção antes de ela ser salva.",
@@ -440,7 +440,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.lifetime.restart":
     "Novas abas usam o valor; reinicie o OMXTerm para aplicar às abas abertas.",
   "settings.save": "Salvar",
-  "settings.reload": "Recarregar Arquivo",
+  "settings.reload": "Recarregar arquivo",
   "settings.reloading": "Recarregando…",
   "settings.reloadError":
     "Não foi possível recarregar o arquivo. Seu rascunho foi mantido.",

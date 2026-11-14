@@ -10,6 +10,7 @@ import { retainDismissalGesture } from "../about/about-dialog";
 import {
   createApplicationPage,
   createPageButton,
+  focusQuietly,
   setPageNotice,
 } from "../application-page";
 import { renderConfigFile } from "./settings-config-file";
@@ -133,7 +134,7 @@ export function createSettingsView(
     current.hidden = !selected;
     current.inert = blocked || !selected;
     options.onActivityChange?.(interactive());
-    if (interactive()) done.focus();
+    if (interactive()) focusQuietly(done);
     await view.load();
   };
 
@@ -179,7 +180,7 @@ export function createSettingsView(
           : (dialog?.querySelector<HTMLElement>(
               '.settings-tabs [aria-selected="true"]',
             ) ?? dialog?.querySelector<HTMLElement>(".settings-close"));
-      target?.focus({ preventScroll: true });
+      if (target) focusQuietly(target);
     },
     // App Copy/Paste/Select All edit the focused text field and never reach
     // the terminal while Settings owns input.
@@ -510,10 +511,11 @@ function buildSettingsView(
         relabel(language.t);
         adopt(loaded);
         report();
-        if (interactive() && document.activeElement === done)
-          tabButtons
-            .find((button) => button.getAttribute("aria-selected") === "true")
-            ?.focus();
+        const tab = tabButtons.find(
+          (button) => button.getAttribute("aria-selected") === "true",
+        );
+        if (tab && interactive() && document.activeElement === done)
+          focusQuietly(tab);
       } catch {
         if (live()) report("settings.loadError", true);
       }

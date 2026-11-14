@@ -387,7 +387,10 @@ body.tabs-visible .terminal-tab {
   box-sizing: border-box;
   width: 100%;
   margin-top: var(--native-title-inset);
-  padding: 4px 8px;
+  /* Line up with the terminal text; never closer than 8 px to the window
+     edge, where the corners round. */
+  padding: 4px max(8px, var(--tab-strip-inset-end, 12px)) 4px
+    max(8px, var(--tab-strip-inset-start, 12px));
   overflow: hidden;
   font: 12px/1.3 var(--ui-font);
   background: transparent;

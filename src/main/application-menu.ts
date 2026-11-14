@@ -12,6 +12,7 @@ import {
 import {
   createCoreActionCatalog,
   coreActionInvocations,
+  PRODUCT_NAME,
   type CoreActionCatalog,
   type CoreActionId,
   type TerminalApplicationMenuActions,
@@ -167,7 +168,7 @@ export function terminalActionInvocations(
   actions: TerminalApplicationMenuActions,
 ) {
   return coreActionInvocations(
-    createCoreActionCatalog("OMXTerm", actions, DEFAULT_TERMINAL_KEYBINDS),
+    createCoreActionCatalog(PRODUCT_NAME, actions, DEFAULT_TERMINAL_KEYBINDS),
   );
 }
 

@@ -25,6 +25,7 @@ import { coreActionMenuTemplate } from "./application-menu";
 import {
   coreActionKeybinds,
   createCoreActionCatalog,
+  PRODUCT_NAME,
   type CoreActionCatalog,
 } from "./action-catalog";
 import { startCommandPalette } from "./command-palette";
@@ -757,7 +758,7 @@ app
         });
         rebuildMenu = () => {
           actionCatalog = createCoreActionCatalog(
-            app.name,
+            PRODUCT_NAME,
             menuActions,
             configurationReloader.current().configuration.keybinds,
             currentTranslator().t,
@@ -765,7 +766,7 @@ app
           );
           nativeMenu.installApplicationMenu(
             coreActionMenuTemplate(
-              app.name,
+              PRODUCT_NAME,
               actionCatalog,
               currentTranslator().t,
             ),

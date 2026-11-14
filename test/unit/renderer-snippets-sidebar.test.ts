@@ -209,6 +209,16 @@ describe("Snippets auxiliary view", () => {
     expect(f.inject).not.toHaveBeenCalled();
   });
 
+  it("gives each name its full text as a tooltip, since long names are cut", async () => {
+    const f = fixture();
+    f.view.activate();
+    await settle();
+    const names = [...f.root.querySelectorAll<HTMLElement>(".snippet-name")];
+    expect(names.map((name) => name.title)).toEqual(
+      catalog.snippets.map((snippet) => snippet.name),
+    );
+  });
+
   it("shows each row's default intent and opens a preview without delivering", async () => {
     const f = fixture();
     f.view.activate();

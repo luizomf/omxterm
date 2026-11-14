@@ -17,6 +17,8 @@
   --ui-decoration: color-mix(in srgb, var(--ui-surface), var(--ui-text) 18%);
   --ui-input-border: color-mix(in srgb, var(--ui-surface), var(--ui-text) 55%);
   --ui-secondary: color-mix(in srgb, var(--ui-surface), var(--ui-text) 75%);
+  /* The soft ring around a focused field. */
+  --ui-focus-halo: rgb(from var(--ui-text) r g b / 0.14);
   /* The agent mark's tone: agents can do anything you can here (ADR 0052).
      The theme's red, or the text when the red is too faint; a theme can't
      switch it off. */
@@ -187,9 +189,30 @@
 .ui-actions-dense {
   gap: var(--ui-space-1);
 }
+/* Focus. Keyboard focus is an outline one tier below text. A text field is
+   different: it shows :focus-visible on every click, so a full outline there
+   becomes the loudest thing in the window. It brightens its own border and
+   gains a soft halo instead. */
 :is(.application-page, .ui-dialog, .ui-overlay, .ui-on-tint) :focus-visible {
-  outline: 2px solid var(--ui-text);
+  outline: 2px solid var(--ui-secondary);
   outline-offset: 1px;
+}
+:is(.application-page, .ui-dialog, .ui-overlay, .ui-on-tint)
+  :is(input, textarea, select).page-control:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="range"],
+    [type="color"]
+  ):focus-visible {
+  outline: none;
+  border-color: var(--ui-text);
+  box-shadow: 0 0 0 3px var(--ui-focus-halo);
+}
+/* A surface that focuses itself (Settings opening) is not keyboard navigation
+   yet; the outline returns with the next key press. */
+:is(.application-page, .ui-dialog, .ui-overlay, .ui-on-tint)
+  [data-quiet-focus]:focus-visible {
+  outline: none;
 }
 
 /* Row, list and nav -------------------------------------------------------- */
@@ -497,7 +520,10 @@
   margin-inline-end: 8px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  vertical-align: -3px;
+  /* An inline grid sits on its glyph's baseline, so a pixel offset drifts
+     with the font; centre the badge on the first line instead. */
+  vertical-align: middle;
+  translate: 0 -1px;
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
