@@ -315,7 +315,6 @@ export const englishMessages = {
   "agent.refused.path-too-long":
     "This profile's folder path is too long for the agent socket.",
   "agent.refused.unavailable": "Agents couldn't be allowed in this window.",
-  "agent.refused.unsupported": "Agent access isn't available on Windows yet.",
   "mirrorTyping.title": "Mirror Typing",
   "mirrorTyping.source": "Mirroring typing from this pane.",
   "mirrorTyping.member": "Mirroring typing to this pane.",

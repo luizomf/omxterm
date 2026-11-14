@@ -1250,7 +1250,7 @@ title, needs 0.29.1-dev.0 or later.
 ## Agent access
 
 A program the user runs, such as a coding agent, can drive a Terminal Window
-the user allows, on macOS and Linux
+the user allows, on macOS, Linux and Windows
 ([ADR 0052](adr/0052-let-a-local-agent-drive-a-granted-window.md); protocol
 and CLI in the [Agent API reference](dev/agent-api.md)).
 
@@ -1320,6 +1320,10 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   an agent in a pane runs `"$OMXTERM_CTL" status` with no setup. Without a
   grant it prints one sentence that names **Allow Agents in This Window** and
   exits 3.
+- On Windows `OMXTERM_CTL` is a `.cmd`, and cmd.exe re-reads its arguments:
+  `%NAME%` expands and unquoted `&`, `|`, `<` and `>` act as shell operators.
+  Until [#1081](https://github.com/luizomf/omxterm/issues/1081), arbitrary
+  text goes through `mcp`, whose arguments travel over stdin.
 - `"$OMXTERM_CTL" guide` prints a short agent guide, which is also a
   `SKILL.md` an agent can keep. `"$OMXTERM_CTL" mcp` serves `status`, `list`,
   `keys`, `send`, `press`, `read` and `wait` as MCP tools on stdio, with the CLI's
@@ -1331,17 +1335,20 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   agent that hides it, or another profile), `status` and `list` add one
   sentence saying no pane is marked `self`.
 - Main listens on `<profile>/agent-api/ctl.sock` (directory `0700`, socket
-  `0600`) only while a grant exists, and never on TCP. Each grant has a random
-  256-bit token in `<profile>/agent-api/grants/<window>.json` (`0600`), written
+  `0600`) on macOS and Linux, and on the named pipe
+  `\\.\pipe\omxterm-agent-<hash of the profile path>` on Windows, only while a
+  grant exists, and never on TCP. The pipe keeps Node's default security
+  descriptor: other users can't write to it or authenticate, though they can
+  hold a pre-handshake connection or take the name first. Each grant has a random
+  256-bit token in `<profile>/agent-api/grants/<window>.json` (`0600`; on
+  Windows, the profile's inherited ACL), written
   after the marks are on screen and removed when the grant ends; leftovers
   from a crash are removed at startup unless another live OMXTerm holds the
-  socket. Connections prove the token both ways without sending it and stay
+  endpoint. Connections prove the token both ways without sending it and stay
   bound to their window and to this OMXTerm process: a pane of another
   process on the same profile can't reach it. A profile path too long for a
-  socket, or a socket another OMXTerm process holds, refuses the grant with
+  socket, or an endpoint another process holds, refuses the grant with
   one sentence.
-- Windows isn't supported yet: the toggle answers with one sentence and panes
-  get no agent variables.
 - Other processes of the same user can read the token, as they can read the
   user's other files; the grant is consent, not a sandbox. Keep sensitive
   sessions in a window without a grant.
@@ -1530,8 +1537,8 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 
 - The environment sets `TERM=xterm-256color`, `COLORTERM=truecolor`,
   `TERM_PROGRAM=OMXTerm` and the installed version in `TERM_PROGRAM_VERSION`.
-- On macOS and Linux it also sets `OMXTERM_CTL` (the bundled `omxterm-ctl`
-  launcher), `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE`
+- It also sets `OMXTERM_CTL` (the bundled `omxterm-ctl` launcher,
+  `omxterm-ctl.cmd` on Windows), `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE`
   (process instance, window and session id, such as `5f0c9a1e2b3d4c6f:3:s4`) for
   [agent access](#agent-access),
   replacing any inherited values. None is secret.
@@ -2978,7 +2985,7 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N` or `0.33.1-dev.N` host admit a
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N` or `0.34.0-dev.N` host admit a
   range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.

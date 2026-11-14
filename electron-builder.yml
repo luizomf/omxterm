@@ -165,6 +165,14 @@ linux:
         - arm64
 win:
   icon: assets/application-icon.png
+  # The agent client runs the app's own binary in Node mode (ADR 0052), through
+  # a .cmd launcher outside the archive.
+  extraResources:
+    - from: dist/agent-ctl
+      to: agent-ctl
+      filter:
+        - omxterm-ctl.cmd
+        - omxterm-ctl.cjs
   files:
     - dist/**
     - "!dist/default-snippets/**"

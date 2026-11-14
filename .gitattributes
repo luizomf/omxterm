@@ -1,5 +1,7 @@
 # Check out text as LF on every platform so hashes, patches, and fixtures match.
 * text=auto eol=lf
+# cmd.exe reads batch files as CRLF.
+*.cmd text eol=crlf
 
 # Binary assets are never converted.
 *.icns binary

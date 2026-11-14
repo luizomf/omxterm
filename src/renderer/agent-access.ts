@@ -13,7 +13,6 @@ const refusals: Readonly<Record<AgentRefusal, MessageKey>> = {
   "in-use": "agent.refused.in-use",
   "path-too-long": "agent.refused.path-too-long",
   unavailable: "agent.refused.unavailable",
-  unsupported: "agent.refused.unsupported",
 };
 
 /**

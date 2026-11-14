@@ -145,10 +145,10 @@ sleep 3; printf '\e]777;notify;Build;Finished\e\\'
 
 ## Letting an agent drive a window
 
-On macOS and Linux, you can let a program you run, such as a coding agent in one pane, work the panes of its window: type commands, press keys (arrows, function keys) in full-screen programs, read their output and wait for them to finish. It only ever reaches the windows you allow.
+You can let a program you run, such as a coding agent in one pane, work the panes of its window: type commands, press keys (arrows, function keys) in full-screen programs, read their output and wait for them to finish. It only ever reaches the windows you allow.
 
 1. Choose **Window → Allow Agents in This Window** (or find it in the Command Palette). A `◆` appears on every pane and tab of that window.
-2. Ask the agent to use OMXTerm. Every pane has `OMXTERM_CTL`, the path of OMXTerm's small client, so the agent can run `"$OMXTERM_CTL" guide` to learn how, and `"$OMXTERM_CTL" status` to check. Before you allow it, `status` tells the agent which menu item to ask you for.
+2. Ask the agent to use OMXTerm. Every pane has `OMXTERM_CTL`, the path of OMXTerm's small client, so the agent can run `"$OMXTERM_CTL" guide` to learn how, and `"$OMXTERM_CTL" status` to check (on Windows, in PowerShell, `& $env:OMXTERM_CTL status`). Before you allow it, `status` tells the agent which menu item to ask you for.
 3. To stop, click any pane's `◆`, or choose the menu item again. Closing the window or quitting OMXTerm also stops it.
 
 For example, from one pane an agent can run a command in the pane next to it:

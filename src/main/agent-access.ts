@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import path from "node:path";
 import type { AgentCommand, AgentErrorCode } from "../shared/agent-api";
 import {
   agentIpc,
@@ -19,7 +20,8 @@ import {
 import {
   AgentEndpointInUseError,
   createAgentEndpoint,
-  maxSocketPathBytes,
+  endpointTooLong,
+  type AgentEndpointHandlers,
 } from "./agent-endpoint";
 import { createGrantFiles } from "./agent-grant-files";
 import type { OperationalEventLog } from "./operational-events";
@@ -108,7 +110,23 @@ export interface AgentAccessOptions {
   readonly keybinds?: () => TerminalKeybinds;
 }
 
-export { agentSocketPath } from "./agent-grant-files";
+export { agentEndpointPath } from "./agent-grant-files";
+
+/**
+ * The `omxterm-ctl` launcher `OMXTERM_CTL` names, in `<directory>/agent-ctl`:
+ * a `.cmd` on Windows, where the GUI executable run directly from PowerShell
+ * loses its output, exit code and wait; a POSIX script elsewhere.
+ */
+export function agentLauncherPath(
+  directory: string,
+  platform: NodeJS.Platform,
+): string {
+  return path.join(
+    directory,
+    "agent-ctl",
+    platform === "win32" ? "omxterm-ctl.cmd" : "omxterm-ctl",
+  );
+}
 
 // A command's envelope, never its arguments or result (ADR 0004).
 async function logged(
@@ -184,34 +202,12 @@ function commandsFor(
   });
 }
 
-function sendState(entry: Entry, state: AgentAccessState) {
-  try {
-    // A crashed renderer has no frame to receive it.
-    if (!entry.contents.isDestroyed() && !entry.contents.isCrashed?.())
-      entry.contents.send(agentIpc.state, state);
-  } catch {
-    // A window being torn down has no marks left to update.
-  }
-}
-
-/**
- * Per-window agent grants (ADR 0052). Only toggle() creates one, and only
- * after the window confirmed its marks; the socket listens while a grant
- * exists. Grants live in memory; the credential file exists while they do.
- */
-export function startAgentAccess(options: AgentAccessOptions) {
-  const entries = new Map<object, Entry>();
-  // This process, as OMXTERM_PANE, the credential and the handshake name it.
-  const instance = randomBytes(8).toString("hex");
-  const files = createGrantFiles(options.profile, instance);
-  const socketPath = files.socketPath;
-  const log = options.operationalEvents;
-  const byWindowId = (windowId: number) =>
-    [...entries.values()].find((entry) => entry.windowId === windowId);
-  const active = () =>
-    [...entries.values()].some((entry) => entry.state !== "off");
-
-  const endpoint = createAgentEndpoint(socketPath, instance, {
+// The endpoint's side of a grant, by window: its token and its commands.
+function endpointHandlers(
+  byWindowId: (windowId: number) => Entry | undefined,
+  log: Pick<OperationalEventLog, "write"> | undefined,
+): AgentEndpointHandlers {
+  return {
     token: (windowId) => {
       const entry = byWindowId(windowId);
       return entry?.state === "granted" ? entry.token : undefined;
@@ -226,7 +222,42 @@ export function startAgentAccess(options: AgentAccessOptions) {
       );
     },
     rejected: (reason) => log?.write({ name: "agent.rejected", reason }),
-  });
+  };
+}
+
+function sendState(entry: Entry, state: AgentAccessState) {
+  try {
+    // A crashed renderer has no frame to receive it.
+    if (!entry.contents.isDestroyed() && !entry.contents.isCrashed?.())
+      entry.contents.send(agentIpc.state, state);
+  } catch {
+    // A window being torn down has no marks left to update.
+  }
+}
+
+/**
+ * Per-window agent grants (ADR 0052). Only toggle() creates one, and only
+ * after the window confirmed its marks; the endpoint listens while a grant
+ * exists. Grants live in memory; the credential file exists while they do.
+ */
+export function startAgentAccess(options: AgentAccessOptions) {
+  const entries = new Map<object, Entry>();
+  // This process, as OMXTERM_PANE, the credential and the handshake name it.
+  const instance = randomBytes(8).toString("hex");
+  const files = createGrantFiles(options.profile, instance, options.platform);
+  const socketPath = files.socketPath;
+  const log = options.operationalEvents;
+  const byWindowId = (windowId: number) =>
+    [...entries.values()].find((entry) => entry.windowId === windowId);
+  const active = () =>
+    [...entries.values()].some((entry) => entry.state !== "off");
+
+  const endpoint = createAgentEndpoint(
+    socketPath,
+    instance,
+    endpointHandlers(byWindowId, log),
+    options.platform,
+  );
 
   const removeGrantFile = (entry: Entry) => {
     if (!entry.credential) return;
@@ -435,8 +466,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
         end(entry, "user");
         return;
       }
-      if (options.platform === "win32") return refuse(entry, "unsupported");
-      if (Buffer.byteLength(socketPath) > maxSocketPathBytes(options.platform))
+      if (endpointTooLong(socketPath, options.platform))
         return refuse(entry, "path-too-long");
       entry.state = "pending";
       entry.token = randomBytes(32);

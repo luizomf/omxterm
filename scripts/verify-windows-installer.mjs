@@ -63,13 +63,15 @@ export function inspectWindowsInstallerInputs(
   // #1025 ships the agent client as a macOS/Linux resource and keeps its
   // build output out of every archive. NSIS identity, paths, templates and
   // options are unchanged.
+  // #1078 ships the same client on Windows as resources/agent-ctl, with its
+  // .cmd launcher. NSIS identity, paths, templates and options are unchanged.
   const digest = (text) =>
     createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
   if (
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest(configuration) !==
-      "5406646a89e83816d7e7d6f12a0dff25db66e5985d2954c70e29db3a2e7a961a" ||
+      "9d354b042a9edc8a246c7f41b3895bbe3a53b6b5b58d7aec758778b48f31f2a3" ||
     typeof nsisInclude !== "string" ||
     digest(nsisInclude) !==
       "98bb5a2a43c4e4bad076c7476410a1256420dd917b5d8cd3d59a2ef2759a5aeb"

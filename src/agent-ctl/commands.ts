@@ -164,6 +164,22 @@ function grantedWindows(profile: string): number[] {
     .sort((a, b) => a - b);
 }
 
+/**
+ * An endpoint a grant file may name. On Windows only OMXTerm's own local pipe
+ * name: a planted file can't send the client to another pipe or to a remote
+ * host (`\\host\pipe\…` would also offer the user's NTLM credentials).
+ */
+export function trustedEndpoint(
+  endpoint: unknown,
+  platform: NodeJS.Platform = process.platform,
+): endpoint is string {
+  if (typeof endpoint !== "string") return false;
+  return (
+    platform !== "win32" ||
+    /^\\\\\.\\pipe\\omxterm-agent-[0-9a-f]{16}$/u.test(endpoint)
+  );
+}
+
 // Inside a pane, only a grant of this pane's own process counts.
 function readGrant(
   profile: string,
@@ -175,9 +191,10 @@ function readGrant(
   try {
     const stat = lstatSync(file);
     // Only the user may read a credential; anything else isn't OMXTerm's.
+    // Windows has no mode bits: the profile's inherited ACL guards the file.
     if (
       !stat.isFile() ||
-      (stat.mode & 0o077) !== 0 ||
+      (process.platform !== "win32" && (stat.mode & 0o077) !== 0) ||
       (typeof process.getuid === "function" && stat.uid !== process.getuid())
     )
       return undefined;
@@ -197,7 +214,7 @@ function readGrant(
     value.window !== window ||
     !isAgentInstance(value.instance) ||
     (instance !== undefined && value.instance !== instance) ||
-    typeof value.endpoint !== "string" ||
+    !trustedEndpoint(value.endpoint) ||
     typeof value.token !== "string" ||
     !/^[0-9a-f]{64}$/u.test(value.token)
   )
