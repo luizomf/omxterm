@@ -20,8 +20,7 @@ import {
 import {
   AgentEndpointInUseError,
   createAgentEndpoint,
-  isNamedPipe,
-  maxSocketPathBytes,
+  endpointTooLong,
 } from "./agent-endpoint";
 import { createGrantFiles } from "./agent-grant-files";
 import type { OperationalEventLog } from "./operational-events";
@@ -453,10 +452,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
         end(entry, "user");
         return;
       }
-      if (
-        !isNamedPipe(socketPath) &&
-        Buffer.byteLength(socketPath) > maxSocketPathBytes(options.platform)
-      )
+      if (endpointTooLong(socketPath, options.platform))
         return refuse(entry, "path-too-long");
       entry.state = "pending";
       entry.token = randomBytes(32);

@@ -794,10 +794,20 @@ probe on a Windows 11 ARM64 guest
   Run directly from PowerShell, the GUI executable gives no output, no exit
   code and doesn't wait. The `.cmd` works from PowerShell
   (`& $env:OMXTERM_CTL status`), cmd (`"%OMXTERM_CTL%" status`) and Git Bash
-  (`"$OMXTERM_CTL" status`), and `mcp` serves over its stdin. Its arguments
-  pass through cmd.exe's rules, so `%` and `^` in `--text` may not arrive as
-  typed; the guide's Windows wording is
-  [#1079](https://github.com/luizomf/omxterm/issues/1079)'s.
+  (`"$OMXTERM_CTL" status`), and `mcp` serves over its stdin.
+- **A `.cmd` re-parses its command line.** Windows runs a batch file through
+  cmd.exe, which reads the whole command line again before the launcher
+  starts, so no launcher code can fix it. Checked from PowerShell 5.1 and Git
+  Bash: `%NAME%` expands even inside quotes, and in an argument without
+  spaces (which those shells pass unquoted) `^` disappears and `&`
+  ends the command and runs the rest as another command, as the caller. An
+  argument with spaces arrives intact unless it holds a double quote:
+  `--text 'git commit -m "fix & test"'` arrived as `git commit -m fix`, and
+  cmd.exe tried to run `test""`. MCP tool arguments travel over stdin and
+  skip all of this. It gives an agent nothing it couldn't do already, but it
+  can garble or split the text it means to type. The guide's Windows wording
+  is [#1079](https://github.com/luizomf/omxterm/issues/1079)'s; a console
+  launcher that passes arguments untouched is the fix if it bites.
 
 ## Open questions
 

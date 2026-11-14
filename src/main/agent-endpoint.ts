@@ -40,6 +40,14 @@ export function isNamedPipe(endpoint: string): boolean {
   return endpoint.startsWith("\\\\.\\pipe\\");
 }
 
+/** A socket path past the platform's limit; a pipe name has none here. */
+export function endpointTooLong(endpoint: string, platform: NodeJS.Platform) {
+  return (
+    !isNamedPipe(endpoint) &&
+    Buffer.byteLength(endpoint) > maxSocketPathBytes(platform)
+  );
+}
+
 export class AgentEndpointInUseError extends Error {
   constructor() {
     super("Another process holds the agent endpoint");
@@ -116,6 +124,23 @@ async function removeStaleSocket(socketPath: string) {
   } catch (error) {
     if (!isMissing(error)) throw error;
   }
+}
+
+// A pipe name is taken while the process that holds it lives.
+function listenOn(server: net.Server, endpoint: string) {
+  return new Promise<void>((resolve, reject) => {
+    server.once("error", (error: NodeJS.ErrnoException) =>
+      reject(
+        isNamedPipe(endpoint) && error.code === "EADDRINUSE"
+          ? new AgentEndpointInUseError()
+          : error,
+      ),
+    );
+    server.listen(endpoint, () => {
+      server.removeAllListeners("error");
+      resolve();
+    });
+  });
 }
 
 const proof = (token: Buffer, message: string) =>
@@ -433,20 +458,7 @@ export function createAgentEndpoint(
           await removeStaleSocket(socketPath);
         }
         const created = net.createServer({ allowHalfOpen: false }, accept);
-        await new Promise<void>((resolve, reject) => {
-          created.once("error", (error: NodeJS.ErrnoException) =>
-            // A pipe name is taken while its process lives.
-            reject(
-              pipe && error.code === "EADDRINUSE"
-                ? new AgentEndpointInUseError()
-                : error,
-            ),
-          );
-          created.listen(socketPath, () => {
-            created.removeAllListeners("error");
-            resolve();
-          });
-        });
+        await listenOn(created, socketPath);
         if (generation !== generations) {
           created.close();
           throw new Error("The endpoint stopped while starting");

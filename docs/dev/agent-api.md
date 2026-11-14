@@ -454,8 +454,11 @@ omxterm-ctl keys                           # slice 4: chords press runs
   from the environment. On Windows that is `& $env:OMXTERM_CTL` in
   PowerShell, `"%OMXTERM_CTL%"` in cmd and `"$OMXTERM_CTL"` in Git Bash. The
   `.cmd` runs the app's own executable in Node mode and returns its exit
-  code; its arguments pass through cmd.exe, so `%` and `^` in `--text` may
-  not arrive as typed. Elsewhere, `--window <id>` picks a grant when there
+  code. cmd.exe reads its arguments again: `%NAME%` expands, and in an
+  argument without spaces `^` disappears and `&` starts another
+  command, and a double quote cuts the argument short. Text with those
+  characters is safer through [MCP](#mcp).
+  Elsewhere, `--window <id>` picks a grant when there
   are several and `--profile <dir>` picks a profile. A `--profile` other than
   the pane's own `OMXTERM_PROFILE` ignores the pane, so nothing is marked
   `self`. `--json` prints the raw result.
