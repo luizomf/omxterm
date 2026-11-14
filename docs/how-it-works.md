@@ -35,7 +35,7 @@ Switching tabs leaves sessions running. Closing a pane ends its session; closing
 
 ## Customization and conveniences
 
-- Use **Settings** for fonts, themes, and shortcuts. If you edit a configuration or theme file yourself, choose **View → Reload User Configuration**; see [Configuration](configuration.md).
+- Use **Settings** for fonts, themes, and shortcuts. If you edit a configuration or theme file yourself, choose **View → Reload Settings**; see [Configuration](configuration.md).
 - **Snippets** saves reusable text. A new installation adds it once from the app's own files (Windows x64 has it built in). See [Snippets setup](configuration.md#snippets) and [Snippets availability](snippets-availability.md).
 - **Protected Paste** can ask before sending multiline text. You can also [preview local images](usage.md#previewing-local-images); see [Protected Paste](usage.md#protected-paste) for its limits.
 

@@ -25,7 +25,7 @@ beforeAll(installSettingsDom);
 it("edits shared panel placement on the Window page with live feedback", async () => {
   const view = await open();
   view.query<HTMLButtonElement>("#settings-tab-window").click();
-  const choice = view.field("Auxiliary panel side");
+  const choice = view.field("Side panel position");
   expect(choice.value).toBe("right");
   expect([...choice.options].map((option) => option.textContent)).toEqual([
     "Left",
@@ -302,7 +302,7 @@ describe("settings dialog", () => {
         saved(base, { applied: false, notice: "reload failed" }),
       ),
     ).toEqual({
-      text: "Saved to config.json, but it could not be applied: reload failed",
+      text: "Saved to config.json, but it couldn't be applied: reload failed",
       error: true,
       severity: "error",
     });

@@ -274,9 +274,7 @@ describe("User Configuration reloader", () => {
     expect(reloader.current().userFileErrors).toHaveLength(1);
     expect(reloader.current().userFileErrors[0]).toContain(privatePath);
     expect(reloader.current().userFileErrors[0]).toContain("font.size");
-    expect(reloader.current().userFileErrors[0]).toContain(
-      "Reload User Configuration",
-    );
+    expect(reloader.current().userFileErrors[0]).toContain("Reload Settings");
     expect(apply).toHaveBeenCalledExactlyOnceWith(reloader.current(), false);
     expect(setLevel).not.toHaveBeenCalled();
     expect(writeStderr).toHaveBeenCalledWith(
@@ -360,7 +358,7 @@ describe("User Configuration reloader", () => {
       expect.stringContaining("font.family and font.lineHeight"),
     ]);
     expect(reloader.current().userFileErrors[0]).toBe(
-      "Existing Terminal Surfaces continue using their previous font.family and font.lineHeight values. Restart OMXTerm to apply them everywhere; new tabs and windows use the latest validated values.",
+      "Open tabs keep their previous font.family and font.lineHeight values. New tabs and windows use the new ones; restart OMXTerm to apply them everywhere.",
     );
 
     await reloader.reload();

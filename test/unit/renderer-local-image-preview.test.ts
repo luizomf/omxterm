@@ -140,7 +140,7 @@ describe("local image preview overlay", () => {
       url: "file:///private/path.png",
     });
     expect(failed.dialog.open).toBe(true);
-    expect(failed.dialog.textContent).toContain("Could not preview this image");
+    expect(failed.dialog.textContent).toContain("Couldn't preview this image");
     expect(failed.dialog.textContent).not.toContain("private path");
     failed.preview.dispose();
 

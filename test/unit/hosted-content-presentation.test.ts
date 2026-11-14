@@ -360,7 +360,7 @@ it.each(["refused", "rejected", "notification"] as const)(
     h.owner.focus();
     expect(h.bridge.present).toHaveBeenCalledTimes(count);
     expect(document.querySelector('[role="status"]')?.textContent).toContain(
-      "could not",
+      "Couldn't hide",
     );
   },
 );
@@ -392,14 +392,14 @@ it.each(["before", "after"] as const)(
     h.owner.select(undefined, () => {}, {});
     await settle();
     expect(document.querySelector('[role="status"]')?.textContent).toContain(
-      "could not",
+      "Couldn't hide",
     );
     hidden.resolve(true);
     await settle();
     // A successful hide without the matching receipt cannot clear failure.
     if (notification === "after") {
       expect(document.querySelector('[role="status"]')?.textContent).toContain(
-        "could not",
+        "Couldn't hide",
       );
       h.retire(target.id);
     }
@@ -431,7 +431,7 @@ it("does not let a scoped rejection overwrite an epoch failure or another reject
   h.owner.select(undefined, () => {}, {});
   await settle();
   expect(document.querySelector('[role="status"]')?.textContent).toContain(
-    "could not",
+    "Couldn't hide",
   );
   h.fail();
   expect(
@@ -441,7 +441,7 @@ it("does not let a scoped rejection overwrite an epoch failure or another reject
   h.owner.select(undefined, () => {}, {});
   await settle();
   expect(document.querySelector('[role="status"]')?.textContent).toContain(
-    "could not",
+    "Couldn't hide",
   );
 });
 
@@ -478,7 +478,7 @@ it.each([
     h.owner.openOverlay(open);
     expect(open).not.toHaveBeenCalled();
     expect(document.querySelector('[role="status"]')?.textContent).toContain(
-      "could not",
+      "Couldn't hide",
     );
   },
 );

@@ -80,7 +80,7 @@ are the only entry point. The package's own duplicate action is withheld.
 
 ### Empty-panel access
 
-**Toggle Auxiliary Panel** hides and reveals the panel as usual whenever any
+**Toggle Side Panel** hides and reveals the panel as usual whenever any
 tool is open. When the panel is genuinely empty, it opens installed and enabled
 Snippets instead. Windows x64 opens its built-in sidebar.
 

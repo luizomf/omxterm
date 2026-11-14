@@ -38,10 +38,10 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.toggleFiles": "Alternar Files",
   "menu.toggleSshConnect": "Alternar SSH Connect",
   "menu.toggleTabBar": "Alternar Barra de Abas",
-  "menu.toggleAuxiliaryPanel": "Alternar Painel Auxiliar",
-  "menu.moveAuxiliaryPanel": "Mover Painel Auxiliar para o Outro Lado",
+  "menu.toggleAuxiliaryPanel": "Alternar Barra Lateral",
+  "menu.moveAuxiliaryPanel": "Mover Barra Lateral para o Outro Lado",
   "menu.toggleTitleBar": "Alternar Barra de Título",
-  "menu.reloadConfiguration": "Recarregar Configuração",
+  "menu.reloadConfiguration": "Recarregar Configurações",
   "menu.toggleDeveloperTools": "Alternar Ferramentas de Desenvolvedor",
   "menu.toggleFullScreen": "Alternar Tela Cheia",
   "menu.window": "Janela",
@@ -53,35 +53,35 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.selectTab": "Selecionar Aba",
   "menu.tab": "Aba {position}",
 
-  "dialog.clipboardError.title": "Erro na Área de Transferência",
+  "dialog.clipboardError.title": "Erro na área de transferência",
   "dialog.clipboardError.message":
-    "A operação na área de transferência falhou.",
-  "dialog.externalLinkError.title": "Erro ao Abrir Link",
-  "dialog.externalLinkError.message": "Não foi possível abrir o link externo.",
-  "dialog.protectedPaste.title": "Colagem Protegida",
+    "Não foi possível usar a área de transferência.",
+  "dialog.externalLinkError.title": "Erro ao abrir link",
+  "dialog.externalLinkError.message": "Não foi possível abrir o link.",
+  "dialog.protectedPaste.title": "Colagem protegida",
   "dialog.protectedPaste.message":
     "Colar um texto que pode conter vários comandos?",
   "dialog.protectedPaste.detail":
-    "O texto colado contém várias linhas ou caracteres de controle.",
+    "Ele tem várias linhas ou caracteres de controle.",
   "dialog.protectedPaste.paste": "Colar",
   "dialog.quit.title": "Sair do OMXTerm",
-  "dialog.quit.message":
-    "Sair do OMXTerm e fechar todas as janelas de terminal?",
+  "dialog.quit.message": "Sair do OMXTerm?",
   "dialog.quit.detail":
-    "Todas as sessões de terminal abertas serão encerradas.",
+    "Todas as janelas serão fechadas e os programas em execução serão encerrados.",
   "dialog.quit.button": "Sair",
-  "dialog.closeWindow.title": "Fechar Janela",
-  "dialog.closeWindow.message":
-    "Fechar esta janela de terminal e todas as suas abas?",
+  "dialog.closeWindow.title": "Fechar janela",
+  "dialog.closeWindow.message": "Fechar esta janela?",
   "dialog.closeWindow.detail":
-    "Todas as sessões de terminal dela serão encerradas.",
-  "dialog.closeTab.title": "Fechar Aba",
-  "dialog.closeTab.message": "Fechar esta aba de terminal?",
-  "dialog.closeTab.detail":
-    "Todas as sessões de terminal dela serão encerradas.",
-  "dialog.closePane.title": "Fechar Painel",
-  "dialog.closePane.message": "Fechar este painel de terminal?",
-  "dialog.closePane.detail": "A sessão de terminal dele será encerrada.",
+    "As abas dela serão fechadas e os programas em execução serão encerrados.",
+  "dialog.closeWindow.button": "Fechar janela",
+  "dialog.closeTab.title": "Fechar aba",
+  "dialog.closeTab.message": "Fechar esta aba?",
+  "dialog.closeTab.detail": "Os programas em execução nela serão encerrados.",
+  "dialog.closeTab.button": "Fechar aba",
+  "dialog.closePane.title": "Fechar painel",
+  "dialog.closePane.message": "Fechar este painel?",
+  "dialog.closePane.detail": "O programa em execução nele será encerrado.",
+  "dialog.closePane.button": "Fechar painel",
   "menu.pane": "Painel",
   "menu.splitRight": "Dividir à Direita",
   "menu.splitDown": "Dividir Abaixo",
@@ -115,48 +115,46 @@ export const brazilianPortugueseMessages: Readonly<
   "export.tooLarge.detail":
     "Selecione uma parte menor do texto do terminal e exporte a seleção. Nada foi salvo ou truncado.",
   "export.failed": "Falha na Exportação",
-  "export.writeError": "O OMXTerm não conseguiu salvar o texto exportado.",
+  "export.writeError": "Não foi possível salvar o texto exportado.",
   "export.readError":
-    "O OMXTerm não conseguiu ler o texto do terminal. Nada foi salvo.",
+    "Não foi possível ler o texto do terminal. Nada foi salvo.",
   "export.failureDetail":
     "Tente exportar de novo e escolha um destino com permissão de escrita e espaço livre suficiente.",
 
   "failure.rendering.title": "Falha na renderização do terminal",
   "failure.rendering.message":
-    "O mecanismo de renderização foi perdido. A sessão de terminal foi fechada.",
+    "O renderizador do terminal parou, e esta sessão foi fechada.",
   "failure.rendering.detail":
     "Reinicie o OMXTerm para criar uma nova sessão. As outras sessões não foram afetadas.",
-  "failure.commandStart.title": "O comando não pôde iniciar",
-  "failure.commandStart.message":
-    "Não foi possível iniciar o comando solicitado.",
-  "failure.shellStart.title": "O shell não pôde iniciar",
-  "failure.shellStart.message": "Não foi possível iniciar o shell padrão.",
-  "failure.spawnDetail": "Falha no ciclo de vida: spawn.",
+  "failure.commandStart.title": "Não foi possível iniciar o comando",
+  "failure.commandStart.message": "O comando solicitado não iniciou.",
+  "failure.shellStart.title": "Não foi possível iniciar o shell",
+  "failure.shellStart.message": "Seu shell não iniciou.",
+  "failure.spawnDetail": "Verifique se o programa existe e pode ser executado.",
   "failure.commandExit.title": "O comando terminou inesperadamente",
   "failure.commandExit.message":
     "O comando solicitado terminou inesperadamente.",
   "failure.shellExit.title": "O shell terminou inesperadamente",
-  "failure.shellExit.message": "O shell padrão terminou inesperadamente.",
+  "failure.shellExit.message": "Seu shell terminou inesperadamente.",
   "failure.signalDetail": "Sinal: {signal}.",
   "failure.unknownSignal": "desconhecido",
   "failure.start.title": "O OMXTerm não pôde iniciar",
   "failure.launchRequest": "A opção -e exige um executável.",
-  "failure.rendererLoad.title": "A janela de terminal não pôde carregar",
+  "failure.rendererLoad.title": "Não foi possível carregar a janela",
   "failure.rendererLoad.message":
-    "O OMXTerm não conseguiu carregar a interface da janela de terminal.",
-  "failure.newWindow.title": "A janela de terminal não pôde abrir",
-  "failure.newWindow.message":
-    "O OMXTerm não conseguiu criar uma nova janela de terminal.",
-  "failure.startup": "Não foi possível criar a janela de terminal inicial.",
+    "O OMXTerm não conseguiu carregar a interface desta janela.",
+  "failure.newWindow.title": "Não foi possível abrir uma nova janela",
+  "failure.newWindow.message": "O OMXTerm não conseguiu criar uma nova janela.",
+  "failure.startup": "Não foi possível criar a primeira janela.",
 
   "notice.reloadFailed":
-    "A recarga da configuração falhou. O OMXTerm manteve a última configuração válida. {detail} Corrija o arquivo e escolha Exibir -> Recarregar Configuração novamente.",
+    "Não foi possível recarregar as configurações, então o OMXTerm manteve as últimas válidas. {detail} Corrija o arquivo e escolha Exibir → Recarregar Configurações.",
   "notice.reloadUnexpected":
-    "Não foi possível carregar a configuração por causa de uma falha inesperada do aplicativo.",
+    "Não foi possível carregar as configurações por causa de um erro inesperado.",
   "notice.restartDeferred": {
-    one: "As superfícies de terminal abertas continuam usando o valor anterior de {settings}. Reinicie o OMXTerm para aplicá-lo em todas; novas abas e janelas usam os valores validados mais recentes.",
+    one: "As abas abertas continuam com o valor anterior de {settings}. Novas abas e janelas usam o novo; reinicie o OMXTerm para aplicá-lo em todas.",
     other:
-      "As superfícies de terminal abertas continuam usando os valores anteriores de {settings}. Reinicie o OMXTerm para aplicá-los em todas; novas abas e janelas usam os valores validados mais recentes.",
+      "As abas abertas continuam com os valores anteriores de {settings}. Novas abas e janelas usam os novos; reinicie o OMXTerm para aplicá-los em todas.",
   },
   "notice.and": "{first} e {second}",
 
@@ -179,9 +177,8 @@ export const brazilianPortugueseMessages: Readonly<
   "terminal.userFileErrors": "Erros nos arquivos do usuário",
   "terminal.surfaceFailure": "Falha na superfície do terminal",
   "terminal.initializationFailure":
-    "Falha ao inicializar a superfície do terminal do OMXTerm: {detail}",
-  "terminal.backendLost":
-    "O backend de renderização da superfície do terminal do OMXTerm foi perdido",
+    "Não foi possível iniciar o terminal: {detail}",
+  "terminal.backendLost": "O renderizador do terminal parou",
   "palette.title": "Paleta de comandos",
   "palette.query": "Buscar ações…",
   "palette.empty": "Nenhuma ação encontrada",
@@ -189,7 +186,7 @@ export const brazilianPortugueseMessages: Readonly<
   "palette.error": "Ações indisponíveis. Feche e tente novamente.",
   "hosted.close": "Fechar",
   "hosted.failure":
-    "Não foi possível ocultar, atualizar ou fechar o conteúdo hospedado. Feche a janela para recuperar.",
+    "Não foi possível ocultar, atualizar ou fechar esta visualização. Feche a janela para recuperar.",
   "search.region": "Buscar no histórico do terminal",
   "search.placeholder": "Buscar no histórico",
   "search.clear": "Limpar",
@@ -219,14 +216,14 @@ export const brazilianPortugueseMessages: Readonly<
   "preview.error":
     "Não foi possível pré-visualizar esta imagem. O arquivo pode estar indisponível, ser inválido ou passar dos limites de PNG/JPEG estáticos (64 MiB, 8192 por lado, 32 milhões de pixels).",
 
-  "panel.resize": "Redimensionar painel auxiliar",
+  "panel.resize": "Redimensionar barra lateral",
   "panel.width": "{width} pixels de largura",
   "panel.close": "Fechar ferramenta",
-  "panel.hide": "Ocultar painel auxiliar",
+  "panel.hide": "Ocultar barra lateral",
   "panel.tools": "Ferramentas abertas",
   "panel.tooNarrow": "Alargue a janela para abrir {view}",
   "panel.empty":
-    "Nenhuma ferramenta está aberta. Abra uma extensão para usar o painel.",
+    "Nenhuma ferramenta está aberta. Abra uma extensão para usar a barra lateral.",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Buscar snippets",
   "snippets.search": "Buscar Snippets",
@@ -419,7 +416,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.option.left": "Option esquerda",
   "settings.option.right": "Option direita",
   "settings.option.both": "Ambas",
-  "settings.auxiliaryPanelSide": "Lado do painel auxiliar",
+  "settings.auxiliaryPanelSide": "Posição da barra lateral",
   "settings.panelLeft": "Esquerda",
   "settings.panelRight": "Direita",
   "settings.titleBar": "Mostrar barra de título",
@@ -466,7 +463,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.cleanupError":
     "config.json não foi salvo. Um arquivo temporário pode ter permanecido no diretório de destino; verifique o diretório e as permissões antes de tentar novamente.",
   "settings.applicationError":
-    "Falha inesperada ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir -> Recarregar Configuração novamente.",
+    "Erro inesperado ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir → Recarregar Configurações novamente.",
   "settings.page.shortcuts": "Atalhos",
   "shortcuts.hint":
     "Atalhos do app recebem a tecla antes dos programas do terminal.",

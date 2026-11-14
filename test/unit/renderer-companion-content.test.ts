@@ -274,7 +274,7 @@ it.each(
     } else {
       expect(f.root.querySelector("input")).toBeNull();
       expect(document.querySelector('[role="status"]')?.textContent).toContain(
-        "could not",
+        "Couldn't hide",
       );
       expect(f.tool("files")).toBeDefined();
     }
@@ -316,7 +316,7 @@ it("keeps close failure visible and does not issue a second close or revive its 
   expect(f.bridge.close).toHaveBeenCalledOnce();
   expect(f.tool("files")).toBeDefined();
   expect(document.querySelector('[role="status"]')!.textContent).toContain(
-    "could not",
+    "Couldn't hide",
   );
   expect(f.surfaces[0]!.dispose).not.toHaveBeenCalled();
 });
@@ -392,7 +392,7 @@ it("settles a refused core focus handoff without focus theft or poisoning later 
     1,
   );
   expect(document.querySelector('[role="status"]')?.textContent).not.toContain(
-    "could not",
+    "Couldn't hide",
   );
   f.toggle();
   await settle();
@@ -577,7 +577,7 @@ it("fails closed when a native panel refuses the overlay hide", async () => {
   await settle();
   expect(document.querySelector(".about-dialog")).toBeNull();
   expect(document.querySelector('[role="status"]')?.textContent).toContain(
-    "could not",
+    "Couldn't hide",
   );
 });
 

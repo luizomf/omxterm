@@ -11,7 +11,7 @@ omxterm/
 
 On systems with built-in Snippets, OMXTerm also creates `snippets.yaml`. Optional Snippets installs leave this file absent until you create it. Configuration files live in `$XDG_CONFIG_HOME/omxterm` when the `XDG_CONFIG_HOME` environment setting (used by some apps) has a nonempty value. If it is unset or empty, they live in `.config/omxterm` under your account home. On Windows, the ordinary path is `%USERPROFILE%\.config\omxterm`.
 
-Use **Settings…** in the application menu for preferences and shortcuts. To edit files, save your changes and choose **View → Reload User Configuration** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux and Windows). Snippets reload when you open its sidebar.
+Use **Settings…** in the application menu for preferences and shortcuts. To edit files, save your changes and choose **View → Reload Settings** (`Cmd+Shift+,` on macOS, `Ctrl+Shift+,` on Linux and Windows). Snippets reload when you open its sidebar.
 
 - [Settings](#settings)
 - [Configuration file](#configuration-file)
@@ -277,7 +277,7 @@ Optional `appearance` theme fields can change pane and panel divider colors and 
 
 <a id="theme-troubleshooting"></a>
 
-Choose **View → Reload User Configuration** after editing `config.json` or a theme file. Theme, font size, ligatures, padding, scrollback, shortcuts, language and transparency update live. Font family and line height update in new tabs; restart to apply them to open tabs. Window defaults affect new windows.
+Choose **View → Reload Settings** after editing `config.json` or a theme file. Theme, font size, ligatures, padding, scrollback, shortcuts, language and transparency update live. Font family and line height update in new tabs; restart to apply them to open tabs. Window defaults affect new windows.
 
 If JSON is invalid, OMXTerm identifies the file and field. A failed manual reload keeps the previous valid configuration active. At startup, an invalid configuration falls back to built-in defaults without overwriting your files. A rejected theme falls back to the bundled theme.
 

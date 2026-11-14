@@ -99,7 +99,7 @@ try {
     const items =
       menu?.items.flatMap((item) => item.submenu?.items ?? []) ?? [];
     // Electron's default-app launcher may install its own menu first.
-    if (!items.some((item) => item.label === "Reload User Configuration")) {
+    if (!items.some((item) => item.label === "Reload Settings")) {
       setMenu(menu);
       return;
     }

@@ -58,7 +58,7 @@ it("shows a failed Reload file without losing the draft and allows recovery", as
   expect(editor.value).toBe("draft");
   expect(
     view.query(".settings-config-file [role=status]").textContent,
-  ).toContain("could not be reloaded");
+  ).toContain("Couldn't reload the file");
   expect(button("Save").disabled).toBe(false);
   button("Reload file").click();
   await view.settle();

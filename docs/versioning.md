@@ -107,6 +107,10 @@ The agent API on Windows (#1078) is the first new feature of this cycle, so
 main then moves to `0.34.0-dev.0`. Its bridge admits ranges that accept both `0.33.0`
 and `0.34.0`, and every catalog archive stays installable unchanged.
 
+A design pass (#1082–#1088: tab strip inset, one-line snippet names, "Quit
+OMXTerm", sentence-case labels, full-width notices, quieter focus, plain
+dialog and error copy) moves main to `0.34.0-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

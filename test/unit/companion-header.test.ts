@@ -54,7 +54,7 @@ it.each([
     expect(nav.getAttribute("aria-label")).toBe("Ferramentas abertas");
     expect(
       header.querySelector(".auxiliary-hide")?.getAttribute("aria-label"),
-    ).toBe("Ocultar painel auxiliar");
+    ).toBe("Ocultar barra lateral");
     expect(
       header.querySelector(".auxiliary-close")?.getAttribute("aria-label"),
     ).toBe("Fechar ferramenta");

@@ -198,7 +198,7 @@ OMXTerm starts macOS and Linux shells as interactive login shells. Zsh reads `~/
 
 ### Configuration changes do not appear
 
-After editing `config.json` or a theme, choose **View → Reload User Configuration** (`Cmd+Shift+,` / `Ctrl+Shift+,`). Invalid JSON leaves the previous valid settings active. Font family and line height apply to new tabs; restart to update existing tabs. Shell changes apply to new tabs, and window defaults apply to new windows. Snippets reload when you open the sidebar. See [configuration help](configuration.md#reload-and-troubleshooting).
+After editing `config.json` or a theme, choose **View → Reload Settings** (`Cmd+Shift+,` / `Ctrl+Shift+,`). Invalid JSON leaves the previous valid settings active. Font family and line height apply to new tabs; restart to update existing tabs. Shell changes apply to new tabs, and window defaults apply to new windows. Snippets reload when you open the sidebar. See [configuration help](configuration.md#reload-and-troubleshooting).
 
 ### Insert, run or preview a snippet
 
@@ -210,7 +210,7 @@ Files and SSH Connect are optional extensions. See [Optional tools](README.md#op
 
 ### Resize or close the auxiliary panel
 
-Choose **Settings → Window → Auxiliary panel side** to set its default side. Drag the separator to resize. **Hide** or **Escape** keeps the tool open; **Close tool** closes it. **View → Toggle Auxiliary Panel** hides or reveals the panel. See [Settings](configuration.md#settings).
+Choose **Settings → Window → Side panel position** to set its default side. Drag the separator to resize. **Hide** or **Escape** keeps the tool open; **Close tool** closes it. **View → Toggle Side Panel** hides or reveals the panel. See [Settings](configuration.md#settings).
 
 ### A program draws text in the wrong place
 

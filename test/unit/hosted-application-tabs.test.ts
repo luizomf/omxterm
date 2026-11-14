@@ -350,7 +350,7 @@ it.each([false, "reject"])(
     await settle();
     expect(overlay).not.toHaveBeenCalled();
     expect(document.querySelector('[role="status"]')?.textContent).toContain(
-      "could not",
+      "Couldn't hide",
     );
     const count = vi.mocked(h.bridge.present).mock.calls.length;
     h.tabs.focusSelected();
@@ -479,7 +479,7 @@ it("keeps last graphical ownership until close acknowledgment and reports failur
   await settle();
   expect(target.isCurrent()).toBe(true);
   expect(document.querySelector('[role="status"]')?.textContent).toContain(
-    "could not",
+    "Couldn't hide",
   );
   h.retire("view-a");
   expect(target.isCurrent()).toBe(false);

@@ -187,7 +187,7 @@ it("relabels the open dialog when the window language changes, keeping loaded va
       "About OMXTerm",
       "Version 1.2.3",
       "Project",
-      "Could not open the link.",
+      "Couldn't open the link.",
       "Close",
     ]),
   );

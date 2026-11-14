@@ -210,10 +210,10 @@ describe("Shortcuts page", () => {
     expect(view.cells("moveAuxiliaryPanel")).toEqual(["Ctrl+Alt+Shift+P", ""]);
     expect(
       view.button("moveAuxiliaryPanel", "record").getAttribute("aria-label"),
-    ).toBe("Record shortcut for Move Auxiliary Panel to Other Side");
+    ).toBe("Record shortcut for Move Side Panel to Other Side");
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
-    ).toBe("Record shortcut for Toggle Auxiliary Panel");
+    ).toBe("Record shortcut for Toggle Side Panel");
     for (const [action, title] of [
       ["toggleFiles", "Files"],
       ["toggleSshConnect", "SSH Connect"],
@@ -345,7 +345,7 @@ describe("Shortcuts page", () => {
     expect(view.cells("moveAuxiliaryPanel")).toEqual(["Ctrl+Alt+Shift+P", ""]);
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
-    ).toBe("Gravar atalho para Alternar Painel Auxiliar");
+    ).toBe("Gravar atalho para Alternar Barra Lateral");
     expect(view.button("find", "record").textContent).toBe("Gravar");
     expect(
       document.querySelector(

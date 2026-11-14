@@ -292,7 +292,7 @@ it("saves the selector through validated IPC, reloader, menu and two retained wi
     await vi.waitFor(() =>
       expect(
         first.doc.querySelector(".settings-status")!.textContent,
-      ).toContain("Saved to config.json, but it could not be applied:"),
+      ).toContain("Saved to config.json, but it couldn't be applied:"),
     );
     expect(
       JSON.parse(

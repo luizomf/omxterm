@@ -63,11 +63,15 @@ export function createNativeDialogs(translator: () => Translator) {
     confirmQuit: (window: BrowserWindow | undefined) =>
       confirm(window, "quit", translator().t("dialog.quit.button")),
     confirmCloseWindow: (window: BrowserWindow) =>
-      confirm(window, "closeWindow", translator().t("common.close")),
+      confirm(
+        window,
+        "closeWindow",
+        translator().t("dialog.closeWindow.button"),
+      ),
     confirmCloseTab: (window: BrowserWindow) =>
-      confirm(window, "closeTab", translator().t("common.close")),
+      confirm(window, "closeTab", translator().t("dialog.closeTab.button")),
     confirmClosePane: (window: BrowserWindow) =>
-      confirm(window, "closePane", translator().t("common.close")),
+      confirm(window, "closePane", translator().t("dialog.closePane.button")),
     async sessionFailure(
       window: BrowserWindow,
       failure: TerminalSessionFailure,
