@@ -1,6 +1,6 @@
 {
   "name": "omxterm",
-  "version": "0.34.1-dev.3",
+  "version": "0.35.0-dev.2",
   "description": "Open-source personal desktop terminal for ARM64 macOS, Linux, and Windows",
   "desktopName": "omxterm.desktop",
   "author": "Luiz Otávio Miranda",

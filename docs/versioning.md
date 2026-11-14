@@ -12,7 +12,7 @@ in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
 `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N`,
-`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N` and `0.34.1-dev.N` bridges have distinct
+`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N` and `0.35.0-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
@@ -137,6 +137,19 @@ moves main to `0.34.1-dev.2`.
 
 Hardening the Windows `omxterm-ctl.exe` launcher (#1092) moves main to
 `0.34.1-dev.3`.
+
+Silencing startup bells before the window's first focus (#1112) moves main to
+`0.34.1-dev.4`.
+
+The Settings Shortcuts filter (#1113) is the first new feature of this cycle,
+so main then moves to `0.35.0-dev.0`. Its bridge admits ranges that accept both
+`0.34.0` and `0.35.0`, and every catalog archive stays installable unchanged.
+
+The agent API's `send` writing keys apart from text, with multi-line text as a
+bracketed paste (#1114), moves main to `0.35.0-dev.1`.
+
+Shift+click adjusting a selection, and triple click selecting whole wrapped
+lines (#1115), move main to `0.35.0-dev.2`.
 
 ## Public contract
 
