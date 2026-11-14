@@ -67,13 +67,15 @@ export function inspectWindowsInstallerInputs(
   // .cmd launcher. NSIS identity, paths, templates and options are unchanged.
   // #1081 ships a console launcher, omxterm-ctl.exe, in place of the .cmd.
   // NSIS identity, paths, templates and options are unchanged.
+  // The bundled default Snippets archive is re-pinned to 0.1.3 (#1105); only its
+  // resource filename changes. NSIS identity, paths and options are unchanged.
   const digest = (text) =>
     createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
   if (
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest(configuration) !==
-      "bcdcdcd3b728a3cb350dc135fc84b73572dca063d69f42ce60078e460e88362c" ||
+      "cbae03285c4e6636fcc3653669e33dcd61f2c626d8148d910c8618847333acb8" ||
     typeof nsisInclude !== "string" ||
     digest(nsisInclude) !==
       "98bb5a2a43c4e4bad076c7476410a1256420dd917b5d8cd3d59a2ef2759a5aeb"

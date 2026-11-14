@@ -26,7 +26,7 @@ do not remove the upstream attribution.
 | Noto Sans Symbols 2                                    | SIL Open Font License 1.1       | `licenses/NotoSansSymbols2-OFL.txt` |
 | Nerd Fonts patched glyph sets                          | MIT, OFL, CC BY 4.0, Apache 2.0 | `licenses/NerdFonts-glyphs.txt`     |
 
-The fixed public Snippets0.1.0 archive bundled for one-time new-profile defaults
+The fixed public Snippets 0.1.3 archive bundled for one-time new-profile defaults
 retains its original OMXTerm MIT license and bundled YAML ISC notice inside the
 ZIP (`LICENSE`, `licenses/yaml.txt`). It is not rebuilt from current extension
 source; [its pinned provenance](assets/default-snippets/README.md) and

@@ -23,7 +23,7 @@ built-in sidebar. Fresh configuration kits on those hosts omit the starter
 `snippets.yaml`; Windows x64 still creates it. Windows x64 manages extensions
 from 0.28.0 but keeps built-in Snippets.
 
-New packaged profiles on extension hosts get Snippets 0.1.0 installed once,
+New packaged profiles on extension hosts get Snippets 0.1.3 installed once,
 enabled but inactive until opened. See [Default Snippets](default-snippets.md).
 Existing profiles never get it automatically.
 
@@ -55,9 +55,9 @@ their own shell.
 
 Which home directory the extension uses depends on its version:
 
-- **0.1.1 (catalog):** a nonempty `XDG_CONFIG_HOME` wins; otherwise the OS
+- **0.1.1 and later (catalog and bundled default):** a nonempty `XDG_CONFIG_HOME` wins; otherwise the OS
   account home, independent of `HOME` or `USERPROFILE`.
-- **0.1.0 (bundled default and older installs):** a nonempty `XDG_CONFIG_HOME`
+- **0.1.0 (older installs):** a nonempty `XDG_CONFIG_HOME`
   wins; otherwise the environment's `HOME` (`USERPROFILE` on Windows). If that
   differs from the account home, 0.1.0 reads a different file from the one
   beside `config.json`. Updating to 0.1.1 fixes it. Upgrading the app does not
