@@ -5,6 +5,10 @@ export function inspectWindowsAgentLauncher(
   execFile?: (
     file: string,
     args: string[],
-    options: { encoding: "utf8"; timeout: number },
+    options: {
+      encoding: "utf8";
+      timeout: number;
+      env: Record<string, string | undefined>;
+    },
   ) => Promise<unknown>,
 ): Promise<void>;

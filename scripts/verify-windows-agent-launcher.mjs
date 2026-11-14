@@ -37,16 +37,29 @@ export async function inspectWindowsAgentLauncher(
   // The optional header follows the 24-byte signature and COFF header.
   if (data.readUInt16LE(pe + 24 + 68) !== consoleSubsystem)
     throw new Error("Agent launcher is not a console program");
-  const answer = await execFile(launcher, [launcherProbeArgument], {
-    encoding: "utf8",
-    timeout: 30_000,
-  }).then(
-    () => ({ code: 0, stderr: "" }),
-    (error) => ({ code: error.code, stderr: error.stderr }),
+  // The launcher must set ELECTRON_RUN_AS_NODE itself, so the probe runs
+  // without one (names are case-insensitive on Windows). It runs from a \\?\
+  // path too, the form Rust's fs::canonicalize gives OMXTERM_CTL.
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(
+      ([name]) => name.toUpperCase() !== "ELECTRON_RUN_AS_NODE",
+    ),
   );
-  if (
-    answer.code !== 2 ||
-    answer.stderr !== `Unknown option ${launcherProbeArgument}.\n`
-  )
-    throw new Error("Agent launcher changed its arguments or exit status");
+  for (const file of [launcher, path.toNamespacedPath(launcher)]) {
+    const answer = await execFile(file, [launcherProbeArgument], {
+      encoding: "utf8",
+      timeout: 30_000,
+      env,
+    }).then(
+      () => ({ code: 0, stderr: "" }),
+      (error) => ({ code: error.code, stderr: error.stderr }),
+    );
+    if (
+      answer.code !== 2 ||
+      answer.stderr !== `Unknown option ${launcherProbeArgument}.\n`
+    )
+      throw new Error(
+        `Agent launcher changed its arguments or exit status, run as ${file}`,
+      );
+  }
 }

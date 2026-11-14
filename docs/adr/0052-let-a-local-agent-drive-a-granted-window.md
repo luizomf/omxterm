@@ -828,9 +828,14 @@ probe on a Windows 11 ARM64 guest
 - **Ctrl+C ends the client, with no batch prompt.** The child writes to the
   launcher's handles, so Electron doesn't attach it to the console and the
   console's Ctrl+C, Ctrl+Break and close reach only the launcher, which ends
-  the child as the console would have (`STATUS_CONTROL_C_EXIT`). The child
-  runs in a kill-on-close job, so a host that kills the launcher, as agent
-  hosts do on a timeout, ends the client too.
+  itself as the console would have ended the child
+  (`STATUS_CONTROL_C_EXIT`). The child is created inside a kill-on-close
+  job, so a host that kills the launcher at any moment, as agent hosts do on
+  a timeout, ends the client too; if no such job can be made, the launcher
+  doesn't start the client
+  ([#1092](https://github.com/luizomf/omxterm/issues/1092)). It finds
+  `OMXTerm.exe` by cutting its own path, so it also runs from a `\\?\` path,
+  which Windows doesn't normalize and Rust's `fs::canonicalize` returns.
 - **Text can come from stdin.** `send --text -` and `wait --match -` read it
   as UTF-8 on every platform, so text never meets a shell's quoting. Leading
   byte order marks (Windows PowerShell 5.1 pipes one or two) and one final

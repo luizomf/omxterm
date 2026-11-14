@@ -8,8 +8,6 @@
 
 #define MAX_COMMAND_LINE 32767
 
-static HANDLE child;
-
 static void fail(const char *message) {
   DWORD written;
   HANDLE error = GetStdHandle(STD_ERROR_HANDLE);
@@ -19,17 +17,19 @@ static void fail(const char *message) {
 }
 
 // The child's stdio is the launcher's own handles, so the console's Ctrl+C,
-// Ctrl+Break and close never reach it: end it as the console would have, and
-// let wmain return its exit code.
+// Ctrl+Break and close never reach it. The launcher ends instead, as the
+// console would have ended the child; that closes the job, which ends the
+// child. Before the child exists, it never starts.
 static BOOL WINAPI on_console_event(DWORD event) {
   (void)event;
-  if (child != NULL) TerminateProcess(child, (UINT)STATUS_CONTROL_C_EXIT);
+  TerminateProcess(GetCurrentProcess(), (UINT)STATUS_CONTROL_C_EXIT);
   return TRUE;
 }
 
 // The arguments after the program name, untouched. The program name ends at
-// the next quote when it starts with one, else at the first blank, as both
-// CommandLineToArgvW and the C runtime read it.
+// the next quote when it starts with one, else at the first blank, the one
+// rule CommandLineToArgvW and the C runtime share. The rest is the child's to
+// parse, so it reads it as it would if OMXTerm.exe had been run directly.
 static const wchar_t *arguments(const wchar_t *line) {
   if (*line == L'"') {
     for (line += 1; *line != L'\0' && *line != L'"'; line += 1) {
@@ -52,6 +52,20 @@ static void append(wchar_t *buffer, size_t *used, const wchar_t *text) {
   buffer[*used] = L'\0';
 }
 
+// The folder two levels above `folder`, which ends in a backslash, cut by
+// hand: Windows doesn't collapse `..` after a \\?\ prefix, which callers such
+// as Rust's fs::canonicalize put on OMXTERM_CTL.
+static void package_folder(const wchar_t *folder, wchar_t *package) {
+  size_t used = 0;
+  append(package, &used, folder);
+  for (int level = 0; level < 2; level += 1) {
+    used -= 1;
+    while (used > 0 && package[used - 1] != L'\\') used -= 1;
+    if (used == 0) fail("omxterm-ctl: can't find OMXTerm\n");
+  }
+  package[used] = L'\0';
+}
+
 // An unpackaged build names its Electron binary in `runtime`, one UTF-8 line,
 // beside the launcher; a package runs the OMXTerm.exe two folders up.
 static void runtime_path(const wchar_t *folder, wchar_t *runtime) {
@@ -64,9 +78,9 @@ static void runtime_path(const wchar_t *folder, wchar_t *runtime) {
   HANDLE handle = CreateFileW(file, GENERIC_READ, FILE_SHARE_READ, NULL,
                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if (handle == INVALID_HANDLE_VALUE) {
-    used = 0;
-    append(runtime, &used, folder);
-    append(runtime, &used, L"..\\..\\OMXTerm.exe");
+    package_folder(folder, runtime);
+    used = length(runtime);
+    append(runtime, &used, L"OMXTerm.exe");
     return;
   }
   BOOL ok = ReadFile(handle, bytes, sizeof bytes - 1, &read, NULL);
@@ -97,6 +111,8 @@ int wmain(void) {
     fail("omxterm-ctl: can't find its own folder\n");
   wchar_t *slash = folder + size;
   while (slash > folder && slash[-1] != L'\\') slash -= 1;
+  // Without a folder, runtime and OMXTerm.exe would be read from the cwd.
+  if (slash == folder) fail("omxterm-ctl: can't find its own folder\n");
   *slash = L'\0';
   runtime_path(folder, runtime);
 
@@ -115,34 +131,43 @@ int wmain(void) {
   // Only the child runs as Node; the caller's environment is its own.
   SetEnvironmentVariableW(L"ELECTRON_RUN_AS_NODE", L"1");
 
-  // A caller that kills the launcher, as agent hosts do on a timeout, ends
-  // the client with it.
+  // The child starts inside a kill-on-close job, so a caller that kills the
+  // launcher at any point, as agent hosts do on a timeout, ends the client
+  // with it. The client never runs outside one.
   HANDLE job = CreateJobObjectW(NULL, NULL);
-  if (job != NULL) {
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits;
-    ZeroMemory(&limits, sizeof limits);
-    limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-    SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits,
-                            sizeof limits);
-  }
+  JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits;
+  ZeroMemory(&limits, sizeof limits);
+  limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+  if (job == NULL ||
+      !SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits,
+                               sizeof limits))
+    fail("omxterm-ctl: can't start OMXTerm\n");
+  SetConsoleCtrlHandler(on_console_event, TRUE);
 
-  STARTUPINFOW startup;
+  SIZE_T bytes = 0;
+  InitializeProcThreadAttributeList(NULL, 1, 0, &bytes);
+  LPPROC_THREAD_ATTRIBUTE_LIST attributes =
+      (LPPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(GetProcessHeap(), 0, bytes);
+  if (attributes == NULL ||
+      !InitializeProcThreadAttributeList(attributes, 1, 0, &bytes) ||
+      !UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_JOB_LIST,
+                                 &job, sizeof job, NULL, NULL))
+    fail("omxterm-ctl: can't start OMXTerm\n");
+
+  STARTUPINFOEXW startup;
   PROCESS_INFORMATION process;
   ZeroMemory(&startup, sizeof startup);
-  startup.cb = sizeof startup;
+  startup.StartupInfo.cb = sizeof startup;
   // No busy cursor for a GUI-subsystem child that never shows a window.
-  startup.dwFlags = STARTF_USESTDHANDLES | STARTF_FORCEOFFFEEDBACK;
-  startup.hStdInput = inherited(STD_INPUT_HANDLE);
-  startup.hStdOutput = inherited(STD_OUTPUT_HANDLE);
-  startup.hStdError = inherited(STD_ERROR_HANDLE);
-  if (!CreateProcessW(runtime, line, NULL, NULL, TRUE, CREATE_SUSPENDED, NULL,
-                      NULL, &startup, &process))
+  startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES | STARTF_FORCEOFFFEEDBACK;
+  startup.StartupInfo.hStdInput = inherited(STD_INPUT_HANDLE);
+  startup.StartupInfo.hStdOutput = inherited(STD_OUTPUT_HANDLE);
+  startup.StartupInfo.hStdError = inherited(STD_ERROR_HANDLE);
+  startup.lpAttributeList = attributes;
+  if (!CreateProcessW(runtime, line, NULL, NULL, TRUE,
+                      EXTENDED_STARTUPINFO_PRESENT, NULL, NULL,
+                      &startup.StartupInfo, &process))
     fail("omxterm-ctl: can't start OMXTerm\n");
-  child = process.hProcess;
-  // Best effort: a job that refuses nesting still runs the client.
-  if (job != NULL) AssignProcessToJobObject(job, process.hProcess);
-  SetConsoleCtrlHandler(on_console_event, TRUE);
-  ResumeThread(process.hThread);
   CloseHandle(process.hThread);
 
   DWORD code = 1;
