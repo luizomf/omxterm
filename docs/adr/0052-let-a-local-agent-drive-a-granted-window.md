@@ -819,9 +819,12 @@ probe on a Windows 11 ARM64 guest
   for cmd.exe either. An executable has no such parse. Checked on a Windows
   11 ARM64 guest from PowerShell 5.1, cmd, Git Bash, Python and Node: those
   characters, `%PATH%`, quotes, a trailing backslash and emoji reached the
-  client as given. Only the caller's own shell still quotes: Windows
-  PowerShell 5.1 splits an argument that holds a double quote unless each
-  one is written `\"`.
+  client as given. Only the caller's own shell still changes arguments:
+  Windows PowerShell 5.1 splits an argument that holds a double quote unless
+  each one is written `\"`, and Git Bash (MSYS) rewrites an argument that
+  looks like a POSIX path, so `--text /exit` arrives as
+  `C:/Program Files/Git/exit`. Stdin (`--text -`) or `MSYS_NO_PATHCONV=1`
+  avoids it.
 - **Ctrl+C ends the client, with no batch prompt.** The child writes to the
   launcher's handles, so Electron doesn't attach it to the console and the
   console's Ctrl+C, Ctrl+Break and close reach only the launcher, which ends

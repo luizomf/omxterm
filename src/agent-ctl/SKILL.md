@@ -17,6 +17,27 @@ You are when `OMXTERM_CTL` is set. It is the path of `omxterm-ctl`, the
 client. Run it quoted, as `"$OMXTERM_CTL" <command>`. Nothing needs to be
 installed or configured.
 
+On Windows it is `omxterm-ctl.exe`. Call it the way your shell runs a program
+from a variable:
+
+| Shell             | Call                        |
+| ----------------- | --------------------------- |
+| PowerShell 5.1, 7 | `& $env:OMXTERM_CTL status` |
+| cmd               | `"%OMXTERM_CTL%" status`    |
+| Git Bash          | `"$OMXTERM_CTL" status`     |
+
+The examples below use the POSIX form. In a cmd script, put `call` in front.
+For any `--text` or `--match` that holds quotes, `$`, `%`, `&`, a backslash or
+a leading `/`, pipe it in with `-` (see Commands) instead of quoting it; that
+is safe in every shell. Windows details:
+
+- PowerShell 5.1 splits an argument that holds a double quote; write each one
+  as `\"`, or use `-`. It also pipes ASCII, so for non-ASCII text run
+  `$OutputEncoding = [System.Text.UTF8Encoding]::new($false)` first.
+- Git Bash rewrites an argument that looks like a POSIX path:
+  `--text /exit` arrives as `C:/Program Files/Git/exit`. Use `-`, or set
+  `MSYS_NO_PATHCONV=1` for that call.
+
 ## Check the grant first
 
 ```sh
@@ -77,6 +98,10 @@ in.
   would be typing into your own input. When `status` and `list` say OMXTerm
   can't tell which pane is yours, you may be in any of them: ask the user
   which pane to use.
+- `--text -` (and `--match -`) reads the text from stdin as UTF-8, so no shell
+  quoting touches it. A final line break is dropped; add `--enter` to press
+  Enter. `printf '%s' 'echo "hi" & more' | "$OMXTERM_CTL" send s2 --text - --enter`.
+  In PowerShell: `'echo "hi" & more' | & $env:OMXTERM_CTL send s2 --text - --enter`.
 - `--keys` takes a comma-separated list of `Enter`, `Tab`, `Escape`,
   `Backspace`, `Space` and `Ctrl+A` to `Ctrl+Z`. `--text` is typed as is,
   with nothing added.
@@ -85,7 +110,9 @@ in.
   `PageUp`, `PageDown`, `Insert`, `Delete`, `F1` to `F12`, `Enter`, `Tab`,
   `Escape`, `Backspace` and `Space`, each with any of `Ctrl+`, `Alt+` and
   `Shift+` (`Ctrl+Shift+Up`). They arrive exactly as the user's own keys
-  would. To see what a key did, `read` the pane.
+  would. To see what a key did, `read` the pane. `Up` recalls history into
+  the prompt: clear the line first (`send --keys Ctrl+U`), or what you type
+  next is appended to the recalled command.
 - `press` with one of the window's shortcuts runs it on the pane you name, as
   if the user clicked that pane and pressed it: new, close, next, previous
   and select tab, split, close pane, focus and swap panes, equalize, zoom,
@@ -150,6 +177,11 @@ env_vars = ["OMXTERM_PROFILE", "OMXTERM_PANE", "OMXTERM_CTL"]
 ' "${CODEX_HOME:-$HOME/.codex}/config.toml"
 ```
 
+On Windows, register the executable itself; a PowerShell form for Claude Code is
+`claude mcp add --scope user omxterm -- $env:OMXTERM_CTL mcp`. It is not a
+batch file, so no `cmd /c` is in front of it. MCP arguments travel as JSON, so
+`text` needs no shell quoting.
+
 On Linux, an AppImage moves `"$OMXTERM_CTL"` on every launch, so register a
 command that looks it up each time instead:
 
@@ -166,4 +198,13 @@ skill:
 ```sh
 mkdir -p ~/.claude/skills/omxterm && "$OMXTERM_CTL" guide > ~/.claude/skills/omxterm/SKILL.md   # Claude Code
 mkdir -p ~/.agents/skills/omxterm && "$OMXTERM_CTL" guide > ~/.agents/skills/omxterm/SKILL.md   # Codex
+```
+
+In Git Bash those lines work as written. In PowerShell, make the output UTF-8
+first (the guide has non-ASCII characters):
+
+```powershell
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+New-Item -ItemType Directory -Force "$HOME\.claude\skills\omxterm" | Out-Null
+& $env:OMXTERM_CTL guide | Out-File -Encoding utf8 "$HOME\.claude\skills\omxterm\SKILL.md"
 ```

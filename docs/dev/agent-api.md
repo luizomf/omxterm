@@ -460,9 +460,12 @@ omxterm-ctl keys                           # slice 4: chords press runs
   is `omxterm-ctl.exe`, a console program that runs the app's own executable
   in Node mode with the caller's arguments untouched, shares its console,
   ends the client on Ctrl+C or when it is killed itself, and returns the
-  client's exit code. Only the caller's own shell quotes: Windows PowerShell
-  5.1 splits an argument that holds a double quote unless each one is
-  written `\"`.
+  client's exit code. Only the caller's own shell changes arguments: Windows
+  PowerShell 5.1 splits an argument that holds a double quote unless each
+  one is written `\"`, and Git Bash (MSYS) rewrites an argument that looks
+  like a POSIX path (`--text /exit` arrives as `C:/Program Files/Git/exit`);
+  use `--text -` or `MSYS_NO_PATHCONV=1`. The guide shows the call per shell,
+  and that an agent should clear the line (`Ctrl+U`) before `press Up`.
 - `send --text -` and `wait --match -` (or `send --match -`) read the text
   from stdin as UTF-8, so it never meets a shell's quoting. Leading byte
   order marks and one final line break are dropped; `--enter` presses Enter.
