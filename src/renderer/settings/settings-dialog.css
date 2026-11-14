@@ -188,7 +188,7 @@ body.tabs-visible .settings-tab {
   background: var(--ui-selected);
 }
 .settings-theme-card input:focus-visible + .settings-theme-content {
-  outline: 2px solid var(--ui-text);
+  outline: 2px solid var(--ui-secondary);
   outline-offset: 2px;
 }
 .settings-theme-preview {
@@ -351,7 +351,7 @@ body.tabs-visible .settings-tab {
 }
 .settings-theme-swatch[aria-pressed="true"],
 .settings-theme-swatch:focus-visible {
-  outline: 2px solid var(--ui-text);
+  outline: 2px solid var(--ui-secondary);
   outline-offset: 2px;
 }
 .settings-theme-use {
