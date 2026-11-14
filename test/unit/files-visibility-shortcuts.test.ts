@@ -135,7 +135,6 @@ it.each([
       document.getElementById(item.getAttribute("aria-describedby")!)
         ?.textContent,
     ).toBe(description);
-    expect(item.querySelector(".menu-check")?.textContent).toBe("□");
     item.click();
     expect(document.activeElement).toBe(actions);
     actions.click();
@@ -143,7 +142,6 @@ it.each([
       '[role="menuitemcheckbox"]',
     )!;
     expect(checked.getAttribute("aria-checked")).toBe("true");
-    expect(checked.querySelector(".menu-check")?.textContent).toBe("✓");
     checked.focus();
     expect(document.activeElement).toBe(checked);
     expect(

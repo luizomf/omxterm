@@ -1,6 +1,7 @@
 import type { AuxiliaryPanelSide } from "../shared/user-configuration";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
+import { createIcon, setIcon } from "../shared/ui-icons";
 import { createPanelDefaultIntent } from "./panel-default";
 import { createAuxiliaryPanelStatus } from "./auxiliary-panel-status";
 import { installAuxiliaryPanelInput } from "./auxiliary-panel-input";
@@ -362,12 +363,16 @@ function createPanelElements(root: HTMLElement) {
   const title = document.createElement("h2");
   const close = document.createElement("button");
   close.type = "button";
-  close.textContent = "×";
+  setIcon(close, "x");
   close.className = "auxiliary-close ui-icon-button";
   const hideButton = document.createElement("button");
   hideButton.type = "button";
   hideButton.className = "auxiliary-hide ui-icon-button";
-  hideButton.textContent = "−";
+  // Both sides' icons; CSS shows the one for the panel's side.
+  hideButton.append(
+    createIcon(document, "panel-right"),
+    createIcon(document, "panel-left"),
+  );
   header.append(title, hideButton, close);
   const body = document.createElement("div");
   body.className = "auxiliary-body";

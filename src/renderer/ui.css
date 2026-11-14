@@ -293,24 +293,42 @@
   background: var(--ui-control-selected);
 }
 
+/* Icon --------------------------------------------------------------------- */
+
+/* One line-icon set, built by createIcon() (src/shared/ui-icons.ts), which
+   draws the geometry in the current text color. 16 px everywhere; 12 px on a
+   tab, where a heavier stroke keeps the same line weight on screen. */
+.ui-icon {
+  display: block;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+.ui-tab .ui-icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.33;
+}
+
 /* State mark ------------------------------------------------------------- */
 
-/* One quiet glyph for an ongoing state. Its tooltip and accessible name say
+/* One quiet icon for an ongoing state. Its tooltip and accessible name say
    what is going on; it never carries text on screen. */
 .ui-mark {
-  display: inline-block;
-  font: var(--ui-text-meta) / 1 var(--ui-font);
+  display: inline-grid;
+  place-items: center;
+  vertical-align: middle;
   color: var(--ui-secondary);
   cursor: default;
   user-select: none;
 }
-/* An actionable mark keeps the glyph's look; only hover reveals the button. */
+/* An actionable mark keeps the icon's look; only hover reveals the button. */
 .ui-mark.ui-icon-button {
   width: 24px;
   height: 24px;
-  font: var(--ui-text-meta) / 1 var(--ui-font);
   color: var(--ui-secondary);
-  border-radius: var(--ui-radius-chip);
+  border-radius: 999px;
   cursor: pointer;
 }
 .ui-mark.ui-icon-button:hover,
@@ -344,10 +362,42 @@
 .ui-mark[data-tip]:focus-visible::after {
   opacity: 1;
 }
-/* Marks follow the terminal's font, but never shrink below the UI's meta
-   text: the agent's mark is a panic button at any zoom. */
+/* The marks' home at a pane's corner: a small capsule that tints and blurs
+   the output under it, so a thin icon stays legible over busy text and
+   translucent windows. It is as wide as its marks and gone with them. The
+   tint alone must carry it wherever the blur has nothing to sample. The one
+   shadow in the system: a faint top rim and a soft drop, like the OS's own
+   floating bars. */
+.state-marks {
+  --state-mark-size: max(
+    24px,
+    calc(var(--terminal-font-size, 16px) * var(--terminal-line-height, 1))
+  );
+  padding: 0 2px;
+  color-scheme: var(--ui-color-scheme, dark);
+  background: color-mix(
+    in srgb,
+    rgb(from var(--ui-surface) r g b / 0.72),
+    var(--ui-neutral) 14%
+  );
+  border-radius: 999px;
+  box-shadow:
+    inset 0 1px 0 light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.11)),
+    inset 0 0 0 1px rgb(from var(--ui-text) r g b / 0.06),
+    0 2px 8px
+      light-dark(rgb(from var(--ui-text) r g b / 0.14), rgb(0 0 0 / 0.32));
+  backdrop-filter: blur(10px) saturate(1.3);
+}
+/* Marks follow the terminal's font: the target is one text row and the icon
+   0.8 of the font size, never under 24 and 16 px. The agent's mark is a
+   panic button at any zoom. */
 .state-marks .ui-mark {
-  font-size: max(var(--terminal-font-size, 16px), var(--ui-text-meta));
+  width: var(--state-mark-size);
+  height: var(--state-mark-size);
+}
+.state-marks .ui-icon {
+  width: max(16px, calc(var(--terminal-font-size, 16px) * 0.8));
+  height: max(16px, calc(var(--terminal-font-size, 16px) * 0.8));
 }
 /* An agent grant's mark is the only glyph with a tone of its own, on hover
    too. */

@@ -70,7 +70,7 @@ it
       expect(validated).toEqual({ digest, manifest: receipt.manifest });
       expect(receipt.manifest).toEqual(sourceManifest);
       expect(receipt.manifest).toMatchObject({
-        version: "0.9.1",
+        version: "0.9.2",
         engines: { omxterm: ">=0.26.0", api: "0.1.x" },
         capabilities: ["terminal.insertPath.v1"],
       });
@@ -146,6 +146,14 @@ it
       ).toEqual(validated);
       expect(await readFile(path.join(extracted, "LICENSE"), "utf8")).toContain(
         "MIT License",
+      );
+      expect(
+        await readFile(path.join(extracted, "licenses/lucide.txt"), "utf8"),
+      ).toBe(
+        await readFile(
+          path.join(process.cwd(), "assets/licenses/lucide-ISC.txt"),
+          "utf8",
+        ),
       );
       await expect(buildFilesExtension(output, commit)).rejects.toThrow();
       expect(await readFile(output)).toEqual(bytes);

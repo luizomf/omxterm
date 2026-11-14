@@ -1,4 +1,5 @@
 import type { TerminalBridge } from "../shared/terminal-bridge";
+import { setIcon, type UiIconName } from "../shared/ui-icons";
 import type { WindowChromeState } from "../shared/window-chrome";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
@@ -23,12 +24,12 @@ export function mountWindowChrome(
   title.className = "window-title";
   const controls = document.createElement("nav");
   const button = (
-    glyph: string,
+    icon: UiIconName,
     command: "minimize" | "maximize" | "close",
   ) => {
     const element = document.createElement("button");
     element.type = "button";
-    element.textContent = glyph;
+    setIcon(element, icon);
     // Native-style pointer controls must not steal terminal or preview focus.
     element.addEventListener("mousedown", (event) => event.preventDefault());
     element.addEventListener("click", () => {
@@ -37,9 +38,9 @@ export function mountWindowChrome(
     controls.append(element);
     return element;
   };
-  const minimize = button("−", "minimize");
-  const maximize = button("□", "maximize");
-  const close = button("×", "close");
+  const minimize = button("minus", "minimize");
+  const maximize = button("square", "maximize");
+  const close = button("x", "close");
   const unbindLabels = language.bind((t) => {
     controls.setAttribute("aria-label", t("chrome.windowControls"));
     minimize.setAttribute("aria-label", t("chrome.minimize"));
@@ -74,7 +75,7 @@ export function mountWindowChrome(
     );
     row.hidden = !visible || state.style === "native";
     title.textContent = state.title;
-    maximize.textContent = state.maximized ? "❐" : "□";
+    setIcon(maximize, state.maximized ? "copy" : "square");
     maximize.setAttribute(
       "aria-label",
       language.t(state.maximized ? "chrome.restore" : "chrome.maximize"),

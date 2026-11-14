@@ -1,3 +1,5 @@
+import { createIcon, type UiIconName } from "../../src/shared/ui-icons.js";
+
 type Icon = "home" | "up" | "refresh" | "new-folder" | "actions" | "go";
 type Hint = {
   wrapper: HTMLElement;
@@ -5,20 +7,14 @@ type Hint = {
   tooltip: HTMLElement;
 };
 
-// Small, monochrome line icons share the quiet page-button treatment. Paths are
-// package-owned, not dependent on fonts, network resources or platform glyphs.
-const paths: Record<Icon, readonly string[]> = {
-  home: ["M3 10.5 12 3l9 7.5", "M5.5 9.5V21h13V9.5", "M9.5 21v-7h5v7"],
-  up: ["M12 20V4", "m6 10 6-6 6 6"],
-  refresh: [
-    "M20 7v5h-5",
-    "M4 17v-5h5",
-    "M5 9a7.5 7.5 0 0 1 13-2l2 5",
-    "M19 15a7.5 7.5 0 0 1-13 2l-2-5",
-  ],
-  "new-folder": ["M3 19V5h7l2 2h9v5", "M3 19h10", "M18 14v7", "M14.5 17.5h7"],
-  actions: ["M5 12h.01", "M12 12h.01", "M19 12h.01"],
-  go: ["M4 12h16", "m14 6 6 6-6 6"],
+// Each control's icon from the shared set (docs/ui-style-guide.md#icons).
+const icons: Record<Icon, UiIconName> = {
+  home: "house",
+  up: "arrow-up",
+  refresh: "refresh-cw",
+  "new-folder": "folder-plus",
+  actions: "ellipsis",
+  go: "arrow-right",
 };
 
 /** Tooltips stay in the child viewport and remain reachable from their anchor. */
@@ -136,20 +132,7 @@ export function createFilesToolbar(document: Document) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "toolbar-button ui-icon-button";
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("class", `toolbar-icon-${icon}`);
-    svg.setAttribute("aria-hidden", "true");
-    svg.setAttribute("focusable", "false");
-    for (const data of paths[icon]) {
-      const path = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "path",
-      );
-      path.setAttribute("d", data);
-      svg.append(path);
-    }
-    button.append(svg);
+    button.append(createIcon(document, icons[icon]));
     const tooltip = document.createElement("span");
     tooltip.className = "toolbar-tooltip ui-popover";
     tooltip.id = `files-toolbar-${icon}-tooltip`;

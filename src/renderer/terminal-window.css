@@ -33,18 +33,23 @@ body {
   );
 }
 
-/* State marks (ADR 0050) follow the terminal's own padding: inset from the
-   pane's top and right edges by it, centered on the first text row, over the
-   canvas and out of the layout flow, so a mark never changes the grid. It may
-   cover the last column or two of row 1. The button is a 24 px hit target. */
+/* State marks (ADR 0050) follow the terminal's own padding: their capsule
+   (ui.css) is centered on the first text row and its icons end near the
+   text's right edge, over the canvas and out of the layout flow, so a mark
+   never changes the grid. It covers the end of row 1: about 28 px per mark.
+   Each mark is a 24 px hit target. */
 .state-marks {
   --state-mark-row: calc(
     var(--terminal-font-size, 16px) * var(--terminal-line-height, 1)
   );
   position: absolute;
   z-index: 2;
-  top: calc(var(--terminal-padding-top, 12px) + var(--state-mark-row) / 2);
-  right: var(--terminal-padding-right, 12px);
+  /* Never clipped by the pane's top edge, however small the padding. */
+  top: max(
+    calc(var(--terminal-padding-top, 12px) + var(--state-mark-row) / 2),
+    calc(var(--state-mark-size) / 2 + 2px)
+  );
+  right: max(4px, calc(var(--terminal-padding-right, 12px) - 4px));
   display: flex;
   align-items: center;
   transform: translateY(-50%);
@@ -437,17 +442,18 @@ body.tabs-visible .terminal-tab {
   display: none;
 }
 
-/* Hide collapses the panel toward its edge; Close (×) ends the tool. */
-.auxiliary-header > .auxiliary-hide {
-  font-size: 0;
-}
-.auxiliary-header > .auxiliary-hide::before {
-  content: "›";
-  font-size: 20px;
+/* Hide collapses the panel toward its edge, so its icon follows the panel's
+   side; Close ends the tool. */
+.auxiliary-hide > [data-icon="panel-left"],
+#terminal-window-content[data-auxiliary-panel-side="left"]
+  .auxiliary-hide
+  > [data-icon="panel-right"] {
+  display: none;
 }
 #terminal-window-content[data-auxiliary-panel-side="left"]
-  .auxiliary-hide::before {
-  content: "‹";
+  .auxiliary-hide
+  > [data-icon="panel-left"] {
+  display: block;
 }
 
 .auxiliary-body {

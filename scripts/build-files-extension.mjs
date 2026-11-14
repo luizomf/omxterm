@@ -117,6 +117,14 @@ export async function buildExtension(
         path.join(stage, "licenses/yaml.txt"),
       );
     }
+    // Files draws the shared Lucide-based icons (src/shared/ui-icons.ts).
+    if (name === "files") {
+      await mkdir(path.join(stage, "licenses"));
+      await cp(
+        path.join(root, "assets/licenses/lucide-ISC.txt"),
+        path.join(stage, "licenses/lucide.txt"),
+      );
+    }
     if (name === "ssh" || name === "restoration" || name === "mirror-typing")
       await cp(
         path.join(root, `extensions/${name}/NOTICE`),
@@ -149,7 +157,7 @@ export async function buildExtension(
         `import pathlib,sys,zipfile
 source=pathlib.Path(sys.argv[1])
 with zipfile.ZipFile(sys.argv[2], 'x', compression=zipfile.ZIP_DEFLATED) as archive:
- for name in ['extension.json','backend.mjs','index.html','${name}.css','view.js','LICENSE'${name === "snippets" ? ",'README.md','snippets.example.yaml','licenses/yaml.txt'" : name === "ssh" ? ",'NOTICE'" : name === "restoration" || name === "mirror-typing" ? ",'NOTICE','licenses/ashyterm.txt'" : ""}]:
+ for name in ['extension.json','backend.mjs','index.html','${name}.css','view.js','LICENSE'${name === "snippets" ? ",'README.md','snippets.example.yaml','licenses/yaml.txt'" : name === "files" ? ",'licenses/lucide.txt'" : name === "ssh" ? ",'NOTICE'" : name === "restoration" || name === "mirror-typing" ? ",'NOTICE','licenses/ashyterm.txt'" : ""}]:
   entry=zipfile.ZipInfo(name, (2026,1,1,0,0,0))
   entry.external_attr=0o100600 << 16
   entry.compress_type=zipfile.ZIP_DEFLATED

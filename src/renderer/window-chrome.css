@@ -31,6 +31,8 @@
 }
 
 .window-title-bar button {
+  display: inline-grid;
+  place-items: center;
   min-width: 40px;
   padding: 7px 10px;
   border: 0;
