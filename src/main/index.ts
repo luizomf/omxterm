@@ -467,7 +467,6 @@ app
                     pending,
                   }),
                 notify: notifications.show,
-                clearNotification: notifications.clear,
                 bellText: () => currentTranslator().t("attention.bell"),
                 onWindowTitle: chrome.setTitle,
                 sendSessionTitle: (sessionId, title) =>

@@ -43,15 +43,13 @@ export function createTerminalNotifications(
 ) {
   const now = options.now ?? Date.now;
   // Kept referenced so the native object (and its click) outlives this call.
+  // A delivered notification is never closed here because closing also removes
+  // it from the system's notification list: it stays until the user acts on it,
+  // or until a newer one from the same session replaces it. References drop
+  // when the session ends or the window is disposed.
   const shown = new Map<TerminalSessionId, NativeNotification>();
   const lastShown = new Map<TerminalSessionId, number>();
   let disposed = false;
-
-  const close = (sessionId: TerminalSessionId) => {
-    const notification = shown.get(sessionId);
-    shown.delete(sessionId);
-    notification?.close();
-  };
 
   return {
     show(sessionId: TerminalSessionId, notification: TerminalNotification) {
@@ -68,7 +66,7 @@ export function createTerminalNotifications(
         options.playSoundFile(preferences.soundFile);
       else if (systemSound && !banner) options.beep();
       if (!banner) return;
-      close(sessionId);
+      shown.get(sessionId)?.close();
       const native = options.create({
         title: sanitizedNotificationText(
           notification.title,
@@ -79,22 +77,21 @@ export function createTerminalNotifications(
       });
       shown.set(sessionId, native);
       native.on("click", () => {
-        if (shown.get(sessionId) === native) shown.delete(sessionId);
-        if (!disposed) options.reveal(sessionId);
+        // Replaced, ended or disposed: nothing left to reveal.
+        if (disposed || shown.get(sessionId) !== native) return;
+        shown.delete(sessionId);
+        options.reveal(sessionId);
       });
       native.show();
     },
-    clear(sessionId: TerminalSessionId) {
-      close(sessionId);
-    },
     ended(sessionId: TerminalSessionId) {
-      close(sessionId);
+      shown.delete(sessionId);
       lastShown.delete(sessionId);
     },
     dispose() {
       if (disposed) return;
       disposed = true;
-      for (const sessionId of [...shown.keys()]) close(sessionId);
+      shown.clear();
       lastShown.clear();
     },
   };
