@@ -6,10 +6,9 @@ or in a few folders, side by side. It's an optional add-on (an extension).
 
 ## Availability
 
-The official extension catalog offers Mirror Typing 0.2.0 on **Macs with
-Apple silicon**, **Windows on ARM** and **Linux on ARM64**. Use OMXTerm 0.28.0
-or later on Linux; on 0.27.0, Start sometimes stops right away (open it again
-to retry). Other platforms aren't tested yet. See the
+The official extension catalog offers Mirror Typing 0.3.1 on **Macs with
+Apple silicon**, **Windows on ARM** and **Linux on ARM64**, for OMXTerm 0.30.0
+or later. Other platforms aren't tested yet. See the
 [developer notes](mirror-typing-development.md) for how it works.
 
 ## Install
