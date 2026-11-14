@@ -55,6 +55,7 @@ in.
 
 ```sh
 "$OMXTERM_CTL" list                     # tabs, each with its panes: id, size, focused, self
+"$OMXTERM_CTL" send s2 --text 'npm test' --enter --command --timeout 300000
 "$OMXTERM_CTL" send s2 --text 'npm test' --enter --wait --timeout 300000
 "$OMXTERM_CTL" send s2 --text 'npm test' --enter --match 'Tests passed' --timeout 300000
 "$OMXTERM_CTL" read s2 --lines 100      # the last 100 lines of s2
@@ -66,10 +67,20 @@ in.
 "$OMXTERM_CTL" press s2 Cmd+T           # new tab, as the user's shortcut (Linux: Ctrl+Shift+T)
 ```
 
-- `send --text … --enter --wait` is the reliable way to run a command: it
-  types, presses Enter and waits until the pane goes quiet. It prints `idle`,
-  `exited <code>` or `timeout` (exit 124). Then `read` the pane to see what
-  happened.
+- `send --text … --enter --command` runs a command and waits for it to end:
+  it prints `command-end <exit code>` (the command's code; the CLI itself
+  exits 0), `exited <code>` or `timeout` (exit 124). It needs the shell to
+  report its commands (OSC 133), which the user sets up once; inside tmux,
+  or over ssh to a host without it, they don't arrive. Without them it fails
+  within about a second with `no-command-marks` and the offset it was sent
+  at: then `wait --after <offset>` with `--idle` or `--match`. An ssh,
+  tmux or REPL you start is one command until it quits. On `timeout` it is
+  still running: run the `wait` the message names. Wait for one command
+  before typing the next; a command typed while another runs gets that
+  one's end.
+- `send --text … --enter --wait` types, presses Enter and waits until the
+  pane goes quiet. It prints `idle`, `exited <code>` or `timeout` (exit 124).
+  Then `read` the pane to see what happened.
 - `read --screen` answers the rows of the pane's screen, blank ones included,
   even when the user scrolled back in it. Use it for full-screen programs
   (vim, less, htop, a menu) and to see a prompt; use `--lines` for the output
@@ -171,7 +182,7 @@ in.
 `"$OMXTERM_CTL" mcp` serves the same commands as MCP tools on stdio: `status`,
 `list`, `keys`, `send`, `press`, `read` and `wait`. Their arguments are the CLI's
 options: `pane`, `text`, `keys` (for `press`, the keys to press), `enter`,
-`wait`, `idle`, `match`, `timeout`, `lines`, `screen` (true reads the screen),
+`wait`, `idle`, `match`, `command`, `timeout`, `lines`, `screen` (true reads the screen),
 `window`
 (only needed when several windows are allowed and you aren't in one of them)
 and `after` (the `offset` that `send` returned; only output past it counts).

@@ -9,6 +9,7 @@ New here? [Install OMXTerm](installation.md), then try your
 | Use tabs, shortcuts, copy/paste, links, and image previews | [Everyday use](usage.md)                                                |
 | Solve common setup or display issues                       | [Troubleshooting](usage.md#troubleshooting)                             |
 | Change fonts, themes, shortcuts, or snippets               | [Configuration](configuration.md)                                       |
+| Let agents know when a command finishes, and its exit code | [Shell integration](shell-integration.md)                               |
 | Enable background transparency and blur                    | [Background effects](configuration.md#background-transparency-and-blur) |
 | Configure GNOME, KDE Plasma, Hyprland, or VM graphics      | [Linux desktop tips](linux-desktop.md)                                  |
 | Add OMXTerm to the Linux application menu                  | [Linux desktop installer](linux-installer.md)                           |

@@ -35,7 +35,7 @@ const CAPABILITIES = { tools: {} };
 const MCP_WAIT_TIMEOUT_MS = 50_000;
 const MAX_LINE_CHARS = 4 * 1024 * 1024;
 
-const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and wait (or match, to wait for text it should print), then read the pane. For arrows and function keys, call press; press also runs the window's shortcuts (new tab, split, close pane, zoom, close window) on the pane it names, then list shows the result; call keys to see which shortcuts, as the user set them, instead of guessing. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
+const INSTRUCTIONS = `Drives the OMXTerm window the user allowed with ${AGENT_GRANT_ITEM}. Call status first; when it fails, tell the user its sentence and try again after they allow the window. To run a command, call send with text, enter and command (it answers command-end <exit code>; when it answers no-command-marks, use wait or match), or wait, or match to wait for text it should print, then read the pane. For arrows and function keys, call press; press also runs the window's shortcuts (new tab, split, close pane, zoom, close window) on the pane it names, then list shows the result; call keys to see which shortcuts, as the user set them, instead of guessing. list marks your own pane as self; never send to that pane, or you would type into your own input. "$OMXTERM_CTL" guide prints the full guide.`;
 
 const window = {
   type: "integer",
@@ -58,6 +58,11 @@ const match = {
   maxLength: MAX_AGENT_MATCH_CHARS,
   description:
     "Literal text, not a pattern, to wait for on the pane's screen; answers match when a new copy shows up past after. With match and no idle, quiet doesn't count.",
+};
+const command = {
+  type: "boolean",
+  description:
+    "Wait for the command typed past after to end, answering command-end <exit code>. Needs the shell's command marks (OSC 133, OMXTerm's shell integration guide); without them it answers no-command-marks within about a second. With command and no idle, quiet doesn't count.",
 };
 const timeout = {
   type: "integer",
@@ -115,7 +120,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "send",
-    "Type into a pane. With text, enter and wait it runs a command and waits until the pane goes quiet, answering idle, exited <code> or timeout; then read the pane. With match it waits for that text instead, answering match when it shows up. Without wait or match it answers the output offset to pass to wait as after.",
+    "Type into a pane. With text, enter and wait it runs a command and waits until the pane goes quiet, answering idle, exited <code> or timeout; then read the pane. With match it waits for that text instead, answering match when it shows up. With command it waits for the command to end, answering command-end <exit code>, when the pane's shell reports it. Without wait, match or command it answers the output offset to pass to wait as after.",
     {
       pane,
       text: {
@@ -133,6 +138,7 @@ const TOOLS: readonly Tool[] = [
       wait: { type: "boolean", description: "Then wait, as the wait tool." },
       idle,
       match,
+      command,
       timeout,
       window,
     },
@@ -182,7 +188,7 @@ const TOOLS: readonly Tool[] = [
   ),
   tool(
     "wait",
-    "Wait until a pane goes quiet, given text shows up on its screen, or its program ends. Answers idle, match, exited <code> or timeout; on timeout the program is still running.",
+    "Wait until a pane goes quiet, given text shows up on its screen, the command ends (command), or its program ends. Answers idle, match, command-end <code>, exited <code> or timeout; on timeout the program is still running.",
     {
       pane,
       after: {
@@ -193,6 +199,7 @@ const TOOLS: readonly Tool[] = [
       },
       idle,
       match,
+      command,
       timeout,
       window,
     },

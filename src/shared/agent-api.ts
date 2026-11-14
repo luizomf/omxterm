@@ -47,6 +47,7 @@ export const AGENT_ERROR_CODES = [
   "refused",
   "not-yet",
   "needs-user",
+  "no-command-marks",
 ] as const;
 export type AgentErrorCode = (typeof AGENT_ERROR_CODES)[number];
 

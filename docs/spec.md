@@ -105,7 +105,8 @@ OMXTerm:
   checksum; running the AppImage directly remains supported.
 
 Outside the current product contract: AI assistance, unrestricted broadcast
-input, saved or reconnectable running sessions, shell integration, profiles, a
+input, saved or reconnectable running sessions, injected shell integration
+(OMXTerm only reads the command marks a shell prints), profiles, a
 remote theme marketplace, automatic configuration reload, automatic updates, and
 remote terminal features beyond the optional SSH Connect preview.
 
@@ -1306,8 +1307,11 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   the user's own key, read the last lines of a pane's scrollback
   and screen (including output from before the grant) or exactly the rows of
   its active screen wherever the user scrolled, and wait until a pane
-  goes quiet, a new copy of given text shows up on its screen, its program
-  ends or a timeout passes. Panes in hidden tabs
+  goes quiet, a new copy of given text shows up on its screen, the command
+  typed past a given offset ends (with its exit code, when the pane's shell
+  prints [command marks](#terminal-identity-and-replies); a pane whose shell
+  never printed one answers so after a second of quiet), its program ends or
+  a timeout passes. Panes in hidden tabs
   answer too. The API can't grant, see other windows, or type anywhere but a
   pane's PTY.
 - A pressed chord that is one of the window's shortcuts (its defaults and the
@@ -1558,6 +1562,16 @@ memory bound, and concurrent sessions multiply the costs.
 OMXTerm uses standard xterm capabilities and does not inject shell integration
 ([ADR 0012](adr/0012-use-standard-xterm-terminal-capabilities.md),
 [ADR 0013](adr/0013-do-not-inject-shell-integration.md)).
+Main reads the OSC 133 command marks a shell prints (`A` prompt, `C` command
+start, `D;<code>` command end), in local and SSH Connect panes alike, for the
+agent API's `wait`; the [shell integration guide](shell-integration.md) has
+the lines users add for zsh and bash (their prompt mark says `redraw=0`, so a
+resize keeps the prompt; a marked prompt after output that didn't end its line
+starts on a new line), and fish 4.0 prints them by default
+([ADR 0054](adr/0054-read-command-marks-for-agents.md)). The last 64 command ends
+per pane are kept and dropped with the session; a mark over 256 characters
+is ignored, and an exit code is an integer from -2³¹ to 2³²−1 or nothing.
+Main never logs them.
 
 - The environment sets `TERM=xterm-256color`, `COLORTERM=truecolor`,
   `TERM_PROGRAM=OMXTerm` and the installed version in `TERM_PROGRAM_VERSION`.

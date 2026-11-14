@@ -170,6 +170,13 @@ export interface AgentSessionPort {
   ): { readonly sent: number; readonly acknowledged: number } | undefined;
   write(sessionId: TerminalSessionId, data: string): TerminalWriteReceipt;
   observe(observer: AgentSessionObserver): () => void;
+  /** The pane's shell has printed an OSC 133 command mark (ADR 0054). */
+  reportsCommands?(sessionId: TerminalSessionId): boolean;
+  /** The first command that ended past `after`, from its OSC 133 marks. */
+  commandEnd?(
+    sessionId: TerminalSessionId,
+    after: number,
+  ): import("./command-marks").CommandEnd | undefined;
 }
 
 export interface TerminalIpcController {
