@@ -154,6 +154,9 @@ lines (#1115), move main to `0.35.0-dev.2`.
 `omxterm-ctl` refusing a `--timeout` under 100 ms (#1116) moves main to
 `0.35.0-dev.3`.
 
+Clearing the alternate-screen flag on a terminal reset (RIS, #1074) moves
+main to `0.35.0-dev.4`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
