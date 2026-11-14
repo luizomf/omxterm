@@ -10,3 +10,7 @@ export const altScreenCorrections: readonly {
   readonly original: string;
   readonly corrected: string;
 }[];
+export const risAltScreenCorrections: readonly {
+  readonly original: string;
+  readonly corrected: string;
+}[];
