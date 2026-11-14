@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { describe, expect, it } from "vitest";
-import { onWindowClosed } from "./window-closed";
+import { onWindowClosed } from "../../src/main/window-closed";
 
 describe("onWindowClosed", () => {
   it("serves any number of owners with one native listener", () => {
