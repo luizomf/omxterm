@@ -442,11 +442,24 @@ describe("Shortcuts filter", () => {
     expect(noMatch().hidden).toBe(false);
   });
 
+  it("reads a spelled-out modifier as a key only inside a combination", async () => {
+    await open(createRendererLanguage("en-US"), "darwin");
+    type("command");
+    expect(shown()).toEqual(["commandPalette"]);
+    type("win");
+    expect(shown()).toContain("newWindow");
+    expect(shown()).not.toContain("moveAuxiliaryPanel");
+    type("command+");
+    expect(shown()).toEqual(["moveAuxiliaryPanel"]);
+    type("+");
+    expect(shown()).toEqual([]);
+  });
+
   it("finds changed shortcuts by their state", async () => {
     const view = await open(createRendererLanguage("en-US"));
     view.button("find", "unbind").click();
     await view.settle();
-    type("unbound");
+    type(view.cells("find")[1]!);
     expect(shown()).toEqual(["find"]);
   });
 

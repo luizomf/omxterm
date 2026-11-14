@@ -9,7 +9,9 @@ const MODIFIER_SYMBOLS: Readonly<Record<string, string>> = {
   "⇧": "shift",
 };
 
-const KEY_ALIASES: Readonly<Record<string, string>> = {
+// Spelled-out modifiers are also ordinary words ("Command Palette", "Window"),
+// so they only name a key inside a combination: "command d", "option+p".
+const SPELLED_MODIFIERS: Readonly<Record<string, string>> = {
   command: "cmd",
   meta: "cmd",
   super: "cmd",
@@ -25,11 +27,17 @@ const fold = (text: string) =>
 
 const words = (text: string) => fold(text).split(/\s+/u).filter(Boolean);
 
-const keys = (text: string) =>
-  fold(text.replace(/[⌘⌃⌥⎇⇧]/gu, (symbol) => ` ${MODIFIER_SYMBOLS[symbol]} `))
+const keys = (text: string) => {
+  const parts = fold(
+    text.replace(/[⌘⌃⌥⎇⇧]/gu, (symbol) => ` ${MODIFIER_SYMBOLS[symbol]} `),
+  )
     .split(/[\s+]+/u)
-    .filter(Boolean)
-    .map((key) => KEY_ALIASES[key] ?? key);
+    .filter(Boolean);
+  const combination = parts.length > 1 || text.includes("+");
+  return combination
+    ? parts.map((part) => SPELLED_MODIFIERS[part] ?? part)
+    : parts;
+};
 
 export interface ShortcutFilterRow {
   /** Everything the row says in words: the action name and its state. */
@@ -50,7 +58,9 @@ export function matchesShortcutFilter(
   const bound = keys(row.binding);
   // One character is a whole key ("d" is not "Down"); longer parts may still
   // be in the middle of being typed ("shi", "cmd+").
-  return keys(query).every((part) =>
+  const parts = keys(query);
+  if (parts.length === 0) return false;
+  return parts.every((part) =>
     bound.some((key) =>
       part.length === 1 ? key === part : key.startsWith(part),
     ),
