@@ -799,14 +799,16 @@ probe on a Windows 11 ARM64 guest
   cmd.exe, which reads the whole command line again before the launcher
   starts, so no launcher code can fix it. Checked from PowerShell 5.1 and Git
   Bash: `%NAME%` expands even inside quotes, and in an argument without
-  spaces (which those shells pass unquoted) `^` disappears and `&`
-  ends the command and runs the rest as another command, as the caller. An
-  argument with spaces arrives intact unless it holds a double quote:
-  `--text 'git commit -m "fix & test"'` arrived as `git commit -m fix`, and
-  cmd.exe tried to run `test""`. MCP tool arguments travel over stdin and
-  skip all of this. It gives an agent nothing it couldn't do already, but it
-  can garble or split the text it means to type. The guide's Windows wording
-  is [#1079](https://github.com/luizomf/omxterm/issues/1079)'s; a console
+  spaces (which those shells pass unquoted) `^` disappears and `&` ends the
+  command and runs the rest as another command, as the caller. From
+  PowerShell 5.1, an argument with spaces arrived intact unless it held a
+  double quote: `--text 'git commit -m "fix & test"'` arrived as
+  `git commit -m fix`, and cmd.exe tried to run `test""`. A batch script
+  must `call` the launcher, or it never returns to the script. MCP tool
+  arguments travel over stdin, so they never meet that parse. It gives an
+  agent nothing it couldn't do already, but it can garble or split the text
+  it means to type. The guide's Windows wording is
+  [#1079](https://github.com/luizomf/omxterm/issues/1079)'s; a console
   launcher that passes arguments untouched is the fix if it bites.
 
 ## Open questions
