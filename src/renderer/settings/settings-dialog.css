@@ -75,10 +75,6 @@ body.tabs-visible .settings-tab {
 .settings-form > .settings-row:has(+ .settings-background-hint) {
   border-block-end: 0;
 }
-.extensions-panel [role="status"],
-.settings-config-file [role="status"] {
-  max-width: 72ch;
-}
 .extensions-status,
 .extensions-installed,
 .extension-catalog,
