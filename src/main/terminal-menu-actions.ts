@@ -43,6 +43,7 @@ export function terminalMenuActions(
     findInSelectedTerminal: application.findInSelectedWindow,
     toggleSelectedSnippets: application.toggleSelectedSnippets,
     toggleSelectedTabBar: application.toggleSelectedTabBar,
+    toggleSelectedPaneMarks: application.toggleSelectedPaneMarks,
     toggleSelectedAuxiliaryPanel: application.toggleSelectedAuxiliaryPanel,
     moveSelectedAuxiliaryPanel: application.moveSelectedAuxiliaryPanel,
     toggleSelectedTitleBar: application.toggleSelectedTitleBar,

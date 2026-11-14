@@ -3,6 +3,21 @@ import { validateUserConfiguration } from "../../src/main/user-configuration";
 import { terminalDefaultKeybinds } from "../../src/shared/terminal-keybinds";
 
 describe("Window Chrome configuration", () => {
+  it("shows pane marks by default and accepts only a boolean", () => {
+    const load = (value?: unknown) =>
+      validateUserConfiguration(
+        {
+          version: 1,
+          window: value === undefined ? {} : { showPaneMarks: value },
+        },
+        "config.json",
+        new Set(),
+      );
+    expect(load().showPaneMarks).toBe(true);
+    expect(load(false).showPaneMarks).toBe(false);
+    for (const value of [null, 0, "false"]) expect(() => load(value)).toThrow();
+  });
+
   it("defaults both new-window bars on and accepts independent strict booleans", () => {
     expect(
       validateUserConfiguration({ version: 1 }, "config.json", new Set()),
@@ -58,6 +73,23 @@ describe("Window Chrome configuration", () => {
           toggleTabBar: defaults.toggleTabBar,
         }),
       ).toThrow("conflicts");
+    },
+  );
+
+  it.each(["darwin", "linux", "win32"])(
+    "keeps an existing custom binding on the Pane Marks default and unbinds the new default on %s",
+    (platform) => {
+      const defaults = terminalDefaultKeybinds(platform);
+      const taken = defaults.togglePaneMarks!;
+      const keybinds = validateUserConfiguration(
+        { version: 1, keybinds: { newWindow: taken } },
+        "config.json",
+        new Set(),
+        defaults,
+        platform,
+      ).keybinds;
+      expect(keybinds.newWindow).toBe(taken);
+      expect(keybinds.togglePaneMarks).toBeNull();
     },
   );
 });

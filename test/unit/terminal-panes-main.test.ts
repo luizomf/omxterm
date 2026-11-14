@@ -55,6 +55,7 @@ async function application(busy: { focused: boolean; tab: boolean }) {
     sendClipboardAction: vi.fn(),
     sendSnippetsToggle: vi.fn(),
     sendTabBarToggle: vi.fn(),
+    sendPaneMarksToggle: vi.fn(),
     sendAuxiliaryPanelToggle: vi.fn(),
     sendAuxiliaryPanelSideToggle: vi.fn(),
     sendFind: vi.fn(),

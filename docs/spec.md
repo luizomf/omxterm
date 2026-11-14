@@ -143,8 +143,9 @@ are the job of a session manager such as tmux.
   - Quit: `Cmd+Q` / `Ctrl+Alt+Shift+Q`.
   - Window Font Zoom: `Cmd++`, `Cmd+-`, `Cmd+0` / `Ctrl++`, `Ctrl+-`, `Ctrl+0`.
 - A window with a single tab shows no tab strip. Each window owns in-memory
-  title-bar and tab-bar visibility choices, initialized from
-  `window.showTitleBar` and `window.showTabBar` (both default to true).
+  title-bar, tab-bar and pane-marks visibility choices, initialized from
+  `window.showTitleBar`, `window.showTabBar` and `window.showPaneMarks` (all
+  default to true).
 - The OMXTerm-drawn tab strip appears only when its flag is on and the window has
   two or more tabs. It takes its own full-width row above the Terminal Surface and
   Snippets Sidebar row: below the 30 px native title inset on macOS (when the
@@ -559,6 +560,18 @@ quietest form that works:
   clickable: the same icon becomes a button whose tooltip and accessible name
   add the action, and clicking it keeps terminal focus. The tab's icon is never
   clickable.
+- `View -> Toggle Pane Marks` (`togglePaneMarks`, default `Cmd+Shift+H` on
+  macOS and `Ctrl+Shift+H` on Linux and Windows) hides or shows the marks
+  capsule at the corner of every pane of the selected window, and the corner
+  copy a Settings or extension tab shows. The choice is window-local and
+  starts from `window.showPaneMarks` (default shown); it is never written to
+  the configuration. Tab icons are unchanged. While an agent is connected, its
+  mark is never hidden: it stays in the corner alone, with its full 24 px
+  target ([agent access](#agent-access)). A window with one tab draws no tab
+  strip, so with the capsule hidden it shows no sign of a bell or a running
+  program; that is accepted, as notifications and Dock attention still work.
+  Hidden marks are only not drawn, so showing them again restores every active
+  state. An agent's press of this shortcut answers `not-yet`.
 
 ### About dialog
 
@@ -2094,7 +2107,7 @@ A present file must contain `"version": 1` and only these keys:
 - `scrollback.lines`;
 - `keyboard.optionAsAlt`: `none` (default), `left`, `right` or `both`;
 - `window.alwaysOnTop` (default `false`), `window.showTitleBar`,
-  `window.showTabBar`, `window.blur`, `window.transparency`,
+  `window.showTabBar`, `window.showPaneMarks`, `window.blur`, `window.transparency`,
   `window.auxiliaryPanelSide`;
 - `theme.path`;
 - `keybinds.<action>` for the vocabulary under [Keybinds](#keybinds);
@@ -2144,8 +2157,8 @@ See [ADR 0035](adr/0035-select-the-interface-language-explicitly.md).
 
 ### Window defaults
 
-- `window.showTitleBar` and `window.showTabBar`: booleans, default `true`. They
-  set the initial visibility of new windows; a reload changes only future
+- `window.showTitleBar`, `window.showTabBar` and `window.showPaneMarks`:
+  booleans, default `true`. They set the initial visibility of new windows; a reload changes only future
   windows, and menu or keybind toggles never rewrite the file. The tab bar still
   needs two or more tabs to show.
 - `window.auxiliaryPanelSide`: `left` or `right`, default `right`; other values,
@@ -2221,7 +2234,7 @@ Vocabulary:
   `selectAll`, `find`, `newWindow`, `closeWindow`, `newTab`, `closeTab`,
   `nextTab`, `previousTab`, `selectTab1`–`selectTab9`, `zoomIn`, `zoomOut`,
   `actualSize`, `toggleFullScreen`, `toggleSnippets`, `toggleFiles`,
-  `toggleSshConnect`, `toggleAuxiliaryPanel`, `toggleTabBar`,
+  `toggleSshConnect`, `toggleAuxiliaryPanel`, `toggleTabBar`, `togglePaneMarks`,
   `moveAuxiliaryPanel`, `toggleTitleBar`, `reloadConfig`, `splitRight`,
   `splitDown`, `closePane`, `focusNextPane`, `focusPreviousPane`,
   `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`, `focusPaneDown`,
@@ -2561,7 +2574,7 @@ Controls:
 - Covers `language`, `confirmClose`, `logLevel`, `windowsShell` (Windows), the
   font fields, `terminal.padding`, `terminal.contextMenuEnabled`,
   `scrollback.lines`, `keyboard.optionAsAlt` (macOS), the new-window defaults
-  (`showTitleBar`, `showTabBar`, `alwaysOnTop`), `auxiliaryPanelSide`,
+  (`showTitleBar`, `showTabBar`, `showPaneMarks`, `alwaysOnTop`), `auxiliaryPanelSide`,
   `theme.path`, `transparency`, `blur` and the `notifications` fields
   (Terminal page).
 - A change saves immediately; clearing a field removes the entry. The language

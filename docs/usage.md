@@ -52,6 +52,7 @@ The application menu displays active shortcuts, including custom bindings.
 | Zoom In / Out                 | `Cmd++` / `Cmd+-`               | `Ctrl++` / `Ctrl+-`             |
 | Actual Size                   | `Cmd+0`                         | `Ctrl+0`                        |
 | Full Screen                   | `Ctrl+Cmd+F`                    | `F11`                           |
+| Toggle Pane Marks             | `Cmd+Shift+H`                   | `Ctrl+Shift+H`                  |
 | Toggle Tab Bar / Title Bar    | `Cmd+Shift+B` / `Cmd+Shift+D`   | `Ctrl+Shift+B` / `Ctrl+Shift+D` |
 | Toggle Snippets               | `Cmd+Option+S`                  | `Ctrl+Shift+S`                  |
 | Files / SSH Connect (add-ons) | `Cmd+Option+F` / `Cmd+Option+O` | unbound                         |

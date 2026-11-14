@@ -83,6 +83,7 @@ function menuActions(): TerminalApplicationMenuActions {
     findInSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
+    toggleSelectedPaneMarks: vi.fn(),
     toggleSelectedAuxiliaryPanel: vi.fn(),
     moveSelectedAuxiliaryPanel: vi.fn(),
     toggleSelectedTitleBar: vi.fn(),

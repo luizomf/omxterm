@@ -399,7 +399,7 @@ elsewhere), as accelerators do: `Cmd+T`, `Ctrl+Shift+]`, `Cmd+Ctrl+=`,
 - The **Allow Agents in This Window** shortcut answers `refused`, whatever
   chord it is bound to, and nothing is written. The Command Palette, Find,
   Paste, New Window, Reload Configuration, the Snippets, Files and SSH Connect panels,
-  the Auxiliary Panel's toggle and move, Mirror Typing and Save layout answer
+  the Auxiliary Panel's toggle and move, Toggle Pane Marks (the agent's own mark can't be hidden), Mirror Typing and Save layout answer
   `not-yet`, with the reason in the message. Settings, About, Always on Top,
   Open Local Image and Developer Tools have no shortcut, so `press` can't
   reach them.

@@ -69,6 +69,7 @@ export function terminalRendererConfiguration(
     optionKeyMode: configuration.optionKeyMode,
     nativeTitleInset: configuration.showTitleBar ? nativeTitleInset : 0,
     showTabBar: configuration.showTabBar,
+    showPaneMarks: configuration.showPaneMarks,
     transparency: configuration.transparency,
     terminalTheme: active.configuration.terminalTheme,
     userFileErrors: active.userFileErrors,

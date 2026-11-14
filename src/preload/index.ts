@@ -90,6 +90,16 @@ ipcRenderer.on(terminalIpc.configurationUpdate, (_event, payload: unknown) => {
     );
 });
 
+// A main-process action with no payload: the listener runs only for a bare
+// notification.
+const plainAction = (channel: string) => (listener: () => void) => {
+  const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
+    if (payload === undefined) listener();
+  };
+  actionTransport.on(channel, handler);
+  return () => actionTransport.removeListener(channel, handler);
+};
+
 const terminal: TerminalBridge = {
   palette,
   hostedContent: createHostedContentBridge(ipcRenderer),
@@ -121,56 +131,13 @@ const terminal: TerminalBridge = {
       throw new TypeError("Invalid Snippets response");
     return response;
   },
-  onSnippetsToggle(listener: () => void) {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-      if (payload === undefined) listener();
-    };
-    actionTransport.on(terminalIpc.snippetsToggle, handler);
-    return () =>
-      actionTransport.removeListener(terminalIpc.snippetsToggle, handler);
-  },
-  onTabBarToggle(listener) {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-      if (payload === undefined) listener();
-    };
-    actionTransport.on(terminalIpc.tabBarToggle, handler);
-    return () =>
-      actionTransport.removeListener(terminalIpc.tabBarToggle, handler);
-  },
-  onAuxiliaryPanelToggle(listener) {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-      if (payload === undefined) listener();
-    };
-    actionTransport.on(terminalIpc.auxiliaryPanelToggle, handler);
-    return () =>
-      actionTransport.removeListener(terminalIpc.auxiliaryPanelToggle, handler);
-  },
-  onAuxiliaryPanelSideToggle(listener) {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-      if (payload === undefined) listener();
-    };
-    actionTransport.on(terminalIpc.auxiliaryPanelSideToggle, handler);
-    return () =>
-      actionTransport.removeListener(
-        terminalIpc.auxiliaryPanelSideToggle,
-        handler,
-      );
-  },
-  onFind(listener) {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-      if (payload === undefined) listener();
-    };
-    actionTransport.on(terminalIpc.find, handler);
-    return () => actionTransport.removeListener(terminalIpc.find, handler);
-  },
-  onTitleBarToggle(listener) {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-      if (payload === undefined) listener();
-    };
-    actionTransport.on(terminalIpc.titleBarToggle, handler);
-    return () =>
-      actionTransport.removeListener(terminalIpc.titleBarToggle, handler);
-  },
+  onSnippetsToggle: plainAction(terminalIpc.snippetsToggle),
+  onTabBarToggle: plainAction(terminalIpc.tabBarToggle),
+  onPaneMarksToggle: plainAction(terminalIpc.paneMarksToggle),
+  onAuxiliaryPanelToggle: plainAction(terminalIpc.auxiliaryPanelToggle),
+  onAuxiliaryPanelSideToggle: plainAction(terminalIpc.auxiliaryPanelSideToggle),
+  onFind: plainAction(terminalIpc.find),
+  onTitleBarToggle: plainAction(terminalIpc.titleBarToggle),
   windowChrome(command) {
     if (!isWindowChromeCommand(command))
       throw new TypeError("Invalid Window Chrome command");
@@ -328,14 +295,7 @@ const terminal: TerminalBridge = {
         return response;
       });
   },
-  onLocalImageOpen(listener: () => void) {
-    const handler = (_event: Electron.IpcRendererEvent, payload: unknown) => {
-      if (payload === undefined) listener();
-    };
-    actionTransport.on(terminalIpc.localImageOpen, handler);
-    return () =>
-      actionTransport.removeListener(terminalIpc.localImageOpen, handler);
-  },
+  onLocalImageOpen: plainAction(terminalIpc.localImageOpen),
   acknowledgeOutput(sessionId: TerminalSessionId, end: number) {
     const payload = { sessionId, end };
     if (!isTerminalSessionOutputAck(payload))

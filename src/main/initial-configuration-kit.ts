@@ -71,6 +71,7 @@ snippets:
         transparency: defaults.transparency,
         showTitleBar: defaults.showTitleBar,
         showTabBar: defaults.showTabBar,
+        showPaneMarks: defaults.showPaneMarks,
       },
       theme: { path: "themes/omtheme.json" },
     });

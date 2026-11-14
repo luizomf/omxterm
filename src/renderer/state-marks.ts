@@ -73,6 +73,13 @@ export function createStateMarks(
   const panes = new Map<TerminalPane, Map<string, StateMark>>();
   const windowMarks = new Map<string, StateMark>();
   let corner: HTMLElement | undefined;
+  // The user may hide the capsule (window.showPaneMarks); the agent grant's
+  // mark is the access indicator and panic button (ADR 0052), so it stays.
+  // Hiding only filters what is drawn: every mark is still kept and shows
+  // again, on every pane, when the capsule returns.
+  let capsuleShown = true;
+  const drawn = (marks: readonly StateMark[]) =>
+    capsuleShown ? marks : marks.filter((mark) => mark.glyph === "agent");
   const text = (value: StateText, t: Translate = language.t) =>
     typeof value === "string" ? value : value(t);
   // Tabs are buttons already, so only a pane's glyph carries the action.
@@ -111,10 +118,10 @@ export function createStateMarks(
   };
   // A pane's own marks, then the window's, which sit at the edge.
   const renderPane = (pane: TerminalPane, t: Translate = language.t) => {
-    const marks = [
+    const marks = drawn([
       ...(panes.get(pane)?.values() ?? []),
       ...windowMarks.values(),
-    ];
+    ]);
     let row = pane.container.querySelector<HTMLElement>(
       ":scope > .state-marks",
     );
@@ -128,7 +135,8 @@ export function createStateMarks(
   };
   const renderCorner = (t: Translate = language.t) => {
     if (!scope) return;
-    if (!windowMarks.size || !scope.cornerShown()) {
+    const marks = drawn([...windowMarks.values()]);
+    if (!marks.length || !scope.cornerShown()) {
       corner?.remove();
       corner = undefined;
       return;
@@ -138,9 +146,7 @@ export function createStateMarks(
       corner.className = "state-marks state-marks-corner";
       scope.corner.append(corner);
     }
-    corner.replaceChildren(
-      ...[...windowMarks.values()].map((mark) => glyph(mark, t, true)),
-    );
+    corner.replaceChildren(...marks.map((mark) => glyph(mark, t, true)));
   };
   const renderAll = (t: Translate = language.t) => {
     const all = new Set([...panes.keys(), ...(scope?.panes() ?? [])]);
@@ -224,6 +230,18 @@ export function createStateMarks(
     /** A pane joined the window: give it the window's marks. */
     attach(pane: TerminalPane) {
       if (windowMarks.size) renderPane(pane);
+    },
+    /**
+     * Show or hide the pane capsules and the corner (tabs are unchanged). The
+     * agent grant's mark is never hidden.
+     */
+    showCapsule(shown: boolean) {
+      if (capsuleShown === shown) return;
+      capsuleShown = shown;
+      renderAll();
+    },
+    toggleCapsule() {
+      this.showCapsule(!capsuleShown);
     },
     /** The selected tab or the tab strip changed: re-check the corner. */
     refreshCorner() {

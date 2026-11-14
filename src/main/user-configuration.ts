@@ -72,6 +72,7 @@ export const DEFAULT_USER_CONFIGURATION: UserConfiguration = Object.freeze({
   transparency: 0,
   showTitleBar: true,
   showTabBar: true,
+  showPaneMarks: true,
   terminalTheme: DEFAULT_TERMINAL_THEME,
   keybinds: DEFAULT_TERMINAL_KEYBINDS,
   notifications: DEFAULT_NOTIFICATION_PREFERENCES,
@@ -108,25 +109,10 @@ export interface UserConfigurationLoad {
   readonly warnings?: readonly string[];
 }
 
-export function userConfigurationFallbackNotice(
-  fallback: UserConfigurationFallback,
-): string {
-  const activeDefaults =
-    fallback.surface === "theme"
-      ? "OMXTerm opened with the bundled omtheme Terminal Theme instead."
-      : "OMXTerm opened with its built-in default settings instead.";
-  return `${activeDefaults} ${fallback.error.message}`;
-}
-
-export function startupUserFileNotices(
-  fallback: UserConfigurationFallback | undefined,
-  warnings: readonly string[] | undefined,
-): readonly string[] {
-  return Object.freeze([
-    ...(fallback ? [userConfigurationFallbackNotice(fallback)] : []),
-    ...(warnings ?? []),
-  ]);
-}
+export {
+  startupUserFileNotices,
+  userConfigurationFallbackNotice,
+} from "./user-configuration-notices";
 
 // Warn about the swallowed control key, never the raw accelerator contents.
 export function keybindPortabilityWarnings(
@@ -403,6 +389,7 @@ export function validateUserConfiguration(
       "transparency",
       "showTitleBar",
       "showTabBar",
+      "showPaneMarks",
     ]);
   if (theme) rejectUnknownKeys(theme, configurationPath, "theme", ["path"]);
   if (keybinds)
@@ -580,6 +567,7 @@ function windowPreferences(
     ),
     showTitleBar: read("showTitleBar", true),
     showTabBar: read("showTabBar", true),
+    showPaneMarks: read("showPaneMarks", true),
   };
 }
 

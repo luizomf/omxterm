@@ -248,6 +248,7 @@ export function mountTerminalWindowPage(
       mount,
       surfaceOptions,
       showTabBar: options.configuration?.showTabBar ?? true,
+      showPaneMarks: options.configuration?.showPaneMarks ?? true,
       ...(options.notifyTabsEmpty
         ? { notifyEmpty: options.notifyTabsEmpty }
         : {}),

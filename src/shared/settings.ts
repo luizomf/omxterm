@@ -104,6 +104,7 @@ export const SETTINGS_FIELDS = {
   "window.alwaysOnTop": { lifetime: "new-windows", accepts: isBoolean },
   "window.showTitleBar": { lifetime: "new-windows", accepts: isBoolean },
   "window.showTabBar": { lifetime: "new-windows", accepts: isBoolean },
+  "window.showPaneMarks": { lifetime: "new-windows", accepts: isBoolean },
   "theme.path": { lifetime: "live", accepts: nonEmptyText },
   "notifications.enabled": { lifetime: "live", accepts: isBoolean },
   "notifications.sound": { lifetime: "live", accepts: isBoolean },

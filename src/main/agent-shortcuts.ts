@@ -82,6 +82,9 @@ export const AGENT_SHORTCUTS: Readonly<
   copy: run({ action: "copy" }),
   selectAll: run({ action: "select-all" }),
   toggleTabBar: run({ action: "toggle-tab-bar" }),
+  togglePaneMarks: notYet(
+    "changes what the user sees of this window, and the agent's own mark can't be hidden.",
+  ),
   toggleTitleBar: run({ action: "toggle-title-bar" }),
   toggleFullScreen: native("full-screen"),
   closeWindow: native("close-window"),

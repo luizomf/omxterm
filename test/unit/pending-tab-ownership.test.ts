@@ -287,6 +287,7 @@ async function harness(failure?: "rendering" | "spawn") {
     sendClipboardAction() {},
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
+    sendPaneMarksToggle() {},
     sendAuxiliaryPanelToggle() {},
     sendAuxiliaryPanelSideToggle() {},
     sendFind() {},

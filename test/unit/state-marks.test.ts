@@ -180,3 +180,69 @@ it("shows a window mark on every pane, later panes and every tab, and in the cor
   expect(corner.querySelector(".ui-mark")).toBeNull();
   marks.dispose();
 });
+
+it("hides every pane mark but the agent's, keeps it clickable, and restores all of them", () => {
+  const { tab, panes } = tabWithPanes(2);
+  const all = [...panes];
+  const corner = document.createElement("div");
+  document.body.append(corner);
+  let cornerShown = false;
+  const marks = createStateMarks(document, createRendererLanguage(), vi.fn(), {
+    panes: () => all,
+    corner,
+    cornerShown: () => cornerShown,
+  });
+  const stop = vi.fn();
+  marks.set(panes[0]!, "mirror", { glyph: "mirror", label: "Source" });
+  marks.set(panes[1]!, "working", { glyph: "working", label: "Working" });
+  marks.setWindow("mirror-window", { glyph: "mirror", label: "Window" });
+
+  marks.showCapsule(false);
+  expect(paneLabels(panes[0]!)).toEqual([]);
+  expect(panes[0]!.container.querySelector(".state-marks")).toBeNull();
+  expect(paneLabels(panes[1]!)).toEqual([]);
+
+  marks.setWindow("agent", {
+    glyph: "agent",
+    label: "Agent",
+    action: { label: "Stop.", run: stop },
+  });
+  for (const pane of panes) expect(paneLabels(pane)).toEqual(["Agent Stop."]);
+  panes[0]!.container
+    .querySelector<HTMLButtonElement>("button.ui-mark")!
+    .click();
+  expect(stop).toHaveBeenCalledOnce();
+  // Tabs keep every state.
+  expect(labels(marks.tab(tab))).toEqual([
+    "Source",
+    "Working",
+    "Window",
+    "Agent",
+  ]);
+
+  // A pane opened while hidden gets the agent mark only.
+  const later = document.createElement("main");
+  document.body.append(later);
+  const pane = { tab, container: later } as unknown as TerminalPane;
+  all.push(pane);
+  marks.attach(pane);
+  expect(paneLabels(pane)).toEqual(["Agent Stop."]);
+
+  // The corner shows the agent alone too.
+  cornerShown = true;
+  marks.refreshCorner();
+  expect(labels([...corner.querySelectorAll(".ui-mark")])).toEqual([
+    "Agent Stop.",
+  ]);
+
+  marks.toggleCapsule();
+  expect(paneLabels(panes[0]!)).toEqual(["Source", "Window", "Agent Stop."]);
+  expect(paneLabels(panes[1]!)).toEqual(["Working", "Window", "Agent Stop."]);
+  expect(paneLabels(pane)).toEqual(["Window", "Agent Stop."]);
+
+  marks.toggleCapsule();
+  marks.setWindow("agent", undefined);
+  expect(paneLabels(panes[0]!)).toEqual([]);
+  expect(corner.querySelector(".ui-mark")).toBeNull();
+  marks.dispose();
+});

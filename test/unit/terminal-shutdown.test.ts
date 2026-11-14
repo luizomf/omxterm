@@ -172,6 +172,7 @@ function harness(confirmClose = false) {
     sendClipboardAction() {},
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
+    sendPaneMarksToggle() {},
     sendAuxiliaryPanelToggle() {},
     sendAuxiliaryPanelSideToggle() {},
     sendFind() {},

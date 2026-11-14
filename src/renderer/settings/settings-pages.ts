@@ -200,6 +200,11 @@ export function pages(platform: string): readonly Page[] {
         { kind: "toggle", path: "window.showTabBar", label: "settings.tabBar" },
         {
           kind: "toggle",
+          path: "window.showPaneMarks",
+          label: "settings.paneMarks",
+        },
+        {
+          kind: "toggle",
           path: "window.alwaysOnTop",
           label: "settings.alwaysOnTop",
         },

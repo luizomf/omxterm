@@ -59,6 +59,7 @@ const MENU_KEYS: Readonly<
   toggleAgentAccess: "menu.allowAgents",
   saveLayout: "menu.saveLayout",
   toggleTabBar: "menu.toggleTabBar",
+  togglePaneMarks: "menu.togglePaneMarks",
   toggleAuxiliaryPanel: "menu.toggleAuxiliaryPanel",
   moveAuxiliaryPanel: "menu.moveAuxiliaryPanel",
   toggleTitleBar: "menu.toggleTitleBar",

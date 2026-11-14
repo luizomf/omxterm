@@ -138,6 +138,7 @@ export interface TerminalTabsOptions {
     readonly clipboard?: TerminalHostClipboard;
   };
   readonly showTabBar?: boolean;
+  readonly showPaneMarks?: boolean;
   readonly canFocus?: () => boolean;
   // A deliberate mount may restore focus if no control took focus while it
   // was pending. Other passive paths pass false.
@@ -236,6 +237,7 @@ export interface TerminalTabs {
   selectedSessionId(): TerminalSessionId | undefined;
   captureActionTarget(): { isCurrent(): boolean };
   toggleTabBar(): void;
+  togglePaneMarks(): void;
   focusSelected(): void;
   dispose(): void;
 }
@@ -301,6 +303,7 @@ export function createTerminalTabs(
       },
     },
   );
+  marks.showCapsule(options.showPaneMarks ?? true);
   const attention = createPaneAttention(marks);
   const layout = createTerminalTabsLayout(
     elements.container,
@@ -852,6 +855,7 @@ export function createTerminalTabs(
         () => !disposed && !closing,
       ),
     toggleTabBar,
+    togglePaneMarks: () => marks.toggleCapsule(),
     focusSelected() {
       automaticFocusAllowed = true;
       focusApplicationTab(selectedApplicationTab(), options, hosted.focus);

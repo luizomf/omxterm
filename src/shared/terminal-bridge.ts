@@ -34,6 +34,7 @@ export interface TerminalBridge {
   snippets(): Promise<TerminalSnippetsResponse>;
   onSnippetsToggle(listener: () => void): () => void;
   onTabBarToggle(listener: () => void): () => void;
+  onPaneMarksToggle(listener: () => void): () => void;
   onAuxiliaryPanelToggle(listener: () => void): () => void;
   onAuxiliaryPanelSideToggle(listener: () => void): () => void;
   onFind(listener: () => void): () => void;

@@ -189,6 +189,7 @@ export async function popupHarness(busy = false) {
     sendSnippetsToggle: vi.fn(),
     sendFind: vi.fn(),
     sendTabBarToggle: vi.fn(),
+    sendPaneMarksToggle: vi.fn(),
     sendAuxiliaryPanelToggle: vi.fn(),
     sendAuxiliaryPanelSideToggle: vi.fn(),
     sendTitleBarToggle: vi.fn(),

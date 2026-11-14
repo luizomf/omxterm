@@ -94,6 +94,7 @@ All fields are optional except `version`. The built-in defaults are shown below.
 | `window.blur`                              | boolean                                 | `false`                         |
 | `window.transparency`                      | number 0–1                              | `0`                             |
 | `window.showTitleBar`, `window.showTabBar` | boolean                                 | `true`                          |
+| `window.showPaneMarks`                     | boolean                                 | `true`                          |
 | `window.auxiliaryPanelSide`                | `"left"`, `"right"`                     | `"right"`                       |
 | `theme.path`                               | relative or absolute file path          | bundled theme                   |
 | `keybinds.<action>`                        | accelerator string or `null`            | built-in shortcut               |
@@ -158,7 +159,7 @@ Transparency lets the desktop show through the terminal background while text st
 
 ### Window defaults
 
-`window.alwaysOnTop`, `window.showTitleBar` and `window.showTabBar` set initial defaults for new windows. Use the **View** and **Window** menus to change the current window. `window.auxiliaryPanelSide` accepts `"left"` or `"right"` and sets the default side for the shared auxiliary panel.
+`window.alwaysOnTop`, `window.showTitleBar`, `window.showTabBar` and `window.showPaneMarks` set initial defaults for new windows. Use the **View** and **Window** menus to change the current window. `window.showPaneMarks: false` hides the marks capsule at each pane's corner (tab marks stay); an agent's mark never hides. `window.auxiliaryPanelSide` accepts `"left"` or `"right"` and sets the default side for the shared auxiliary panel.
 
 To start new windows without title and tab bars:
 
@@ -230,6 +231,7 @@ Every shortcut needs a key and at least one modifier other than Shift. Function 
 | `saveLayout`                          | `Cmd+Shift+L`                                                         | `Ctrl+Shift+L`                             |
 | `toggleAgentAccess`                   | unbound                                                               | unbound                                    |
 | `moveAuxiliaryPanel`                  | `Cmd+Shift+Option+P`                                                  | `Ctrl+Shift+Alt+P`                         |
+| `togglePaneMarks`                     | `Cmd+Shift+H`                                                         | `Ctrl+Shift+H`                             |
 | `toggleTabBar` / `toggleTitleBar`     | `Cmd+Shift+B` / `Cmd+Shift+D`                                         | `Ctrl+Shift+B` / `Ctrl+Shift+D`            |
 | `reloadConfig`                        | `Cmd+Shift+,`                                                         | `Ctrl+Shift+,`                             |
 

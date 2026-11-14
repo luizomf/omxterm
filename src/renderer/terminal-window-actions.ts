@@ -15,6 +15,7 @@ export interface TerminalWindowActionSubscriptions {
   ) => () => void;
   readonly subscribeToClipboardActions?: TerminalBridge["onClipboardAction"];
   readonly subscribeToTabBarToggle?: (listener: () => void) => () => void;
+  readonly subscribeToPaneMarksToggle?: (listener: () => void) => () => void;
   readonly subscribeToAuxiliaryPanelToggle?: (
     listener: () => void,
   ) => () => void;
@@ -66,6 +67,10 @@ export function subscribeToGuardedActions(
     () =>
       options.subscribeToTabBarToggle?.(() => {
         if (!blocked()) tabs.toggleTabBar();
+      }),
+    () =>
+      options.subscribeToPaneMarksToggle?.(() => {
+        if (!blocked()) tabs.togglePaneMarks();
       }),
     () =>
       options.subscribeToFind?.(() => {
