@@ -36,8 +36,8 @@ for itself, but the WASM build exports nothing to find them.
 ## Decision
 
 **Opt-in shell integration, documented, never injected.** The [shell
-integration guide](../shell-integration.md) has a few lines for zsh and bash
-(4.4 or later) that the user adds to their own startup file; fish needs none.
+integration guide](../shell-integration.md) has a few lines for zsh, bash
+(4.4 or later) and PowerShell (Windows PowerShell 5.1 and PowerShell 7) that the user adds to their own startup file; fish needs none.
 OMXTerm reads the marks a shell prints and never asks for them: no startup
 file, environment variable or argument changes. Their prompt mark says
 `redraw=0`: the Ghostty core otherwise clears a marked prompt on resize for
@@ -88,5 +88,9 @@ changes now.
 - **bash before 4.4** has no hook for a command's start, so the lines skip
   it: no marks, and an agent learns so at once.
 - **fish** is taken at its word; it wasn't run here.
-- **Windows.** Whether ConPTY passes OSC 133 through to node-pty is
-  unverified, so the guide has no PowerShell lines yet.
+- **Windows.** ConPTY passes the marks through: checked with OMXTerm's bundled
+  `conpty.dll` on Windows 11 ARM64 (build 26300, where the inbox one passes
+  them too), for Windows PowerShell 5.1 and PowerShell 7.7. PowerShell has no
+  hook for a command's start, so its lines mark only prompts and ends, and a
+  failed cmdlet reports 1. cmd.exe can't report exit codes in its prompt and
+  has no lines.

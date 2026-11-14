@@ -205,6 +205,9 @@ of them (#1125) should have moved main to the next minor. This step does it, so
 main moves to `0.36.0-dev.0`. Its bridge admits ranges that accept both `0.35.0`
 and `0.36.0`, and every catalog archive stays installable unchanged.
 
+PowerShell lines for command marks, checked through ConPTY on Windows 11
+(#1027), move main to `0.36.0-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

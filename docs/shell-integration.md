@@ -50,6 +50,33 @@ if (( BASH_VERSINFO[0] * 100 + BASH_VERSINFO[1] >= 404 )); then
 fi
 ```
 
+## PowerShell
+
+Windows PowerShell 5.1 and PowerShell 7. Add this to the end of your profile
+(`notepad $PROFILE`; if it doesn't exist yet, create it first with
+`New-Item -Force $PROFILE`):
+
+```powershell
+# Command marks for the terminal (OSC 133)
+$global:__omxtermPrompt = $function:prompt
+$global:__omxtermLastId = (Get-History -Count 1).Id
+function global:prompt {
+  $ok = $?
+  $id = (Get-History -Count 1).Id
+  $code = if ($ok) { 0 }
+    elseif ($Error[0].InvocationInfo.HistoryId -eq $id) { 1 }
+    else { $global:LASTEXITCODE }
+  $e = [char]27; $a = [char]7
+  $mark = if ($id -and $id -ne $global:__omxtermLastId) { "$e]133;D;$code$a" } else { "" }
+  $global:__omxtermLastId = $id
+  "$mark$e]133;A;redraw=0$a" + (& $global:__omxtermPrompt)
+}
+```
+
+If Windows PowerShell says running scripts is disabled, it isn't loading any
+profile; `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` lets it load
+yours. A failed cmdlet reports exit code 1; a program reports its own.
+
 ## fish
 
 fish 4.0 and newer print the marks themselves
@@ -64,6 +91,12 @@ the pane. In one pane, run `"$OMXTERM_CTL" list` to see the other pane's id
 
 ```sh
 "$OMXTERM_CTL" send s2 --text 'false' --enter --command --timeout 5000
+```
+
+In PowerShell:
+
+```powershell
+& $env:OMXTERM_CTL send s2 --text 'cmd /c exit 1' --enter --command --timeout 5000
 ```
 
 It prints `command-end 1`. Without the marks, it says the shell doesn't
@@ -82,4 +115,5 @@ does it, so without these lines nothing changes.
   it.
 - **ssh** reports the remote shell's commands only when that computer has the
   same lines. Otherwise the whole session is one command.
-- **Windows:** PowerShell lines aren't offered yet.
+- **cmd.exe** can't put a command's exit code in its prompt, so it has no
+  lines.

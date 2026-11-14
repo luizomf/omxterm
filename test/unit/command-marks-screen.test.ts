@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { loadResttyWasm } from "restty/internal";
 import { afterEach, expect, it } from "vitest";
@@ -19,9 +20,13 @@ afterEach(() => {
   for (const { core, handle } of handles.splice(0)) core.destroy(handle);
 });
 
-async function screenAfterResize(output: string, resize = true) {
+async function screenAfterResize(
+  output: string,
+  resize = true,
+  [cols, rows] = [20, 6],
+) {
   const core = (await loadResttyWasm()) as Core;
-  const handle = core.create(20, 6, 1_000_000);
+  const handle = core.create(cols, rows, 1_000_000);
   handles.push({ core, handle });
   const read = runInNewContext(
     runtimeSection(
@@ -36,7 +41,7 @@ async function screenAfterResize(output: string, resize = true) {
     },
   ) as () => string | null;
   core.write(handle, output);
-  if (resize) core.resize(handle, 30, 6);
+  if (resize) core.resize(handle, cols + 10, rows);
   return read();
 }
 
@@ -74,3 +79,25 @@ it("starts a prompt on its own row after output with no final newline", async ()
       "$ printf foo\nfoo\n$\n\n\n",
     );
 });
+
+// Windows PowerShell 5.1 and PowerShell 7.7 with the guide's lines, as
+// ConPTY sent them at 100x30: `Write-Host -NoNewline foo`, then `echo hi`.
+// ConPTY places the cursor itself, so the marked prompt must not move a row.
+const { noNewline } = JSON.parse(
+  readFileSync(
+    new URL("../fixtures/powershell-command-marks.json", import.meta.url),
+    "utf8",
+  ),
+) as { noNewline: Record<"5.1" | "7", string> };
+
+it.each(["5.1", "7"] as const)(
+  "draws PowerShell %s through ConPTY as without marks",
+  async (version) => {
+    const output = noNewline[version];
+    for (const resize of [false, true])
+      expect(await screenAfterResize(output, resize, [100, 30])).toBe(
+        await screenAfterResize(unmarked(output), resize, [100, 30]),
+      );
+    expect(await screenAfterResize(output, false, [100, 30])).toContain("foo");
+  },
+);
