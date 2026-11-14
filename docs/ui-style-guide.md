@@ -280,7 +280,8 @@ tints (surface at 86 % with 16 % neutral) and blurs the output under it, with
 a faint top rim and a soft shadow. It is only as wide as its marks (a 24 px
 target each, about 28 px for one mark, 100 px for four) and disappears
 with the last one. Marks grow with the terminal font: the target is one text
-row, the icon 0.8 of the font size. Nothing else uses this look: no other
+row, the icon 0.8 of the font size. While a pane's find bar is open the capsule sits just below it, so the two never
+overlap. Nothing else uses this look: no other
 chip, pill or blurred surface floats over the terminal.
 
 Marks and notices float over the terminal, out of the layout flow, so they

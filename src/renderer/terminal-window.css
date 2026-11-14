@@ -57,6 +57,17 @@ body {
   app-region: no-drag;
 }
 
+/* The find bar (Restty's, top-right of the terminal area, 10 px in and 42 px
+   tall) and the capsule share that corner. While find is open the capsule
+   drops just below the bar, whatever its width, so they never overlap and the
+   agent's mark stays visible and clickable. It is still out of the layout flow. */
+.terminal-surface:has(.restty-pane-search[data-open="1"]) > .state-marks {
+  top: calc(
+    var(--terminal-padding-top, 12px) + 52px + var(--ui-space-1) +
+      var(--state-mark-size) / 2
+  );
+}
+
 /* Without a pane, the window's marks sit in the page's top-right corner,
    clear of a page header's buttons. */
 .state-marks-corner {
