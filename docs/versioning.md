@@ -169,6 +169,9 @@ Stable 0.35.0 uses the frozen cut `b91350c5`; the next development baseline is
 Re-pinning the bundled default Snippets to the published 0.1.4 moves main to
 `0.35.1-dev.1`.
 
+Keeping delivered notifications until the user dismisses them (#1124) moves
+main to `0.35.1-dev.2`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
