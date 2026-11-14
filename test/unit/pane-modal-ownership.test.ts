@@ -208,7 +208,7 @@ it.each(["about", "settings", "snippet", "showing"] as const)(
             ".settings-tabs button",
           ),
         ]
-          .find((button) => button.textContent === "Config File")!
+          .find((button) => button.textContent === "Config file")!
           .click();
         const field = document.querySelector<HTMLTextAreaElement>(
           ".settings-dialog textarea",

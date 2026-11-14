@@ -42,7 +42,7 @@ it.each(["conflict", "failed", "transport"] as const)(
   },
 );
 
-it("shows a failed Reload File without losing the draft and allows recovery", async () => {
+it("shows a failed Reload file without losing the draft and allows recovery", async () => {
   const view = await open({
     snapshot: vi
       .fn()
@@ -53,14 +53,14 @@ it("shows a failed Reload File without losing the draft and allows recovery", as
   const editor = view.query<HTMLTextAreaElement>("textarea");
   editor.value = "draft";
   editor.dispatchEvent(new Event("input"));
-  button("Reload File").click();
+  button("Reload file").click();
   await view.settle();
   expect(editor.value).toBe("draft");
   expect(
     view.query(".settings-config-file [role=status]").textContent,
   ).toContain("could not be reloaded");
   expect(button("Save").disabled).toBe(false);
-  button("Reload File").click();
+  button("Reload file").click();
   await view.settle();
   expect(editor.value).toBe("fresh file");
   button("Save").click();
@@ -80,7 +80,7 @@ it.each(["save", "reload", "graphical"] as const)(
     if (route === "save") button("Save").click();
     else if (route === "reload") {
       vi.mocked(view.bridge.snapshot).mockReturnValueOnce(snapshot.promise);
-      button("Reload File").click();
+      button("Reload file").click();
     } else {
       view.field("Font size").value = "18";
       view.field("Font size").dispatchEvent(new Event("change"));

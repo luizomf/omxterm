@@ -23,9 +23,9 @@ Use **Settings…** in the application menu for preferences and shortcuts. To ed
 
 ## Settings
 
-Choose **Settings…** from the application menu. Preference changes are saved and applied as you make them, except theme drafts and the **Config File** editor, which require explicit saving. Use **General** for language and close confirmation, **Appearance** for fonts, themes, transparency and blur, **Terminal** for terminal preferences, **Window** for window defaults, and **Shortcuts** to record, reset or unbind application shortcuts.
+Choose **Settings…** from the application menu. Preference changes are saved and applied as you make them, except theme drafts and the **Config file** editor, which require explicit saving. Use **General** for language and close confirmation, **Appearance** for fonts, themes, transparency and blur, **Terminal** for terminal preferences, **Window** for window defaults, and **Shortcuts** to record, reset or unbind application shortcuts.
 
-Settings has local theme cards with inline editing, font controls, and transparency and blur controls. **Config File** provides a text editor for `config.json`; choose **Save** explicitly. Snippets are edited in `snippets.yaml`.
+Settings has local theme cards with inline editing, font controls, and transparency and blur controls. **Config file** provides a text editor for `config.json`; choose **Save** explicitly. Snippets are edited in `snippets.yaml`.
 
 Settings shows status for saved changes and errors. Some preferences apply to new tabs or windows; font family and line height require a restart to update existing tabs. If a save or reload fails, follow the status message, fix the reported problem, and reload again.
 

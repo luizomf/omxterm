@@ -187,7 +187,7 @@ export async function exerciseExtensionViews(options: {
     settings.show();
     await until("!!document.querySelector('.settings-dialog input')");
     await js(`(() => {
-      [...document.querySelectorAll('.settings-dialog button')].find(button => button.textContent === 'Config File').click();
+      [...document.querySelectorAll('.settings-dialog button')].find(button => button.textContent === 'Config file').click();
       const field = document.querySelector('.settings-config-file textarea');
       field.value = 'synthetic retained raw draft'; field.dispatchEvent(new Event('input')); field.focus(); field.setSelectionRange(2, 7);
       window.__extensionSettingsField = field;

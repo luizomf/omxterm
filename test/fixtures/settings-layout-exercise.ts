@@ -170,7 +170,7 @@ async function checkConfigProse(
     if (box.width <= 0 || box.height <= 0 ||
         (innerWidth >= 960 && box.width >=
         document.querySelector('.settings-config-file').getBoundingClientRect().width - 1))
-      throw Error('Settings Config File result spans the full wide panel');
+      throw Error('Settings Config file result spans the full wide panel');
   })()`,
     true,
   );
