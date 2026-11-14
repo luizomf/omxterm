@@ -23,7 +23,7 @@ built-in sidebar. Fresh configuration kits on those hosts omit the starter
 `snippets.yaml`; Windows x64 still creates it. Windows x64 manages extensions
 from 0.28.0 but keeps built-in Snippets.
 
-New packaged profiles on extension hosts get Snippets 0.1.3 installed once,
+New packaged profiles on extension hosts get Snippets 0.1.4 installed once,
 enabled but inactive until opened. See [Default Snippets](default-snippets.md).
 Existing profiles never get it automatically.
 

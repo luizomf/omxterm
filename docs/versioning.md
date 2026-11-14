@@ -166,6 +166,9 @@ Stable 0.35.0 uses the frozen cut `b91350c5`; the next development baseline is
 `0.35.1-dev.0`. Its bridge admits ranges that accept both `0.35.0` and
 `0.35.1`. Every catalog archive stays installable unchanged.
 
+Re-pinning the bundled default Snippets to the published 0.1.4 moves main to
+`0.35.1-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

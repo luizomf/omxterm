@@ -69,13 +69,14 @@ export function inspectWindowsInstallerInputs(
   // NSIS identity, paths, templates and options are unchanged.
   // The bundled default Snippets archive is re-pinned to 0.1.3 (#1105); only its
   // resource filename changes. NSIS identity, paths and options are unchanged.
+  // It is re-pinned again to 0.1.4; same scope.
   const digest = (text) =>
     createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
   if (
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest(configuration) !==
-      "cbae03285c4e6636fcc3653669e33dcd61f2c626d8148d910c8618847333acb8" ||
+      "024c9ef85a965858748fd35039364244688709874f28c04f54115e21f46d5582" ||
     typeof nsisInclude !== "string" ||
     digest(nsisInclude) !==
       "98bb5a2a43c4e4bad076c7476410a1256420dd917b5d8cd3d59a2ef2759a5aeb"

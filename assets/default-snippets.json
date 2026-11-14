@@ -1,10 +1,10 @@
 {
   "id": "omxterm.snippets",
-  "version": "0.1.3",
-  "filename": "snippets-0.1.3.omxext",
-  "bytes": 82380,
-  "sha256": "9f331d1f5ace110db3d72858006cdc1090aa06c3ec4438062cbbba2fd5006c07",
-  "sourceCommit": "e18e16e512ebe5f3cc076ef9a8509be0719cd537",
-  "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.3/snippets-0.1.3.omxext",
+  "version": "0.1.4",
+  "filename": "snippets-0.1.4.omxext",
+  "bytes": 82514,
+  "sha256": "2ab03c51b5a341323765195eaa459fd94a3c9f61b392719c965ecb60d9819557",
+  "sourceCommit": "b91350c575641031793b85ef8030ca4eb31f9059",
+  "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.4/snippets-0.1.4.omxext",
   "targets": ["linux-arm64", "linux-x64", "darwin-arm64", "win32-arm64"]
 }

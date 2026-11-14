@@ -14,7 +14,7 @@ Production intentionally omits the package's duplicate action: the existing
 Toggle Snippets menu, palette and shortcut command opens or closes the single
 installed companion. Absent/disabled packages open Extensions guidance instead.
 The host's [new-profile default](https://github.com/luizomf/omxterm/blob/main/docs/dev/default-snippets.md) uses the pinned
-`0.1.3` archive, not this package. Building this source does not publish, install
+`0.1.4` archive, not this package. Building this source does not publish, install
 or enable it, or change a catalog listing. Updating an installed copy requires a
 deliberate update and ordinary package trust; it is not automatic.
 
