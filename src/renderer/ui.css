@@ -497,7 +497,10 @@
   margin-inline-end: 8px;
   border: 1px solid currentColor;
   border-radius: 50%;
-  vertical-align: -3px;
+  /* An inline grid sits on its glyph's baseline, so a pixel offset drifts
+     with the font; centre the badge on the first line instead. */
+  vertical-align: middle;
+  translate: 0 -1px;
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
