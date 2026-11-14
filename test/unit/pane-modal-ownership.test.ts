@@ -32,7 +32,7 @@ function pointer(kind: string, x: number) {
 }
 
 // Image choosing/loading/showing share one preview gate; "showing" covers it.
-it.each(["about", "settings", "snippet", "showing"] as const)(
+it.each(["about", "settings", "showing"] as const)(
   "keeps pane navigation/layout inert under %s but delivers captured closure",
   async (state) => {
     installSettingsDom();
@@ -220,16 +220,6 @@ it.each(["about", "settings", "snippet", "showing"] as const)(
         await vi.waitFor(() => expect(field.value).toBe("nefield-only draft"));
         for (const surface of surfaces)
           expect(surface.paste).not.toHaveBeenCalled();
-      } else if (state === "snippet") {
-        toggleSnippets();
-        await vi.waitFor(() =>
-          expect(
-            snippets.querySelector(".snippet-preview-open"),
-          ).not.toBeNull(),
-        );
-        snippets
-          .querySelector<HTMLButtonElement>(".snippet-preview-open")!
-          .click();
       } else {
         openImage();
         loaded.resolve({

@@ -1,7 +1,7 @@
 # Optional Snippets package
 
 This separately built package preserves the built-in Snippets YAML v1 catalog,
-search, exact text, Insert/Run and core-owned preview. Current host source uses
+search, exact text, Insert/Run and a body tooltip per row. Current host source uses
 optional Snippets on Linux ARM64/x64, macOS ARM64 and Windows ARM64; Windows x64
 retains built-in Snippets. See the [migration guide](https://github.com/luizomf/omxterm/blob/main/docs/dev/snippets-migration.md)
 for distribution and qualification boundaries.

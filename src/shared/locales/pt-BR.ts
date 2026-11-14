@@ -235,13 +235,6 @@ export const brazilianPortugueseMessages: Readonly<
     "Não foi possível carregar os snippets. Feche e abra Snippets de novo para tentar outra vez.",
   "snippets.insert": "Inserir",
   "snippets.run": "Executar · adiciona Enter",
-  "snippets.preview": "Pré-visualizar",
-  "snippets.previewNamed": "Pré-visualizar {name}",
-  "snippetPreview.body": "Conteúdo do snippet",
-  "snippetPreview.insert": "Inserir — sem adicionar Enter",
-  "snippetPreview.run": "Executar — adiciona Enter",
-  "snippetPreview.unavailable":
-    "O terminal deste snippet foi encerrado. Nada será enviado.",
 
   "settings.title": "Configurações",
   "settings.page.general": "Geral",

@@ -249,8 +249,8 @@ hides it. Mirror Typing setup is the one Hosted Dialog. See
 
 **Snippets Sidebar** — The Auxiliary Panel view for browsing and searching the user's
 `snippets.yaml` catalog. Insert and Run send exact text through core-owned
-Protected Paste to a captured live Terminal Surface; preview shows the text
-without sending it. Most hosts use an optional extension, while Windows x64
+Protected Paste to a captured live Terminal Surface; a row's tooltip shows the
+text before it is sent. Most hosts use an optional extension, while Windows x64
 keeps the built-in sidebar. See [Snippets availability](docs/snippets-availability.md)
 and the [extension guide](docs/dev/snippets-migration.md).
 

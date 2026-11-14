@@ -21,7 +21,6 @@ import {
 } from "./terminal-window-actions";
 
 // Own the window's inbound action subscriptions and their partial-setup cleanup.
-// The window retains the returned preview's modal and disposal lifetime.
 export function subscribeToWindowTools(
   document: Document,
   options: TerminalWindowActionSubscriptions & {
@@ -39,12 +38,10 @@ export function subscribeToWindowTools(
     language: RendererLanguage;
     blocked(): boolean;
     semanticBlocked?(): boolean;
-    onPreviewActivity(): void;
     modalClipboard(action: TerminalClipboardAction): boolean;
     focusTerminal?(focus?: () => void): void;
     sourceForeground?(id: string): boolean;
     sourceSelected?(id: string): boolean;
-    restoreSourceFocus?(id: string): boolean;
     togglePanelSide?(): void;
   },
 ) {
@@ -69,8 +66,7 @@ export function subscribeToWindowTools(
     options.droppedFilePathInsertion,
     dropTarget,
   );
-  const input = createSemanticInput(document, {
-    language: owner.language,
+  const input = createSemanticInput({
     capture: tabs.captureSnippetTarget,
     blocked: semanticBlocked,
     focusTerminal: owner.focusTerminal ?? tabs.focusSelected,
@@ -95,8 +91,6 @@ export function subscribeToWindowTools(
       if (owner.focusTerminal) owner.focusTerminal(focus);
       else focus();
     },
-    onPreviewActivity: owner.onPreviewActivity,
-    openOverlay: tabs.openOverlay,
   });
   let snippets: ReturnType<typeof mountWindowSnippets>;
   let disposed = false;
@@ -105,6 +99,7 @@ export function subscribeToWindowTools(
     disposed = true;
     removeActions?.();
     snippets?.unsubscribe();
+    input.dispose();
     removeSettings?.();
     removeNative?.();
     removePanel?.();
@@ -156,15 +151,12 @@ export function subscribeToWindowTools(
       input,
       language: owner.language,
       blocked: owner.blocked,
-      onPreviewActivity: owner.onPreviewActivity,
-      openOverlay: tabs.openOverlay,
     });
     if (options.semanticInput)
       removeNative = subscribeNativeSemanticInput(
         options.semanticInput,
         input,
         tabs.selectionRevision,
-        owner.restoreSourceFocus ?? (() => false),
         tabs.selectedSessionId,
         dropTarget.takeTarget,
       );
@@ -172,13 +164,11 @@ export function subscribeToWindowTools(
       if (!disposed && !owner.blocked()) tabs.openSettings();
     });
     return {
-      preview: input.preview,
       unsubscribe,
       clearFileDrop: dropTarget.clear,
     };
   } catch (error) {
     unsubscribe();
-    input.preview.dispose();
     throw error;
   }
 }

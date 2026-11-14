@@ -29,11 +29,9 @@ function fixture(
 ) {
   let interactive = true;
   const inject = vi.fn();
-  const preview = vi.fn();
   const view = createSnippetsView(document, {
     loadSnippets: load,
     inject,
-    preview,
     isInteractive: () => interactive,
     ...(language ? { language } : {}),
   });
@@ -52,7 +50,6 @@ function fixture(
     results,
     input,
     inject,
-    preview,
     load,
     block: () => {
       interactive = false;
@@ -209,58 +206,32 @@ describe("Snippets auxiliary view", () => {
     expect(f.inject).not.toHaveBeenCalled();
   });
 
-  it("gives each name its full text as a tooltip, since long names are cut", async () => {
-    const f = fixture();
-    f.view.activate();
-    await settle();
-    const names = [...f.root.querySelectorAll<HTMLElement>(".snippet-name")];
-    expect(names.map((name) => name.title)).toEqual(
-      catalog.snippets.map((snippet) => snippet.name),
-    );
-  });
-
-  it("shows each row's default intent and opens a preview without delivering", async () => {
+  it("shows each row's default intent and gives each row one tab stop", async () => {
     const f = fixture();
     f.view.activate();
     await settle();
     expect(
       [...f.root.querySelectorAll(".snippet-intent")].map((e) => e.textContent),
     ).toEqual(["Insert", "Run · adds Enter"]);
-    const previews = f.root.querySelectorAll<HTMLButtonElement>(
-      "li .snippet-preview-open",
-    );
-    expect(previews[1]!.getAttribute("aria-label")).toBe("Preview update brew");
-    previews[1]!.click();
-    expect(f.inject).not.toHaveBeenCalled();
-    expect(f.preview).toHaveBeenCalledExactlyOnceWith(
-      catalog.snippets[1],
-      expect.any(Function),
-    );
-    f.block();
-    previews[0]!.click();
-    expect(f.preview).toHaveBeenCalledOnce();
+    for (const row of f.root.querySelectorAll("li"))
+      expect(row.querySelectorAll("button")).toHaveLength(1);
   });
 
-  it("returns focus to the preview control, then search, never to a hidden view", async () => {
-    const f = fixture();
+  it("shows the snippet body as the row tooltip, truncated when long", async () => {
+    const long = { name: "long", body: "x".repeat(600), execute: false };
+    const f = fixture(
+      vi.fn(async () => ({ snippets: [...catalog.snippets, long] })),
+    );
     f.view.activate();
     await settle();
-    f.root
-      .querySelector<HTMLButtonElement>("li .snippet-preview-open")!
-      .click();
-    const [, returnFocus] = f.preview.mock.calls[0] as [unknown, () => boolean];
-    expect(returnFocus()).toBe(true);
-    expect(document.activeElement!.matches(".snippet-preview-open")).toBe(true);
-    f.input("brew");
-    expect(returnFocus()).toBe(true);
-    expect(document.activeElement).toBe(f.search);
-    f.block();
-    expect(returnFocus()).toBe(false);
-    f.unblock();
-    f.view.deactivate();
-    (document.activeElement as HTMLElement).blur();
-    expect(returnFocus()).toBe(false);
-    expect(document.activeElement).toBe(document.body);
+    const titles = [
+      ...f.root.querySelectorAll<HTMLElement>("li .snippet-activate"),
+    ].map((row) => row.title);
+    expect(titles.slice(0, 2)).toEqual(
+      catalog.snippets.map((snippet) => snippet.body),
+    );
+    expect(titles[2]!.length).toBeLessThan(long.body.length);
+    expect(long.body.startsWith(titles[2]!.slice(0, -1))).toBe(true);
   });
 
   it.each(["resolve", "reject"])(

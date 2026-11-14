@@ -66,14 +66,13 @@ function fixture() {
       language: englishLanguage,
       blocked: () => blocked,
       semanticBlocked: () => semanticBlocked,
-      onPreviewActivity() {},
       modalClipboard: () => false,
       focusTerminal,
       sourceForeground: () => foreground,
       sourceSelected: () => selected,
     },
   );
-  cleanups.push(tools.unsubscribe, tools.preview.dispose);
+  cleanups.push(tools.unsubscribe);
   const act = (drop = false) =>
     command({
       kind: "request",
@@ -87,7 +86,6 @@ function fixture() {
         text: "'/file'",
         title: "File path",
         intent: "insert",
-        preview: false,
       },
     });
   return {

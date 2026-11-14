@@ -662,7 +662,6 @@ it.each([
         text: paths.quotedText,
         title: "File path",
         intent: "insert",
-        preview: false,
       },
       expect.objectContaining({
         id: input.source.id,
@@ -933,7 +932,6 @@ it("refuses reordered core selection and child requests rather than using the pr
     bridge,
     {} as Parameters<typeof subscribeNativeSemanticInput>[1],
     () => rendererRevision,
-    () => false,
     () => rendererSession,
   );
   vi.mocked(window.webContents.send).mockImplementation((channel, value) => {
@@ -1914,7 +1912,6 @@ it.each([true, false])(
       text: " exact\n",
       title: "Exact",
       intent: "insert",
-      preview: true,
     };
     await expect(
       host.options.onRequest!(input, signal, context),
@@ -2010,7 +2007,6 @@ it.each(
         text: paths.multilineText,
         title: "File path",
         intent: "insert",
-        preview: false,
       },
       context,
       expect.any(AbortSignal),

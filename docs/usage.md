@@ -200,9 +200,9 @@ OMXTerm starts macOS and Linux shells as interactive login shells. Zsh reads `~/
 
 After editing `config.json` or a theme, choose **View → Reload Settings** (`Cmd+Shift+,` / `Ctrl+Shift+,`). Invalid JSON leaves the previous valid settings active. Font family and line height apply to new tabs; restart to update existing tabs. Shell changes apply to new tabs, and window defaults apply to new windows. Snippets reload when you open the sidebar. See [configuration help](configuration.md#reload-and-troubleshooting).
 
-### Insert, run or preview a snippet
+### Insert or run a snippet
 
-Snippets may require installation on your system. See [Optional tools](README.md#optional-add-ons). **Preview** captures its terminal target when opened and does not retarget if you change selection. **Insert** sends text without adding Enter; **Run** adds Enter. Multiline snippets can run multiple shell commands, so review the preview first. See [Snippets configuration](configuration.md#snippets).
+Snippets may require installation on your system. See [Optional tools](README.md#optional-add-ons). Hover a snippet to see its text (long text is cut short). **Insert** sends text without adding Enter; **Run** adds Enter. Multiline snippets can run multiple shell commands, so check the text before you click. See [Snippets configuration](configuration.md#snippets).
 
 ### Files and SSH Connect
 

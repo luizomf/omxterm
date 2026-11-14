@@ -53,7 +53,6 @@ async function setup(mode: number, execute = false) {
           createSnippetsView(document, {
             isInteractive,
             inject,
-            preview: vi.fn(),
             loadSnippets: async () => ({
               snippets: [
                 { name: "Literal", body: " literal  $value ", execute },

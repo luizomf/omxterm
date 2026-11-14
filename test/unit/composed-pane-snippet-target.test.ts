@@ -66,48 +66,6 @@ it.each([
   },
 );
 
-it.each(["signal", "rendering", "remove"] as const)(
-  "keeps a translated preview bound to unavailable pane B after %s and surviving A",
-  async (ending) => {
-    const f = await snippetsWindow();
-    f.tabCommand({ action: "split", direction: "right" });
-    await vi.waitFor(() => expect(f.surfaces).toHaveLength(2));
-    f.toggle();
-    await vi.waitFor(() =>
-      expect(f.root.querySelector(".snippet-preview-open")).not.toBeNull(),
-    );
-    f.root.querySelector<HTMLButtonElement>(".snippet-preview-open")!.click();
-    const dialog = document.querySelector(".snippet-preview")!;
-    const body = dialog.querySelector("pre")!;
-    const run = dialog.querySelector<HTMLButtonElement>(
-      ".snippet-preview-run",
-    )!;
-    if (ending === "signal")
-      f.sessionHandlers[1]!.onExit({ exitCode: 1, signal: 9 });
-    else if (ending === "rendering")
-      f.surfaceOptions[1]!.onFatalError!({ kind: "backend-loss" });
-    else f.tabCommand({ action: "close-session", sessionId: "s2" });
-    f.setLanguage("pt-BR");
-    expect(document.querySelector(".snippet-preview")).toBe(dialog);
-    expect(dialog.querySelector("pre")).toBe(body);
-    expect(body.textContent).toBe(" a  b\n$VALUE\n");
-    expect(run.disabled).toBe(true);
-    expect(dialog.querySelector(".snippet-preview-closed")!.textContent).toBe(
-      "O terminal deste snippet foi encerrado. Nada será enviado.",
-    );
-    f.tabCommand({ action: "close-session", sessionId: "s2" });
-    f.setLanguage("en-US");
-    expect(run.disabled).toBe(true);
-    run.disabled = false;
-    run.click();
-    for (const write of f.transportWrites) expect(write).not.toHaveBeenCalled();
-    for (const surface of f.surfaces)
-      expect(surface.inject).not.toHaveBeenCalled();
-    expect(f.surfaces[0]!.dispose).not.toHaveBeenCalled();
-    expect(f.load).toHaveBeenCalledOnce();
-  },
-);
-
 it("does not deliver accepted Protected Paste or Enter after captured B exits while approval is pending", async () => {
   const f = await snippetsWindow();
   let approve!: (value: boolean) => void;
@@ -121,10 +79,9 @@ it("does not deliver accepted Protected Paste or Enter after captured B exits wh
   await vi.waitFor(() => expect(f.surfaces).toHaveLength(2));
   f.toggle();
   await vi.waitFor(() =>
-    expect(f.root.querySelector(".snippet-preview-open")).not.toBeNull(),
+    expect(f.root.querySelector(".snippet-activate")).not.toBeNull(),
   );
-  f.root.querySelector<HTMLButtonElement>(".snippet-preview-open")!.click();
-  document.querySelector<HTMLButtonElement>(".snippet-preview-run")!.click();
+  f.root.querySelector<HTMLButtonElement>(".snippet-activate")!.click();
   await vi.waitFor(() =>
     expect(f.clipboard.confirmPaste).toHaveBeenCalledOnce(),
   );

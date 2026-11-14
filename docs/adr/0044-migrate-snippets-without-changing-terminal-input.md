@@ -2,6 +2,12 @@
 
 Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/issues/741).
 
+> **Amendment ([#1090](https://github.com/luizomf/omxterm/issues/1090)):** the
+> Preview button and its dialog were removed. Rows show the body as a tooltip, and
+> `terminal.semanticInput.v1` no longer carries a preview request (`preview: false`
+> from earlier packages is still accepted; `true` is refused). Preview references
+> below record the original design.
+
 ## Current distribution status
 
 **[Stable OMXTerm 0.25.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.25.0).**

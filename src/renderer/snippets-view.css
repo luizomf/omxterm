@@ -40,7 +40,7 @@
   gap: 2px;
 }
 
-/* One line; the full name is the element's tooltip. */
+/* One line; the row's tooltip shows the snippet body. */
 .snippets-view .snippet-name {
   max-width: 100%;
   overflow: hidden;
@@ -55,10 +55,4 @@
   color: var(--ui-secondary);
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.snippets-view .snippet-preview-open {
-  align-self: center;
-  color: var(--ui-secondary);
-  font-size: var(--ui-text-meta);
 }
