@@ -175,9 +175,10 @@ function readGrant(
   try {
     const stat = lstatSync(file);
     // Only the user may read a credential; anything else isn't OMXTerm's.
+    // Windows has no mode bits: the profile's inherited ACL guards the file.
     if (
       !stat.isFile() ||
-      (stat.mode & 0o077) !== 0 ||
+      (process.platform !== "win32" && (stat.mode & 0o077) !== 0) ||
       (typeof process.getuid === "function" && stat.uid !== process.getuid())
     )
       return undefined;

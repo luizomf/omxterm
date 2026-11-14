@@ -35,6 +35,11 @@ export function maxSocketPathBytes(platform: NodeJS.Platform): number {
   return platform === "darwin" ? 103 : 107;
 }
 
+/** A Windows named pipe, which lives outside the file system. */
+export function isNamedPipe(endpoint: string): boolean {
+  return endpoint.startsWith("\\\\.\\pipe\\");
+}
+
 export class AgentEndpointInUseError extends Error {
   constructor() {
     super("Another process holds the agent endpoint");
@@ -193,9 +198,10 @@ function readLines(
 }
 
 /**
- * The agent API's Unix socket (ADR 0052): newline-delimited JSON, a mutual
- * HMAC handshake over a grant's token, and connections bound to one window.
- * It listens only while its owner holds at least one grant.
+ * The agent API's endpoint (ADR 0052), a Unix socket or, on Windows, a named
+ * pipe: newline-delimited JSON, a mutual HMAC handshake over a grant's token,
+ * and connections bound to one window. It listens only while its owner holds
+ * at least one grant.
  */
 export function createAgentEndpoint(
   socketPath: string,
@@ -208,6 +214,9 @@ export function createAgentEndpoint(
   // Each listen() or stop() starts a generation; a stale start gives up.
   let generations = 0;
   let onFailure: (() => void) | undefined;
+  // A pipe has no file to prepare, replace, protect or remove; Node's default
+  // pipe descriptor keeps other users out and the token does the rest.
+  const pipe = isNamedPipe(socketPath);
 
   const send = (connection: Connection, message: unknown) => {
     const { socket } = connection;
@@ -403,6 +412,7 @@ export function createAgentEndpoint(
     if (!current) return;
     current.removeAllListeners("connection");
     current.close();
+    if (pipe) return;
     // Ours to remove, synchronously so a new grant can't lose its socket.
     try {
       unlinkSync(socketPath);
@@ -412,19 +422,28 @@ export function createAgentEndpoint(
   };
 
   return {
-    /** Starts listening once; refuses a socket another process holds. */
+    /** Starts listening once; refuses an endpoint another process holds. */
     listen(failed: () => void): Promise<void> {
       onFailure = failed;
       if (listening) return listening;
       const generation = ++generations;
       const pending = (async () => {
-        await prepareDirectory(path.dirname(socketPath));
-        await removeStaleSocket(socketPath);
+        if (!pipe) {
+          await prepareDirectory(path.dirname(socketPath));
+          await removeStaleSocket(socketPath);
+        }
         const created = net.createServer({ allowHalfOpen: false }, accept);
         await new Promise<void>((resolve, reject) => {
-          created.once("error", reject);
+          created.once("error", (error: NodeJS.ErrnoException) =>
+            // A pipe name is taken while its process lives.
+            reject(
+              pipe && error.code === "EADDRINUSE"
+                ? new AgentEndpointInUseError()
+                : error,
+            ),
+          );
           created.listen(socketPath, () => {
-            created.removeListener("error", reject);
+            created.removeAllListeners("error");
             resolve();
           });
         });
@@ -437,7 +456,7 @@ export function createAgentEndpoint(
           stop();
           onFailure?.();
         });
-        await chmod(socketPath, 0o600);
+        if (!pipe) await chmod(socketPath, 0o600);
       })();
       listening = pending;
       pending.catch(() => {
@@ -454,7 +473,7 @@ export function createAgentEndpoint(
         close(connection);
       }
     },
-    /** Stops listening and removes the socket. */
+    /** Stops listening and removes the socket (a pipe goes by itself). */
     close: stop,
     isListening: () => server !== undefined,
   };

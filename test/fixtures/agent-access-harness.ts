@@ -6,7 +6,7 @@ import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { build } from "esbuild";
-import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, expect, vi } from "vitest";
 import {
   startAgentAccess,
   type AgentAccess,
@@ -49,9 +49,6 @@ export function useAgentHarness() {
     });
   });
   afterAll(() => rmSync(scratch, { recursive: true, force: true }));
-
-  // Unix sockets; the Windows named pipe is a later slice (ADR 0052).
-  const posix = it.skipIf(process.platform === "win32");
 
   const cleanups: (() => void)[] = [];
   afterEach(() => {
@@ -291,5 +288,5 @@ export function useAgentHarness() {
     };
   }
 
-  return { scratch, posix, cleanups, ctl, mcp, sessions, setup };
+  return { scratch, cleanups, ctl, mcp, sessions, setup };
 }

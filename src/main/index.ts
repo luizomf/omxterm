@@ -41,7 +41,11 @@ import {
 } from "./application-layout";
 import { REOPEN_LAYOUT_CAPABILITY } from "./layout-session";
 import { registerMirrorTypingIpc } from "./mirror-typing-ipc";
-import { startAgentAccess, type AgentAccess } from "./agent-access";
+import {
+  agentLauncherPath,
+  startAgentAccess,
+  type AgentAccess,
+} from "./agent-access";
 import { agentShortcutAction } from "./agent-shortcuts";
 import { trackWindowDialogs } from "./window-dialogs";
 import { displayAccelerator } from "../shared/terminal-keybinds";
@@ -292,12 +296,11 @@ app
           },
         });
         // The agent client sits beside the app, outside the archive.
-        const agentClient = app.isPackaged
-          ? path.join(process.resourcesPath, "agent-ctl", "omxterm-ctl")
-          : path.join(applicationRoot, "agent-ctl", "omxterm-ctl");
+        const agentClient = agentLauncherPath(
+          app.isPackaged ? process.resourcesPath : applicationRoot,
+          process.platform,
+        );
         const profile = app.getPath("userData");
-        const agentPlatform =
-          process.platform === "darwin" || process.platform === "linux";
         const syncAgentMenu = () => {
           const item =
             Menu.getApplicationMenu()?.getMenuItemById("toggleAgentAccess");
@@ -537,7 +540,7 @@ app
                   applicationVersionProvider: app,
                   environment: process.env,
                   chromiumStartupVariables,
-                  ...(agentPlatform && agentAccess && sessionId
+                  ...(agentAccess && sessionId
                     ? {
                         agentEnvironment: {
                           OMXTERM_CTL: agentClient,

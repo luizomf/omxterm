@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { renameSync, unlinkSync } from "node:fs";
 import {
   chmod,
@@ -10,21 +10,35 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { AGENT_GRANT_VERSION } from "../shared/agent-api";
-import { socketIsLive } from "./agent-endpoint";
+import { isNamedPipe, socketIsLive } from "./agent-endpoint";
 
 export function agentApiDirectory(profile: string) {
   return path.join(profile, "agent-api");
 }
-export function agentSocketPath(profile: string) {
-  return path.join(agentApiDirectory(profile), "ctl.sock");
+/**
+ * Where a profile's endpoint listens: a socket in the profile on macOS and
+ * Linux, a named pipe named after the profile path on Windows.
+ */
+export function agentEndpointPath(
+  profile: string,
+  platform: NodeJS.Platform = process.platform,
+) {
+  if (platform !== "win32")
+    return path.join(agentApiDirectory(profile), "ctl.sock");
+  const hash = createHash("sha256").update(profile).digest("hex");
+  return `\\\\.\\pipe\\omxterm-agent-${hash.slice(0, 16)}`;
 }
 
 /**
  * A profile's grant credentials (ADR 0052): one user-only file per granted
  * window, which exists while the grant does and which OMXTerm never reads.
  */
-export function createGrantFiles(profile: string, instance: string) {
-  const socketPath = agentSocketPath(profile);
+export function createGrantFiles(
+  profile: string,
+  instance: string,
+  platform: NodeJS.Platform = process.platform,
+) {
+  const socketPath = agentEndpointPath(profile, platform);
   const directory = path.join(agentApiDirectory(profile), "grants");
   const file = (windowId: number) => path.join(directory, `${windowId}.json`);
   return {
@@ -62,7 +76,8 @@ export function createGrantFiles(profile: string, instance: string) {
     /** Removes a crashed run's socket and credentials, never a live one's. */
     async removeLeftovers() {
       if (await socketIsLive(socketPath)) return;
-      await unlink(socketPath).catch(() => {});
+      // A pipe goes away with the process that held it.
+      if (!isNamedPipe(socketPath)) await unlink(socketPath).catch(() => {});
       const names = await readdir(directory).catch(() => [] as string[]);
       for (const name of names)
         if (/^(\d+\.json|\.\d+\.[0-9a-f-]{36}\.tmp)$/u.test(name))

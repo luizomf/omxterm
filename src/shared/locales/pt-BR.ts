@@ -328,8 +328,6 @@ export const brazilianPortugueseMessages: Readonly<
     "O caminho da pasta deste perfil é longo demais para o socket dos agentes.",
   "agent.refused.unavailable":
     "Não foi possível permitir agentes nesta janela.",
-  "agent.refused.unsupported":
-    "O acesso de agentes ainda não está disponível no Windows.",
   "mirrorTyping.title": "Espelhar digitação",
   "mirrorTyping.source": "Espelhando a digitação deste painel.",
   "mirrorTyping.member": "Espelhando a digitação para este painel.",

@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import path from "node:path";
 import type { AgentCommand, AgentErrorCode } from "../shared/agent-api";
 import {
   agentIpc,
@@ -19,6 +20,7 @@ import {
 import {
   AgentEndpointInUseError,
   createAgentEndpoint,
+  isNamedPipe,
   maxSocketPathBytes,
 } from "./agent-endpoint";
 import { createGrantFiles } from "./agent-grant-files";
@@ -108,7 +110,23 @@ export interface AgentAccessOptions {
   readonly keybinds?: () => TerminalKeybinds;
 }
 
-export { agentSocketPath } from "./agent-grant-files";
+export { agentEndpointPath } from "./agent-grant-files";
+
+/**
+ * The `omxterm-ctl` launcher `OMXTERM_CTL` names, in `<directory>/agent-ctl`:
+ * a `.cmd` on Windows, where the GUI executable run directly from PowerShell
+ * loses its output, exit code and wait; a POSIX script elsewhere.
+ */
+export function agentLauncherPath(
+  directory: string,
+  platform: NodeJS.Platform,
+): string {
+  return path.join(
+    directory,
+    "agent-ctl",
+    platform === "win32" ? "omxterm-ctl.cmd" : "omxterm-ctl",
+  );
+}
 
 // A command's envelope, never its arguments or result (ADR 0004).
 async function logged(
@@ -196,14 +214,14 @@ function sendState(entry: Entry, state: AgentAccessState) {
 
 /**
  * Per-window agent grants (ADR 0052). Only toggle() creates one, and only
- * after the window confirmed its marks; the socket listens while a grant
+ * after the window confirmed its marks; the endpoint listens while a grant
  * exists. Grants live in memory; the credential file exists while they do.
  */
 export function startAgentAccess(options: AgentAccessOptions) {
   const entries = new Map<object, Entry>();
   // This process, as OMXTERM_PANE, the credential and the handshake name it.
   const instance = randomBytes(8).toString("hex");
-  const files = createGrantFiles(options.profile, instance);
+  const files = createGrantFiles(options.profile, instance, options.platform);
   const socketPath = files.socketPath;
   const log = options.operationalEvents;
   const byWindowId = (windowId: number) =>
@@ -435,8 +453,10 @@ export function startAgentAccess(options: AgentAccessOptions) {
         end(entry, "user");
         return;
       }
-      if (options.platform === "win32") return refuse(entry, "unsupported");
-      if (Buffer.byteLength(socketPath) > maxSocketPathBytes(options.platform))
+      if (
+        !isNamedPipe(socketPath) &&
+        Buffer.byteLength(socketPath) > maxSocketPathBytes(options.platform)
+      )
         return refuse(entry, "path-too-long");
       entry.state = "pending";
       entry.token = randomBytes(32);

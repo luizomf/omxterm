@@ -18,7 +18,7 @@ const AGENT_GRANT_REASONS = {
     "marks-unconfirmed",
     "quit",
   ],
-  refused: ["in-use", "path-too-long", "unavailable", "unsupported"],
+  refused: ["in-use", "path-too-long", "unavailable"],
 } as const;
 type AgentGrantAction = keyof typeof AGENT_GRANT_REASONS;
 

@@ -48,7 +48,6 @@ export const AGENT_REFUSALS = [
   "in-use",
   "path-too-long",
   "unavailable",
-  "unsupported",
 ] as const;
 export type AgentRefusal = (typeof AGENT_REFUSALS)[number];
 
