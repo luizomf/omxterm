@@ -26,7 +26,7 @@ from a variable:
 | cmd               | `"%OMXTERM_CTL%" status`    |
 | Git Bash          | `"$OMXTERM_CTL" status`     |
 
-The examples below use the POSIX form. In a cmd script, put `call` in front.
+The examples below use the POSIX form.
 For any `--text` or `--match` that holds quotes, `$`, `%`, `&`, a backslash or
 a leading `/`, pipe it in with `-` (see Commands) instead of quoting it; that
 is safe in every shell. Windows details:
@@ -200,11 +200,4 @@ mkdir -p ~/.claude/skills/omxterm && "$OMXTERM_CTL" guide > ~/.claude/skills/omx
 mkdir -p ~/.agents/skills/omxterm && "$OMXTERM_CTL" guide > ~/.agents/skills/omxterm/SKILL.md   # Codex
 ```
 
-In Git Bash those lines work as written. In PowerShell, make the output UTF-8
-first (the guide has non-ASCII characters):
-
-```powershell
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-New-Item -ItemType Directory -Force "$HOME\.claude\skills\omxterm" | Out-Null
-& $env:OMXTERM_CTL guide | Out-File -Encoding utf8 "$HOME\.claude\skills\omxterm\SKILL.md"
-```
+On Windows, run them from Git Bash: PowerShell's `>` re-encodes the file.
