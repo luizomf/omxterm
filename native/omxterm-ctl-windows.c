@@ -8,6 +8,8 @@
 
 #define MAX_COMMAND_LINE 32767
 
+static HANDLE volatile child;
+
 static void fail(const char *message) {
   DWORD written;
   HANDLE error = GetStdHandle(STD_ERROR_HANDLE);
@@ -17,11 +19,12 @@ static void fail(const char *message) {
 }
 
 // The child's stdio is the launcher's own handles, so the console's Ctrl+C,
-// Ctrl+Break and close never reach it. The launcher ends instead, as the
-// console would have ended the child; that closes the job, which ends the
-// child. Before the child exists, it never starts.
+// Ctrl+Break and close never reach it: end it as the console would have, and
+// the launcher with it, which also closes the job.
 static BOOL WINAPI on_console_event(DWORD event) {
   (void)event;
+  HANDLE running = InterlockedCompareExchangePointer(&child, NULL, NULL);
+  if (running != NULL) TerminateProcess(running, (UINT)STATUS_CONTROL_C_EXIT);
   TerminateProcess(GetCurrentProcess(), (UINT)STATUS_CONTROL_C_EXIT);
   return TRUE;
 }
@@ -131,28 +134,30 @@ int wmain(void) {
   // Only the child runs as Node; the caller's environment is its own.
   SetEnvironmentVariableW(L"ELECTRON_RUN_AS_NODE", L"1");
 
-  // The child starts inside a kill-on-close job, so a caller that kills the
-  // launcher at any point, as agent hosts do on a timeout, ends the client
-  // with it. The client never runs outside one.
+  SetConsoleCtrlHandler(on_console_event, TRUE);
+
+  // The child starts inside a kill-on-close job, which is what ends it when a
+  // caller kills the launcher, as agent hosts do on a timeout. A host whose
+  // own job refuses one still gets a client, without that cleanup.
+  LPPROC_THREAD_ATTRIBUTE_LIST attributes = NULL;
   HANDLE job = CreateJobObjectW(NULL, NULL);
   JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits;
   ZeroMemory(&limits, sizeof limits);
   limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-  if (job == NULL ||
-      !SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits,
-                               sizeof limits))
-    fail("omxterm-ctl: can't start OMXTerm\n");
-  SetConsoleCtrlHandler(on_console_event, TRUE);
-
-  SIZE_T bytes = 0;
-  InitializeProcThreadAttributeList(NULL, 1, 0, &bytes);
-  LPPROC_THREAD_ATTRIBUTE_LIST attributes =
-      (LPPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(GetProcessHeap(), 0, bytes);
-  if (attributes == NULL ||
-      !InitializeProcThreadAttributeList(attributes, 1, 0, &bytes) ||
-      !UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_JOB_LIST,
-                                 &job, sizeof job, NULL, NULL))
-    fail("omxterm-ctl: can't start OMXTerm\n");
+  if (job != NULL &&
+      SetInformationJobObject(job, JobObjectExtendedLimitInformation, &limits,
+                              sizeof limits)) {
+    SIZE_T bytes = 0;
+    InitializeProcThreadAttributeList(NULL, 1, 0, &bytes);
+    attributes =
+        (LPPROC_THREAD_ATTRIBUTE_LIST)HeapAlloc(GetProcessHeap(), 0, bytes);
+    if (attributes != NULL &&
+        (!InitializeProcThreadAttributeList(attributes, 1, 0, &bytes) ||
+         !UpdateProcThreadAttribute(attributes, 0,
+                                    PROC_THREAD_ATTRIBUTE_JOB_LIST, &job,
+                                    sizeof job, NULL, NULL)))
+      attributes = NULL;
+  }
 
   STARTUPINFOEXW startup;
   PROCESS_INFORMATION process;
@@ -164,10 +169,20 @@ int wmain(void) {
   startup.StartupInfo.hStdOutput = inherited(STD_OUTPUT_HANDLE);
   startup.StartupInfo.hStdError = inherited(STD_ERROR_HANDLE);
   startup.lpAttributeList = attributes;
-  if (!CreateProcessW(runtime, line, NULL, NULL, TRUE,
-                      EXTENDED_STARTUPINFO_PRESENT, NULL, NULL,
-                      &startup.StartupInfo, &process))
-    fail("omxterm-ctl: can't start OMXTerm\n");
+  // Suspended until the console handler can end it.
+  BOOL started =
+      attributes != NULL &&
+      CreateProcessW(runtime, line, NULL, NULL, TRUE,
+                     CREATE_SUSPENDED | EXTENDED_STARTUPINFO_PRESENT, NULL,
+                     NULL, &startup.StartupInfo, &process);
+  if (!started) {
+    startup.StartupInfo.cb = sizeof startup.StartupInfo;
+    started = CreateProcessW(runtime, line, NULL, NULL, TRUE, CREATE_SUSPENDED,
+                             NULL, NULL, &startup.StartupInfo, &process);
+  }
+  if (!started) fail("omxterm-ctl: can't start OMXTerm\n");
+  InterlockedExchangePointer(&child, process.hProcess);
+  ResumeThread(process.hThread);
   CloseHandle(process.hThread);
 
   DWORD code = 1;
