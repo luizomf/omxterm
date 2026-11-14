@@ -217,7 +217,7 @@ describe("Snippets auxiliary view", () => {
       expect(row.querySelectorAll("button")).toHaveLength(1);
   });
 
-  it("shows the snippet body as the row tooltip, truncated when long", async () => {
+  it("shows the full name and the body as the row tooltip, truncated when long", async () => {
     const long = { name: "long", body: "x".repeat(600), execute: false };
     const f = fixture(
       vi.fn(async () => ({ snippets: [...catalog.snippets, long] })),
@@ -228,10 +228,12 @@ describe("Snippets auxiliary view", () => {
       ...f.root.querySelectorAll<HTMLElement>("li .snippet-activate"),
     ].map((row) => row.title);
     expect(titles.slice(0, 2)).toEqual(
-      catalog.snippets.map((snippet) => snippet.body),
+      catalog.snippets.map((snippet) => `${snippet.name}\n\n${snippet.body}`),
     );
-    expect(titles[2]!.length).toBeLessThan(long.body.length);
-    expect(long.body.startsWith(titles[2]!.slice(0, -1))).toBe(true);
+    const [name, shown] = titles[2]!.split("\n\n");
+    expect(name).toBe("long");
+    expect(shown!.length).toBeLessThan(long.body.length);
+    expect(long.body.startsWith(shown!.slice(0, -1))).toBe(true);
   });
 
   it.each(["resolve", "reject"])(

@@ -7,10 +7,13 @@ import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
 const TOOLTIP_BODY_LIMIT = 500;
 
-function bodyTooltip(body: string) {
-  return body.length > TOOLTIP_BODY_LIMIT
-    ? `${body.slice(0, TOOLTIP_BODY_LIMIT)}…`
-    : body;
+// The full name first (rows cut long names), then what will be sent.
+function rowTooltip(name: string, body: string) {
+  const shown =
+    body.length > TOOLTIP_BODY_LIMIT
+      ? `${body.slice(0, TOOLTIP_BODY_LIMIT)}…`
+      : body;
+  return `${name}\n\n${shown}`;
 }
 
 // Content/query/scroll belong to this view; visibility, focus transitions and
@@ -89,8 +92,7 @@ export function createSnippetsView(
         const intent = document.createElement("span");
         intent.className = "snippet-intent ui-meta";
         button.append(intent);
-        // Hover shows what will be sent, truncated when long.
-        button.title = bodyTooltip(snippet.body);
+        button.title = rowTooltip(snippet.name, snippet.body);
         button.addEventListener("click", () => {
           if (usable()) options.inject(snippet);
         });

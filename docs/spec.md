@@ -882,8 +882,8 @@ Connect share it; no per-tool placement or second panel exists.
   add a terminal Enter outside the snippet's `execute` choice. A fresh terminal
   key is ordinary input.
 - Each row has a single control, so Tab moves from the search field to each row
-  in turn with no extra stops. The row's tooltip shows the stored body, cut to a
-  bounded length with an ellipsis when long, so hovering shows what will be
+  in turn with no extra stops. The row's tooltip shows the full name, then the
+  stored body, cut to a bounded length with an ellipsis when long, so hovering shows what will be
   sent. There is no preview dialog; a click sends the body at once.
 - Language switching relabels row intents without replacing DOM, moving focus,
   rereading YAML, recapturing the target, or changing user text.
