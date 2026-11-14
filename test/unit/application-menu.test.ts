@@ -102,7 +102,7 @@ it("names the actual Portuguese menu path in Settings application-failure guidan
   );
   expect(reload).toBeDefined();
   expect(settingsMessageText({ kind: "application" }, t)).toContain(
-    `${view!.label} -> ${reload!.label}`,
+    `${view!.label} → ${reload!.label}`,
   );
 });
 
@@ -412,10 +412,10 @@ describe("native application menu", () => {
         actions,
         DEFAULT_TERMINAL_KEYBINDS,
       ),
-    ).find((candidate) => candidate.label === "Reload User Configuration");
+    ).find((candidate) => candidate.label === "Reload Settings");
 
     expect(item).toEqual({
-      label: "Reload User Configuration",
+      label: "Reload Settings",
       accelerator: "CommandOrControl+Shift+,",
       click: actions.reloadUserConfiguration,
     });
@@ -492,13 +492,13 @@ describe("core action catalog", () => {
       "Zoom In",
       "Zoom Out",
       "Actual Size",
-      "Toggle Auxiliary Panel",
-      "Move Auxiliary Panel to Other Side",
+      "Toggle Side Panel",
+      "Move Side Panel to Other Side",
       "Toggle Snippets",
       "Toggle Tab Bar",
       "Toggle Title Bar",
       "Pane",
-      "Reload User Configuration",
+      "Reload Settings",
       "Toggle Developer Tools",
       "Toggle Full Screen",
     ]);

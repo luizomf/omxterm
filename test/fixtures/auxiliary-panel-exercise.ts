@@ -513,7 +513,7 @@ async function exerciseRetention(
   const { window, application, sizes, clipboard } = s.options;
   const { clickMenu, until, wait, evaluate, width } = s;
   for (const theme of ["#f5f5f5", "#000000"]) {
-    clickMenu("Reload User Configuration");
+    clickMenu("Reload Settings");
     await until(
       `document.documentElement.style.getPropertyValue('--terminal-background') === '${theme}'`,
     );

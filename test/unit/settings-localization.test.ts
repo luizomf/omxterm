@@ -247,11 +247,11 @@ it("relabels a retained initial load failure without retrying", async () => {
     "Não foi possível carregar as configurações.",
   );
   language.set("en-US");
-  expect(status.textContent).toBe("Settings could not be loaded.");
+  expect(status.textContent).toBe("Couldn't load settings.");
   expect(bridge.snapshot).toHaveBeenCalledOnce();
   dialog.dispose();
   language.set("pt-BR");
-  expect(status.textContent).toBe("Settings could not be loaded.");
+  expect(status.textContent).toBe("Couldn't load settings.");
 });
 
 it("relabels raw transport errors and saved-but-not-applied result identity without another request", async () => {
@@ -285,7 +285,7 @@ it("relabels raw transport errors and saved-but-not-applied result identity with
   button("Save").click();
   await view.settle();
   expect(message.textContent).toContain(
-    "Saved to config.json, but it could not be applied:",
+    "Saved to config.json, but it couldn't be applied:",
   );
   language.set("pt-BR");
   expect(message.textContent).toContain(

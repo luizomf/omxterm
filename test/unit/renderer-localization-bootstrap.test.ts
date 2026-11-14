@@ -67,16 +67,16 @@ it("keeps the production failure notice subscribed until page teardown after ini
   // Surface callback that publishes the notice.
   for (let turn = 0; turn < 10; turn++) await Promise.resolve();
   expect(banner.textContent).toBe(
-    "Falha ao inicializar a superfície do terminal do OMXTerm: font lookup failed",
+    "Não foi possível iniciar o terminal: font lookup failed",
   );
   expect(removed).not.toHaveBeenCalled();
   update({ ...configuration, language: "en-US" });
   expect(banner.textContent).toBe(
-    "Failed to initialize the OMXTerm Terminal Surface: font lookup failed",
+    "Couldn't start the terminal: font lookup failed",
   );
   update(configuration);
   expect(banner.textContent).toBe(
-    "Falha ao inicializar a superfície do terminal do OMXTerm: font lookup failed",
+    "Não foi possível iniciar o terminal: font lookup failed",
   );
   expect(start).not.toHaveBeenCalled();
   window.dispatchEvent(new Event("pagehide"));
@@ -84,6 +84,6 @@ it("keeps the production failure notice subscribed until page teardown after ini
   update({ ...configuration, language: "en-US" });
   expect(document.documentElement.lang).toBe("pt-BR");
   expect(banner.textContent).toBe(
-    "Falha ao inicializar a superfície do terminal do OMXTerm: font lookup failed",
+    "Não foi possível iniciar o terminal: font lookup failed",
   );
 });

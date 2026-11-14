@@ -71,14 +71,14 @@ it("uses a localized noninteractive status for four seconds without focus or tim
   expect(status.hidden).toBe(false);
   expect(status.getAttribute("role")).toBe("status");
   expect(status.textContent).toBe(
-    "No tools are open. Open an extension to use the panel.",
+    "No tools are open. Open an extension to use the side panel.",
   );
   expect(f.root.hidden).toBe(true);
   expect(document.activeElement).toBe(focused);
   vi.advanceTimersByTime(2000);
   f.setLanguage("pt-BR");
   expect(status.textContent).toBe(
-    "Nenhuma ferramenta está aberta. Abra uma extensão para usar o painel.",
+    "Nenhuma ferramenta está aberta. Abra uma extensão para usar a barra lateral.",
   );
   f.panelToggle(); // Even duplicate notice permission cannot extend a visible notice.
   await settle();

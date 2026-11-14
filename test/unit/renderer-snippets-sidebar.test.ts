@@ -83,7 +83,7 @@ describe("Snippets auxiliary view", () => {
       const error = f.root.querySelector<HTMLElement>(".snippets-error")!;
       expect(error.hidden).toBe(false);
       expect(error.textContent).toBe(
-        "Could not load snippets. Close and reopen Snippets to retry.",
+        "Couldn't load snippets. Close and reopen Snippets to retry.",
       );
       language.set("pt-BR");
       expect(error.textContent).toBe(
@@ -92,7 +92,7 @@ describe("Snippets auxiliary view", () => {
       expect(f.search.placeholder).toBe("Buscar snippets");
       language.set("en-US");
       expect(error.textContent).toBe(
-        "Could not load snippets. Close and reopen Snippets to retry.",
+        "Couldn't load snippets. Close and reopen Snippets to retry.",
       );
       expect(f.root.querySelector("input")).toBe(f.search);
       expect(f.search.value).toBe("retained query");
@@ -102,7 +102,7 @@ describe("Snippets auxiliary view", () => {
       f.view.dispose();
       language.set("pt-BR");
       expect(error.textContent).toBe(
-        "Could not load snippets. Close and reopen Snippets to retry.",
+        "Couldn't load snippets. Close and reopen Snippets to retry.",
       );
     },
   );
@@ -110,7 +110,7 @@ describe("Snippets auxiliary view", () => {
     const language = createRendererLanguage();
     // Even a diagnostic matching a catalog string is not an application notice.
     const diagnostic =
-      "Could not load snippets. Close and reopen Snippets to retry.";
+      "Couldn't load snippets. Close and reopen Snippets to retry.";
     const load = vi
       .fn<() => Promise<TerminalSnippetsResponse>>()
       .mockRejectedValueOnce(new Error("private details"))
@@ -309,7 +309,7 @@ describe("Snippets auxiliary view", () => {
     f.view.deactivate();
     f.view.activate();
     await settle();
-    expect(f.root.textContent).toContain("Could not load snippets");
+    expect(f.root.textContent).toContain("Couldn't load snippets");
     expect(f.root.textContent).not.toContain("private details");
   });
 

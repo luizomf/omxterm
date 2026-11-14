@@ -674,7 +674,7 @@ overlays.
 
 ### Configuration reload
 
-- `View -> Reload User Configuration` (default `Cmd+Shift+,` on macOS and
+- `View -> Reload Settings` (default `Cmd+Shift+,` on macOS and
   `Ctrl+Shift+,` on Linux and Windows) rereads and validates the complete
   configuration.
 - A successful reload updates, in place: font-size baseline, padding, terminal
@@ -758,9 +758,9 @@ Connect share it; no per-tool placement or second panel exists.
   the page keeps focused panel controls; deliberate terminal/tab actions still
   focus the terminal.
 
-**Toggle Auxiliary Panel**
+**Toggle Side Panel**
 
-- `View -> Toggle Auxiliary Panel` (`keybinds.toggleAuxiliaryPanel`, default
+- `View -> Toggle Side Panel` (`keybinds.toggleAuxiliaryPanel`, default
   `null`) hides or reveals the container. Reveal restores the remembered open
   tool, or the first remaining one. Hiding does not keep active semantic-input
   authority.
@@ -786,14 +786,14 @@ Connect share it; no per-tool placement or second panel exists.
 
 **Panel side and width**
 
-- **Settings → Window → Auxiliary panel side** persists
+- **Settings → Window → Side panel position** persists
   `window.auxiliaryPanelSide` (`left` or `right`, default `right`) and applies
   live to all windows. A side change ends active resizing and keeps preferred
   width, visibility, selection, drafts, focus, and view/Surface/session
   identities. It does not activate, hide, reopen, or reload a tool.
   Position-only native changes refresh the coalesced presentation path without
   focus intent; overlay, selection, and retirement guards still apply.
-- `View -> Move Auxiliary Panel to Other Side` (`keybinds.moveAuxiliaryPanel`,
+- `View -> Move Side Panel to Other Side` (`keybinds.moveAuxiliaryPanel`,
   default `CommandOrControl+Shift+Alt+P` on macOS and `Control+Shift+Alt+P` on
   Linux/Windows) changes only the focused window's side and never writes
   configuration. It works from a terminal, Settings, or a nonmodal hosted tab,
@@ -2478,7 +2478,7 @@ Startup:
   key shadowing. Notices never expire on a timer: time alone never resolves a
   font error or applies creation-time settings.
 
-Manual reload (`View -> Reload User Configuration`):
+Manual reload (`View -> Reload Settings`):
 
 - Runs one full startup-equivalent load, serialized in request order. Success
   replaces the snapshot and notices, sets the log level and applies settings to

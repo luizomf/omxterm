@@ -303,7 +303,7 @@ describe.skipIf(
       });
       expect(result.beforeDestroy).toEqual({ canvases: 1, tabs: 1 });
       expect(result.backendLoss).toMatchObject({
-        message: "The OMXTerm Terminal Surface rendering backend was lost",
+        message: "The terminal's renderer stopped",
         ownedSessionExited: true,
         unaffectedSessionResponded: true,
         executedResponse: true,

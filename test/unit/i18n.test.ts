@@ -217,7 +217,7 @@ describe("translated main-process text", () => {
     );
     expect(terminalApplicationFailureDisplay(failure, pt)).toEqual({
       title: "O OMXTerm não pôde iniciar",
-      message: "Não foi possível criar a janela de terminal inicial.",
+      message: "Não foi possível criar a primeira janela.",
     });
   });
 
@@ -243,9 +243,9 @@ describe("translated main-process text", () => {
     });
     await reloader.reload();
     const [notice] = reloader.current().userFileErrors;
-    expect(notice).toMatch(/^A recarga da configuração falhou\./u);
+    expect(notice).toMatch(/^Não foi possível recarregar as configurações,/u);
     expect(notice).toContain("must be from 8 through 72 $&");
-    expect(notice).toContain("Recarregar Configuração");
+    expect(notice).toContain("Recarregar Configurações");
     expect(reloader.current().configuration).toBe(initial);
   });
 });

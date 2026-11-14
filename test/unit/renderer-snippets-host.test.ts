@@ -239,7 +239,7 @@ it.each(["signal", "rendering"] as const)(
     } else {
       f.surfaceOptions[0]!.onFatalError!({ kind: "backend-loss" });
       expect(f.failure).toHaveBeenCalledExactlyOnceWith(
-        "The OMXTerm Terminal Surface rendering backend was lost",
+        "The terminal's renderer stopped",
       );
     }
     expect(document.querySelectorAll("main.terminal-surface")).toHaveLength(1);

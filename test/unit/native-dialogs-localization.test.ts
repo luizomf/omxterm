@@ -22,7 +22,7 @@ it("uses the current language and native owner for singular pane/plural tab clos
       title: t("dialog.closePane.title"),
       message: t("dialog.closePane.message"),
       detail: t("dialog.closePane.detail"),
-      buttons: [t("common.close"), t("common.cancel")],
+      buttons: [t("dialog.closePane.button"), t("common.cancel")],
       defaultId: 1,
       cancelId: 1,
       noLink: true,
@@ -33,8 +33,8 @@ it("uses the current language and native owner for singular pane/plural tab clos
       expect.objectContaining({
         detail:
           tag === "en-US"
-            ? "All of its Live Terminal Sessions will end."
-            : "Todas as sessões de terminal dela serão encerradas.",
+            ? "Its running programs will stop."
+            : "Os programas em execução nela serão encerrados.",
         defaultId: 1,
         cancelId: 1,
       }),

@@ -35,10 +35,10 @@ export const englishMessages = {
   "menu.toggleFiles": "Toggle Files",
   "menu.toggleSshConnect": "Toggle SSH Connect",
   "menu.toggleTabBar": "Toggle Tab Bar",
-  "menu.toggleAuxiliaryPanel": "Toggle Auxiliary Panel",
-  "menu.moveAuxiliaryPanel": "Move Auxiliary Panel to Other Side",
+  "menu.toggleAuxiliaryPanel": "Toggle Side Panel",
+  "menu.moveAuxiliaryPanel": "Move Side Panel to Other Side",
   "menu.toggleTitleBar": "Toggle Title Bar",
-  "menu.reloadConfiguration": "Reload User Configuration",
+  "menu.reloadConfiguration": "Reload Settings",
   "menu.toggleDeveloperTools": "Toggle Developer Tools",
   "menu.toggleFullScreen": "Toggle Full Screen",
   "menu.window": "Window",
@@ -50,30 +50,33 @@ export const englishMessages = {
   "menu.selectTab": "Select Tab",
   "menu.tab": "Tab {position}",
 
-  "dialog.clipboardError.title": "Clipboard Error",
-  "dialog.clipboardError.message": "Clipboard operation failed.",
-  "dialog.externalLinkError.title": "External Link Error",
-  "dialog.externalLinkError.message": "The External Link could not be opened.",
-  "dialog.protectedPaste.title": "Protected Paste",
+  "dialog.clipboardError.title": "Clipboard error",
+  "dialog.clipboardError.message": "Couldn't use the clipboard.",
+  "dialog.externalLinkError.title": "Link error",
+  "dialog.externalLinkError.message": "Couldn't open the link.",
+  "dialog.protectedPaste.title": "Protected paste",
   "dialog.protectedPaste.message":
     "Paste text that may contain multiple commands?",
-  "dialog.protectedPaste.detail":
-    "The paste contains multiple lines or control characters.",
+  "dialog.protectedPaste.detail": "It has several lines or control characters.",
   "dialog.protectedPaste.paste": "Paste",
   "dialog.quit.title": "Quit OMXTerm",
-  "dialog.quit.message": "Quit OMXTerm and close all Terminal Windows?",
-  "dialog.quit.detail": "All open Live Terminal Sessions will end.",
+  "dialog.quit.message": "Quit OMXTerm?",
+  "dialog.quit.detail":
+    "All windows will close and their running programs will stop.",
   "dialog.quit.button": "Quit",
-  "dialog.closeWindow.title": "Close Window",
-  "dialog.closeWindow.message":
-    "Close this Terminal Window and all of its tabs?",
-  "dialog.closeWindow.detail": "All of its Live Terminal Sessions will end.",
-  "dialog.closeTab.title": "Close Tab",
-  "dialog.closeTab.message": "Close this Terminal Tab?",
-  "dialog.closeTab.detail": "All of its Live Terminal Sessions will end.",
-  "dialog.closePane.title": "Close Pane",
-  "dialog.closePane.message": "Close this Terminal Pane?",
-  "dialog.closePane.detail": "Its Live Terminal Session will end.",
+  "dialog.closeWindow.title": "Close window",
+  "dialog.closeWindow.message": "Close this window?",
+  "dialog.closeWindow.detail":
+    "Its tabs will close and their running programs will stop.",
+  "dialog.closeWindow.button": "Close window",
+  "dialog.closeTab.title": "Close tab",
+  "dialog.closeTab.message": "Close this tab?",
+  "dialog.closeTab.detail": "Its running programs will stop.",
+  "dialog.closeTab.button": "Close tab",
+  "dialog.closePane.title": "Close pane",
+  "dialog.closePane.message": "Close this pane?",
+  "dialog.closePane.detail": "Its running program will stop.",
+  "dialog.closePane.button": "Close pane",
   "menu.pane": "Pane",
   "menu.splitRight": "Split Right",
   "menu.splitDown": "Split Down",
@@ -107,46 +110,45 @@ export const englishMessages = {
   "export.tooLarge.detail":
     "Select a smaller portion of the terminal text and export the selection. Nothing was saved or truncated.",
   "export.failed": "Export Failed",
-  "export.writeError": "OMXTerm could not save the exported text.",
-  "export.readError":
-    "OMXTerm could not read the terminal text. Nothing was saved.",
+  "export.writeError": "Couldn't save the exported text.",
+  "export.readError": "Couldn't read the terminal text. Nothing was saved.",
   "export.failureDetail":
     "Try exporting again and choose a writable destination with enough free space.",
 
   "failure.rendering.title": "Terminal rendering failed",
   "failure.rendering.message":
-    "The rendering backend was lost. Its terminal session has been closed.",
+    "The terminal's renderer stopped, so this session was closed.",
   "failure.rendering.detail":
     "Restart OMXTerm to create a new session. Other sessions are unaffected.",
-  "failure.commandStart.title": "Command could not start",
-  "failure.commandStart.message": "The requested command could not be started.",
-  "failure.shellStart.title": "Shell could not start",
-  "failure.shellStart.message": "The Default Shell could not be started.",
-  "failure.spawnDetail": "Lifecycle failure: spawn.",
+  "failure.commandStart.title": "Couldn't start the command",
+  "failure.commandStart.message": "The command you asked for didn't start.",
+  "failure.shellStart.title": "Couldn't start the shell",
+  "failure.shellStart.message": "Your shell didn't start.",
+  "failure.spawnDetail": "Check that the program exists and can run.",
   "failure.commandExit.title": "Command exited unexpectedly",
-  "failure.commandExit.message": "The requested command exited unexpectedly.",
+  "failure.commandExit.message":
+    "The command you asked for exited unexpectedly.",
   "failure.shellExit.title": "Shell exited unexpectedly",
-  "failure.shellExit.message": "The Default Shell exited unexpectedly.",
+  "failure.shellExit.message": "Your shell exited unexpectedly.",
   "failure.signalDetail": "Signal: {signal}.",
   "failure.unknownSignal": "unknown",
-  "failure.start.title": "OMXTerm could not start",
+  "failure.start.title": "OMXTerm couldn't start",
   "failure.launchRequest": "The -e option requires an executable.",
-  "failure.rendererLoad.title": "Terminal Window could not load",
+  "failure.rendererLoad.title": "Couldn't load the window",
   "failure.rendererLoad.message":
-    "OMXTerm could not load the Terminal Window renderer.",
-  "failure.newWindow.title": "Terminal Window could not open",
-  "failure.newWindow.message":
-    "OMXTerm could not create a new Terminal Window.",
-  "failure.startup": "The initial Terminal Window could not be created.",
+    "OMXTerm couldn't load this window's interface.",
+  "failure.newWindow.title": "Couldn't open a new window",
+  "failure.newWindow.message": "OMXTerm couldn't create a new window.",
+  "failure.startup": "Couldn't create the first window.",
 
   "notice.reloadFailed":
-    "User Configuration reload failed. OMXTerm kept the last valid configuration. {detail} Fix the file and choose View -> Reload User Configuration again.",
+    "Couldn't reload your settings, so OMXTerm kept the last valid ones. {detail} Fix the file, then choose View → Reload Settings.",
   "notice.reloadUnexpected":
-    "The configuration could not be loaded because of an unexpected application failure.",
+    "Couldn't load your settings because of an unexpected error.",
   "notice.restartDeferred": {
-    one: "Existing Terminal Surfaces continue using their previous {settings} value. Restart OMXTerm to apply it everywhere; new tabs and windows use the latest validated values.",
+    one: "Open tabs keep their previous {settings} value. New tabs and windows use the new one; restart OMXTerm to apply it everywhere.",
     other:
-      "Existing Terminal Surfaces continue using their previous {settings} values. Restart OMXTerm to apply them everywhere; new tabs and windows use the latest validated values.",
+      "Open tabs keep their previous {settings} values. New tabs and windows use the new ones; restart OMXTerm to apply them everywhere.",
   },
   "notice.and": "{first} and {second}",
 
@@ -168,10 +170,8 @@ export const englishMessages = {
   "terminal.tabs": "Terminal Tabs",
   "terminal.userFileErrors": "User File Errors",
   "terminal.surfaceFailure": "Terminal Surface Failure",
-  "terminal.initializationFailure":
-    "Failed to initialize the OMXTerm Terminal Surface: {detail}",
-  "terminal.backendLost":
-    "The OMXTerm Terminal Surface rendering backend was lost",
+  "terminal.initializationFailure": "Couldn't start the terminal: {detail}",
+  "terminal.backendLost": "The terminal's renderer stopped",
   "palette.title": "Command Palette",
   "palette.query": "Search actions…",
   "palette.empty": "No matching actions",
@@ -179,7 +179,7 @@ export const englishMessages = {
   "palette.error": "Actions are unavailable. Close and try again.",
   "hosted.close": "Close",
   "hosted.failure":
-    "Hosted content could not be hidden, updated, or closed. Close the window to recover.",
+    "Couldn't hide, update or close this view. Close the window to recover.",
   "search.region": "Search terminal scrollback",
   "search.placeholder": "Find in scrollback",
   "search.clear": "Clear",
@@ -195,7 +195,7 @@ export const englishMessages = {
   "about.contributors": "Contributors",
   "about.issues": "Report an issue",
   "about.mitLicense": "MIT License",
-  "about.linkError": "Could not open the link.",
+  "about.linkError": "Couldn't open the link.",
   "about.unavailable": "Application information unavailable.",
 
   "preview.region": "Local image preview",
@@ -207,15 +207,15 @@ export const englishMessages = {
   "preview.unsupported":
     "Unsupported image format. Choose a static PNG or JPEG; WebP is not supported.",
   "preview.error":
-    "Could not preview this image. The file may be unavailable, invalid or over the static PNG/JPEG limits (64 MiB, 8192 per side, 32 million pixels).",
+    "Couldn't preview this image. The file may be unavailable, invalid or over the static PNG/JPEG limits (64 MiB, 8192 per side, 32 million pixels).",
 
-  "panel.resize": "Resize auxiliary panel",
+  "panel.resize": "Resize side panel",
   "panel.width": "{width} pixels wide",
   "panel.close": "Close tool",
-  "panel.hide": "Hide auxiliary panel",
+  "panel.hide": "Hide side panel",
   "panel.tools": "Open tools",
   "panel.tooNarrow": "Widen the window to open {view}",
-  "panel.empty": "No tools are open. Open an extension to use the panel.",
+  "panel.empty": "No tools are open. Open an extension to use the side panel.",
   "snippets.title": "Snippets",
   "snippets.searchPlaceholder": "Search snippets",
   "snippets.search": "Search Snippets",
@@ -223,7 +223,7 @@ export const englishMessages = {
   "snippets.empty": "No snippets. Create snippets.yaml next to config.json.",
   "snippets.noMatch": "No snippets match the search.",
   "snippets.loadError":
-    "Could not load snippets. Close and reopen Snippets to retry.",
+    "Couldn't load snippets. Close and reopen Snippets to retry.",
   "snippets.insert": "Insert",
   "snippets.run": "Run · adds Enter",
   "snippets.preview": "Preview",
@@ -329,7 +329,7 @@ export const englishMessages = {
   "extensions.noActiveTerminalDirectory":
     "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
   "extensions.activeTerminalChanged":
-    "The active terminal changed or could not be confirmed. Try again",
+    "The active terminal changed or couldn't be confirmed. Try again",
   "extensions.terminalDirectoryBusy":
     "A terminal directory request is already in progress. Try again",
   "extensions.unavailable": "Extension unavailable",
@@ -369,16 +369,16 @@ export const englishMessages = {
     "No themes folder found. Create themes/ beside config.json and refresh.",
   "settings.themeEmpty": "No theme files found in themes/.",
   "settings.themeUnavailable":
-    "Could not read themes or config.json. Check the folder and configuration, then refresh.",
+    "Couldn't read themes or config.json. Check the folder and configuration, then refresh.",
   "settings.themeTruncated":
     "The list is limited; some files may not be shown.",
   "settings.themeCustom":
     "The configured theme is outside this list or unavailable. Check the advanced path or refresh.",
-  "settings.themeInvalid": "These theme files could not be used:",
+  "settings.themeInvalid": "These theme files couldn't be used:",
   "settings.themeErrorSize": "File exceeds the theme size limit.",
   "settings.themeErrorType": "Target is not a regular file.",
   "settings.themeErrorChanged": "File changed while being read.",
-  "settings.themeErrorRead": "File could not be read.",
+  "settings.themeErrorRead": "File couldn't be read.",
   "settings.themeErrorInvalid": "Invalid theme:",
   "settings.themeErrorUnknown": "Theme contains an unknown field.",
   "settings.themeSelected": "Selected",
@@ -404,7 +404,7 @@ export const englishMessages = {
   "settings.option.left": "Left Option",
   "settings.option.right": "Right Option",
   "settings.option.both": "Both",
-  "settings.auxiliaryPanelSide": "Auxiliary panel side",
+  "settings.auxiliaryPanelSide": "Side panel position",
   "settings.panelLeft": "Left",
   "settings.panelRight": "Right",
   "settings.titleBar": "Show title bar",
@@ -412,7 +412,7 @@ export const englishMessages = {
   "settings.alwaysOnTop": "Always on top",
   "settings.range": "Out of range",
   "settings.loading": "Loading settings…",
-  "settings.loadError": "Settings could not be loaded.",
+  "settings.loadError": "Couldn't load settings.",
   "settings.saving": "Saving…",
   "settings.requestError": "Not saved: the request failed.",
   "settings.fileGuidance":
@@ -422,7 +422,7 @@ export const englishMessages = {
     "A newer choice replaced this selection before it was saved.",
   "settings.notSaved": "Not saved: {detail}",
   "settings.notApplied":
-    "Saved to config.json, but it could not be applied: {notice}",
+    "Saved to config.json, but it couldn't be applied: {notice}",
   "settings.lifetime.tabs": "New tabs use it.",
   "settings.lifetime.windows": "It applies to new windows.",
   "settings.lifetime.restart":
@@ -430,12 +430,12 @@ export const englishMessages = {
   "settings.save": "Save",
   "settings.reload": "Reload File",
   "settings.reloading": "Reloading…",
-  "settings.reloadError": "The file could not be reloaded. Your draft is kept.",
+  "settings.reloadError": "Couldn't reload the file. Your draft is kept.",
   "settings.stale":
     "config.json changed since you started editing. Your draft is kept; saving it will be refused until you reload the file.",
   "settings.newer": "Newer edits are not saved.",
   "settings.readError":
-    "config.json could not be read. Check its permissions and location.",
+    "config.json couldn't be read. Check its permissions and location.",
   "settings.utf8Error": "config.json is not valid UTF-8",
   "settings.jsonError": "config.json is not valid JSON",
   "settings.objectError": "config.json must hold an object",
@@ -446,11 +446,11 @@ export const englishMessages = {
   "settings.conflict":
     "config.json or its target changed since this edit started. Copy your draft, reload the file and apply your edits again.",
   "settings.writeError":
-    "config.json could not be written. Check permissions on the file and its target directory. Nothing was changed.",
+    "config.json couldn't be written. Check permissions on the file and its target directory. Nothing was changed.",
   "settings.cleanupError":
     "config.json was not saved. A temporary file may remain in its target directory; check the directory and permissions before trying again.",
   "settings.applicationError":
-    "Unexpected application failure. Some settings may already be active; choose View -> Reload User Configuration again.",
+    "Unexpected error. Some settings may already be active; choose View → Reload Settings again.",
   "settings.page.shortcuts": "Shortcuts",
   "shortcuts.hint": "App shortcuts get the key before terminal programs do.",
   "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",

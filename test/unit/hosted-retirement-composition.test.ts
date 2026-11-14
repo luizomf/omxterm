@@ -213,7 +213,7 @@ it.each([
         expect(requests[0]).toMatchObject({ error: "Unknown hosted content" });
         expect(
           document.querySelector('[role="status"]')?.textContent,
-        ).toContain("could not");
+        ).toContain("Couldn't hide");
         const blocked = vi.fn();
         h.tabs.openOverlay(blocked);
         await settle();

@@ -89,10 +89,10 @@ describe("local theme picker", () => {
       true,
     );
     expect(view.query(".settings-themes-invalid").textContent).not.toContain(
-      "These theme files could not be used",
+      "These theme files couldn't be used",
     );
     expect(view.query(".settings-themes-message").textContent).toContain(
-      "These theme files could not be used",
+      "These theme files couldn't be used",
     );
     expect(view.field("Theme file").value).toContain("themes/b.json");
   });
@@ -127,7 +127,7 @@ describe("local theme picker", () => {
     });
     await view.settle();
     expect(view.status()).toContain(
-      "Saved to config.json, but it could not be applied: reload failed",
+      "Saved to config.json, but it couldn't be applied: reload failed",
     );
     expect(input("themes/a.json").checked).toBe(true);
     expect(themes).toHaveBeenCalledTimes(2);
@@ -312,7 +312,7 @@ describe("theme discovery feedback", () => {
       "valid JSON",
     );
     expect(view.query(".settings-themes-message").textContent).toContain(
-      "could not be used",
+      "couldn't be used",
     );
     expect(input("").checked).toBe(false);
   });

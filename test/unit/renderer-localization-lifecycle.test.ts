@@ -168,13 +168,13 @@ describe("window localization lifecycle", () => {
       "#terminal-surface-failure",
     )!;
     await vi.waitFor(() => expect(banner.hidden).toBe(false));
-    expect(banner.textContent).toBe("Clipboard operation failed.");
+    expect(banner.textContent).toBe("Couldn't use the clipboard.");
     expect(f.adapters[0]!.write).not.toHaveBeenCalled();
     expect(f.adapters[0]!.close).not.toHaveBeenCalled();
     expect(runtime.destroy).not.toHaveBeenCalled();
     f.update({ ...configuration, language: "pt-BR" });
     expect(banner.textContent).toBe(
-      "A operação na área de transferência falhou.",
+      "Não foi possível usar a área de transferência.",
     );
     runtime.options.services.beforeInput({ text: "safe", source: "paste" });
     await vi.waitFor(() =>
@@ -201,7 +201,7 @@ describe("window localization lifecycle", () => {
       const banner = document.querySelector<HTMLElement>(
         "#terminal-surface-failure",
       )!;
-      const fatal = "The OMXTerm Terminal Surface rendering backend was lost";
+      const fatal = "The terminal's renderer stopped";
       expect(banner.textContent).toBe(fatal);
       expect(failed.destroy).toHaveBeenCalledOnce();
       if (removeFailed) {
@@ -220,7 +220,7 @@ describe("window localization lifecycle", () => {
       });
       await vi.waitFor(() =>
         expect(banner.textContent).toBe(
-          `${fatal}\nClipboard operation failed.`,
+          `${fatal}\nCouldn't use the clipboard.`,
         ),
       );
       expect(banner.hidden).toBe(false);
@@ -229,10 +229,10 @@ describe("window localization lifecycle", () => {
       expect(survivor.destroy).not.toHaveBeenCalled();
       f.update({ ...configuration, language: "pt-BR" });
       expect(banner.textContent).toBe(
-        "O backend de renderização da superfície do terminal do OMXTerm foi perdido\nA operação na área de transferência falhou.",
+        "O renderizador do terminal parou\nNão foi possível usar a área de transferência.",
       );
       f.update(configuration);
-      expect(banner.textContent).toBe(`${fatal}\nClipboard operation failed.`);
+      expect(banner.textContent).toBe(`${fatal}\nCouldn't use the clipboard.`);
       survivor.options.services.beforeInput({ text: "safe", source: "paste" });
       await vi.waitFor(() =>
         expect(f.adapters[0]!.write).toHaveBeenCalledWith(
@@ -263,12 +263,12 @@ describe("window localization lifecycle", () => {
       )!;
       const portuguese =
         failure === "initialization"
-          ? "Falha ao inicializar a superfície do terminal do OMXTerm: <img src=x> unavailable"
-          : "O backend de renderização da superfície do terminal do OMXTerm foi perdido";
+          ? "Não foi possível iniciar o terminal: <img src=x> unavailable"
+          : "O renderizador do terminal parou";
       const english =
         failure === "initialization"
-          ? "Failed to initialize the OMXTerm Terminal Surface: <img src=x> unavailable"
-          : "The OMXTerm Terminal Surface rendering backend was lost";
+          ? "Couldn't start the terminal: <img src=x> unavailable"
+          : "The terminal's renderer stopped";
       expect(f.onSurfaceFailure).toHaveBeenLastCalledWith(portuguese);
       expect(banner.hidden).toBe(false);
       expect(banner.textContent).toBe(portuguese);
@@ -309,7 +309,7 @@ describe("window localization lifecycle", () => {
       "#terminal-surface-failure",
     )!;
     expect(banner.textContent).toBe(
-      "Falha ao inicializar a superfície do terminal do OMXTerm: backend unavailable",
+      "Não foi possível iniciar o terminal: backend unavailable",
     );
     expect(f.adapters[0]!.start).not.toHaveBeenCalled();
     expect(f.adapters[0]!.close).toHaveBeenCalledOnce();
