@@ -15,7 +15,7 @@ it("relabels retained rows in place and shows the body as the row tooltip", asyn
     expect(f.root.querySelector(".snippet-activate")).not.toBeNull(),
   );
   const row = f.root.querySelector<HTMLButtonElement>(".snippet-activate")!;
-  expect(row.title).toBe(" a  b\n$VALUE\n");
+  expect(row.title).toBe("literal\n\n a  b\n$VALUE\n");
   expect(row.closest("li")!.querySelectorAll("button")).toHaveLength(1);
   row.focus();
   f.setLanguage("pt-BR");

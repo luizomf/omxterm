@@ -65,7 +65,7 @@ it("loads only on logical activation, preserves search and focuses search on int
   expect(document.activeElement).toBe(h.search);
   await settle();
   const row = document.querySelector<HTMLButtonElement>(".snippet-activate")!;
-  expect(row.title).toBe("  echo 'hello'\r\n");
+  expect(row.title).toBe("Literal\n\n  echo 'hello'\r\n");
   expect(row.closest("li")!.querySelectorAll("button")).toHaveLength(1);
   row.click();
   expect(h.request).toHaveBeenLastCalledWith({
