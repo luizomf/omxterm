@@ -154,7 +154,7 @@ Use **Settings → Appearance** or set `window.transparency` from 0 to 1 and `wi
 }
 ```
 
-Transparency lets the desktop show through the terminal background; blur support depends on the platform and compositor. Windows 11 Acrylic requires both blur enabled and transparency above 0. Linux transparency depends on the compositor; see the [Linux desktop guide](linux-desktop.md) for GNOME, KDE Plasma, Hyprland and HiDPI tips. Full-screen terminal apps that paint their own background may cover the effect.
+Transparency lets the desktop show through the terminal background while text stays sharp; blur support depends on the platform and compositor. Windows 11 Acrylic requires both blur enabled and transparency above 0. Linux transparency depends on the compositor; see the [Linux desktop guide](linux-desktop.md) for GNOME, KDE Plasma, Hyprland and HiDPI tips. Full-screen terminal apps that paint their own background may cover the effect.
 
 ### Window defaults
 

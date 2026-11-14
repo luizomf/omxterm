@@ -371,6 +371,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.blur": "Desfocar o fundo da área de trabalho",
   "settings.backgroundHint":
     "0% é opaco; o desfoque precisa de transparência e suporte da área de trabalho.",
+  "settings.learnMore": "Saiba mais",
   "settings.fontFamily": "Família da fonte",
   "settings.fontSize": "Tamanho da fonte",
   "settings.lineHeight": "Altura da linha",

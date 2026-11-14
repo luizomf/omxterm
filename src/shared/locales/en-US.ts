@@ -355,6 +355,7 @@ export const englishMessages = {
   "settings.blur": "Blur desktop background",
   "settings.backgroundHint":
     "0% is opaque; blur needs transparency and desktop support.",
+  "settings.learnMore": "Learn more",
   "settings.fontFamily": "Font family",
   "settings.fontSize": "Font size",
   "settings.lineHeight": "Line height",

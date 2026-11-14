@@ -331,3 +331,29 @@ it.each(["win32", "darwin", "linux"])(
     view.dialog.dispose();
   },
 );
+
+it.each(["en-US", "pt-BR"] as const)(
+  "labels the Appearance hint's docs link in %s and opens the docs through the terminal bridge",
+  async (initial) => {
+    const openExternalLink = vi.fn();
+    Object.defineProperty(window, "omxterm", {
+      configurable: true,
+      value: { terminal: { openExternalLink } },
+    });
+    const language = createRendererLanguage(initial);
+    const view = await open({}, language);
+    const appearance = [
+      ...document.querySelectorAll<HTMLButtonElement>("[role=tab]"),
+    ].find((tab) => tab.textContent === language.t("settings.page.appearance"));
+    appearance!.click();
+    const hint = view.query<HTMLElement>("#settings-background-hint");
+    const link = hint.querySelector<HTMLButtonElement>("button")!;
+    expect(link.textContent).toBe(language.t("settings.learnMore"));
+    link.click();
+    expect(openExternalLink).toHaveBeenCalledWith(
+      "https://github.com/luizomf/omxterm/blob/main/docs/configuration.md#background-transparency-and-blur",
+    );
+    view.dialog.dispose();
+    Reflect.deleteProperty(window, "omxterm");
+  },
+);

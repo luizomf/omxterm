@@ -100,6 +100,9 @@ Stable 0.33.0 uses the frozen cut `b0d1745e`; the next development baseline is
 `0.33.1-dev.0`. Its bridge admits ranges that accept both `0.33.0` and
 `0.33.1`. Every catalog archive stays installable unchanged.
 
+A "Learn more" link on the Appearance transparency hint (#1000) moves main
+to `0.33.1-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
