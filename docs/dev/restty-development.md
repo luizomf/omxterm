@@ -46,7 +46,9 @@ but the last comes from the query of it and the next row, minus the next row's
 own query. `test/unit/agent-screen-read.test.ts` runs it against the real core.
 `isAltScreen()` on the terminal (`altScreenCorrections`) says which screen
 that read saw, from the input handler's own tracking, so an agent's `wait`
-with `match` counts copies per screen.
+with `match` counts copies per screen. A reset (RIS, `ESC c`) clears that
+flag too, since it takes the core back to the main screen
+(`risAltScreenCorrections`).
 
 ### Pending-wrap resize coverage
 
@@ -309,7 +311,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `76c74a23600aa3cc0e442ad95443e15a7118864e578513885e9d2da739e83222` |
+| Restty JavaScript runtime | `3cdffe590dff2c420f41841fbe6aacdc4cad94e60ba927c6610514965db4c83c` |
 | Embedded-core chunk       | `9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |

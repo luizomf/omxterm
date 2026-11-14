@@ -126,4 +126,31 @@ describe("the screen read", () => {
       }
     },
   );
+
+  // RIS takes the core back to the main screen with no ?1049l.
+  it.each([["whole"], ["split"]])(
+    "says the main screen is back after a reset (ESC c, %s)",
+    async (how) => {
+      const t = await cprCoreFixture(10, 4);
+      try {
+        t.write("main\u001b[?1049h\u001b[Hfull");
+        expect(t.altScreen()).toBe(true);
+        if (how === "split") {
+          t.write("\u001b");
+          t.write("c");
+        } else t.write("\u001bc");
+        expect(t.altScreen()).toBe(false);
+        t.write("after");
+        t.write("\u001b[?1049h");
+        expect(t.altScreen()).toBe(true);
+        expect(t.text()).toBe("\n\n\n");
+        // What was written after the reset is on the main screen.
+        t.write("\u001b[?1049l");
+        expect(t.altScreen()).toBe(false);
+        expect(t.text()).toBe("after\n\n\n");
+      } finally {
+        t.dispose();
+      }
+    },
+  );
 });

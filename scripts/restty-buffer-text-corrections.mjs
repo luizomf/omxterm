@@ -110,3 +110,17 @@ export const altScreenCorrections = [
     applyTheme,`,
   },
 ];
+
+// RIS (ESC c) takes the core back to the main screen without a ?1049l, so
+// the input handler's screen flag follows it (#1074). DECSTR (CSI ! p)
+// keeps the alternate screen in the core, so it changes nothing here.
+export const risAltScreenCorrections = [
+  {
+    original: `      if (data[i + 1] !== "[") {
+        result += ch;`,
+    corrected: `      if (data[i + 1] !== "[") {
+        if (data[i + 1] === "c")
+          this.altScreen = false;
+        result += ch;`,
+  },
+];

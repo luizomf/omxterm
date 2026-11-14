@@ -14,6 +14,7 @@ import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs"
 import {
   altScreenCorrections,
   bufferTextCorrections,
+  risAltScreenCorrections,
   screenTextCorrections,
 } from "./restty-buffer-text-corrections.mjs";
 import { idleRenderCorrections } from "./restty-idle-render-corrections.mjs";
@@ -182,8 +183,10 @@ const priorAltScreenDigest =
   "2dea1f31028c175bf08139bdc0f716c00f763ba602968f1fb43f4a6883fafdaa";
 const priorSelectionDigest =
   "eee63b0f502ea478e43d10d35a7df0d12243c223be341e85603fe047afcbabe8";
-const correctedDigest =
+const priorRisAltScreenDigest =
   "76c74a23600aa3cc0e442ad95443e15a7118864e578513885e9d2da739e83222";
+const correctedDigest =
+  "3cdffe590dff2c420f41841fbe6aacdc4cad94e60ba927c6610514965db4c83c";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -2079,6 +2082,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, altScreenCorrections);
       case priorSelectionDigest:
         source = applyCorrections(source, selectionCorrections);
+      case priorRisAltScreenDigest:
+        source = applyCorrections(source, risAltScreenCorrections);
         break;
       default:
         throw new Error(

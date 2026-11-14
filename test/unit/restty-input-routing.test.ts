@@ -6,6 +6,7 @@ import { syntheticBoldCorrections } from "../../scripts/restty-synthetic-bold-co
 import {
   altScreenCorrections,
   bufferTextCorrections,
+  risAltScreenCorrections,
   screenTextCorrections,
 } from "../../scripts/restty-buffer-text-corrections.mjs";
 import { idleRenderCorrections } from "../../scripts/restty-idle-render-corrections.mjs";
@@ -81,7 +82,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(occurrences + 1);
         return value.replaceAll(corrected, original);
       }, text);
-    const preSelection = reverse(source, selectionCorrections);
+    const preRisAltScreen = reverse(source, risAltScreenCorrections);
+    expect(hash(preRisAltScreen)).toBe(
+      "76c74a23600aa3cc0e442ad95443e15a7118864e578513885e9d2da739e83222",
+    );
+    const preSelection = reverse(preRisAltScreen, selectionCorrections);
     expect(hash(preSelection)).toBe(
       "eee63b0f502ea478e43d10d35a7df0d12243c223be341e85603fe047afcbabe8",
     );
