@@ -96,7 +96,7 @@ same as with the built-in sidebar.
 
 - **One narrow capability.** The package declares `terminal.semanticInput.v1`.
   A request carries exact `text`, a `title`, an optional `description`, an
-  `intent` (`insert` or `run`) and a boolean `preview`. It cannot name a target
+  `intent` (`insert` or `run`). Earlier packages also send `preview: false`, which is accepted and ignored; `preview: true` is refused. It cannot name a target
   terminal, get a PTY handle, read terminal output or inject raw keys.
 - **Core picks the target.** Core captures the selected live Surface before any
   asynchronous work, and every later step uses that capture. If the selection
@@ -104,19 +104,13 @@ same as with the built-in sidebar.
   if a replacement pane appears. With no live target, the request does nothing.
 - **Sender checks.** Core rejects requests from stale, hidden or foreign views
   and from a retired installation.
-- **Core-owned preview.** The preview is the core's dialog, not an extension
-  modal. Its body is literal and read-only, with localized Insert, Run and
-  Cancel. The final button overrides the row's default intent. Only one
-  acceptance is possible. Cancel returns focus to the initiating control, then
-  the panel search, then the terminal.
 - **Exact text.** Text is never expanded, normalized or truncated.
   `execute: false` adds no final Enter, but embedded line breaks or control
   characters can still execute. Protected Paste stays core-owned.
 - **Gesture ownership.** A row's Enter press, its repeats and its release never
   leak into the terminal after focus moves, including with Kitty keyboard
   reporting.
-- **Retirement.** Disable, update or uninstall cancels unaccepted previews and
-  pending requests. It does not end terminal sessions or undo commands already
+- **Retirement.** Disable, update or uninstall cancels pending requests. It does not end terminal sessions or undo commands already
   sent. Input a Surface already accepted stays with that Surface.
 
 ## Build and test

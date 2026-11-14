@@ -114,8 +114,8 @@ An apostrophe does not need escaping inside double quotes. This real English
 entry illustrates that distinction:
 
 ```ts
-"snippetPreview.unavailable":
-  "This snippet's terminal closed. Nothing will be sent.",
+"snippets.loadError":
+  "Couldn't load snippets. Close and reopen Snippets to retry.",
 ```
 
 ### Placeholders: keep the text inside braces

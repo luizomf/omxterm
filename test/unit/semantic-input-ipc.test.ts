@@ -25,7 +25,6 @@ const input: SemanticInputRequest = {
   text: "  printf '%s' '$literal'\n\t",
   title: "Literal example",
   intent: "insert",
-  preview: true,
 };
 type Service = ReturnType<typeof registerSemanticInputIpc>;
 type Admit = Parameters<Service["request"]>[4];
@@ -321,7 +320,7 @@ it("allows one pending request per window, independently of another window", asy
 it("refuses a path action captured at revision 7 when main already observed revision 8", async () => {
   const test = fixture();
   const owner = test.owner();
-  const pathInput = { ...input, intent: "insert" as const, preview: false };
+  const pathInput = { ...input, intent: "insert" as const };
   const source = { ...owner.source, actionSelectionRevision: 7 };
   owner.selection(8);
   const pending = test.service.request(
@@ -351,7 +350,7 @@ it.each([undefined, -1, 6, 8])(
     await expect(
       test.service.request(
         owner.window,
-        { ...input, intent: "insert", preview: false },
+        { ...input, intent: "insert" },
         {
           ...owner.source,
           ...(actionSelectionRevision === undefined
@@ -378,7 +377,7 @@ it("checks the stamped path selection again when admission commits", async () =>
   });
   const pending = test.service.request(
     owner.window,
-    { ...input, intent: "insert", preview: false },
+    { ...input, intent: "insert" },
     { ...owner.source, actionSelectionRevision: 7 },
     owner.abort.signal,
     async (_signal, commit) => {
@@ -401,7 +400,7 @@ it("checks the stamped path selection again when admission commits", async () =>
 it("serializes tracked path delivery and reports busy or unavailable without retargeting", async () => {
   const test = fixture();
   const owner = test.owner();
-  const pathInput = { ...input, intent: "insert" as const, preview: false };
+  const pathInput = { ...input, intent: "insert" as const };
   const tracked = () =>
     test.service.request(
       owner.window,
@@ -533,7 +532,7 @@ it.each([
   "navigation",
   "dispose",
 ] as const)(
-  "revokes a sent preview on %s and clears pending ownership",
+  "revokes a sent request on %s and clears pending ownership",
   async (mode) => {
     const test = fixture();
     const owner = test.owner();
@@ -668,16 +667,17 @@ it("does not access a retired window getter or send to destroyed contents", asyn
   expect(vi.getTimerCount()).toBe(0);
 });
 
-it("validates bounded literal input, exact keys, intent and preview", () => {
+it("validates bounded literal input, exact keys, intent and the retired preview flag", () => {
   expect(isSemanticInputRequest(input)).toBe(true);
   expect(
     isSemanticInputRequest({
       ...input,
       intent: "run",
-      preview: false,
       description: "",
     }),
   ).toBe(true);
+  // Earlier packages still send preview: false; it is accepted and ignored.
+  expect(isSemanticInputRequest({ ...input, preview: false })).toBe(true);
   expect(
     isSemanticInputRequest({
       ...input,
@@ -700,7 +700,8 @@ it("validates bounded literal input, exact keys, intent and preview", () => {
     { ...input, description: null },
     { ...input, description: "x".repeat(MAX_SNIPPET_DESCRIPTION_LENGTH + 1) },
     { ...input, intent: "paste" },
-    { ...input, preview: "true" },
+    { ...input, preview: true },
+    { ...input, preview: "false" },
   ])
     expect(isSemanticInputRequest(value)).toBe(false);
   for (const key of Object.keys(input)) {
@@ -729,12 +730,11 @@ it("validates selection and exact request/revoke/started/finished envelopes", ()
     { ...command, source: "" },
     { ...command, id: "" },
     { ...command, input: { ...input, intent: "write" } },
-    { ...command, waitForDelivery: true },
     { ...command, waitForDelivery: false },
     {
       ...command,
       waitForDelivery: true,
-      input: { ...input, preview: false, intent: "run" },
+      input: { ...input, intent: "run" },
     },
     { kind: "revoke", id: token, input },
   ])

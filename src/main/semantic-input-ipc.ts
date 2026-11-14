@@ -189,7 +189,7 @@ export function registerSemanticInputIpc(options: {
         options.quitting() ||
         !source.isCurrentVisible() ||
         !isSemanticInputRequest(input) ||
-        (waitForDelivery && (input.intent !== "insert" || input.preview))
+        (waitForDelivery && input.intent !== "insert")
       )
         return waitForDelivery
           ? Promise.resolve({ ok: false, reason: "terminal-unavailable" })
@@ -227,7 +227,7 @@ export function registerSemanticInputIpc(options: {
             resolve({ ok: false, reason: "terminal-unavailable" });
           else reject(new Error("Semantic input unavailable"));
         };
-        // Bound a missing renderer acknowledgement, not the user's preview time.
+        // Bound a missing renderer acknowledgement.
         const timer = setTimeout(cancel, 5000);
         owner.pending = {
           id,

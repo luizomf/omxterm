@@ -39,7 +39,6 @@ import {
 import type { TerminalHostClipboard } from "./terminal-pane-context-menu";
 import type { WindowSnippetsSource } from "./snippets-host";
 import { subscribeToWindowTools } from "./window-tool-subscriptions";
-import type { SnippetPreview } from "./snippet-preview";
 import type { AuxiliaryPanel } from "./auxiliary-panel";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import {
@@ -147,12 +146,8 @@ export function mountTerminalWindowPage(
   // assigned. Activity must already own exclusion, chrome and hover then.
   let dialogsActive = false;
   let palette: ReturnType<typeof createCommandPalette> | undefined;
-  let snippetPreview: SnippetPreview | undefined;
   let clearFilesDrop = () => {};
-  const modalActive = () =>
-    dialogsActive ||
-    (palette?.isActive() ?? false) ||
-    (snippetPreview?.isActive() ?? false);
+  const modalActive = () => dialogsActive || (palette?.isActive() ?? false);
   const previewActive = () =>
     (localImagePreview?.isActive() ?? false) || modalActive();
   const hoverAvailabilityListeners = new Set<() => void>();
@@ -341,8 +336,6 @@ export function mountTerminalWindowPage(
     chrome?.dispose();
     localImagePreview?.dispose();
     localImagePreview = undefined;
-    snippetPreview?.dispose();
-    snippetPreview = undefined;
     companion.dispose();
     auxiliaryPanel = undefined;
     tabs.dispose();
@@ -406,17 +399,14 @@ export function mountTerminalWindowPage(
         language,
         blocked: previewActive,
         semanticBlocked: companion.presentation.isInputBlocked,
-        onPreviewActivity: onOverlayActivity,
         modalClipboard: (action) => palette?.clipboardAction(action) ?? false,
         focusTerminal: companion.focusTerminal,
         sourceForeground: companion.isSourceForeground,
         sourceSelected: companion.isSourceSelected,
-        restoreSourceFocus: companion.restoreSourceFocus,
         togglePanelSide: companion.toggleSide,
       },
     );
     clearFilesDrop = tools.clearFileDrop;
-    snippetPreview = tools.preview;
     removeToolSubscriptions = tools.unsubscribe;
   } catch (error) {
     dispose();

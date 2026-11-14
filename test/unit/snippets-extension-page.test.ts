@@ -57,36 +57,34 @@ function setup() {
   const search = document.querySelector<HTMLInputElement>("input")!;
   return { activity, visibility, language, focus, request, search, page };
 }
-it("loads only on logical activation, preserves search and restores the initiating preview control", async () => {
+it("loads only on logical activation, preserves search and focuses search on intent", async () => {
   const h = setup();
   h.activity(true);
   h.visibility(true);
   h.focus("search");
   expect(document.activeElement).toBe(h.search);
   await settle();
-  const preview = document.querySelector<HTMLButtonElement>(
-    ".snippet-preview-open",
-  )!;
-  preview.click();
+  const row = document.querySelector<HTMLButtonElement>(".snippet-activate")!;
+  expect(row.title).toBe("Literal\n\n  echo 'hello'\r\n");
+  expect(row.closest("li")!.querySelectorAll("button")).toHaveLength(1);
+  row.click();
   expect(h.request).toHaveBeenLastCalledWith({
     operation: "terminal.semanticInput.v1",
     text: "  echo 'hello'\r\n",
     title: "Literal",
     intent: "run",
-    preview: true,
   });
+  row.focus();
   h.visibility(false);
   h.visibility(true);
   h.focus("restore");
-  expect(document.activeElement).toBe(preview);
+  expect(document.activeElement).toBe(h.search);
   expect(
     h.request.mock.calls.filter(
       ([value]) => (value as { operation: string }).operation === "open",
     ),
   ).toHaveLength(1);
   h.language("pt-BR");
-  expect(document.querySelector(".snippet-preview-open")).toBe(preview);
-  expect(document.activeElement).toBe(preview);
   h.search.value = "Literal";
   h.search.dispatchEvent(new Event("input"));
   h.activity(false);
@@ -101,24 +99,12 @@ it("loads only on logical activation, preserves search and restores the initiati
     ),
   ).toHaveLength(2);
 });
-it("refuses stale/hidden controls and falls back to search when the preview row was replaced", async () => {
+it("refuses stale and hidden controls", async () => {
   const h = setup();
   h.activity(true);
   h.visibility(true);
   await settle();
-  const preview = document.querySelector<HTMLButtonElement>(
-    ".snippet-preview-open",
-  )!;
-  preview.click();
-  h.search.value = "no match";
-  h.search.dispatchEvent(new Event("input"));
-  h.focus("restore");
-  expect(document.activeElement).toBe(h.search);
   const count = h.request.mock.calls.length;
-  preview.click();
-  expect(h.request).toHaveBeenCalledTimes(count);
-  h.search.value = "";
-  h.search.dispatchEvent(new Event("input"));
   const row = document.querySelector<HTMLButtonElement>(".snippet-activate")!;
   h.visibility(false);
   row.click();
@@ -126,11 +112,7 @@ it("refuses stale/hidden controls and falls back to search when the preview row 
   h.visibility(true);
   row.click();
   expect(h.request).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      preview: false,
-      intent: "run",
-      text: "  echo 'hello'\r\n",
-    }),
+    expect.objectContaining({ intent: "run", text: "  echo 'hello'\r\n" }),
   );
   h.page.dispose();
   h.page.dispose();

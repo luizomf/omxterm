@@ -226,13 +226,6 @@ export const englishMessages = {
     "Couldn't load snippets. Close and reopen Snippets to retry.",
   "snippets.insert": "Insert",
   "snippets.run": "Run · adds Enter",
-  "snippets.preview": "Preview",
-  "snippets.previewNamed": "Preview {name}",
-  "snippetPreview.body": "Snippet body",
-  "snippetPreview.insert": "Insert — no added Enter",
-  "snippetPreview.run": "Run — adds Enter",
-  "snippetPreview.unavailable":
-    "This snippet's terminal closed. Nothing will be sent.",
 
   "settings.title": "Settings",
   "settings.page.general": "General",

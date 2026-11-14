@@ -71,7 +71,6 @@ it("owns an empty Auxiliary Panel without enabling Snippets", async () => {
   expect(root.querySelector(".auxiliary-hide")).not.toBeNull();
   expect(document.querySelectorAll(".auxiliary-separator")).toHaveLength(1);
   expect(root.querySelector(".auxiliary-body")!.children).toHaveLength(0);
-  expect(document.querySelector(".snippet-preview")).toBeNull();
   expect(load).not.toHaveBeenCalled();
   host.dispose();
   host.dispose();

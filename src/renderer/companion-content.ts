@@ -341,18 +341,6 @@ export function createCompanionContent(
     },
     focusTerminal: (focus: () => void = options.focusTerminal) =>
       presentation.focusCore(focus),
-    restoreSourceFocus(id: string) {
-      if (
-        disposed ||
-        options.blocked() ||
-        presentation.isBlocked() ||
-        application?.kind !== "terminal" ||
-        selectedPanel()?.id !== id
-      )
-        return false;
-      presentation.restoreFocus();
-      return true;
-    },
     isSourceSelected(id: string) {
       return (
         !disposed &&

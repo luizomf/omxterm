@@ -2,12 +2,11 @@ import type { SemanticInputBridge } from "../shared/semantic-input";
 import type { createSemanticInput } from "./semantic-input";
 import type { SnippetTarget } from "./snippet-target";
 
-/** Bridges native admission to the same window-owned input/preview as built-in UI. */
+/** Bridges native admission to the same window-owned input as built-in UI. */
 export function subscribeNativeSemanticInput(
   bridge: SemanticInputBridge,
   input: ReturnType<typeof createSemanticInput>,
   selectionRevision: () => number,
-  restoreSourceFocus: (id: string) => boolean,
   selectedSession: () => string | undefined,
   takeDropTarget?: (ticket: string) => SnippetTarget | undefined,
 ) {
@@ -61,9 +60,7 @@ export function subscribeNativeSemanticInput(
             ? {}
             : { description: request.description }),
         },
-        request.preview ? "preview" : request.intent,
-        () =>
-          !current.abort.signal.aborted && restoreSourceFocus(command.source),
+        request.intent,
         current.abort.signal,
         command.waitForDelivery === true,
         dropTarget

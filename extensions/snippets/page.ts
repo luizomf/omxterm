@@ -23,9 +23,8 @@ export function mountSnippetsPage(document: Document, bridge: SnippetsBridge) {
   let active = false;
   let visible = false;
   let disposed = false;
-  let returnFocus: (() => boolean) | undefined;
   const interactive = () => active && visible && !disposed;
-  const requestInput = (snippet: TerminalSnippet, preview: boolean) => {
+  const requestInput = (snippet: TerminalSnippet) => {
     void bridge
       .request({
         operation: "terminal.semanticInput.v1",
@@ -35,7 +34,6 @@ export function mountSnippetsPage(document: Document, bridge: SnippetsBridge) {
           ? {}
           : { description: snippet.description }),
         intent: snippet.execute ? "run" : "insert",
-        preview,
       })
       .catch(() => {
         /* Retirement/unavailable input never retries or redirects. */
@@ -49,14 +47,7 @@ export function mountSnippetsPage(document: Document, bridge: SnippetsBridge) {
     },
     isInteractive: interactive,
     language,
-    inject(snippet) {
-      returnFocus = undefined;
-      requestInput(snippet, false);
-    },
-    preview(snippet, restore) {
-      returnFocus = restore;
-      requestInput(snippet, true);
-    },
+    inject: requestInput,
   });
   document.body.append(view.element);
   const removers = [
@@ -71,18 +62,15 @@ export function mountSnippetsPage(document: Document, bridge: SnippetsBridge) {
     bridge.onActivity((next) => {
       if (disposed || next === active) return;
       active = next;
-      returnFocus = undefined;
       if (active) view.activate();
       else {
         catalog.cancel();
         view.deactivate();
       }
     }),
-    bridge.onFocusIntent((intent) => {
+    bridge.onFocusIntent(() => {
       if (!interactive()) return;
-      const restore = returnFocus;
-      returnFocus = undefined;
-      if (intent !== "restore" || !restore?.()) view.focus();
+      view.focus();
     }),
   ];
   const dispose = () => {

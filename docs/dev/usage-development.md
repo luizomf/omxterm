@@ -56,7 +56,7 @@ command is running. `"confirmClose": false` turns the prompt off.
   focused Terminal Surface after palette input isn't established.
 - The palette keeps its original tab and pane target and never runs against a
   replacement. It can open above Settings without losing drafts or pending
-  saves, but doesn't stack with About, image preview or snippet preview. Cancel
+  saves, but doesn't stack with About or image preview. Cancel
   returns focus to the prior control if its target still exists.
 - Losing window focus invalidates the open palette; reopen it before choosing.
   Reopen after a language or shortcut change to refresh the list.

@@ -59,7 +59,6 @@ export function createFilesPathInsertion(
         text,
         title: "File path",
         intent: "insert",
-        preview: false,
       },
       signal,
       context,

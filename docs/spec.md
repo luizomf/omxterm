@@ -612,8 +612,7 @@ quietest form that works:
 
 ### Modal overlay rules
 
-About, Command Palette, Local Image Preview, and the Snippets preview are modal
-overlays.
+About, Command Palette, and Local Image Preview are modal overlays.
 
 - They never stack: opening one while another is choosing, loading, or showing
   is ignored. Settings is nonmodal application content; About and menu-triggered
@@ -630,7 +629,7 @@ overlays.
   configuration updates, approved pane/tab/session/window closure, failure
   acknowledgement, and Quit stay active. Already accepted terminal input is not
   rolled back.
-- About, Command Palette, Local Image Preview and the Snippets preview share
+- About, Command Palette and Local Image Preview share
   one overlay recipe: theme-derived surface, subtle hairline, 8 px radius,
   quiet filled buttons and the same typography (the SSH exit notice uses the
   same surface). Their background tint follows effective window transparency
@@ -882,25 +881,12 @@ Connect share it; no per-tool placement or second panel exists.
 - Enter on a row owns that gesture's held repeats and release, so they cannot
   add a terminal Enter outside the snippet's `execute` choice. A fresh terminal
   key is ordinary input.
-- A separate **Preview** control opens a temporary read-only dialog that shows
-  the stored body exactly, without trimming or normalization. It captures the
-  focused pane's live Surface first; with no live Surface it does not open. Its
-  final **Insert — no added Enter** or **Run — adds Enter** choice wins over
-  `execute`, is accepted once, closes the preview, and returns focus to the
-  terminal.
-- Cancel or Escape sends nothing and restores focus to the Preview control (when
-  still connected, enabled, and interactive in the visible view), otherwise
-  panel search, otherwise the live selected terminal. It never reopens a hidden
-  panel.
-- If the captured Surface ends or fails while the preview is open, its actions
-  are disabled even if the pane stays visible for failure acknowledgement.
-  Removal, tab closure, and host disposal also end that target exactly once,
-  before exit or fatal failure is forwarded. Nothing goes to a sibling or
-  replacement pane, and an unavailable Surface cannot be captured for a new
-  preview.
-- Language switching relabels row/preview controls and the unavailable notice
-  without replacing DOM, moving focus, rereading YAML, recapturing the target,
-  changing user text, or re-enabling a dead target's actions.
+- Each row has a single control, so Tab moves from the search field to each row
+  in turn with no extra stops. The row's tooltip shows the full name, then the
+  stored body, cut to a bounded length with an ellipsis when long, so hovering shows what will be
+  sent. There is no preview dialog; a click sends the body at once.
+- Language switching relabels row intents without replacing DOM, moving focus,
+  rereading YAML, recapturing the target, or changing user text.
 - Insert only omits the added Enter: embedded line breaks or control characters
   can still execute, and Protected Paste may still ask for confirmation. Hiding
   does not cancel accepted Surface-owned delivery; closing that Surface stops
@@ -2097,7 +2083,7 @@ See [ADR 0035](adr/0035-select-the-interface-language-explicitly.md).
   from the system locale.
 - It covers native menus (including View → Pane), the Close Pane and Close Tab
   dialogs, pane Surface and separator accessible names, Window Chrome, the
-  Auxiliary Panel, the Snippets Sidebar and preview, Settings, Local Image
+  Auxiliary Panel, the Snippets Sidebar, Settings, Local Image
   Preview, About and Scrollback Search, plus the document's accessibility
   language and resize value text.
 - Main reads it from the active configuration whenever it builds a menu or opens
@@ -2746,8 +2732,8 @@ content; Settings and terminal panes are unaffected.
   child into the currently selected Surface. Hiding or losing selection revokes
   it, even if the child is shown again; same-view geometry updates do not.
   Main captures the selection revision before admission and core refuses a
-  changed selection. Insert, Run and preview reuse Protected Paste, modal
-  exclusion and the built-in Snippets preview owner; native Enter repeats and
+  changed selection. Insert and Run reuse Protected Paste and modal
+  exclusion; native Enter repeats and
   release stay owned across focus handoff. Retirement cancels pending requests
   but not accepted input or sessions.
 - `terminal.insertPath.v1` inserts one bounded absolute lexical path, quoted by

@@ -127,12 +127,11 @@ async function fixture() {
     () => targets[selected as "first" | "second"],
   );
   const focusCapturedTarget = vi.fn();
-  const input = createSemanticInput(document, {
+  const input = createSemanticInput({
     capture,
     blocked: () => false,
     focusTerminal() {},
     focusCapturedTarget,
-    onPreviewActivity() {},
   });
   const coreBridge = createSemanticInputBridge({
     on: (channel, listener) => {
@@ -148,7 +147,6 @@ async function fixture() {
     coreBridge,
     input,
     () => rendererRevision,
-    () => false,
     () => selected,
   );
   const child = Object.assign(new EventEmitter(), {
@@ -252,7 +250,6 @@ async function fixture() {
           text,
           title: "File path",
           intent: "insert",
-          preview: false,
         },
         context,
         signal,
@@ -263,7 +260,7 @@ async function fixture() {
   });
   cleanups.push(async () => {
     unsubscribe();
-    input.preview.dispose();
+    input.dispose();
     await host.retire();
     service.dispose();
   });

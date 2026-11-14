@@ -18,7 +18,8 @@ export interface SemanticInputRequest {
   readonly title: string;
   readonly description?: string;
   readonly intent: "insert" | "run";
-  readonly preview: boolean;
+  // Retired: earlier packages send false; true is refused.
+  readonly preview?: false;
 }
 export type SemanticInputCommand =
   | {
@@ -59,7 +60,7 @@ export function isSemanticInputRequest(
       "text",
       "title",
       "intent",
-      "preview",
+      ...("preview" in value ? ["preview"] : []),
       ...("description" in value ? ["description"] : []),
     ])
   )
@@ -76,7 +77,7 @@ export function isSemanticInputRequest(
       (typeof value.description === "string" &&
         value.description.length <= MAX_SNIPPET_DESCRIPTION_LENGTH)) &&
     (value.intent === "insert" || value.intent === "run") &&
-    typeof value.preview === "boolean"
+    (value.preview === undefined || value.preview === false)
   );
 }
 export function isSemanticInputCommand(
@@ -110,9 +111,7 @@ export function isSemanticInputCommand(
     isSelectionRevision(value.revision) &&
     isSemanticInputRequest(value.input) &&
     (value.waitForDelivery === undefined ||
-      (value.waitForDelivery === true &&
-        value.input.intent === "insert" &&
-        !value.input.preview)) &&
+      (value.waitForDelivery === true && value.input.intent === "insert")) &&
     (value.dropTicket === undefined ||
       (isLayoutToken(value.dropTicket) && value.waitForDelivery === true))
   );

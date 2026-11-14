@@ -5,6 +5,17 @@ import type {
 import type { AuxiliaryView } from "./auxiliary-panel";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
+const TOOLTIP_BODY_LIMIT = 500;
+
+// The full name first (rows cut long names), then what will be sent.
+function rowTooltip(name: string, body: string) {
+  const shown =
+    body.length > TOOLTIP_BODY_LIMIT
+      ? `${body.slice(0, TOOLTIP_BODY_LIMIT)}…`
+      : body;
+  return `${name}\n\n${shown}`;
+}
+
 // Content/query/scroll belong to this view; visibility, focus transitions and
 // resize belong to the window's auxiliary host. Reread YAML on every activation.
 export function createSnippetsView(
@@ -12,11 +23,6 @@ export function createSnippetsView(
   options: {
     readonly loadSnippets: () => Promise<TerminalSnippetsResponse>;
     readonly inject: (snippet: TerminalSnippet) => void;
-    // returnFocus reports whether the view could take focus back on cancel.
-    readonly preview: (
-      snippet: TerminalSnippet,
-      returnFocus: () => boolean,
-    ) => void;
     readonly isInteractive: () => boolean;
     readonly language?: RendererLanguage;
   },
@@ -75,7 +81,6 @@ export function createSnippetsView(
         const name = document.createElement("span");
         name.className = "snippet-name";
         name.textContent = snippet.name;
-        name.title = snippet.name;
         button.append(name);
         if (snippet.description) {
           const description = document.createElement("span");
@@ -87,36 +92,18 @@ export function createSnippetsView(
         const intent = document.createElement("span");
         intent.className = "snippet-intent ui-meta";
         button.append(intent);
+        button.title = rowTooltip(snippet.name, snippet.body);
         button.addEventListener("click", () => {
           if (usable()) options.inject(snippet);
         });
-        const preview = document.createElement("button");
-        preview.type = "button";
-        preview.className =
-          "snippet-preview-open page-control page-button page-button-text page-button-compact";
         const relabel = (t: RendererLanguage["t"]) => {
           intent.textContent = t(
             snippet.execute ? "snippets.run" : "snippets.insert",
           );
-          preview.textContent = t("snippets.preview");
-          preview.setAttribute(
-            "aria-label",
-            t("snippets.previewNamed", { name: snippet.name }),
-          );
         };
         rowLabels.push(relabel);
         relabel(language.t);
-        const returnFocus = () => {
-          if (!active || disposed || !options.isInteractive()) return false;
-          const control =
-            preview.isConnected && !preview.disabled ? preview : search;
-          control.focus();
-          return document.activeElement === control;
-        };
-        preview.addEventListener("click", () => {
-          if (usable()) options.preview(snippet, returnFocus);
-        });
-        item.append(button, preview);
+        item.append(button);
         return item;
       }),
     );
