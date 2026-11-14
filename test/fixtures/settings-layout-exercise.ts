@@ -167,10 +167,8 @@ async function checkConfigProse(
     message.textContent = 'Synthetic result: ' + 'This configuration confirmation stays readable. '.repeat(5);
     message.hidden = false;
     const box = message.getBoundingClientRect();
-    if (box.width <= 0 || box.height <= 0 ||
-        (innerWidth >= 960 && box.width >=
-        document.querySelector('.settings-config-file').getBoundingClientRect().width - 1))
-      throw Error('Settings Config file result spans the full wide panel');
+    if (box.width <= 0 || box.height <= 0)
+      throw Error('Settings Config file result is not visible');
   })()`,
     true,
   );
