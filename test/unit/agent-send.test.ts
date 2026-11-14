@@ -78,7 +78,7 @@ const failure = (promise: Promise<unknown>) =>
     (error: unknown) => (error instanceof AgentApiError ? error.code : error),
   );
 
-it("pastes a multi-line text where the program takes a paste, and types it elsewhere", async () => {
+it("pastes a multi-line text where the program takes a paste, and types it elsewhere with Enter per line", async () => {
   vi.useFakeTimers();
   const window = fakeWindow();
   const bracketed = new Map([
@@ -95,7 +95,7 @@ it("pastes a multi-line text where the program takes a paste, and types it elsew
     encode: vi.fn(),
     modes,
   });
-  const script = "read x\necho $x";
+  const script = "read x\r\necho $x\nexit";
   const pasted = commands.run(
     "send",
     { pane: "s1", text: script, keys: ["Enter"] },
@@ -113,9 +113,10 @@ it("pastes a multi-line text where the program takes a paste, and types it elsew
     "s2",
   ]);
   expect(window.writes).toEqual([
-    ["s1", "\x1b[200~read x\necho $x\x1b[201~"],
+    ["s1", "\x1b[200~read x\r\necho $x\nexit\x1b[201~"],
     ["s1", "\r"],
-    ["s2", "read x\necho $x"],
+    // Typed, each line break is the Enter key (#1126).
+    ["s2", "read x\recho $x\rexit"],
     ["s1", "echo hi"],
   ]);
 });
@@ -160,7 +161,7 @@ it("runs a text that ends in one line break, as Enter after it", async () => {
     ["s1", "\r"],
     ["s1", "\x1b[200~a\nb\x1b[201~"],
     ["s1", "\r"],
-    ["s2", "a\nb"],
+    ["s2", "a\rb"],
     ["s2", "\r"],
     ["s1", "\r"],
   ]);

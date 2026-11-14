@@ -423,6 +423,14 @@ function asPaste(text: string): string {
   return PASTE_START + text + PASTE_END;
 }
 
+// A multi-line text typed as the user types it: each line break is the
+// Enter key (CR), as a keyboard sends it. A shell's tty reads CR and LF
+// alike, but Windows PowerShell's PSReadLine reads a typed LF as Ctrl+Enter
+// (insert a line above) and cmd.exe drops it (#1126).
+function typedLines(text: string): string {
+  return text.replace(/\r\n|\n/gu, "\r");
+}
+
 // send's text and keys as checked, before anything is written.
 function sendRequest(args: unknown) {
   const value = argumentsOf(args, ["pane"], ["text", "keys"]);
@@ -586,8 +594,8 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     },
 
     // A multi-line text goes as a paste when the pane's program accepts one,
-    // as the user's paste would (#1110); any other text is typed. A final
-    // line break is an Enter after it. Keys follow
+    // as the user's paste would (#1110); any other text is typed, its line
+    // breaks as Enter. A final line break is an Enter after it. Keys follow
     // in their own write after a gap, so a program doesn't read them as part
     // of the text (#1109).
     send(args, caller) {
@@ -596,11 +604,11 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       return inOrder(sessionId, async () => {
         caller.signal.throwIfAborted();
         let data = text;
-        if (text !== undefined && multiLine && options.modes) {
-          await caughtUp(sessionId, caller.signal);
-          const modes = await options.modes(sessionId, caller.signal);
+        if (text !== undefined && multiLine) {
+          if (options.modes) await caughtUp(sessionId, caller.signal);
+          const modes = await options.modes?.(sessionId, caller.signal);
           if (disposed) throw revoked();
-          if (modes.bracketedPaste) data = asPaste(text);
+          data = modes?.bracketedPaste ? asPaste(text) : typedLines(text);
         }
         const { receipt, offset } = writeInput(sessionId, data ?? keys);
         if (data === undefined || keys === "" || receipt !== "accepted")
