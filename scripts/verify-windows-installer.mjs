@@ -65,13 +65,15 @@ export function inspectWindowsInstallerInputs(
   // options are unchanged.
   // #1078 ships the same client on Windows as resources/agent-ctl, with its
   // .cmd launcher. NSIS identity, paths, templates and options are unchanged.
+  // #1081 ships a console launcher, omxterm-ctl.exe, in place of the .cmd.
+  // NSIS identity, paths, templates and options are unchanged.
   const digest = (text) =>
     createHash("sha256").update(text.replaceAll("\r\n", "\n")).digest("hex");
   if (
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest(configuration) !==
-      "9d354b042a9edc8a246c7f41b3895bbe3a53b6b5b58d7aec758778b48f31f2a3" ||
+      "bcdcdcd3b728a3cb350dc135fc84b73572dca063d69f42ce60078e460e88362c" ||
     typeof nsisInclude !== "string" ||
     digest(nsisInclude) !==
       "98bb5a2a43c4e4bad076c7476410a1256420dd917b5d8cd3d59a2ef2759a5aeb"

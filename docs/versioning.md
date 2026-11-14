@@ -111,6 +111,9 @@ A design pass (#1082–#1088: tab strip inset, one-line snippet names, "Quit
 OMXTerm", sentence-case labels, full-width notices, quieter focus, plain
 dialog and error copy) moves main to `0.34.0-dev.1`.
 
+A console launcher for the Windows agent client, in place of the `.cmd`
+(#1081), moves main to `0.34.0-dev.2`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

@@ -110,7 +110,7 @@ first two slices (macOS and Linux: drive the window, then an agent guide and an
 MCP server) are accepted and implemented. Its keyboard-parity rule is accepted
 for slice 4: in that window the agent may press what the user can press,
 except the grant toggle, and the mark turns to the error tone. Slice 5 brings
-it to Windows over a named pipe with an `omxterm-ctl.cmd` launcher. Other
+it to Windows over a named pipe with an `omxterm-ctl.exe` console launcher. Other
 later slices remain proposed. It amends ADRs 0004, 0013 and 0050. The
 [Agent API reference](../dev/agent-api.md) holds the protocol and CLI.
 

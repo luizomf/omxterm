@@ -5,6 +5,7 @@ import path from "node:path";
 import { buildMacOSWindowBlur } from "./scripts/build-macos-window-blur.mjs";
 import { buildMacOSOptionShortcut } from "./scripts/build-macos-option-shortcut.mjs";
 import { buildExtensionRuntime } from "./scripts/build-extension-runtime.mjs";
+import { buildAgentCtlLauncher } from "./scripts/build-agent-ctl-launcher.mjs";
 
 const projectRoot = path.resolve(import.meta.dirname);
 const outputRoot = path.join(projectRoot, "dist");
@@ -78,7 +79,8 @@ await Promise.all([
       outfile: "dist/agent-ctl/omxterm-ctl.cjs",
     });
     await cp("src/agent-ctl/omxterm-ctl", "dist/agent-ctl/omxterm-ctl");
-    await cp("src/agent-ctl/omxterm-ctl.cmd", "dist/agent-ctl/omxterm-ctl.cmd");
+    if (process.platform === "win32")
+      await buildAgentCtlLauncher("dist/agent-ctl");
     // Every account that runs the installed app can run its client.
     await chmod("dist/agent-ctl/omxterm-ctl", 0o755);
     await chmod("dist/agent-ctl/omxterm-ctl.cjs", 0o644);

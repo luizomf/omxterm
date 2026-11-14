@@ -114,7 +114,7 @@ export { agentEndpointPath } from "./agent-grant-files";
 
 /**
  * The `omxterm-ctl` launcher `OMXTERM_CTL` names, in `<directory>/agent-ctl`:
- * a `.cmd` on Windows, where the GUI executable run directly from PowerShell
+ * a console executable on Windows, where the GUI executable run directly
  * loses its output, exit code and wait; a POSIX script elsewhere.
  */
 export function agentLauncherPath(
@@ -124,7 +124,7 @@ export function agentLauncherPath(
   return path.join(
     directory,
     "agent-ctl",
-    platform === "win32" ? "omxterm-ctl.cmd" : "omxterm-ctl",
+    platform === "win32" ? "omxterm-ctl.exe" : "omxterm-ctl",
   );
 }
 

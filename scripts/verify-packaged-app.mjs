@@ -22,6 +22,7 @@ import { linuxHelperName, renderLinuxHelper } from "./package-linux-assets.mjs";
 import { verifyExactWindowsInstaller } from "./windows-installer-transaction.mjs";
 import { windowsVerificationOptions } from "./windows-verification-options.mjs";
 import { inspectLinuxAppRun } from "./verify-linux-launcher.mjs";
+import { inspectWindowsAgentLauncher } from "./verify-windows-agent-launcher.mjs";
 import { releaseDesignatedRequirement } from "./sign-macos.mjs";
 import { bundleExecutables } from "./macos-executable-uuid.mjs";
 import { launchLinuxPackagedProcess } from "./linux-packaged-process.mjs";
@@ -1273,6 +1274,7 @@ export async function verifyPackagedApplication(
     );
 
     await inspectArchitecture(executable, "OMXTerm executable", platform);
+    if (platform === "win32") await inspectWindowsAgentLauncher(resources);
     const selectedNativeFiles =
       platform === "win32"
         ? windowsNativeFiles

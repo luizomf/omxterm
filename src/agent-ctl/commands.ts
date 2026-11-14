@@ -115,6 +115,37 @@ export function parse(argv: readonly string[]): Options {
   return options;
 }
 
+/**
+ * `--text -` or `--match -`: the CLI's text from stdin instead of an argument,
+ * so no shell or launcher reads it as syntax. Strict UTF-8, without the byte
+ * order marks Windows PowerShell puts first and one final line break, which
+ * `echo` and every pipe add. MCP passes its text as is and never calls this.
+ */
+export async function textFromStdin(
+  options: Options,
+  read: () => Promise<Buffer>,
+): Promise<void> {
+  const fields = (["text", "match"] as const).filter(
+    (field) => options[field] === "-",
+  );
+  if (fields.length === 0) return;
+  if (fields.length > 1)
+    throw new CtlError(
+      EXIT.usage,
+      "Only one of --text and --match can read stdin.",
+    );
+  const bytes = await read();
+  let text: string;
+  try {
+    text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(
+      bytes,
+    );
+  } catch {
+    throw new CtlError(EXIT.usage, "The text on stdin isn't UTF-8.");
+  }
+  options[fields[0]!] = text.replace(/^\uFEFF+/u, "").replace(/\r?\n$/u, "");
+}
+
 function defaultProfile(): string {
   const home = os.homedir();
   if (process.platform === "darwin")

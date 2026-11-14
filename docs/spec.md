@@ -1320,10 +1320,10 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   an agent in a pane runs `"$OMXTERM_CTL" status` with no setup. Without a
   grant it prints one sentence that names **Allow Agents in This Window** and
   exits 3.
-- On Windows `OMXTERM_CTL` is a `.cmd`, and cmd.exe re-reads its arguments:
-  `%NAME%` expands and unquoted `&`, `|`, `<` and `>` act as shell operators.
-  Until [#1081](https://github.com/luizomf/omxterm/issues/1081), arbitrary
-  text goes through `mcp`, whose arguments travel over stdin.
+- On Windows `OMXTERM_CTL` is `omxterm-ctl.exe`, a console program that
+  hands the client its arguments as the caller wrote them; no cmd.exe reads
+  them on the way. `send --text -` and `wait --match -` read the text from
+  stdin instead, on every platform, so it never meets a shell's quoting.
 - `"$OMXTERM_CTL" guide` prints a short agent guide, which is also a
   `SKILL.md` an agent can keep. `"$OMXTERM_CTL" mcp` serves `status`, `list`,
   `keys`, `send`, `press`, `read` and `wait` as MCP tools on stdio, with the CLI's
@@ -1538,7 +1538,7 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 - The environment sets `TERM=xterm-256color`, `COLORTERM=truecolor`,
   `TERM_PROGRAM=OMXTerm` and the installed version in `TERM_PROGRAM_VERSION`.
 - It also sets `OMXTERM_CTL` (the bundled `omxterm-ctl` launcher,
-  `omxterm-ctl.cmd` on Windows), `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE`
+  `omxterm-ctl.exe` on Windows), `OMXTERM_PROFILE` (the profile directory) and `OMXTERM_PANE`
   (process instance, window and session id, such as `5f0c9a1e2b3d4c6f:3:s4`) for
   [agent access](#agent-access),
   replacing any inherited values. None is secret.
