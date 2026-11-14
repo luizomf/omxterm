@@ -48,7 +48,10 @@ own query. `test/unit/agent-screen-read.test.ts` runs it against the real core.
 that read saw, from the input handler's own tracking, so an agent's `wait`
 with `match` counts copies per screen. A reset (RIS, `ESC c`) clears that
 flag too, since it takes the core back to the main screen
-(`risAltScreenCorrections`).
+(`risAltScreenCorrections`). It also turns off the modes the filter alone
+owns (mouse reporting, bracketed paste, focus reporting) and its
+synchronized-output flag, keeping the user's mouse setting
+(`risModeCorrections`, `test/unit/restty-reset-modes.test.ts`).
 
 ### Pending-wrap resize coverage
 
@@ -311,7 +314,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `3cdffe590dff2c420f41841fbe6aacdc4cad94e60ba927c6610514965db4c83c` |
+| Restty JavaScript runtime | `1a067f98ac1905611f51d186a95bae144c496174a6aa0f5de4ddea591608f533` |
 | Embedded-core chunk       | `9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |

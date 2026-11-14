@@ -124,3 +124,36 @@ export const risAltScreenCorrections = [
         result += ch;`,
   },
 ];
+
+// RIS also returns every mode to its default. The filter alone owns mouse
+// reporting, bracketed paste and focus reporting (the core never sees those
+// sequences), and keeps its own synchronized-output flag, so after `reset`
+// clicks, paste and focus would still be reported to a program that is gone.
+// The user's mouse setting (`mode`) is kept.
+export const risModeCorrections = [
+  {
+    original: `        if (data[i + 1] === "c")
+          this.altScreen = false;`,
+    corrected: `        if (data[i + 1] === "c") {
+          this.altScreen = false;
+          this.bracketedPaste = false;
+          this.focusReporting = false;
+          this.synchronizedOutput = false;
+          this.mouse.reset();
+        }`,
+  },
+  {
+    original: "  isX10EventMode() {",
+    corrected: `  reset() {
+    this.flags = { 1000: false, 1002: false, 1003: false };
+    this.x10Event = false;
+    this.format = "x10";
+    this.pressed = false;
+    this.button = 0;
+    this.pendingWheelX = 0;
+    this.pendingWheelY = 0;
+    this.setMode(this.mode);
+  }
+  isX10EventMode() {`,
+  },
+];
