@@ -7,7 +7,7 @@ not install SSH or store your keys.
 
 ## Availability
 
-SSH Connect 0.4.0 runs on macOS (Apple silicon) and Linux with OMXTerm 0.27.0
+SSH Connect 0.4 runs on macOS (Apple silicon) and Linux with OMXTerm 0.27.0
 or later, and on Windows with OMXTerm 0.28.0 or later (earlier Windows versions
 can't find `ssh.exe`). A real Windows connection hasn't been tested yet. On OMXTerm 0.26,
 install [SSH Connect 0.3.2](https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.3.2)
@@ -18,7 +18,7 @@ for how it is built and its current limits.
 
 1. In OMXTerm, open **Settings → Extensions** and choose **Browse official
    extensions**.
-2. Find **SSH Connect**. Check that the card offers version **0.4.0**, then
+2. Find **SSH Connect**. Check that the card offers version **0.4.1**, then
    choose **Install** and review the trust warning. Extensions run with your
    account's permissions; the warning is not a sandbox.
 3. Return to a terminal tab (open one if needed); the panel is suspended while
