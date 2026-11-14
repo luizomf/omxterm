@@ -52,7 +52,7 @@
     {
       "id": "omxterm.snippets",
       "name": "Snippets",
-      "description": "Search your saved text snippets, preview the exact text, then insert it into the terminal or run it.",
+      "description": "Search your saved text snippets, hover one to see its full text, then insert it into the terminal or run it.",
       "version": "0.1.3",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
