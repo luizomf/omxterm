@@ -120,6 +120,9 @@ body) moves main to `0.34.0-dev.3`.
 The agent guide's per-shell Windows calls and `--text -` (#1079) move main to
 `0.34.0-dev.4`.
 
+`omxterm-ctl` refusing a stray argument instead of dropping it (#1096), plus
+two guide lines checked on winvm, move main to `0.34.0-dev.5`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

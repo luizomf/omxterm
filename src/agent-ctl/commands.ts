@@ -330,6 +330,14 @@ export async function execute(
     )
   )
     throw new CtlError(EXIT.usage, `Unknown command ${options.command}.`);
+  // A shell that splits a quoted argument leaves its tail here; typing the
+  // head and dropping the rest would run a cut-off command.
+  const panes = ["send", "read", "wait"].includes(options.command!) ? 1 : 0;
+  if (options.command !== "press" && options.positional.length > panes)
+    throw new CtlError(
+      EXIT.usage,
+      `Unexpected ${JSON.stringify(options.positional[panes])}. Quote the text, or pipe it with --text -.`,
+    );
 
   const window = chooseWindow(options, profile);
   const own = ownPane(options);
