@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import {
   AgentApiError,
+  agentKeysGapMs,
   createAgentCommands,
 } from "../../src/main/agent-commands";
 import type {
@@ -133,7 +134,8 @@ it("lists a tab title as plain text and passes the window's failure on", async (
   );
 });
 
-it("types text and mode-independent keys in one write and returns the offset", async () => {
+it("types text, then writes its keys apart after a gap, and returns the offset", async () => {
+  vi.useFakeTimers();
   const window = fakeWindow();
   window.output("s1", 40);
   const commands = createAgentCommands({
@@ -142,14 +144,31 @@ it("types text and mode-independent keys in one write and returns the offset", a
     read: vi.fn(),
     encode: vi.fn(),
   });
-  await expect(
-    commands.run(
-      "send",
-      { pane: "s1", text: "npm test", keys: ["Enter", "ctrl+c", "Tab"] },
-      caller(),
-    ),
-  ).resolves.toEqual({ receipt: "accepted", offset: 40 });
-  expect(window.writes).toEqual([["s1", "npm test\r\x03\t"]]);
+  const sent = commands.run(
+    "send",
+    { pane: "s1", text: "npm test", keys: ["Enter", "ctrl+c", "Tab"] },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  // A program like Claude Code reads text and Enter in one chunk as a paste.
+  expect(window.writes).toEqual([["s1", "npm test"]]);
+  await vi.advanceTimersByTimeAsync(agentKeysGapMs(8) - 1);
+  expect(window.writes).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(1);
+  await expect(sent).resolves.toEqual({ receipt: "accepted", offset: 40 });
+  expect(window.writes).toEqual([
+    ["s1", "npm test"],
+    ["s1", "\r\x03\t"],
+  ]);
+  // Text or keys alone are one write, at once.
+  await commands.run("send", { pane: "s1", keys: ["Enter"] }, caller());
+  await commands.run("send", { pane: "s1", text: "ls" }, caller());
+  expect(window.writes.slice(2)).toEqual([
+    ["s1", "\r"],
+    ["s1", "ls"],
+  ]);
+  vi.useRealTimers();
+  window.writes.length = 0;
 
   const refusals = await Promise.all([
     failure(commands.run("send", { pane: "s1", keys: ["Up"] }, caller())),
@@ -175,7 +194,144 @@ it("types text and mode-independent keys in one write and returns the offset", a
     "invalid-request",
     "invalid-request",
   ]);
-  expect(window.writes).toHaveLength(1);
+  expect(window.writes).toEqual([]);
+});
+
+it("pastes a multi-line text where the program takes a paste, and types it elsewhere", async () => {
+  vi.useFakeTimers();
+  const window = fakeWindow();
+  const bracketed = new Map([
+    ["s1", true],
+    ["s2", false],
+  ]);
+  const modes = vi.fn((sessionId: string) =>
+    Promise.resolve({ bracketedPaste: bracketed.get(sessionId)! }),
+  );
+  const commands = createAgentCommands({
+    tabs: tabs(),
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode: vi.fn(),
+    modes,
+  });
+  const script = "read x\necho $x";
+  const pasted = commands.run(
+    "send",
+    { pane: "s1", text: script, keys: ["Enter"] },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(1000);
+  await expect(pasted).resolves.toEqual({ receipt: "accepted", offset: 0 });
+  const typed = commands.run("send", { pane: "s2", text: script }, caller());
+  await vi.advanceTimersByTimeAsync(0);
+  await expect(typed).resolves.toEqual({ receipt: "accepted", offset: 0 });
+  // One line is typed without asking the window.
+  await commands.run("send", { pane: "s1", text: "echo hi" }, caller());
+  expect(modes.mock.calls.map(([sessionId]) => sessionId)).toEqual([
+    "s1",
+    "s2",
+  ]);
+  expect(window.writes).toEqual([
+    ["s1", "\x1b[200~read x\necho $x\x1b[201~"],
+    ["s1", "\r"],
+    ["s2", "read x\necho $x"],
+    ["s1", "echo hi"],
+  ]);
+});
+
+it("writes nothing when a paste can't be framed or the window can't say", async () => {
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    tabs: tabs(),
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode: vi.fn(),
+    modes: vi
+      .fn()
+      .mockResolvedValueOnce({ bracketedPaste: true })
+      .mockRejectedValueOnce(new AgentApiError("unavailable", "slow")),
+  });
+  const codes = [
+    await failure(
+      commands.run("send", { pane: "s1", text: "a\n\x1b[201~b" }, caller()),
+    ),
+    await failure(commands.run("send", { pane: "s1", text: "a\nb" }, caller())),
+    // The paste's markers count toward the limit.
+    await failure(
+      commands.run(
+        "send",
+        { pane: "s1", text: `${"x".repeat(64 * 1024 - 6)}\n` },
+        caller(),
+      ),
+    ),
+  ];
+  expect(codes).toEqual(["invalid-request", "unavailable", "too-large"]);
+  expect(window.writes).toEqual([]);
+});
+
+it("sends no keys once the grant ends, the agent goes or the pane ends during the gap", async () => {
+  vi.useFakeTimers();
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    tabs: tabs(),
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode: vi.fn(),
+  });
+  const send = (pane: string, signal = new AbortController().signal) =>
+    commands.run("send", { pane, text: "hello", keys: ["Enter"] }, { signal });
+
+  const agent = new AbortController();
+  const gone = failure(send("s1", agent.signal));
+  await vi.advanceTimersByTimeAsync(0);
+  agent.abort(new AgentApiError("unavailable", "The agent went away."));
+  expect(await gone).toBe("unavailable");
+
+  const ended = send("s2");
+  await vi.advanceTimersByTimeAsync(0);
+  window.exit("s2", 0);
+  await vi.advanceTimersByTimeAsync(1000);
+  // The text was written; the keys weren't.
+  await expect(ended).resolves.toEqual({ receipt: "unknown", offset: 0 });
+
+  const revoked = failure(send("s1"));
+  await vi.advanceTimersByTimeAsync(0);
+  commands.dispose();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(await revoked).toBe("revoked");
+  expect(window.writes).toEqual([
+    ["s1", "hello"],
+    ["s2", "hello"],
+    ["s1", "hello"],
+  ]);
+});
+
+it("keeps a press to the same pane out of a send's gap", async () => {
+  vi.useFakeTimers();
+  const window = fakeWindow();
+  const commands = createAgentCommands({
+    tabs: tabs(),
+    sessions: window.sessions,
+    read: vi.fn(),
+    encode: vi.fn(() => Promise.resolve("<Up>")),
+  });
+  const sent = commands.run(
+    "send",
+    { pane: "s1", text: "hello", keys: ["Enter"] },
+    caller(),
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  const pressed = commands.run("press", { pane: "s1", keys: ["Up"] }, caller());
+  // Another pane doesn't wait.
+  await commands.run("send", { pane: "s2", keys: ["Tab"] }, caller());
+  await vi.advanceTimersByTimeAsync(1000);
+  await Promise.all([sent, pressed]);
+  expect(window.writes).toEqual([
+    ["s1", "hello"],
+    ["s2", "\t"],
+    ["s1", "\r"],
+    ["s1", "<Up>"],
+  ]);
 });
 
 it("waits for output past the offset to go quiet, and reports time-outs", async () => {

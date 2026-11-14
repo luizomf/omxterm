@@ -1,5 +1,6 @@
 import type {
   AgentAccessBridge,
+  AgentModesResult,
   AgentPressResult,
   AgentRefusal,
   AgentTabsResult,
@@ -18,8 +19,9 @@ const refusals: Readonly<Record<AgentRefusal, MessageKey>> = {
 /**
  * The window's agent grant (ADR 0052): one mark in the error tone on every
  * pane and tab while it lasts, a click on a pane's mark to stop it, the pane
- * text and tab list main asks for, presses encoded for a pane's modes, and
- * the tab and pane shortcuts an agent presses. Main admits agents only after
+ * text and tab list main asks for, presses encoded for a pane's modes, the
+ * modes a send's paste depends on, and the tab and pane shortcuts an agent
+ * presses. Main admits agents only after
  * shown() confirms the marks.
  */
 export function subscribeToAgentAccess(
@@ -30,6 +32,7 @@ export function subscribeToAgentAccess(
     | "flash"
     | "readSession"
     | "encodeSessionKeys"
+    | "sessionModes"
     | "agentTabs"
     | "runSessionCommand"
     | "cancelAgentCommands"
@@ -83,6 +86,9 @@ export function subscribeToAgentAccess(
       tabs.encodeSessionKeys(request.id, request.sessionId, request.keys),
     ),
   );
+  const removeModes = bridge.onModes((request) =>
+    bridge.modesResult(tabs.sessionModes(request.id, request.sessionId)),
+  );
   const removeTabs = bridge.onTabs((request) =>
     bridge.tabsResult(tabs.agentTabs(request.id)),
   );
@@ -111,6 +117,7 @@ export function subscribeToAgentAccess(
     removeState();
     removeRead();
     removePress();
+    removeModes();
   };
 }
 
@@ -133,6 +140,25 @@ export function encodeAgentKeys(
       data += bytes;
     }
     return { id, data };
+  } catch {
+    return { id, error: "unavailable" };
+  }
+}
+
+/**
+ * The modes a send's paste depends on, from a pane's Surface. A Surface that
+ * can't take input answers unavailable.
+ */
+export function agentPaneModes(
+  id: string,
+  surface: Pick<TerminalSurface, "isBracketedPasteEnabled"> | undefined,
+): AgentModesResult {
+  if (!surface) return { id, error: "unknown-pane" };
+  try {
+    const bracketedPaste = surface.isBracketedPasteEnabled?.();
+    return bracketedPaste === undefined
+      ? { id, error: "unavailable" }
+      : { id, bracketedPaste };
   } catch {
     return { id, error: "unavailable" };
   }

@@ -24,6 +24,8 @@ it("shows an extension tab for an agent's shortcut without native focus while th
     readResult: vi.fn(),
     onPress: () => () => {},
     pressResult: vi.fn(),
+    onModes: () => () => {},
+    modesResult: vi.fn(),
     onTabs: () => () => {},
     tabsResult: vi.fn(),
     onAction(listener) {

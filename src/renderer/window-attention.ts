@@ -59,6 +59,7 @@ export function subscribeToWindowAttention(
     | "flash"
     | "readSession"
     | "encodeSessionKeys"
+    | "sessionModes"
     | "agentTabs"
     | "runSessionCommand"
     | "cancelAgentCommands"

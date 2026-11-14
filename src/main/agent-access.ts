@@ -4,6 +4,7 @@ import type { AgentCommand, AgentErrorCode } from "../shared/agent-api";
 import {
   agentIpc,
   isAgentActionResult,
+  isAgentModesResult,
   isAgentPressResult,
   isAgentReadResult,
   isAgentTabsResult,
@@ -15,6 +16,7 @@ import {
   AgentApiError,
   createAgentCommands,
   type AgentCommands,
+  type AgentPaneModes,
   type AgentPaneText,
 } from "./agent-commands";
 import {
@@ -42,6 +44,7 @@ import { subscribeWindowOwnerLoss } from "./window-owner-loss";
 import {
   requestWindow,
   settleAction,
+  settleModes,
   settlePress,
   settleRead,
   settleTabs,
@@ -165,8 +168,8 @@ function answerListener<R>(
   };
 }
 
-// A granted window's commands; its reads, tab lists, presses and shortcut
-// actions are asked of the window.
+// A granted window's commands; its reads, tab lists, presses, pane modes and
+// shortcut actions are asked of the window.
 function commandsFor(
   entry: Entry,
   shortcut: AgentAccessOptions["shortcut"],
@@ -198,6 +201,8 @@ function commandsFor(
       ask<AgentPaneText>(agentIpc.read, { sessionId, ...read }, signal),
     encode: (sessionId, keys, signal) =>
       ask<string>(agentIpc.press, { sessionId, keys }, signal),
+    modes: (sessionId, signal) =>
+      ask<AgentPaneModes>(agentIpc.modes, { sessionId }, signal),
     tabs: (signal) => ask<readonly AgentWindowTab[]>(agentIpc.tabs, {}, signal),
   });
 }
@@ -404,6 +409,7 @@ export function startAgentAccess(options: AgentAccessOptions) {
   const stopAnswers = [
     listen(agentIpc.readResult, isAgentReadResult, settleRead),
     listen(agentIpc.pressResult, isAgentPressResult, settlePress),
+    listen(agentIpc.modesResult, isAgentModesResult, settleModes),
     listen(agentIpc.tabsResult, isAgentTabsResult, settleTabs),
     listen(agentIpc.actionResult, isAgentActionResult, settleAction),
   ];

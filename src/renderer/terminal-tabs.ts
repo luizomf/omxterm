@@ -13,6 +13,7 @@ import {
   type AgentActionResult,
   type AgentPaneRead,
   type AgentWindowCommand,
+  type AgentModesResult,
   type AgentPressResult,
   type AgentReadResult,
   type AgentTabsResult,
@@ -21,7 +22,7 @@ import {
   MAX_AGENT_TAB_TITLE,
 } from "../shared/agent-access";
 import type { AgentKeyChord } from "../shared/agent-api";
-import { encodeAgentKeys } from "./agent-access";
+import { agentPaneModes, encodeAgentKeys } from "./agent-access";
 import { createPaneAttention } from "./pane-attention";
 import { createLayoutSaveNotice } from "./layout-save-notice";
 import type {
@@ -195,6 +196,9 @@ export interface TerminalTabs {
     sessionId: TerminalSessionId,
     keys: readonly AgentKeyChord[],
   ): AgentPressResult;
+  // The modes a send's paste depends on, for one session, hidden tabs
+  // included.
+  sessionModes(id: string, sessionId: TerminalSessionId): AgentModesResult;
   // The window's tabs for the agent API: ids, titles and the sessions of
   // each tab's panes (settings and hosted tabs have none).
   agentTabs(id: string): AgentTabsResult;
@@ -672,6 +676,15 @@ export function createTerminalTabs(
         id,
         pane && !pane.removed ? pane.surface : undefined,
         keys,
+      );
+    },
+    sessionModes(id, sessionId) {
+      const pane = disposed
+        ? undefined
+        : findPaneBySession(terminalTabs(), sessionId);
+      return agentPaneModes(
+        id,
+        pane && !pane.removed ? pane.surface : undefined,
       );
     },
     agentTabs(id) {

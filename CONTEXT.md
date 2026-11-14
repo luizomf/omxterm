@@ -105,7 +105,7 @@ or closing the window or quitting (the user's or the agent's). It is never
 restored or granted by anything but that gesture.
 
 **Agent API** — Main's user-only local socket (a named pipe on Windows) for granted windows: list tabs and
-panes, type text and mode-independent keys, press named keys encoded for the pane's
+panes, type text (a multi-line one as a paste where the program takes one) and mode-independent keys, press named keys encoded for the pane's
 modes or the window's shortcuts on a named pane, list those shortcuts as the user set them, read a pane's
 last lines or its screen's rows and wait for it to go quiet, show given text or end. `omxterm-ctl`, the bundled client, finds it from the
 `OMXTERM_CTL`, `OMXTERM_PROFILE` and `OMXTERM_PANE` variables every pane gets,

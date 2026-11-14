@@ -148,6 +148,46 @@ it("passes only valid presses and bounded encoded bytes", () => {
   ]);
 });
 
+it("passes only valid mode requests and answers", () => {
+  const listeners = new Map<
+    string,
+    (event: unknown, payload: unknown) => void
+  >();
+  const ipc = {
+    send: vi.fn(),
+    on: vi.fn(
+      (channel: string, listener: (event: unknown, payload: unknown) => void) =>
+        listeners.set(channel, listener),
+    ),
+    removeListener: vi.fn(),
+  };
+  const bridge = createAgentBridge(ipc as never);
+  const requests: unknown[] = [];
+  bridge.onModes((request) => requests.push(request));
+  const id = "00000000-0000-0000-0000-000000000008";
+  for (const payload of [
+    { id },
+    { id, sessionId: "pane-1" },
+    { id, sessionId: "s1", text: "x" },
+    { id, sessionId: "s1" },
+  ])
+    listeners.get(agentIpc.modes)!({}, payload);
+  expect(requests).toEqual([{ id, sessionId: "s1" }]);
+
+  bridge.modesResult({ id, bracketedPaste: true });
+  bridge.modesResult({ id, error: "unknown-pane" });
+  for (const bad of [
+    { id, bracketedPaste: "yes" },
+    { id, bracketedPaste: true, extra: 1 },
+    { id, error: "failed" },
+  ])
+    expect(() => bridge.modesResult(bad as never)).toThrow(TypeError);
+  expect(ipc.send.mock.calls).toEqual([
+    [agentIpc.modesResult, { id, bracketedPaste: true }],
+    [agentIpc.modesResult, { id, error: "unknown-pane" }],
+  ]);
+});
+
 it("passes only valid tab requests and bounded tab trees", () => {
   const listeners = new Map<
     string,

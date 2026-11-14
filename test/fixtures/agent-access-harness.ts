@@ -17,6 +17,7 @@ import type {
 } from "../../src/main/terminal-ipc-types";
 import {
   agentIpc,
+  type AgentModesRequest,
   type AgentPressRequest,
   type AgentReadRequest,
 } from "../../src/shared/agent-access";
@@ -236,7 +237,7 @@ export function useAgentHarness() {
       contents.send.mock.calls
         .filter(([channel]) => channel === agentIpc.state)
         .map(([, state]) => state);
-    // The window answers reads and presses like the renderer would; a
+    // The window answers reads, presses and modes like the renderer would; a
     // press's bytes name its keys here, the Surface's encoder is tested apart.
     contents.send.mockImplementation((channel: string, payload: unknown) => {
       // Two tabs: s1 in the selected one, s2 in the other.
@@ -260,6 +261,16 @@ export function useAgentHarness() {
             data: request.keys
               .map((key) => `<${key.ctrl ? "C-" : ""}${key.key}>`)
               .join(""),
+          }),
+        );
+      }
+      // s2's program took bracketed paste; s1's didn't.
+      if (channel === agentIpc.modes) {
+        const request = payload as AgentModesRequest;
+        setImmediate(() =>
+          ipc.listeners.get(agentIpc.modesResult)!(event, {
+            id: request.id,
+            bracketedPaste: request.sessionId === "s2",
           }),
         );
       }

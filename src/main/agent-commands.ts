@@ -58,6 +58,27 @@ export interface AgentPaneText {
   readonly alternate?: boolean;
 }
 
+/** The pane modes a send's text depends on. */
+export interface AgentPaneModes {
+  /** The program enabled bracketed paste (DECSET 2004). */
+  readonly bracketedPaste: boolean;
+}
+
+const PASTE_START = "\u001b[200~";
+const PASTE_END = "\u001b[201~";
+
+/**
+ * How long send waits between its text and its keys (#1109). Programs that
+ * read a chunk holding text and Enter as a paste (Claude Code) need them in
+ * separate reads, which SSH merges up to about 10 ms apart; Codex takes an
+ * Enter within 120 ms of a fast run of typed characters as a newline. A
+ * long text still drains through tmux after main's write, about 1 to 2 ms
+ * per KiB, so the wait grows with it.
+ */
+export function agentKeysGapMs(textBytes: number): number {
+  return 200 + 2 * Math.ceil(textBytes / 1024);
+}
+
 export interface AgentCommandsOptions {
   readonly sessions: AgentSessionPort;
   /** The renderer's text for one pane; rejects with an AgentApiError. */
@@ -75,6 +96,14 @@ export interface AgentCommandsOptions {
     keys: readonly AgentKeyChord[],
     signal: AbortSignal,
   ) => Promise<string>;
+  /**
+   * The pane's modes, asked before a multi-line text is written; rejects with
+   * an AgentApiError. Without it, text is always typed.
+   */
+  readonly modes?: (
+    sessionId: TerminalSessionId,
+    signal: AbortSignal,
+  ) => Promise<AgentPaneModes>;
   /** The window's tabs and the session ids of their panes, as it shows them. */
   readonly tabs: (signal: AbortSignal) => Promise<readonly AgentWindowTab[]>;
   /** The action a press chord runs, from the window's effective shortcuts. */
@@ -352,6 +381,84 @@ function watch<T>(
   });
 }
 
+// Resolves after ms, or rejects when the signal aborts first.
+function pause(ms: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(signal.reason);
+    const abort = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}
+
+// A pane's sends and presses write one after another, so another request
+// can't land between a send's text and its keys.
+function paneQueue() {
+  const queues = new Map<TerminalSessionId, Promise<void>>();
+  return <T>(sessionId: TerminalSessionId, run: () => Promise<T>) => {
+    const result = (queues.get(sessionId) ?? Promise.resolve()).then(run);
+    const settled = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    queues.set(sessionId, settled);
+    void settled.then(() => {
+      if (queues.get(sessionId) === settled) queues.delete(sessionId);
+    });
+    return result;
+  };
+}
+
+// A text framed as a paste. A paste can't hold its own end marker: refuse
+// rather than rewrite the text.
+function asPaste(text: string): string {
+  if (text.includes(PASTE_END))
+    throw invalid("A pasted text can't contain ESC [201~.");
+  return PASTE_START + text + PASTE_END;
+}
+
+// send's text and keys as checked, before anything is written.
+function sendRequest(args: unknown) {
+  const value = argumentsOf(args, ["pane"], ["text", "keys"]);
+  if (!isAgentPaneId(value.pane))
+    throw invalid("pane must be an id such as s1.");
+  if (value.text === undefined && value.keys === undefined)
+    throw invalid("send needs text, keys or both.");
+  if (
+    value.text !== undefined &&
+    (typeof value.text !== "string" || value.text.length === 0)
+  )
+    throw invalid("text must be a non-empty string.");
+  const text = value.text as string | undefined;
+  let keys = "";
+  if (value.keys !== undefined) {
+    for (const key of keyNames(value.keys)) {
+      const bytes = key.length <= 32 ? agentKeyBytes(key) : undefined;
+      if (bytes === undefined)
+        throw new AgentApiError(
+          "unsupported-key",
+          "Only Enter, Tab, Escape, Backspace, Space and Ctrl+A to Ctrl+Z are supported.",
+        );
+      keys += bytes;
+    }
+  }
+  // A text with a line break may go as a paste: count its markers.
+  const multiLine = text !== undefined && /[\r\n]/u.test(text);
+  const markers = multiLine ? PASTE_START.length + PASTE_END.length : 0;
+  if (
+    utf8Length(text ?? "") + markers + utf8Length(keys) >
+    MAX_AGENT_SEND_BYTES
+  )
+    throw new AgentApiError("too-large", "At most 64 KiB per send.");
+  return { sessionId: value.pane, text, keys, multiLine };
+}
+
 /**
  * list, send, read, wait and press for one granted window (ADR 0052). Every
  * pane id is checked against this window's live sessions; another window's
@@ -425,6 +532,17 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     );
   };
 
+  const inOrder = paneQueue();
+  // One agent write, remembered for wait; its offset is the position before.
+  const writeInput = (sessionId: TerminalSessionId, data: string) => {
+    const offset = position(sessionId).sent;
+    screens.remember(sessionId, offset);
+    const receipt = options.sessions.write(sessionId, data);
+    if (receipt === "rejected")
+      throw new AgentApiError("not-live", "The pane isn't accepting input.");
+    return { receipt, offset };
+  };
+
   const commands: Record<
     AgentCommand,
     (args: unknown, caller: AgentCaller) => unknown
@@ -458,36 +576,35 @@ export function createAgentCommands(options: AgentCommandsOptions) {
       };
     },
 
-    send(args) {
-      const value = argumentsOf(args, ["pane"], ["text", "keys"]);
-      const sessionId = pane(value.pane);
-      if (value.text === undefined && value.keys === undefined)
-        throw invalid("send needs text, keys or both.");
-      if (
-        value.text !== undefined &&
-        (typeof value.text !== "string" || value.text.length === 0)
-      )
-        throw invalid("text must be a non-empty string.");
-      let data = (value.text as string | undefined) ?? "";
-      if (value.keys !== undefined) {
-        for (const key of keyNames(value.keys)) {
-          const bytes = key.length <= 32 ? agentKeyBytes(key) : undefined;
-          if (bytes === undefined)
-            throw new AgentApiError(
-              "unsupported-key",
-              "Only Enter, Tab, Escape, Backspace, Space and Ctrl+A to Ctrl+Z are supported.",
-            );
-          data += bytes;
+    // A multi-line text goes as a paste when the pane's program accepts one,
+    // as the user's paste would (#1110); any other text is typed. Keys follow
+    // in their own write after a gap, so a program doesn't read them as part
+    // of the text (#1109).
+    send(args, caller) {
+      const { sessionId, text, keys, multiLine } = sendRequest(args);
+      position(sessionId);
+      return inOrder(sessionId, async () => {
+        caller.signal.throwIfAborted();
+        let data = text;
+        if (text !== undefined && multiLine && options.modes) {
+          await caughtUp(sessionId, caller.signal);
+          const modes = await options.modes(sessionId, caller.signal);
+          if (disposed) throw revoked();
+          if (modes.bracketedPaste) data = asPaste(text);
         }
-      }
-      if (utf8Length(data) > MAX_AGENT_SEND_BYTES)
-        throw new AgentApiError("too-large", "At most 64 KiB per send.");
-      const offset = position(sessionId).sent;
-      screens.remember(sessionId, offset);
-      const receipt = options.sessions.write(sessionId, data);
-      if (receipt === "rejected")
-        throw new AgentApiError("not-live", "The pane isn't accepting input.");
-      return { receipt, offset };
+        const { receipt, offset } = writeInput(sessionId, data ?? keys);
+        if (data === undefined || keys === "" || receipt !== "accepted")
+          return { receipt, offset };
+        await pause(agentKeysGapMs(utf8Length(data)), caller.signal);
+        // The grant may have ended while send waited; then no keys follow.
+        if (disposed) throw revoked();
+        const keysReceipt = options.sessions.write(sessionId, keys);
+        // The text was written, so a refused key write is a partial send.
+        return {
+          receipt: keysReceipt === "accepted" ? "accepted" : "unknown",
+          offset,
+        };
+      });
     },
 
     async read(args, caller) {
@@ -525,7 +642,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
 
     // A chord that is one of the window's shortcuts runs its action (#1050);
     // named keys are encoded by the window for the pane's current modes, as
-    // the user's key would be, then written here in one write like send.
+    // the user's key would be, then written here in one write.
     async press(args, caller) {
       const value = argumentsOf(args, ["pane", "keys"]);
       const sessionId = pane(value.pane);
@@ -542,17 +659,14 @@ export function createAgentCommands(options: AgentCommandsOptions) {
         );
       }
       const keys = pressChords(names, options.platform ?? process.platform);
-      await caughtUp(sessionId, caller.signal);
-      const data = await options.encode(sessionId, keys, caller.signal);
-      // The grant may have ended while the window encoded.
-      if (disposed) throw revoked();
-      if (data === "") throw unsupportedPress();
-      const offset = position(sessionId).sent;
-      screens.remember(sessionId, offset);
-      const receipt = options.sessions.write(sessionId, data);
-      if (receipt === "rejected")
-        throw new AgentApiError("not-live", "The pane isn't accepting input.");
-      return { receipt, offset };
+      return inOrder(sessionId, async () => {
+        await caughtUp(sessionId, caller.signal);
+        const data = await options.encode(sessionId, keys, caller.signal);
+        // The grant may have ended while the window encoded.
+        if (disposed) throw revoked();
+        if (data === "") throw unsupportedPress();
+        return writeInput(sessionId, data);
+      });
     },
 
     // What press does with each shortcut, from the table and live shortcuts

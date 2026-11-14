@@ -5,6 +5,8 @@ import {
   isAgentActionCancel,
   isAgentActionRequest,
   isAgentActionResult,
+  isAgentModesRequest,
+  isAgentModesResult,
   isAgentPressRequest,
   isAgentPressResult,
   isAgentReadRequest,
@@ -14,9 +16,10 @@ import {
   type AgentAccessBridge,
 } from "../shared/agent-access";
 
-// A window's agent grant (ADR 0052): main's state, reads, tab lists, presses
-// and shortcut actions in; confirmations, stops, read results, tab lists,
-// encoded presses and action results out. Payloads are checked both ways.
+// A window's agent grant (ADR 0052): main's state, reads, tab lists, presses,
+// mode queries and shortcut actions in; confirmations, stops, read results,
+// tab lists, encoded presses, pane modes and action results out. Payloads
+// are checked both ways.
 export function createAgentBridge(
   ipcRenderer: Pick<IpcRenderer, "send" | "on" | "removeListener">,
 ): AgentAccessBridge {
@@ -53,6 +56,18 @@ export function createAgentBridge(
       if (!isAgentPressResult(result))
         throw new TypeError("Invalid agent press result");
       ipcRenderer.send(agentIpc.pressResult, result);
+    },
+    onModes(listener) {
+      const handler = (_event: IpcRendererEvent, payload: unknown) => {
+        if (isAgentModesRequest(payload)) listener(payload);
+      };
+      ipcRenderer.on(agentIpc.modes, handler);
+      return () => ipcRenderer.removeListener(agentIpc.modes, handler);
+    },
+    modesResult(result) {
+      if (!isAgentModesResult(result))
+        throw new TypeError("Invalid agent modes result");
+      ipcRenderer.send(agentIpc.modesResult, result);
     },
     onTabs(listener) {
       const handler = (_event: IpcRendererEvent, payload: unknown) => {

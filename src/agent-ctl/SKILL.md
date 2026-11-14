@@ -104,7 +104,15 @@ in.
   In PowerShell: `'echo "hi" & more' | & $env:OMXTERM_CTL send s2 --text - --enter`.
 - `--keys` takes a comma-separated list of `Enter`, `Tab`, `Escape`,
   `Backspace`, `Space` and `Ctrl+A` to `Ctrl+Z`. `--text` is typed as is,
-  with nothing added.
+  with nothing added. Keys after a text (`--enter`) follow it a moment later
+  (about 0.2 s), so Claude Code, Codex and other TUIs submit instead of
+  adding a line.
+- A `--text` with a line break goes as one paste when the program asked for
+  pastes (bracketed paste: zsh, bash 5.1+, fish, vim, Claude Code, Codex),
+  the way the user's paste arrives: a shell runs none of it until Enter, then
+  all of it. Otherwise it is typed: a shell runs the first line, and whatever
+  reads input next (ssh, sudo, `read`) takes the rest. For a shell you're not
+  sure of, send one line (`a && b`) or write a script file and run it.
 - `press` is for keys whose bytes depend on what the program asked for, as
   in vim, less, htop or a menu: `Up`, `Down`, `Left`, `Right`, `Home`, `End`,
   `PageUp`, `PageDown`, `Insert`, `Delete`, `F1` to `F12`, `Enter`, `Tab`,

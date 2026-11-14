@@ -17,8 +17,9 @@ import {
 } from "./agent-api";
 
 // Main ⇄ renderer contract for a window's agent grant (ADR 0052). The
-// renderer confirms the marks, stops the grant, answers reads and tab lists, and encodes
-// presses for a pane's modes (main writes the bytes), and runs the tab and pane
+// renderer confirms the marks, stops the grant, answers reads and tab lists, encodes
+// presses for a pane's modes and reports the modes a send's paste depends on
+// (main writes the bytes), and runs the tab and pane
 // shortcuts an agent presses on the pane it names. A grant
 // starts only from the toggle action (menu, shortcut or Command Palette).
 export const agentIpc = {
@@ -29,6 +30,8 @@ export const agentIpc = {
   readResult: "agent:read-result",
   press: "agent:press",
   pressResult: "agent:press-result",
+  modes: "agent:modes",
+  modesResult: "agent:modes-result",
   tabs: "agent:tabs",
   tabsResult: "agent:tabs-result",
   action: "agent:action",
@@ -176,6 +179,41 @@ export function isAgentPressResult(value: unknown): value is AgentPressResult {
     hasOnlyKeys(value, ["id", "data"]) &&
     typeof value.data === "string" &&
     value.data.length <= MAX_AGENT_PRESS_CHARS
+  );
+}
+
+/** The pane modes main asks for before it writes a send's text. */
+export interface AgentModesRequest {
+  readonly id: string;
+  readonly sessionId: TerminalSessionId;
+}
+
+/** Whether the pane's program enabled bracketed paste (DECSET 2004). */
+export type AgentModesResult =
+  | { readonly id: string; readonly bracketedPaste: boolean }
+  | { readonly id: string; readonly error: "unknown-pane" | "unavailable" };
+
+export function isAgentModesRequest(
+  value: unknown,
+): value is AgentModesRequest {
+  return (
+    isPlainRecord(value) &&
+    hasOnlyKeys(value, ["id", "sessionId"]) &&
+    isReadId(value.id) &&
+    isTerminalSessionId(value.sessionId)
+  );
+}
+
+export function isAgentModesResult(value: unknown): value is AgentModesResult {
+  if (!isPlainRecord(value) || !isReadId(value.id)) return false;
+  if ("error" in value)
+    return (
+      hasOnlyKeys(value, ["id", "error"]) &&
+      (value.error === "unknown-pane" || value.error === "unavailable")
+    );
+  return (
+    hasOnlyKeys(value, ["id", "bracketedPaste"]) &&
+    typeof value.bracketedPaste === "boolean"
   );
 }
 
@@ -381,6 +419,8 @@ export interface AgentAccessBridge {
   readResult(result: AgentReadResult): void;
   onPress(listener: (request: AgentPressRequest) => void): () => void;
   pressResult(result: AgentPressResult): void;
+  onModes(listener: (request: AgentModesRequest) => void): () => void;
+  modesResult(result: AgentModesResult): void;
   onTabs(listener: (request: AgentTabsRequest) => void): () => void;
   tabsResult(result: AgentTabsResult): void;
   onAction(listener: (request: AgentActionRequest) => void): () => void;

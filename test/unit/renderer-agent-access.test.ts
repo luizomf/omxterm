@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 import {
+  agentPaneModes,
   encodeAgentKeys,
   subscribeToAgentAccess,
 } from "../../src/renderer/agent-access";
@@ -7,6 +8,7 @@ import type {
   AgentAccessBridge,
   AgentAccessState,
   AgentActionRequest,
+  AgentModesRequest,
   AgentPressRequest,
   AgentReadRequest,
   AgentTabsRequest,
@@ -18,6 +20,7 @@ function bridge() {
   let state: ((value: AgentAccessState) => void) | undefined;
   let read: ((value: AgentReadRequest) => void) | undefined;
   let press: ((value: AgentPressRequest) => void) | undefined;
+  let modes: ((value: AgentModesRequest) => void) | undefined;
   let tabsListener: ((value: AgentTabsRequest) => void) | undefined;
   let action: ((value: AgentActionRequest) => void) | undefined;
   let cancel: ((id: string) => void) | undefined;
@@ -38,6 +41,11 @@ function bridge() {
       return () => (press = undefined);
     }),
     pressResult: vi.fn(),
+    onModes: vi.fn((listener: (value: AgentModesRequest) => void) => {
+      modes = listener;
+      return () => (modes = undefined);
+    }),
+    modesResult: vi.fn(),
     onTabs: vi.fn((listener: (value: AgentTabsRequest) => void) => {
       tabsListener = listener;
       return () => (tabsListener = undefined);
@@ -58,6 +66,7 @@ function bridge() {
     state: (next: AgentAccessState) => state?.(next),
     read: (next: AgentReadRequest) => read?.(next),
     press: (next: AgentPressRequest) => press?.(next),
+    modes: (next: AgentModesRequest) => modes?.(next),
     tabs: (next: AgentTabsRequest) => tabsListener?.(next),
     action: (next: AgentActionRequest) => action?.(next),
     cancel: (id: string) => cancel?.(id),
@@ -65,6 +74,7 @@ function bridge() {
       state !== undefined ||
       read !== undefined ||
       press !== undefined ||
+      modes !== undefined ||
       tabsListener !== undefined ||
       action !== undefined ||
       cancel !== undefined,
@@ -78,6 +88,7 @@ const fakeTabs = () => ({
   flash: vi.fn<(text: StateText) => void>(),
   readSession: vi.fn(),
   encodeSessionKeys: vi.fn(),
+  sessionModes: vi.fn(),
   agentTabs: vi.fn(),
   runSessionCommand: vi.fn(),
   cancelAgentCommands: vi.fn(),
@@ -132,6 +143,7 @@ it("answers main's reads with the pane's text", () => {
     flash: vi.fn(),
     readSession: vi.fn(() => result),
     encodeSessionKeys: vi.fn(),
+    sessionModes: vi.fn(),
     agentTabs: vi.fn(),
     runSessionCommand: vi.fn(),
     cancelAgentCommands: vi.fn(),
@@ -260,4 +272,39 @@ it("joins a press's keys from the pane's Surface, or says why it can't", () => {
     id,
     error: "unavailable",
   });
+});
+
+it("answers main's mode requests with whether the pane takes a paste", () => {
+  const main = bridge();
+  const id = "00000000-0000-0000-0000-000000000006";
+  const tabs = {
+    ...fakeTabs(),
+    sessionModes: vi.fn(() => ({ id, bracketedPaste: true })),
+  };
+  subscribeToAgentAccess(main.bridge, tabs);
+  main.modes({ id, sessionId: "s2" });
+  expect(tabs.sessionModes).toHaveBeenCalledWith(id, "s2");
+  expect(main.bridge.modesResult).toHaveBeenCalledWith({
+    id,
+    bracketedPaste: true,
+  });
+});
+
+it("reads a pane's paste mode from its Surface, or says why it can't", () => {
+  const id = "00000000-0000-0000-0000-000000000007";
+  expect(agentPaneModes(id, { isBracketedPasteEnabled: () => false })).toEqual({
+    id,
+    bracketedPaste: false,
+  });
+  expect(agentPaneModes(id, undefined)).toEqual({ id, error: "unknown-pane" });
+  expect(
+    agentPaneModes(id, { isBracketedPasteEnabled: () => undefined }),
+  ).toEqual({ id, error: "unavailable" });
+  expect(
+    agentPaneModes(id, {
+      isBracketedPasteEnabled: () => {
+        throw new Error("core gone");
+      },
+    }),
+  ).toEqual({ id, error: "unavailable" });
 });
