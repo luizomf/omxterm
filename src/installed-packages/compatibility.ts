@@ -21,6 +21,7 @@ const developmentBridges: readonly [RegExp, string, string][] = [
   [/^0\.33\.1-dev\.(?:0|[1-9]\d*)$/u, "0.33.0", "0.33.1"],
   [/^0\.34\.0-dev\.(?:0|[1-9]\d*)$/u, "0.33.0", "0.34.0"],
   [/^0\.34\.1-dev\.(?:0|[1-9]\d*)$/u, "0.34.0", "0.34.1"],
+  [/^0\.35\.0-dev\.(?:0|[1-9]\d*)$/u, "0.34.0", "0.35.0"],
 ];
 
 function bridgedDevelopmentHost(appVersion: string, range: string): boolean {
