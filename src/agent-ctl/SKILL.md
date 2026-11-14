@@ -31,8 +31,8 @@ For any `--text` or `--match` that holds quotes, `$`, `%`, `&`, a backslash or
 a leading `/`, pipe it in with `-` (see Commands) instead of quoting it; that
 is safe in every shell. Windows details:
 
-- PowerShell 5.1 splits an argument that holds a double quote; write each one
-  as `\"`, or use `-`. It also pipes ASCII, so for non-ASCII text run
+- PowerShell 5.1 drops the double quotes inside an argument and splits it
+  where they hold a space; write each one as `\"`, or use `-`. It also pipes ASCII, so for non-ASCII text run
   `$OutputEncoding = [System.Text.UTF8Encoding]::new($false)` first.
 - Git Bash rewrites an argument that looks like a POSIX path:
   `--text /exit` arrives as `C:/Program Files/Git/exit`. Use `-`, or set
@@ -200,4 +200,5 @@ mkdir -p ~/.claude/skills/omxterm && "$OMXTERM_CTL" guide > ~/.claude/skills/omx
 mkdir -p ~/.agents/skills/omxterm && "$OMXTERM_CTL" guide > ~/.agents/skills/omxterm/SKILL.md   # Codex
 ```
 
-On Windows, run them from Git Bash: PowerShell's `>` re-encodes the file.
+On Windows, run them from Git Bash: Windows PowerShell 5.1's `>` re-encodes the
+file.

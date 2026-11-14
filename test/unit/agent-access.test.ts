@@ -71,6 +71,17 @@ it("grants only after the window shows its marks, then a pane's client drives it
   );
   await ctl(profile, ["send", "s2", "--text", "ls -la", "--enter"], pane);
   expect(port.writes).toEqual([["s2", "ls -la\r"]]);
+  // A split argument's tail is refused, not dropped after typing the head.
+  expect(
+    (
+      await ctl(
+        profile,
+        ["send", "s2", "--text", "say hi", "there", "now", "--enter"],
+        pane,
+      )
+    ).code,
+  ).toBe(2);
+  expect(port.writes).toHaveLength(1);
   expect((await ctl(profile, ["read", "s2"], pane)).stdout).toBe(
     "tail of s2\n",
   );
