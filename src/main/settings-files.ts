@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { constants, type Stats } from "node:fs";
+import { constants, type BigIntStats } from "node:fs";
 import {
   mkdir,
   lstat,
@@ -85,8 +85,8 @@ function sameSettingsFile(first: SettingsFile, second: SettingsFile): boolean {
 }
 
 export function sameTemporary(
-  entry: Stats,
-  original: Stats | undefined,
+  entry: BigIntStats,
+  original: BigIntStats | undefined,
 ): boolean {
   return (
     original !== undefined &&
@@ -98,10 +98,10 @@ export function sameTemporary(
 
 export async function removeSettingsTemporary(
   temporary: string,
-  identity: Stats | undefined,
+  identity: BigIntStats | undefined,
 ): Promise<void> {
   try {
-    if (!sameTemporary(await lstat(temporary), identity))
+    if (!sameTemporary(await lstat(temporary, { bigint: true }), identity))
       throw new SettingsFileError("cleanup");
     await rm(temporary);
   } catch (cause) {
@@ -111,10 +111,10 @@ export async function removeSettingsTemporary(
 
 async function readBounded(
   handle: FileHandle,
-  status: Stats,
+  status: BigIntStats,
   maxBytes: number,
 ): Promise<Uint8Array> {
-  if (status.size > maxBytes) throw new SettingsFileError("size");
+  if (status.size > BigInt(maxBytes)) throw new SettingsFileError("size");
   const buffer = Buffer.allocUnsafe(maxBytes + 1);
   let length = 0;
   while (length < buffer.length) {
@@ -128,11 +128,11 @@ async function readBounded(
     length += read.bytesRead;
   }
   if (length > maxBytes) throw new SettingsFileError("size");
-  const after = await handle.stat();
+  const after = await handle.stat({ bigint: true });
   if (
     status.size !== after.size ||
-    status.mtimeMs !== after.mtimeMs ||
-    status.ctimeMs !== after.ctimeMs
+    status.mtimeNs !== after.mtimeNs ||
+    status.ctimeNs !== after.ctimeNs
   )
     throw new SettingsFileError("conflict");
   return buffer.subarray(0, length);
@@ -146,7 +146,7 @@ export function createNodeSettingsFiles(maxBytes?: number): SettingsFiles {
       const target = await settingsTarget(filePath);
       let entry;
       try {
-        entry = await lstat(target);
+        entry = await lstat(target, { bigint: true });
       } catch (cause) {
         if (!isNotFound(cause)) throw cause;
       }
@@ -155,7 +155,7 @@ export function createNodeSettingsFiles(maxBytes?: number): SettingsFiles {
       if (entry) {
         if (entry.isSymbolicLink()) throw new SettingsFileError("conflict");
         if (!entry.isFile()) throw new SettingsFileError("target");
-        if (maxBytes !== undefined && entry.size > maxBytes)
+        if (maxBytes !== undefined && entry.size > BigInt(maxBytes))
           throw new SettingsFileError("size");
         const handle = await open(
           target,
@@ -164,14 +164,14 @@ export function createNodeSettingsFiles(maxBytes?: number): SettingsFiles {
             (constants.O_NOFOLLOW ?? 0),
         );
         try {
-          const status = await handle.stat();
+          const status = await handle.stat({ bigint: true });
           if (!status.isFile()) throw new SettingsFileError("target");
           if (
             maxBytes !== undefined &&
             (status.dev !== entry.dev || status.ino !== entry.ino)
           )
             throw new SettingsFileError("conflict");
-          mode = status.mode & 0o777;
+          mode = Number(status.mode & 0o777n);
           bytes =
             maxBytes === undefined
               ? await handle.readFile()
@@ -193,12 +193,12 @@ export function createNodeSettingsFiles(maxBytes?: number): SettingsFiles {
       );
       let created = false;
       let replaced = false;
-      let identity: Stats | undefined;
+      let identity: BigIntStats | undefined;
       try {
         const handle = await open(temporary, "wx", 0o600);
         created = true;
         try {
-          identity = await handle.stat();
+          identity = await handle.stat({ bigint: true });
           await handle.writeFile(text, "utf8");
           if (!sameSettingsFile(await files.read(filePath), expected))
             return false;
@@ -209,7 +209,7 @@ export function createNodeSettingsFiles(maxBytes?: number): SettingsFiles {
         }
         if (!sameSettingsFile(await files.read(filePath), expected))
           return false;
-        if (!sameTemporary(await lstat(temporary), identity))
+        if (!sameTemporary(await lstat(temporary, { bigint: true }), identity))
           throw new SettingsFileError("conflict");
         // Guarded replacement is not cross-process CAS: paths can still change
         // between their last checks and rename. Inode/ACL preservation is not promised.

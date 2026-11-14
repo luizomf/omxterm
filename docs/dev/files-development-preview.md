@@ -23,7 +23,7 @@ or the terminal renderer; it ships only as a `.omxext` archive.
 - `view.ts`, `page.ts`, `tree.ts`, `toolbar.ts`, `messages.ts`, `index.html`,
   `files.css` — the view page shown in the companion panel.
 
-Files 0.9.2 declares host `>=0.26.0`, API `0.1.x` and the
+Files 0.9.3 declares host `>=0.26.0`, API `0.1.x` and the
 `terminal.insertPath.v1` capability. Host 0.26.0 is the first published host
 with the protected path consumer, so older hosts neither offer nor admit Files 0.8
 or later. Paths are handled in the form the backend reports them (POSIX, or
@@ -280,7 +280,7 @@ The AppImage is extracted, not modified.
 
 ## Platform limits
 
-- Files 0.9.2 browses POSIX and Windows drive paths. Rename, move and Windows
+- Files 0.9.3 browses POSIX and Windows drive paths. Rename, move and Windows
   trash need the host's native Files services, which every target has from
   OMXTerm 0.28.0. On older Windows and Linux x64 hosts rename, move and
   Windows trash report unsupported before acting.

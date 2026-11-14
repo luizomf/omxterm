@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { Stats } from "node:fs";
+import type { BigIntStats } from "node:fs";
 import { link, lstat, mkdir, open } from "node:fs/promises";
 import path from "node:path";
 import type {
@@ -161,10 +161,10 @@ async function publish(
   const logicalParent = path.dirname(filePath);
   const parent = await settingsTarget(logicalParent);
   if (createParent) await mkdir(parent, { recursive: true });
-  const parentIdentity = await lstat(parent);
+  const parentIdentity = await lstat(parent, { bigint: true });
   if (!parentIdentity.isDirectory()) throw new SettingsFileError("target");
   const checkParent = async () => {
-    const latest = await lstat(parent);
+    const latest = await lstat(parent, { bigint: true });
     if (
       (await settingsTarget(logicalParent)) !== parent ||
       !latest.isDirectory() ||
@@ -181,19 +181,19 @@ async function publish(
   );
   let created = false;
   let published = false;
-  let identity: Stats | undefined;
+  let identity: BigIntStats | undefined;
   let warning: "cleanup" | undefined;
   try {
     const handle = await open(temporary, "wx", 0o600);
     created = true;
     try {
-      identity = await handle.stat();
+      identity = await handle.stat({ bigint: true });
       await handle.writeFile(text, "utf8");
     } finally {
       await handle.close();
     }
     await checkParent();
-    if (!sameTemporary(await lstat(temporary), identity))
+    if (!sameTemporary(await lstat(temporary, { bigint: true }), identity))
       throw new DocumentError("changed");
     // Like guarded replacement, parent/temp checks reduce races; they do not
     // lock linked parents against a change after this final check.

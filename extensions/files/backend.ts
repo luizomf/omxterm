@@ -15,10 +15,10 @@ type MoveCapture = {
   directory: string;
   sourceReal: string;
   directoryReal: string;
-  sourceDevice: number;
-  sourceInode: number;
-  directoryDevice: number;
-  directoryInode: number;
+  sourceDevice: bigint;
+  sourceInode: bigint;
+  directoryDevice: bigint;
+  directoryInode: bigint;
   kind: string;
 };
 const limit = 5_000;
@@ -96,8 +96,9 @@ async function captureMove(
   directory: string,
   kind: string,
 ): Promise<MoveCapture> {
-  const sourceStat = await lstat(source);
-  const directoryStat = await lstat(directory);
+  // Bigint IDs: NTFS file IDs exceed 2^53, so as numbers two files can match.
+  const sourceStat = await lstat(source, { bigint: true });
+  const directoryStat = await lstat(directory, { bigint: true });
   if (kindOf(sourceStat) !== kind) refuse("FILES_CHANGED");
   // A link can be moved as an entry, but is never a directory-drop target.
   if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink())
@@ -165,7 +166,7 @@ export function activate(context: {
   >();
   const deletions = new Map<
     string,
-    { target: string; device: number; inode: number }
+    { target: string; device: bigint; inode: bigint }
   >();
   const moves = new Map<string, MoveCapture>();
   let active = 0;
@@ -327,7 +328,7 @@ export function activate(context: {
         const captured = deletions.get(request.token);
         deletions.delete(request.token);
         if (!captured) throw new Error("expired-confirmation");
-        const stat = await lstat(captured.target);
+        const stat = await lstat(captured.target, { bigint: true });
         if (stat.dev !== captured.device || stat.ino !== captured.inode)
           throw new Error("changed-entry");
         check(signal);
@@ -345,7 +346,7 @@ export function activate(context: {
             // confirmation; using it later fails closed and requires fresh consent.
             if (deletions.size >= 8)
               deletions.delete(deletions.keys().next().value!);
-            const stat = await lstat(target);
+            const stat = await lstat(target, { bigint: true });
             const token = randomUUID();
             deletions.set(token, { target, device: stat.dev, inode: stat.ino });
             return { ok: true, token, path: target };
