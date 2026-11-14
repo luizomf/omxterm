@@ -117,6 +117,9 @@ A console launcher for the Windows agent client, in place of the `.cmd`
 Removing the Snippets Preview button (#1090; the row tooltip shows the name and
 body) moves main to `0.34.0-dev.3`.
 
+The agent guide's per-shell Windows calls and `--text -` (#1079) move main to
+`0.34.0-dev.4`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
