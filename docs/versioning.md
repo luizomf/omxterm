@@ -172,6 +172,9 @@ Re-pinning the bundled default Snippets to the published 0.1.4 moves main to
 Keeping delivered notifications until the user dismisses them (#1124) moves
 main to `0.35.1-dev.2`.
 
+The Lucide-based icon set and the pane marks' capsule (#1071) move main to
+`0.35.1-dev.3`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
