@@ -12,7 +12,7 @@ in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
 `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N`,
-`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N` and `0.35.1-dev.N` bridges have distinct
+`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N`, `0.35.1-dev.N` and `0.36.0-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
@@ -198,6 +198,12 @@ environment can't abort the app (#1042) moves main to `0.35.1-dev.9`.
 
 Reading OSC 133 command marks so an agent's `wait` answers when the typed
 command ended, with its exit code (#1027), moves main to `0.35.1-dev.10`.
+
+Keeping notifications (#1125), the new icon set (#1130), hiding the pane marks
+(#1134) and OSC 133 command marks for agents (#1139) are features, and the first
+of them (#1125) should have moved main to the next minor. This step does it, so
+main moves to `0.36.0-dev.0`. Its bridge admits ranges that accept both `0.35.0`
+and `0.36.0`, and every catalog archive stays installable unchanged.
 
 ## Public contract
 
