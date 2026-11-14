@@ -81,7 +81,7 @@ declare global {
   >;
   var __omxtermResttyAppearanceResult: AppearanceResult | undefined;
   var __omxtermRenderConfiguredFont: (reference: boolean) => Promise<void>;
-  var __omxtermBeginSelection: () => void;
+  var __omxtermBeginSelection: () => Promise<void>;
   var __omxtermSelectionAfterFrames: () => Promise<SelectionObservation>;
   var __omxtermHasNoSelection: () => Promise<boolean>;
   var __omxtermSelectionState: () => Promise<{
@@ -97,6 +97,7 @@ declare global {
     readonly frameCount: number;
     readonly frameTimes: readonly number[];
     readonly lastFrameAt: number | null;
+    readonly gateError: string | null;
     readonly observedAt: number;
   }>;
   var __omxtermSelectionFrame: () => Promise<void>;
