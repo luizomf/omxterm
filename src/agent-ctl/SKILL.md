@@ -138,6 +138,9 @@ in.
 - When `$TMUX` is set, you run inside tmux: the whole tmux session is one
   OMXTerm pane. Reach tmux's own windows and panes with tmux's commands
   (`tmux send-keys`, `tmux capture-pane -p`), not with these.
+  A tmux pane opened before the user last attached from OMXTerm can hold a
+  stale `OMXTERM_PANE`; refresh it with
+  `eval "$(tmux show-environment -s | grep '^OMXTERM_')"`.
 - Pane ids such as `s2` come from `list` and last as long as the grant.
 - Sends to the same pane at the same time arrive in no guaranteed order. Send
   one at a time.
