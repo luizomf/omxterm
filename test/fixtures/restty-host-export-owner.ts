@@ -45,6 +45,7 @@ export async function createResttyExportOwner(
     sendSnippetsToggle: notify(terminalIpc.snippetsToggle),
     sendFind: notify(terminalIpc.find),
     sendTabBarToggle: notify(terminalIpc.tabBarToggle),
+    sendPaneMarksToggle: notify(terminalIpc.paneMarksToggle),
     sendAuxiliaryPanelToggle: notify(terminalIpc.auxiliaryPanelToggle),
     sendAuxiliaryPanelSideToggle: notify(terminalIpc.auxiliaryPanelSideToggle),
     sendTitleBarToggle: notify(terminalIpc.titleBarToggle),

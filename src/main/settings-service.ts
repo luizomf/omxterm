@@ -329,6 +329,7 @@ function settingsValues(
     "window.alwaysOnTop": configuration.alwaysOnTop,
     "window.showTitleBar": configuration.showTitleBar,
     "window.showTabBar": configuration.showTabBar,
+    "window.showPaneMarks": configuration.showPaneMarks,
     "theme.path": typeof theme === "string" ? theme : "",
     "notifications.enabled": configuration.notifications.enabled,
     "notifications.sound": configuration.notifications.sound,

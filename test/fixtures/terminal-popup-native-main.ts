@@ -269,6 +269,7 @@ app
       sendSnippetsToggle() {},
       sendFind() {},
       sendTabBarToggle() {},
+      sendPaneMarksToggle() {},
       sendAuxiliaryPanelToggle() {},
       sendAuxiliaryPanelSideToggle() {},
       sendTitleBarToggle() {},

@@ -714,9 +714,9 @@ app
       showSessionFailure: async () => {
         throw new Error("Unexpected fixture session failure");
       },
-      sendTitleBarToggle: (window) =>
-        window.webContents.send(terminalIpc.titleBarToggle),
+      sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
       sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
+      sendPaneMarksToggle: notifyWindow(terminalIpc.paneMarksToggle),
       sendAuxiliaryPanelToggle: notifyWindow(terminalIpc.auxiliaryPanelToggle),
       sendAuxiliaryPanelSideToggle: notifyWindow(
         terminalIpc.auxiliaryPanelSideToggle,

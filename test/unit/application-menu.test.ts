@@ -38,6 +38,7 @@ function menuActions() {
     findInSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
+    toggleSelectedPaneMarks: vi.fn(),
     toggleSelectedAuxiliaryPanel: vi.fn(),
     moveSelectedAuxiliaryPanel: vi.fn(),
     toggleSelectedTitleBar: vi.fn(),
@@ -496,6 +497,7 @@ describe("core action catalog", () => {
       "Move Side Panel to Other Side",
       "Toggle Snippets",
       "Toggle Tab Bar",
+      "Toggle Pane Marks",
       "Toggle Title Bar",
       "Pane",
       "Reload Settings",
@@ -548,6 +550,8 @@ describe("keybind action invocations", () => {
     expect(actions.toggleSelectedFullScreen).toHaveBeenCalledOnce();
     invocations.toggleSnippets();
     expect(actions.toggleSelectedSnippets).toHaveBeenCalledOnce();
+    invocations.togglePaneMarks();
+    expect(actions.toggleSelectedPaneMarks).toHaveBeenCalledOnce();
     invocations.reloadConfig();
     expect(actions.reloadUserConfiguration).toHaveBeenCalledOnce();
 

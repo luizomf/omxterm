@@ -69,6 +69,8 @@ export interface TerminalRendererConfiguration {
   readonly nativeTitleInset: 0 | 30;
   readonly transparency: number;
   readonly showTabBar: boolean;
+  // Main sends the effective value; standalone/older hosts inherit true.
+  readonly showPaneMarks?: boolean;
   readonly terminalTheme: TerminalTheme;
   readonly userFileErrors: readonly string[];
 }
@@ -93,6 +95,7 @@ export interface UserConfiguration {
   readonly transparency: number;
   readonly showTitleBar: boolean;
   readonly showTabBar: boolean;
+  readonly showPaneMarks: boolean;
   readonly terminalTheme: TerminalTheme;
   readonly keybinds: TerminalKeybinds;
   readonly notifications: NotificationPreferences;
@@ -106,6 +109,8 @@ function hasValidOptionalRendererFields(
     (value.auxiliaryPanelSide === undefined ||
       value.auxiliaryPanelSide === "left" ||
       value.auxiliaryPanelSide === "right") &&
+    (value.showPaneMarks === undefined ||
+      typeof value.showPaneMarks === "boolean") &&
     (value.optionalSnippets === undefined ||
       typeof value.optionalSnippets === "boolean") &&
     isOptionalSurfaceFontIdentity(value.fontConfigurationId) &&
@@ -136,6 +141,7 @@ export function isTerminalRendererConfiguration(
         "nativeTitleInset",
         "transparency",
         "showTabBar",
+        "showPaneMarks",
         "terminalTheme",
         "userFileErrors",
       ].includes(key),

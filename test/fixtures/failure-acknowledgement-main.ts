@@ -238,6 +238,7 @@ async function run() {
     sendClipboardAction() {},
     sendSnippetsToggle() {},
     sendTabBarToggle() {},
+    sendPaneMarksToggle() {},
     sendAuxiliaryPanelToggle() {},
     sendAuxiliaryPanelSideToggle() {},
     sendFind() {},

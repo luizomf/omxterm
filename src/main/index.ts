@@ -706,6 +706,7 @@ app
           sendFind: notifyWindow(terminalIpc.find),
           sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
           sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
+          sendPaneMarksToggle: notifyWindow(terminalIpc.paneMarksToggle),
           sendAuxiliaryPanelToggle: notifyWindow(
             terminalIpc.auxiliaryPanelToggle,
           ),

@@ -101,6 +101,7 @@ export function coreActionMenuTemplate(
         item("moveAuxiliaryPanel"),
         item("toggleSnippets"),
         item("toggleTabBar"),
+        item("togglePaneMarks"),
         item("toggleTitleBar"),
         { type: "separator" },
         {

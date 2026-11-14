@@ -81,6 +81,7 @@ function createApplicationHarness(
   const sendClipboardAction = vi.fn();
   const sendSnippetsToggle = vi.fn();
   const sendTabBarToggle = vi.fn();
+  const sendPaneMarksToggle = vi.fn();
   const sendAuxiliaryPanelToggle = vi.fn();
   const sendAuxiliaryPanelSideToggle = vi.fn();
   const sendFind = vi.fn();
@@ -108,6 +109,7 @@ function createApplicationHarness(
     sendClipboardAction,
     sendSnippetsToggle,
     sendTabBarToggle,
+    sendPaneMarksToggle,
     sendAuxiliaryPanelToggle,
     sendAuxiliaryPanelSideToggle,
     sendFind,
@@ -130,6 +132,7 @@ function createApplicationHarness(
     sendClipboardAction,
     sendSnippetsToggle,
     sendTabBarToggle,
+    sendPaneMarksToggle,
     sendAuxiliaryPanelToggle,
     sendAuxiliaryPanelSideToggle,
     sendFind,

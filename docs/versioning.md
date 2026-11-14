@@ -179,6 +179,9 @@ Typing each line break of a multi-line agent `send` as the Enter key, so
 Windows PowerShell 5.1 runs the lines in order (#1126), moves main to
 `0.35.1-dev.4`.
 
+A setting and shortcut to hide the pane marks, leaving only the agent's (#1132),
+move main to `0.35.1-dev.5`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

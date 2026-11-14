@@ -128,6 +128,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendFind: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
+  readonly sendPaneMarksToggle: (window: Window) => void;
   readonly sendAuxiliaryPanelToggle: (window: Window) => void;
   readonly sendAuxiliaryPanelSideToggle: (window: Window) => void;
   readonly sendTitleBarToggle: (window: Window) => void;
@@ -186,6 +187,7 @@ export interface TerminalApplication<
   findInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
+  toggleSelectedPaneMarks(): void;
   toggleSelectedAuxiliaryPanel(): void;
   moveSelectedAuxiliaryPanel(): void;
   toggleSelectedTitleBar(): void;
@@ -195,6 +197,25 @@ export interface TerminalApplication<
     readonly alwaysOnTopDefault: boolean;
   }): void;
   isQuitting(): boolean;
+}
+
+// The window-chrome toggles: each only tells the selected window.
+function selectedWindowToggles<Window extends NativeTerminalWindow>(
+  options: TerminalApplicationOptions<Window>,
+  selectedWindowAction: (action: (window: Window) => void) => () => void,
+) {
+  return {
+    toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
+    toggleSelectedPaneMarks: selectedWindowAction(options.sendPaneMarksToggle),
+    toggleSelectedAuxiliaryPanel: selectedWindowAction(
+      options.sendAuxiliaryPanelToggle,
+    ),
+    moveSelectedAuxiliaryPanel: selectedWindowAction(
+      options.sendAuxiliaryPanelSideToggle,
+    ),
+    toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
+    toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
+  };
 }
 
 export function startTerminalApplication<Window extends NativeTerminalWindow>(
@@ -445,15 +466,7 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       if (window) options.sendClipboardAction(window, action);
     },
     findInSelectedWindow: selectedWindowAction(options.sendFind),
-    toggleSelectedTabBar: selectedWindowAction(options.sendTabBarToggle),
-    toggleSelectedAuxiliaryPanel: selectedWindowAction(
-      options.sendAuxiliaryPanelToggle,
-    ),
-    moveSelectedAuxiliaryPanel: selectedWindowAction(
-      options.sendAuxiliaryPanelSideToggle,
-    ),
-    toggleSelectedTitleBar: selectedWindowAction(options.sendTitleBarToggle),
-    toggleSelectedSnippets: selectedWindowAction(options.sendSnippetsToggle),
+    ...selectedWindowToggles(options, selectedWindowAction),
     openLocalImageInSelectedWindow: selectedWindowAction(
       options.sendLocalImageOpen,
     ),

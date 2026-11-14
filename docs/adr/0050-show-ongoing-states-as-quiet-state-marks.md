@@ -148,5 +148,12 @@ The cost is stated plainly: the capsule hides the end of row 1 instead of
 letting it show through, and it is wider than "a column or two". At the
 default 16 px font one mark covers 28 px (about 3 columns) and all four
 100 px (about 11 columns). It still never enters the layout flow or changes
-the grid. A setting and shortcut to hide pane marks, which never hide the
-agent mark, are planned separately for people who want row 1 back.
+the grid. People who want row 1 back can hide the capsules: `window.showPaneMarks`
+sets the default for new windows and `Toggle Pane Marks` (`Cmd/Ctrl+Shift+H`)
+flips the selected window, like the tab bar. Only the pane capsules (and the
+page-corner copy) go; the tab icons stay. The agent's mark never hides: it is
+the access indicator and panic button ([ADR 0052](0052-let-a-local-agent-drive-a-granted-window.md)),
+so it stays in the corner alone with its full target. The accepted cost is
+that a window with one tab, which draws no tab strip, then shows no sign of a
+bell or a running program; the user chose that, and notifications and Dock
+attention still work.

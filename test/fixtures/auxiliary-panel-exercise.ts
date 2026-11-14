@@ -108,6 +108,7 @@ function createScenario(options: PanelOptions) {
     findInSelectedTerminal: unexpected,
     toggleSelectedSnippets: () => application.toggleSelectedSnippets(),
     toggleSelectedTabBar: () => application.toggleSelectedTabBar(),
+    toggleSelectedPaneMarks: () => application.toggleSelectedPaneMarks(),
     toggleSelectedAuxiliaryPanel: () =>
       application.toggleSelectedAuxiliaryPanel(),
     moveSelectedAuxiliaryPanel: () => application.moveSelectedAuxiliaryPanel(),
