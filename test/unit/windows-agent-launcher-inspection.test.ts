@@ -11,6 +11,7 @@ import {
 // architecture, alone with the client, that hands arguments over as given.
 const temporary: string[] = [];
 afterEach(async () => {
+  vi.unstubAllEnvs();
   for (const directory of temporary.splice(0))
     await rm(directory, { recursive: true, force: true });
 });
@@ -35,12 +36,14 @@ async function resources(files: Record<string, Buffer | string>) {
 }
 
 // The client's answer to the probe argument, when it arrives as given.
+const usage = (argument: string | undefined) =>
+  Object.assign(new Error("usage"), {
+    code: argument === launcherProbeArgument ? 2 : 1,
+    stderr: `Unknown option ${argument}.\n`,
+  });
 const echoes = () =>
   vi.fn(async (_file: string, args: string[]) => {
-    throw Object.assign(new Error("usage"), {
-      code: args[0] === launcherProbeArgument ? 2 : 1,
-      stderr: `Unknown option ${args[0]}.\n`,
-    });
+    throw usage(args[0]);
   });
 
 it("accepts a console launcher of the build's architecture", async () => {
@@ -50,11 +53,12 @@ it("accepts a console launcher of the build's architecture", async () => {
   });
   const run = echoes();
   await inspectWindowsAgentLauncher(root, "arm64", run);
-  expect(run).toHaveBeenCalledWith(
-    path.join(root, "agent-ctl", "omxterm-ctl.exe"),
-    [launcherProbeArgument],
-    expect.anything(),
-  );
+  const launcher = path.join(root, "agent-ctl", "omxterm-ctl.exe");
+  // Also from the \\?\ form of its path (the same path off Windows).
+  expect(run.mock.calls.map(([file, args]) => [file, args])).toEqual([
+    [launcher, [launcherProbeArgument]],
+    [path.toNamespacedPath(launcher), [launcherProbeArgument]],
+  ]);
 });
 
 it.each([
@@ -87,3 +91,53 @@ it("refuses a launcher that changes the arguments", async () => {
     inspectWindowsAgentLauncher(root, "x64", reparsed),
   ).rejects.toThrow("changed its arguments");
 });
+
+it("refuses a launcher that only works from its plain path", async () => {
+  const root = await resources({
+    "omxterm-ctl.cjs": "",
+    "omxterm-ctl.exe": pe(0xaa64, 3),
+  });
+  let runs = 0;
+  const plainOnly = vi.fn(async (_file: string, args: string[]) => {
+    runs += 1;
+    if (runs === 1) throw usage(args[0]);
+    throw Object.assign(new Error("start"), {
+      code: 1,
+      stderr: "omxterm-ctl: can't start OMXTerm\n",
+    });
+  });
+  await expect(
+    inspectWindowsAgentLauncher(root, "arm64", plainOnly),
+  ).rejects.toThrow("changed its arguments");
+  expect(runs).toBe(2);
+});
+
+it.each(["ELECTRON_RUN_AS_NODE", "Electron_Run_As_Node"])(
+  "refuses a launcher that leaves Node mode to its caller's %s",
+  async (name) => {
+    vi.stubEnv(name, "1");
+    const root = await resources({
+      "omxterm-ctl.cjs": "",
+      "omxterm-ctl.exe": pe(0xaa64, 3),
+    });
+    // Without the variable, OMXTerm.exe starts as the GUI app: no usage
+    // error, exit 0.
+    const forgetful = vi.fn(
+      async (
+        _file: string,
+        args: string[],
+        options: { env: Record<string, string | undefined> },
+      ) => {
+        const node = Object.entries(options.env).some(
+          ([key, value]) =>
+            key.toUpperCase() === "ELECTRON_RUN_AS_NODE" && value === "1",
+        );
+        if (node) throw usage(args[0]);
+        return { stdout: "", stderr: "" };
+      },
+    );
+    await expect(
+      inspectWindowsAgentLauncher(root, "arm64", forgetful),
+    ).rejects.toThrow("changed its arguments");
+  },
+);

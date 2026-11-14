@@ -135,6 +135,9 @@ main to `0.34.1-dev.1`.
 Teaching agents inside tmux how to get the `OMXTERM_*` variables (#1094)
 moves main to `0.34.1-dev.2`.
 
+Hardening the Windows `omxterm-ctl.exe` launcher (#1092) moves main to
+`0.34.1-dev.3`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
