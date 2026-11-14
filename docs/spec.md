@@ -544,6 +544,10 @@ quietest form that works:
   so no pane shows it, it also sits in the page's top-right corner, where it
   can be clicked like a pane's; it stays there until the panes of a terminal
   tab the user returns to actually show.
+- The find bar and the capsule never overlap: while find is open in a pane,
+  that pane's capsule moves just below the bar (4 px under it, same right
+  edge), whatever its width, and returns when find closes. The agent's mark
+  stays visible and clickable throughout.
 - Marks use the secondary text color, except the agent grant's diamond, which
   takes the theme's error tone: its red, or its foreground when the red lacks
   contrast against the background. `appearance.activePaneHighlight` doesn't

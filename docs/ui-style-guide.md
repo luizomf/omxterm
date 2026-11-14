@@ -283,6 +283,10 @@ with the last one. Marks grow with the terminal font: the target is one text
 row, the icon 0.8 of the font size. Nothing else uses this look: no other
 chip, pill or blurred surface floats over the terminal.
 
+Over the terminal, the find bar owns the top-right corner. While it is open
+the capsule moves just below it, so the two never overlap. A new overlay in
+that area must do the same, and must never cover the agent's mark.
+
 Marks and notices float over the terminal, out of the layout flow, so they
 never change the grid. Stopping a state goes through existing actions
 (shortcut, Command Palette, menu), never a separate button; an owner may also

@@ -152,6 +152,35 @@ npm audit --omit=dev
 node -e "const {listPackage}=require('@electron/asar');const files=listPackage(process.argv[1]);if(files.length===0)throw Error('empty asar');console.log(files.length+' entries')" path/to/resources/app.asar
 ```
 
+## Adding a core toggle action
+
+A window-local toggle (like Toggle Tab Bar or Toggle Pane Marks) touches these
+places; add the name to `TERMINAL_ACTION_NAMES` first and let `npm run
+typecheck` list what is left.
+
+1. `src/shared/terminal-keybinds.ts`: the name and both default maps. The
+   default is `Cmd/Ctrl+Shift+<letter>`, free on all three platforms, or `null`
+   ([style guide](ui-style-guide.md#default-shortcuts)).
+2. `src/shared/terminal-ipc.ts`, `terminal-bridge.ts`, `command-palette.ts` and
+   `src/preload/index.ts`: the channel and its listener.
+3. `src/main/terminal-application.ts` (`send…` option and `toggleSelected…`),
+   `terminal-menu-actions.ts`, `action-catalog.ts`, `application-menu.ts` and
+   the `src/main/index.ts` wiring.
+4. `src/main/agent-shortcuts.ts`: what an agent's press does (`run`,
+   `refused` or `not-yet`), and `docs/dev/agent-api.md`.
+5. Renderer: `start-terminal-window.ts`, `terminal-window-actions.ts`, then the
+   owner (`terminal-tabs.ts`).
+6. Labels in `src/shared/locales/en-US.ts` and `pt-BR.ts`, and
+   `src/renderer/settings/settings-shortcuts.ts`.
+7. If it has a startup default, a `window.*` setting: `src/shared/settings.ts`,
+   `user-configuration.ts` (shared and main), `active-user-configuration.ts`,
+   `initial-configuration-kit.ts`, `settings-service.ts`,
+   `settings-pages.ts` and the renderer configuration validator.
+8. Tests that build the application options or menu actions (`test/unit` and
+   `test/fixtures`; `typecheck` finds them), plus a behavior test.
+9. Docs: `spec.md`, `configuration.md`, `usage.md`, the ADR if the
+   architecture changes, and the version step.
+
 ## Test layers
 
 Vitest discovers `*.test.*` and `*.spec.*` files under `test/unit/` and `test/integration/`. Shared support code lives in `test/fixtures/`.
