@@ -3,6 +3,7 @@ import type {
   LocalImageActivation,
   LocalImageData,
 } from "../shared/local-image";
+import { setIcon } from "../shared/ui-icons";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
 export interface LocalImagePreview {
@@ -29,7 +30,7 @@ export function createLocalImagePreview(
   const closeButton = document.createElement("button");
   closeButton.type = "button";
   closeButton.className = "local-image-preview-close ui-icon-button";
-  closeButton.textContent = "×";
+  setIcon(closeButton, "x");
 
   const image = document.createElement("img");
   const error = document.createElement("p");

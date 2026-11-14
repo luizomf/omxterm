@@ -20,11 +20,17 @@ do not remove the upstream attribution.
 | `text-shaper` 0.1.28 and FreeType-derived portions     | MIT and upstream attribution    | `licenses/text-shaper.txt`          |
 | Ghostty/libghostty-vt (`0309af1`)                      | MIT                             | `licenses/ghostty.txt`              |
 | xterm.js visible-link expression (retained derivative) | MIT                             | `licenses/xterm-visible-links.txt`  |
+| Lucide 1.73.0 icons (vendored path data)               | ISC; Feather-derived icons MIT  | `licenses/lucide.txt`               |
 | FiraCode Nerd Font Mono                                | SIL Open Font License 1.1       | `licenses/FiraCode-OFL.txt`         |
 | DejaVu Sans Mono                                       | Bitstream/DejaVu/Arev           | `licenses/DejaVu.txt`               |
 | JetBrainsMono Nerd Font Mono                           | SIL Open Font License 1.1       | `licenses/JetBrainsMono-OFL.txt`    |
 | Noto Sans Symbols 2                                    | SIL Open Font License 1.1       | `licenses/NotoSansSymbols2-OFL.txt` |
 | Nerd Fonts patched glyph sets                          | MIT, OFL, CC BY 4.0, Apache 2.0 | `licenses/NerdFonts-glyphs.txt`     |
+
+The interface icons are Lucide 1.73.0 geometry vendored as path data in
+`src/shared/ui-icons.ts` and drawn at a lighter stroke; no Lucide package is a
+dependency. The separate Files archive bundles the same paths and carries the
+notice as `licenses/lucide.txt`.
 
 The fixed public Snippets 0.1.4 archive bundled for one-time new-profile defaults
 retains its original OMXTerm MIT license and bundled YAML ISC notice inside the

@@ -128,8 +128,8 @@ Or, in a POSIX shell, start one session with `PI_IMAGE_PROTOCOL=kitty pi`. Inlin
 
 Programs such as coding agents can tell OMXTerm what they're doing:
 
-- **Working (`⋯`):** while a program reports progress (OSC 9;4), its pane and tab show `⋯`. It goes away when the program says it's done, asks for attention, or exits.
-- **Attention (`●`):** when a program rings the bell or sends a notification (OSC 9 or OSC 777), its pane and tab show `●` until you look at that pane. Bells stay silent.
+- **Working (an open ring):** while a program reports progress (OSC 9;4), its pane and tab show a small open ring. It goes away when the program says it's done, asks for attention, or exits.
+- **Attention (a solid dot):** when a program rings the bell or sends a notification (OSC 9 or OSC 777), its pane and tab show a solid dot until you look at that pane. Bells stay silent.
 
 If the window is in the background, or the program's tab isn't selected, OMXTerm also shows a desktop notification with the program's message. Click it to jump to that tab. Sound is off by default. To turn notifications off or add a sound, see [Notifications](configuration.md#notifications).
 

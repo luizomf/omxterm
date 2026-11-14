@@ -86,10 +86,10 @@ stay in memory and are not displayed or logged.
 area and tab strip. macOS uses native window buttons; Linux and Windows draw a
 themed title row with native window actions.
 
-**State Mark** — A small core-owned glyph at a pane's edge (and on its tab when
+**State Mark** — A small core-owned icon at a pane's corner (and on its tab when
 the tab strip shows) for an ongoing state such as Mirror Typing, Program
 Progress or Attention. Its tooltip
-names the state; its owner may make the pane's glyph clickable (Mirror Typing:
+names the state; its owner may make the pane's mark clickable (Mirror Typing:
 click to stop). It never changes the terminal grid. Idle and success show
 nothing; surprises and problems use one overlay sentence instead, and so does
 the confirmation of an explicit action with no other visible result (Save

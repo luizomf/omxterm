@@ -240,6 +240,11 @@ describe("search bar theme", () => {
       ]);
       expect(buttons[0]!.title).toBe(labels.searchMatchAbove);
       expect(buttons[2]!.textContent).toBe(labels.searchClear);
+      // Above, below and close are one icon each, however often this runs.
+      expect(
+        buttons.map((button) => button.querySelectorAll("svg").length),
+      ).toEqual([1, 1, 0, 1]);
+      expect(buttons[3]!.textContent).toBe("");
     }
   });
 });

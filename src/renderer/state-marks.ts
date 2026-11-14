@@ -1,3 +1,4 @@
+import { setIcon, type UiIconName } from "../shared/ui-icons";
 import { retainDismissalGesture } from "./about/about-dialog";
 import type { RendererLanguage, Translate } from "./renderer-language";
 import {
@@ -9,18 +10,23 @@ import {
 /**
  * Core owns the glyphs so every state looks the same whoever reports it. A
  * new state adds a glyph here; reporters never bring their own visuals.
+ * Each is an icon from the shared set: an outline for an ambient state, a
+ * solid shape for one that needs the user.
  */
 export const stateGlyphs = {
-  mirror: "↔\uFE0E",
+  mirror: { icon: "move-horizontal" },
   // A program reports progress (OSC 9;4); static, never animated.
-  working: "⋯",
+  working: { icon: "loader-circle" },
   // A program asked for attention (BEL, OSC 9, OSC 777) and the pane has
   // not been seen since.
-  attention: "●",
+  attention: { icon: "circle-small", solid: true },
   // Something other than the user can act here: an agent grant (ADR 0052).
   // The only glyph with a tone of its own, the theme's error tone.
-  agent: "◆",
-} as const;
+  agent: { icon: "diamond", solid: true },
+} as const satisfies Record<
+  string,
+  { readonly icon: UiIconName; readonly solid?: boolean }
+>;
 export type StateGlyph = keyof typeof stateGlyphs;
 
 /** Literal text (never HTML), or a resolver for core strings. */
@@ -78,7 +84,8 @@ export function createStateMarks(
       : text(mark.label, t);
     element.className = action ? "ui-mark ui-icon-button" : "ui-mark";
     element.dataset.glyph = mark.glyph;
-    element.textContent = stateGlyphs[mark.glyph];
+    const { icon, ...look } = stateGlyphs[mark.glyph];
+    setIcon(element, icon, look);
     if (!action) element.setAttribute("role", "img");
     element.setAttribute("aria-label", label);
     // The native tooltip waits about a second; an actionable mark must be
@@ -150,7 +157,7 @@ export function createStateMarks(
   const dismiss = document.createElement("button");
   dismiss.type = "button";
   dismiss.className = "ui-icon-button";
-  dismiss.textContent = "×";
+  setIcon(dismiss, "x");
   notice.append(message, dismiss);
   document.body.append(notice);
   const keyboard = retainDismissalGesture(document);

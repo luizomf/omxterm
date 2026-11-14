@@ -1,3 +1,4 @@
+import { setIcon } from "../shared/ui-icons";
 import { retainDismissalGesture } from "./about/about-dialog";
 import type { HostedContentSlot } from "./hosted-content-presentation";
 import type { RendererLanguage } from "./renderer-language";
@@ -37,7 +38,7 @@ export function createHostedDialogFrame(
   const close = document.createElement("button");
   close.type = "button";
   close.className = "ui-icon-button";
-  close.textContent = "×";
+  setIcon(close, "x");
   const slot = document.createElement("div");
   slot.className = "hosted-content-dialog-slot";
   header.append(title, close);

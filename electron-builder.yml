@@ -50,6 +50,8 @@ extraResources:
     to: licenses/text-shaper.txt
   - from: assets/licenses/ghostty-MIT.txt
     to: licenses/ghostty.txt
+  - from: assets/licenses/lucide-ISC.txt
+    to: licenses/lucide.txt
   - from: node_modules/electron/dist/LICENSE
     to: LICENSE.electron.txt
   - from: node_modules/electron/dist/LICENSES.chromium.html

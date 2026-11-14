@@ -59,6 +59,30 @@ it("shows each owner's mark on its pane and once per owner on the tab", () => {
   expect(paneLabels(panes[0]!)).toEqual([]);
 });
 
+it("draws every state as one decorative icon: an outline while ambient, solid when it needs the user", () => {
+  const marks = createStateMarks(document, createRendererLanguage(), vi.fn());
+  const { tab, panes } = tabWithPanes(1);
+  const glyphs = ["mirror", "working", "attention", "agent"] as const;
+  for (const glyph of glyphs)
+    marks.set(panes[0]!, glyph, { glyph, label: glyph });
+  const icons = (elements: readonly Element[]) =>
+    elements.map((element) => {
+      const drawn = element.querySelectorAll("svg");
+      expect(drawn).toHaveLength(1);
+      // The mark carries the name; the drawing is hidden from it.
+      expect(drawn[0]!.getAttribute("aria-hidden")).toBe("true");
+      expect(element.textContent).toBe("");
+      return drawn[0]!.getAttribute("fill") === "none" ? "outline" : "solid";
+    });
+  const expected = ["outline", "outline", "solid", "solid"];
+  expect(icons([...panes[0]!.container.querySelectorAll(".ui-mark")])).toEqual(
+    expected,
+  );
+  expect(icons(marks.tab(tab))).toEqual(expected);
+  expect(labels(marks.tab(tab))).toEqual([...glyphs]);
+  marks.dispose();
+});
+
 it("turns a pane's mark into a button when its owner gives an action", () => {
   const marks = createStateMarks(document, createRendererLanguage(), vi.fn());
   const { tab, panes } = tabWithPanes(1);

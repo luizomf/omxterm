@@ -1,4 +1,5 @@
 import type { TerminalTheme } from "../shared/terminal-theme";
+import { setIcon } from "../shared/ui-icons";
 import type { PatchedRestty } from "./restty-runtime-contract";
 import {
   toResttySearchStatusStyle,
@@ -163,23 +164,27 @@ export function retainSearchEscapeGesture(container: HTMLElement): () => void {
   };
 }
 
-// Restty builds the bar with fixed English titles and accessible names; the
-// Surface applies the window language to them and follows later changes.
+// Restty builds the bar with text glyphs and fixed English titles and
+// accessible names; the Surface draws the shared icons instead, applies the
+// window language and follows later changes.
 export function applySearchLabels(
   container: HTMLElement,
   labels: TerminalSurfaceLabels | undefined,
 ): void {
-  if (!labels) return;
-  container.setAttribute("aria-label", labels.surfaceRegion);
+  if (labels) container.setAttribute("aria-label", labels.surfaceRegion);
   for (const root of container.querySelectorAll<HTMLElement>(
     '[role="search"]',
   )) {
-    root.setAttribute("aria-label", labels.searchRegion);
-    const input = root.querySelector("input");
-    if (input) input.placeholder = labels.searchPlaceholder;
     const [above, below, clear, close] = root.querySelectorAll<HTMLElement>(
       ".restty-pane-search-button",
     );
+    if (above) setIcon(above, "arrow-up");
+    if (below) setIcon(below, "arrow-down");
+    if (close) setIcon(close, "x");
+    if (!labels) continue;
+    root.setAttribute("aria-label", labels.searchRegion);
+    const input = root.querySelector("input");
+    if (input) input.placeholder = labels.searchPlaceholder;
     above?.setAttribute("title", labels.searchMatchAbove);
     above?.setAttribute("aria-label", labels.searchMatchAbove);
     below?.setAttribute("title", labels.searchMatchBelow);

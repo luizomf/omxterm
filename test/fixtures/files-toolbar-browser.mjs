@@ -46,6 +46,9 @@ try {
       "--disable-backgrounding-occluded-windows",
       "--no-first-run",
       "--no-default-browser-check",
+      // Never reach for the OS keychain: on macOS that opens a system dialog.
+      "--use-mock-keychain",
+      "--password-store=basic",
       `--user-data-dir=${path.join(root, "profile")}`,
       "about:blank",
     ],

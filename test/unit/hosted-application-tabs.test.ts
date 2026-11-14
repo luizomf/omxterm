@@ -524,8 +524,16 @@ it("keeps the window's mark clickable over an extension tab, with or without the
   });
   h.open();
   await settle();
-  // Every tab carries the glyph, but a tab button's can't be clicked.
-  expect(selectedStates(h.strip)).toEqual(["◆1:false", "◆view-a:true"]);
+  // Every tab carries the mark, but a tab button's can't be clicked.
+  expect(selectedStates(h.strip)).toEqual(["1:false", "view-a:true"]);
+  expect(
+    [...h.strip.querySelectorAll('[role="tab"]')].map((tab) =>
+      tab.querySelector('[role="img"]')?.getAttribute("aria-label"),
+    ),
+  ).toEqual([
+    "Agents can do anything you can in this window.",
+    "Agents can do anything you can in this window.",
+  ]);
   const corner = () =>
     document.querySelector<HTMLButtonElement>(".state-marks-corner button");
   expect(h.strip.hidden).toBe(false);

@@ -1528,6 +1528,10 @@ export async function verifyPackagedApplication(
         path.join(projectRoot, "assets", "licenses", "ghostty-MIT.txt"),
         path.join(resources, "licenses", "ghostty.txt"),
       ),
+      assertSameFile(
+        path.join(projectRoot, "assets", "licenses", "lucide-ISC.txt"),
+        path.join(resources, "licenses", "lucide.txt"),
+      ),
       stat(path.join(resources, "LICENSE.electron.txt")),
       stat(path.join(resources, "LICENSES.chromium.html")),
     ]);

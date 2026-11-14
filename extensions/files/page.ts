@@ -13,6 +13,7 @@ import {
 import type { SupportedLanguage } from "../../src/shared/i18n.js";
 import { filesMessages, type FilesMessages } from "./messages.js";
 import { createFilesToolbar } from "./toolbar.js";
+import { setIcon } from "../../src/shared/ui-icons.js";
 import { inside, isRoot, join, parent, validName } from "./paths.js";
 import {
   FILES_ENTRY_DRAG_TYPE,
@@ -336,8 +337,14 @@ export function mountFilesPage(
       const disclosure = document.createElement("span");
       disclosure.className = "disclosure";
       disclosure.setAttribute("aria-hidden", "true");
-      disclosure.textContent =
-        item.kind === "directory" ? (item.expanded ? "▾" : "▸") : "·";
+      setIcon(
+        disclosure,
+        item.kind !== "directory"
+          ? "file"
+          : item.expanded
+            ? "chevron-down"
+            : "chevron-right",
+      );
       const name = document.createElement("span");
       name.className = "file-name";
       name.textContent = item.name;
@@ -1107,7 +1114,7 @@ export function mountFilesPage(
         const indicator = document.createElement("span");
         indicator.className = "menu-check";
         indicator.setAttribute("aria-hidden", "true");
-        indicator.textContent = action.checked ? "✓" : "□";
+        setIcon(indicator, action.checked ? "square-check" : "square");
         const caption = document.createElement("span");
         caption.className = "menu-caption";
         caption.id = "files-dotfiles-caption";
