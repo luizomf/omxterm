@@ -1,3 +1,4 @@
+import { onWindowClosed } from "./window-closed";
 import type { BrowserWindow, Event, Input } from "electron";
 import { hasNativeAltGr } from "./keyboard-modifiers";
 import { coreActionForKeyboardInput } from "./action-catalog";
@@ -124,7 +125,7 @@ export function registerWindowActionDelivery(
   contents.on("render-process-gone", invalidate);
   contents.on("destroyed", invalidate);
   window.on("blur", () => capture.release(contents));
-  window.once("closed", () => capture.release(contents));
+  onWindowClosed(window, () => capture.release(contents));
   let selection: string | null | undefined;
   return {
     invalidate,

@@ -1,3 +1,4 @@
+import { onWindowClosed } from "./window-closed";
 import { execFileSync } from "node:child_process";
 import { release } from "node:os";
 import type { BrowserWindow } from "electron";
@@ -48,7 +49,7 @@ export function createWindowBackgroundEffectsOwner(
       });
       owned.set(window, effects);
       effects.apply(configuration);
-      window.once("closed", () => {
+      onWindowClosed(window, () => {
         effects.dispose();
         owned.delete(window);
       });

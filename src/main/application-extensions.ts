@@ -1,3 +1,4 @@
+import { onWindowClosed } from "./window-closed";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import type { DefaultSnippetsSeed } from "./default-snippets";
 import { createPanelDefault, type PendingExtensionOpen } from "./panel-default";
@@ -498,7 +499,7 @@ export async function startApplicationExtensions(
       const contents = window.webContents;
       windows.set(window, target);
       defaultPanel.registerWindow(window);
-      window.once("closed", () => {
+      onWindowClosed(window, () => {
         windows.delete(window);
         defaultPanel.cancel(window);
         pending.delete(window);
