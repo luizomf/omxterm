@@ -7,7 +7,8 @@ row and Stop button this replaces. Amended by
 `working` and `attention` glyphs, and by
 [ADR 0052](0052-let-a-local-agent-drive-a-granted-window.md), which adds the
 window-scoped `agent` mark and the one accent tone, and later moves that mark
-to the error tone.
+to the error tone. Amended below ([#1071](https://github.com/luizomf/omxterm/issues/1071)):
+the glyphs are icons from one set, and a pane's marks sit in a small capsule.
 
 ## Context
 
@@ -117,3 +118,35 @@ While a grant exists the mark is always visible: no hidden chrome, extension
 tab or state the agent can toggle may hide it. The token is `--ui-agent`,
 which replaces `--ui-accent`, and the corner copy shows whenever the selected
 tab has no pane, so there is always a mark to click.
+
+## Amendment: one icon set and a capsule for pane marks (#1071)
+
+The four Unicode glyphs (`↔`, `⋯`, `●`, `◆`) came out at four sizes and
+weights, differed between tab and pane, and tangled with the output they
+floated over: the working mark vanished inside the letters under it. Testing
+line weights showed that no stroke reads bare over busy text; a backing
+decides legibility, the stroke only taste.
+
+So tier 2 changes in two ways, and nothing else does:
+
+- **Marks are icons from the interface's one icon set**
+  (`src/shared/ui-icons.ts`: Lucide geometry at stroke 1.75, vendored as path
+  data, no dependency). An outline is an ambient state (mirror: a two-headed
+  arrow; working: a static open ring); a solid shape needs the user
+  (attention: a dot; agent: a diamond, still the only mark with a tone). One
+  optical size per place: 12 px on a tab, and on a pane 0.8 of the terminal
+  font size, never under 16 px, in a target of one text row, never under
+  24 px. `stateGlyphs` still names them and reporters still pass only a name.
+- **A pane's marks share one capsule**, which replaces "no chip or
+  background": a fully round surface tint with a backdrop blur, a faint top
+  rim and a soft shadow, only as wide as its marks and gone with the last
+  one. It is one home for every state, never a chip per feature. The tint
+  alone must carry it, because the blur is an enhancement that not every
+  compositor gives.
+
+The cost is stated plainly: the capsule hides the end of row 1 instead of
+letting it show through, and it is wider than "a column or two". At the
+default 15 px font one mark covers about 28 px (3 columns) and all four
+about 104 px (11 columns). It still never enters the layout flow or changes
+the grid. A setting and shortcut to hide pane marks, which never hide the
+agent mark, are planned separately for people who want row 1 back.

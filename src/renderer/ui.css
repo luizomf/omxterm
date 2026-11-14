@@ -377,8 +377,8 @@
   color-scheme: var(--ui-color-scheme, dark);
   background: color-mix(
     in srgb,
-    rgb(from var(--ui-surface) r g b / 0.72),
-    var(--ui-neutral) 14%
+    rgb(from var(--ui-surface) r g b / 0.86),
+    var(--ui-neutral) 16%
   );
   border-radius: 999px;
   box-shadow:
@@ -386,7 +386,7 @@
     inset 0 0 0 1px rgb(from var(--ui-text) r g b / 0.06),
     0 2px 8px
       light-dark(rgb(from var(--ui-text) r g b / 0.14), rgb(0 0 0 / 0.32));
-  backdrop-filter: blur(10px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
 }
 /* Marks follow the terminal's font: the target is one text row and the icon
    0.8 of the font size, never under 24 and 16 px. The agent's mark is a

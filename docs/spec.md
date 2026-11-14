@@ -521,20 +521,29 @@ quietest form that works:
 
 - Idle or success shows nothing, except that an explicit action with no other
   visible result (Save layout) confirms itself with one transient sentence.
-- An ongoing state is a State Mark: one small glyph at the pane's top-right
-  edge, in its top padding, with a tooltip and an accessible name and no
-  on-screen text. With the tab strip visible, the tab shows each state's glyph
-  once before its title. Core owns the glyphs: Mirror Typing `↔`, a program
-  working `⋯`, a program asking for attention `●`
+- An ongoing state is a State Mark: one small icon at the pane's top-right
+  corner, centered on the first text row, with a tooltip and an accessible
+  name and no on-screen text. With the tab strip visible, the tab shows each
+  state's icon once before its title. Core owns the icons, all from the one
+  interface icon set: Mirror Typing a two-headed horizontal arrow, a program
+  working a static open ring, a program asking for attention a solid dot
   ([program progress and attention](#program-progress-and-attention)), and an
-  agent grant `◆` ([agent access](#agent-access)).
+  agent grant a solid diamond ([agent access](#agent-access)). An outline is
+  an ambient state; a solid shape needs the user.
+- A pane's marks sit together in one small capsule that tints and blurs the
+  output under it, so they stay legible over busy text and in translucent
+  windows. The capsule is only as wide as its marks (about 28 px for one,
+  104 px for four at the default font size), covers that much of the end of
+  row 1, and disappears with its last mark. Marks scale with the terminal
+  font: each target is one text row and never under 24 px, its icon 0.8 of
+  the font size and never under 16 px. A tab's icons are 12 px.
 - A window-wide state puts its mark on every pane of the window, panes opened
   later included, after each pane's own marks, and once on every tab, Settings
   and extension tabs included. When a Settings or extension tab is selected,
   so no pane shows it, it also sits in the page's top-right corner, where it
   can be clicked like a pane's; it stays there until the panes of a terminal
   tab the user returns to actually show.
-- Marks use the secondary text color, except the agent grant's `◆`, which
+- Marks use the secondary text color, except the agent grant's diamond, which
   takes the theme's error tone: its red, or its foreground when the red lacks
   contrast against the background. `appearance.activePaneHighlight` doesn't
   change it.
@@ -740,8 +749,8 @@ Connect share it; no per-tool placement or second panel exists.
   view through the acknowledged host lifecycle, not extension disable or backend
   retirement. Reopening creates fresh view state and invocation context.
   Repeated closes coalesce; a pending close never queues an automatic reopen.
-- Header Hide (a chevron toward the panel's edge, distinct from Close's ×, both
-  with tooltips) and Escape (from inside the panel) keep every opened tool and
+- Header Hide (a panel icon whose bar sits on the panel's side, distinct from
+  Close's ×, both with tooltips) and Escape (from inside the panel) keep every opened tool and
   its state.
 - Close and Hide return focus to the live selected terminal after native
   acknowledgement, unless a newer selection or modal owns focus. Neither closes
@@ -1257,7 +1266,7 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   [State Mark](#state-marks) in the error tone, and so does the page corner
   when a Settings or extension tab is selected; no state of the window hides
   it, including a hidden tab strip or title bar, full screen and any zoom
-  (pane marks never shrink below the UI's meta text size).
+  (a pane mark is never smaller than a 16 px icon in a 24 px target).
   The pane's and the corner's mark are buttons: their tooltip says "Agents
   can do anything you can in this window. Click this mark to stop them." The grant ends on
   that click, the toggle, closing the window, quitting, a renderer reload or
