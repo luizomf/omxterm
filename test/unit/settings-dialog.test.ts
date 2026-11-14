@@ -69,7 +69,7 @@ it("keeps typing after raw submission and saves the newer draft from the submitt
   expect(view.bridge.saveText).toHaveBeenLastCalledWith(newer, "r2");
 });
 
-it("keeps the raw draft until Reload File completes and retains typing during that read", async () => {
+it("keeps the raw draft until Reload file completes and retains typing during that read", async () => {
   const pending = deferred<SettingsSnapshot>();
   const view = await open({
     snapshot: vi
@@ -80,7 +80,7 @@ it("keeps the raw draft until Reload File completes and retains typing during th
   const editor = view.query<HTMLTextAreaElement>("textarea");
   editor.value = "draft A";
   editor.dispatchEvent(new Event("input"));
-  button("Reload File").click();
+  button("Reload file").click();
   view.field("Font size").value = "18";
   view.field("Font size").dispatchEvent(new Event("change"));
   await view.settle();
@@ -220,7 +220,7 @@ describe("settings dialog", () => {
       "Terminal",
       "Window",
       "Shortcuts",
-      "Config File",
+      "Config file",
     ]);
     expect(document.activeElement?.textContent).toBe("General");
     expect(view.field("Confirm before closing").checked).toBe(true);

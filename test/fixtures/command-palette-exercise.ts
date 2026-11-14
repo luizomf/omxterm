@@ -256,7 +256,7 @@ export async function exerciseCommandPalette(options: {
       "document.querySelector('.settings-dialog').closest('[hidden]') === null",
     );
     await js(
-      `(() => { [...document.querySelectorAll('.settings-dialog button')].find(button => button.textContent === 'Config File').click(); const input = document.querySelector('.settings-config-file textarea'); input.value = 'palette unsaved draft'; input.dispatchEvent(new Event('input')); input.focus(); input.dataset.paletteDraft = 'true'; })()`,
+      `(() => { [...document.querySelectorAll('.settings-dialog button')].find(button => button.textContent === 'Config file').click(); const input = document.querySelector('.settings-config-file textarea'); input.value = 'palette unsaved draft'; input.dispatchEvent(new Event('input')); input.focus(); input.dataset.paletteDraft = 'true'; })()`,
     );
     key("F6");
     await opened();

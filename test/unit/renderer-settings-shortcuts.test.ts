@@ -137,33 +137,31 @@ describe("Shortcuts page", () => {
     const view = await open(language);
     const record = view.button("find", "record");
     expect(view.button("find", "unbind").getAttribute("aria-label")).toBe(
-      "Unbind shortcut for Find…",
+      "Unbind shortcut for Find",
     );
     expect(view.button("find", "default").getAttribute("aria-label")).toBe(
-      "Use default shortcut for Find…",
+      "Use default shortcut for Find",
     );
     record.focus();
     record.click();
     expect(record.getAttribute("aria-label")).toBe(
-      "Cancel shortcut recording for Find…",
+      "Cancel shortcut recording for Find",
     );
     language.set("pt-BR");
     expect(view.button("find", "record")).toBe(record);
     expect(document.activeElement).toBe(record);
     expect(record.textContent).toBe("Cancelar");
     expect(record.getAttribute("aria-label")).toBe(
-      "Cancelar gravação de atalho para Buscar…",
+      "Cancelar gravação de atalho para Buscar",
     );
     expect(view.button("find", "unbind").getAttribute("aria-label")).toBe(
-      "Remover atalho para Buscar…",
+      "Remover atalho para Buscar",
     );
     expect(view.button("find", "default").getAttribute("aria-label")).toBe(
-      "Usar atalho padrão para Buscar…",
+      "Usar atalho padrão para Buscar",
     );
     record.click();
-    expect(record.getAttribute("aria-label")).toBe(
-      "Gravar atalho para Buscar…",
-    );
+    expect(record.getAttribute("aria-label")).toBe("Gravar atalho para Buscar");
     expect(view.status()).toBe("Gravação cancelada.");
   });
   it("releases capture on page departure even when activation never focused Record", async () => {
@@ -227,7 +225,7 @@ describe("Shortcuts page", () => {
     }
     expect(view.cells("quit")).toEqual(["None", ""]);
     expect(view.button("find", "record").getAttribute("aria-label")).toBe(
-      "Record shortcut for Find…",
+      "Record shortcut for Find",
     );
     expect(view.button("find", "default").disabled).toBe(true);
   });

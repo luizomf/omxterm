@@ -199,7 +199,7 @@ it("keeps file, reload and transport failures live without refetching on languag
   const editor = view.query<HTMLTextAreaElement>("textarea");
   editor.value = "draft";
   editor.dispatchEvent(new Event("input"));
-  button("Recarregar Arquivo").click();
+  button("Recarregar arquivo").click();
   language.set("en-US");
   expect(view.query(".settings-config-file [role=status]").textContent).toBe(
     "Reloading…",
