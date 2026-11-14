@@ -95,6 +95,10 @@ export async function prepareNodePtyExecStatus({
         "-DNAPI_VERSION=8",
         "-DNODE_GYP_MODULE_NAME=pty",
         "-DNAPI_CPP_EXCEPTIONS",
+        // A shell can die while Electron frees its Node environment (a forced
+        // app.exit()). The exit callback then cannot run JS, and rethrowing
+        // that as a C++ exception aborts the process (#1042).
+        "-DNODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS",
         `-I${apiHeaders}`,
         `-I${addonHeaders}`,
         ...targetFlags,

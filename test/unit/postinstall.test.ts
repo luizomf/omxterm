@@ -320,6 +320,7 @@ describe("node-pty prepared artifact and callback ordering", () => {
             "-DNAPI_VERSION=8",
             "-DNODE_GYP_MODULE_NAME=pty",
             "-DNAPI_CPP_EXCEPTIONS",
+            "-DNODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS",
             `-I${include_dir}`,
             `-I${path.dirname(createRequire(path.join(isolated, "package.json")).resolve("node-addon-api/package.json"))}`,
             "-fPIC",
