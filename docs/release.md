@@ -6,7 +6,7 @@ See [versioning.md](versioning.md) for SemVer rules and [development.md](develop
 
 ## Release workflow
 
-1. Select application version `X.Y.Z` under [versioning.md](versioning.md), remove the development suffix and review one frozen source cut. Record its full commit SHA. All targets for that application version use this cut; they need not ship together.
+1. Select application version `X.Y.Z` under [versioning.md](versioning.md), remove the development suffix and review one frozen source cut. Every author of a merged outside contribution since the last release is in [CONTRIBUTORS.md](../CONTRIBUTORS.md). Record its full commit SHA. All targets for that application version use this cut; they need not ship together.
 2. Build and verify a ready target using the relevant procedure below. Retain the actual build SHA, checksums and evidence; prove any build-to-cut differences are non-artifact changes. Collect its files in the ignored `release/` directory.
 3. Create its target tag and draft, upload its complete [asset set](#publication), read back sizes and hashes, publish, and verify public downloads. Update that target's exact links in the README download index. A target that is not ready does not block another.
 4. Advance the development baseline once for the selected application cut, not for each later target, after reviewing [extension compatibility](versioning.md#development-baseline-between-releases) for the new family.

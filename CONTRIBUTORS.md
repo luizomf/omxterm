@@ -8,8 +8,10 @@ translation or documentation fix. The list is alphabetical by GitHub handle,
 with equal recognition for every contributor:
 
 - [Gabriel Albuquerque Alencar (@Gaalbu)](https://github.com/Gaalbu)
+- [Jay (@jay23606)](https://github.com/jay23606)
 - [Francisco Juan (@Juan-Severiano)](https://github.com/Juan-Severiano)
 - [Otávio Miranda (@luizomf)](https://github.com/luizomf)
+- [@MayurK-cmd](https://github.com/MayurK-cmd)
 - [Rafael Ruscher (@ruscher)](https://github.com/ruscher)
 
 Missing from the list, or want to correct your name or optional self-provided
