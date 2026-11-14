@@ -446,6 +446,8 @@ export const englishMessages = {
     "Unexpected error. Some settings may already be active; choose View → Reload Settings again.",
   "settings.page.shortcuts": "Shortcuts",
   "shortcuts.hint": "App shortcuts get the key before terminal programs do.",
+  "shortcuts.search": "Search shortcuts",
+  "shortcuts.noMatch": "No shortcuts match the search.",
   "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",
   "shortcuts.promptMac":
     "Press the new shortcut, or Escape to cancel. Option-only letters and top-row digits may work with supported layouts. Some dead keys may not be recordable; input methods or missing native support can also prevent recording. Option as Alt affects terminal input only.",

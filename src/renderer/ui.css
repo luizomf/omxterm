@@ -114,6 +114,28 @@
 .page-control::placeholder {
   color: var(--ui-secondary);
 }
+/* A search field's clear button: the native one is heavy and takes the system
+   accent. Two hairlines in the secondary tone, like every other quiet glyph. */
+.page-control[type="search"]::-webkit-search-cancel-button {
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  margin-inline: var(--ui-space-2) 0;
+  cursor: pointer;
+  background:
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 0.6px),
+      var(--ui-secondary) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    ),
+    linear-gradient(
+      -45deg,
+      transparent calc(50% - 0.6px),
+      var(--ui-secondary) calc(50% - 0.6px) calc(50% + 0.6px),
+      transparent calc(50% + 0.6px)
+    );
+}
 .page-button {
   border-color: transparent;
   cursor: pointer;

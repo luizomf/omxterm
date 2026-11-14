@@ -192,7 +192,7 @@ You can also use a PowerShell 7 executable such as `C:\\Program Files\\PowerShel
 
 <a id="keybinds"></a>
 
-Use **Settings → Shortcuts** to record, reset or unbind application shortcuts. To edit JSON, use `keybinds` with [Electron accelerator syntax](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators). For example:
+Use **Settings → Shortcuts** to record, reset or unbind application shortcuts. The search field finds an action by its name or by its current keys, such as `split`, `⌘D` or `cmd+d`; **Escape** clears it. To edit JSON, use `keybinds` with [Electron accelerator syntax](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators). For example:
 
 ```json
 {

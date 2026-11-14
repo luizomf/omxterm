@@ -460,6 +460,8 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.page.shortcuts": "Atalhos",
   "shortcuts.hint":
     "Atalhos do app recebem a tecla antes dos programas do terminal.",
+  "shortcuts.search": "Buscar atalhos",
+  "shortcuts.noMatch": "Nenhum atalho corresponde à busca.",
   "shortcuts.prompt": "Pressione o novo atalho, ou Escape para cancelar.",
   "shortcuts.promptMac":
     "Pressione o novo atalho, ou Escape para cancelar. Option sem outros modificadores com letras e dígitos da fileira superior pode funcionar em layouts compatíveis. Algumas teclas mortas podem não ser graváveis; métodos de entrada ou suporte nativo indisponível também podem impedir a gravação. A opção de usar Option como Alt afeta apenas a entrada no terminal.",

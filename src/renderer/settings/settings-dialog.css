@@ -433,6 +433,18 @@ body.tabs-visible .settings-tab {
   max-width: none;
   margin-bottom: 16px;
 }
+/* A field like any other in Settings: it ends at the 384 px field boundary. */
+.settings-shortcut-filter {
+  width: 100%;
+  max-width: 384px;
+  margin-bottom: 8px;
+}
+.settings-shortcut-empty {
+  padding-block: 12px;
+}
+.settings-shortcut[hidden] {
+  display: none;
+}
 .settings-shortcut {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

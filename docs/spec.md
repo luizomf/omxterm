@@ -2541,6 +2541,13 @@ Shortcuts page:
   `null`, and recording writes an accelerator, all through the normal save.
   Recording another action's default takes the key; that action shows no
   shortcut until it is recorded again or the taking entry is reset.
+- A search field above the list filters it by action name in the Interface
+  Language, by state, or by the keys of the current binding. Case and accents
+  are ignored; keys match in any order, as symbols or words (`⌘D`, `cmd+d`,
+  `command d`), and a part longer than one character may be unfinished
+  (`cmd+sh`). Matches keep the list's order and no match shows one line.
+  Escape clears a non-empty field. A row found by its keys stays in place
+  while those keys are changed, until the query changes.
 - Recording is owned by main: the next candidate key is captured with the same
   identity delivery uses (including AltGr and bare F1–F24) instead of running a
   keybind or menu shortcut or reaching the terminal. Its held repeats and

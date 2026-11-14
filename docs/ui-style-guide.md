@@ -73,7 +73,7 @@ take `color-scheme` from background luminance (light above 0.179).
 | `page-button-compact`               | Add to any button in a dense row: 28 px tall, 13 px text.                                                                                                                                                                                                                                             |
 | `ui-icon-button`                    | A 28 px square glyph or icon button (close, hide, toolbars). Always give it an accessible name and a tooltip.                                                                                                                                                                                         |
 | `ui-link`                           | A text link, such as "Learn more" or About's links.                                                                                                                                                                                                                                                   |
-| `page-control`                      | Native text fields, selects and textareas. 36 px, control fill, input border. Checkboxes stay native.                                                                                                                                                                                                 |
+| `page-control`                      | Native text fields, selects and textareas. 36 px, control fill, input border. Checkboxes stay native. A search field's clear button is two secondary hairlines.                                                                                                                                       |
 | `ui-actions` (`ui-actions-dense`)   | A group of buttons: wraps with an 8 px (4 px) gap. Buttons never touch.                                                                                                                                                                                                                               |
 | `ui-list` + `ui-row`                | Lists people pick from (snippets, aliases, files, palette results). Hover and selection are fills, never borders or bars.                                                                                                                                                                             |
 | `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.                                                                                                                                                                                       |
@@ -114,7 +114,8 @@ Every category shares a 720 px content boundary; the sidebar is 168 px below
 fields end at the content edge (fields at most 384 px, numbers 112 px); below
 560 px of content width labels sit above fields. Shortcut rows are at least
 48 px with the binding as a `ui-chip` and compact actions; only Custom and
-Unbound are labelled. Extensions lists installed extensions as `ui-row`s with
+Unbound are labelled. A search `page-control` above the rows filters them; it
+ends at the 384 px field boundary and an empty result is one `ui-hint` line. Extensions lists installed extensions as `ui-row`s with
 compact `-text` actions and official extensions as `ui-card`s. Settings is
 comfortable at 640×480; below 480 px categories become a two-column grid.
 
