@@ -22,7 +22,7 @@ it("declares the mirror and docs-link capabilities and ships the AshyTerm licens
   expect(manifest).toMatchObject({
     id: "omxterm.mirror-typing",
     name: "Mirror Typing",
-    version: "0.3.0",
+    version: "0.3.1",
     capabilities: ["terminal.mirrorTyping.v1", "links.open.v1"],
     view: { context: "window", action: "omxterm.mirror-typing.open" },
   });

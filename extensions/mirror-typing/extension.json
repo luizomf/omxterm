@@ -1,7 +1,7 @@
 {
   "format": 1,
   "id": "omxterm.mirror-typing",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "name": "Mirror Typing",
   "engines": { "omxterm": ">=0.29.1-dev.0", "api": "0.1.x" },
   "backend": "backend.mjs",

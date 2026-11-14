@@ -73,6 +73,7 @@ it("loads only on logical activation, preserves search and focuses search on int
     text: "  echo 'hello'\r\n",
     title: "Literal",
     intent: "run",
+    preview: false,
   });
   row.focus();
   h.visibility(false);
