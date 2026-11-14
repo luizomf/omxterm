@@ -43,9 +43,9 @@ const runtime = { appVersion, apiVersion: "0.1.0" };
 // Verbatim extension.json bytes extracted from the published archives.
 const releases = [
   {
-    name: "Files 0.9.1",
+    name: "Files 0.9.2",
     id: "omxterm.files",
-    manifest: `{"format":1,"id":"omxterm.files","version":"0.9.1","name":"Files","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
+    manifest: `{"format":1,"id":"omxterm.files","version":"0.9.2","name":"Files","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
   },
   {
     name: "SSH 0.4.2",
