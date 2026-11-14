@@ -276,10 +276,16 @@ describe("native Terminal Title and bell attention", () => {
     // tmux replays pending bells on attach, before the window has focus.
     harness.controller.ringBell("s1");
     harness.controller.ringBell("s2");
-    harness.controller.notify("s2", { title: "", body: "Done" });
     expect(harness.attention).toHaveBeenCalledWith("s2", true);
     expect(harness.dock).not.toHaveBeenCalled();
     expect(harness.notify).not.toHaveBeenCalled();
+
+    // A program's own notification still gets through.
+    harness.controller.notify("s2", { title: "", body: "Done" });
+    expect(harness.notify).toHaveBeenCalledOnce();
+    expect(harness.dock).toHaveBeenCalledOnce();
+    harness.dock.mockClear();
+    harness.notify.mockClear();
 
     // After the user has had the window, a background bell notifies again.
     harness.focus();

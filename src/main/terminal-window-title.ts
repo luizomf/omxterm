@@ -103,8 +103,9 @@ export function createTerminalWindowTitleController(
   let settingsTitle: string | undefined;
   let cancelAttention: (() => void) | undefined;
   let disposed = false;
-  // Output that arrives while the window opens (tmux replaying a pending bell
-  // on attach) is not news: native attention waits for the first focus.
+  // A bell that arrives while the window opens (tmux replaying a pending one
+  // on attach) is not news: bells wait for the first focus. Program
+  // notifications carry text the program chose to send, so they never wait.
   let hasBeenFocused = window.isFocused();
   const onRejected = options.onRejected ?? (() => {});
 
@@ -152,7 +153,7 @@ export function createTerminalWindowTitleController(
       state.attentionPending = true;
       options.sendSessionAttention?.(sessionId, true);
     }
-    if (!hasBeenFocused) return;
+    if (!hasBeenFocused && !notification) return;
     const focused = window.isFocused();
     if (!focused && !cancelAttention) {
       cancelAttention = options.requestAttention();
