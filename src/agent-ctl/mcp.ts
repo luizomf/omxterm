@@ -16,7 +16,7 @@ import {
   isPlainRecord,
 } from "../shared/agent-api";
 import { CtlError, EXIT } from "./client";
-import { execute, parse, type Options } from "./commands";
+import { MIN_TIMEOUT_MS, execute, parse, type Options } from "./commands";
 
 const MODERN_VERSIONS = ["2026-07-28"];
 const LEGACY_VERSIONS = [
@@ -61,9 +61,9 @@ const match = {
 };
 const timeout = {
   type: "integer",
-  minimum: 1,
+  minimum: MIN_TIMEOUT_MS,
   maximum: MAX_AGENT_WAIT_MS,
-  description: `Give up after this many milliseconds (default ${MCP_WAIT_TIMEOUT_MS}). Keep it under your client's tool timeout.`,
+  description: `Give up after this many milliseconds, not seconds (default ${MCP_WAIT_TIMEOUT_MS}). Keep it under your client's tool timeout.`,
 };
 
 type Schema = { type: string; [key: string]: unknown };
