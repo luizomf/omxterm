@@ -11,10 +11,20 @@ const queuedFrames = new Map<
   number,
   { callback: FrameRequestCallback; nativeId: number }
 >();
+let holdNextFrame: (() => void) | undefined;
+// Executed-script errors reach the main process only as "Script failed to
+// execute"; keep the gate's own failure readable in the capture state.
+let gateError: string | null = null;
 if (gateFrames) {
   let nextId = 0;
   window.requestAnimationFrame = (callback) => {
     const id = ++nextId;
+    if (holdNextFrame) {
+      queuedFrames.set(id, { callback, nativeId: 0 });
+      heldCallbacks.add(id);
+      holdNextFrame();
+      return id;
+    }
     const nativeId = nativeFrame((time) => {
       queuedFrames.delete(id);
       callback(time);
@@ -53,19 +63,32 @@ export const selectionFrame = () =>
     }),
   );
 
-export function beginSelectionFrameGate(): void {
-  if (gateFrames) {
-    // Only callbacks already queued by the live Surface are held. New fixture
-    // RAF boundaries keep running: their completion is not render readiness.
-    // Track queue identities, never callback source or production internals.
-    if (queuedFrames.size === 0)
-      throw new Error("Selection gate found no queued Surface frame");
-    gateHeld = true;
-    for (const [id, entry] of queuedFrames) {
-      nativeCancelFrame(entry.nativeId);
-      heldCallbacks.add(id);
-    }
+export async function beginSelectionFrameGate(): Promise<void> {
+  if (!gateFrames) return;
+  // Only the live Surface's frames are held. New fixture RAF boundaries keep
+  // running: their completion is not render readiness. Track queue
+  // identities, never callback source or production internals.
+  gateHeld = true;
+  for (const [id, entry] of queuedFrames) {
+    nativeCancelFrame(entry.nativeId);
+    heldCallbacks.add(id);
   }
+  if (heldCallbacks.size > 0) return;
+  // A quiet Surface leaves vsync and sleeps on a timer (#868), so nothing is
+  // queued. Hold the frame its next wake requests: nothing else in the page
+  // requests one before the gesture starts.
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      holdNextFrame = undefined;
+      gateError = "Selection gate found no Surface frame to hold";
+      reject(new Error(gateError));
+    }, 3000);
+    holdNextFrame = () => {
+      holdNextFrame = undefined;
+      clearTimeout(timer);
+      resolve();
+    };
+  });
 }
 
 export const waitForLayout = (observeSelectionFrames = false) =>
@@ -89,5 +112,6 @@ export function selectionFrameDiagnostics() {
     frameCount: frameTimes.length,
     frameTimes: [...frameTimes],
     lastFrameAt: frameTimes.at(-1) ?? null,
+    gateError,
   };
 }

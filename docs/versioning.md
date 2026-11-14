@@ -220,6 +220,9 @@ to `0.36.1-dev.1`.
 Adding the missing contributors to `CONTRIBUTORS.md` and a release check for
 it moves main to `0.36.1-dev.2`.
 
+Letting the appearance fixture's frame gate hold an idle Surface's next frame
+(#1144) moves main to `0.36.1-dev.3`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

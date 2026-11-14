@@ -14,8 +14,8 @@ export async function exerciseAppearanceSelection(
   const startX = Math.round(x + cellWidth * 8);
   const endX = Math.round(x + cellWidth * 13);
   await window.webContents.executeJavaScript(
-    `(() => {
-    globalThis.__omxtermBeginSelection();
+    `(async () => {
+    await globalThis.__omxtermBeginSelection();
     const nextPointer = type => new Promise((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error(type + ' was not delivered')), 3000);
       document.addEventListener(type, event => { clearTimeout(timer); resolve(event.pointerId); }, { capture: true, once: true });
