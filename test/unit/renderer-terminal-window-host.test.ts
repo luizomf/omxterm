@@ -191,6 +191,7 @@ describe("renderer Terminal Window page host", () => {
       expect.any(Object),
       {
         abortSignal: expect.any(AbortSignal) as AbortSignal,
+        estimatedBox: expect.any(Function) as () => undefined,
         onFatalError: expect.any(Function) as (message: string) => void,
         onContextMenu: expect.any(Function) as () => void,
         routeKeyInput: expect.any(Function) as (data: string) => boolean,

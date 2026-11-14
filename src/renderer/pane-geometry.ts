@@ -59,3 +59,37 @@ export function fitsPaneLayout<Pane>(
     ),
   );
 }
+
+// The box one pane gets when its tab's layout fills width × height, as the
+// view's flex shares divide it: each pane keeps its padding (inset) and the
+// weights split what the panes' padding and the dividers leave.
+export function paneLayoutBox<Pane>(
+  layout: PaneLayout<Pane>,
+  pane: Pane,
+  width: number,
+  height: number,
+  inset: { readonly width: number; readonly height: number },
+): { readonly width: number; readonly height: number } | undefined {
+  if (layout.kind === "leaf")
+    return layout.pane === pane ? { width, height } : undefined;
+  const horizontal = layout.direction === "row";
+  const padding = (child: PaneLayout<Pane>) =>
+    child.kind === "leaf" ? (horizontal ? inset.width : inset.height) : 0;
+  const length = layout.children.reduce(
+    (free, child) => free - padding(child),
+    (horizontal ? width : height) -
+      PANE_DIVIDER_SIZE * (layout.children.length - 1),
+  );
+  for (const [index, child] of layout.children.entries()) {
+    const share = padding(child) + length * layout.weights[index]!;
+    const box = paneLayoutBox(
+      child,
+      pane,
+      horizontal ? share : width,
+      horizontal ? height : share,
+      inset,
+    );
+    if (box) return box;
+  }
+  return undefined;
+}

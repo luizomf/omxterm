@@ -42,8 +42,9 @@ export function surfaceTransport(
       if (meta?.cellW !== undefined && meta.cellH !== undefined)
         cell = { width: meta.cellW, height: meta.cellH };
       const size = withPixels({ cols, rows }, cell);
-      // A hidden tab's grid comes from a placeholder canvas; keep only a grid
-      // measured while laid out, even if the tab is shown before start.
+      // A hidden tab's grid comes from a placeholder canvas unless the host
+      // estimated its box; keep only a laid-out or estimated grid, even if the
+      // tab is shown before start.
       measured = laidOut() ? size : undefined;
       resized(size, meta);
       if (writable()) adapter.resize(size);
@@ -58,7 +59,7 @@ export function surfaceTransport(
       if (live()) callbacks?.onData?.(data);
     },
     // Start at the grid Restty reported on connect, pixels included, so a
-    // program that runs at once reads it (#1038). Without one: 80×24.
+    // program that runs at once reads it (#1038, #1041). Without one: 80×24.
     start: (handlers: TerminalSessionHandlers) =>
       adapter.start(handlers, measured),
   };

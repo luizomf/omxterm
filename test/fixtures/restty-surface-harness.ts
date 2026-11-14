@@ -9,9 +9,10 @@ const harness = vi.hoisted(() => {
   const instances: FakeRestty[] = [];
   let initError: Error | undefined;
   let initGate: Promise<void> | undefined;
-  // Like Restty, connecting reports a grid it already measured.
+  // Like Restty, connecting reports a grid it already measured. Without
+  // cols/rows the grid comes from the canvas, as Restty's first grid does.
   let connectGrid:
-    { cols: number; rows: number; cellW: number; cellH: number } | undefined;
+    { cols?: number; rows?: number; cellW: number; cellH: number } | undefined;
   class FakeRestty {
     readonly canvas = document.createElement("canvas");
     readonly listeners = new Set<(event: ResttyRuntimeEvent) => void>();
@@ -64,13 +65,19 @@ const harness = vi.hoisted(() => {
                 url: "",
                 callbacks: {
                   onConnect: () => {
-                    if (connectGrid)
-                      transport.resize(connectGrid.cols, connectGrid.rows, {
-                        widthPx: connectGrid.cols * connectGrid.cellW + 7,
-                        heightPx: connectGrid.rows * connectGrid.cellH + 5,
-                        cellW: connectGrid.cellW,
-                        cellH: connectGrid.cellH,
-                      });
+                    if (!connectGrid) return;
+                    const { cellW, cellH } = connectGrid;
+                    const cols =
+                      connectGrid.cols ?? Math.floor(this.canvas.width / cellW);
+                    const rows =
+                      connectGrid.rows ??
+                      Math.floor(this.canvas.height / cellH);
+                    transport.resize(cols, rows, {
+                      widthPx: cols * cellW + 7,
+                      heightPx: rows * cellH + 5,
+                      cellW,
+                      cellH,
+                    });
                   },
                   onData: (data) => {
                     this.sendInput(data, "pty");
