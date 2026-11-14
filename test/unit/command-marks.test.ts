@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { createCommandMarks } from "../../src/main/command-marks";
 
@@ -60,6 +61,30 @@ it.each([
   });
   expect(marks.endAfter("s1", positions[4]!)).toBeUndefined();
 });
+
+// Windows PowerShell 5.1 and PowerShell 7.7 running the guide's lines, as
+// their ConPTY output reached node-pty with OMXTerm's bundled conpty.dll on
+// Windows 11: `cmd /c exit 0`, `cmd /c exit 3`, a failing `Get-Item`, an
+// empty Enter and `echo hi`, each chunk ending at a prompt.
+const POWERSHELL = JSON.parse(
+  readFileSync(
+    new URL("../fixtures/powershell-command-marks.json", import.meta.url),
+    "utf8",
+  ),
+) as Record<"5.1" | "7", string[]>;
+
+it.each(["5.1", "7"] as const)(
+  "answers each command's end and exit code from PowerShell %s",
+  (version) => {
+    const { marks, positions } = feed(POWERSHELL[version]);
+    const codes = positions.map(
+      (after) => marks.endAfter("s1", after)?.exitCode,
+    );
+    // A native exit code, a cmdlet's failure as 1, and nothing for an empty
+    // Enter, whose next end is `echo hi`'s.
+    expect(codes).toEqual([0, 3, 1, 0, 0, undefined]);
+  },
+);
 
 it("reads marks split anywhere across chunks", () => {
   const codes = (chunks: readonly string[], afters: readonly number[]) => {

@@ -60,8 +60,8 @@ Windows panes got none until slice 5 of ADR 0052.
 
 Main also reads the OSC 133 command marks a shell prints (prompt, command
 start, command end with its exit code), so an agent's `wait` can answer when
-the command it typed ended
-([ADR 0054](0054-read-command-marks-for-agents.md)). Like OSC 7, they are
-read, never requested: the few lines that make zsh or bash print them are in
-the [shell integration guide](../shell-integration.md), for users to add
-themselves, and OMXTerm still injects nothing.
+the command it typed ended ([ADR
+0054](0054-read-command-marks-for-agents.md)). Like OSC 7, they are read,
+never requested: the few lines that make zsh, bash or PowerShell print them
+are in the [shell integration guide](../shell-integration.md), for users to
+add themselves, and OMXTerm still injects nothing.

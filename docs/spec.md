@@ -1565,7 +1565,7 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 Main reads the OSC 133 command marks a shell prints (`A` prompt, `C` command
 start, `D;<code>` command end), in local and SSH Connect panes alike, for the
 agent API's `wait`; the [shell integration guide](shell-integration.md) has
-the lines users add for zsh and bash (their prompt mark says `redraw=0`, so a
+the lines users add for zsh, bash and PowerShell (their prompt mark says `redraw=0`, so a
 resize keeps the prompt; a marked prompt after output that didn't end its line
 starts on a new line), and fish 4.0 prints them by default
 ([ADR 0054](adr/0054-read-command-marks-for-agents.md)). The last 64 command ends
