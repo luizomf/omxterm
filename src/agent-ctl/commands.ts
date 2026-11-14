@@ -14,6 +14,7 @@ import {
   parseAgentPane,
 } from "../shared/agent-api";
 import { Client, CtlError, EXIT, type Grant } from "./client";
+import { report, sentAt, waitArguments } from "./wait";
 
 export type Options = {
   command?: string;
@@ -24,6 +25,7 @@ export type Options = {
   wait: boolean;
   idle?: number;
   match?: string;
+  commandEnd: boolean;
   timeout?: number;
   after?: number;
   lines?: number;
@@ -45,6 +47,7 @@ export function parse(argv: readonly string[]): Options {
     keys: [],
     enter: false,
     wait: false,
+    commandEnd: false,
     screen: false,
     json: false,
     help: false,
@@ -90,6 +93,9 @@ export function parse(argv: readonly string[]): Options {
         break;
       case "--match":
         options.match = value();
+        break;
+      case "--command":
+        options.commandEnd = true;
         break;
       case "--timeout":
         options.timeout = timeoutMs(number(argument, value()));
@@ -449,12 +455,20 @@ async function send(
     ...(options.text === undefined ? {} : { text: options.text }),
     ...(keys.length ? { keys } : {}),
   })) as { offset: number };
-  // A match is something to wait for.
-  if (options.wait || options.match !== undefined)
-    return report(
-      options,
-      await client.request("wait", waitArguments(options, pane, sent.offset)),
-    );
+  // A match or a command's end is something to wait for.
+  if (options.wait || options.match !== undefined || options.commandEnd) {
+    try {
+      return report(
+        options,
+        await client.request("wait", waitArguments(options, pane, sent.offset)),
+      );
+    } catch (error) {
+      // The text went out, so say where to wait from instead.
+      if (!(error instanceof CtlError) || error.exitCode !== EXIT.api)
+        throw error;
+      throw new CtlError(EXIT.api, `${error.message} ${sentAt(sent.offset)}`);
+    }
+  }
   return done(options.json ? JSON.stringify(sent) : "", sent);
 }
 
@@ -518,27 +532,4 @@ async function run(
     options,
     await client.request("wait", waitArguments(options, pane, options.after)),
   );
-}
-
-function waitArguments(options: Options, pane: string, after?: number) {
-  return {
-    pane,
-    timeoutMs: options.timeout ?? 60_000,
-    ...(after === undefined ? {} : { after }),
-    ...(options.idle === undefined ? {} : { idleMs: options.idle }),
-    ...(options.match === undefined ? {} : { match: options.match }),
-  };
-}
-
-function report(options: Options, value: unknown): Outcome {
-  const result = value as { reason: string; exitCode?: number };
-  return {
-    output: options.json
-      ? JSON.stringify(result)
-      : result.reason === "exited" && result.exitCode !== undefined
-        ? `exited ${result.exitCode}`
-        : result.reason,
-    code: result.reason === "timeout" ? EXIT.timeout : EXIT.ok,
-    result,
-  };
 }

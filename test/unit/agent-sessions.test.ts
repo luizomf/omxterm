@@ -99,3 +99,22 @@ it("reports live sessions, sizes, positions and their output, acks and exit", ()
   expect(events).toHaveLength(3);
   router.dispose();
 });
+
+it("reads each session's command marks from its output and forgets them on exit", () => {
+  const { controller, callbacks, start, router } = harness();
+  const sessionId = start();
+  const port = controller.agentSessions!;
+  expect(port.reportsCommands!(sessionId)).toBe(false);
+  callbacks[0]!.onOutput("\x1b]133;A\x07$ ");
+  const typed = port.position(sessionId)!.sent;
+  callbacks[0]!.onOutput("make\r\n\x1b]133;C\x07ok\r\n\x1b]1");
+  callbacks[0]!.onOutput("33;D;4\x07\x1b]133;A\x07$ ");
+  expect(port.reportsCommands!(sessionId)).toBe(true);
+  expect(port.commandEnd!(sessionId, typed)).toEqual({
+    offset: port.position(sessionId)!.sent,
+    exitCode: 4,
+  });
+  callbacks[0]!.onExit({ exitCode: 0, signal: 0 });
+  expect(port.reportsCommands!(sessionId)).toBe(false);
+  router.dispose();
+});

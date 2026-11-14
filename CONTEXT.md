@@ -294,7 +294,10 @@ frame. XTVERSION answers `ghostty 1.0` on purpose, because image tools key
 on that name. This identity is not a guarantee of every xterm extension.
 
 **Shell Integration** — Terminal-specific shell startup hooks. OMXTerm leaves
-shell initialization to the user and injects no hooks.
+shell initialization to the user and injects no hooks. It reads the OSC 133
+**Command Marks** (prompt, command start, command end with its exit code) a
+shell prints when the user adds the documented lines, for the agent API's
+`wait` (ADR 0054).
 
 **Clipboard Boundary** — Explicit text copy/paste between the terminal and OS
 clipboard. Selection alone does not copy. Programs can request bounded OSC 52

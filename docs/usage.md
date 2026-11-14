@@ -162,6 +162,8 @@ For example, from one pane an agent can run a command in the pane next to it:
 "$OMXTERM_CTL" read s2 --lines 40
 ```
 
+With a few lines of [shell integration](shell-integration.md) in your shell's startup file, `--command` instead of `--wait` waits for the command itself to finish and prints its exit code, such as `command-end 0`.
+
 Agents that speak MCP, such as Claude Code and Codex, can also use OMXTerm as an MCP server, `"$OMXTERM_CTL" mcp`. The guide says how to register it. Register it once from an OMXTerm pane and start a new agent session; from then on it works in every window you allow, and allowing a window later needs no restart.
 
 Inside tmux, a pane gets the tmux server's environment, not the OMXTerm pane's, so agents there don't see `OMXTERM_CTL`. Add this line to `~/.tmux.conf` and attach again from an OMXTerm pane; new tmux windows and panes then have the variables:

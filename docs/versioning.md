@@ -196,6 +196,9 @@ sessions no longer start at an 18×4 placeholder grid (#1041), moves main to
 Building the Unix PTY addon so a shell that ends while Electron frees its Node
 environment can't abort the app (#1042) moves main to `0.35.1-dev.9`.
 
+Reading OSC 133 command marks so an agent's `wait` answers when the typed
+command ended, with its exit code (#1027), moves main to `0.35.1-dev.10`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

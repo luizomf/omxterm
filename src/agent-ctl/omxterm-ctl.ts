@@ -19,10 +19,11 @@ Commands:
   grants                       List the windows of this profile that do.
   list                         List the window's tabs and panes.
   send <pane> [--text TEXT] [--keys KEY,...] [--enter]
-              [--wait [--idle MS] [--match TEXT] [--timeout MS]]
+              [--wait [--idle MS] [--match TEXT] [--command]
+              [--timeout MS]]
                                Type into a pane. Keys: Enter, Tab, Escape,
                                Backspace, Space, Ctrl+A ... Ctrl+Z. With
-                               --wait (or --match), then wait as below,
+                               --wait (or --match, --command), then wait as below,
                                counting from before the typing. TEXT -
                                reads the text from stdin, as UTF-8, without
                                one final line break. A final line break
@@ -43,11 +44,15 @@ Commands:
   read <pane> [--lines N]      Print the last N lines (default 200).
   read <pane> --screen         Print exactly the screen's rows, one line each,
                                wherever the user scrolled.
-  wait <pane> [--after OFFSET] [--idle MS] [--match TEXT] [--timeout MS]
+  wait <pane> [--after OFFSET] [--idle MS] [--match TEXT] [--command]
+              [--timeout MS]
                                Wait until the pane goes quiet, TEXT (literal,
                                not a pattern) shows up on its screen past
-                               OFFSET, or its program ends. Prints idle,
-                               match, exited or timeout. With --match alone,
+                               OFFSET, the command typed past OFFSET ends
+                               (--command, when the shell reports it: OSC
+                               133), or its program ends. Prints idle,
+                               match, command-end CODE, exited CODE or
+                               timeout. With --match or --command alone,
                                quiet doesn't count. --match - reads TEXT from
                                stdin, like send --text -.
 

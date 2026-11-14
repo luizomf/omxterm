@@ -296,9 +296,10 @@ matching lands, every chord goes to the pane.
   up), an optional literal `match` checked against the pane's text, and a
   required bounded `timeoutMs`. It answers with a tagged `reason`: `idle`,
   `match`, `timeout` or `exited`. OSC 133
-  ([#1027](https://github.com/luizomf/omxterm/issues/1027)) later adds
-  `reason: "command-end"` with `exitCode` and a read source for one command's
-  output without changing existing fields.
+  ([#1027](https://github.com/luizomf/omxterm/issues/1027),
+  [ADR 0054](0054-read-command-marks-for-agents.md)) adds
+  `reason: "command-end"` with `exitCode` without changing existing fields;
+  a read source for one command's output comes later.
 - Without command boundaries, `idle` is a heuristic: a spinner or a prompt
   clock never goes idle, and a slow command can pause. That is why `match`
   and the timeout exist.
@@ -528,8 +529,9 @@ a command name, its duration and an error code.
 7. **A record of what the agent typed.** Session-only, in memory, bounded,
    shown to the user in the window and dropped with the grant; attached at
    main's agent write, never in operational logs.
-8. **Command boundaries.** With #1027: `command-end`, exit codes and
-   per-command output.
+8. **Command boundaries.** With #1027: `command-end` and exit codes are
+   implemented ([ADR 0054](0054-read-command-marks-for-agents.md));
+   per-command output remains.
 
 Numbers name slices, not their order; #1025 tracks the order.
 

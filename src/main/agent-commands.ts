@@ -141,6 +141,16 @@ export interface AgentCaller {
 }
 
 const MAX_REMEMBERED_EXITS = 256;
+/**
+ * How long a pane whose shell never printed a command mark stays quiet
+ * before a commandEnd wait says so, instead of running into its timeout.
+ */
+export const NO_COMMAND_MARKS_QUIET_MS = 1000;
+const noCommandMarks = () =>
+  new AgentApiError(
+    "no-command-marks",
+    "This pane's shell doesn't report when commands end (OSC 133); see OMXTerm's shell integration guide, or wait with idle or match.",
+  );
 
 const invalid = (message: string) =>
   new AgentApiError("invalid-request", message);
@@ -179,19 +189,23 @@ function waitRequest(args: unknown) {
   const value = argumentsOf(
     args,
     ["pane", "timeoutMs"],
-    ["after", "idleMs", "match"],
+    ["after", "idleMs", "match", "commandEnd"],
   );
   if (!isAgentPaneId(value.pane))
     throw invalid("pane must be an id such as s1.");
   const match = value.match === undefined ? undefined : matchText(value.match);
+  if (value.commandEnd !== undefined && typeof value.commandEnd !== "boolean")
+    throw invalid("commandEnd must be true or false.");
+  const commandEnd = value.commandEnd === true;
   return {
     sessionId: value.pane,
     after: value.after,
     match,
+    commandEnd,
     timeoutMs: integer(value.timeoutMs, "timeoutMs", 1, MAX_AGENT_WAIT_MS),
-    // With only match, idleness is ignored.
+    // With only match or commandEnd, idleness is ignored.
     idleMs:
-      match !== undefined && value.idleMs === undefined
+      (match !== undefined || commandEnd) && value.idleMs === undefined
         ? undefined
         : integer(
             value.idleMs,
@@ -474,6 +488,72 @@ function sendRequest(args: unknown) {
   return { sessionId: value.pane, text, keys, multiLine };
 }
 
+// The window knows its tabs; main knows each pane's size and focus.
+async function listTabs(
+  options: AgentCommandsOptions,
+  args: unknown,
+  caller: AgentCaller,
+) {
+  argumentsOf(args, []);
+  const windowTabs = await options.tabs(caller.signal);
+  const live = new Map(
+    options.sessions.sessions().map((s) => [s.sessionId, s]),
+  );
+  return {
+    tabs: windowTabs.map((tab) => ({
+      tab: tab.tab,
+      // A title is the program's text: no control characters.
+      title: tab.title.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, " "),
+      selected: tab.selected,
+      panes: tab.panes.map((sessionId) => {
+        const session = live.get(sessionId);
+        return {
+          pane: sessionId,
+          focused: session?.focused ?? false,
+          self: sessionId === caller.pane,
+          ...(session?.cols === undefined
+            ? {}
+            : { cols: session.cols, rows: session.rows }),
+          live: session !== undefined,
+        };
+      }),
+    })),
+  };
+}
+
+// The sooner of two delays, either of which may be missing.
+const earliest = (a: number | undefined, b: number | undefined) =>
+  a === undefined || b === undefined ? (a ?? b) : Math.min(a, b);
+
+// wait's commandEnd (ADR 0054): the end of the first command past `after`,
+// once the window shows it so a read right after has it. A pane whose shell
+// never printed a mark says so once it has been quiet for a while.
+function commandEndWatch(
+  sessions: AgentSessionPort,
+  sessionId: TerminalSessionId,
+  after: number,
+  quietSince: () => number,
+) {
+  const unmarked = () => !sessions.reportsCommands?.(sessionId);
+  return {
+    check(current: { sent: number; acknowledged: number }, now: number) {
+      const end = sessions.commandEnd?.(sessionId, after);
+      if (end && current.acknowledged >= end.offset)
+        return { reason: "command-end", ...end };
+      if (
+        !end &&
+        unmarked() &&
+        now - quietSince() >= NO_COMMAND_MARKS_QUIET_MS &&
+        current.acknowledged >= current.sent
+      )
+        throw noCommandMarks();
+      return undefined;
+    },
+    nextCheckIn: (now: number) =>
+      unmarked() ? NO_COMMAND_MARKS_QUIET_MS - (now - quietSince()) : undefined,
+  };
+}
+
 /**
  * list, send, read, wait and press for one granted window (ADR 0052). Every
  * pane id is checked against this window's live sessions; another window's
@@ -564,34 +644,7 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     AgentCommand,
     (args: unknown, caller: AgentCaller) => unknown
   > = {
-    // The window knows its tabs; main knows each pane's size and focus.
-    async list(args, caller) {
-      argumentsOf(args, []);
-      const windowTabs = await options.tabs(caller.signal);
-      const live = new Map(
-        options.sessions.sessions().map((s) => [s.sessionId, s]),
-      );
-      return {
-        tabs: windowTabs.map((tab) => ({
-          tab: tab.tab,
-          // A title is the program's text: no control characters.
-          title: tab.title.replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, " "),
-          selected: tab.selected,
-          panes: tab.panes.map((sessionId) => {
-            const session = live.get(sessionId);
-            return {
-              pane: sessionId,
-              focused: session?.focused ?? false,
-              self: sessionId === caller.pane,
-              ...(session?.cols === undefined
-                ? {}
-                : { cols: session.cols, rows: session.rows }),
-              live: session !== undefined,
-            };
-          }),
-        })),
-      };
-    },
+    list: (args, caller) => listTabs(options, args, caller),
 
     // A multi-line text goes as a paste when the pane's program accepts one,
     // as the user's paste would (#1110); any other text is typed, its line
@@ -695,8 +748,9 @@ export function createAgentCommands(options: AgentCommandsOptions) {
     },
 
     wait(args, caller) {
-      const { sessionId, match, timeoutMs, idleMs, ...request } =
+      const { sessionId, match, commandEnd, timeoutMs, idleMs, ...request } =
         waitRequest(args);
+      const startedAt = now();
       const exited = () => {
         const exit = exits.get(sessionId);
         return exit && { reason: "exited", ...exit };
@@ -709,6 +763,11 @@ export function createAgentCommands(options: AgentCommandsOptions) {
         match === undefined
           ? undefined
           : screens.watch(sessionId, match, after, start.sent, caller.signal);
+      const ended = commandEnd
+        ? commandEndWatch(options.sessions, sessionId, after, () =>
+            Math.max(lastOutput.get(sessionId) ?? 0, startedAt),
+          )
+        : undefined;
       let last = start;
       return watch<object>(
         watchers,
@@ -724,6 +783,8 @@ export function createAgentCommands(options: AgentCommandsOptions) {
           last = current;
           const found = screen?.check();
           if (found !== undefined) return { reason: "match", offset: found };
+          const end = ended?.check(current, now());
+          if (end) return end;
           if (idleMs === undefined) return undefined;
           const quiet = now() - (lastOutput.get(sessionId) ?? 0);
           return current.sent > after &&
@@ -735,11 +796,11 @@ export function createAgentCommands(options: AgentCommandsOptions) {
         () => ({ reason: "timeout", offset: last.sent }),
         () => {
           const output = lastOutput.get(sessionId);
-          return idleMs !== undefined &&
-            last.sent > after &&
-            output !== undefined
-            ? output + idleMs - now()
-            : undefined;
+          const idle =
+            idleMs !== undefined && last.sent > after && output !== undefined
+              ? output + idleMs - now()
+              : undefined;
+          return earliest(idle, ended?.nextCheckIn(now()));
         },
       ).finally(() => screen?.stop());
     },

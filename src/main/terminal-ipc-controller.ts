@@ -61,6 +61,7 @@ import {
 } from "./terminal-session-failure";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
 import { createWorkingDirectoryTracker } from "./terminal-working-directories";
+import { createCommandMarks } from "./command-marks";
 import {
   restoredDirectory,
   captureSessionDirectory,
@@ -501,6 +502,8 @@ function createTerminalIpcController(
     show: options.showClipboardContextMenu,
   });
   const workingDirectories = createWorkingDirectoryTracker();
+  // SSH Connect panes too: a remote shell's marks are its commands.
+  const commandMarks = createCommandMarks();
   const agentObservers = new Set<AgentSessionObserver>();
   const notifyAgent = (event: (observer: AgentSessionObserver) => void) => {
     for (const observer of [...agentObservers]) event(observer);
@@ -568,6 +571,7 @@ function createTerminalIpcController(
               closeSession(sessionId);
               return;
             }
+            commandMarks.observe(sessionId, data, outputEnd);
             try {
               options.webContents.send(terminalIpc.output, {
                 sessionId,
@@ -621,6 +625,7 @@ function createTerminalIpcController(
               if (state?.terminalSurfaceFontConfiguration)
                 options.onSurfaceFontConfigurationsChanged?.();
               workingDirectories.forget(sessionId);
+              commandMarks.forget(sessionId);
             }
           },
         },
@@ -766,6 +771,8 @@ function createTerminalIpcController(
       agentObservers.add(observer);
       return () => agentObservers.delete(observer);
     },
+    reportsCommands: commandMarks.reports,
+    commandEnd: commandMarks.endAfter,
   };
   const close = (payload?: unknown) => {
     if (!isTerminalSessionClose(payload)) {

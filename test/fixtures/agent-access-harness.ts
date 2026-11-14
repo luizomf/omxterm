@@ -21,6 +21,7 @@ import {
   type AgentPressRequest,
   type AgentReadRequest,
 } from "../../src/shared/agent-access";
+import { createCommandMarks } from "../../src/main/command-marks";
 import { createIpcHarness } from "./terminal-ipc-harness";
 
 type Register = Parameters<AgentAccess["register"]>;
@@ -160,8 +161,10 @@ export function useAgentHarness() {
   function sessions(): AgentSessionPort & {
     writes: [string, string][];
     position: ReturnType<typeof vi.fn<AgentSessionPort["position"]>>;
+    shell(id: string, exitCode?: number): void;
   } {
     const writes: [string, string][] = [];
+    const shells = fakeShells();
     const sent = new Map([
       ["s1", 10],
       ["s2", 10],
@@ -179,10 +182,13 @@ export function useAgentHarness() {
           ? undefined
           : { sent: position, acknowledged: position };
       }),
+      shell: shells.shell,
+      reportsCommands: shells.marks.reports,
+      commandEnd: shells.marks.endAfter,
       write(id, data) {
         writes.push([id, data]);
         setImmediate(() => {
-          sent.set(id, sent.get(id)! + data.length);
+          sent.set(id, shells.print(id, data, sent.get(id)!));
           for (const observer of observers) {
             observer.output(id);
             observer.acknowledged(id);
@@ -316,4 +322,24 @@ export function useAgentHarness() {
   }
 
   return { scratch, cleanups, ctl, mcp, sessions, setup };
+}
+
+// Panes whose shell reports commands (OSC 133): each Enter runs one, which
+// ends with the pane's exit code, or never without one.
+function fakeShells() {
+  const codes = new Map<string, number | undefined>();
+  return {
+    marks: createCommandMarks(),
+    shell: (id: string, exitCode?: number) => void codes.set(id, exitCode),
+    /** The pane's output for what was written; answers its new position. */
+    print(id: string, data: string, position: number) {
+      const code = codes.get(id);
+      const output =
+        data !== "\r" || !codes.has(id)
+          ? data
+          : `\r\n\x1b]133;C\x07${code === undefined ? "" : `\x1b]133;D;${code}\x07\x1b]133;A\x07$ `}`;
+      this.marks.observe(id as `s${number}`, output, position + output.length);
+      return position + output.length;
+    },
+  };
 }

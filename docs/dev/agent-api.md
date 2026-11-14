@@ -8,7 +8,7 @@ and its [MCP server](#mcp). Slice 3 is implemented too: the exact `screen`
 source of [`read`](#read-tail-and-screen) and `match` in
 [`wait`](#wait). From slice 4, the tab tree in
 [`list`](#list-slice-1-tree-in-slice-4) and [`press`](#press-slice-4) with
-named keys and the window's shortcuts, and [`keys`](#keys-slice-4), are implemented. Each later
+named keys and the window's shortcuts, and [`keys`](#keys-slice-4), are implemented. From slice 8, `commandEnd` in [`wait`](#wait) is implemented. Each later
 command says which slice of the ADR's plan it belongs to; until then, names
 and shapes can still change.
 
@@ -245,7 +245,7 @@ partly happened; it is never retried). A refused write is the error
 `offset` is the position the window had consumed when the text was read.
 
 Later, without changing these fields: `"source": "command"` for one command's
-output once OSC 133 lands (slice 8).
+output from its OSC 133 marks (slice 8).
 
 ### `wait`
 
@@ -297,8 +297,29 @@ output once OSC 133 lands (slice 8).
     most every 50 ms. Text that appears and scrolls off between two looks
     is missed (`timeout`), so wait for text that stays, such as a final
     line.
-- The first condition met answers. At least one of `idleMs` or `match`
-  applies; with only `match`, idleness is ignored.
+- `commandEnd: true` (slice 8,
+  [ADR 0054](../adr/0054-read-command-marks-for-agents.md)): satisfied when
+  the first command that ends past `after` has ended, from the OSC 133 marks
+  the pane's shell prints with [shell integration](../shell-integration.md),
+  and the window has consumed the output that holds its end mark.
+  - A command is the shell's: `D;<code>` ends it. The first `D` past
+    `after` answers, so a command still running at `after` is the one that
+    answers: a text typed into it (an answer to its prompt), or a wait asked
+    again after a timeout, gets its end. A command typed while another runs
+    gets the running one's end; wait for one before typing the next.
+  - Main keeps each pane's last 64 command ends, read as its output arrives,
+    so a command that ended before the wait arrived still answers.
+  - The result's `offset` is the pane's position at the end of the output
+    that held the `D`; `exitCode` is its integer (from -2³¹ to 2³²−1), and
+    is missing when the shell printed none.
+  - A pane whose shell has never printed a mark answers the error
+    `no-command-marks` once it has had no output for 1 s (counted from the
+    wait's arrival at the latest) and the window has consumed it all.
+  - Marks that don't reach the pane don't count: inside tmux, or over ssh to
+    a host without the lines, the command is the tmux or ssh it runs in.
+- The first condition met answers. At least one of `idleMs`, `match` or
+  `commandEnd` applies; with only `match` or `commandEnd`, idleness is
+  ignored.
 
 ```json
 { "reason": "match", "offset": 50213 }
@@ -309,12 +330,14 @@ appeared.
 
 ```json
 { "reason": "idle", "offset": 51877 }
+{ "reason": "command-end", "exitCode": 1, "offset": 52004 }
 ```
 
-`reason` is `idle`, `match`, `timeout` or `exited` (the pane's program ended;
-the result adds `exitCode`). A timeout is a normal result, not an error. Later:
-`command-end` with `exitCode` (slice 8). Clients must ignore reasons and fields
-they don't know.
+`reason` is `idle`, `match`, `command-end` (the command ended; the result
+adds `exitCode` when the shell reported one), `timeout` or `exited` (the
+pane's program ended; the result adds `exitCode`). A timeout is a normal
+result, not an error. Clients must ignore reasons and fields they don't
+know.
 
 ### `press` (slice 4)
 
@@ -442,19 +465,20 @@ ends the grant.
 
 ## Errors
 
-| Code              | Meaning                                                                 |
-| ----------------- | ----------------------------------------------------------------------- |
-| `invalid-request` | Not JSON, too long, unknown command, or a wrong argument shape.         |
-| `revoked`         | The grant ended. The connection closes after this response.             |
-| `unknown-pane`    | No such pane in this window (also used for another window's ids).       |
-| `not-live`        | The pane's program has ended or the pane is still starting.             |
-| `unsupported-key` | A key name this version can't encode.                                   |
-| `too-large`       | The text to send or the text to return is over its limit.               |
-| `limit`           | Too many tabs, panes, connections or pending waits.                     |
-| `unavailable`     | The window couldn't answer in time (a read, a press or a tree request). |
-| `refused`         | The press named the grant toggle's shortcut; only the user toggles it.  |
-| `not-yet`         | UI agents can't use yet, or an action past the window.                  |
-| `needs-user`      | Left to the user: a running program, an open dialog, another window.    |
+| Code               | Meaning                                                                 |
+| ------------------ | ----------------------------------------------------------------------- |
+| `invalid-request`  | Not JSON, too long, unknown command, or a wrong argument shape.         |
+| `revoked`          | The grant ended. The connection closes after this response.             |
+| `unknown-pane`     | No such pane in this window (also used for another window's ids).       |
+| `not-live`         | The pane's program has ended or the pane is still starting.             |
+| `unsupported-key`  | A key name this version can't encode.                                   |
+| `too-large`        | The text to send or the text to return is over its limit.               |
+| `limit`            | Too many tabs, panes, connections or pending waits.                     |
+| `unavailable`      | The window couldn't answer in time (a read, a press or a tree request). |
+| `refused`          | The press named the grant toggle's shortcut; only the user toggles it.  |
+| `not-yet`          | UI agents can't use yet, or an action past the window.                  |
+| `needs-user`       | Left to the user: a running program, an open dialog, another window.    |
+| `no-command-marks` | A `commandEnd` wait on a pane whose shell never printed OSC 133 marks.  |
 
 `message` is one English sentence for people reading logs of their own
 scripts. Programs should branch on `code`.
@@ -471,6 +495,8 @@ omxterm-ctl mcp                            # MCP server on stdio
 omxterm-ctl grants                         # granted windows of this profile
 omxterm-ctl list
 omxterm-ctl send s1 --text 'npm test' --enter --wait --idle 800
+omxterm-ctl send s1 --text 'npm test' --enter --command --timeout 600000
+omxterm-ctl wait s1 --after 48211 --command --timeout 120000
 omxterm-ctl send s1 --keys Ctrl+C
 printf '%s' "$text" | omxterm-ctl send s1 --text - --enter
 omxterm-ctl wait s1 --after 48211 --idle 800 --timeout 120000
@@ -528,6 +554,13 @@ omxterm-ctl keys                           # slice 4: chords press runs
   comma-separated list works too) and prints nothing for keys; a shortcut
   prints the action and the pane, tab-separated. `--json` prints the result.
 - `read` prints the text and nothing else, so it pipes.
+- `--command` on `wait` or `send` waits for `commandEnd` and prints
+  `command-end <code>` (or `command-end` without one). The command's own
+  code is printed, not returned: the CLI exits 0. Its timeout prints
+  `timeout (still running; wait --command --after <offset>)`, so a command
+  that ends before the next wait still answers it. When a `send … --command`
+  fails after typing, as on `no-command-marks`, the message ends with the
+  offset to pass to `wait --after`.
 - Exit status: 0 for a result (a `wait` timeout prints `timeout` and exits
   124), 1 for an API error, 2 for usage, 3 when no grant or endpoint was found.
 
@@ -539,14 +572,14 @@ script. It answers both the per-request protocol (`2026-07-28`, opened with
 Code does) and the `initialize` handshake (`2025-11-25` back to `2024-11-05`,
 as Codex does). It offers tools only.
 
-| Tool     | Arguments                                                                                    |
-| -------- | -------------------------------------------------------------------------------------------- |
-| `status` | `window?`                                                                                    |
-| `list`   | `window?`                                                                                    |
-| `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `match?`, `timeout?`, `window?` |
-| `press`  | `pane`, `keys` (list), `window?`                                                             |
-| `read`   | `pane`, `lines?`, `screen?`, `window?`                                                       |
-| `wait`   | `pane`, `after?`, `idle?`, `match?`, `timeout?`, `window?`                                   |
+| Tool     | Arguments                                                                                                |
+| -------- | -------------------------------------------------------------------------------------------------------- |
+| `status` | `window?`                                                                                                |
+| `list`   | `window?`                                                                                                |
+| `send`   | `pane`, `text?`, `keys?` (list), `enter?`, `wait?`, `idle?`, `match?`, `command?`, `timeout?`, `window?` |
+| `press`  | `pane`, `keys` (list), `window?`                                                                         |
+| `read`   | `pane`, `lines?`, `screen?`, `window?`                                                                   |
+| `wait`   | `pane`, `after?`, `idle?`, `match?`, `command?`, `timeout?`, `window?`                                   |
 
 | `keys` | `window?` |
 
@@ -604,6 +637,7 @@ instead.
 | Socket and handshake     | `src/main/agent-endpoint.ts`                                                                               |
 | Window requests          | `src/main/agent-window-requests.ts` (reads, presses, tabs and actions asked of the window)                 |
 | Commands and waits       | `src/main/agent-commands.ts`                                                                               |
+| Command marks (OSC 133)  | `src/main/command-marks.ts`, fed from each pane's output in `src/main/terminal-ipc-controller.ts`          |
 | Agent input and outputs  | `agentSessions` in `src/main/terminal-ipc-controller.ts` (the only agent write)                            |
 | Pane environment         | `createLocalTerminalSession()` in `src/main/local-terminal-session.ts`                                     |
 | Reads and marks (window) | `src/renderer/agent-access.ts`, `src/renderer/state-marks.ts`, `src/preload/agent-bridge.ts`               |
