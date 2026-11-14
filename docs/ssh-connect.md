@@ -18,7 +18,7 @@ for how it is built and its current limits.
 
 1. In OMXTerm, open **Settings → Extensions** and choose **Browse official
    extensions**.
-2. Find **SSH Connect**. Check that the card offers version **0.4.1**, then
+2. Find **SSH Connect**. Check that the card offers version **0.4.2**, then
    choose **Install** and review the trust warning. Extensions run with your
    account's permissions; the warning is not a sandbox.
 3. Return to a terminal tab (open one if needed); the panel is suspended while

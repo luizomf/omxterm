@@ -8,8 +8,8 @@ New installations try once to add it for you; it stays off until you open it.
 Existing profiles don't get it automatically, and your snippets and your choice
 to disable or remove it are kept.
 
-The current Snippets (0.1.2) was checked on Linux ARM64 and macOS. It was not
-checked on Windows ARM64 or Linux x64.
+The current Snippets (0.1.4) was checked on macOS, Linux ARM64 and Windows
+ARM64. It was not checked on Linux x64.
 
 ## Install or update
 
