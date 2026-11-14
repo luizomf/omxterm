@@ -117,7 +117,9 @@ exit never means startup failure.
   patched with zero fuzz, checked, and built with C++17, Node-API 8 and locked
   headers. The installed upstream sources stay unchanged. The rebuilt addon goes
   into both `build/Release` and the matching prebuild directory (macOS also gets
-  the spawn helper), so the loader can't fall back to an unpatched build.
+  the spawn helper), so the loader can't fall back to an unpatched build. The
+  build swallows Node-API errors that can't be thrown, so a shell that ends
+  while Electron frees its Node environment can't abort the app (#1042).
 - **Windows ARM64/x64:** the official `conpty.node`, `conpty_console_list.node`
   and bundled ConPTY (`conpty.dll`, `OpenConsole.exe`, used with
   `useConptyDll: true`) are kept unmodified and checked against the archive

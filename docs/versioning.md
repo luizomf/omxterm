@@ -193,6 +193,9 @@ Sizing a background tab's panes from the window's terminal area, so their
 sessions no longer start at an 18×4 placeholder grid (#1041), moves main to
 `0.35.1-dev.8`.
 
+Building the Unix PTY addon so a shell that ends while Electron frees its Node
+environment can't abort the app (#1042) moves main to `0.35.1-dev.9`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

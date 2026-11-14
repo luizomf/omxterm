@@ -1,6 +1,8 @@
 import * as nodePty from "node-pty";
 import type { IPty } from "node-pty";
+import { spawnSync } from "node:child_process";
 import { userInfo } from "node:os";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { resolveDefaultShell } from "../../src/main/default-shell";
 import {
@@ -286,6 +288,21 @@ describe.skipIf(!supportedEnvironment)("real local PTY", () => {
     },
     15_000,
   );
+
+  it("survives a shell that ends while its Node environment is freed (#1042)", () => {
+    const run = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(
+          new URL("../fixtures/pty-environment-teardown.cjs", import.meta.url),
+        ),
+      ],
+      { encoding: "utf8", timeout: 10_000 },
+    );
+    expect(run.signal).toBeNull();
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("PTY_TEARDOWN_WORKER_EXIT 0");
+  });
 });
 
 // ConPTY renders into an 80-column screen buffer and repaints with cursor
