@@ -48,14 +48,14 @@ const releases = [
     manifest: `{"format":1,"id":"omxterm.files","version":"0.9.1","name":"Files","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
   },
   {
-    name: "SSH 0.4.1",
+    name: "SSH 0.4.2",
     id: "omxterm.ssh",
-    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.4.1","name":"SSH Connect","engines":{"omxterm":">=0.27.0-dev.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1","links.open.v1"],"links":{"docs":"https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md"},"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
+    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.4.2","name":"SSH Connect","engines":{"omxterm":">=0.27.0-dev.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1","links.open.v1"],"links":{"docs":"https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md"},"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
   },
   {
-    name: "Snippets 0.1.3",
+    name: "Snippets 0.1.4",
     id: "omxterm.snippets",
-    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.3","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
+    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.4","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
   },
 ] as const;
 type ReleaseFixture = (typeof releases)[number];

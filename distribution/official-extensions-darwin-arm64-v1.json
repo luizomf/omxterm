@@ -29,7 +29,7 @@
       "id": "omxterm.ssh",
       "name": "SSH Connect",
       "description": "Pick a server from your SSH config, or type an address, and connect in a new terminal tab.",
-      "version": "0.4.1",
+      "version": "0.4.2",
       "engines": {
         "omxterm": ">=0.27.0-dev.0",
         "api": "0.1.x"
@@ -42,30 +42,30 @@
         "win32-x64"
       ],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.4.1/ssh-0.4.1.omxext",
-        "sha256": "d95ff8a3e0dc5fefd4dfd93a0c0e42a9c4f8352fbfa188885b6fa2a617a7b532",
-        "bytes": 13182
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.4.2/ssh-0.4.2.omxext",
+        "sha256": "efc712b567413fb2d0e54f5960e916fe8bc15e8be185ae6a15fd56166c7da53e",
+        "bytes": 13291
       },
-      "sourceCommit": "e18e16e512ebe5f3cc076ef9a8509be0719cd537",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.4.1"
+      "sourceCommit": "b91350c575641031793b85ef8030ca4eb31f9059",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.4.2"
     },
     {
       "id": "omxterm.snippets",
       "name": "Snippets",
       "description": "Search your saved text snippets, hover one to see its full text, then insert it into the terminal or run it.",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.3/snippets-0.1.3.omxext",
-        "sha256": "9f331d1f5ace110db3d72858006cdc1090aa06c3ec4438062cbbba2fd5006c07",
-        "bytes": 82380
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.4/snippets-0.1.4.omxext",
+        "sha256": "2ab03c51b5a341323765195eaa459fd94a3c9f61b392719c965ecb60d9819557",
+        "bytes": 82514
       },
-      "sourceCommit": "e18e16e512ebe5f3cc076ef9a8509be0719cd537",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.3"
+      "sourceCommit": "b91350c575641031793b85ef8030ca4eb31f9059",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.4"
     },
     {
       "id": "omxterm.restoration",
