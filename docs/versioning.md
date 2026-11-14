@@ -214,6 +214,9 @@ Stable 0.36.0 uses the frozen cut `5fa6e40f`; the next development baseline is
 `0.36.1-dev.0`. Its bridge admits ranges that accept both `0.36.0` and
 `0.36.1`. Every catalog archive stays installable unchanged.
 
+Aligning the marks capsule's right edge with the find bar's (#1143) moves main
+to `0.36.1-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
