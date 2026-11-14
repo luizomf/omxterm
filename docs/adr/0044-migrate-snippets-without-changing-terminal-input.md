@@ -11,7 +11,7 @@ Status: accepted migration design for [#741](https://github.com/luizomf/omxterm/
 ## Current distribution status
 
 **[Stable OMXTerm 0.25.0 is published and Latest](https://github.com/luizomf/omxterm/releases/tag/v0.25.0).**
-Its bundled default is the immutable Snippets `0.1.0` archive on Linux ARM64/x64,
+Its bundled default is the immutable Snippets `0.1.3` archive on Linux ARM64/x64,
 macOS ARM64 and Windows ARM64. The official catalog offers `0.1.1` for deliberate
 installation or update; it does not change the bundle or automatically update it.
 Positively new packaged profiles get the removable

@@ -701,10 +701,10 @@ Connect share it; no per-tool placement or second panel exists.
   the selected window's Snippets view. It is the only menu/palette entry for
   Snippets, including with remapped or null bindings.
 - Snippets is an optional installed extension on Linux ARM64/x64, macOS ARM64,
-  and Windows ARM64. Those packages bundle Snippets `0.1.0` as a
+  and Windows ARM64. Those packages bundle Snippets `0.1.3` as a
   [removable default](dev/default-snippets.md), enabled but dormant only for
   positively new packaged profiles; existing users are never enrolled and
-  install it through the official catalog (which offers `0.1.1`) or a verified
+  install it through the official catalog (which offers newer releases) or a verified
   local/offline archive. Updates are never automatic. Windows x64 keeps the
   built-in view and is not a default-provisioning or catalog target. Existing YAML, bindings, and
   disabled/removed choices are preserved
@@ -2021,7 +2021,7 @@ location and the strict, non-mutating model.
 ### Default Snippets provisioning
 
 Packaged builds for the extension targets try once to install the bundled,
-pinned Snippets `0.1.0` archive, enabled but dormant. Windows x64 keeps built-in
+pinned Snippets `0.1.3` archive, enabled but dormant. Windows x64 keeps built-in
 Snippets. [One-time default Snippets](dev/default-snippets.md) has the full policy.
 
 - Only a fresh profile enrolls: early main capture must prove the default
@@ -2279,9 +2279,9 @@ Delivery:
   creates (outside the kit), rewrites or migrates it; absence is the empty
   state. It is reread each time the sidebar opens. `snippets.json` is not read.
 - Published Snippets `0.1.1` resolves it with the account-home fallback; the
-  installed or bundled-default `0.1.0` can resolve a different file when XDG
+  installed `0.1.0` can resolve a different file when XDG
   is unset or empty and the environment home is overridden. The bundled default
-  stays `0.1.0`. Updating is deliberate. See the
+  is `0.1.3`, which resolves the account home. Updating is deliberate. See the
   [Snippets migration guide](dev/snippets-migration.md).
 - One UTF-8 YAML 1.2 core document (parsed with `yaml` v2): exactly
   `version: 1` and a `snippets` array of at most 512 entries. Each entry has
