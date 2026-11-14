@@ -15,8 +15,12 @@ import {
   type TerminalThemeAppearance,
 } from "../../src/shared/terminal-theme";
 import type { TerminalApplication } from "../../src/main/terminal-application";
+import type { TerminalSize } from "../../src/shared/terminal-contract";
 import { waitFor } from "./window-chrome-exercise";
-import { focusThemeSeparator } from "./theme-appearance-keyboard";
+import {
+  focusThemeSeparator,
+  stepUntilRefit,
+} from "./theme-appearance-keyboard";
 import { createThemeSearch } from "./theme-appearance-search";
 
 const pane = ".terminal-tab:not([hidden]) .terminal-surface";
@@ -26,7 +30,7 @@ const dividers = [
   ".auxiliary-separator",
 ];
 const hidden = "rgba(0, 0, 0, 0)";
-type Sizes = ReadonlyArray<ReadonlyArray<{ cols: number; rows: number }>>;
+type Sizes = ReadonlyArray<ReadonlyArray<TerminalSize>>;
 
 function createScene(
   window: BrowserWindow,
@@ -399,7 +403,6 @@ async function exerciseHiddenDividers(s: ReturnType<typeof createScene>) {
     contents,
     evaluate,
     until,
-    key,
     paint,
     point,
     idle,
@@ -474,12 +477,7 @@ async function exerciseHiddenDividers(s: ReturnType<typeof createScene>) {
       hosted ? ".auxiliary-hide" : undefined,
     );
     assert.equal(await paint(selector), "rgb(240, 240, 255)");
-    const keyboardGrid = grid();
-    key(index === 1 ? "Up" : "Left");
-    await waitFor(
-      () => changed(keyboardGrid),
-      "Keyboard resize of hidden divider refits PTYs",
-    );
+    await stepUntilRefit({ ...s, pane }, index === 1 ? "height" : "width");
     assert.equal(await evaluate(`document.activeElement === ${element}`), true);
     assert.equal(await paint(selector), "rgb(240, 240, 255)");
     const focusedPoint = await point(selector);
