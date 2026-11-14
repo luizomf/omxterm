@@ -27,9 +27,9 @@ static BOOL WINAPI on_console_event(DWORD event) {
 }
 
 // The arguments after the program name, untouched. The program name ends at
-// the next quote when it starts with one, else at the first blank, the one
-// rule CommandLineToArgvW and the C runtime share. The rest is the child's to
-// parse, so it reads it as it would if OMXTerm.exe had been run directly.
+// the next quote when it starts with one, else at the first blank. The rest
+// is the child's to parse, so it reads it as it would if OMXTerm.exe had been
+// run directly.
 static const wchar_t *arguments(const wchar_t *line) {
   if (*line == L'"') {
     for (line += 1; *line != L'\0' && *line != L'"'; line += 1) {
