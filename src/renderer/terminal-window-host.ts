@@ -51,7 +51,7 @@ import type {
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
-import { applyWindowTheme } from "./terminal-window-theme";
+import { applyWindowInsets, applyWindowTheme } from "./terminal-window-theme";
 import type { TerminalWindowActionSubscriptions } from "./terminal-window-actions";
 
 type MountTerminalSurface = (
@@ -357,11 +357,7 @@ export function mountTerminalWindowPage(
       language.set(configuration.language);
       companion.applyConfiguration(configuration);
       fontConfigurationId = configuration.fontConfigurationId;
-      if (!chrome)
-        page.document.documentElement.style.setProperty(
-          "--native-title-inset",
-          `${configuration.nativeTitleInset}px`,
-        );
+      applyWindowInsets(page.document, configuration, !chrome);
       applyPageTheme(configuration.terminalTheme, configuration.transparency);
       const nextSurfaceConfiguration = surfaceConfiguration(configuration);
       if (configuration.fontFamily !== activeFontFamily) {
@@ -438,10 +434,7 @@ function bindPageTheme(
   const apply = (theme: TerminalTheme, transparency: number) =>
     applyWindowTheme(document, container, theme, transparency);
   if (configuration) {
-    document.documentElement.style.setProperty(
-      "--native-title-inset",
-      `${configuration.nativeTitleInset}px`,
-    );
+    applyWindowInsets(document, configuration);
     apply(configuration.terminalTheme, configuration.transparency);
   }
   return apply;

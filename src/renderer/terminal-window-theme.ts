@@ -1,4 +1,5 @@
 import type { TerminalTheme } from "../shared/terminal-theme";
+import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import {
   luminance,
   terminalAgentTone,
@@ -47,4 +48,25 @@ export function applyWindowTheme(
   );
   document.body.style.setProperty("--terminal-background", background);
   tabs.style.setProperty("--terminal-background", background);
+}
+
+// Window-level insets: the native title bar's height, and the tab strip's
+// sides, which start and end where the terminal text does.
+export function applyWindowInsets(
+  document: Document,
+  configuration: Pick<
+    TerminalRendererConfiguration,
+    "nativeTitleInset" | "terminalPadding"
+  >,
+  titleInset = true,
+): void {
+  const style = document.documentElement.style;
+  if (titleInset)
+    style.setProperty(
+      "--native-title-inset",
+      `${configuration.nativeTitleInset}px`,
+    );
+  const { left, right } = configuration.terminalPadding;
+  style.setProperty("--tab-strip-inset-start", `${left}px`);
+  style.setProperty("--tab-strip-inset-end", `${right}px`);
 }
