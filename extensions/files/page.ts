@@ -1114,7 +1114,7 @@ export function mountFilesPage(
         const indicator = document.createElement("span");
         indicator.className = "menu-check";
         indicator.setAttribute("aria-hidden", "true");
-        if (action.checked) setIcon(indicator, "check");
+        setIcon(indicator, action.checked ? "square-check" : "square");
         const caption = document.createElement("span");
         caption.className = "menu-caption";
         caption.id = "files-dotfiles-caption";

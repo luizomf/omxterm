@@ -21,7 +21,7 @@ it("replaces a control's content with one icon and leaves it alone when already 
   expect(button.textContent).toBe("");
   setIcon(button, "x");
   expect(button.firstElementChild).toBe(shown);
-  setIcon(button, "check");
+  setIcon(button, "minus");
   expect(button.childElementCount).toBe(1);
   expect(button.firstElementChild).not.toBe(shown);
 });

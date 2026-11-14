@@ -146,7 +146,7 @@ So tier 2 changes in two ways, and nothing else does:
 
 The cost is stated plainly: the capsule hides the end of row 1 instead of
 letting it show through, and it is wider than "a column or two". At the
-default 15 px font one mark covers about 28 px (3 columns) and all four
-about 104 px (11 columns). It still never enters the layout flow or changes
+default 16 px font one mark covers 28 px (about 3 columns) and all four
+100 px (about 11 columns). It still never enters the layout flow or changes
 the grid. A setting and shortcut to hide pane marks, which never hide the
 agent mark, are planned separately for people who want row 1 back.

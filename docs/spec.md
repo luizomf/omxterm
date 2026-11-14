@@ -532,8 +532,8 @@ quietest form that works:
   an ambient state; a solid shape needs the user.
 - A pane's marks sit together in one small capsule that tints and blurs the
   output under it, so they stay legible over busy text and in translucent
-  windows. The capsule is only as wide as its marks (about 28 px for one,
-  104 px for four at the default font size), covers that much of the end of
+  windows. The capsule is only as wide as its marks (28 px for one,
+  100 px for four at the default font size), covers that much of the end of
   row 1, and disappears with its last mark. Marks scale with the terminal
   font: each target is one text row and never under 24 px, its icon 0.8 of
   the font size and never under 16 px. A tab's icons are 12 px.
@@ -556,8 +556,8 @@ quietest form that works:
   refits a Surface or resizes a PTY, with or without the title bar or tab
   strip. Stopping an ongoing state uses existing actions (shortcut, Command
   Palette, menu), never a separate button. A state may also make its pane mark
-  clickable: the same glyph becomes a button whose tooltip and accessible name
-  add the action, and clicking it keeps terminal focus. The tab's glyph is never
+  clickable: the same icon becomes a button whose tooltip and accessible name
+  add the action, and clicking it keeps terminal focus. The tab's icon is never
   clickable.
 
 ### About dialog

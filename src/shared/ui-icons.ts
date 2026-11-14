@@ -16,7 +16,6 @@ const icons = {
   "arrow-down": ["M12 5v14", "m19 12-7 7-7-7"],
   "arrow-right": ["M5 12h14", "m12 5 7 7-7 7"],
   "arrow-up": ["m5 12 7-7 7 7", "M12 19V5"],
-  check: ["M20 6 9 17l-5-5"],
   "chevron-down": ["m6 9 6 6 6-6"],
   "chevron-right": ["m9 18 6-6-6-6"],
   "circle-small": [["circle", { cx: "12", cy: "12", r: "6" }]],
@@ -57,6 +56,7 @@ const icons = {
     "M8 16H3v5",
   ],
   square: [["rect", box]],
+  "square-check": [["rect", box], "m16 9-5.5 5.5L8 12"],
   x: ["M18 6 6 18", "m6 6 12 12"],
 } satisfies Record<string, readonly Shape[]>;
 

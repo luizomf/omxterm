@@ -24,7 +24,8 @@ This page and those two files are enough to build an official surface. Read
   competes with terminal output.
 - **Signs over words.** A control that has an icon in the set is an icon
   button with a tooltip and an accessible name, not a word. Never a text
-  glyph (`×`, `›`, `▸`, `✓`, `●`) and never an emoji.
+  glyph (`×`, `›`, `▸`, `✓`, `●`) and never an emoji. The one exception
+  already exists: the severity badge that `page-notice` draws by itself.
 - **Use a component, not a local style.** Surface CSS holds layout only (grid,
   gaps, widths, positions). Colors, fonts, radii, borders and hover or
   selection fills come from `ui.css`. If two surfaces need the same new thing,
@@ -159,7 +160,7 @@ close.title = t("common.close"); // and so does the tooltip
 | `refresh-cw`                    | Reload from the source                                  |
 | `folder-plus`                   | New folder                                              |
 | `ellipsis`                      | More actions (opens a menu)                             |
-| `check`                         | The checked item of a menu                              |
+| `square-check`, `square`        | A checked or unchecked menu item                        |
 | `minus`, `square`, `copy`       | Minimize, maximize, restore the window                  |
 | `move-horizontal`               | State Mark: Mirror Typing                               |
 | `loader-circle`                 | State Mark: a program is working (static, never spun)   |
@@ -177,7 +178,9 @@ and a note in ADR 0050.
 ## Recipes
 
 Every recipe is DOM built in TypeScript with `textContent` and
-`setAttribute`, never HTML strings. Labels come from the message catalogs.
+`setAttribute`, never HTML strings. Labels come from the message catalogs. The last two rows
+need the window's `StateMarks`, which only the core renderer holds; an
+extension view reports through its page notice instead.
 
 | You need                       | Build it like this                                                                                                                                                                                                             |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -193,8 +196,8 @@ Every recipe is DOM built in TypeScript with `textContent` and
 | A side-panel tool              | An extension panel view: `<html class="ui-on-tint">`, CSS starts with `@import "../shared/appearance.css";`, body is a compact page. No title, no header, no border: the host draws the `ui-panel-header` with Hide and Close. |
 | A short task over the terminal | An extension dialog view (same setup as a panel view). The host draws the `ui-dialog`, its title and Close; the view ends in a `ui-actions` with the primary button.                                                           |
 | A result on the page           | `setPageNotice(element, { text, severity })` on one retained element with `role="status"`. Nothing for success unless the action has no other visible result.                                                                  |
-| A toast                        | `stateMarks.flash(text)`: one sentence, gone in 4 s ("Layout saved."). Something the user must deal with: `stateMarks.notify(text)`.                                                                                           |
-| An ongoing state               | `stateMarks.set(pane, owner, { glyph, label, action? })`. Never your own strip, badge, dot or color.                                                                                                                           |
+| A toast (core only)            | `stateMarks.flash(text)`: one sentence, gone in 4 s ("Layout saved."). Something the user must deal with: `stateMarks.notify(text)`.                                                                                           |
+| An ongoing state (core only)   | `stateMarks.set(pane, owner, { glyph, label, action? })`. Never your own strip, badge, dot or color.                                                                                                                           |
 
 ## Do and don't
 
@@ -275,7 +278,7 @@ a strip, badge or color of your own. Pick the quietest tier that works:
 round pill at the top-right corner, centered on the first text row, that
 tints (surface at 86 % with 16 % neutral) and blurs the output under it, with
 a faint top rim and a soft shadow. It is only as wide as its marks (a 24 px
-target each, about 28 px for one mark and 104 px for four) and disappears
+target each, about 28 px for one mark, 100 px for four) and disappears
 with the last one. Marks grow with the terminal font: the target is one text
 row, the icon 0.8 of the font size. Nothing else uses this look: no other
 chip, pill or blurred surface floats over the terminal.
