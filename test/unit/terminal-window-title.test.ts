@@ -267,8 +267,39 @@ describe("native Terminal Title and bell attention", () => {
     expect(harness.window.setTitle).toHaveBeenLastCalledWith("agent");
   });
 
+  it("keeps startup bells to the mark until the window is first focused", () => {
+    const harness = createControllerHarness(false);
+    harness.controller.sessionStarted("s1");
+    harness.controller.sessionStarted("s2");
+    harness.controller.selectSession("s1");
+
+    // tmux replays pending bells on attach, before the window has focus.
+    harness.controller.ringBell("s1");
+    harness.controller.ringBell("s2");
+    expect(harness.attention).toHaveBeenCalledWith("s2", true);
+    expect(harness.dock).not.toHaveBeenCalled();
+    expect(harness.notify).not.toHaveBeenCalled();
+
+    // A program's own notification still gets through.
+    harness.controller.notify("s2", { title: "", body: "Done" });
+    expect(harness.notify).toHaveBeenCalledOnce();
+    expect(harness.dock).toHaveBeenCalledOnce();
+    harness.dock.mockClear();
+    harness.notify.mockClear();
+
+    // After the user has had the window, a background bell notifies again.
+    harness.focus();
+    harness.controller.ringBell("s2", false);
+    expect(harness.notify).toHaveBeenCalledOnce();
+    harness.unfocus();
+    harness.controller.ringBell("s1");
+    expect(harness.dock).toHaveBeenCalledOnce();
+  });
+
   it("requests native attention once for an unfocused window until focus clears it", () => {
     const harness = createControllerHarness(false);
+    harness.focus();
+    harness.unfocus();
     harness.controller.sessionStarted("s1");
     harness.controller.selectSession("s1");
     harness.controller.requestTitle("s1", "remote job");

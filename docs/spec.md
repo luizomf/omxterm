@@ -1058,6 +1058,10 @@ Programs report what they are doing with standard sequences
 - Program text is untrusted plain text. Controls and line breaks become
   spaces, bidirectional controls are removed, and titles and bodies are cut to
   128 and 512 code points with an ellipsis. It never reaches logs.
+- Until a window has been focused for the first time, a BEL only leaves the
+  mark: a bell during startup (such as tmux replaying a pending one on attach)
+  raises no notification or Dock bounce. OSC 9 and OSC 777 text always
+  notify.
 - When the window isn't focused, or the session isn't one of the selected
   tab's panes, OMXTerm shows a native notification (`notifications.enabled`,
   on by default). Its title is the OSC 777 title, or else the session's title.
