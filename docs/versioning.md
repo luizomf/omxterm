@@ -217,6 +217,9 @@ Stable 0.36.0 uses the frozen cut `5fa6e40f`; the next development baseline is
 Aligning the marks capsule's right edge with the find bar's (#1143) moves main
 to `0.36.1-dev.1`.
 
+Adding the missing contributors to `CONTRIBUTORS.md` and a release check for
+it moves main to `0.36.1-dev.2`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
