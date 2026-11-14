@@ -96,6 +96,32 @@ describe("initial saved-window layout ownership", () => {
     expect(captured.capture()!.tabs[1]!.focused).toBe(1);
   });
 
+  it("gives a background tab's panes the tabs area, split by their layout (#1041)", async () => {
+    const h = createTabsHarness({ tabsOptions: { initialLayout: plan() } });
+    owners.push(h.tabs);
+    vi.spyOn(h.container, "getBoundingClientRect").mockReturnValue({
+      width: 1052,
+      height: 600,
+    } as DOMRect);
+    await settle();
+    const panes = [
+      ...h.container.querySelectorAll<HTMLElement>(".terminal-surface"),
+    ];
+    for (const pane of panes) pane.style.padding = "12px";
+    const estimates = h.mount.mock.calls
+      .map(([container, , options]) => ({
+        pane: panes.indexOf(container),
+        box: options.estimatedBox?.(),
+      }))
+      .sort((a, b) => a.pane - b.pane);
+    // Tab 0 is in the background. Its split keeps each pane's 24px of
+    // padding and a 4px divider, and splits the other 1000px 0.3/0.7.
+    expect(estimates.slice(0, 2)).toEqual([
+      { pane: 0, box: { width: 324, height: 600 } },
+      { pane: 1, box: { width: 724, height: 600 } },
+    ]);
+  });
+
   it("closes pending owners without starting queued panes and observes late mounts", async () => {
     const releases: (() => void)[] = [];
     const h = createTabsHarness({

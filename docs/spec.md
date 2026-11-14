@@ -1657,9 +1657,12 @@ authority; OMXTerm adds no second parser.
   program that runs at once, such as a Launch Request or a line in a shell
   startup file, reads the real size. The pixels follow the spawn in the same
   tick, so on Linux a native program that reads them in its first instant can
-  still see 0×0 (#1043). A Surface that hasn't measured a grid yet starts its
-  session at 80×24 until its first resize. A pane in a background tab gets a
-  placeholder grid until the tab is shown (#1041).
+  still see 0×0 (#1043). A pane in a background tab (Saved Layout restore, SSH
+  Connect) has no layout box, so its grid comes from the window's terminal
+  area, split as its tab's layout splits it, and its session starts at that
+  size; showing the tab refits it to the real box (#1041). A Surface that
+  hasn't measured a grid yet starts its session at 80×24 until its first
+  resize.
 
 **Placement**
 

@@ -10,6 +10,7 @@ import type {
 } from "../terminal-surface/terminal-surface";
 import type { TerminalTabsOptions } from "./terminal-tabs";
 import { forwardFieldContextMenu } from "./field-context-menu";
+import { paneLayoutBox } from "./pane-geometry";
 import type { TerminalHostClipboard } from "./terminal-pane-context-menu";
 import {
   endPane,
@@ -116,6 +117,7 @@ export function createPaneMount(deps: {
           }
         : {}),
       abortSignal: pane.mountAbort.signal,
+      estimatedBox: () => estimatedPaneBox(pane),
       onFatalError(failure) {
         endPane(pane);
         deps.surfaceOptions().onFatalError?.(failure);
@@ -181,6 +183,30 @@ export function createPaneMount(deps: {
       if (document.hasFocus()) deps.focus(pane, focus.unchanged());
     }
   };
+}
+
+// A pane in a background tab has no layout box. Its tab would fill the tabs
+// area, as the selected tab does, and split it by the tab's layout (#1041).
+function estimatedPaneBox(pane: TerminalPane) {
+  const tab = pane.tab.container;
+  const area = tab.parentElement?.getBoundingClientRect();
+  if (!area || area.width <= 0 || area.height <= 0) return undefined;
+  const px = (value: string) => Number.parseFloat(value) || 0;
+  const padding = (element: HTMLElement) => {
+    const style = getComputedStyle(element);
+    return {
+      width: px(style.paddingLeft) + px(style.paddingRight),
+      height: px(style.paddingTop) + px(style.paddingBottom),
+    };
+  };
+  const tabPadding = padding(tab);
+  return paneLayoutBox(
+    pane.tab.layout,
+    pane,
+    area.width - tabPadding.width,
+    area.height - tabPadding.height,
+    padding(pane.container),
+  );
 }
 
 function observeMountFocus(document: Document, signal: AbortSignal) {

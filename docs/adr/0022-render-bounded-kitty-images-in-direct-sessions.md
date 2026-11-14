@@ -39,9 +39,10 @@ the claimed paths inside its pinned Ghostty core. Cell-size reports remain
 enabled so `CSI 16 t` returns the dimensions image-producing applications need,
 and each resize gives the PTY the grid's size in device pixels (columns × cell
 width, padding excluded), the same cell size. A visible pane's PTY also starts
-at that size. A background tab's pane starts at 80×24 and gets a placeholder
-grid until it is shown (#1041), Windows gets no pixels, and on Linux a program
-that reads the size in its first instant can still see 0×0 pixels (#1043). File,
+at that size. A background tab's pane starts at the size the window's
+terminal area would give it and refits when shown (#1041), Windows gets no
+pixels, and on Linux a program that reads the size in its first instant can
+still see 0×0 pixels (#1043). File,
 temporary-file and shared-memory media stay refused, so main never reads local
 files or shared memory on behalf of output that may come from SSH. Image
 rendering uses no JavaScript eval, remote fetch, object source, renderer Node

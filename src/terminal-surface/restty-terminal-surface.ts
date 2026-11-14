@@ -158,6 +158,8 @@ export async function mountResttyTerminalSurface(
   const isCancelled = () => options.abortSignal?.aborted === true;
   const isInactive = () => disposed || isCancelled();
   let ready = false;
+  // The first grid came from the host's estimate, not a placeholder canvas.
+  let estimated = false;
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
   let visibleLinkController: ResttyVisibleLinkController | undefined;
@@ -267,7 +269,7 @@ export async function mountResttyTerminalSurface(
       geometry.record(meta);
       settledSize = size;
     },
-    () => container.getBoundingClientRect().width > 0,
+    () => estimated || container.getBoundingClientRect().width > 0,
   );
 
   try {
@@ -297,6 +299,11 @@ export async function mountResttyTerminalSurface(
     });
     pane = restty.getActivePane() ?? undefined;
     if (!pane) throw new Error("Restty did not create its terminal pane");
+    estimated = presizeHiddenCanvas(
+      container,
+      pane.container.querySelector("canvas"),
+      options.estimatedBox,
+    );
     applySearchTheme(restty, container, terminalTheme, options.labels);
 
     removeRuntimeListener = pane.runtime.events.subscribe((event) => {
@@ -420,6 +427,29 @@ export async function mountResttyTerminalSurface(
     // Release late resources after settlement; cleanup errors still propagate.
     if (isCancelled()) dispose();
   }
+}
+
+// Without a layout box Restty builds its first grid from the canvas's 300×150
+// default, an 18×4 grid on a HiDPI display (#1041). Size the canvas to the
+// content box the host expects, as Restty's own refit would; showing the
+// Surface refits it to the real box.
+function presizeHiddenCanvas(
+  container: HTMLElement,
+  canvas: HTMLCanvasElement | null,
+  estimatedBox: TerminalSurfaceOptions["estimatedBox"],
+): boolean {
+  if (!canvas || container.getBoundingClientRect().width > 0) return false;
+  const box = estimatedBox?.();
+  if (!box) return false;
+  const style = getComputedStyle(container);
+  const px = (value: string) => Number.parseFloat(value) || 0;
+  const width = box.width - px(style.paddingLeft) - px(style.paddingRight);
+  const height = box.height - px(style.paddingTop) - px(style.paddingBottom);
+  if (!(width >= 1 && height >= 1)) return false;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  return true;
 }
 
 async function acquireSurfaceFonts(

@@ -189,6 +189,10 @@ Sharing one native `closed` listener per window among its owners, so a dev run
 no longer warns about too many listeners (#1057), moves main to
 `0.35.1-dev.7`.
 
+Sizing a background tab's panes from the window's terminal area, so their
+sessions no longer start at an 18×4 placeholder grid (#1041), moves main to
+`0.35.1-dev.8`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

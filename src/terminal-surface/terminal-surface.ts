@@ -167,6 +167,10 @@ export interface TerminalSurfaceOptions {
   readonly onExternalLink?: (url: string) => void;
   readonly onLocalImageActivation?: (source: LocalImageActivation) => void;
   readonly onFatalError?: (failure: TerminalSurfaceFailure) => void;
+  // The CSS box the container will fill once laid out. A Surface mounted
+  // without a layout box (a background tab) sizes its first grid from it.
+  readonly estimatedBox?: () =>
+    { readonly width: number; readonly height: number } | undefined;
 }
 
 export { mountResttyTerminalSurface as mountTerminalSurface } from "./restty-terminal-surface";

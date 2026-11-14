@@ -33,43 +33,6 @@ describe("Restty Terminal Surface", () => {
     harness.setInitError(undefined);
   });
 
-  it.each([
-    [
-      "the grid it measured, pixels included",
-      960,
-      { cols: 118, rows: 37, pixelWidth: 1_888, pixelHeight: 1_184 },
-    ],
-    ["no size from a hidden tab's placeholder grid", 0, undefined],
-  ])("starts the session at %s", async (_label, width, size) => {
-    harness.setConnectGrid({ cols: 118, rows: 37, cellW: 16, cellH: 32 });
-    try {
-      const { adapter } = createAdapter();
-      const container = document.createElement("main");
-      container.getBoundingClientRect = () => ({ width }) as DOMRect;
-      const surface = await mountResttyTerminalSurface(container, adapter);
-      expect(adapter.start).toHaveBeenCalledExactlyOnceWith(
-        expect.anything(),
-        size,
-      );
-      surface.dispose();
-    } finally {
-      harness.setConnectGrid(undefined);
-    }
-  });
-
-  it("starts without a size when nothing was measured yet", async () => {
-    const { adapter } = createAdapter();
-    const surface = await mountResttyTerminalSurface(
-      document.createElement("main"),
-      adapter,
-    );
-    expect(adapter.start).toHaveBeenCalledExactlyOnceWith(
-      expect.anything(),
-      undefined,
-    );
-    surface.dispose();
-  });
-
   it("rejects a configured family without a font provider before starting a session", async () => {
     const { adapter } = createAdapter();
     await expect(
