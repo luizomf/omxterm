@@ -36,7 +36,7 @@ async function resources(files: Record<string, Buffer | string>) {
 }
 
 // The client's answer to the probe argument, when it arrives as given.
-const usage = (argument: string) =>
+const usage = (argument: string | undefined) =>
   Object.assign(new Error("usage"), {
     code: argument === launcherProbeArgument ? 2 : 1,
     stderr: `Unknown option ${argument}.\n`,
