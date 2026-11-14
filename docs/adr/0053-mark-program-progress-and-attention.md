@@ -64,8 +64,9 @@ the selected tab's panes, main shows a native notification:
 - **Body:** the program's text, or a short localized sentence for BEL.
 
 Each session keeps at most one notification. A newer one replaces it, and
-repeats within a second are dropped. A notification closes when its attention
-clears or its session ends. Clicking it brings the window forward and selects
+repeats within a second are dropped. A delivered notification stays in the
+system's notification list until the user clicks or dismisses it; clearing
+attention or ending the session does not close it. Clicking it brings the window forward and selects
 the session's tab and pane. Linux bodies are markup-escaped so they stay text.
 macOS Dock bounces and Linux/Windows frame flashes are unchanged.
 
