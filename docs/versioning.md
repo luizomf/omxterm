@@ -157,6 +157,9 @@ lines (#1115), move main to `0.35.0-dev.2`.
 Clearing the alternate-screen flag on a terminal reset (RIS, #1074) moves
 main to `0.35.0-dev.4`.
 
+Turning off mouse reporting, bracketed paste and focus reporting on a terminal
+reset (RIS, #1120) moves main to `0.35.0-dev.5`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

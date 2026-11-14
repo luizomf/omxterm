@@ -1854,6 +1854,9 @@ paths open a Local Image Preview
 
 ### Mouse and context menu
 
+- A terminal reset (RIS, as `reset` sends) turns off mouse reporting, bracketed
+  paste and focus reporting, so a full-screen program that crashed with them on
+  doesn't keep clicks, paste or focus changes after `reset`.
 - Application mouse modes own button, motion and wheel reporting in normal and
   alternate screens. Shift keeps the selection override (see
   [Mouse selection](#mouse-selection)). Explicit copy and valid modified-link

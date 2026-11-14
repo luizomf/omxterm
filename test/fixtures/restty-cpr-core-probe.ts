@@ -22,6 +22,7 @@ type PtyRuntime = {
   disconnectPty(): void;
   scheduleSyncOutputReset(): void;
   cancelSyncOutputReset(): void;
+  sendPasteText(text: string): void;
 };
 type Controller = {
   sendInput(text: string, source: string): void;
@@ -59,7 +60,7 @@ export async function cprCoreFixture(
   const createPty = runInNewContext(
     runtimeSection(
       source,
-      "function createPtyInputRuntime(options) {",
+      "// src/runtime/create-runtime/format-utils.ts",
       "// src/runtime/create-runtime/interaction-runtime/desktop-word-selection.ts",
     ) + "\ncreatePtyInputRuntime",
     globals,
@@ -126,6 +127,9 @@ export async function cprCoreFixture(
     getGridSize: () => grid,
     getCursorForCpr: staleCursor,
     sendInput: controller.sendInput,
+    runBeforeInputHook: (text: string) => text,
+    shouldClearSelection: () => false,
+    clearSelection() {},
     syncOutputResetMs: 1000,
     syncOutputResetSeq: "\u001b[?2026l",
   });
@@ -145,6 +149,20 @@ export async function cprCoreFixture(
     },
     // The filter's own screen flag, which the window reports with a read.
     altScreen: () => inputHandler.isAltScreen(),
+    // Modes the filter alone owns: the core never sees these sequences.
+    modes: () => ({
+      mouse: inputHandler.isMouseActive(),
+      bracketedPaste: inputHandler.isBracketedPaste(),
+      focusReporting: inputHandler.isFocusReporting(),
+      synchronizedOutput: inputHandler.isSynchronizedOutput(),
+    }),
+    // A paste through the production path; its bytes land in replies.
+    paste: (text: string) => ptyRuntime.sendPasteText(text),
+    // A primary-button press: true when it was reported to the program.
+    click: () =>
+      inputHandler.sendMouseEvent("down", {
+        button: 0,
+      } as unknown as PointerEvent),
     cursor() {
       // Final-state control only, never the query oracle or reply provider.
       wasm.renderUpdate(handle);
