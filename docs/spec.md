@@ -1320,6 +1320,10 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   an agent in a pane runs `"$OMXTERM_CTL" status` with no setup. Without a
   grant it prints one sentence that names **Allow Agents in This Window** and
   exits 3.
+- On Windows `OMXTERM_CTL` is a `.cmd`, and cmd.exe re-reads its arguments:
+  `%NAME%` expands and unquoted `&`, `|`, `<` and `>` act as shell operators.
+  Until [#1081](https://github.com/luizomf/omxterm/issues/1081), arbitrary
+  text goes through `mcp`, whose arguments travel over stdin.
 - `"$OMXTERM_CTL" guide` prints a short agent guide, which is also a
   `SKILL.md` an agent can keep. `"$OMXTERM_CTL" mcp` serves `status`, `list`,
   `keys`, `send`, `press`, `read` and `wait` as MCP tools on stdio, with the CLI's
@@ -1334,7 +1338,8 @@ and CLI in the [Agent API reference](dev/agent-api.md)).
   `0600`) on macOS and Linux, and on the named pipe
   `\\.\pipe\omxterm-agent-<hash of the profile path>` on Windows, only while a
   grant exists, and never on TCP. The pipe keeps Node's default security
-  descriptor, which other users can open only for reading. Each grant has a random
+  descriptor: other users can't write to it or authenticate, though they can
+  hold a pre-handshake connection or take the name first. Each grant has a random
   256-bit token in `<profile>/agent-api/grants/<window>.json` (`0600`; on
   Windows, the profile's inherited ACL), written
   after the marks are on screen and removed when the grant ends; leftovers

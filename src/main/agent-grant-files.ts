@@ -10,7 +10,7 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { AGENT_GRANT_VERSION } from "../shared/agent-api";
-import { isNamedPipe, socketIsLive } from "./agent-endpoint";
+import { socketIsLive } from "./agent-endpoint";
 
 export function agentApiDirectory(profile: string) {
   return path.join(profile, "agent-api");
@@ -77,7 +77,7 @@ export function createGrantFiles(
     async removeLeftovers() {
       if (await socketIsLive(socketPath)) return;
       // A pipe goes away with the process that held it.
-      if (!isNamedPipe(socketPath)) await unlink(socketPath).catch(() => {});
+      if (platform !== "win32") await unlink(socketPath).catch(() => {});
       const names = await readdir(directory).catch(() => [] as string[]);
       for (const name of names)
         if (/^(\d+\.json|\.\d+\.[0-9a-f-]{36}\.tmp)$/u.test(name))

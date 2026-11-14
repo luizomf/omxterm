@@ -34,6 +34,7 @@ it("grants only after the window shows its marks, then a pane's client drives it
   expect(states()).toEqual([{ state: "pending" }]);
   // No mark on screen yet: nothing listens and no credential exists.
   expect(await listening(profile)).toBe(false);
+  if (!windows) expect(existsSync(agentEndpointPath(profile))).toBe(false);
   expect(grants()).toEqual([]);
 
   await shown();

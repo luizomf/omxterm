@@ -394,10 +394,10 @@ a command name, its duration and an error code.
 ## Threat model
 
 - **Other users on the machine** are stopped by the profile directory and
-  socket permissions on macOS and Linux. On Windows the pipe's default
-  security descriptor lets other users open it only for reading, which a
-  connection can't use, and the profile's inherited ACL keeps them from the
-  credential ([Slice 5 as built](#slice-5-as-built)).
+  socket permissions on macOS and Linux. On Windows they can't write to the
+  pipe or read the credential, so they can't authenticate; they can still
+  hold a pre-handshake slot or take the pipe's name first, which only
+  refuses or delays a grant ([Slice 5 as built](#slice-5-as-built)).
 - **Other processes of the same user are not stopped**, and no local design
   here can stop them: they can read the grant file. The same user can already
   read the user's keys and shell startup files, and on X11 (the Linux default,
@@ -770,11 +770,19 @@ probe on a Windows 11 ARM64 guest
 
 - **The default pipe descriptor, no native pipe server.** That settles the
   open question. Node's descriptor gives the owner, SYSTEM and Administrators
-  full control and Everyone and Anonymous only read. A client opens the pipe
-  for reading and writing, so a second non-admin user gets `EPERM` on
-  connect, whether OMXTerm runs elevated or not. Administrators can connect,
-  as they can open anything of the user's. Same-user processes were never out
-  of reach on any platform, and the token still proves both sides.
+  full control and Everyone and Anonymous only read. A client that opens the
+  pipe for reading and writing, as `omxterm-ctl` does, gets `EPERM` as a
+  second non-admin user, whether OMXTerm runs elevated or not.
+  Administrators can connect, as they can open anything of the user's.
+  Same-user processes were never out of reach on any platform, and the token
+  still proves both sides.
+- **What another user can still do is a nuisance, not access.** libuv
+  doesn't reject remote clients, and a read-only open is allowed, so another
+  user's connection still reaches `accept` and can hold one of the eight
+  pre-handshake slots until the 5 s handshake timeout. The pipe name is
+  predictable, so another user can also create it first, and the grant is
+  refused as `in-use`. Neither gets past the handshake: without the token no
+  command runs and nothing is read.
 - **The credential is the same file.** `%APPDATA%\omxterm` inherits SYSTEM,
   Administrators and the user only; the probe's second non-admin user
   couldn't read a fresh file there. Windows has no mode bits, so the client
@@ -782,7 +790,10 @@ probe on a Windows 11 ARM64 guest
   still carries no such guarantee.
 - **The pipe is `\\.\pipe\omxterm-agent-<hash>`**, the first 16 hex digits of
   the SHA-256 of the profile path. It has no file: nothing to prepare,
-  protect, replace or remove, and no path-length limit. A name another live
+  protect, replace or remove, and no path-length limit. Main decides that by
+  platform, never by how the path is spelled. On Windows the client only
+  follows a grant file to that local pipe name, so a file planted under a
+  custom profile can't send it to another pipe or to a remote host. A name another live
   process holds fails the listen, and the grant is refused with the
   existing sentence; the name is free again when that process ends. Ending
   the last grant closes the pipe.
@@ -795,21 +806,23 @@ probe on a Windows 11 ARM64 guest
   code and doesn't wait. The `.cmd` works from PowerShell
   (`& $env:OMXTERM_CTL status`), cmd (`"%OMXTERM_CTL%" status`) and Git Bash
   (`"$OMXTERM_CTL" status`), and `mcp` serves over its stdin.
-- **A `.cmd` re-parses its command line.** Windows runs a batch file through
-  cmd.exe, which reads the whole command line again before the launcher
-  starts, so no launcher code can fix it. Checked from PowerShell 5.1 and Git
-  Bash: `%NAME%` expands even inside quotes, and in an argument without
-  spaces (which those shells pass unquoted) `^` disappears and `&` ends the
-  command and runs the rest as another command, as the caller. From
-  PowerShell 5.1, an argument with spaces arrived intact unless it held a
-  double quote: `--text 'git commit -m "fix & test"'` arrived as
+- **A `.cmd` re-parses its command line, so the CLI isn't for arbitrary
+  text on Windows.** Windows runs a batch file through cmd.exe, which reads
+  the whole command line again before the launcher starts, so no launcher
+  code can fix it. Checked from PowerShell 5.1 and Git Bash: `%NAME%`
+  expands even inside quotes, and in an argument without spaces (which
+  those shells pass unquoted) `^` disappears and `&` runs the rest as a
+  command. `&`, `|`, `<` and `>` are cmd.exe's operators there, so
+  `--text 'x&calc'` would start Calculator and `--text 'echo>notes.txt'`
+  would overwrite `notes.txt`: commands run as the caller, outside the granted window.
+  From PowerShell 5.1, an argument with spaces arrived intact unless it held
+  a double quote: `--text 'git commit -m "fix & test"'` arrived as
   `git commit -m fix`, and cmd.exe tried to run `test""`. A batch script
   must `call` the launcher, or it never returns to the script. MCP tool
-  arguments travel over stdin, so they never meet that parse. It gives an
-  agent nothing it couldn't do already, but it can garble or split the text
-  it means to type. The guide's Windows wording is
-  [#1079](https://github.com/luizomf/omxterm/issues/1079)'s; a console
-  launcher that passes arguments untouched is the fix if it bites.
+  arguments travel over stdin and never meet that parse, so MCP is the route
+  for text until [#1081](https://github.com/luizomf/omxterm/issues/1081)
+  (a console launcher, and text over stdin) lands; it blocks the 0.34.0
+  release.
 
 ## Open questions
 

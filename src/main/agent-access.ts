@@ -21,6 +21,7 @@ import {
   AgentEndpointInUseError,
   createAgentEndpoint,
   endpointTooLong,
+  type AgentEndpointHandlers,
 } from "./agent-endpoint";
 import { createGrantFiles } from "./agent-grant-files";
 import type { OperationalEventLog } from "./operational-events";
@@ -201,6 +202,29 @@ function commandsFor(
   });
 }
 
+// The endpoint's side of a grant, by window: its token and its commands.
+function endpointHandlers(
+  byWindowId: (windowId: number) => Entry | undefined,
+  log: Pick<OperationalEventLog, "write"> | undefined,
+): AgentEndpointHandlers {
+  return {
+    token: (windowId) => {
+      const entry = byWindowId(windowId);
+      return entry?.state === "granted" ? entry.token : undefined;
+    },
+    async request(windowId, command, args, caller) {
+      const entry = byWindowId(windowId);
+      if (entry?.state !== "granted" || !entry.commands)
+        throw new AgentApiError("revoked", "The user stopped agent access.");
+      const commands = entry.commands;
+      return logged(log, windowId, command, () =>
+        commands.run(command, args, caller),
+      );
+    },
+    rejected: (reason) => log?.write({ name: "agent.rejected", reason }),
+  };
+}
+
 function sendState(entry: Entry, state: AgentAccessState) {
   try {
     // A crashed renderer has no frame to receive it.
@@ -228,22 +252,12 @@ export function startAgentAccess(options: AgentAccessOptions) {
   const active = () =>
     [...entries.values()].some((entry) => entry.state !== "off");
 
-  const endpoint = createAgentEndpoint(socketPath, instance, {
-    token: (windowId) => {
-      const entry = byWindowId(windowId);
-      return entry?.state === "granted" ? entry.token : undefined;
-    },
-    async request(windowId, command, args, caller) {
-      const entry = byWindowId(windowId);
-      if (entry?.state !== "granted" || !entry.commands)
-        throw new AgentApiError("revoked", "The user stopped agent access.");
-      const commands = entry.commands;
-      return logged(log, windowId, command, () =>
-        commands.run(command, args, caller),
-      );
-    },
-    rejected: (reason) => log?.write({ name: "agent.rejected", reason }),
-  });
+  const endpoint = createAgentEndpoint(
+    socketPath,
+    instance,
+    endpointHandlers(byWindowId, log),
+    options.platform,
+  );
 
   const removeGrantFile = (entry: Entry) => {
     if (!entry.credential) return;

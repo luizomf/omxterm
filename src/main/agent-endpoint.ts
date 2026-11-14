@@ -35,15 +35,10 @@ export function maxSocketPathBytes(platform: NodeJS.Platform): number {
   return platform === "darwin" ? 103 : 107;
 }
 
-/** A Windows named pipe, which lives outside the file system. */
-export function isNamedPipe(endpoint: string): boolean {
-  return endpoint.startsWith("\\\\.\\pipe\\");
-}
-
-/** A socket path past the platform's limit; a pipe name has none here. */
+/** A socket path past the platform's limit; Windows' pipe name has none. */
 export function endpointTooLong(endpoint: string, platform: NodeJS.Platform) {
   return (
-    !isNamedPipe(endpoint) &&
+    platform !== "win32" &&
     Buffer.byteLength(endpoint) > maxSocketPathBytes(platform)
   );
 }
@@ -127,11 +122,11 @@ async function removeStaleSocket(socketPath: string) {
 }
 
 // A pipe name is taken while the process that holds it lives.
-function listenOn(server: net.Server, endpoint: string) {
+function listenOn(server: net.Server, endpoint: string, pipe: boolean) {
   return new Promise<void>((resolve, reject) => {
     server.once("error", (error: NodeJS.ErrnoException) =>
       reject(
-        isNamedPipe(endpoint) && error.code === "EADDRINUSE"
+        pipe && error.code === "EADDRINUSE"
           ? new AgentEndpointInUseError()
           : error,
       ),
@@ -224,7 +219,7 @@ function readLines(
 
 /**
  * The agent API's endpoint (ADR 0052), a Unix socket or, on Windows, a named
- * pipe: newline-delimited JSON, a mutual HMAC handshake over a grant's token,
+ * pipe (by platform, never by the path's spelling): newline-delimited JSON, a mutual HMAC handshake over a grant's token,
  * and connections bound to one window. It listens only while its owner holds
  * at least one grant.
  */
@@ -232,6 +227,7 @@ export function createAgentEndpoint(
   socketPath: string,
   instance: string,
   handlers: AgentEndpointHandlers,
+  platform: NodeJS.Platform = process.platform,
 ) {
   const connections = new Set<Connection>();
   let server: net.Server | undefined;
@@ -241,7 +237,7 @@ export function createAgentEndpoint(
   let onFailure: (() => void) | undefined;
   // A pipe has no file to prepare, replace, protect or remove; Node's default
   // pipe descriptor keeps other users out and the token does the rest.
-  const pipe = isNamedPipe(socketPath);
+  const pipe = platform === "win32";
 
   const send = (connection: Connection, message: unknown) => {
     const { socket } = connection;
@@ -458,7 +454,7 @@ export function createAgentEndpoint(
           await removeStaleSocket(socketPath);
         }
         const created = net.createServer({ allowHalfOpen: false }, accept);
-        await listenOn(created, socketPath);
+        await listenOn(created, socketPath, pipe);
         if (generation !== generations) {
           created.close();
           throw new Error("The endpoint stopped while starting");

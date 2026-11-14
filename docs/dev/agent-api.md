@@ -29,8 +29,11 @@ A client needs the profile directory (Electron userData):
 
 `<hash>` is the first 16 hex characters of the SHA-256 of the profile path. A
 non-default profile (`--user-data-dir`) is passed with `--profile`. The pipe
-uses Node's default security descriptor: other users can open it only for
-reading, which a connection can't use.
+uses Node's default security descriptor: other users can't write to it, but
+can still connect read-only and hold a pre-handshake slot, or create the
+name first so a grant is refused. The token is still required for anything
+else. On Windows the client only accepts a grant file whose `endpoint` is
+that local pipe name.
 
 Each grant has one file, `<profile>/agent-api/grants/<window>.json`, readable
 only by the user (mode `0600`; on Windows, the inherited ACL of
@@ -454,10 +457,14 @@ omxterm-ctl keys                           # slice 4: chords press runs
   from the environment. On Windows that is `& $env:OMXTERM_CTL` in
   PowerShell, `"%OMXTERM_CTL%"` in cmd and `"$OMXTERM_CTL"` in Git Bash. The
   `.cmd` runs the app's own executable in Node mode and returns its exit
-  code. cmd.exe reads its arguments again: `%NAME%` expands, and in an
-  argument without spaces `^` disappears and `&` starts another
-  command, and a double quote cuts the argument short. Text with those
-  characters is safer through [MCP](#mcp).
+  code. cmd.exe reads its arguments again before the client sees them:
+  `%NAME%` expands, a double quote cuts an argument short, and in an
+  argument without spaces `^` disappears and `&`, `|`, `<` and `>` act as
+  shell operators, so `--text 'x&calc'` would start a program and
+  `--text 'echo>notes.txt'` would overwrite a file. Until
+  [#1081](https://github.com/luizomf/omxterm/issues/1081) lands, the CLI on
+  Windows is not for arbitrary text: send it through [MCP](#mcp), whose
+  arguments go over stdin.
   Elsewhere, `--window <id>` picks a grant when there
   are several and `--profile <dir>` picks a profile. A `--profile` other than
   the pane's own `OMXTERM_PROFILE` ignores the pane, so nothing is marked
