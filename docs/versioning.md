@@ -269,6 +269,10 @@ versions.
 The Command Palette and Find in scrollback polish (#1173) moves main to
 `0.37.0-dev.2`. Settings gains `Cmd+,` and `Ctrl+,`.
 
+The Snippets panel polish (#1176) moves main to `0.37.0-dev.3`. Snippets goes to
+0.1.5; the catalogs, the bundled default and its pins stay at the published
+0.1.4.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

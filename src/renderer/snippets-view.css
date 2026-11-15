@@ -27,6 +27,11 @@
   overflow-anchor: none;
 }
 
+/* The results area bleeds, so the status line and the error step back in. */
+.snippets-view :is(.snippets-empty, .snippets-error) {
+  margin-inline: var(--ui-space-2);
+}
+
 .snippets-view li {
   display: flex;
   gap: 2px;
@@ -35,9 +40,15 @@
 
 .snippets-view .snippet-activate {
   flex: 1 1 auto;
+  align-items: center;
+}
+
+.snippets-view .snippet-text {
+  display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  align-items: flex-start;
   gap: 2px;
+  min-width: 0;
 }
 
 /* One line; the row's tooltip shows the snippet body. */
@@ -55,4 +66,17 @@
   color: var(--ui-secondary);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* What a row does is an icon on the hovered or focused row, not a word on
+   every row. It keeps its space so titles never shift. */
+.snippets-view .snippet-intent {
+  display: flex;
+  flex: none;
+  color: var(--ui-secondary);
+  opacity: 0;
+}
+
+.snippets-view .snippet-activate:is(:hover, :focus-visible) .snippet-intent {
+  opacity: 1;
 }

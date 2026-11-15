@@ -2,6 +2,7 @@ import type {
   TerminalSnippet,
   TerminalSnippetsResponse,
 } from "../shared/terminal-snippets";
+import { createIcon } from "../shared/ui-icons";
 import type { AuxiliaryView } from "./auxiliary-panel";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
 
@@ -78,28 +79,39 @@ export function createSnippetsView(
         const button = document.createElement("button");
         button.type = "button";
         button.className = "snippet-activate ui-row";
+        const text = document.createElement("span");
+        text.className = "snippet-text";
         const name = document.createElement("span");
         name.className = "snippet-name";
         name.textContent = snippet.name;
-        button.append(name);
+        text.append(name);
         if (snippet.description) {
           const description = document.createElement("span");
           description.className = "snippet-description";
           description.textContent = snippet.description;
-          button.append(description);
+          text.append(description);
         }
-        // The default action is visible before activation: Run adds Enter.
+        // What the row does shows as an icon on hover or focus: Insert is an
+        // arrow, Run (adds Enter) is the return mark. The words stay for
+        // screen readers and the icon's tooltip.
         const intent = document.createElement("span");
-        intent.className = "snippet-intent ui-meta";
-        button.append(intent);
+        intent.className = "snippet-intent";
+        const intentIcon = createIcon(
+          document,
+          snippet.execute ? "corner-down-left" : "arrow-right",
+        );
+        const intentLabel = document.createElement("span");
+        intentLabel.className = "ui-visually-hidden";
+        intent.append(intentIcon, intentLabel);
+        button.append(text, intent);
         button.title = rowTooltip(snippet.name, snippet.body);
         button.addEventListener("click", () => {
           if (usable()) options.inject(snippet);
         });
         const relabel = (t: RendererLanguage["t"]) => {
-          intent.textContent = t(
-            snippet.execute ? "snippets.run" : "snippets.insert",
-          );
+          const label = t(snippet.execute ? "snippets.run" : "snippets.insert");
+          intentLabel.textContent = label;
+          intent.title = label;
         };
         rowLabels.push(relabel);
         relabel(language.t);

@@ -230,7 +230,7 @@ export const brazilianPortugueseMessages: Readonly<
   "snippets.search": "Buscar Snippets",
   "snippets.loading": "Carregando snippets…",
   "snippets.empty":
-    "Nenhum snippet. Crie snippets.yaml ao lado de config.json.",
+    "Nenhum snippet ainda. Adicione em snippets.yaml, ao lado de config.json.",
   "snippets.noMatch": "Nenhum snippet corresponde à busca.",
   "snippets.loadError":
     "Não foi possível carregar os snippets. Feche e abra Snippets de novo para tentar outra vez.",
