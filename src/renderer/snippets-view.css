@@ -27,6 +27,11 @@
   overflow-anchor: none;
 }
 
+/* The results area bleeds, so the status line and the error step back in. */
+.snippets-view :is(.snippets-empty, .snippets-error) {
+  margin-inline: var(--ui-space-2);
+}
+
 .snippets-view li {
   display: flex;
   gap: 2px;
