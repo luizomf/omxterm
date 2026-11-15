@@ -309,7 +309,7 @@ describe("installed fallback font data", () => {
       families: [
         "Apple Color Emoji",
         "Hiragino Sans GB",
-        "Apple SD Gothic Neo",
+        "AppleGothic",
         "Apple Symbols",
       ],
     },

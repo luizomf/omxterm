@@ -241,8 +241,8 @@ export function fallbackFontFamilies(platform: string): readonly string[] {
     ? [
         "Apple Color Emoji",
         "Hiragino Sans GB",
-        // Hiragino has no Hangul syllables; Apple SD Gothic Neo ships with macOS.
-        "Apple SD Gothic Neo",
+        // Hiragino has no Hangul syllables; AppleGothic ships with macOS (one face, ~15 MB).
+        "AppleGothic",
         "Apple Symbols",
       ]
     : platform === "win32"
