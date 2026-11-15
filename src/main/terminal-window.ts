@@ -31,6 +31,17 @@ export function terminalNativeTitleInset(platform: string): 0 | 30 {
   return platform === "darwin" ? MACOS_NATIVE_TITLE_AREA_INSET : 0;
 }
 
+// Centers the traffic lights in the title row, where the tab strip sits beside
+// them (ADR 0058). Electron puts the buttons `y` px below the window's top;
+// they are 14 px tall from macOS 26 on and 16 px before it.
+export function macTrafficLightPosition(systemVersion: string): {
+  x: number;
+  y: number;
+} {
+  const height = Number.parseInt(systemVersion, 10) < 26 ? 16 : 14;
+  return { x: 12, y: (MACOS_NATIVE_TITLE_AREA_INSET - height) / 2 };
+}
+
 export function applyTerminalWindowConfiguration(
   windows: readonly ConfigurableTerminalWindow[],
   configuration: TerminalWindowGeometryConfiguration,
@@ -96,6 +107,13 @@ export function terminalWindowOptions(
     frame: platform === "darwin",
     useContentSize: platform !== "darwin",
     titleBarStyle: platform === "darwin" ? "hiddenInset" : "default",
+    ...(platform === "darwin"
+      ? {
+          trafficLightPosition: macTrafficLightPosition(
+            process.getSystemVersion?.() ?? "",
+          ),
+        }
+      : {}),
     // Windows transparent windows lose the normal native control/state path.
     // Keep it intact; Acrylic supplies translucency, otherwise retain the theme.
     transparent: platform !== "win32",

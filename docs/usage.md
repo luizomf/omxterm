@@ -24,6 +24,7 @@ The optional [Saved Layout](saved-layout.md) add-on saves a window's tabs, split
 
 - **Zoom:** changes text size in the current window (`Cmd++` / `Cmd+-` on macOS; `Ctrl++` / `Ctrl+-` on Linux and Windows). **Actual Size** (`Cmd+0` / `Ctrl+0`) resets it.
 - **View → Toggle Title Bar:** hide or show the title bar (`Cmd+Shift+D` / `Ctrl+Shift+D`). Drag the three-dot handle at the top to move a window without its title bar.
+- **Tabs on macOS:** with two or more tabs, they sit in the title row beside the window buttons. Drag the window by either end of that row.
 - **View → Toggle Full Screen:** use `Ctrl+Cmd+F` on macOS or `F11` on Linux/Windows.
 - **Window → Always on Top:** keep the current window above normal windows.
 - **Window → Allow Agents in This Window:** let a program you run, such as a coding agent, drive this window (see [Letting an agent drive a window](#letting-an-agent-drive-a-window)).

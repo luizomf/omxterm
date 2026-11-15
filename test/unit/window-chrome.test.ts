@@ -33,6 +33,8 @@ function setup(
     isVisible: () => flags.visible,
     isFocused: () => flags.focused,
     setWindowButtonVisibility: vi.fn<(visible: boolean) => void>(),
+    getWindowButtonPosition: () => ({ x: 12, y: 8 }),
+    setWindowButtonPosition: vi.fn<(position: object | null) => void>(),
     getContentBounds: () => ({ x: 50, y: 60, width: 800, height: 600 }),
     minimize: vi.fn(),
     maximize: vi.fn(),
@@ -504,6 +506,11 @@ describe("native Window Chrome ownership", () => {
     expect(view.window.setWindowButtonVisibility).toHaveBeenLastCalledWith(
       true,
     );
+    // Shown again, the buttons go back to their configured position.
+    expect(view.window.setWindowButtonPosition).toHaveBeenLastCalledWith({
+      x: 12,
+      y: 8,
+    });
     view.command("toggle-title-bar");
     view.command("preview-active");
     view.command("toggle-title-bar");

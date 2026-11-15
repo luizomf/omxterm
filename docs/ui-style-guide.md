@@ -370,7 +370,9 @@ doesn't open under the list.
 
 **Window chrome and tabs.** Tabs are `ui-tab` buttons in a 12 px strip whose
 side insets follow the terminal's left and right padding (never under 8 px),
-so the first tab lines up with the prompt. The
+so the first tab lines up with the prompt. On macOS with the title bar
+showing, the strip is the title row instead: 30 px tall, with 84 px kept at each end for the
+traffic lights and for dragging the window. The
 Linux/Windows title bar (`window-chrome.css`) uses 13 px text. Pane dividers
 are 1 px hairlines; the focused pane in a split gets a 1 px accent line across its full top edge.
 The selected tab's title is full text color; the others are one tier down

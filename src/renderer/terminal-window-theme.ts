@@ -55,6 +55,15 @@ export function applyWindowTheme(
   tabs.style.setProperty("--terminal-background", background);
 }
 
+// The macOS title row: its height, and a flag the tab strip reads to share
+// that row with the traffic lights. Both setters go through here so the first
+// paint and later chrome states agree.
+export function applyNativeTitleInset(document: Document, inset: number): void {
+  const root = document.documentElement;
+  root.style.setProperty("--native-title-inset", `${inset}px`);
+  root.toggleAttribute("data-native-title-row", inset > 0);
+}
+
 // Window-level insets: the native title bar's height, and the tab strip's
 // sides, which start and end where the terminal text does.
 export function applyWindowInsets(
@@ -67,10 +76,7 @@ export function applyWindowInsets(
 ): void {
   const style = document.documentElement.style;
   if (titleInset)
-    style.setProperty(
-      "--native-title-inset",
-      `${configuration.nativeTitleInset}px`,
-    );
+    applyNativeTitleInset(document, configuration.nativeTitleInset);
   const { left, right } = configuration.terminalPadding;
   style.setProperty("--tab-strip-inset-start", `${left}px`);
   style.setProperty("--tab-strip-inset-end", `${right}px`);

@@ -150,11 +150,19 @@ are the job of a session manager such as tmux.
   `window.showTitleBar`, `window.showTabBar` and `window.showPaneMarks` (all
   default to true).
 - The OMXTerm-drawn tab strip appears only when its flag is on and the window has
-  two or more tabs. It takes its own full-width row above the Terminal Surface and
-  Snippets Sidebar row: below the 30 px native title inset on macOS (when the
-  title area is visible and the window is not fullscreen), or below the visible
-  34 px app-drawn title row on Linux and Windows. A hidden title area or
-  fullscreen leaves no title row or duplicate inset.
+  two or more tabs. It is a full-width row above the Terminal Surface and
+  Snippets Sidebar row. On Linux and Windows it sits below the visible 34 px
+  app-drawn title row; a hidden title area or fullscreen leaves no title row.
+- On macOS the strip is the title row
+  ([ADR 0058](adr/0058-share-the-macos-title-row-with-the-tabs.md)): 30 px
+  tall, at the top of the window, beside the traffic lights. It starts 84 px in
+  and ends in an empty 84 px gutter, which narrows to 40 px before crowded tabs
+  clip. Both ends drag the window, and a double-click there follows the macOS
+  title-bar preference. Tabs click and reorder as everywhere else. Opening a second tab,
+  closing back to one, or toggling the title bar while the strip shows moves no
+  terminal content. With the title bar hidden or in fullscreen there are no
+  lights, and the strip takes its usual sides. Linux and Windows may follow
+  later.
 - Clicking a tab selects it; the selected grid refits and gets terminal focus.
   Dragging a tab horizontally within the strip reorders that window's tabs.
   The new order immediately drives visible order, next/previous cycling, and
@@ -460,10 +468,12 @@ are the job of a session manager such as tmux.
   hover-revealed handle when that area is hidden. Native dragging is limited to
   these areas; the rest of the Surface stays interactive.
 - macOS: visible chrome keeps the blended `hiddenInset` appearance, with native
-  traffic lights on the left and a 30 px title/drag inset above configured top
-  padding. The Terminal Theme background continues behind the controls, with no
-  separately colored title strip. Hiding removes the controls and inset without
-  recreating the native window.
+  traffic lights on the left, centered in a 30 px title row above configured top
+  padding. With one tab, or with the tab bar off, the whole row drags the
+  window; a visible tab strip takes the row's place and keeps both of its ends
+  for dragging. The Terminal Theme background continues behind the controls,
+  with no separately colored title strip. Hiding removes the controls and inset
+  without recreating the native window.
 - Linux and Windows: a frameless native window with a hideable, app-drawn 34 px
   title/drag row. The sanitized selected Terminal Title (with the existing
   fallback) sits at the left; minimize, maximize/restore, and close sit at the
@@ -2212,7 +2222,8 @@ A present file must contain `"version": 1` and only these keys:
   allowed, default 1.0; glyph size is unchanged.
 - Padding: per-side integer CSS pixels, 0–128 inclusive; defaults top 0, right
   8, bottom 8, left 8. Top padding sits below the visible 30 px native title
-  inset on macOS, or the 34 px app-drawn title row on Linux and Windows. Hiding
+  row on macOS (or the tab strip in its place), or the 34 px app-drawn title row
+  on Linux and Windows. Hiding
   the title area or going fullscreen removes only that app-owned space, never
   configured padding or the macOS safe area.
 

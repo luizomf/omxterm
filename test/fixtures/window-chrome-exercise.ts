@@ -7,6 +7,7 @@ import {
   type ChromeNativeExpectation,
 } from "./window-policy";
 import { windowGridFits } from "./window-grid-fit";
+import { exerciseSharedTitleRow } from "./window-chrome-title-row";
 
 export async function waitFor(
   predicate: () => boolean | Promise<boolean>,
@@ -271,6 +272,7 @@ export async function exerciseWindowChrome(options: {
     () => sessions.length === 1 && (sizes[0]?.length ?? 0) > 0,
     "first real Surface and PTY",
   );
+  const singleTabCanvasHeight = (await geometry()).canvasHeight;
   application.newTabInSelectedWindow();
   await waitFor(
     () => sessions.length === 2 && (sizes[1]?.length ?? 0) > 0,
@@ -292,13 +294,22 @@ export async function exerciseWindowChrome(options: {
   assert.equal(first.inset, process.platform === "darwin" ? 30 : 0);
   assert.equal(first.tabs, true);
   const rows = sizes[1]!.at(-1)!.rows;
-  application.toggleSelectedTitleBar();
-  await waitFor(
-    async () =>
-      (await geometry()).canvasHeight === first.canvasHeight + titlePixels &&
-      sizes[1]!.at(-1)!.rows > rows,
-    "title removal refits the existing visible PTY",
-  );
+  if (process.platform === "darwin")
+    await exerciseSharedTitleRow({
+      evaluate,
+      singleTabCanvasHeight,
+      toggleTitleBar: () => application.toggleSelectedTitleBar(),
+      rows: () => sizes[1]!.at(-1)!.rows,
+    });
+  else {
+    application.toggleSelectedTitleBar();
+    await waitFor(
+      async () =>
+        (await geometry()).canvasHeight === first.canvasHeight + titlePixels &&
+        sizes[1]!.at(-1)!.rows > rows,
+      "title removal refits the existing visible PTY",
+    );
+  }
   const noTitle = await geometry();
   assert.equal(noTitle.titleHeight, 0);
   assert.equal(noTitle.inset, 0);

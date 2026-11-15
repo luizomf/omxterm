@@ -11,7 +11,9 @@ including Settings. Opening Settings never reveals a disabled strip; navigation
 and the Settings menu remain usable. Settings uses its own localized native
 title, isolated from background terminal titles/bells.
 
-macOS uses blended `hiddenInset` chrome and native traffic-light controls.
+macOS uses blended `hiddenInset` chrome and native traffic-light controls;
+since [ADR 0058](0058-share-the-macos-title-row-with-the-tabs.md) a visible tab
+strip takes the title row's place and owns its dragging.
 Hiding removes the buttons and the 30 px app-owned title inset. Terminal and
 Settings content share the same bounded native-title drag hit region, independent
 of live Surface existence. Hidden title/fullscreen reduce its height to zero;

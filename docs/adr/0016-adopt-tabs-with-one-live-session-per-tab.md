@@ -107,7 +107,9 @@ enabled window-local tab-bar flag. Title/tab visibility initializes from
 windows retain their choices after reload; new windows use the latest defaults.
 [ADR 0027](0027-hide-window-chrome-without-replacing-sessions.md) owns the current
 hideable chrome: a 30 px macOS native-title inset or a 34 px Linux/Windows
-drawn title row, removed when hidden or in fullscreen.
+drawn title row, removed when hidden or in fullscreen. On macOS the tab strip
+takes that title row's place
+([ADR 0058](0058-share-the-macos-title-row-with-the-tabs.md)).
 
 `View -> Toggle Tab Bar` changes only the selected window's in-memory flag,
 including with one tab. Main sends a payload-free command through preload;

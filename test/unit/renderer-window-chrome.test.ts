@@ -137,6 +137,8 @@ async function setup(
 
 const inset = () =>
   document.documentElement.style.getPropertyValue("--native-title-inset");
+const sharesTitleRow = () =>
+  document.documentElement.hasAttribute("data-native-title-row");
 const row = () => document.querySelector<HTMLElement>(".window-title-bar")!;
 const handle = () =>
   document.querySelector<HTMLElement>(".window-drag-handle")!;
@@ -148,14 +150,20 @@ describe("Window Chrome through the mounted window host", () => {
     expect(row().hidden).toBe(true);
     expect(handle().hidden).toBe(true);
     expect(inset()).toBe("30px");
+    expect(sharesTitleRow()).toBe(true);
     const nodes = [...view.tabsContainer.children];
     view.chrome.toggle();
     expect(view.chrome.command).toHaveBeenLastCalledWith("toggle-title-bar");
     view.chrome.update({ titleBarVisible: false });
     expect(inset()).toBe("0px");
+    expect(sharesTitleRow()).toBe(false);
     expect(row().hidden).toBe(true);
     view.chrome.update({ titleBarVisible: true });
     expect(inset()).toBe("30px");
+    expect(sharesTitleRow()).toBe(true);
+    view.chrome.update({ fullScreen: true });
+    expect(sharesTitleRow()).toBe(false);
+    view.chrome.update({ fullScreen: false });
     expect([...view.tabsContainer.children]).toEqual(nodes);
     expect(view.mount).toHaveBeenCalledOnce();
     expect(view.surfaces[0]!.dispose).not.toHaveBeenCalled();
@@ -169,6 +177,7 @@ describe("Window Chrome through the mounted window host", () => {
       title: "<b>sanitized title</b>",
     });
     expect(inset()).toBe("0px");
+    expect(sharesTitleRow()).toBe(false);
     expect(row().hidden).toBe(false);
     expect(row().querySelector(".window-title")!.textContent).toBe(
       "<b>sanitized title</b>",
