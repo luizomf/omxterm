@@ -1853,7 +1853,9 @@ it("Settings installs captured bytes through explicit trust without activating c
     entries: [{ version: "1.0.0", local: "dormant", enabled: true }],
   });
   expect(adapters.activate).not.toHaveBeenCalled();
-  expect(adapters.consent.mock.calls[0]![1].detail).toContain("read your files");
+  expect(adapters.consent.mock.calls[0]![1].detail).toContain(
+    "read your files",
+  );
   expect(service.actions()).toMatchObject([
     { id: "example.files.open", accelerator: null },
   ]);
