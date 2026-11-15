@@ -183,7 +183,7 @@ On Windows, set `windowsShell` to the full executable path of your shell. Double
 }
 ```
 
-You can also use a PowerShell 7 executable such as `C:\\Program Files\\PowerShell\\7\\pwsh.exe`. Reload and open a new tab. macOS and Linux use your account's login shell.
+You can also use a PowerShell 7 executable such as `C:\\Program Files\\PowerShell\\7\\pwsh.exe`, or, for PowerShell 7 from the Microsoft Store, the path that `(Get-Command pwsh).Source` prints (`C:\\Users\\<you>\\AppData\\Local\\Microsoft\\WindowsApps\\pwsh.exe`). Reload and open a new tab. macOS and Linux use your account's login shell.
 
 ### Legacy OMXTerm Studio
 

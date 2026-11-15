@@ -2320,7 +2320,11 @@ adapter, its HUD fallback and cleanup.
   macOS and Linux accept it without filesystem access or warning and ignore
   it.
 - On Windows it must be an absolute path whose final target (through links and
-  reparse points) is an existing regular file; inspection failure is invalid.
+  reparse points) is an existing regular file; inspection failure is invalid,
+  except for a link whose final target denies inspection (access denied), such
+  as a Microsoft Store App Execution Alias
+  (`%LOCALAPPDATA%\Microsoft\WindowsApps\pwsh.exe`): it is accepted as
+  written, and a target that can't start fails as a session start.
 - The path is used as written for each new Default Shell session, passed to the
   PTY with an empty argument vector. No expansion, shell detection, ACL or
   executability check, spawn preflight, extra arguments, wrapper or command

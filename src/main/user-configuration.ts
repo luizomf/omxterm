@@ -1,6 +1,7 @@
 import { validateLanguage } from "./user-configuration-language";
 import { notificationPreferences } from "./user-configuration-notifications";
-import { readFile, stat } from "node:fs/promises";
+import { lstat, readFile, stat } from "node:fs/promises";
+import { windowsShellTargetIsFile } from "./user-configuration-windows-shell";
 import path from "node:path";
 import type {
   OperationalLogLevel,
@@ -87,6 +88,7 @@ export interface LoadUserConfigurationOptions {
   ) => Promise<InstalledFontFamilyMetrics | undefined>;
   readonly read?: typeof readFile;
   readonly inspectWindowsShell?: typeof stat;
+  readonly inspectWindowsShellLink?: typeof lstat;
   readonly platform?: NodeJS.Platform | string;
 }
 
@@ -204,9 +206,11 @@ export async function loadUserConfiguration(
   ) {
     let finalTargetIsFile: boolean;
     try {
-      finalTargetIsFile = (
-        await (options.inspectWindowsShell ?? stat)(preliminary.windowsShell)
-      ).isFile();
+      finalTargetIsFile = await windowsShellTargetIsFile(
+        preliminary.windowsShell,
+        options.inspectWindowsShell ?? stat,
+        options.inspectWindowsShellLink ?? lstat,
+      );
     } catch {
       return configurationFallback(
         "windowsShell",
