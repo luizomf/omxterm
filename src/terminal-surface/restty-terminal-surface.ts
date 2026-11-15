@@ -597,6 +597,7 @@ function createDisposedSurface(): TerminalSurface {
     applyTheme: () => undefined,
     zoom: () => undefined,
     copy: async () => undefined,
+    copyLastCommandOutput: async () => undefined,
     paste: async () => undefined,
     inject: async () => undefined,
     selectAll: () => undefined,

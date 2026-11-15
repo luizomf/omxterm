@@ -18,6 +18,7 @@ import { keyPressCorrections } from "../../scripts/restty-key-press-corrections.
 import { selectionCorrections } from "../../scripts/restty-selection-corrections.mjs";
 import { cff2Corrections } from "../../scripts/restty-cff2-corrections.mjs";
 import { promptJumpCorrections } from "../../scripts/restty-prompt-jump-corrections.mjs";
+import { commandOutputCorrections } from "../../scripts/restty-command-output-corrections.mjs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
 import { describe, expect, it, vi } from "vitest";
@@ -85,7 +86,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(occurrences + 1);
         return value.replaceAll(corrected, original);
       }, text);
-    const prePromptJump = reverse(source, promptJumpCorrections);
+    const preCommandOutput = reverse(source, commandOutputCorrections);
+    expect(hash(preCommandOutput)).toBe(
+      "599f4c483ab13a414aac4ae94f0a60436c4a763bd11ce72c98f0a8703b3d7838",
+    );
+    const prePromptJump = reverse(preCommandOutput, promptJumpCorrections);
     expect(hash(prePromptJump)).toBe(
       "5b89db17bcc3274adfb8b57a426df4cd8fcc84671c0d0f8b2abfe22f470d8ca8",
     );

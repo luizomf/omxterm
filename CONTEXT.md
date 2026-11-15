@@ -298,8 +298,9 @@ on that name. This identity is not a guarantee of every xterm extension.
 shell initialization to the user and injects no hooks. It reads the OSC 133
 **Command Marks** (prompt, command start, command end with its exit code) a
 shell prints when the user adds the documented lines, for the agent API's
-`wait` (ADR 0054) and for Jump to Previous/Next Prompt, which the core scrolls
-by its prompt marks (ADR 0055).
+`wait` (ADR 0054), for Jump to Previous/Next Prompt, which the core scrolls
+by its prompt marks (ADR 0055), and for Copy Last Command Output, which the
+core reads by its output marks (ADR 0057).
 
 **Clipboard Boundary** — Explicit text copy/paste between the terminal and OS
 clipboard. Selection alone does not copy. Programs can request bounded OSC 52

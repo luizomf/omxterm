@@ -86,6 +86,7 @@ export const AGENT_SHORTCUTS: Readonly<
     direction: "previous",
   }),
   jumpToNextPrompt: run({ action: "jump-to-prompt", direction: "next" }),
+  copyLastCommandOutput: run({ action: "copy-last-command-output" }),
   toggleTabBar: run({ action: "toggle-tab-bar" }),
   togglePaneMarks: notYet(
     "changes what the user sees of this window, and the agent's own mark can't be hidden.",

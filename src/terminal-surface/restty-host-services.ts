@@ -17,12 +17,14 @@ export function resttyClipboardActions(
         getSelectionText(): string;
         getBufferText(): string;
         getScreenText(): string | null;
+        getLastCommandOutput(): string;
         selectAll(): boolean;
       }
     | undefined,
 ): Pick<
   TerminalSurface,
   | "copy"
+  | "copyLastCommandOutput"
   | "paste"
   | "inject"
   | "injectTracked"
@@ -34,6 +36,15 @@ export function resttyClipboardActions(
     async copy() {
       try {
         const text = liveSelection()?.getSelectionText() ?? "";
+        if (!text) return;
+        await options.clipboard?.writeText(text);
+      } catch {
+        options.onClipboardError?.();
+      }
+    },
+    async copyLastCommandOutput() {
+      try {
+        const text = liveSelection()?.getLastCommandOutput() ?? "";
         if (!text) return;
         await options.clipboard?.writeText(text);
       } catch {

@@ -136,10 +136,16 @@ makes the side panel's switcher icon buttons whose icons the host picks for the
 official tools; a package never names or ships one, and an unknown tool shows a
 monogram.
 
+[ADR0057: Copy the last command's output from the core](0057-copy-the-last-command-output-from-the-core.md)
+exports the Ghostty core's output lookup for Copy Last Command Output
+(`Cmd+Shift+A`, `Ctrl+Shift+G` on Linux and Windows): the latest finished
+command that printed something, without prompt or command line. It amends
+ADR 0055.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051, 0053.
-- Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037, 0055.
+- Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037, 0055, 0057.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052, 0054, 0056.
 - Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046, 0049.

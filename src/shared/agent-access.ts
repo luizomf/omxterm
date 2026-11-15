@@ -271,8 +271,8 @@ export function isAgentTabsResult(value: unknown): value is AgentTabsResult {
 /**
  * The tab, pane and window commands an agent's shortcut runs in the window
  * (#1050, #1052). Close Pane never carries a popup target: the pane it closes
- * is the one the request names. Copy, Select All and the prompt jumps act on
- * that pane too.
+ * is the one the request names. Copy, Select All, the prompt jumps and Copy
+ * Last Command Output act on that pane too.
  */
 export type AgentWindowCommand =
   | { readonly action: "zoom"; readonly zoom: TerminalFontZoom }
@@ -282,7 +282,11 @@ export type AgentWindowCommand =
     }
   | {
       readonly action:
-        "copy" | "select-all" | "toggle-tab-bar" | "toggle-title-bar";
+        | "copy"
+        | "copy-last-command-output"
+        | "select-all"
+        | "toggle-tab-bar"
+        | "toggle-title-bar";
     }
   | Extract<
       TerminalTabCommand,
@@ -316,6 +320,7 @@ const AGENT_WINDOW_ACTIONS = new Set<string>([
 
 const AGENT_WINDOW_OWN_ACTIONS = new Set<string>([
   "copy",
+  "copy-last-command-output",
   "select-all",
   "toggle-tab-bar",
   "toggle-title-bar",

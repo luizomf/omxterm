@@ -711,6 +711,9 @@ app
           sendFind: notifyWindow(terminalIpc.find),
           sendJumpToPrompt: (window, direction) =>
             sendAction(window.webContents, terminalIpc.jumpToPrompt, direction),
+          sendCopyLastCommandOutput: notifyWindow(
+            terminalIpc.copyLastCommandOutput,
+          ),
           sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
           sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
           sendPaneMarksToggle: notifyWindow(terminalIpc.paneMarksToggle),

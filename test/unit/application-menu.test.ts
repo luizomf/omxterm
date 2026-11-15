@@ -36,6 +36,7 @@ function menuActions() {
     selectAllSelectedTerminal: vi.fn(),
     findInSelectedTerminal: vi.fn(),
     jumpToPromptInSelectedTerminal: vi.fn(),
+    copyLastCommandOutputInSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
     toggleSelectedPaneMarks: vi.fn(),
@@ -139,12 +140,17 @@ it.each(["en-US", "pt-BR"] as const)(
 );
 
 it.each([
-  ["darwin", "CommandOrControl+Shift+Up", "CommandOrControl+Shift+Down"],
-  ["linux", "Control+Shift+Up", "Control+Shift+Down"],
-  ["win32", "Control+Shift+Up", "Control+Shift+Down"],
+  [
+    "darwin",
+    "CommandOrControl+Shift+Up",
+    "CommandOrControl+Shift+Down",
+    "CommandOrControl+Shift+A",
+  ],
+  ["linux", "Control+Shift+Up", "Control+Shift+Down", "Control+Shift+G"],
+  ["win32", "Control+Shift+Up", "Control+Shift+Down", "Control+Shift+G"],
 ])(
-  "offers Jump to Previous/Next Prompt after Find on %s",
-  (platform, previous, next) => {
+  "offers the prompt jumps and Copy Last Command Output after Find on %s",
+  (platform, previous, next, copyOutput) => {
     const actions = menuActions();
     const template = terminalApplicationMenuTemplate(
       "OMXTerm",
@@ -158,15 +164,21 @@ it.each([
     expect(edit.slice(index + 2).map((item) => item.label)).toEqual([
       "Jump to Previous Prompt",
       "Jump to Next Prompt",
+      "Copy Last Command Output",
     ]);
-    expect(edit[index + 2]!.accelerator).toBe(previous);
-    expect(edit[index + 3]!.accelerator).toBe(next);
-    (edit[index + 2]!.click as () => void)();
-    (edit[index + 3]!.click as () => void)();
+    expect(edit.slice(index + 2).map((item) => item.accelerator)).toEqual([
+      previous,
+      next,
+      copyOutput,
+    ]);
+    for (const item of edit.slice(index + 2)) (item.click as () => void)();
     expect(actions.jumpToPromptInSelectedTerminal.mock.calls).toEqual([
       ["previous"],
       ["next"],
     ]);
+    expect(
+      actions.copyLastCommandOutputInSelectedTerminal,
+    ).toHaveBeenCalledOnce();
   },
 );
 

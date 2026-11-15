@@ -68,7 +68,7 @@ async function observe(
       "utf8",
     );
     expect(createHash("sha256").update(runtime).digest("hex")).toBe(
-      "599f4c483ab13a414aac4ae94f0a60436c4a763bd11ce72c98f0a8703b3d7838",
+      "735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3",
     );
     let probed = runtime;
     if (priorSynthesis) {

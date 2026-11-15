@@ -34,6 +34,7 @@ export function createFakeSurface() {
     selectAll: vi.fn(),
     find: vi.fn(),
     jumpToPrompt: vi.fn(),
+    copyLastCommandOutput: vi.fn(async () => undefined),
     exportText: vi.fn(() => ""),
     dispose: vi.fn(),
   };

@@ -28,6 +28,7 @@ The portable Terminal Surface (`src/terminal-surface/`) receives a session Adapt
 - Accepted user input (typing, paste, snippets, or dropped paths) returns the viewport to the live bottom; background output, focus, and selection do not jump the scroll position.
 - Desktops with a fine pointer use native scrolling even if touch hardware is present.
 - Jump to Previous/Next Prompt calls the core patch's `restty_scroll_viewport_prompt`, Ghostty's own prompt scroll over its OSC 133 row marks; `promptJumpCorrections` (`scripts/restty-prompt-jump-corrections.mjs`) gives the runtime a `scrollToPrompt` that keeps the selection, link hover and frame in step as other scrolls do ([ADR 0055](../adr/0055-jump-between-prompts-in-the-core.md)). `test/unit/restty-prompt-jump.test.ts` checks the jumps through the prepared core.
+- Copy Last Command Output calls the core patch's `restty_last_command_output`, Ghostty's prompt iterator and output lookup over its OSC 133 cell marks, formatted like `restty_selection_text`; `commandOutputCorrections` (`scripts/restty-command-output-corrections.mjs`) gives the interaction runtime a read-only `getLastCommandOutput` ([ADR 0057](../adr/0057-copy-the-last-command-output-from-the-core.md)). `test/unit/restty-command-output.test.ts` checks it through the prepared core.
 
 ### Read-only export snapshots
 
@@ -326,10 +327,10 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `599f4c483ab13a414aac4ae94f0a60436c4a763bd11ce72c98f0a8703b3d7838` |
-| Embedded-core chunk       | `002160c6135a9ab99909e8e9b523890176d7a8e7ac2eebdb88217a214e5f6eb7` |
+| Restty JavaScript runtime | `735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3` |
+| Embedded-core chunk       | `c61dd249e4e7555ff37b1701680f92d2172309efd4b29a07bf449b2137ac8ad5` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
-| Tracked WASM core         | `a2f3c1f2de08df1e79c72a629824e87fab498acf37330b5feeb384b45e5304e9` |
+| Tracked WASM core         | `045bd4cdd61bf235ac622a8d1ca509a6fc0b4ce018c11a0d86c7ee9d78ec16f8` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
 | Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
 | Windows terminal          | `4ceeb76ee0c99ec013678828a3fdf309a612c4613190e5ce16840f5096f7e162` |

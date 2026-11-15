@@ -70,6 +70,7 @@ export function coreActionMenuTemplate(
         { type: "separator" },
         item("jumpToPreviousPrompt"),
         item("jumpToNextPrompt"),
+        item("copyLastCommandOutput"),
       ],
     },
     {

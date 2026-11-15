@@ -313,6 +313,8 @@ Saved Layout 0.3.4 and Mirror Typing 0.3.3.
 Showing the install prompt's SHA-256 as four lines of 16 characters, so macOS
 never hyphenates it when it wraps (#1190), moves main to `0.38.0-dev.1`.
 
+Copy Last Command Output (#1027) moves main to `0.38.0-dev.2`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

@@ -23,6 +23,7 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.find": "Buscar…",
   "menu.jumpToPreviousPrompt": "Ir para o Prompt Anterior",
   "menu.jumpToNextPrompt": "Ir para o Próximo Prompt",
+  "menu.copyLastCommandOutput": "Copiar Saída do Último Comando",
   "menu.exportSelection": "Exportar Seleção…",
   "menu.exportContent": "Exportar Conteúdo do Terminal…",
   "menu.file": "Arquivo",

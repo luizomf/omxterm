@@ -41,6 +41,7 @@ export interface TerminalApplicationMenuActions {
   readonly jumpToPromptInSelectedTerminal: (
     direction: TerminalPromptJump,
   ) => void;
+  readonly copyLastCommandOutputInSelectedTerminal: () => void;
   readonly toggleSelectedSnippets: () => void;
   readonly toggleSelectedTabBar: () => void;
   readonly toggleSelectedPaneMarks: () => void;
@@ -122,6 +123,10 @@ export function createCoreActionCatalog(
     ),
     jumpToNextPrompt: action(t("menu.jumpToNextPrompt"), () =>
       actions.jumpToPromptInSelectedTerminal("next"),
+    ),
+    copyLastCommandOutput: action(
+      t("menu.copyLastCommandOutput"),
+      actions.copyLastCommandOutputInSelectedTerminal,
     ),
     newWindow: action(t("menu.newWindow"), actions.newWindow),
     newTab: action(t("menu.newTab"), actions.newTabInSelectedWindow),

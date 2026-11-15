@@ -231,6 +231,7 @@ export interface TerminalTabs {
   ): TerminalClipboard | undefined;
   find(): void;
   jumpToPrompt(direction: TerminalPromptJump): void;
+  copyLastCommandOutput(): void;
   injectText(text: string): void;
   // The selected live terminal, captured for one snippet action.
   captureSnippetTarget(): SnippetTarget | undefined;
@@ -367,8 +368,8 @@ export function createTerminalTabs(
     focusPane(focusedPane(), options, true);
   };
   // An agent's shortcut, once its pane is focused (ADR 0052). Copy, Select
-  // All and the prompt jumps take that pane, as the user's would after a
-  // click on it.
+  // All, the prompt jumps and Copy Last Command Output take that pane, as the
+  // user's would after a click on it.
   const runAgentCommand = (
     pane: TerminalPane,
     command: AgentWindowCommand,
@@ -379,6 +380,9 @@ export function createTerminalTabs(
         return true;
       case "copy":
         void pane.surface?.copy();
+        return true;
+      case "copy-last-command-output":
+        void pane.surface?.copyLastCommandOutput?.();
         return true;
       case "select-all":
         pane.surface?.selectAll();
@@ -807,6 +811,8 @@ export function createTerminalTabs(
     find: () => interactivePane()?.surface?.find(),
     jumpToPrompt: (direction) =>
       interactivePane()?.surface?.jumpToPrompt?.(direction),
+    copyLastCommandOutput: () =>
+      void interactivePane()?.surface?.copyLastCommandOutput?.(),
     injectText: (text) => void interactivePane()?.surface?.inject(text),
     captureSnippetTarget: () => {
       const pane = interactivePane(),

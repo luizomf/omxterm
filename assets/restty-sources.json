@@ -21,7 +21,7 @@
       {
         "repository": "restty",
         "path": "assets/restty/omxterm-core.patch",
-        "sha256": "da7fc170f4ee6fc13169660807bde1ff9b638da1e7caed296e8e7e5acbaab2f5"
+        "sha256": "bdf23ce5dd50b7f2b1e49ff9ffb13803e157a67fc0dbeec4ca4a245aac4e216d"
       },
       {
         "repository": "ghostty",
@@ -30,7 +30,7 @@
       }
     ],
     "artifact": "assets/restty/omxterm-restty-core.wasm",
-    "artifactSha256": "a2f3c1f2de08df1e79c72a629824e87fab498acf37330b5feeb384b45e5304e9",
+    "artifactSha256": "045bd4cdd61bf235ac622a8d1ca509a6fc0b4ce018c11a0d86c7ee9d78ec16f8",
     "zigVersion": "0.16.0",
     "optimize": "ReleaseSafe",
     "target": "wasm32-freestanding",

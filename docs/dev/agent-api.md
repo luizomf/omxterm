@@ -401,8 +401,9 @@ elsewhere), as accelerators do: `Cmd+T`, `Ctrl+Shift+]`, `Cmd+Ctrl+=`,
   first focuses that pane, selecting its tab, as a user clicks a pane and
   presses, so `press s3 Cmd+W` closes the tab holding `s3`. So do `zoomIn`,
   `zoomOut`, `actualSize`, `toggleTabBar` and `toggleTitleBar`, `copy`
-  and `selectAll`, which take that pane's selection, and
-  `jumpToPreviousPrompt` and `jumpToNextPrompt`, which scroll that pane. The result names
+  and `selectAll`, which take that pane's selection,
+  `jumpToPreviousPrompt` and `jumpToNextPrompt`, which scroll that pane, and
+  `copyLastCommandOutput`, which copies that pane's last command output. The result names
   the action and the pane; nothing is written to the PTY. The chord must be
   the press's only key (`invalid-request` otherwise). A window that can't take
   it now (a dialog or preview over it) answers `unavailable`.

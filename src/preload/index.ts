@@ -139,6 +139,7 @@ const terminal: TerminalBridge = {
   onAuxiliaryPanelToggle: plainAction(terminalIpc.auxiliaryPanelToggle),
   onAuxiliaryPanelSideToggle: plainAction(terminalIpc.auxiliaryPanelSideToggle),
   onFind: plainAction(terminalIpc.find),
+  onCopyLastCommandOutput: plainAction(terminalIpc.copyLastCommandOutput),
   textEntryFocus(editing: boolean) {
     if (typeof editing !== "boolean")
       throw new TypeError("Invalid text entry focus");
