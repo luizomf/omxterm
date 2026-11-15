@@ -39,8 +39,8 @@ describe("fixed default Snippets installed-package publication", () => {
       enabled: true,
       generation: 1,
       digest:
-        "2ab03c51b5a341323765195eaa459fd94a3c9f61b392719c965ecb60d9819557",
-      manifest: { version: "0.1.4", engines: { omxterm: ">=0.24.0-dev.8" } },
+        "6470985017cad22e6ed1be5cb047fde3ad90d2a3563cf068c57ea930991b28bc",
+      manifest: { version: "0.1.5", engines: { omxterm: ">=0.24.0-dev.8" } },
     });
     expect((await readdir(f.userData)).sort()).toEqual([
       "Crashpad",
