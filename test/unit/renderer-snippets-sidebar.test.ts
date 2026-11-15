@@ -259,7 +259,7 @@ describe("Snippets auxiliary view", () => {
       else reject(new Error("private details"));
       await settle();
       expect(f.root.querySelectorAll("li")).toHaveLength(0);
-      expect(f.root.textContent).toContain("No snippets. Create snippets.yaml");
+      expect(f.root.textContent).toContain("No snippets yet.");
       f.view.dispose();
       f.view.dispose();
       expect(f.root.childElementCount).toBe(0);

@@ -220,7 +220,7 @@ export const englishMessages = {
   "snippets.searchPlaceholder": "Search snippets",
   "snippets.search": "Search Snippets",
   "snippets.loading": "Loading snippets…",
-  "snippets.empty": "No snippets. Create snippets.yaml next to config.json.",
+  "snippets.empty": "No snippets yet.",
   "snippets.noMatch": "No snippets match the search.",
   "snippets.loadError":
     "Couldn't load snippets. Close and reopen Snippets to retry.",

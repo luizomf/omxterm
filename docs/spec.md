@@ -905,8 +905,9 @@ Connect share it; no per-tool placement or second panel exists.
 
 ### Snippets panel
 
-- Each row shows its default action before activation: **Insert** (`execute`
-  false or omitted) or **Run · adds Enter** (`execute: true`). Clicking a current
+- The hovered or focused row shows its default action as an icon, with a
+  tooltip and an accessible name: **Insert** (`execute` false or omitted) or
+  **Run · adds Enter** (`execute: true`). Clicking a current
   row captures the focused pane's live Surface at that moment, injects the exact
   body with that intent through Protected Paste, and returns focus immediately.
 - Enter on a row owns that gesture's held repeats and release, so they cannot

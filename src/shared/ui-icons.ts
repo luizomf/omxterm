@@ -19,6 +19,7 @@ const icons = {
   "chevron-down": ["m6 9 6 6 6-6"],
   "chevron-right": ["m9 18 6-6-6-6"],
   "circle-small": [["circle", { cx: "12", cy: "12", r: "6" }]],
+  "corner-down-left": ["M20 4v7a4 4 0 0 1-4 4H4", "m9 10-5 5 5 5"],
   copy: [
     ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" }],
     "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2",
