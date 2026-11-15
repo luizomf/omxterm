@@ -330,6 +330,10 @@ Stable 0.38.0 uses the frozen cut `77d3eeb3`; the next development baseline is
 Re-pinning the bundled default Snippets to the published 0.1.6 moves main to
 `0.38.1-dev.1`.
 
+Accepting a Microsoft Store App Execution Alias, such as PowerShell 7's
+`WindowsApps\pwsh.exe`, as `windowsShell` (#1208) moves main to
+`0.38.1-dev.2`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

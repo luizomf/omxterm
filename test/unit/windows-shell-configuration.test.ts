@@ -146,6 +146,69 @@ describe("windowsShell User Configuration", () => {
     expect(inspectWindowsShell).toHaveBeenCalledExactlyOnceWith(windowsShell);
   });
 
+  // A Microsoft Store App Execution Alias (such as PowerShell 7's
+  // WindowsApps\pwsh.exe) is a link whose final target the user may not
+  // inspect, but Windows still starts it (#1208).
+  it.each(["EACCES", "EPERM"])(
+    "keeps a link whose final target denies inspection (%s), as an App Execution Alias does",
+    async (code) => {
+      const alias =
+        "C:\\Users\\tester\\AppData\\Local\\Microsoft\\WindowsApps\\pwsh.exe";
+      const load = await loadUserConfiguration({
+        environment: { XDG_CONFIG_HOME: "C:\\Users\\tester\\.config" },
+        homeDirectory: "C:\\Users\\tester",
+        platform: "win32",
+        read: encodedConfiguration({
+          version: 1,
+          confirmClose: false,
+          windowsShell: alias,
+        }),
+        inspectWindowsShell: (async () =>
+          Promise.reject(
+            Object.assign(new Error("denied"), { code }),
+          )) as never,
+        inspectWindowsShellLink: (async () => ({
+          isSymbolicLink: () => true,
+        })) as never,
+        getInstalledFontFamilyMetrics,
+      });
+
+      expect(load.fallback).toBeUndefined();
+      expect(load.configuration.windowsShell).toBe(alias);
+      expect(load.configuration.confirmClose).toBe(false);
+    },
+  );
+
+  it("uses complete defaults when a denied final target is not behind a link", async () => {
+    const load = await loadUserConfiguration({
+      environment: { XDG_CONFIG_HOME: "C:\\Users\\tester\\.config" },
+      homeDirectory: "C:\\Users\\tester",
+      platform: "win32",
+      read: encodedConfiguration({
+        version: 1,
+        confirmClose: false,
+        windowsShell: "C:\\selected\\shell.exe",
+      }),
+      inspectWindowsShell: (async () =>
+        Promise.reject(
+          Object.assign(new Error("denied"), { code: "EACCES" }),
+        )) as never,
+      inspectWindowsShellLink: (async () => ({
+        isSymbolicLink: () => false,
+      })) as never,
+      getInstalledFontFamilyMetrics,
+    });
+
+    expect(load.configuration.confirmClose).toBe(true);
+    expect(load.fallback).toMatchObject({
+      surface: "configuration",
+      error: {
+        location: "windowsShell",
+        reason: "the final target could not be inspected",
+      },
+    });
+  });
+
   it.each([
     [
       "missing or inaccessible",
