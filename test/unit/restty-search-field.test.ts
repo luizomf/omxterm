@@ -221,6 +221,8 @@ describe("search bar theme", () => {
     applySearchTheme(restty, bar.container, LIGHT_THEME);
     expect(bar.status.style.background).toBe("transparent");
     expect(bar.status.style.borderColor).toBe("transparent");
+    expect(bar.status.style.fontFamily).toBe("var(--ui-font)");
+    expect(bar.status.style.color).toBe("var(--ui-secondary)");
     expect(restty.setSearchUiStyleOptions).toHaveBeenCalledExactlyOnceWith(
       toResttySearchUiStyle(LIGHT_THEME),
     );

@@ -185,7 +185,6 @@ export const englishMessages = {
     "Couldn't hide, update or close this view. Close the window to recover.",
   "search.region": "Search terminal scrollback",
   "search.placeholder": "Find in scrollback",
-  "search.clear": "Clear",
   "search.matchAbove": "Match above",
   "search.matchBelow": "Match below",
   "search.close": "Close search",

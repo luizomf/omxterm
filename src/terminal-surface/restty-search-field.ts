@@ -116,7 +116,15 @@ export function applySearchTheme(
   )) {
     status.style.background = "transparent";
     status.style.borderColor = "transparent";
+    // Restty sets no face, so the count fell back to the browser's serif.
+    status.style.fontFamily = "var(--ui-font)";
+    status.style.fontSize = "var(--ui-text-meta)";
+    status.style.color = "var(--ui-secondary)";
   }
+  for (const input of container.querySelectorAll<HTMLElement>(
+    ".restty-pane-search-input",
+  ))
+    input.style.fontFamily = "var(--ui-font)";
 }
 
 // Restty closes the bar on the query's Escape keydown and moves focus to the

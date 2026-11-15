@@ -193,7 +193,6 @@ export const brazilianPortugueseMessages: Readonly<
     "Não foi possível ocultar, atualizar ou fechar esta visualização. Feche a janela para recuperar.",
   "search.region": "Buscar no histórico do terminal",
   "search.placeholder": "Buscar no histórico",
-  "search.clear": "Limpar",
   "search.matchAbove": "Resultado acima",
   "search.matchBelow": "Resultado abaixo",
   "search.close": "Fechar busca",
