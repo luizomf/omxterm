@@ -298,8 +298,9 @@ not visual quality. The `settings-only` Window Chrome case checks real layout:
 
 - Seven categories after a native-minimum window request, then at 600×320,
   600×480, 640×480, 800×600, 960×320, 960×640 and 1280×640, in both Interface
-  Languages with light and dark palettes, plus the panel-container edges at
-  559/560/599/600 px (viewport height 640).
+  Languages with light and dark palettes, plus content widths of
+  559/560/599/600 px (viewport height 640), on both sides of the 560 px
+  step where the theme editor's fields move beside their names.
 - The minimum slot records the requested minimum and the actual outer, content
   and viewport sizes. It needs a compact viewport (at most 639×360) smaller than
   the desktop one; the runtime minimum is never lowered.

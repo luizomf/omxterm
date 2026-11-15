@@ -269,8 +269,16 @@ export function renderShortcuts(
         t("shortcuts.defaultLabel", { action: actionName }),
       );
       // Nothing to remove without a shortcut, nothing to reset on a default.
-      unbind.hidden = keybind?.effective == null;
-      inherit.hidden = !keybind || keybind.state === "inherit";
+      // A button that leaves while it holds focus hands it to Change, so the
+      // keyboard stays on the row.
+      for (const [element, gone] of [
+        [unbind, keybind?.effective == null],
+        [inherit, !keybind || keybind.state === "inherit"],
+      ] as const) {
+        if (gone && !element.hidden && document.activeElement === element)
+          recordButton.focus();
+        element.hidden = gone;
+      }
     });
     filtered.push({
       element: row,

@@ -242,7 +242,7 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 - Saving doesn't apply the theme. **Use saved theme**, available once all edits
   are saved, writes its path through the normal Settings path and reloads the
   whole configuration. A failed activation leaves the file saved.
-- **Export JSON…** writes the complete valid draft to a new file. It never
+- **Export JSON** writes the complete valid draft to a new file. It never
   replaces an existing file, even if the OS dialog offers to. Export doesn't
   select the theme, mark the draft saved or retarget later Saves.
 - Optional `appearance` values survive import, edit, save, copy and export,

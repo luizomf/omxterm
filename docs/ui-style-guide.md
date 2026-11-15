@@ -418,8 +418,8 @@ Pick the smallest presentation that fits:
   needed, what to do next, in one or two sentences. State notices (see State
   marks) take one.
 - Buttons are verbs ("Connect", "Save"), not "OK". Sentence case everywhere.
-- A command listed outside a menu (Shortcuts) keeps the menu's name without
-  its ellipsis: the `…` promises a dialog in a menu and is noise in a list.
+- No ellipsis outside menus: the `…` promises a dialog in a menu and is noise
+  on a button or in a list. (An ongoing state keeps it: "Saving…".)
 - Keep user data literal, never HTML.
 - Interface Languages ship together: update English and Portuguese in the same
   change.

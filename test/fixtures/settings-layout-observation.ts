@@ -415,7 +415,10 @@ export function assertSettingsLayout(
       row.field.bottom > row.label.top;
     const below = row.field.top >= row.label.bottom - 1;
     if (!row.formRow) {
-      assert.ok(below, "Settings field overlaps its stacked label");
+      assert.ok(
+        contentWidth < 560 ? below : beside,
+        "Settings labelled field did not follow content breakpoint",
+      );
       continue;
     }
     assert.ok(beside || below, "Settings control overlaps its name");

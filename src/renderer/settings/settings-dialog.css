@@ -346,19 +346,21 @@ body.tabs-visible .settings-tab {
   align-items: flex-start;
 }
 /* A labelled field outside a form list (the theme editor, the install
-   link): the name above its field. Form rows are ui-form-row. */
-.settings-row:not(.ui-form-row) {
+   link): the name above its field, beside it when there is room. Form rows
+   are ui-form-row. */
+.settings-row:where(:not(.ui-form-row)) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
+  gap: 12px;
   min-width: 0;
   width: 100%;
 }
 .settings-row > span {
   overflow-wrap: anywhere;
 }
-.settings-row:not(.ui-form-row) :is(input, select) {
+.settings-row:where(:not(.ui-form-row)) input:not([type="checkbox"]),
+.settings-row:where(:not(.ui-form-row)) select {
   width: min(100%, 384px);
   min-width: 0;
 }
@@ -436,6 +438,13 @@ body.tabs-visible .settings-tab {
 }
 .settings-shortcut.is-recording .settings-shortcut-value {
   color: var(--ui-text);
+}
+@container (min-width: 560px) {
+  .settings-row:not(.ui-form-row) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 384px);
+    align-items: center;
+  }
 }
 @media (min-width: 640px) and (max-height: 360px) {
   /* Reserve a usable navigation scrollport even when the page itself scrolls. */

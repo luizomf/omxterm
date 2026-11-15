@@ -35,7 +35,7 @@ Settings shows status for saved changes and errors. Some preferences apply to ne
 
 ### Terminal context menu
 
-In **Settings → Terminal**, clear **Terminal context menu** to disable the popup over terminal content and padding. To set it in JSON:
+In **Settings → Terminal**, clear **Right-click menu** to disable the popup over terminal content and padding. To set it in JSON:
 
 ```json
 {

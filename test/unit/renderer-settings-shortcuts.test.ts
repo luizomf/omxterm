@@ -295,9 +295,12 @@ describe("Shortcuts page", () => {
     expect(view.status()).toBe("Recording cancelled.");
     expect(view.changeKeybind).not.toHaveBeenCalled();
 
+    view.button("find", "unbind").focus();
     view.button("find", "unbind").click();
     await view.settle();
     expect(view.cells("find")).toEqual(["None", "Unbound"]);
+    // The pressed button is gone; the keyboard stays on the row.
+    expect(document.activeElement).toBe(view.button("find", "record"));
     // Only a changed row offers Reset, and only a bound one offers Remove.
     expect(view.button("find", "default").hidden).toBe(false);
     expect(view.button("find", "unbind").hidden).toBe(true);
