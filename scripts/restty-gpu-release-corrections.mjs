@@ -83,6 +83,52 @@ export const gpuReleaseCorrections = [
   };`,
   },
   {
+    // The native scroll host is built once around the first canvas, and the
+    // swap's cleanup tears it down for good. Rebuild it around a new canvas.
+    original: `  const nativeScrollHost = (hasFinePointer || !hasCoarsePointer && !hasTouchPoints) && typeof document !== "undefined" ? createNativeScrollbarHost({`,
+    corrected: `  let hostCanvas = getCanvas();
+  const createHost = () => (hasFinePointer || !hasCoarsePointer && !hasTouchPoints) && typeof document !== "undefined" ? createNativeScrollbarHost({`,
+  },
+  {
+    original: `      setViewportScrollOffset(nextOffset);
+    }
+  }) : null;`,
+    corrected: `      setViewportScrollOffset(nextOffset);
+    }
+  }) : null;
+  let nativeScrollHost = createHost();`,
+  },
+  {
+    original: `    destroy: () => {
+      nativeScrollHost?.destroy();
+    },`,
+    corrected: `    destroy: () => {
+      nativeScrollHost?.destroy();
+    },
+    attach: () => {
+      if (hostCanvas === getCanvas())
+        return false;
+      nativeScrollHost?.destroy();
+      hostCanvas = getCanvas();
+      nativeScrollHost = createHost();
+      return true;
+    },`,
+  },
+  {
+    original: `  const bindCanvasEvents = (bindOptions) => {
+    if (!attachCanvasEvents)
+      return;
+    const canvas = getCanvas();`,
+    corrected: `  const bindCanvasEvents = (bindOptions) => {
+    if (!attachCanvasEvents)
+      return;
+    if (scrollbarRuntime.attach())
+      cleanupCanvasFns.push(() => {
+        scrollbarRuntime.destroy();
+      });
+    const canvas = getCanvas();`,
+  },
+  {
     // The native scroll host wraps the canvas and its cleanup unwraps it, so
     // the parent read before cleanup is stale by the swap (upstream only swaps
     // canvases when switching backends, which OMXTerm never did).

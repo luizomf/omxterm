@@ -211,7 +211,7 @@ const priorCommandOutputDigest =
 const priorGpuReleaseDigest =
   "735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3";
 const correctedDigest =
-  "a9d670bae0cfa50658e3dcb995a666e728d939033583ae773e2b7fdd14dccd7b";
+  "a13b40d0a5ad2e1449b097004c0e1d20f0ca90854d3db0d5fdb8ddc5d98f52ba";
 
 const nativeScrollFeedbackCorrections = [
   {

@@ -164,7 +164,7 @@ export async function mountResttyTerminalSurface(
   let estimated = false;
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
-  let removeShowRefit: (() => void) | undefined;
+  let showRefit: ReturnType<typeof refitWhenShown>;
   let visibleLinkController: ResttyVisibleLinkController | undefined;
   let restty: PatchedRestty | undefined;
   let fontLease: TerminalFontInputLease | undefined;
@@ -248,6 +248,7 @@ export async function mountResttyTerminalSurface(
     }
     canvas = undefined;
     released = true;
+    showRefit?.rearm();
     visibleLinkController?.dispose();
     visibleLinkController = undefined;
     return true;
@@ -306,7 +307,7 @@ export async function mountResttyTerminalSurface(
       () => delivery.dispose(),
       () => container.removeEventListener("contextmenu", contextMenu.handle),
       () => removeRuntimeListener?.(),
-      () => removeShowRefit?.(),
+      () => showRefit?.dispose(),
       releaseSearchEscape,
       releaseSearchClear,
       () => visibleLinkController?.dispose(),
@@ -399,7 +400,7 @@ export async function mountResttyTerminalSurface(
 
     pane.runtime.io.connectPty();
     attachCanvas(pane);
-    removeShowRefit = refitWhenShown(container, refit);
+    showRefit = refitWhenShown(container, refit);
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
@@ -528,7 +529,16 @@ function refitWhenShown(container: HTMLElement, refit: () => void) {
     laidOut = next;
   });
   observer.observe(container);
-  return () => observer.disconnect();
+  return {
+    dispose: () => observer.disconnect(),
+    // A pane released and shown again within one frame has no size change to
+    // report; a fresh observation reports it once it is laid out.
+    rearm: () => {
+      laidOut = false;
+      observer.unobserve(container);
+      observer.observe(container);
+    },
+  };
 }
 
 async function acquireSurfaceFonts(

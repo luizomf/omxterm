@@ -215,8 +215,9 @@ panes than that used to lose sessions (#1202). `gpuReleaseCorrections`
 `render.restore()`: release cancels the loop, swaps in a fresh canvas and frees
 the context at once through `WEBGL_lose_context`; restore builds a new context
 on that canvas and resumes the loop. Upstream's canvas swap read the parent
-before the native scroll host unwrapped the canvas; the swap now uses the
-canvas's current place. The core handle is untouched. `destroy()`
+before the native scroll host unwrapped the canvas, and never rebuilt that
+host; the swap now uses the canvas's current place and the host wraps the new
+canvas again. The core handle is untouched. `destroy()`
 frees its context the same way, and the pane's focus target follows the
 current canvas (`gpuReleaseSurfaceCorrection` on the pane surface chunk).
 `src/terminal-surface/renderer-context-budget.ts` decides when: past 12 live
@@ -343,7 +344,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `a9d670bae0cfa50658e3dcb995a666e728d939033583ae773e2b7fdd14dccd7b` |
+| Restty JavaScript runtime | `a13b40d0a5ad2e1449b097004c0e1d20f0ca90854d3db0d5fdb8ddc5d98f52ba` |
 | Embedded-core chunk       | `c61dd249e4e7555ff37b1701680f92d2172309efd4b29a07bf449b2137ac8ad5` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Pane surface chunk        | `e93e09544f30a7ea5ef6f9c12f22790f6e53d283aeb9d3372159adf13b8888ef` |

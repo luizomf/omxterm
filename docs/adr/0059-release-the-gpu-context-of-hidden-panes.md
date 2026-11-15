@@ -33,7 +33,7 @@ Surface is about to create or restore one past that, the hidden Surfaces shown
 least recently release first. Shown Surfaces never do, and a tab holds at most
 16 panes, so the visible ones always fit. The slack above 12 covers Surfaces
 still starting, which can't release yet. Recently used tabs keep their context,
-so switching among them costs nothing new.
+so switching among them costs nothing new while they fit in the budget.
 
 **Showing a released pane is synchronous.** The selection refit (or the
 ResizeObserver that sees the layout box come back) restores the context,
@@ -45,10 +45,15 @@ is never reported as one.
 
 ## Tradeoffs
 
-- **Showing a long-unused tab rebuilds its GPU state.** Shaders compile again
-  and glyphs rasterize again for what is on screen; the core is not touched.
-- **The canvas element changes.** Restty's pane focus target follows the canvas
-  in the pane (a second, checksum-guarded correction), and the Surface moves its
-  link and loss listeners to the new canvas.
+- **Showing a released tab rebuilds its GPU state.** A context, its shaders
+  and the glyphs on screen are built again; the core is not touched. On the
+  macOS test VM that is about 10 ms per pane inside the switching task: a
+  single-pane tab still shows in its first frame, a 4-pane tab takes about
+  25 ms longer than before, and alternating between tabs that together hold
+  more than 12 panes pays it on every switch. Keeping the glyph atlas across a
+  release would cut most of it.
+- **The canvas element changes.** Restty's native scroll host wraps the new
+  canvas again, the pane focus target follows it (a second, checksum-guarded
+  correction), and the Surface moves its link and loss listeners to it.
 - **One budget per window, not per app.** Each window is its own renderer
   process, which is what Chromium counts.
