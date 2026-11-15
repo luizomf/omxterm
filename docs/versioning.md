@@ -12,7 +12,7 @@ in [release.md](release.md). They do not become stable releases or automatically
 advance main to the next patch baseline. Preserve exact binary/source identities
 and re-evaluate extension compatibility before any version change. The explicit
 `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`, `0.26.1-dev.N`, `0.27.0-dev.N`,
-`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N`, `0.35.1-dev.N`, `0.36.0-dev.N`, `0.36.1-dev.N`, `0.36.2-dev.N` and `0.37.0-dev.N` bridges have distinct
+`0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N`, `0.35.1-dev.N`, `0.36.0-dev.N`, `0.36.1-dev.N`, `0.36.2-dev.N`, `0.37.0-dev.N` and `0.37.1-dev.N` bridges have distinct
 endpoint requirements in the
 [compatibility contract](dev/extension-installation-foundation.md#archive-contract).
 None automatically extends to another patch or minor development family;
@@ -294,6 +294,12 @@ Looking up a tab's folder only while the shell itself is in the foreground and
 no title of its own shows (#1183's lookup ran `lsof` on macOS after every quiet
 second of output, including under tmux and running programs) moves main to
 `0.37.0-dev.8`.
+
+## Post-0.37.0 development baseline
+
+Stable 0.37.0 uses the frozen cut `c51517aa`; the next development baseline is
+`0.37.1-dev.0`. Its bridge admits ranges that accept both `0.37.0` and
+`0.37.1`. Every catalog archive stays installable unchanged.
 
 ## Public contract
 
