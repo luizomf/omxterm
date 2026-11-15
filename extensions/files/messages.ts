@@ -80,6 +80,11 @@ const english = {
       permission: "Permission denied while moving the entry.",
       unsupported: "This filesystem does not support a no-overwrite move.",
     })[error] ?? `Operation not completed: ${error}.`,
+  deleteError: (error: string) =>
+    ({
+      "changed-entry": "The entry changed. Start the delete again.",
+      "expired-confirmation": "The delete confirmation expired. Start again.",
+    })[error] ?? `Operation not completed: ${error}.`,
   trash: "Move to Trash",
   prepareDelete: "Delete permanently…",
   delete: "Delete permanently",
@@ -246,6 +251,12 @@ const portuguese: FilesMessages = {
   invalidName: "Digite um único nome de arquivo ou pasta.",
   trashUnavailable:
     "Este item não pode ir para a Lixeira aqui. Nada foi apagado.",
+  deleteError: (error) =>
+    ({
+      "changed-entry": "O item mudou. Inicie a exclusão novamente.",
+      "expired-confirmation":
+        "A confirmação da exclusão expirou. Inicie novamente.",
+    })[error] ?? `Operação não concluída: ${error}.`,
   failed: (error) => `Operação não concluída: ${error}.`,
   folderUnavailable: (error) => `Pasta indisponível: ${error}`,
   directoryUnavailable: (error) => `Diretório indisponível: ${error}`,

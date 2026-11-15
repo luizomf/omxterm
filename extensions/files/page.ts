@@ -198,7 +198,10 @@ export function mountFilesPage(
         ? m.unknown
         : moving
           ? m.moveError(reply.error ?? "failed")
-          : m.failed(reply.error ?? "failed");
+          : reply.error === "changed-entry" ||
+              reply.error === "expired-confirmation"
+            ? m.deleteError(reply.error)
+            : m.failed(reply.error ?? "failed");
     }, "error");
   }
   function button(
