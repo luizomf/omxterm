@@ -125,7 +125,14 @@ export async function installedFontStyleFaces(
           macosScript,
           family,
         ]);
-  const result: unknown = JSON.parse(stdout);
+  return installedFontStyleFacesFromResult(JSON.parse(stdout), family);
+}
+
+/** Validates one parsed native style-face answer; throws on invalid data. */
+export function installedFontStyleFacesFromResult(
+  result: unknown,
+  family: string,
+): readonly InstalledFontFace[] {
   if (!Array.isArray(result) || result.length > 3)
     throw new Error("Installed font style lookup returned invalid data");
   const seen = new Set<string>();

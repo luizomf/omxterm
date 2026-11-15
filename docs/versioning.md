@@ -230,6 +230,9 @@ package read checks (#1149), moves main to `0.36.1-dev.4`. Files goes to 0.9.3.
 Letting the theme case step a hidden divider until it moves past a cell
 (#1024) moves main to `0.36.1-dev.5`.
 
+Looking up a window's Windows fonts in one PowerShell process, and reusing the
+resolved font files for later windows (#1154), moves main to `0.36.1-dev.6`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

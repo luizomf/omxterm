@@ -84,16 +84,16 @@ vi.mock("node:fs/promises", async (original) => {
 });
 // Only installed discovery is synthetic. No native helper, GUI or OS fonts.
 // Real licensed repository TTFs go through the real bounded reader and parser.
-vi.mock("../../src/main/installed-font-family", async (original) => {
+vi.mock("../../src/main/terminal-font-faces", async (original) => {
   const native =
-    await original<typeof import("../../src/main/installed-font-family")>();
+    await original<typeof import("../../src/main/terminal-font-faces")>();
   return {
     ...native,
-    installedFontDataForRestty: (family: string) =>
-      native.installedFontDataForRestty(
+    installedTerminalFontFaces: async (family: string | undefined) => ({
+      ...(await native.installedTerminalFontFaces(
         family,
         async (_file, args) => {
-          if (args.at(-1) !== `${family}:style=Regular`)
+          if (family === undefined || args.at(-1) !== `${family}:style=Regular`)
             return { stdout: "missing\n" };
           const filename =
             family === "DejaVu Sans Mono"
@@ -111,8 +111,9 @@ vi.mock("../../src/main/installed-font-family", async (original) => {
           };
         },
         "linux",
-      ),
-    installedFallbackFontData: async () => [],
+      )),
+      fallbacks: [],
+    }),
   };
 });
 

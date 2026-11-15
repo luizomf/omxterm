@@ -101,7 +101,7 @@ export type FontMetricsCommand = (
 ) => Promise<{ readonly stdout: string }>;
 
 const execFileAsync = promisify(execFile);
-const runFontMetricsCommand: FontMetricsCommand = async (
+export const runFontMetricsCommand: FontMetricsCommand = async (
   file,
   arguments_,
   options,
@@ -121,12 +121,17 @@ export async function installedFontFamilyMetrics(
   run: FontMetricsCommand = runFontMetricsCommand,
   platform: string = process.platform,
   readFace: (face: InstalledFontFace) => Promise<Uint8Array> = async (face) =>
-    (await readInstalledFontFamilyFaces(face, run, platform)).data,
+    (
+      await readInstalledFontFamilyFaces(
+        face,
+        await installedFontStyleFaces(face.family, run, platform),
+      )
+    ).data,
 ): Promise<InstalledFontFamilyMetrics | undefined> {
   const face = await resolveInstalledFontFace(family, fontSize, run, platform);
   if (!face) return undefined;
   // Validation includes a bounded readable-font check. Bytes are discarded;
-  // the active-family IPC rereads them on demand and keeps no main cache.
+  // the active-family IPC rereads them on demand and keeps no main byte cache.
   await readFace(face);
   return Object.freeze({
     cellWidth: face.cellWidth,
@@ -153,23 +158,24 @@ export async function installedFontDataForRestty(
   platform: string = process.platform,
 ): Promise<InstalledFontFamilyData | undefined> {
   const face = await resolveInstalledFontFace(family, 16, run, platform);
-  return face ? readInstalledFontFamilyFaces(face, run, platform) : undefined;
+  return face
+    ? readInstalledFontFamilyFaces(
+        face,
+        await installedFontStyleFaces(face.family, run, platform),
+      )
+    : undefined;
 }
 
-async function readInstalledFontFamilyFaces(
+/** Reads and validates a resolved regular face and its resolved real styles. */
+export async function readInstalledFontFamilyFaces(
   face: InstalledFontFace,
-  run: FontMetricsCommand,
-  platform: string,
+  styleFaces: readonly InstalledFontFace[],
 ): Promise<InstalledFontFamilyData> {
   const regular = await readInstalledFontFaceData(face);
   const sources = new Map([[face.path, regular.data]]);
   const styles: Partial<Record<TerminalFontStyle, InstalledFontData>> = {};
   let remaining = MAX_TERMINAL_FONT_DATA_BYTES - regular.data.byteLength;
-  for (const candidate of await installedFontStyleFaces(
-    face.family,
-    run,
-    platform,
-  )) {
+  for (const candidate of styleFaces) {
     try {
       const shared = sources.get(candidate.path);
       const loaded = shared
@@ -199,34 +205,73 @@ export async function installedFallbackFontData(
     face: InstalledFontFace,
     maxBytes?: number,
   ) => Promise<Uint8Array> = readInstalledFontFace,
-): Promise<readonly { readonly family: string; readonly data: Uint8Array }[]> {
-  const candidates =
-    platform === "darwin"
-      ? ["Apple Color Emoji", "Hiragino Sans GB", "Apple Symbols"]
-      : platform === "win32"
-        ? [
-            "Segoe UI Emoji",
-            "Microsoft YaHei UI",
-            // YaHei has no Hangul syllables; Malgun Gothic ships with Windows.
-            "Malgun Gothic",
-            "Segoe UI Symbol",
-          ]
-        : [
-            "Noto Color Emoji",
-            "Noto Sans CJK SC",
-            "DejaVu Sans Mono",
-            "Source Han Sans CN",
-          ];
+): Promise<readonly InstalledFallbackFontData[]> {
+  return readFallbackFontData(
+    await resolveFallbackFontFaces(run, platform),
+    byteBudget,
+    readFace,
+  );
+}
+
+/** Resolves the installed OS fallback faces, in precedence order. */
+export async function resolveFallbackFontFaces(
+  run: FontMetricsCommand,
+  platform: string,
+): Promise<readonly InstalledFontFace[]> {
+  const faces = [];
+  for (const family of fallbackFontFamilies(platform)) {
+    try {
+      const face = await resolveInstalledFontFace(family, 16, run, platform);
+      if (face) faces.push(face);
+    } catch {
+      // OS fallbacks are best-effort additions after the licensed bundled face.
+    }
+  }
+  return Object.freeze(faces);
+}
+
+export interface InstalledFallbackFontData {
+  readonly family: string;
+  readonly data: Uint8Array;
+}
+
+/** The OS fallback families, in precedence order, for one platform. */
+export function fallbackFontFamilies(platform: string): readonly string[] {
+  return platform === "darwin"
+    ? ["Apple Color Emoji", "Hiragino Sans GB", "Apple Symbols"]
+    : platform === "win32"
+      ? [
+          "Segoe UI Emoji",
+          "Microsoft YaHei UI",
+          // YaHei has no Hangul syllables; Malgun Gothic ships with Windows.
+          "Malgun Gothic",
+          "Segoe UI Symbol",
+        ]
+      : [
+          "Noto Color Emoji",
+          "Noto Sans CJK SC",
+          "DejaVu Sans Mono",
+          "Source Han Sans CN",
+        ];
+}
+
+/** Reads resolved fallback faces in order, keeping their bytes in budget. */
+export async function readFallbackFontData(
+  faces: readonly InstalledFontFace[],
+  byteBudget: number = MAX_TERMINAL_FONT_DATA_BYTES,
+  readFace: (
+    face: InstalledFontFace,
+    maxBytes?: number,
+  ) => Promise<Uint8Array> = readInstalledFontFace,
+): Promise<readonly InstalledFallbackFontData[]> {
   const loaded = [];
   let remaining = Math.max(0, byteBudget);
-  for (const family of candidates) {
+  for (const face of faces) {
     if (remaining === 0) break;
     try {
-      const data = await installedFontData(family, run, platform, (face) =>
-        readFace(face, remaining),
-      );
-      if (data && data.byteLength <= remaining) {
-        loaded.push(Object.freeze({ family, data }));
+      const data = await readFace(face, remaining);
+      if (data.byteLength <= remaining) {
+        loaded.push(Object.freeze({ family: face.family, data }));
         remaining -= data.byteLength;
       }
     } catch {
@@ -236,7 +281,7 @@ export async function installedFallbackFontData(
   return Object.freeze(loaded);
 }
 
-async function resolveInstalledFontFace(
+export async function resolveInstalledFontFace(
   family: string,
   fontSize: number,
   run: FontMetricsCommand,
@@ -274,13 +319,7 @@ async function resolveInstalledFontFace(
   const { stdout } =
     platform === "win32"
       ? await run(
-          path.join(
-            process.env["SystemRoot"] ?? "C:\\Windows",
-            "System32",
-            "WindowsPowerShell",
-            "v1.0",
-            "powershell.exe",
-          ),
+          windowsPowerShell(),
           ["-NoProfile", "-NonInteractive", "-Command", WINDOWS_FONT_SCRIPT],
           { timeoutMs: 10_000, environment: { OMXTERM_FONT_FAMILY: family } },
         )
@@ -298,6 +337,25 @@ async function resolveInstalledFontFace(
   } catch {
     throw invalidFontResult();
   }
+  return installedFontFaceFromResult(result, platform, fontSize);
+}
+
+export function windowsPowerShell(): string {
+  return path.join(
+    process.env["SystemRoot"] ?? "C:\\Windows",
+    "System32",
+    "WindowsPowerShell",
+    "v1.0",
+    "powershell.exe",
+  );
+}
+
+/** Validates one parsed native regular-face answer; throws on invalid data. */
+export function installedFontFaceFromResult(
+  result: unknown,
+  platform: string,
+  fontSize: number,
+): InstalledFontFace | undefined {
   if (isStatus(result, "missing") || isStatus(result, "missing-regular"))
     return undefined;
   if (!isAvailableResult(result, platform)) throw invalidFontResult();

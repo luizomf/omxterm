@@ -81,7 +81,9 @@ case-sensitively, without fuzzy substitution. Windows uses installed WPF
 GlyphTypefaces rather than GDI+ family-level style availability, which can accept
 a bold file as regular and miss variable fonts. Non-default variable instances
 are not materialized; unavailable styles use synthesis without rejecting an
-otherwise usable regular family.
+otherwise usable regular family. On Windows one PowerShell process resolves the
+family, its styles and the fallbacks. Main reuses those resolved files for later
+windows but rereads and validates their bytes on every load.
 
 Restty owns ordered style selection and missing-glyph fallback. Synthesis does
 not add an unrequested weight or slant. Synthetic bold adds cardinal-neighbour
