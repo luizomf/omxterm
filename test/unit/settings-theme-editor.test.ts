@@ -15,6 +15,14 @@ import { createRendererLanguage } from "../../src/renderer/renderer-language";
 
 beforeAll(installSettingsDom);
 afterEach(() => document.body.replaceChildren());
+const role = (key: string) =>
+  document.querySelector<HTMLInputElement>(
+    `.settings-theme-editor .ui-swatch input[value="${key}"]`,
+  )!;
+const selectedRole = () =>
+  document.querySelector<HTMLInputElement>(
+    ".settings-theme-editor .ui-swatch input:checked",
+  )!.value;
 function documents(): SettingsThemeDocumentsBridge {
   return {
     openTheme: vi.fn(),
@@ -32,13 +40,16 @@ it("creates a complete draft, previews it locally and saves before explicit use"
   button("Appearance").click();
   const original = document.documentElement.style.cssText;
   button("New theme").click();
-  const select = view.query<HTMLSelectElement>(".settings-theme-editor select");
-  expect([...select.options].map((o) => o.value)).toEqual(
-    TERMINAL_THEME_COLOR_KEYS,
-  );
+  expect(
+    [
+      ...document.querySelectorAll<HTMLInputElement>(
+        ".settings-theme-editor .ui-swatch input",
+      ),
+    ].map((radio) => radio.value),
+  ).toEqual(TERMINAL_THEME_COLOR_KEYS);
+  expect(view.query<HTMLElement>(".settings-themes-list").hidden).toBe(true);
   const hex = view.query<HTMLInputElement>(".settings-theme-hex");
-  select.value = "background";
-  select.dispatchEvent(new Event("change"));
+  expect(selectedRole()).toBe("background");
   hex.value = "#123456";
   hex.dispatchEvent(new Event("input"));
   expect(
@@ -82,35 +93,43 @@ const css = (color: string) => {
   return probe.style.color;
 };
 const swatch = (label: string) =>
-  document.querySelector<HTMLButtonElement>(
-    `.settings-theme-ansi button[aria-label="${label}"]`,
+  document.querySelector<HTMLInputElement>(
+    `.settings-theme-editor .ui-swatch input[aria-label="${label}"]`,
   )!;
 
 it.each(["en-US", "pt-BR"] as const)(
-  "shows each normal color next to its bright variant and edits the one picked in %s",
+  "shows each normal color above its bright variant and edits the one picked in %s",
   async (locale) => {
     const language = createRendererLanguage(locale);
     const view = await open({ themeDocuments: documents() }, language);
     button(language.t("settings.page.appearance")).click();
     button(language.t("settings.author.new")).click();
-    const role = view.query<HTMLSelectElement>(".settings-theme-editor select");
     const hex = view.query<HTMLInputElement>(".settings-theme-hex");
+    const column = (radio: HTMLInputElement) =>
+      [...radio.parentElement!.parentElement!.children].indexOf(
+        radio.parentElement!,
+      );
     for (const [normal, bright] of ANSI_PAIRS) {
       const first = swatch(language.t(`settings.author.color.${normal}`));
       const second = swatch(language.t(`settings.author.color.${bright}`));
-      // Side by side in the same row, normal first.
-      expect(first.nextElementSibling).toBe(second);
-      expect(first.style.backgroundColor).toBe(
+      // The same column of two consecutive rows, normal on top.
+      expect(column(second)).toBe(column(first));
+      expect(first.parentElement!.parentElement!.nextElementSibling).toBe(
+        second.parentElement!.parentElement,
+      );
+      expect(first.parentElement!.style.backgroundColor).toBe(
         css(DEFAULT_TERMINAL_THEME.colors[normal]),
       );
-      expect(second.style.backgroundColor).toBe(
+      expect(second.parentElement!.style.backgroundColor).toBe(
         css(DEFAULT_TERMINAL_THEME.colors[bright]),
       );
       second.click();
-      expect(role.value).toBe(bright);
       expect(hex.value).toBe(DEFAULT_TERMINAL_THEME.colors[bright]);
-      expect(second.getAttribute("aria-pressed")).toBe("true");
-      expect(first.getAttribute("aria-pressed")).toBe("false");
+      expect(second.checked).toBe(true);
+      expect(first.checked).toBe(false);
+      expect(view.query(".settings-theme-color label").textContent).toBe(
+        language.t(`settings.author.color.${bright}`),
+      );
     }
     view.dialog.dispose();
   },
@@ -123,15 +142,15 @@ it("updates exact sample contrast without recoloring names or replacing retained
   button("Appearance").click();
   button("New theme").click();
   const original = document.documentElement.style.cssText;
-  const role = view.query<HTMLSelectElement>(".settings-theme-editor select");
   const hex = view.query<HTMLInputElement>(".settings-theme-hex");
   const swatches = [
-    ...document.querySelectorAll<HTMLElement>(".settings-theme-ansi button"),
+    ...document.querySelectorAll<HTMLElement>(
+      ".settings-theme-editor .ui-swatch",
+    ),
   ];
-  expect(swatches).toHaveLength(16);
+  expect(swatches).toHaveLength(21);
   const change = (key: string, color: string) => {
-    role.value = key;
-    role.dispatchEvent(new Event("change"));
+    role(key).click();
     hex.value = color;
     hex.dispatchEvent(new Event("input"));
   };
@@ -147,10 +166,9 @@ it("updates exact sample contrast without recoloring names or replacing retained
   ];
   expect(text).toHaveLength(16);
   for (const span of text) expect(span.style.color).toBe("rgb(18, 52, 86)");
-  for (const name of document.querySelectorAll<HTMLElement>(
-    ".settings-theme-ansi-name",
-  ))
-    expect(name.style.cssText).toBe("");
+  expect(view.query<HTMLElement>(".settings-theme-color").style.cssText).toBe(
+    "",
+  );
   const selection = view.query<HTMLElement>(".settings-theme-selection");
   expect(selection.style.backgroundColor).toBe("rgb(18, 52, 86)");
   expect(selection.style.color).toBe("rgb(18, 52, 86)");
@@ -159,11 +177,14 @@ it("updates exact sample contrast without recoloring names or replacing retained
   ).toBe("rgb(18, 52, 86)");
   change("brightWhite", "#12");
   language.set("pt-BR");
-  expect([...document.querySelectorAll(".settings-theme-ansi button")]).toEqual(
-    swatches,
-  );
-  expect(swatches.at(-1)!.getAttribute("aria-label")).toBe("Branco claro");
+  expect([
+    ...document.querySelectorAll(".settings-theme-editor .ui-swatch"),
+  ]).toEqual(swatches);
+  expect(role("brightWhite").getAttribute("aria-label")).toBe("Branco claro");
+  // The swatch keeps the last valid color and is marked while its text isn't one.
   expect(swatches.at(-1)!.style.backgroundColor).toBe("rgb(18, 52, 86)");
+  expect(role("brightWhite").getAttribute("aria-invalid")).toBe("true");
+  expect(role("white").getAttribute("aria-invalid")).toBe("false");
   expect(hex.value).toBe("#12");
   expect(view.bridge.change).not.toHaveBeenCalled();
   expect(docs.saveTheme).not.toHaveBeenCalled();
@@ -176,12 +197,10 @@ it("retains invalid input per role across categories and blocks saving last-vali
   const view = await open({ themeDocuments: docs });
   button("Appearance").click();
   button("New theme").click();
-  const role = view.query<HTMLSelectElement>(".settings-theme-editor select");
   const hex = view.query<HTMLInputElement>(".settings-theme-hex");
   hex.value = "#12";
   hex.dispatchEvent(new Event("input"));
-  role.value = "brightWhite";
-  role.dispatchEvent(new Event("change"));
+  role("brightWhite").click();
   expect(hex.value).toBe("#ffffff");
   expect(button("Save copy").disabled).toBe(true);
   expect(button("Export JSON").disabled).toBe(true);
@@ -189,14 +208,14 @@ it("retains invalid input per role across categories and blocks saving last-vali
   view.dialog.setSelected(false);
   view.dialog.setSelected(true);
   button("Appearance").click();
-  role.value = "background";
-  role.dispatchEvent(new Event("change"));
+  role("background").click();
   expect(hex.value).toBe("#12");
   expect(hex.getAttribute("aria-invalid")).toBe("true");
   expect(docs.saveTheme).not.toHaveBeenCalled();
   expect(view.bridge.change).not.toHaveBeenCalled();
   button("Cancel").click();
   expect(document.querySelector(".settings-theme-editor")).toBeNull();
+  expect(view.query<HTMLElement>(".settings-themes-list").hidden).toBe(false);
   view.dialog.dispose();
 });
 
@@ -215,7 +234,7 @@ it("preserves imported appearance and newer typing during Save, then saves to th
   vi.mocked(docs.saveTheme).mockReturnValueOnce(saved.promise);
   const view = await open({ themeDocuments: docs });
   button("Appearance").click();
-  button("Import theme JSON").click();
+  button("Import theme").click();
   await view.settle();
   expect(button("Save").disabled).toBe(true);
   button("Save copy").click();
@@ -306,11 +325,11 @@ it("edits every color without losing untouched optional fields or selecting a ca
   edit.click();
   await view.settle();
   expect(view.bridge.change).not.toHaveBeenCalled();
-  const role = view.query<HTMLSelectElement>(".settings-theme-editor select");
+  // The editor takes the list's place instead of opening under it.
+  expect(view.query<HTMLElement>(".settings-themes-list").hidden).toBe(true);
   const hex = view.query<HTMLInputElement>(".settings-theme-hex");
   for (const key of TERMINAL_THEME_COLOR_KEYS) {
-    role.value = key;
-    role.dispatchEvent(new Event("change"));
+    role(key).click();
     hex.value = "#aBcDeF";
     hex.dispatchEvent(new Event("input"));
   }
@@ -337,7 +356,7 @@ it("keeps a conflicting local draft until explicit source reload", async () => {
   });
   const view = await open({ themeDocuments: docs });
   button("Appearance").click();
-  button("Import theme JSON").click();
+  button("Import theme").click();
   await view.settle();
   button("Save copy").click();
   await view.settle();
@@ -518,3 +537,50 @@ it.each(["edit", "radio", "outside"] as const)(
     }
   },
 );
+
+it("returns focus to the theme's edit control after a completed Save rebuilt the cards", async () => {
+  const docs = documents();
+  const base = { path: "themes/local.json", revision: "f".repeat(64) };
+  const theme = { ...DEFAULT_TERMINAL_THEME, name: "Before save" };
+  let name = theme.name;
+  vi.mocked(docs.openTheme).mockResolvedValue({
+    status: "opened",
+    theme,
+    base,
+  });
+  vi.mocked(docs.saveTheme).mockImplementation(async (save) => {
+    name = save.theme.name;
+    return { status: "saved", base: { ...base, revision: "a".repeat(64) } };
+  });
+  const view = await open({
+    themeDocuments: docs,
+    themes: vi.fn(async () => ({
+      status: "ok" as const,
+      themes: [{ path: base.path, name, colors: theme.colors }],
+      invalid: [],
+      truncated: false,
+      hasConfiguredTheme: false,
+    })),
+  });
+  button("Appearance").click();
+  await view.settle();
+  const edit = () =>
+    document.querySelector<HTMLButtonElement>(
+      '.settings-theme-entry:has(input[value="themes/local.json"]) button',
+    )!;
+  const opened = edit();
+  opened.click();
+  await view.settle();
+  const field = view.query<HTMLInputElement>(
+    ".settings-theme-editor input[type=text]",
+  );
+  field.value = "After save";
+  field.dispatchEvent(new Event("input"));
+  button("Save").click();
+  await view.settle();
+  expect(opened.isConnected).toBe(false);
+  button("Cancel").click();
+  expect(edit().getAttribute("aria-label")).toContain("After save");
+  expect(document.activeElement).toBe(edit());
+  view.dialog.dispose();
+});

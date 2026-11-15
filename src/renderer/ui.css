@@ -426,7 +426,9 @@ textarea.page-control {
 .ui-reveal {
   opacity: 0;
 }
-:is(.ui-form-row, .ui-row):is(:hover, :focus-within, .is-active) .ui-reveal {
+:is(.ui-form-row, .ui-row):is(:hover, :focus-within, .is-active) .ui-reveal,
+/* A clicked card keeps focus on its radio, so only keyboard focus counts. */
+.ui-choice:is(:hover, :has(:focus-visible)) .ui-reveal {
   opacity: 1;
 }
 @media (hover: none) {
@@ -609,7 +611,7 @@ textarea.page-control {
   white-space: nowrap;
 }
 
-/* Card and chip ------------------------------------------------------------ */
+/* Card --------------------------------------------------------------------- */
 
 /* A raised block. Quiet buttons inside step up one fill so they still read
    as buttons. */
@@ -628,6 +630,148 @@ textarea.page-control {
     var(--ui-neutral) calc(15% * var(--terminal-background-opacity, 1))
   );
 }
+/* Choice card -------------------------------------------------------------- */
+
+/* One of several things picked by how they look (a theme): a <label> holding
+   a hidden radio and a ui-choice-body with the picture and its name. The
+   picture fills the card, so the choice is the border, not a fill. */
+.ui-choice {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.ui-choice-card {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  scroll-margin: var(--ui-space-1);
+  cursor: pointer;
+}
+.ui-choice-card > input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.ui-choice-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+  box-sizing: border-box;
+  height: 100%;
+  padding: var(--ui-space-2);
+  border: 1px solid var(--ui-decoration);
+  border-radius: var(--ui-radius);
+  overflow-wrap: anywhere;
+}
+.ui-choice-card:hover .ui-choice-body {
+  border-color: var(--ui-input-border);
+}
+/* Two pixels without moving the content: the border, doubled inward. */
+.ui-choice-card > input:checked + .ui-choice-body {
+  border-color: var(--ui-text);
+  box-shadow: inset 0 0 0 1px var(--ui-text);
+}
+/* Picked, and still being saved. */
+.ui-choice-card[aria-busy="true"] > input:checked + .ui-choice-body {
+  border-color: var(--ui-secondary);
+  box-shadow: inset 0 0 0 1px var(--ui-secondary);
+}
+:is(.application-page, .ui-dialog, .ui-overlay, .ui-on-tint)
+  .ui-choice-card
+  > input:focus-visible
+  + .ui-choice-body {
+  outline: 2px solid var(--ui-secondary);
+  outline-offset: 2px;
+}
+/* A card's one action (edit): an icon button over its top corner, a sibling
+   of the label. It sits on any picture, so it brings its own solid surface.
+   Add ui-reveal so it waits for hover or focus. */
+.ui-choice-action {
+  position: absolute;
+  inset-block-start: var(--ui-space-3);
+  inset-inline-end: var(--ui-space-3);
+  color: var(--ui-text);
+  background: var(--ui-raised);
+}
+.ui-choice-action:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--ui-hover);
+}
+
+/* Swatch ------------------------------------------------------------------- */
+
+/* Colors to pick from: a radiogroup of ui-swatch-rows. A swatch is a <label>
+   painted with its color (inline background-color) around a hidden radio that
+   carries the color's name. The ring marks the one being edited; a dashed
+   ring marks one whose value is not valid yet. */
+.ui-swatch-grid {
+  display: grid;
+  gap: var(--ui-space-2);
+  justify-content: start;
+}
+.ui-swatch-row {
+  display: flex;
+  gap: var(--ui-space-2);
+}
+.ui-swatch {
+  position: relative;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--ui-radius-chip);
+  /* A swatch the color of the surface still has an edge. */
+  box-shadow: inset 0 0 0 1px var(--ui-decoration);
+  cursor: pointer;
+}
+.ui-swatch > input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.ui-swatch:hover {
+  outline: 1px solid var(--ui-input-border);
+  outline-offset: 2px;
+}
+.ui-swatch:has(> input:checked) {
+  outline: 2px solid var(--ui-text);
+  outline-offset: 2px;
+}
+.ui-swatch:has(> input[aria-invalid="true"]) {
+  outline: 2px dashed var(--ui-text);
+  outline-offset: 2px;
+}
+/* Keyboard focus lands on the picked swatch, whose ring is already there:
+   it gains the soft halo a focused field has. */
+.ui-swatch:has(> input:focus-visible) {
+  box-shadow:
+    inset 0 0 0 1px var(--ui-decoration),
+    0 0 0 6px var(--ui-focus-halo);
+}
+/* A color's two fields on one line: the native well, then its hex text. As
+   wide as any other field. */
+.ui-color-field {
+  display: flex;
+  gap: var(--ui-space-2);
+  width: 280px;
+  max-width: 100%;
+}
+.ui-color-field > input[type="color"] {
+  flex: none;
+  width: 40px;
+  padding: 3px;
+  cursor: pointer;
+}
+.ui-color-field > input:not([type="color"]) {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--ui-font-mono);
+}
+
+/* Chip --------------------------------------------------------------------- */
+
 /* A key binding or short literal value. */
 .ui-chip {
   display: inline-block;
@@ -813,6 +957,9 @@ textarea.page-control {
   .ui-icon-button,
   .ui-chip,
   .ui-card,
+  .ui-choice,
+  .ui-swatch-grid,
+  .ui-color-field,
   .ui-tab,
   .ui-panel-header,
   .ui-overlay,

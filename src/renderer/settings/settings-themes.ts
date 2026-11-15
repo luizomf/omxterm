@@ -1,11 +1,12 @@
 import type { SettingsBridge, SettingsPath } from "../../shared/settings";
-import type {
-  SettingsTheme,
-  SettingsThemesResult,
+import {
+  SETTINGS_THEME_COLOR_KEYS,
+  type SettingsTheme,
+  type SettingsThemesResult,
 } from "../../shared/settings-themes";
 import { DEFAULT_TERMINAL_THEME } from "../../shared/terminal-theme";
+import { setIcon } from "../../shared/ui-icons";
 import { englishLanguage, type Translate } from "../renderer-language";
-import { createPageButton } from "../application-page";
 import { createSettingsThemeEditor } from "./settings-theme-editor";
 
 const problemLabels = {
@@ -46,13 +47,17 @@ export function renderSettingsThemes(
   let rendered = "";
   const section = document.createElement("section");
   section.className = "settings-themes";
+  // The list and the editor share one place: opening a theme swaps them.
+  const list = document.createElement("div");
+  list.className = "settings-themes-list";
   const header = document.createElement("div");
   header.className = "settings-themes-header";
   const heading = document.createElement("h3");
   heading.id = "settings-themes-title";
-  const refresh = createPageButton(document);
-  const hint = document.createElement("p");
-  hint.className = "ui-hint settings-hint";
+  const refresh = document.createElement("button");
+  refresh.type = "button";
+  refresh.className = "ui-icon-button";
+  setIcon(refresh, "refresh-cw");
   const grid = document.createElement("div");
   grid.className = "settings-themes-grid";
   grid.setAttribute("role", "radiogroup");
@@ -65,7 +70,13 @@ export function renderSettingsThemes(
   const invalidList = document.createElement("ul");
   invalid.append(invalidList);
   header.append(heading, refresh);
-  section.append(header, hint, grid, message, invalid);
+  list.append(header, grid, message, invalid);
+  section.append(list);
+  const editControl = (path: string) =>
+    [...grid.querySelectorAll<HTMLInputElement>("input")]
+      .find((input) => input.value === path)
+      ?.closest(".settings-theme-entry")
+      ?.querySelector<HTMLButtonElement>("button") ?? undefined;
   const editor = bridge.themeDocuments
     ? createSettingsThemeEditor(document, bridge.themeDocuments, {
         live: options.live,
@@ -75,10 +86,20 @@ export function renderSettingsThemes(
           for (const button of grid.querySelectorAll("button"))
             button.disabled = busy;
         },
+        opened: (open) => {
+          list.hidden = open;
+          section.classList.toggle("is-editing", open);
+          // The editor is shorter than a long list: start at its top.
+          if (open) section.scrollIntoView?.({ block: "start" });
+        },
+        editControl,
         use: (path, settled) => options.change("theme.path", path, settled),
       })
     : undefined;
-  if (editor) section.append(editor.element);
+  if (editor) {
+    header.append(editor.toolbar);
+    section.append(editor.element);
+  }
 
   const defaultTheme: SettingsTheme = {
     path: "",
@@ -93,19 +114,29 @@ export function renderSettingsThemes(
       (pendingChoice === undefined &&
         selectionFresh &&
         result?.hasConfiguredTheme === false);
+    // A file that is the built-in theme (the copy first run writes) stands
+    // for it: one card, unless the built-in itself is what is in use.
+    const twin = (result?.themes ?? []).some((theme) =>
+      sameLook(theme, defaultTheme),
+    );
     for (const input of grid.querySelectorAll<HTMLInputElement>("input")) {
       input.checked =
         input.value === "" ? useDefault : input.value === selected;
-      const badge = input.parentElement?.querySelector(
-        ".settings-theme-selected",
-      );
-      if (badge)
-        badge.textContent = t(
-          pendingChoice !== undefined && input.value === pendingChoice
-            ? "settings.themePending"
-            : "settings.themeSelected",
-        );
+      const pending =
+        pendingChoice !== undefined && input.value === pendingChoice;
+      const card = input.parentElement!;
+      // The border is the selection; a choice still being saved is quieter
+      // and says so to assistive technology.
+      if (pending) card.setAttribute("aria-busy", "true");
+      else card.removeAttribute("aria-busy");
+      card.querySelector(".settings-theme-pending")!.textContent = pending
+        ? t("settings.themePending")
+        : "";
+      if (input.value === "")
+        card.closest<HTMLElement>(".settings-theme-entry")!.hidden =
+          twin && !useDefault;
     }
+    showSharedNames(grid);
   };
 
   const choose = (path: string) => {
@@ -149,15 +180,15 @@ export function renderSettingsThemes(
 
   const render = () => {
     heading.textContent = t("settings.themePicker");
-    refresh.textContent = t("settings.themeRefresh");
-    hint.textContent = t("settings.themePickerHint");
+    refresh.title = t("settings.themeRefresh");
+    refresh.setAttribute("aria-label", refresh.title);
     const themes = result?.themes ?? [];
     const next = JSON.stringify(themes);
     if (rendered !== next) {
       const focused = focusedThemeControl(grid);
       grid.replaceChildren(
         ...[defaultTheme, ...themes].map((theme) =>
-          createThemeCard(document, theme, t, choose, editor),
+          createThemeCard(document, theme, choose, editor),
         ),
       );
       rendered = next;
@@ -174,34 +205,7 @@ export function renderSettingsThemes(
         control?.focus({ preventScroll: true });
       }
     }
-    const defaultCard = grid.querySelector(".settings-theme-card");
-    if (defaultCard) {
-      defaultCard.querySelector(".settings-theme-name")!.textContent = t(
-        "settings.bundledTheme",
-      );
-      defaultCard.querySelector(".settings-theme-path")!.textContent = t(
-        "settings.themeDefaultDetail",
-      );
-    }
-    for (const entry of grid.querySelectorAll<HTMLElement>(
-      ".settings-theme-entry",
-    )) {
-      const edit = entry.querySelector("button")!;
-      const path = entry.querySelector<HTMLInputElement>("input")!.value;
-      const theme = path
-        ? themes.find((theme) => theme.path === path)
-        : defaultTheme;
-      if (theme) {
-        edit.disabled = editor?.busy() ?? false;
-        edit.textContent = t("settings.author.title");
-        edit.setAttribute(
-          "aria-label",
-          t("settings.author.edit", {
-            name: `${path ? theme.name : t("settings.bundledTheme")}${path ? ` (${cleanPath(path)})` : ""}`,
-          }),
-        );
-      }
-    }
+    labelCards(grid, [defaultTheme, ...themes], t, editor?.busy() ?? false);
     updateSelection();
     renderNotice();
   };
@@ -284,15 +288,67 @@ function cleanPath(path: string): string {
   );
 }
 
+// Names tell themes apart; the file only shows when two cards on screen
+// share a name.
+function showSharedNames(grid: HTMLElement) {
+  const names = [
+    ...grid.querySelectorAll<HTMLElement>(
+      ".settings-theme-entry:not([hidden]) .settings-theme-name",
+    ),
+  ];
+  for (const name of names)
+    name.parentElement!.querySelector<HTMLElement>(
+      ".settings-theme-path",
+    )!.hidden =
+      names.filter((other) => other.textContent === name.textContent).length <
+      2;
+}
+
+function labelCards(
+  grid: HTMLElement,
+  themes: readonly SettingsTheme[],
+  t: Translate,
+  busy: boolean,
+) {
+  grid
+    .querySelectorAll<HTMLElement>(".settings-theme-entry")
+    .forEach((entry, index) => {
+      const theme = themes[index]!;
+      const detail = theme.path
+        ? cleanPath(theme.path)
+        : t("settings.themeDefaultDetail");
+      entry.querySelector(".settings-theme-path")!.textContent = detail;
+      entry.querySelector<HTMLElement>(".settings-theme-card")!.title = detail;
+      const edit = entry.querySelector("button");
+      if (!edit) return;
+      edit.disabled = busy;
+      edit.title = t("settings.author.edit", { name: theme.name });
+      edit.setAttribute(
+        "aria-label",
+        t("settings.author.edit", { name: `${theme.name} (${detail})` }),
+      );
+    });
+}
+
+// The picker only has the eight summary colors, so "the same theme" means
+// the same name and the same card.
+function sameLook(a: SettingsTheme, b: SettingsTheme): boolean {
+  return (
+    a.name === b.name &&
+    SETTINGS_THEME_COLOR_KEYS.every((key) => a.colors[key] === b.colors[key])
+  );
+}
+
 function createThemeCard(
   document: Document,
   theme: SettingsTheme,
-  t: Translate,
   choose: (path: string) => void,
   editor?: ReturnType<typeof createSettingsThemeEditor>,
 ): HTMLElement {
+  const entry = document.createElement("div");
+  entry.className = "settings-theme-entry ui-choice";
   const label = document.createElement("label");
-  label.className = "settings-theme-card";
+  label.className = "settings-theme-card ui-choice-card";
   const input = document.createElement("input");
   input.type = "radio";
   input.name = "settings-theme";
@@ -306,7 +362,7 @@ function createThemeCard(
     if (input.checked) choose(theme.path);
   });
   const content = document.createElement("span");
-  content.className = "settings-theme-content";
+  content.className = "settings-theme-content ui-choice-body";
   const preview = document.createElement("span");
   preview.className = "settings-theme-preview";
   preview.setAttribute("aria-hidden", "true");
@@ -329,39 +385,27 @@ function createThemeCard(
     dots.append(dot);
   }
   preview.append(sample, dots);
-  const title = document.createElement("span");
-  title.className = "settings-theme-title";
   const name = document.createElement("span");
   name.className = "settings-theme-name";
-  name.textContent = theme.path ? theme.name : t("settings.bundledTheme");
-  const selected = document.createElement("span");
-  selected.className = "settings-theme-selected";
-  selected.textContent = t("settings.themeSelected");
-  title.append(name, selected);
+  name.textContent = theme.name;
+  const pending = document.createElement("span");
+  pending.className = "settings-theme-pending ui-visually-hidden";
   const path = document.createElement("span");
-  path.className = "settings-theme-path";
-  path.textContent = theme.path
-    ? cleanPath(theme.path)
-    : t("settings.themeDefaultDetail");
-  content.append(preview, title, path);
+  path.className = "settings-theme-path ui-meta";
+  path.hidden = true;
+  content.append(preview, name, pending, path);
   label.append(input, content);
-  if (!editor) return label;
-  const entry = document.createElement("div");
-  entry.className = "settings-theme-entry";
-  const edit = createPageButton(document, "text");
-  const relabel = () => {
-    edit.textContent = t("settings.author.title");
-    edit.setAttribute(
-      "aria-label",
-      t("settings.author.edit", {
-        name: `${theme.name}${theme.path ? ` (${cleanPath(theme.path)})` : ""}`,
-      }),
-    );
-  };
-  relabel();
+  entry.append(label);
+  if (!editor) return entry;
+  // A sibling of the label, drawn over the card's corner: a button inside a
+  // label would also pick the theme.
+  const edit = document.createElement("button");
+  edit.type = "button";
+  edit.className = "ui-icon-button ui-choice-action ui-reveal";
+  setIcon(edit, "pencil");
   edit.addEventListener("click", () =>
     theme.path ? editor.edit(theme.path, edit) : editor.editBundled(edit),
   );
-  entry.append(label, edit);
+  entry.append(edit);
   return entry;
 }

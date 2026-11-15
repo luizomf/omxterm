@@ -1,14 +1,11 @@
 export const englishThemeAuthoringMessages = {
   "settings.author.new": "New theme",
-  "settings.author.import": "Import theme JSON",
+  "settings.author.import": "Import theme",
   "settings.author.edit": "Edit {name}",
   "settings.author.title": "Edit theme",
   "settings.author.name": "Theme name",
   "settings.author.newName": "My theme",
-  "settings.author.role": "Color role",
-  "settings.author.surface": "Surface",
-  "settings.author.ansi": "ANSI colors",
-  "settings.author.bright": "Bright ANSI colors",
+  "settings.author.role": "Colors",
   "settings.author.hex": "{color} hex",
   "settings.author.well": "{color} color picker",
   "settings.author.filename": "New filename",
@@ -25,12 +22,10 @@ export const englishThemeAuthoringMessages = {
   "settings.author.copySource": "New copy — no source file will be changed",
   "settings.author.appearance": "Extra pane and panel colors are kept.",
   "settings.author.preview": "Preview",
-  "settings.author.samplesHint":
-    "Normal on the left, bright on the right. Click a color to edit it.",
   "settings.author.selection": "Selected text",
   "settings.author.cursor": "Cursor sample",
   "settings.author.invalid":
-    "Use a printable name of 1–64 Unicode characters and #RRGGBB for every color. Incomplete input is kept, but cannot be saved or exported.",
+    "To save or export, give the theme a name of up to 64 characters and every color a #RRGGBB value.",
   "settings.author.busy": "Working…",
   "settings.author.saved":
     "Saved theme file. Not applied; use the saved theme when ready.",
@@ -88,15 +83,12 @@ export const englishThemeAuthoringMessages = {
 
 export const brazilianPortugueseThemeAuthoringMessages = {
   "settings.author.new": "Novo tema",
-  "settings.author.import": "Importar JSON de tema",
+  "settings.author.import": "Importar tema",
   "settings.author.edit": "Editar {name}",
   "settings.author.title": "Editar tema",
   "settings.author.name": "Nome do tema",
   "settings.author.newName": "Meu tema",
-  "settings.author.role": "Função da cor",
-  "settings.author.surface": "Superfície",
-  "settings.author.ansi": "Cores ANSI",
-  "settings.author.bright": "Cores ANSI claras",
+  "settings.author.role": "Cores",
   "settings.author.hex": "Hexadecimal de {color}",
   "settings.author.well": "Seletor de cor: {color}",
   "settings.author.filename": "Novo nome de arquivo",
@@ -116,12 +108,10 @@ export const brazilianPortugueseThemeAuthoringMessages = {
   "settings.author.appearance":
     "Cores extras de painéis e divisórias são mantidas.",
   "settings.author.preview": "Prévia",
-  "settings.author.samplesHint":
-    "Normal à esquerda, clara à direita. Clique em uma cor para editá-la.",
   "settings.author.selection": "Texto selecionado",
   "settings.author.cursor": "Amostra de cursor",
   "settings.author.invalid":
-    "Use um nome imprimível de 1–64 caracteres Unicode e #RRGGBB em todas as cores. Entradas incompletas são mantidas, mas não podem ser salvas ou exportadas.",
+    "Para salvar ou exportar, dê ao tema um nome de até 64 caracteres e a cada cor um valor #RRGGBB.",
   "settings.author.busy": "Processando…",
   "settings.author.saved":
     "Arquivo de tema salvo. Ainda não aplicado; use o tema salvo quando quiser.",

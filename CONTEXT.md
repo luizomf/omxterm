@@ -204,9 +204,9 @@ highlight. Omission retains defaults; null hides decorative paint, not separator
 keyboard-focus feedback or resizing. The bundled default is `omtheme`. Settings
 can discover and select validated local themes beside the logical configuration
 directory; the advanced custom path remains available. Development-source
-Settings also authors complete themes in one inline Appearance editor: a
-memory-only palette preview with readable names and grouped normal/Bright text
-samples and swatches, guarded local Save, new-file Save copy/import/export,
+Settings also authors complete themes in one Appearance editor that takes the
+theme list's place: a swatch for every color over a memory-only preview with
+grouped normal/Bright text samples, guarded local Save, new-file Save copy/import/export,
 and explicit Use saved theme through configuration reload. Optional appearance
 values are preserved even without controls; draft preview never changes sessions.
 Theme-file saving and configuration/application outcomes are separate.

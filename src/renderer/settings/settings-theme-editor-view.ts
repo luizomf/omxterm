@@ -31,17 +31,18 @@ interface ThemeEditorPresentation {
   readonly base: ThemeDocumentBase | undefined;
   readonly notice: ThemeEditorNotice | undefined;
   readonly valid: boolean;
-  readonly colorValid: boolean;
+  /** The color the field edits. */
+  readonly role: TerminalThemeColorKey;
+  /** Colors whose typed text is not a color yet. */
+  readonly invalidRoles: ReadonlySet<TerminalThemeColorKey>;
 }
 
 // Construction and painting only: document ownership, revisions and async
 // generations stay in the editor, not in DOM rebuilding or label callbacks.
-function buildThemeEditorView(
-  document: Document,
-  labels: ((t: Translate) => void)[],
-) {
+function buildThemeEditorView(document: Document) {
   const element = document.createElement("section");
   element.className = "settings-theme-authoring";
+  // New and Import start a draft, so they sit with the list's heading.
   const toolbar = document.createElement("div");
   toolbar.className = "settings-actions ui-actions";
   const create = createPageButton(document);
@@ -50,16 +51,17 @@ function buildThemeEditorView(
   const panel = document.createElement("section");
   panel.className = "settings-theme-editor";
   panel.hidden = true;
-  const heading = document.createElement("h4");
-  const source = document.createElement("p");
-  source.className = "settings-path";
-  const hint = document.createElement("p");
-  hint.className = "ui-hint settings-hint";
-  const appearance = document.createElement("p");
-  appearance.className = "ui-hint settings-hint";
+  const header = document.createElement("div");
+  header.className = "settings-theme-editor-header";
+  const heading = document.createElement("h3");
+  heading.id = "settings-theme-editor-title";
+  panel.setAttribute("aria-labelledby", heading.id);
+  const source = document.createElement("span");
+  source.className = "ui-meta settings-path";
+  header.append(heading, source);
   const field = (input: HTMLElement) => {
     const row = document.createElement("label");
-    row.className = "settings-row";
+    row.className = "settings-row ui-form-row";
     const label = document.createElement("span");
     label.className = "settings-control-caption";
     row.append(label, input);
@@ -70,45 +72,58 @@ function buildThemeEditorView(
   name.type = "text";
   name.spellcheck = false;
   const nameField = field(name);
-  const role = document.createElement("select");
-  for (const [key, keys] of [
-    ["settings.author.surface", TERMINAL_THEME_COLOR_KEYS.slice(0, 5)],
-    ["settings.author.ansi", TERMINAL_THEME_COLOR_KEYS.slice(5, 13)],
-    ["settings.author.bright", TERMINAL_THEME_COLOR_KEYS.slice(13)],
-  ] as const) {
-    const group = document.createElement("optgroup");
-    labels.push((t) => {
-      group.label = t(key);
+  // Every color at once: the surface colors, then each normal ANSI color
+  // directly above its bright variant. One radio group picks the color the
+  // field beside it edits.
+  const swatches = document.createElement("div");
+  swatches.className = "ui-swatch-grid";
+  swatches.setAttribute("role", "radiogroup");
+  const roles = [
+    TERMINAL_THEME_COLOR_KEYS.slice(0, 5),
+    TERMINAL_THEME_COLOR_KEYS.slice(5, 13),
+    TERMINAL_THEME_COLOR_KEYS.slice(13),
+  ].flatMap((keys) => {
+    const row = document.createElement("div");
+    row.className = "ui-swatch-row";
+    swatches.append(row);
+    return keys.map((key) => {
+      const swatch = document.createElement("label");
+      swatch.className = "ui-swatch";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "settings-theme-role";
+      radio.value = key;
+      swatch.append(radio);
+      row.append(swatch);
+      return { key, swatch, radio };
     });
-    for (const value of keys) {
-      const option = document.createElement("option");
-      option.value = value;
-      group.append(option);
-      labels.push((t) => {
-        option.textContent = t(`settings.author.color.${value}`);
-      });
-    }
-    role.append(group);
-  }
-  const roleField = field(role);
-  const colorControls = document.createElement("div");
-  colorControls.className = "settings-theme-color-controls";
+  });
+  const color = document.createElement("div");
+  color.className = "settings-theme-color";
+  const colorName = document.createElement("label");
+  const colorField = document.createElement("div");
+  colorField.className = "ui-color-field";
   const well = document.createElement("input");
   well.type = "color";
   well.className = "page-control";
   const hex = document.createElement("input");
   hex.type = "text";
+  hex.id = "settings-theme-hex";
   hex.className = "page-control settings-theme-hex";
   hex.spellcheck = false;
   hex.autocomplete = "off";
-  const hexField = field(hex);
-  colorControls.append(well, hexField.row);
+  colorName.htmlFor = hex.id;
+  colorField.append(well, hex);
+  color.append(colorName, colorField);
+  const colors = document.createElement("div");
+  colors.className = "settings-theme-colors";
+  colors.append(swatches, color);
   const invalid = document.createElement("p");
   invalid.className = "page-notice";
   invalid.setAttribute("role", "status");
-  const previewTitle = document.createElement("h4");
   const specimen = document.createElement("div");
   specimen.className = "settings-theme-specimen";
+  specimen.setAttribute("role", "group");
   const line = document.createElement("div");
   line.textContent = "~ $ demo   ";
   const signals = (["green", "yellow", "red"] as const).map((key, index) => {
@@ -137,34 +152,6 @@ function buildThemeEditorView(
       return { key, span };
     }),
   );
-  const samplesHint = document.createElement("p");
-  samplesHint.className = "ui-hint settings-hint";
-  const samples = document.createElement("ul");
-  samples.className = "settings-theme-ansi";
-  // One row per color: normal and bright swatches side by side. Picking one
-  // edits that role, the same as choosing it in the role list.
-  const ansi = TERMINAL_THEME_COLOR_KEYS.slice(5, 13).flatMap(
-    (normal, index) => {
-      const pair = document.createElement("li");
-      pair.className = "settings-theme-ansi-pair";
-      const name = document.createElement("span");
-      name.className = "settings-theme-ansi-name";
-      pair.append(name);
-      samples.append(pair);
-      return [normal, TERMINAL_THEME_COLOR_KEYS[13 + index]!].map((key) => {
-        const swatch = document.createElement("button");
-        swatch.type = "button";
-        swatch.className = "settings-theme-swatch";
-        swatch.dataset.role = key;
-        swatch.addEventListener("click", () => {
-          role.value = key;
-          role.dispatchEvent(new Event("change"));
-        });
-        pair.append(swatch);
-        return { key, name: key === normal ? name : undefined, swatch };
-      });
-    },
-  );
   specimen.append(line, selection, cursor, ansiText);
   const filename = document.createElement("input");
   filename.type = "text";
@@ -180,48 +167,45 @@ function buildThemeEditorView(
   const save = createPageButton(document, "primary");
   const copy = createPageButton(document);
   const exportButton = createPageButton(document);
+  const use = createPageButton(document);
   const cancel = createPageButton(document, "text");
   const reload = createPageButton(document, "text");
   reload.hidden = true;
   const actions = document.createElement("div");
   actions.className = "settings-actions ui-actions";
-  actions.append(save, copy, exportButton, cancel, reload);
-  const exportHint = document.createElement("p");
-  exportHint.className = "ui-hint settings-hint";
+  actions.append(save, copy, exportButton, use, cancel, reload);
+  // Export's promise stays attached to its button without a second sentence
+  // on the page: its description and its tooltip.
+  const exportHint = document.createElement("span");
+  exportHint.className = "ui-visually-hidden";
   exportHint.id = "settings-theme-export-hint";
   exportButton.setAttribute("aria-describedby", exportHint.id);
-  const use = createPageButton(document);
-  const useRow = document.createElement("div");
-  useRow.className = "settings-theme-use";
-  useRow.append(use);
+  const hint = document.createElement("p");
+  hint.className = "ui-hint settings-hint";
   const message = document.createElement("p");
   message.setAttribute("role", "status");
   panel.append(
-    heading,
-    source,
-    hint,
+    header,
     nameField.row,
-    roleField.row,
-    colorControls,
-    invalid,
-    previewTitle,
+    colors,
     specimen,
-    samplesHint,
-    samples,
-    appearance,
+    invalid,
     copyFields,
     actions,
     exportHint,
-    useRow,
+    hint,
   );
-  element.append(toolbar, panel, message);
+  element.append(panel, message);
   return {
     element,
+    toolbar,
     panel,
     create,
     importButton,
     name,
-    role,
+    swatches,
+    roles,
+    colorName,
     hex,
     well,
     filename,
@@ -236,19 +220,13 @@ function buildThemeEditorView(
     heading,
     source,
     hint,
-    appearance,
     nameField,
-    roleField,
-    hexField,
     invalid,
-    previewTitle,
-    samplesHint,
     specimen,
     selection,
     cursor,
     signals,
     ansiLines,
-    ansi,
     filenameField,
     filenameHint,
     exportHint,
@@ -268,8 +246,7 @@ function paintSpecimen(
   theme: TerminalTheme,
   t: Translate,
 ) {
-  view.previewTitle.textContent = t("settings.author.preview");
-  view.samplesHint.textContent = t("settings.author.samplesHint");
+  view.specimen.setAttribute("aria-label", t("settings.author.preview"));
   view.selection.textContent = t("settings.author.selection");
   view.cursor.setAttribute("aria-label", t("settings.author.cursor"));
   view.specimen.style.backgroundColor = theme.colors.background;
@@ -283,14 +260,22 @@ function paintSpecimen(
   view.ansiLines.forEach(({ key, span }) => {
     span.style.color = theme.colors[key];
   });
-  const selected = view.role.value;
-  view.ansi.forEach(({ key, name, swatch }) => {
-    // Names stay in interface colors; only the samples show draft contrast.
+}
+
+// A swatch always shows the last valid color; one whose typed text is not a
+// color yet is marked, so the notice's "every color" can be found.
+function paintSwatches(view: ThemeEditorView, state: ThemeEditorPresentation) {
+  const { t, theme } = state;
+  view.swatches.setAttribute("aria-label", t("settings.author.role"));
+  view.roles.forEach(({ key, swatch, radio }) => {
     const label = t(`settings.author.color.${key}`);
-    if (name) name.textContent = label;
-    swatch.setAttribute("aria-label", label);
+    radio.setAttribute("aria-label", label);
+    radio.checked = key === state.role;
+    radio.setAttribute(
+      "aria-invalid",
+      String(state.active && state.invalidRoles.has(key)),
+    );
     swatch.title = `${label} ${theme.colors[key]}`;
-    swatch.setAttribute("aria-pressed", String(key === selected));
     swatch.style.backgroundColor = theme.colors[key];
   });
 }
@@ -330,24 +315,29 @@ function paintThemeEditor(
   view.source.textContent = base
     ? displayPath(base.path)
     : t("settings.author.copySource");
-  view.hint.textContent = t("settings.author.draftHint");
-  view.appearance.hidden = theme.appearance === undefined;
-  view.appearance.textContent = t("settings.author.appearance");
+  view.hint.textContent =
+    t("settings.author.draftHint") +
+    (theme.appearance === undefined
+      ? ""
+      : ` ${t("settings.author.appearance")}`);
   view.nameField.label.textContent = t("settings.author.name");
-  view.roleField.label.textContent = t("settings.author.role");
-  const role = view.role.value as TerminalThemeColorKey;
-  const color = t(`settings.author.color.${role || "background"}`);
-  view.hexField.label.textContent = t("settings.author.hex", { color });
+  const color = t(`settings.author.color.${state.role}`);
+  view.colorName.textContent = color;
+  view.hex.setAttribute("aria-label", t("settings.author.hex", { color }));
   view.well.setAttribute("aria-label", t("settings.author.well", { color }));
   view.name.setAttribute(
     "aria-invalid",
     String(active && !isTerminalThemeName(view.name.value)),
   );
-  view.hex.setAttribute("aria-invalid", String(active && !state.colorValid));
+  view.hex.setAttribute(
+    "aria-invalid",
+    String(active && state.invalidRoles.has(state.role)),
+  );
   setPageNotice(view.invalid, {
     text: active && !valid ? t("settings.author.invalid") : "",
     severity: "warning",
   });
+  paintSwatches(view, state);
   paintSpecimen(view, theme, t);
   view.filenameField.label.textContent = t("settings.author.filename");
   view.filenameHint.textContent = t("settings.author.filenameHint");
@@ -356,10 +346,17 @@ function paintThemeEditor(
   view.exportButton.textContent = t("settings.author.export");
   view.cancel.textContent = t("common.cancel");
   view.reload.textContent = t("settings.author.reload");
+  // One main action: Save for a theme that has a file, Save copy for a draft
+  // that has none yet (new, built-in or imported).
+  view.save.hidden = view.use.hidden = !base;
+  view.copy.classList.toggle("page-button-primary", !base);
+  view.copy.classList.toggle("page-button-quiet", !!base);
   view.save.disabled = pending || !base || !valid;
   view.copy.disabled = view.exportButton.disabled = pending || !valid;
   view.reload.disabled = pending;
-  view.exportHint.textContent = t("settings.author.exportHint");
+  view.exportHint.textContent = view.exportButton.title = t(
+    "settings.author.exportHint",
+  );
   view.use.textContent = t("settings.author.use");
   view.use.disabled = pending || dirty || !base || !valid;
   paintNotice(view, state.notice, t);
@@ -367,10 +364,9 @@ function paintThemeEditor(
 
 export function createSettingsThemeEditorView(
   document: Document,
-  labels: ((t: Translate) => void)[],
   busyChanged: (busy: boolean) => void,
 ) {
-  const view = buildThemeEditorView(document, labels);
+  const view = buildThemeEditorView(document);
   return {
     ...view,
     paint: (state: ThemeEditorPresentation) =>

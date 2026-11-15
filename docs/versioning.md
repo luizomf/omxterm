@@ -286,6 +286,10 @@ Tab titles that name the shell's folder, quieter unselected tab titles and a
 full-width split focus line (#1182) move main to `0.37.0-dev.6`. Extension
 packages already on unpublished versions carry the stylesheet; none bumps.
 
+The Appearance theme list and theme editor redesign (#1184) moves main to
+`0.37.0-dev.7`. The stylesheet gains choice cards and swatches; extension
+packages already on unpublished versions carry it, and none bumps.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

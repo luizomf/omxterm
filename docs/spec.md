@@ -2476,15 +2476,19 @@ Format:
 Settings → Appearance picker:
 
 - Lists direct `themes/*.json` entries beside the logical configuration path
-  (linked directories and files included) by name and path, plus the built-in
-  default, so duplicate names stay distinct. Main validates candidates and
+  (linked directories and files included) by name, plus the built-in default.
+  A card adds its path only while another card on screen has the same name;
+  the path is always the card's tooltip. A listed file with the built-in
+  theme's name and summary colors (the copy first run writes) stands for the
+  built-in default, whose own card then shows only while the built-in is the
+  theme in use. The selected card is marked by its border alone. Main validates candidates and
   exposes bounded palette previews and diagnostics through the Settings bridge.
   The configured entry is matched by equivalent relative or absolute logical
   path; a path to some other alias is not assumed to identify one of several
   entries. Missing, empty, unreadable, invalid or truncated discovery is
   reported, never treated as the default. Discovery never modifies themes or
   changes relative-path semantics.
-- Refresh is explicit; there is no watcher. A scan reads at most 2,048
+- Refresh is explicit (an icon beside the heading); there is no watcher. A scan reads at most 2,048
   directory entries, 128 JSON candidates, 256 KiB per theme and 4 MiB of
   configuration, and reports truncation.
 - Selecting saves `theme.path` through the normal validation and reload path;
@@ -2495,10 +2499,16 @@ Settings → Appearance picker:
   are ordering barriers that coalescing never crosses. Superseded requests
   settle as superseded (not saved) with the winning request's snapshot; the
   winner keeps the normal save/error/application feedback. Closing Settings
-  keeps the final queued choice. A pending choice shows as saving; afterwards
+  keeps the final queued choice. A pending choice has a quieter border and is
+  announced as saving; afterwards
   cards show the saved configuration, which is not proof it applied.
 
-Theme editor (inline, retained):
+Theme editor (in place of the picker, retained):
+
+- While a draft is open the editor replaces the theme list and the other
+  Appearance settings; Cancel brings them back and returns focus to the control
+  that opened the draft. Each card's edit action is an icon button shown on
+  hover or focus.
 
 - New starts from the bundled palette; Edit rereads a card's full file without
   selecting it; Import copies a file picked through a window-owned native
@@ -2507,17 +2517,17 @@ Theme editor (inline, retained):
   target and is validated; unknown fields or versions and partial palettes are
   rejected, not repaired. The editor never rebuilds a theme from the picker's
   eight-color summary.
-- The name, a 21-role selector, a native color well and a hex field edit the
-  in-memory draft. Invalid input stays tied to its role across selection and
-  category or tab changes. Save, copy and export stay disabled until every
+- The name, a grid of 21 color swatches (one radio group), a native color well
+  and a hex field edit the in-memory draft. Picking a swatch points the well
+  and the hex field at that color. Invalid input stays tied to its role across
+  selection and category or tab changes, and its swatch is marked. Save, copy and export stay disabled until every
   visible or retained input is valid; the specimen uses the last valid colors.
 - The DOM preview shows foreground/background text, cursor, both selection
   colors and the 16 ANSI colors as two terminal-style text lines on the draft
-  background (each normal color directly above its bright variant). Below it,
-  one row per named color shows the normal and bright swatches side by side,
-  kept together as the grid reflows, plus a translated hint. Picking a swatch
-  selects that role for editing, like the role selector. Names stay in
-  interface colors; only sample paint reflects draft contrast. It is not a live
+  background (each normal color directly above its bright variant). Above it,
+  the swatch grid shows the five surface colors, then the normal ANSI colors
+  directly above their bright variants. Names stay in interface colors; only
+  sample paint reflects draft contrast. It is not a live
   Surface, PTY or desktop-effects simulation and never paints the document root
   or live configuration.
 - An omitted or empty `appearance`, hex and `null` values, and untouched color
@@ -2527,8 +2537,9 @@ Theme editor (inline, retained):
   portable OS-safe leaf name, no path or shell expansion) and never replaces an
   existing file; a successful copy becomes the base for later Saves.
 - Export publishes the captured valid draft through a window-owned native save
-  chooser without replacing anything; the UI says first that export never
-  replaces an existing file, even if the platform dialog offers replacement. Export returns no
+  chooser without replacing anything; the Export button's description and
+  tooltip say that export never replaces an existing file, even if the
+  platform dialog offers replacement. Export returns no
   writable base, changes no configuration and does not mark edits as saved.
 - Copy and export fail rather than clobber when no-replace linking is
   unavailable. Publication followed by a cleanup failure still counts as saved

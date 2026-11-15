@@ -116,6 +116,10 @@ take `color-scheme` from background luminance (light above 0.179).
 | `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency. The selected title is `--ui-text`, the rest `--ui-secondary`.                                                                                                                                                    |
 | `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                                                                                                                                                                                                                                     |
 | `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                                                                                                                                                                                                                               |
+| `ui-choice` + `ui-choice-card`      | One of several things picked by how they look (themes). The card is a radio; the picked one has the text-colored border and nothing else. See [Choice cards and swatches](#choice-cards-and-swatches).                                                                                                                                 |
+| `ui-choice-action`                  | The one icon button over a choice card's top corner (edit). With `ui-reveal` it waits for hover or focus.                                                                                                                                                                                                                              |
+| `ui-swatch-grid` + `ui-swatch`      | Colors to pick from, as rows of 28 px samples in one radio group. A ring marks the one being edited, a dashed ring one whose value isn't valid.                                                                                                                                                                                        |
+| `ui-color-field`                    | A color's two fields on one line: the native well, then its hex text. 280 px like any field.                                                                                                                                                                                                                                           |
 | `ui-chip`                           | A key binding or short literal value.                                                                                                                                                                                                                                                                                                  |
 | `ui-shortcut`                       | A key binding in a list row, as quiet secondary text (`⇧ ⌘ =` on macOS, `Ctrl+Shift+=` elsewhere), not boxed.                                                                                                                                                                                                                          |
 | `ui-dialog`                         | Modal overlays (About, Command Palette, previews, extension setup). Clear backdrop; the rest of the window softens.                                                                                                                                                                                                                    |
@@ -176,6 +180,7 @@ close.title = t("common.close"); // and so does the tooltip
 | `arrow-up`, `arrow-down`        | Previous or next match; `arrow-up` also "parent folder" |
 | `arrow-right`                   | Go                                                      |
 | `house`                         | Home folder                                             |
+| `pencil`                        | Edit this item (a theme card)                           |
 | `refresh-cw`                    | Reload from the source                                  |
 | `folder-plus`                   | New folder                                              |
 | `ellipsis`                      | More actions (opens a menu)                             |
@@ -212,6 +217,8 @@ extension view reports through its page notice instead.
 | Actions on a row               | A `ui-form-value` holding a `ui-actions ui-actions-dense` of `"text"` buttons, then the row's value. Add `ui-reveal` to the ones that can wait for hover or focus; leave visible only what also tells the user something (Reset on a changed row). |
 | A list to pick from            | `<ul class="ui-list">` of `<li>`/`<button class="ui-row">`; mark the choice with `aria-selected="true"`. One line per row, truncated with an ellipsis; details go in a `ui-meta` span at the end.                                                  |
 | Navigation between sections    | `<nav class="ui-nav">` of buttons; the current one has `aria-selected` or `aria-pressed`.                                                                                                                                                          |
+| A choice between looks         | A `role="radiogroup"` grid of `ui-choice` cards. See [Choice cards and swatches](#choice-cards-and-swatches).                                                                                                                                      |
+| A set of colors to edit        | A `ui-swatch-grid` beside one `ui-color-field` for the picked color, over a live sample. Never one dropdown that hides the others.                                                                                                                 |
 | A key or literal value         | `<kbd class="ui-chip">`.                                                                                                                                                                                                                           |
 | A page                         | `createApplicationPage(document, { title, actions, navigation, notice, content, status })`. The first child of `content` may be one `ui-hint` sentence.                                                                                            |
 | A side-panel tool              | An extension panel view: `<html class="ui-on-tint">`, CSS starts with `@import "../shared/appearance.css";`, body is a compact page. No title, no header, no border: the host draws the `ui-panel-header` with Hide and Close.                     |
@@ -284,6 +291,52 @@ form.append(row, group);
 - **A labelled field outside a form** (a dialog, a panel, an editor) puts the
   name above the field: a `<label>` with `display: grid; gap: 4px`.
 
+## Choice cards and swatches
+
+A **choice card** is for picking one of several things you recognise by
+sight. Its picture is the content, so the selection is the border: no fill,
+no "Selected" word, no badge. The card's name is one truncated line; add a
+`ui-meta` line under it only to tell two same-named cards apart, and put the
+rest in the card's `title`.
+
+```ts
+const entry = document.createElement("div");
+entry.className = "ui-choice";
+const card = document.createElement("label");
+card.className = "ui-choice-card";
+const radio = document.createElement("input");
+radio.type = "radio";
+radio.name = "theme"; // one name per group; the group has role="radiogroup"
+const body = document.createElement("span");
+body.className = "ui-choice-body"; // the picture, then the name
+card.append(radio, body);
+
+// The card's one action is a sibling of the label, never inside it.
+const edit = document.createElement("button");
+edit.type = "button";
+edit.className = "ui-icon-button ui-choice-action ui-reveal";
+setIcon(edit, "pencil");
+edit.title = t("settings.author.edit", { name });
+edit.setAttribute("aria-label", edit.title);
+entry.append(card, edit);
+```
+
+Set `aria-busy="true"` on the card while its choice is being saved: the border waits
+one tier quieter.
+
+A **swatch grid** shows every color of a set at once. Each `ui-swatch` is a
+`<label>` painted with its color (`style.backgroundColor`, the one place a
+literal color is right) around a radio whose `aria-label` is the color's
+name; its `title` adds the value. Rows are `ui-swatch-row`s, eight swatches
+at most, with related colors in the same column. Picking a swatch points the
+single `ui-color-field` beside the grid at that color; a value that isn't a
+color yet sets `aria-invalid="true"` on the radio and the swatch keeps its
+last valid paint.
+
+When a view takes over a list (the theme editor), it replaces the list in
+place: same heading position, the list hidden, **Cancel** to go back. It
+doesn't open under the list.
+
 ## Do and don't
 
 - **Don't build a Christmas tree.** Each feature adding its own strip, badge,
@@ -301,7 +354,8 @@ form.append(row, group);
   cards. Weight 600 and the fill tiers carry emphasis.
 - **Don't confirm the obvious.** No "Saved!" when the thing visibly changed.
 - **Do** keep hover and selection as fills, focus as the outline, and borders
-  for fields only.
+  for fields only. A choice card is the one exception: its picture fills it,
+  so its selection is its border.
 - **Do** keep every control 28 px and every text 13 px. A bigger button or a
   bolder border is never how one surface gets attention.
 - **Do** check the surface on opaque black, on a transparent window and on a
@@ -332,7 +386,11 @@ elsewhere); Change and Remove appear on hover or focus, and Reset shows only
 on a row the user changed, which is also how such a row is told apart. A
 search `page-control` above the rows filters them, and an empty result is one
 `ui-hint` line. Extensions lists installed extensions as `ui-row`s with
-`-text` actions and official extensions as `ui-card`s.
+`-text` actions and official extensions as `ui-card`s. Appearance starts
+with the themes: a heading with Refresh as an icon beside it, New theme and
+Import theme at the end of that line, then a grid of choice cards. Editing a
+theme takes the page: its name, a swatch grid with the picked color's field,
+a live sample, then the actions with one primary button.
 
 **Auxiliary panel.** 13 px text on a 15 % neutral layer, separated from the
 terminal by a hairline. The header holds the tool name, or a single-line
