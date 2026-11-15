@@ -23,6 +23,14 @@ const family =
     : process.platform === "win32"
       ? "Consolas"
       : "DejaVu Sans Mono";
+// On Windows, installed-font discovery runs several PowerShell lookups that
+// take seconds on a cold system and have their own timeouts. Finish it before
+// the timed mount step, which measures the Surface.
+let fontData: ReturnType<typeof loadTerminalFontData> | undefined;
+const loadFonts = () => (fontData ??= loadTerminalFontData(family));
+const fontsBeforeMount = async (configured: boolean) => {
+  if (configured) await loadFonts();
+};
 interface Phase {
   cellWidth: number;
   cellHeight: number;
@@ -252,7 +260,7 @@ async function run() {
     await mkdir(path.join(root, name), { recursive: true });
     app.setPath(name, path.join(root, name));
   }
-  ipcMain.handle("fonts", () => loadTerminalFontData(family));
+  ipcMain.handle("fonts", loadFonts);
   await app.whenReady();
   const window = new BrowserWindow({
     width: 900,
@@ -294,6 +302,7 @@ async function run() {
   const { combinations, lifecycles } = cursorScenario(control);
   for (const [configured, padding] of combinations) {
     context = cursorContext(dpr, configured, padding, "mount");
+    await fontsBeforeMount(configured);
     await execute(`mount(${configured}, ${padding})`, "mount");
     if (control === "native-input") {
       await runCursorStep(
