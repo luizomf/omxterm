@@ -1437,14 +1437,17 @@ startup, shell exit, tab close and renderer-loss cleanup.
   names or substitution.
 - Missing styles use Restty's synthesis. Bold-italic may use a same-family bold
   or italic face; regular, bold-only and italic-only text never gain an
-  unrequested trait. Non-default variable-font instances are not materialized,
-  so a style that needs them is synthesized and the regular family still works.
+  unrequested trait. Bold and italic variable-font instances are not
+  materialized, so a style that needs them is synthesized and the regular family
+  still works.
 - Synthetic bold thickens monochrome strokes in both directions, also over a
   real italic face. Extra ink stays inside the cell and keeps any italic
   overhang. It does not change cell layout, ANSI colors, real bold faces, color
   emoji, or regular and italic-only text. Pixel parity with native rasterizers
   is not promised.
 - Missing glyphs use the regular fallback faces.
+- Variable CFF2 faces, such as the `Noto Sans CJK` collection Fedora installs,
+  draw at Regular weight (`wght` 400), whatever their default master.
 - Compatible tabs share native font bytes and parsed faces; faces in one
   collection share its buffer. Apple Color Emoji reaches Restty as memory-only
   shaping input without the unused `sbix` bitmap table, keeping every face and
