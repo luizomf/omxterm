@@ -26,6 +26,41 @@ import {
 } from "./restty-local-image-reference";
 import { clickTerminalCell, scrollTerminal } from "./restty-link-gestures";
 
+// Clicks resolve against the last rendered cells, and a busy renderer can draw
+// after any fixed delay. Deliver ASCII output at cell zero and wait until a
+// submitted frame shows it.
+async function deliverUntilRendered(
+  {
+    window,
+    deliverOutput,
+    waitFor,
+  }: Pick<
+    Parameters<typeof exerciseResttyLocalImageLinks>[0],
+    "window" | "deliverOutput" | "waitFor"
+  >,
+  text: string,
+  label: string,
+) {
+  const destination = `[...document.querySelectorAll('.restty-terminal-surface canvas')].find(c => c.getBoundingClientRect().width > 0)?.__resttyLinkDestinationFixture`;
+  await window.webContents.executeJavaScript(
+    `${destination}.prepare(${JSON.stringify(text)})`,
+    true,
+  );
+  deliverOutput(`\u001b[3J\u001b[2J\u001b[H${text}`);
+  try {
+    await waitFor(
+      () =>
+        window.webContents.executeJavaScript(
+          `${destination}.snapshot()?.matches === true`,
+          true,
+        ),
+      label,
+    );
+  } finally {
+    await window.webContents.executeJavaScript(`${destination}?.clear()`, true);
+  }
+}
+
 export function fixtureLocalImageLoader(
   window: BrowserWindow,
   root: string,
@@ -245,8 +280,7 @@ export async function exerciseResttyLocalImageLinks(options: {
 
       // A printed trailing space is not blank cell padding: retain token grammar
       // rather than silently opening the existing full spaced file.
-      deliverOutput(`\u001b[3J\u001b[2J\u001b[H${shortPath} `);
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await deliverUntilRendered(options, `${shortPath} `, "trailing path");
       const beforeTrailing = options.localImageRequests.length;
       await clickTerminalCell(window, 0, 2, options.resizes.at(-1)!);
       await waitFor(
