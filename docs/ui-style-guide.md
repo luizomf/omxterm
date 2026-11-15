@@ -113,7 +113,7 @@ take `color-scheme` from background luminance (light above 0.179).
 | `ui-field-group`                    | Several small fields that make one setting, on one row (the four sides of the terminal padding). Each is a `<label>` holding a `ui-meta` name and its field.                                                                                                                                                                           |
 | `ui-reveal`                         | Add to a row's action buttons that should wait out of sight: they show while the row is hovered, holds focus or has `is-active`. They keep their space and their place in the tab order.                                                                                                                                               |
 | `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.                                                                                                                                                                                                                        |
-| `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency.                                                                                                                                                                                                                  |
+| `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency. The selected title is `--ui-text`, the rest `--ui-secondary`.                                                                                                                                                    |
 | `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                                                                                                                                                                                                                                     |
 | `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                                                                                                                                                                                                                               |
 | `ui-chip`                           | A key binding or short literal value.                                                                                                                                                                                                                                                                                                  |
@@ -315,7 +315,9 @@ form.append(row, group);
 side insets follow the terminal's left and right padding (never under 8 px),
 so the first tab lines up with the prompt. The
 Linux/Windows title bar (`window-chrome.css`) uses 13 px text. Pane dividers
-are 1 px hairlines; the focused pane in a split gets a 1 px accent line on top.
+are 1 px hairlines; the focused pane in a split gets a 1 px accent line across its full top edge.
+The selected tab's title is full text color; the others are one tier down
+(`--ui-secondary`).
 Default terminal padding is 12 px.
 
 **Settings.** An 18 px title and Close above a hairline. A flat `ui-nav`.

@@ -117,6 +117,23 @@ describe("native Terminal Title and bell attention", () => {
     expect(harness.chromeTitle).not.toHaveBeenCalled();
   });
 
+  it("names a tab after its folder until the shell sets a title", () => {
+    const h = createControllerHarness();
+    h.controller.sessionStarted("s1");
+    h.controller.selectSession("s1");
+    h.controller.setFolder("s1", "project");
+    expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "project");
+    expect(h.chromeTitle).toHaveBeenLastCalledWith("project");
+    h.controller.requestTitle("s1", "vim notes");
+    h.controller.setFolder("s1", "other");
+    expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "vim notes");
+    h.controller.requestTitle("s1", "");
+    expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "other");
+    h.controller.setFolder("s1", undefined);
+    expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "example-shell");
+    h.controller.dispose();
+  });
+
   it("removes all C0, C1, DEL, and Bidi_Control characters", () => {
     const controls = [
       ...Array.from({ length: 0x20 }, (_, value) => value),

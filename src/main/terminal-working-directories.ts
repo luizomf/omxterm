@@ -1,5 +1,6 @@
 import { realpathSync, statSync } from "node:fs";
 import { hostname } from "node:os";
+import { posix, win32 } from "node:path";
 import { isLayoutPath } from "../shared/terminal-layout";
 import {
   createProcessDirectoryReader,
@@ -259,4 +260,19 @@ function resolvedDirectory(path: string): string {
   } catch {
     return path;
   }
+}
+
+// The short name a tab shows for a shell's folder: the last path segment, "~"
+// for the home folder, and the path itself for a filesystem root.
+export function folderDisplayName(
+  directory: string,
+  homeDirectory: string | undefined,
+  platform: string = process.platform,
+): string {
+  const path = platform === "win32" ? win32 : posix;
+  const trim = (value: string) =>
+    value.length > 1 ? value.replace(/[\\/]+$/u, "") : value;
+  const folder = trim(directory);
+  if (homeDirectory !== undefined && folder === trim(homeDirectory)) return "~";
+  return path.basename(folder) || folder;
 }

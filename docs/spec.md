@@ -241,8 +241,8 @@ are the job of a session manager such as tmux.
   terminal-directed action, and supplies the tab and window title. Explicit
   [Mirror Typing](#mirror-typing) also routes genuine keyboard bytes to its fixed
   members; all other input stays single-target.
-- In a split tab, the only focus marker is a 1 px top line inset by the Surface's
-  left/right padding, with no side/bottom ring and no dimming of other panes. It
+- In a split tab, the only focus marker is a 1 px top line across the pane's full
+  width (so a stacked split lights up its divider), with no side/bottom ring and no dimming of other panes. It
   is a non-intercepting overlay above the terminal canvas (including opaque
   first-row backgrounds at zero top padding) and below app overlays.
 - The marker uses the theme's cyan. If that contrasts below 3:1 with the

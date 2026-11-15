@@ -1,6 +1,9 @@
 import { expect, it, vi } from "vitest";
 import { createProcessDirectoryReader } from "../../src/main/process-working-directory";
-import { createWorkingDirectoryTracker } from "../../src/main/terminal-working-directories";
+import {
+  createWorkingDirectoryTracker,
+  folderDisplayName,
+} from "../../src/main/terminal-working-directories";
 
 it("reads each shell's cwd from /proc on Linux", async () => {
   const readLink = vi.fn(async (path: string) => {
@@ -162,4 +165,15 @@ it("keeps a reopened pane's missing folder while its shell stays where it starte
     kind: "reported-local",
     path: "/tmp",
   });
+});
+
+it("shows a folder as its last name, the home folder as ~", () => {
+  expect(folderDisplayName("/home/me/project", "/home/me", "linux")).toBe(
+    "project",
+  );
+  expect(folderDisplayName("/home/me/", "/home/me", "linux")).toBe("~");
+  expect(folderDisplayName("/", "/home/me", "linux")).toBe("/");
+  expect(
+    folderDisplayName("C:\\Users\\me\\src", "C:\\Users\\me", "win32"),
+  ).toBe("src");
 });

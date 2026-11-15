@@ -60,7 +60,10 @@ import {
   throwSessionStartError,
 } from "./terminal-session-failure";
 import { isTerminalRendererConfiguration } from "../shared/user-configuration";
-import { createWorkingDirectoryTracker } from "./terminal-working-directories";
+import {
+  createWorkingDirectoryTracker,
+  folderDisplayName,
+} from "./terminal-working-directories";
 import { createCommandMarks } from "./command-marks";
 import {
   restoredDirectory,
@@ -390,6 +393,9 @@ export function registerTerminalIpcRouter(
   };
 }
 
+// How long a session's output stays quiet before its folder is looked up.
+const FOLDER_LOOKUP_QUIET_MS = 1000;
+
 interface RoutedSessionState {
   readonly session: LocalTerminalSession;
   readonly terminalSurfaceFontConfiguration?: TerminalSurfaceFontConfiguration;
@@ -502,6 +508,39 @@ function createTerminalIpcController(
     show: options.showClipboardContextMenu,
   });
   const workingDirectories = createWorkingDirectoryTracker();
+  // A tab shows its shell's folder until the shell sets a title. An OSC 7
+  // report is read for free; without one the shell's own folder is looked up
+  // once its output has been quiet for a moment.
+  const folders = new Map<TerminalSessionId, string>();
+  const folderLookups = new Map<
+    TerminalSessionId,
+    ReturnType<typeof setTimeout>
+  >();
+  const announceFolder = (sessionId: TerminalSessionId) => {
+    if (disposed) return;
+    const where = workingDirectories.provenance(sessionId);
+    const folder =
+      where.kind === "reported-local"
+        ? folderDisplayName(where.path, options.homeDirectory)
+        : undefined;
+    if (folders.get(sessionId) === folder) return;
+    if (folder === undefined) folders.delete(sessionId);
+    else folders.set(sessionId, folder);
+    options.onFolderChange?.(sessionId, folder);
+  };
+  const scheduleFolderLookup = (sessionId: TerminalSessionId) => {
+    if (!workingDirectories.readsProcess(sessionId)) return;
+    clearTimeout(folderLookups.get(sessionId));
+    const timer = setTimeout(() => {
+      folderLookups.delete(sessionId);
+      if (disposed || !sessions.has(sessionId)) return;
+      void workingDirectories
+        .refresh([sessionId])
+        .then(() => announceFolder(sessionId));
+    }, FOLDER_LOOKUP_QUIET_MS);
+    timer.unref?.();
+    folderLookups.set(sessionId, timer);
+  };
   // SSH Connect panes too: a remote shell's marks are its commands.
   const commandMarks = createCommandMarks();
   const agentObservers = new Set<AgentSessionObserver>();
@@ -564,7 +603,11 @@ function createTerminalIpcController(
               else ownerLostBeforeRegistration = true;
               return;
             }
-            if (!ssh) workingDirectories.observe(sessionId, data);
+            if (!ssh) {
+              workingDirectories.observe(sessionId, data);
+              announceFolder(sessionId);
+              scheduleFolderLookup(sessionId);
+            }
             options.onLayoutActivity?.();
             const outputEnd = outputFlow.record(data);
             if (outputEnd === undefined) {
@@ -624,6 +667,9 @@ function createTerminalIpcController(
               );
               if (state?.terminalSurfaceFontConfiguration)
                 options.onSurfaceFontConfigurationsChanged?.();
+              clearTimeout(folderLookups.get(sessionId));
+              folderLookups.delete(sessionId);
+              folders.delete(sessionId);
               workingDirectories.forget(sessionId);
               commandMarks.forget(sessionId);
             }

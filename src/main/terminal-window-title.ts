@@ -46,6 +46,9 @@ export interface TerminalWindowTitleController {
   selectSession(sessionId: TerminalSessionId | null): void;
   selectSettings(title: string): void;
   syncSessionTitle(sessionId: TerminalSessionId): void;
+  // The folder the session's shell is in, or undefined when unknown. It names
+  // the tab until the shell sets a title of its own.
+  setFolder(sessionId: TerminalSessionId, folder: string | undefined): void;
   requestTitle(sessionId: TerminalSessionId, request: string): void;
   // inSelectedTab: the session is a pane of the selected tab, so it is on
   // screen. It defaults to whether it is the selected tab's focused pane.
@@ -88,6 +91,7 @@ export function sanitizedTerminalTitle(request: string): string | undefined {
 
 interface SessionTitleState {
   title: string | undefined;
+  folder: string | undefined;
   fallbackTitle: string;
   attentionPending: boolean;
 }
@@ -108,7 +112,7 @@ export function createTerminalWindowTitleController(
   const onRejected = options.onRejected ?? (() => {});
 
   const displayTitle = (state: SessionTitleState) =>
-    state.title ?? state.fallbackTitle;
+    state.title ?? state.folder ?? state.fallbackTitle;
 
   const pushSessionTitle = (sessionId: TerminalSessionId) => {
     const state = sessions.get(sessionId);
@@ -186,6 +190,7 @@ export function createTerminalWindowTitleController(
       if (disposed) return;
       sessions.set(sessionId, {
         title: undefined,
+        folder: undefined,
         fallbackTitle: fallbackSessionTitle ?? options.fallbackSessionTitle,
         attentionPending: false,
       });
@@ -217,6 +222,18 @@ export function createTerminalWindowTitleController(
       // Publish the current value on the same ordered stream as OSC/BEL updates;
       // a start-time snapshot could overwrite a newer accepted title.
       if (!disposed) pushSessionTitle(sessionId);
+    },
+    setFolder(sessionId, folder) {
+      if (disposed) return;
+      const state = sessions.get(sessionId);
+      const accepted =
+        folder === undefined ? undefined : sanitizedTerminalTitle(folder);
+      if (!state || state.folder === accepted) return;
+      state.folder = accepted;
+      // A title the shell set still wins; the folder only fills in behind it.
+      if (state.title !== undefined) return;
+      pushSessionTitle(sessionId);
+      if (sessionId === selectedSessionId) updateWindowTitle();
     },
     requestTitle(sessionId, request) {
       if (disposed) return;

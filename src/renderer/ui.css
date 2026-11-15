@@ -559,7 +559,7 @@ textarea.page-control {
   padding: 4px 12px;
   overflow: hidden;
   font: inherit;
-  color: var(--ui-text);
+  color: var(--ui-secondary);
   text-overflow: ellipsis;
   white-space: nowrap;
   background: color-mix(
@@ -578,6 +578,7 @@ textarea.page-control {
   );
 }
 .ui-tab[aria-selected="true"] {
+  color: var(--ui-text);
   box-shadow: inset 0 -1px
     rgb(
       from var(--ui-text) r g b /
