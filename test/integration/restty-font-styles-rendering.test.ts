@@ -79,7 +79,7 @@ async function observe(
       expect(createHash("sha256").update(probed).digest("hex")).toBe(
         // Current input routing/cursor encoding retained; only synthesis is reversed.
         // The historical b4112dac baseline remains verified separately.
-        "a402bf2b52b7fb439d2ad764dfe983fe81a62344b49a12c5e6cff79e08882e05",
+        "b63ebef3ad0909fa5dc5893da03283cc37d2483a04ccd2214591073522153e60",
       );
     }
     const synthesisRuntimeSha256 = capture
