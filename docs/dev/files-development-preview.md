@@ -287,8 +287,8 @@ The AppImage is extracted, not modified.
   Network shares (`\\server\share`) browse like drives, but the host's
   move and trash take drive paths only, so they refuse share paths (and shares
   have no Recycle Bin).
-- Files 0.9.2 passed the packaged smoke (list, insert, rename, trash) on the
-  published 0.35.0 and the 0.36.0 release builds for macOS, Linux ARM64 and
+- Files 0.9.3 passed the packaged smoke (list, insert, rename, trash) on the
+  published 0.36.0 and the 0.36.1 release builds for macOS, Linux ARM64 and
   Windows ARM64. On a 0.27.0 Windows ARM64 host it lists and inserts, but
   rename reports unsupported. Linux x64 and Windows x64 are build-only: hosted CI runs
   the native move and Recycle Bin tests, never a desktop. Native drag onto the
