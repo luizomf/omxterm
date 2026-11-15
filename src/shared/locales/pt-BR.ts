@@ -243,7 +243,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.page.appearance": "Aparência",
   "settings.page.terminal": "Terminal",
   "settings.page.window": "Janela",
-  "settings.page.file": "Arquivo de config.",
+  "settings.page.file": "Arquivo",
   "settings.page.extensions": "Extensões",
   "extensions.heading": "Extensões",
   "extensions.snippetsOptional":
