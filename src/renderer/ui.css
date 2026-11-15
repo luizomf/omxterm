@@ -349,6 +349,12 @@ textarea.page-control {
 .ui-switcher > .ui-icon-button[aria-pressed="true"]:hover:not(:disabled) {
   color: var(--ui-text);
   background: var(--ui-control-selected);
+  /* Like a tab: an underline takes over as transparency thins the fill. */
+  box-shadow: inset 0 -1px
+    rgb(
+      from var(--ui-text) r g b /
+        calc(1 - var(--terminal-background-opacity, 1))
+    );
 }
 /* A view with no icon: the first letter of its name, in an icon's box. */
 .ui-monogram {
