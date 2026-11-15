@@ -38,14 +38,14 @@ async function prepared() {
 describe("pinned public archive and narrow package resources", () => {
   it("pins actual immutable public0.1 bytes, independent of mutable catalogs and source rebuilds", async () => {
     const bytes = await readDefaultSnippets(publicArchive);
-    expect(bytes.length).toBe(84036);
+    expect(bytes.length).toBe(84262);
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(
-      "6470985017cad22e6ed1be5cb047fde3ad90d2a3563cf068c57ea930991b28bc",
+      "beac01d870cefc961d733612ae71d22c008788da942db1387b0000924d111194",
     );
     expect(defaultSnippets).toMatchObject({
       id: "omxterm.snippets",
-      version: "0.1.5",
-      sourceCommit: "c51517aa4ebd9f959bb7b97062349c40ea194717",
+      version: "0.1.6",
+      sourceCommit: "77d3eeb3b5bfb080ca7a322f95484253beac0f57",
     });
     for (const platform of ["linux", "darwin", "win32"])
       for (const arch of ["arm64", "x64"])
@@ -179,7 +179,7 @@ describe("pinned public archive and narrow package resources", () => {
     const forbidden = [
       exact + ".json",
       exact + ".sha256",
-      exact.replace("snippets-0.1.5", "snippets-0.2.0"),
+      exact.replace("snippets-0.1.6", "snippets-0.2.0"),
       "/dist/default-snippets/linux-arm64/bundled-snippets/" +
         defaultSnippets.filename,
       exact.replace("/resources/", "/elsewhere/resources/"),
