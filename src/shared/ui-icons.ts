@@ -19,6 +19,7 @@ const icons = {
   "chevron-down": ["m6 9 6 6 6-6"],
   "chevron-right": ["m9 18 6-6-6-6"],
   "circle-small": [["circle", { cx: "12", cy: "12", r: "6" }]],
+  code: ["m16 18 6-6-6-6", "m8 6-6 6 6 6"],
   "corner-down-left": ["M20 4v7a4 4 0 0 1-4 4H4", "m9 10-5 5 5 5"],
   copy: [
     ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" }],
@@ -35,6 +36,9 @@ const icons = {
   file: [
     "M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z",
     "M14 2v5a1 1 0 0 0 1 1h5",
+  ],
+  folder: [
+    "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z",
   ],
   "folder-plus": [
     "M12 10v6",
@@ -59,6 +63,12 @@ const icons = {
     "M21 3v5h-5",
     "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16",
     "M8 16H3v5",
+  ],
+  server: [
+    ["rect", { width: "20", height: "8", x: "2", y: "2", rx: "2", ry: "2" }],
+    ["rect", { width: "20", height: "8", x: "2", y: "14", rx: "2", ry: "2" }],
+    ["line", { x1: "6", x2: "6.01", y1: "6", y2: "6" }],
+    ["line", { x1: "6", x2: "6.01", y1: "18", y2: "18" }],
   ],
   square: [["rect", box]],
   "square-check": [["rect", box], "m16 9-5.5 5.5L8 12"],

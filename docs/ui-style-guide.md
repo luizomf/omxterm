@@ -112,9 +112,10 @@ take `color-scheme` from background luminance (light above 0.179).
 | `ui-form-value`                     | The end of a row that shows a value with actions: the actions, then the value at the right edge (a shortcut's keys). They wrap together.                                                                                                                                                                                               |
 | `ui-field-group`                    | Several small fields that make one setting, on one row (the four sides of the terminal padding). Each is a `<label>` holding a `ui-meta` name and its field.                                                                                                                                                                           |
 | `ui-reveal`                         | Add to a row's action buttons that should wait out of sight: they show while the row is hovered, holds focus or has `is-active`. They keep their space and their place in the tab order.                                                                                                                                               |
-| `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.                                                                                                                                                                                                                        |
+| `ui-nav`                            | Navigation (Settings categories). Only the selected item gets a fill and 600 weight.                                                                                                                                                                                                                                                   |
+| `ui-switcher` (+ `ui-monogram`)     | A row of `ui-icon-button`s that shows one of a few views at a time (the side panel's tools). The current one is `--ui-text` on the control fill, the rest `--ui-secondary` with no fill. A view without an icon gets a `ui-monogram`: the first letter of its name.                                                                    |
 | `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency. The selected title is `--ui-text`, the rest `--ui-secondary`.                                                                                                                                                    |
-| `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                                                                                                                                                                                                                                     |
+| `ui-panel-header`                   | The header row of a side panel or hosted dialog: a `ui-switcher` or a truncating title, then icon buttons.                                                                                                                                                                                                                             |
 | `ui-card`                           | A raised block that groups one item (a catalog entry, a saved snapshot).                                                                                                                                                                                                                                                               |
 | `ui-choice` + `ui-choice-card`      | One of several things picked by how they look (themes). The card is a radio; the picked one has the text-colored border and nothing else. See [Choice cards and swatches](#choice-cards-and-swatches).                                                                                                                                 |
 | `ui-choice-action`                  | The one icon button over a choice card's top corner (edit). With `ui-reveal` it waits for hover or focus.                                                                                                                                                                                                                              |
@@ -182,6 +183,7 @@ close.title = t("common.close"); // and so does the tooltip
 | `house`                         | Home folder                                             |
 | `pencil`                        | Edit this item (a theme card)                           |
 | `refresh-cw`                    | Reload from the source                                  |
+| `folder`, `code`, `server`      | Side-panel tools: Files, Snippets, SSH Connect          |
 | `folder-plus`                   | New folder                                              |
 | `ellipsis`                      | More actions (opens a menu)                             |
 | `square-check`, `square`        | A checked or unchecked menu item                        |
@@ -217,11 +219,12 @@ extension view reports through its page notice instead.
 | Actions on a row               | A `ui-form-value` holding a `ui-actions ui-actions-dense` of `"text"` buttons, then the row's value. Add `ui-reveal` to the ones that can wait for hover or focus; leave visible only what also tells the user something (Reset on a changed row). |
 | A list to pick from            | `<ul class="ui-list">` of `<li>`/`<button class="ui-row">`; mark the choice with `aria-selected="true"`. One line per row, truncated with an ellipsis; details go in a `ui-meta` span at the end.                                                  |
 | Navigation between sections    | `<nav class="ui-nav">` of buttons; the current one has `aria-selected` or `aria-pressed`.                                                                                                                                                          |
+| A switch between a few views   | `<nav class="ui-switcher">` with an `aria-label`, holding one `ui-icon-button` per view: `setIcon()`, `aria-label` and `title` with the view's name, `aria-pressed` on the current one. No words, no title beside it.                              |
 | A choice between looks         | A `role="radiogroup"` grid of `ui-choice` cards. See [Choice cards and swatches](#choice-cards-and-swatches).                                                                                                                                      |
 | A set of colors to edit        | A `ui-swatch-grid` beside one `ui-color-field` for the picked color, over a live sample. Never one dropdown that hides the others.                                                                                                                 |
 | A key or literal value         | `<kbd class="ui-chip">`.                                                                                                                                                                                                                           |
 | A page                         | `createApplicationPage(document, { title, actions, navigation, notice, content, status })`. The first child of `content` may be one `ui-hint` sentence.                                                                                            |
-| A side-panel tool              | An extension panel view: `<html class="ui-on-tint">`, CSS starts with `@import "../shared/appearance.css";`, body is a compact page. No title, no header, no border: the host draws the `ui-panel-header` with Hide and Close.                     |
+| A side-panel tool              | An extension panel view: `<html class="ui-on-tint">`, CSS starts with `@import "../shared/appearance.css";`, body is a compact page. No title, no header, no border: the host draws the `ui-panel-header` with the tool's icon, Hide and Close.    |
 | A short task over the terminal | An extension dialog view (same setup as a panel view). The host draws the `ui-dialog`, its title and Close; the view ends in a `ui-actions` with the primary button.                                                                               |
 | A result on the page           | `setPageNotice(element, { text, severity })` on one retained element with `role="status"`. Nothing for success unless the action has no other visible result.                                                                                      |
 | A toast (core only)            | `stateMarks.flash(text)`: one sentence, gone in 4 s ("Layout saved."). Something the user must deal with: `stateMarks.notify(text)`.                                                                                                               |
@@ -393,10 +396,12 @@ theme takes the page: its name, a swatch grid with the picked color's field,
 a live sample, then the actions with one primary button.
 
 **Auxiliary panel.** 13 px text on a 15 % neutral layer, separated from the
-terminal by a hairline. The header holds the tool name, or a single-line
-`ui-nav` switcher when several tools are open. Hide is the `panel-right` or
+terminal by a hairline. The header is a `ui-switcher` with one icon per open
+tool (also when only one is open) and no title: the tool's name is the icon's
+tooltip and accessible name. The host picks the icon; an extension never does
+([ADR 0056](adr/0056-name-side-panel-tools-with-host-owned-icons.md)). Hide is the `panel-right` or
 `panel-left` icon, following the panel's side; Close (`x`) ends the tool. Extension views span the panel width so
-their 12 px padding lines up with the panel title.
+their 12 px padding lines up with the header's first icon.
 
 **Overlays.** One recipe: `--ui-overlay` surface, 1 px hairline, 8 px radius, no
 shadow, quiet buttons, Close as an `x` icon button. While a `ui-dialog` is modal a fixed 12 px CSS filter
@@ -450,7 +455,7 @@ Pick the smallest presentation that fits:
 
 - Panel views (Files, SSH Connect, Snippets) are companion tools. They are
   transparent: the host paints the panel tint. They don't repeat the tool
-  name; the panel header shows it.
+  name; the panel header's icon carries it.
 - Dialog views (Mirror Typing setup) are a short task over the terminal. The
   host shows a `ui-dialog` (440 px wide, up to 480 px tall) with a
   `ui-panel-header` (the view's title, then Close ×) and the view below. The

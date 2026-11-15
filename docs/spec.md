@@ -751,11 +751,16 @@ Connect share it; no per-tool placement or second panel exists.
 
 **Header and switching**
 
-- With one open tool the header shows its name. With several, a labeled,
-  single-line switcher (long names truncate) fills the same header and
-  identifies the selected tool,
-  without a second host title. One view is visible at a time; switcher buttons
-  select without closing.
+- The header names tools with icons, never words: a labeled switcher with one
+  icon button per open tool, also when only one is open. Each button's tooltip
+  and accessible name are the tool's name. The selected tool's icon is in the
+  full text color on a soft fill; the others are one tier quieter. One view is
+  visible at a time; switcher buttons select without closing.
+- The host owns the icons: Files is a folder, Snippets a pair of angle
+  brackets, SSH Connect a server. An extension never names, ships or draws
+  one, so installed older archives show theirs too; a panel tool the host has
+  no icon for shows the first letter of its name
+  ([ADR 0056](adr/0056-name-side-panel-tools-with-host-owned-icons.md)).
 - The host keeps the panel's accessible name and does not inspect or strip
   extension content. Files and SSH Connect pages leave tool identity to the host
   and keep named child regions and content sections; installed older archives

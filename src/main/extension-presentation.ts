@@ -1,5 +1,8 @@
 import type { ExtensionShortcutAction } from "../shared/terminal-keybinds";
-import type { HostedPresentationKind } from "../shared/extension-view";
+import type {
+  HostedPresentationKind,
+  HostedToolIcon,
+} from "../shared/extension-view";
 import type { PackageManifest } from "../installed-packages/installed-packages";
 
 export function companionToolShortcut(
@@ -24,5 +27,18 @@ export function extensionPresentation(
   )
     return "panel";
   if (manifest.id === "omxterm.mirror-typing") return "dialog";
+  return undefined;
+}
+
+// The switcher icon of each official panel tool. The host owns it, so an
+// archive installed before the switcher had icons gets one too, and a package
+// never names or ships its own. Any other panel tool shows a monogram.
+export function companionToolIcon(
+  manifest: Pick<PackageManifest, "id" | "view">,
+): HostedToolIcon | undefined {
+  if (extensionPresentation(manifest) !== "panel") return undefined;
+  if (manifest.id === "omxterm.files") return "folder";
+  if (manifest.id === "omxterm.snippets") return "code";
+  if (manifest.id === "omxterm.ssh") return "server";
   return undefined;
 }

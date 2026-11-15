@@ -1,5 +1,8 @@
 import { expect, it } from "vitest";
-import { extensionPresentation } from "../../src/main/extension-presentation";
+import {
+  companionToolIcon,
+  extensionPresentation,
+} from "../../src/main/extension-presentation";
 
 it.each(["omxterm.files", "omxterm.ssh"])(
   "places captured %s tool metadata in the panel",
@@ -62,4 +65,16 @@ it("floats Mirror Typing setup as a dialog over the tab", () => {
       },
     }),
   ).toBeUndefined();
+});
+
+it("gives each official panel tool its switcher icon, and no other view one", () => {
+  const manifest = (id: string, title = "Tool") => ({
+    id,
+    view: { entry: "index.html", title, action: `${id}.open` },
+  });
+  expect(companionToolIcon(manifest("omxterm.files"))).toBe("folder");
+  expect(companionToolIcon(manifest("omxterm.snippets"))).toBe("code");
+  expect(companionToolIcon(manifest("omxterm.ssh"))).toBe("server");
+  expect(companionToolIcon(manifest("omxterm.mirror-typing"))).toBeUndefined();
+  expect(companionToolIcon(manifest("example.files", "Files"))).toBeUndefined();
 });

@@ -102,7 +102,10 @@ The manifest is strict and small:
   action is the package ID plus exactly one more dot-separated name, so packages
   cannot claim each other's namespaces. A view grants no startup activation or
   shortcut. `view.context: "window"` ties the view to its original window
-  instead of a source session's directory.
+  instead of a source session's directory. A view declares no icon: the side
+  panel's switcher shows a host-owned icon for the official tools and the
+  first letter of `title` otherwise
+  ([ADR 0056](../adr/0056-name-side-panel-tools-with-host-owned-icons.md)).
 - An optional, nonempty, unique `capabilities` array may use only the names the
   host knows: `terminal.openSsh.v1`, `terminal.captureLayout.v1`,
   `terminal.openLayout.v1`, `terminal.reopenLayout.v1`,

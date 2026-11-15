@@ -204,7 +204,7 @@ it.each(["close", "hide", "terminal"])(
     await settle();
     expect(f.root.hidden).toBe(phase === "terminal");
     if (phase !== "terminal")
-      expect(f.root.querySelector("h2")!.textContent).toBe("ssh");
+      expect(f.root.getAttribute("aria-label")).toBe("ssh");
     expect(f.tool("files")).toBeUndefined();
     for (const surface of f.surfaces)
       expect(surface.focus).not.toHaveBeenCalled();
@@ -213,7 +213,7 @@ it.each(["close", "hide", "terminal"])(
     if (phase === "terminal") {
       f.toggle();
       await settle();
-      expect(f.root.querySelector("h2")?.textContent).toBe("Snippets");
+      expect(f.root.getAttribute("aria-label")).toBe("Snippets");
       expect(f.root.hidden).toBe(false);
     }
   },
@@ -269,7 +269,7 @@ it.each(
     await settle();
     if (hideOutcome === "ack") {
       expect(f.root.hidden).toBe(false);
-      expect(f.root.querySelector("h2")?.textContent).toBe("Snippets");
+      expect(f.root.getAttribute("aria-label")).toBe("Snippets");
     } else {
       expect(f.root.querySelector("input")).toBeNull();
       expect(document.querySelector('[role="status"]')?.textContent).toContain(
@@ -478,7 +478,7 @@ it("keeps a pending Snippets selection when a hidden native tool retires", async
   hide.resolve(true);
   await settle();
   expect(f.root.hidden).toBe(false);
-  expect(f.root.querySelector("h2")?.textContent).toBe("Snippets");
+  expect(f.root.getAttribute("aria-label")).toBe("Snippets");
   expect(f.tool("ssh")).toBeUndefined();
   expect(vi.mocked(f.bridge.present).mock.lastCall?.[0].id).toBeNull();
 });
@@ -496,7 +496,7 @@ it("keeps a pending Files selection when the previously selected SSH tool retire
   hide.resolve(true);
   await settle();
   expect(f.root.hidden).toBe(false);
-  expect(f.root.querySelector("h2")?.textContent).toBe("files");
+  expect(f.root.getAttribute("aria-label")).toBe("files");
   expect(f.tool("ssh")).toBeUndefined();
   expect(vi.mocked(f.bridge.present).mock.lastCall?.[0]).toMatchObject({
     id: "files",

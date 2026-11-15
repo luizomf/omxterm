@@ -207,6 +207,7 @@ export function createCompanionContent(
         {
           id: descriptor.id,
           label: descriptor.title,
+          ...(descriptor.icon ? { icon: descriptor.icon } : {}),
           close() {
             if (target.closing || target.removed) return;
             target.closing = true;

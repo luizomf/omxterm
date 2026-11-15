@@ -165,8 +165,8 @@ describe("tool close and panel visibility", () => {
   it("separates available factories from opened tools and retains them across hide, not close", () => {
     const f = fixture();
     const tools = () =>
-      [...f.root.querySelectorAll(".auxiliary-tools button")].map(
-        (button) => button.textContent,
+      [...f.root.querySelectorAll(".auxiliary-tools button")].map((button) =>
+        button.getAttribute("aria-label"),
       );
     expect(tools()).toEqual([]);
     f.panel.toggleVisibility();

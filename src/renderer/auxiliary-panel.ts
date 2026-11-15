@@ -1,7 +1,7 @@
 import type { AuxiliaryPanelSide } from "../shared/user-configuration";
 import type { TerminalClipboard } from "../terminal-surface/terminal-surface";
 import type { TerminalClipboardAction } from "../shared/terminal-contract";
-import { createIcon, setIcon } from "../shared/ui-icons";
+import { createIcon, setIcon, type UiIconName } from "../shared/ui-icons";
 import { createPanelDefaultIntent } from "./panel-default";
 import { createAuxiliaryPanelStatus } from "./auxiliary-panel-status";
 import { installAuxiliaryPanelInput } from "./auxiliary-panel-input";
@@ -23,6 +23,8 @@ export interface AuxiliaryViewDefinition {
   readonly id: string;
   // A fixed label, or one that follows the window language.
   readonly label: string | ((t: Translate) => string);
+  // The tool's switcher icon. Without one the switcher shows a monogram.
+  readonly icon?: UiIconName;
   readonly create: (isInteractive: () => boolean) => AuxiliaryView;
   // Native views finish removal through their authoritative retirement owner.
   readonly close?: () => void;
@@ -80,9 +82,9 @@ export function createAuxiliaryPanel(
   const status = createAuxiliaryPanelStatus(document, language);
   const defaultOpen = createPanelDefaultIntent();
   const cancelDefaultOpen = defaultOpen.cancel;
-  const { separator, header, title, close, hideButton, body } =
+  const { separator, header, close, hideButton, body } =
     createPanelElements(root);
-  const tools = createPanelTools(header, title, definitions, opened, show);
+  const tools = createPanelTools(header, definitions, opened, show);
   const renderTools = () => tools(current, language.t);
   const unbindLabels = language.bind((t) => {
     close.setAttribute("aria-label", t("panel.close"));
@@ -90,10 +92,7 @@ export function createAuxiliaryPanel(
     hideButton.setAttribute("aria-label", t("panel.hide"));
     hideButton.title = t("panel.hide");
     const definition = definitions.get(current ?? "");
-    if (definition) {
-      title.textContent = labelOf(definition, t);
-      root.setAttribute("aria-label", title.textContent);
-    }
+    if (definition) root.setAttribute("aria-label", labelOf(definition, t));
     renderTools();
   });
   const ownsFocus = () =>
@@ -200,8 +199,7 @@ export function createAuxiliaryPanel(
       opened.add(id);
       for (const [key, candidate] of created)
         candidate.element.hidden = key !== id;
-      title.textContent = labelOf(definition, language.t);
-      root.setAttribute("aria-label", title.textContent);
+      root.setAttribute("aria-label", labelOf(definition, language.t));
       root.hidden = false;
       separator.hidden = false;
       status.clear();
@@ -309,21 +307,20 @@ function labelOf(definition: AuxiliaryViewDefinition, t: Translate) {
     : definition.label(t);
 }
 
+// The header names tools with icons, never words: one button per open tool,
+// each with its name as tooltip and accessible name.
 function createPanelTools(
   header: HTMLElement,
-  title: HTMLElement,
   definitions: ReadonlyMap<string, AuxiliaryViewDefinition>,
   opened: ReadonlySet<string>,
   show: (id: string) => void,
 ) {
   const document = header.ownerDocument;
   const switcher = document.createElement("nav");
-  switcher.className = "auxiliary-tools ui-nav";
-  title.after(switcher);
+  switcher.className = "auxiliary-tools ui-switcher";
+  header.prepend(switcher);
   const buttons = new Map<string, HTMLButtonElement>();
   return (selected: string | undefined, t: Translate) => {
-    switcher.hidden = opened.size < 2;
-    title.hidden = !switcher.hidden;
     switcher.setAttribute("aria-label", t("panel.tools"));
     for (const [id, button] of buttons) {
       if (!opened.has(id)) {
@@ -337,15 +334,32 @@ function createPanelTools(
       if (!button) {
         button = document.createElement("button");
         button.type = "button";
+        button.className = "ui-icon-button";
         button.addEventListener("click", () => show(definition.id));
         buttons.set(definition.id, button);
         switcher.append(button);
       }
-      button.textContent = labelOf(definition, t);
-      button.title = button.textContent;
+      const label = labelOf(definition, t);
+      if (definition.icon) setIcon(button, definition.icon);
+      else setMonogram(button, label);
+      button.title = label;
+      button.setAttribute("aria-label", label);
       button.setAttribute("aria-pressed", String(definition.id === selected));
     }
   };
+}
+
+// A tool without an icon shows the first letter of its name, as text.
+function setMonogram(button: HTMLButtonElement, label: string) {
+  const letter = [...label.trim()][0]?.toLocaleUpperCase() ?? "";
+  let monogram = button.querySelector<HTMLElement>(".ui-monogram");
+  if (!monogram) {
+    monogram = button.ownerDocument.createElement("span");
+    monogram.className = "ui-monogram";
+    monogram.setAttribute("aria-hidden", "true");
+    button.replaceChildren(monogram);
+  }
+  if (monogram.textContent !== letter) monogram.textContent = letter;
 }
 
 function createPanelElements(root: HTMLElement) {
@@ -360,7 +374,6 @@ function createPanelElements(root: HTMLElement) {
   separator.setAttribute("aria-orientation", "vertical");
   const header = document.createElement("header");
   header.className = "auxiliary-header ui-panel-header";
-  const title = document.createElement("h2");
   const close = document.createElement("button");
   close.type = "button";
   setIcon(close, "x");
@@ -373,10 +386,10 @@ function createPanelElements(root: HTMLElement) {
     createIcon(document, "panel-right"),
     createIcon(document, "panel-left"),
   );
-  header.append(title, hideButton, close);
+  header.append(hideButton, close);
   const body = document.createElement("div");
   body.className = "auxiliary-body";
   root.replaceChildren(header, body);
   root.before(separator);
-  return { separator, header, title, close, hideButton, body };
+  return { separator, header, close, hideButton, body };
 }

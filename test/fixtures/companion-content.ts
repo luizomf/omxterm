@@ -86,7 +86,7 @@ export async function fixture(
         ...f.root.querySelectorAll<HTMLButtonElement>(
           ".auxiliary-tools button",
         ),
-      ].find((button) => button.textContent === title)!;
+      ].find((button) => button.getAttribute("aria-label") === title)!;
     },
   };
 }

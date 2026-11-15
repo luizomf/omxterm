@@ -265,11 +265,16 @@ export function startExtensionViewHost(
       entryResource: string;
       title: string;
       presentation?: import("../shared/extension-view").HostedPresentationKind;
+      icon?: import("../shared/extension-view").HostedToolIcon;
       panelDefaultToken?: string;
     }) {
       const opened = await host.open(input);
       const descriptor: HostedContentDescriptor = input.presentation
-        ? { ...opened, presentation: input.presentation }
+        ? {
+            ...opened,
+            presentation: input.presentation,
+            ...(input.icon ? { icon: input.icon } : {}),
+          }
         : opened;
       if (!host.owns(descriptor.id) || contents.isDestroyed())
         throw new Error("Hosted owner retired");
