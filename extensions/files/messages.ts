@@ -253,7 +253,7 @@ const portuguese: FilesMessages = {
     "Este item não pode ir para a Lixeira aqui. Nada foi apagado.",
   deleteError: (error) =>
     ({
-      "changed-entry": "A entrada mudou. Inicie a exclusão novamente.",
+      "changed-entry": "O item mudou. Inicie a exclusão novamente.",
       "expired-confirmation":
         "A confirmação da exclusão expirou. Inicie novamente.",
     })[error] ?? `Operação não concluída: ${error}.`,
