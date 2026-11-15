@@ -221,8 +221,8 @@ Alt. It does not change application shortcut recording or matching.
 
 **Auxiliary Panel** — One window-owned, nonmodal host (right by default) shared by
 Snippets and explicitly opened companion tools, with one visible view at a time.
-Its header shows the tool name when alone, or an in-header selector when several
-are open. It does not suppress extension-owned content; older immutable Files/SSH
+Its header names each open tool with a host-owned icon button (tooltip and
+accessible name carry the tool's name), never a title word. It does not suppress extension-owned content; older immutable Files/SSH
 archives can retain their own headings. It owns independent tool closure,
 retained panel hiding, focus and pointer/keyboard resizing; width and visibility
 are memory-only. Settings → Window

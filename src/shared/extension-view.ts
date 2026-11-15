@@ -1,3 +1,5 @@
+import type { UiIconName } from "./ui-icons";
+
 // Internal window-content transport; not an extension SDK.
 export interface HostedAppearance {
   readonly background: string;
@@ -5,6 +7,14 @@ export interface HostedAppearance {
   // Effective window tint opacity, not whole-view opacity or a blur command.
   readonly opacity: number;
 }
+// The icons a side-panel tool can show in the switcher. Main picks one for
+// the tools it knows; nothing an extension ships selects or draws an icon.
+export const hostedToolIcons = [
+  "code",
+  "folder",
+  "server",
+] as const satisfies readonly UiIconName[];
+export type HostedToolIcon = (typeof hostedToolIcons)[number];
 // "panel" docks a companion tool; "dialog" floats over the selected tab.
 export type HostedPresentationKind = "panel" | "dialog";
 export interface HostedContentDescriptor {
@@ -12,6 +22,8 @@ export interface HostedContentDescriptor {
   title: string;
   // Omission keeps the existing general application-tab presentation.
   presentation?: HostedPresentationKind;
+  // A panel tool's switcher icon; without one the panel shows a monogram.
+  icon?: HostedToolIcon;
   // Main-issued tool toggle for an already retained companion.
   toggle?: true;
   // One-shot core empty-panel intent, never supplied by extension code.
@@ -101,19 +113,29 @@ export function isHostedContentTitle(value: unknown): value is string {
 export function isHostedContentDescriptor(
   value: unknown,
 ): value is HostedContentDescriptor {
+  if (value === null || typeof value !== "object") return false;
+  // The icon is optional on a panel tool; every other shape stays exact.
+  const { icon, ...fields } = value as Record<string, unknown>;
+  if (
+    Object.hasOwn(value, "icon") &&
+    (fields.presentation !== "panel" ||
+      !hostedToolIcons.includes(icon as HostedToolIcon))
+  )
+    return false;
+  const rest: unknown = fields;
   return (
-    (record(value, ["id", "title"]) ||
-      (record(value, ["id", "title", "presentation"]) &&
-        (value.presentation === "panel" || value.presentation === "dialog")) ||
-      (record(value, ["id", "title", "presentation", "panelDefaultToken"]) &&
-        value.presentation === "panel" &&
-        typeof value.panelDefaultToken === "string" &&
-        /^[0-9a-f-]{36}$/.test(value.panelDefaultToken)) ||
-      (record(value, ["id", "title", "presentation", "toggle"]) &&
-        value.presentation === "panel" &&
-        value.toggle === true)) &&
-    isHostedContentId(value.id) &&
-    isHostedContentTitle(value.title)
+    (record(rest, ["id", "title"]) ||
+      (record(rest, ["id", "title", "presentation"]) &&
+        (rest.presentation === "panel" || rest.presentation === "dialog")) ||
+      (record(rest, ["id", "title", "presentation", "panelDefaultToken"]) &&
+        rest.presentation === "panel" &&
+        typeof rest.panelDefaultToken === "string" &&
+        /^[0-9a-f-]{36}$/.test(rest.panelDefaultToken)) ||
+      (record(rest, ["id", "title", "presentation", "toggle"]) &&
+        rest.presentation === "panel" &&
+        rest.toggle === true)) &&
+    isHostedContentId(rest.id) &&
+    isHostedContentTitle(rest.title)
   );
 }
 

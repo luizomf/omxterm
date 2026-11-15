@@ -327,6 +327,41 @@ textarea.page-control {
   font-weight: 600;
   background: var(--ui-control-selected);
 }
+/* Switcher: a row of icon buttons that shows one of a few views at a time.
+   The icon's tier says which one: full text color on the selected fill for
+   the current view, secondary and no fill for the others. Names live in the tooltip and
+   the accessible name, never beside the icon. */
+.ui-switcher {
+  display: flex;
+  gap: 2px;
+  min-width: 0;
+}
+.ui-switcher > .ui-icon-button {
+  color: var(--ui-secondary);
+}
+/* Hover is a step under the selected fill, so the open view stays the
+   strongest thing in the row while the pointer is on another. */
+.ui-switcher > .ui-icon-button:hover:not(:disabled) {
+  color: var(--ui-text);
+  background: var(--ui-control);
+}
+.ui-switcher > .ui-icon-button[aria-pressed="true"],
+.ui-switcher > .ui-icon-button[aria-pressed="true"]:hover:not(:disabled) {
+  color: var(--ui-text);
+  background: var(--ui-control-selected);
+  /* Like a tab: an underline takes over as transparency thins the fill. */
+  box-shadow: inset 0 -1px
+    rgb(
+      from var(--ui-text) r g b /
+        calc(1 - var(--terminal-background-opacity, 1))
+    );
+}
+/* A view with no icon: the first letter of its name, in an icon's box. */
+.ui-monogram {
+  width: 16px;
+  font: 600 var(--ui-text-chrome) / 16px var(--ui-font);
+  text-align: center;
+}
 
 /* Form --------------------------------------------------------------------- */
 
@@ -950,6 +985,7 @@ textarea.page-control {
   .ui-row,
   .ui-list,
   .ui-nav,
+  .ui-switcher,
   .ui-actions,
   .ui-form,
   .ui-form-row,

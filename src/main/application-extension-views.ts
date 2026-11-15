@@ -18,6 +18,7 @@ import type { ApplicationExtensionsOptions } from "./application-extensions";
 import { extensionResourceOwner } from "./extension-view-reader";
 import { startExtensionViewHost } from "./extension-view-ipc";
 import { createFilesTerminalDirectory } from "./files-terminal-directory";
+import { companionToolIcon } from "./extension-presentation";
 
 /** Own-view capability dispatch; ordinary extension data goes to its backend. */
 export function applicationViews(
@@ -47,6 +48,10 @@ export function applicationViews(
         })
       : undefined;
   const view = pin.manifest.view!;
+  const icon =
+    target.presentation === "panel"
+      ? companionToolIcon(pin.manifest)
+      : undefined;
   const viewOwner = {};
   if (target.mirrorContext)
     options.mirrorTyping?.bind(window, target.mirrorContext, lifetime);
@@ -255,6 +260,7 @@ export function applicationViews(
         entryResource: view.entry,
         title: view.title,
         ...(target.presentation ? { presentation: target.presentation } : {}),
+        ...(icon ? { icon } : {}),
         ...(panelDefaultToken ? { panelDefaultToken } : {}),
       });
       viewId = descriptor.id;

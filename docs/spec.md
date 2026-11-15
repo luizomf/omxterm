@@ -751,11 +751,16 @@ Connect share it; no per-tool placement or second panel exists.
 
 **Header and switching**
 
-- With one open tool the header shows its name. With several, a labeled,
-  single-line switcher (long names truncate) fills the same header and
-  identifies the selected tool,
-  without a second host title. One view is visible at a time; switcher buttons
-  select without closing.
+- The header names tools with icons, never words: a labeled switcher with one
+  icon button per open tool, also when only one is open. Each button's tooltip
+  and accessible name are the tool's name. The selected tool's icon is in the
+  full text color on the selected-row fill; the others are one tier quieter. One view is
+  visible at a time; switcher buttons select without closing.
+- The host owns the icons: Files is a folder, Snippets a pair of angle
+  brackets, SSH Connect a server. An extension never names, ships or draws
+  one, so installed older archives show theirs too; a panel tool the host has
+  no icon for shows the first letter of its name
+  ([ADR 0056](adr/0056-name-side-panel-tools-with-host-owned-icons.md)).
 - The host keeps the panel's accessible name and does not inspect or strip
   extension content. Files and SSH Connect pages leave tool identity to the host
   and keep named child regions and content sections; installed older archives
@@ -3119,7 +3124,7 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N`, `0.35.1-dev.N`, `0.36.0-dev.N`, `0.36.1-dev.N`, `0.36.2-dev.N`, `0.37.0-dev.N` or `0.37.1-dev.N` host admit a
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N`, `0.35.1-dev.N`, `0.36.0-dev.N`, `0.36.1-dev.N`, `0.36.2-dev.N`, `0.37.0-dev.N`, `0.37.1-dev.N` or `0.38.0-dev.N` host admit a
   range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.

@@ -60,6 +60,7 @@ export function createSnippetsTool(
   const view: AuxiliaryViewDefinition = {
     id: "snippets",
     label: (t) => t("snippets.title"),
+    icon: "code",
     create: (isInteractive) =>
       createSnippetsView(document, {
         language,

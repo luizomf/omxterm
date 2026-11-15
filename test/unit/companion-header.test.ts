@@ -24,11 +24,13 @@ it.each([
     f.open(id, true, false, label);
     await settle();
     const header = f.root.querySelector<HTMLElement>(".auxiliary-header")!;
-    const title = header.querySelector<HTMLHeadingElement>("h2")!;
     const nav = header.querySelector<HTMLElement>(".auxiliary-tools")!;
-    expect(title.textContent).toBe(label);
-    expect(title.hidden).toBe(false);
-    expect(nav.hidden).toBe(true);
+    // The header never prints a tool's name: the icon button carries it.
+    expect(header.querySelector("h2")).toBeNull();
+    expect(nav.querySelectorAll("button")).toHaveLength(1);
+    expect(f.tool(label).textContent).toBe(label[0]);
+    expect(f.tool(label).title).toBe(label);
+    expect(f.tool(label).getAttribute("aria-pressed")).toBe("true");
     expect(f.root.getAttribute("aria-label")).toBe(label);
 
     for (const [otherId, otherLabel] of [
@@ -42,8 +44,6 @@ it.each([
     }
     f.tool(label).click();
     await settle();
-    expect(title.hidden).toBe(true);
-    expect(nav.hidden).toBe(false);
     expect(nav.getAttribute("aria-label")).toBe("Open tools");
     expect(nav.querySelectorAll("button")).toHaveLength(3);
     expect(f.tool(label).getAttribute("aria-pressed")).toBe("true");
@@ -123,23 +123,19 @@ it.each([
       dispose = page.dispose;
     }
     await settle();
-    const title = f.root.querySelector<HTMLHeadingElement>(
-      ".auxiliary-header h2",
-    )!;
-    const nav = f.root.querySelector<HTMLElement>(".auxiliary-tools")!;
-    expect(title.hidden).toBe(false);
-    expect(title.textContent).toBe(label);
-    expect(nav.hidden).toBe(true);
+    expect(f.tool(label).getAttribute("aria-pressed")).toBe("true");
     expect(child.querySelector("h1")).toBeNull();
     expect(child.body.textContent).toContain(loading);
 
-    f.open("other", true, false, "Other tool");
+    f.open("other", true, false, "Other tool", "server");
     await settle();
+    expect(
+      f.tool("Other tool").querySelector("svg")?.getAttribute("data-icon"),
+    ).toBe("server");
     f.tool(label).click();
     await settle();
-    expect(title.hidden).toBe(true);
-    expect(nav.hidden).toBe(false);
     expect(f.tool(label).getAttribute("aria-pressed")).toBe("true");
+    expect(f.tool("Other tool").getAttribute("aria-pressed")).toBe("false");
     expect(child.body.textContent).toContain(loading);
     failure.resolve({ ok: false, error: "unavailable" });
     await ready;

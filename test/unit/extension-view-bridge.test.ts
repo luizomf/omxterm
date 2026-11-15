@@ -43,7 +43,23 @@ describe("hosted application-tab contract", () => {
         panelDefaultToken,
       }),
     ).toBe(true);
+    // A panel tool may carry one of the host's own switcher icons.
+    for (const extra of [{}, { toggle: true as const }, { panelDefaultToken }])
+      expect(
+        isHostedContentDescriptor({
+          id: "a",
+          title: "Files",
+          presentation: "panel",
+          icon: "folder",
+          ...extra,
+        }),
+      ).toBe(true);
     for (const descriptor of [
+      { id: "a", title: "Files", icon: "folder" },
+      { id: "a", title: "Files", presentation: "dialog", icon: "folder" },
+      { id: "a", title: "Files", presentation: "panel", icon: "x" },
+      { id: "a", title: "Files", presentation: "panel", icon: "<svg>" },
+      { id: "a", title: "Files", presentation: "panel", icon: undefined },
       { id: "a", title: "Snippets", panelDefaultToken },
       {
         id: "a",

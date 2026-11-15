@@ -484,8 +484,7 @@ body.tabs-visible .terminal-tab {
   min-height: 0;
 }
 
-.companion-native-slot[hidden],
-.auxiliary-tools[hidden] {
+.companion-native-slot[hidden] {
   display: none;
 }
 
@@ -498,31 +497,11 @@ body.tabs-visible .terminal-tab {
   margin-inline: -12px;
 }
 
-/* One line at any panel width; long names truncate instead of wrapping. */
+/* The switcher takes the header's free width, so Hide and Close stay at the
+   far edge. */
 .auxiliary-tools {
   flex: 1 1 auto;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 2px;
-  min-width: 0;
   overflow: hidden;
-}
-
-.auxiliary-tools button {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 24px;
-  padding: 2px 6px;
-  overflow: hidden;
-  font: inherit;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: inherit;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 .auxiliary-separator {

@@ -100,6 +100,7 @@ export async function exerciseCompanionRouting(
     entryResource: "index.html",
     title: "Files",
     presentation: "panel",
+    icon: tool === "files" ? "folder" : "server",
   });
   targets.ended("s1");
   expect(host.retire).not.toHaveBeenCalled();

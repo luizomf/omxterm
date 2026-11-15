@@ -102,7 +102,10 @@ The manifest is strict and small:
   action is the package ID plus exactly one more dot-separated name, so packages
   cannot claim each other's namespaces. A view grants no startup activation or
   shortcut. `view.context: "window"` ties the view to its original window
-  instead of a source session's directory.
+  instead of a source session's directory. A view declares no icon: the side
+  panel's switcher shows a host-owned icon for the official tools and the
+  first letter of `title` otherwise
+  ([ADR 0056](../adr/0056-name-side-panel-tools-with-host-owned-icons.md)).
 - An optional, nonempty, unique `capabilities` array may use only the names the
   host knows: `terminal.openSsh.v1`, `terminal.captureLayout.v1`,
   `terminal.openLayout.v1`, `terminal.reopenLayout.v1`,
@@ -139,7 +142,7 @@ development hosts keep accepting the same archives.
   (`0.24.0` and `0.25.0`), `0.26.0-dev.N` (`0.25.0` and `0.26.0`),
   `0.26.1-dev.N` (`0.26.0` and `0.26.1`), `0.27.0-dev.N` (`0.26.0` and
   `0.27.0`), `0.27.1-dev.N` (`0.27.0` and `0.27.1`), `0.28.0-dev.N`
-  (`0.27.0` and `0.28.0`) `0.28.1-dev.N` (`0.28.0` and `0.28.1`) `0.29.1-dev.N` (`0.29.0` and `0.29.1`) `0.30.1-dev.N` (`0.30.0` and `0.30.1`) `0.31.0-dev.N` (`0.30.0` and `0.31.0`) `0.31.1-dev.N` (`0.31.0` and `0.31.1`) `0.32.0-dev.N` (`0.31.0` and `0.32.0`) `0.32.1-dev.N` (`0.32.0` and `0.32.1`) `0.33.0-dev.N` (`0.32.0` and `0.33.0`) `0.33.1-dev.N` (`0.33.0` and `0.33.1`) `0.34.0-dev.N` (`0.33.0` and `0.34.0`) `0.34.1-dev.N` (`0.34.0` and `0.34.1`) `0.35.0-dev.N` (`0.34.0` and `0.35.0`) `0.35.1-dev.N` (`0.35.0` and `0.35.1`) `0.36.0-dev.N` (`0.35.0` and `0.36.0`) `0.36.1-dev.N` (`0.36.0` and `0.36.1`) `0.36.2-dev.N` (`0.36.1` and `0.36.2`) `0.37.0-dev.N` (`0.36.1` and `0.37.0`) and `0.37.1-dev.N` (`0.37.0` and `0.37.1`). They do not rewrite the
+  (`0.27.0` and `0.28.0`) `0.28.1-dev.N` (`0.28.0` and `0.28.1`) `0.29.1-dev.N` (`0.29.0` and `0.29.1`) `0.30.1-dev.N` (`0.30.0` and `0.30.1`) `0.31.0-dev.N` (`0.30.0` and `0.31.0`) `0.31.1-dev.N` (`0.31.0` and `0.31.1`) `0.32.0-dev.N` (`0.31.0` and `0.32.0`) `0.32.1-dev.N` (`0.32.0` and `0.32.1`) `0.33.0-dev.N` (`0.32.0` and `0.33.0`) `0.33.1-dev.N` (`0.33.0` and `0.33.1`) `0.34.0-dev.N` (`0.33.0` and `0.34.0`) `0.34.1-dev.N` (`0.34.0` and `0.34.1`) `0.35.0-dev.N` (`0.34.0` and `0.35.0`) `0.35.1-dev.N` (`0.35.0` and `0.35.1`) `0.36.0-dev.N` (`0.35.0` and `0.36.0`) `0.36.1-dev.N` (`0.36.0` and `0.36.1`) `0.36.2-dev.N` (`0.36.1` and `0.36.2`) `0.37.0-dev.N` (`0.36.1` and `0.37.0`) `0.37.1-dev.N` (`0.37.0` and `0.37.1`) and `0.38.0-dev.N` (`0.37.0` and `0.38.0`). They do not rewrite the
   range, and a
   range with an upper bound that excludes the required stable versions gains
   nothing. Other development families need ordinary admission or a reviewed
