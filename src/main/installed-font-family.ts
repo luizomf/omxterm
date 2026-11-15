@@ -238,7 +238,13 @@ export interface InstalledFallbackFontData {
 /** The OS fallback families, in precedence order, for one platform. */
 export function fallbackFontFamilies(platform: string): readonly string[] {
   return platform === "darwin"
-    ? ["Apple Color Emoji", "Hiragino Sans GB", "Apple Symbols"]
+    ? [
+        "Apple Color Emoji",
+        "Hiragino Sans GB",
+        // Hiragino has no Hangul syllables; AppleGothic ships with macOS (one face, ~15 MB).
+        "AppleGothic",
+        "Apple Symbols",
+      ]
     : platform === "win32"
       ? [
           "Segoe UI Emoji",

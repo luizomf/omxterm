@@ -306,7 +306,12 @@ describe("installed fallback font data", () => {
     },
     {
       platform: "darwin",
-      families: ["Apple Color Emoji", "Hiragino Sans GB", "Apple Symbols"],
+      families: [
+        "Apple Color Emoji",
+        "Hiragino Sans GB",
+        "AppleGothic",
+        "Apple Symbols",
+      ],
     },
     {
       platform: "win32",
