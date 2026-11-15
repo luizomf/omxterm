@@ -9,7 +9,7 @@ export interface ResttySearchEvidence {
   readonly pastedQuery: string;
   readonly unicodeStatus: string;
   readonly themed: boolean;
-  readonly counterMatchesField: boolean;
+  readonly counterIsQuietText: boolean;
   readonly terminalKeysWhileOpen: boolean;
   readonly openAfterTerminalKeys: boolean;
   readonly closed: boolean;
@@ -39,12 +39,11 @@ const searchState = `(() => {
         .getPropertyValue("--restty-search-ui-background")
         .trim() ===
         surface.style.getPropertyValue("--terminal-background").trim(),
-    counterMatchesField:
+    // The count is quiet text on the bar, not Restty's fixed dark chip.
+    counterIsQuietText:
       !!status &&
-      !!input &&
-      getComputedStyle(status).backgroundColor ===
-        getComputedStyle(input).backgroundColor &&
-      getComputedStyle(status).backgroundColor !== "rgb(37, 37, 37)",
+      getComputedStyle(status).backgroundColor === "rgba(0, 0, 0, 0)" &&
+      getComputedStyle(status).borderTopColor === "rgba(0, 0, 0, 0)",
     terminalPoint: canvas
       ? { x: Math.round(canvas.left + 40), y: Math.round(canvas.top + canvas.height / 2) }
       : undefined,
@@ -58,7 +57,7 @@ type SearchState = {
   readonly inputFocused: boolean;
   readonly terminalFocused: boolean;
   readonly themed: boolean;
-  readonly counterMatchesField: boolean;
+  readonly counterIsQuietText: boolean;
   readonly terminalPoint:
     { readonly x: number; readonly y: number } | undefined;
 };
@@ -201,7 +200,7 @@ export async function exerciseResttyScrollbackSearch(options: {
     pastedQuery: pasted.query,
     unicodeStatus: unicode.status,
     themed: opened.themed,
-    counterMatchesField: unicode.counterMatchesField,
+    counterIsQuietText: unicode.counterIsQuietText,
     terminalKeysWhileOpen: true,
     openAfterTerminalKeys:
       afterTerminalKeys.open && afterTerminalKeys.status === "1",

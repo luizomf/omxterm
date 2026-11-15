@@ -373,7 +373,7 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       send("keyDown", "A");
       send("keyDown", "B");
       await waitFor(
-        () => evaluate<boolean>(`${status}.includes('not supported')`),
+        () => evaluate<boolean>(`${status}.includes("isn't supported")`),
         "invalid overlap reported",
       );
       await evaluate(`${button}.click()`);
