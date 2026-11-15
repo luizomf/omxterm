@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { loadResttyWasm } from "restty/internal";
 import { afterEach, describe, expect, it } from "vitest";
@@ -12,11 +13,18 @@ type Core = Awaited<ReturnType<typeof loadResttyWasm>> & {
 
 const cols = 40;
 const rows = 10;
-// The zsh and bash snippets in docs/shell-integration.md: D ends the last
-// command, A starts the prompt, C starts the command's output.
+// The lines in docs/shell-integration.md: D ends the last command, A starts
+// the prompt, C starts the command's output.
 const promptMark = "\u001b]133;A;redraw=0\u0007";
 const commandMark = "\u001b]133;C\u0007";
 const endMark = (code: number) => `\u001b]133;D;${code}\u0007`;
+
+const { copy: POWERSHELL } = JSON.parse(
+  readFileSync(
+    new URL("../fixtures/powershell-command-marks.json", import.meta.url),
+    "utf8",
+  ),
+) as { copy: Record<"5.1" | "7", string[]> };
 
 const handles: Array<{ core: Core; handle: number }> = [];
 
@@ -37,9 +45,9 @@ const reader = (core: Core, handle: number) =>
     },
   ) as () => string;
 
-async function terminal() {
+async function terminal([width, height] = [cols, rows]) {
   const core = (await loadResttyWasm()) as Core;
-  const handle = core.create(cols, rows, 10_000_000);
+  const handle = core.create(width, height, 10_000_000);
   handles.push({ core, handle });
   const write = (text: string) => core.write(handle, text);
   const run = (command: string, output: string) =>
@@ -107,9 +115,23 @@ describe("the prepared runtime's last command output", () => {
     expect(marked.lastOutput()).toBe("");
   });
 
-  it("reads nothing from the PowerShell lines, which print no output mark", async () => {
+  it("reads nothing from PowerShell without PSReadLine, which marks no output", async () => {
     const t = await terminal();
     t.write(`${promptMark}PS> dir\r\nfile1\r\n${endMark(0)}${promptMark}PS> `);
     expect(t.lastOutput()).toBe("");
   });
+
+  // Windows PowerShell 5.1 and PowerShell 7 with the guide's lines, as ConPTY
+  // sent them at 100x30: `Write-Output alpha`, then an empty Enter.
+  it.each(["5.1", "7"] as const)(
+    "reads PowerShell %s's output through ConPTY",
+    async (version) => {
+      const [start, alpha, emptyEnter] = POWERSHELL[version];
+      const t = await terminal([100, 30]);
+      t.write(start! + alpha!);
+      expect(t.lastOutput()).toBe("alpha");
+      t.write(emptyEnter!);
+      expect(t.lastOutput()).toBe("alpha");
+    },
+  );
 });

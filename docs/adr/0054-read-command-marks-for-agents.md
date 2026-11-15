@@ -92,6 +92,7 @@ export and the jumps.
 - **Windows.** ConPTY passes the marks through: checked with OMXTerm's bundled
   `conpty.dll` on Windows 11 ARM64 (build 26300, where the inbox one passes
   them too), for Windows PowerShell 5.1 and PowerShell 7.7. PowerShell has no
-  hook for a command's start, so its lines mark only prompts and ends, and a
+  hook for a command's start, so its lines mark it when PSReadLine returns the
+  line ([ADR 0057](0057-copy-the-last-command-output-from-the-core.md)), and a
   failed cmdlet reports 1. cmd.exe can't report exit codes in its prompt and
   has no lines.
