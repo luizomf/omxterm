@@ -1453,7 +1453,12 @@ startup, shell exit, tab close and renderer-loss cleanup.
   affected.
 - Font reads use native platform facilities without shell interpolation.
   Responses carry bounded bytes and face metadata, not paths. There is no broad
-  filesystem API, remote fallback or persistent byte cache. Known limitation: a
+  filesystem API, remote fallback or persistent byte cache. Main remembers which
+  installed files back the configured family and the fallbacks for the session,
+  so later windows skip the native lookup, but it rereads and validates the bytes
+  on every load. A User Configuration Reload, a failed lookup, a missing family
+  or a remembered file that is gone triggers a fresh lookup. On Windows one
+  PowerShell process answers every lookup of a load. Known limitation: a
   failed on-demand read after validation can put a native font path in the IPC
   rejection. It does not grant arbitrary filesystem access.
 - A Surface applies its font family and line height when it is created. After
