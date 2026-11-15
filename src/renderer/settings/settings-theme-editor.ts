@@ -24,6 +24,10 @@ interface ThemeEditorOptions {
   readonly labels: ((t: Translate) => void)[];
   readonly saved: () => void;
   readonly busyChanged: (busy: boolean) => void;
+  /** The editor took the list's place, or gave it back. */
+  readonly opened: (open: boolean) => void;
+  /** The control that opened a theme, found again after the list rebuilt. */
+  readonly editControl: (path: string) => HTMLElement | undefined;
   readonly use: (path: string, settled: () => void) => void;
 }
 
@@ -40,6 +44,11 @@ class SettingsThemeEditor {
   private theme: TerminalTheme = DEFAULT_TERMINAL_THEME;
   private base: ThemeDocumentBase | undefined;
   private returnFocus: HTMLElement | undefined;
+  private returnPath: string | undefined;
+  private role: TerminalThemeColorKey = "background";
+  private shown = false;
+  // Reloading the source closes and reopens the draft; the list stays away.
+  private reloading = false;
   private readonly texts = new Map<TerminalThemeColorKey, string>();
   private notice: ThemeEditorNotice | undefined;
   private readonly view: ReturnType<typeof createSettingsThemeEditorView>;
@@ -49,17 +58,15 @@ class SettingsThemeEditor {
     private readonly bridge: SettingsThemeDocumentsBridge,
     private readonly options: ThemeEditorOptions,
   ) {
-    this.view = createSettingsThemeEditorView(
-      document,
-      options.labels,
-      (busy) => options.busyChanged(busy),
+    this.view = createSettingsThemeEditorView(document, (busy) =>
+      options.busyChanged(busy),
     );
     options.labels.push((translate) => {
       this.t = translate;
       this.paint();
     });
     const {
-      role,
+      roles,
       name,
       hex,
       well,
@@ -72,10 +79,13 @@ class SettingsThemeEditor {
       reload,
       use,
     } = this.view;
-    role.addEventListener("change", this.chooseRole);
+    for (const { key, radio } of roles)
+      radio.addEventListener("change", () => {
+        if (radio.checked) this.chooseRole(key);
+      });
     name.addEventListener("input", this.changed);
     hex.addEventListener("input", () => {
-      const key = this.selectedRole();
+      const key = this.role;
       this.texts.set(key, hex.value);
       if (isTerminalThemeColor(hex.value)) {
         this.theme = {
@@ -96,6 +106,7 @@ class SettingsThemeEditor {
     create.addEventListener("click", () => {
       if (!this.active && !this.pending && options.live()) {
         this.returnFocus = create;
+        this.returnPath = undefined;
         ++this.epoch;
         this.begin({
           ...DEFAULT_TERMINAL_THEME,
@@ -114,7 +125,12 @@ class SettingsThemeEditor {
       if (this.base && !this.pending) {
         const path = this.base.path;
         this.active = false;
-        this.load(() => bridge.openTheme(path), this.returnFocus);
+        this.reloading = true;
+        this.load(
+          () => bridge.openTheme(path),
+          this.returnFocus,
+          this.returnPath,
+        );
       }
     });
     use.addEventListener("click", () => this.useSaved());
@@ -124,23 +140,24 @@ class SettingsThemeEditor {
   get element() {
     return this.view.element;
   }
+  get toolbar() {
+    return this.view.toolbar;
+  }
   busy() {
     return this.active || this.pending;
   }
   edit(path: string, focus: HTMLElement) {
-    this.load(() => this.bridge.openTheme(path), focus);
+    this.load(() => this.bridge.openTheme(path), focus, path);
   }
   editBundled(focus: HTMLElement) {
     if (!this.active && !this.pending && this.options.live()) {
       this.returnFocus = focus;
+      this.returnPath = "";
       ++this.epoch;
       this.begin(DEFAULT_TERMINAL_THEME);
     }
   }
 
-  private selectedRole() {
-    return this.view.role.value as TerminalThemeColorKey;
-  }
   private valid() {
     return (
       isTerminalThemeName(this.view.name.value) &&
@@ -150,6 +167,11 @@ class SettingsThemeEditor {
     );
   }
   private paint() {
+    const invalidRoles = new Set(
+      TERMINAL_THEME_COLOR_KEYS.filter(
+        (key) => !isTerminalThemeColor(this.texts.get(key)),
+      ),
+    );
     this.view.paint({
       t: this.t,
       active: this.active,
@@ -159,8 +181,14 @@ class SettingsThemeEditor {
       base: this.base,
       notice: this.notice,
       valid: this.valid(),
-      colorValid: isTerminalThemeColor(this.texts.get(this.selectedRole())),
+      role: this.role,
+      invalidRoles,
     });
+    const shown = this.active || this.reloading;
+    if (this.shown !== shown) {
+      this.shown = shown;
+      this.options.opened(shown);
+    }
   }
   private reportFailure(result: ThemeDocumentFailure) {
     this.view.reload.hidden =
@@ -172,11 +200,12 @@ class SettingsThemeEditor {
       recovery: !this.view.reload.hidden,
     };
   }
-  private chooseRole = () => {
-    this.view.hex.value = this.texts.get(this.selectedRole()) ?? "";
-    this.view.well.value = this.theme.colors[this.selectedRole()];
+  private chooseRole(key: TerminalThemeColorKey) {
+    this.role = key;
+    this.view.hex.value = this.texts.get(key) ?? "";
+    this.view.well.value = this.theme.colors[key];
     this.paint();
-  };
+  }
   private changed = () => {
     this.edits += 1;
     this.dirty = true;
@@ -194,12 +223,11 @@ class SettingsThemeEditor {
     TERMINAL_THEME_COLOR_KEYS.forEach((key) =>
       this.texts.set(key, next.colors[key]),
     );
-    this.view.role.value = "background";
     this.view.filename.value = "my-theme.json";
     this.view.copyFields.hidden = !!this.base;
     this.view.reload.hidden = true;
     this.notice = undefined;
-    this.chooseRole();
+    this.chooseRole("background");
     if (this.document.hasFocus()) this.view.name.focus({ preventScroll: true });
   }
   private accept(result: ThemeDocumentOpenResult) {
@@ -210,9 +238,11 @@ class SettingsThemeEditor {
   private load(
     read: () => Promise<ThemeDocumentOpenResult>,
     focus?: HTMLElement,
+    path?: string,
   ) {
     if (this.active || this.pending || !this.options.live()) return;
     this.returnFocus = focus;
+    this.returnPath = path;
     const request = ++this.epoch;
     this.pending = true;
     this.notice = { key: "settings.author.busy", severity: "info" };
@@ -233,6 +263,7 @@ class SettingsThemeEditor {
       )
       .finally(() => {
         if (this.options.live() && request === this.epoch) {
+          this.reloading = false;
           this.pending = false;
           this.paint();
         }
@@ -343,11 +374,21 @@ class SettingsThemeEditor {
   }
   private cancel() {
     ++this.epoch;
-    this.active = this.pending = false;
+    this.active = this.pending = this.reloading = false;
     this.notice = undefined;
     this.paint();
-    if (this.returnFocus?.isConnected && !this.returnFocus.closest("[hidden]"))
-      this.returnFocus.focus({ preventScroll: true });
+    // A save rebuilds the cards, so the control that opened this theme may be
+    // a new element by now.
+    const target = this.returnFocus?.isConnected
+      ? this.returnFocus
+      : this.returnPath === undefined
+        ? undefined
+        : this.options.editControl(this.returnPath);
+    if (target?.isConnected && !target.closest("[hidden]")) {
+      target.focus({ preventScroll: true });
+      // Opening scrolled to the editor's top; go back to the card.
+      target.scrollIntoView?.({ block: "nearest" });
+    }
   }
   private useSaved() {
     if (
@@ -379,6 +420,7 @@ export function createSettingsThemeEditor(
   const editor = new SettingsThemeEditor(document, bridge, options);
   return {
     element: editor.element,
+    toolbar: editor.toolbar,
     busy: () => editor.busy(),
     edit: (path: string, focus: HTMLElement) => editor.edit(path, focus),
     editBundled: (focus: HTMLElement) => editor.editBundled(focus),

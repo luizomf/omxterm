@@ -349,9 +349,7 @@ export const englishMessages = {
   "settings.fontSize": "Font size",
   "settings.lineHeight": "Line height",
   "settings.ligatures": "Programming ligatures",
-  "settings.themePicker": "Terminal themes",
-  "settings.themePickerHint":
-    "Add JSON themes to themes/ beside config.json, then refresh the list.",
+  "settings.themePicker": "Themes",
   "settings.themeRefresh": "Refresh themes",
   "settings.themeLoading": "Loading themes…",
   "settings.themeMissing":
@@ -370,12 +368,10 @@ export const englishMessages = {
   "settings.themeErrorRead": "File couldn't be read.",
   "settings.themeErrorInvalid": "Invalid theme:",
   "settings.themeErrorUnknown": "Theme contains an unknown field.",
-  "settings.themeSelected": "Selected",
   "settings.themePending": "Saving…",
   "settings.themeDefaultDetail": "Built-in default",
   ...englishThemeAuthoringMessages,
   "settings.bundledFont": "Bundled FiraCode Nerd Font Mono",
-  "settings.bundledTheme": "Bundled omtheme",
   "settings.defaultShell": "Windows PowerShell",
   "settings.scrollback": "Scrollback lines",
   "settings.contextMenu": "Right-click menu",

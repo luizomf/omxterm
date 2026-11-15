@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createRendererLanguage } from "../../src/renderer/renderer-language";
-import type { SettingsThemesResult } from "../../src/shared/settings-themes";
+import {
+  SETTINGS_THEME_COLOR_KEYS,
+  type SettingsThemesResult,
+} from "../../src/shared/settings-themes";
+import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   base,
   button,
@@ -85,9 +89,7 @@ describe("local theme picker", () => {
     expect(view.query(".settings-themes-invalid").textContent).toContain(
       "themes/broken.json",
     );
-    expect(button("Refresh themes").classList.contains("page-control")).toBe(
-      true,
-    );
+    expect(button("Refresh themes").title).toBe("Refresh themes");
     expect(view.query(".settings-themes-invalid").textContent).not.toContain(
       "These theme files couldn't be used",
     );
@@ -254,6 +256,72 @@ describe("local theme picker", () => {
   });
 });
 
+describe("the built-in theme and its first-run copy", () => {
+  const builtIn = {
+    path: "themes/omtheme.json",
+    name: DEFAULT_TERMINAL_THEME.name,
+    colors: Object.fromEntries(
+      SETTINGS_THEME_COLOR_KEYS.map((key) => [
+        key,
+        DEFAULT_TERMINAL_THEME.colors[key],
+      ]),
+    ) as SettingsThemesResult["themes"][number]["colors"],
+  };
+  const shown = () =>
+    [...document.querySelectorAll<HTMLElement>(".settings-theme-entry")]
+      .filter((entry) => !entry.hidden)
+      .map((entry) => entry.querySelector("input")!.value);
+  const copy = (selectedPath?: string): SettingsThemesResult => ({
+    status: "ok",
+    themes: [builtIn],
+    invalid: [],
+    truncated: false,
+    hasConfiguredTheme: selectedPath !== undefined,
+    ...(selectedPath ? { selectedPath } : {}),
+  });
+
+  it("shows one card when the configured file is the built-in theme", async () => {
+    const view = await picker(copy(builtIn.path));
+    expect(shown()).toEqual([builtIn.path]);
+    expect(input(builtIn.path).checked).toBe(true);
+    view.dialog.dispose();
+  });
+
+  it("keeps the built-in card while it is the one in use or the file differs", async () => {
+    const view = await picker(copy());
+    expect(shown()).toEqual(["", builtIn.path]);
+    expect(input("").checked).toBe(true);
+    view.dialog.dispose();
+    document.body.replaceChildren();
+    const edited = await picker({
+      ...copy(builtIn.path),
+      themes: [{ ...builtIn, colors: { ...builtIn.colors, red: "#aa0000" } }],
+    });
+    expect(shown()).toEqual(["", builtIn.path]);
+    edited.dialog.dispose();
+  });
+
+  it("names the file only when two cards share a name", async () => {
+    const view = await picker({
+      ...choices,
+      themes: [
+        ...choices.themes,
+        { path: "themes/c.json", name: "Only one", colors },
+      ],
+    });
+    const path = (value: string) =>
+      input(value)
+        .closest(".settings-theme-card")!
+        .querySelector<HTMLElement>(".settings-theme-path")!;
+    expect(path("themes/a.json").hidden).toBe(false);
+    expect(path("themes/c.json").hidden).toBe(true);
+    expect(input("themes/c.json").closest("label")!.title).toBe(
+      "themes/c.json",
+    );
+    view.dialog.dispose();
+  });
+});
+
 describe("theme discovery feedback", () => {
   it("offers the bundled default separately and removes theme.path on explicit selection", async () => {
     const view = await picker();
@@ -381,9 +449,7 @@ describe("theme discovery feedback", () => {
     theme.focus();
     language.set("pt-BR");
     expect(document.activeElement).toBe(theme);
-    expect(view.query("#settings-themes-title").textContent).toBe(
-      "Temas do terminal",
-    );
+    expect(view.query("#settings-themes-title").textContent).toBe("Temas");
     expect(view.query(".settings-themes-message").textContent).toContain(
       "Não foi possível usar",
     );

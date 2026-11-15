@@ -24,7 +24,6 @@ interface Box {
   readonly height: number;
 }
 interface Form {
-  readonly nestedColor: boolean;
   /** A ui-form-row; otherwise a labelled field with its name above it. */
   readonly formRow: boolean;
   /** One row holding several small fields. */
@@ -163,15 +162,20 @@ export function observeSettingsLayout(
       mode: getComputedStyle(nav).flexDirection,
       reachable: navReachable,
     },
+    // Null while the theme editor has taken the list's place.
     theme:
-      panel.id === "settings-panel-appearance"
+      panel.id === "settings-panel-appearance" &&
+      panel.querySelector(".settings-themes-grid")!.getClientRects().length
         ? {
             grid: box(panel.querySelector(".settings-themes-grid")!),
             cards: [
               ...panel.querySelectorAll(
                 ".settings-themes-grid .settings-theme-card",
               ),
-            ].map(box),
+            ]
+              // The built-in card hides while a file stands for it.
+              .filter((card) => card.getClientRects().length)
+              .map(box),
           }
         : null,
     extensions:
@@ -188,12 +192,11 @@ export function observeSettingsLayout(
           }
         : null,
     forms: [...panel.querySelectorAll<HTMLElement>(".settings-row")]
-      .filter((row) => !row.closest("[hidden]"))
+      .filter((row) => !row.closest("[hidden]") && row.getClientRects().length)
       .slice(0, 16)
       .map((row) => {
         const formRow = row.classList.contains("ui-form-row");
         return {
-          nestedColor: !!row.closest(".settings-theme-color-controls"),
           formRow,
           group: row.classList.contains("settings-group"),
           box: box(row),
@@ -212,7 +215,9 @@ export function observeSettingsLayout(
         ".settings-control-caption, .settings-shortcut-name, .extensions-panel .settings-row > span",
       ),
     ]
-      .filter((label) => !label.closest("[hidden]"))
+      .filter(
+        (label) => !label.closest("[hidden]") && label.getClientRects().length,
+      )
       .slice(0, 16)
       .map((label) => {
         const font = getComputedStyle(label);
@@ -261,6 +266,7 @@ export function observeSettingsLayout(
 function assertSettingsDetails(
   observation: SettingsLayoutObservation,
   expectedPanel: string,
+  editingTheme: boolean,
 ) {
   assert.equal(
     observation.navigation.reachable,
@@ -272,7 +278,7 @@ function assertSettingsDetails(
     observation.width < 640 ? "row" : "column",
     "Settings compact navigation did not follow its viewport breakpoint",
   );
-  if (expectedPanel === "settings-panel-appearance") {
+  if (expectedPanel === "settings-panel-appearance" && !editingTheme) {
     const theme = observation.theme;
     assert.ok(
       theme && theme.cards.length >= 6,
@@ -316,7 +322,6 @@ function assertSettingsDetails(
 }
 
 function assertCommonFormBoundary(row: Form, panel: Box) {
-  if (row.nestedColor) return;
   assert.ok(
     Math.abs(row.box.left - panel.left) <= 2 &&
       Math.abs(row.box.right - panel.right) <= 2,
@@ -351,6 +356,8 @@ function assertShortcutProportions(
 export function assertSettingsLayout(
   observation: SettingsLayoutObservation,
   expectedPanel: string,
+  // The theme editor has taken the place of the list and the page's rows.
+  editingTheme?: boolean,
 ) {
   const { panels, categories, contentWidth } = observation;
   assert.equal(panels.length, 7, "Settings panel inventory changed");
@@ -391,7 +398,7 @@ export function assertSettingsLayout(
   }
   assert.equal(observation.overflow, false, "Settings horizontal overflow");
   assert.ok(contentWidth > 0, "Settings content has no width");
-  assertSettingsDetails(observation, expectedPanel);
+  assertSettingsDetails(observation, expectedPanel, !!editingTheme);
   if (
     [
       "settings-panel-general",

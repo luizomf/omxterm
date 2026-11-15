@@ -107,15 +107,16 @@ async function checkThemeEditor(
   evidence?: string,
 ) {
   await contents.executeJavaScript(
-    "document.querySelector('.settings-theme-authoring > .settings-actions button').click()",
+    "document.querySelector('.settings-themes-header .settings-actions button').click()",
     true,
   );
   await frame();
   const editor = await observe();
-  assertSettingsLayout(editor, "settings-panel-appearance");
+  assertSettingsLayout(editor, "settings-panel-appearance", true);
   assert.ok(
-    editor.forms.length >= 9,
-    "Settings nested theme editor rows missing",
+    // A new theme has no file yet: its name, and the filename to save it as.
+    editor.theme === null && editor.forms.length === 2,
+    "Settings theme editor did not take the place of the list and its page",
   );
   if (evidence)
     await writeFile(

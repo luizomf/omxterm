@@ -362,9 +362,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.fontSize": "Tamanho da fonte",
   "settings.lineHeight": "Altura da linha",
   "settings.ligatures": "Ligaduras de programação",
-  "settings.themePicker": "Temas do terminal",
-  "settings.themePickerHint":
-    "Adicione temas JSON em themes/ ao lado de config.json e atualize a lista.",
+  "settings.themePicker": "Temas",
   "settings.themeRefresh": "Atualizar temas",
   "settings.themeLoading": "Carregando temas…",
   "settings.themeMissing":
@@ -383,12 +381,10 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.themeErrorRead": "Não foi possível ler o arquivo.",
   "settings.themeErrorInvalid": "Tema inválido:",
   "settings.themeErrorUnknown": "O tema contém um campo desconhecido.",
-  "settings.themeSelected": "Selecionado",
   "settings.themePending": "Salvando…",
   "settings.themeDefaultDetail": "Padrão incluído",
   ...brazilianPortugueseThemeAuthoringMessages,
   "settings.bundledFont": "FiraCode Nerd Font Mono incluída",
-  "settings.bundledTheme": "omtheme incluído",
   "settings.defaultShell": "Windows PowerShell",
   "settings.scrollback": "Linhas de histórico",
   "settings.contextMenu": "Menu do botão direito",

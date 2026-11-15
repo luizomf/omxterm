@@ -210,12 +210,14 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 
 - **Settings → Appearance** lists version-1 JSON files placed directly in
   `themes/` beside the logical `config.json`. The folder and the files may be
-  symlinks. Cards show name and path, so same-named themes stay distinct.
-- **Bundled omtheme** removes `theme.path`. It is distinct from the editable
-  `themes/omtheme.json` copy.
+  symlinks. Cards show the name; the path is the tooltip and appears on the
+  card when two cards share a name.
+- The built-in `omtheme` card removes `theme.path`. While `themes/omtheme.json`
+  is still the copy first run wrote (same name and preview colors), that file's
+  card stands for both and the built-in card shows only if it is in use.
 - Discovery reads at most 2,048 directory entries, 128 JSON candidates, 256 KiB
   per theme and 4 MiB of configuration. It doesn't watch for changes; the user
-  chooses **Refresh themes**. Missing folders, unreadable or invalid files and a
+  chooses **Refresh themes** (the icon beside the heading). Missing folders, unreadable or invalid files and a
   truncated list are reported. Discovery never edits theme files.
 - A custom path outside `themes/` doesn't show as a selected card. Settings
   has no field for it; `theme.path` in the config file accepts relative or
@@ -223,12 +225,16 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 
 ### Author a theme
 
-- One inline editor is open at a time. **Edit theme** doesn't select the card.
+- One editor is open at a time, in place of the theme list. A card's edit
+  icon (on hover or focus) opens it and doesn't select the card.
+- Every color is a swatch: the five surface colors, then the normal ANSI
+  colors above their bright variants. Pick one to edit it with the color well
+  or the hex field beside the grid.
 - Invalid partial color text stays with its role when switching roles or
   categories and must be fixed before Save or Export. The specimen shows the
   last valid colors.
-- The palette preview pairs each normal color with its bright variant, shows `Aa`
-  text on the draft background and a solid square. It never runs a shell or
+- The preview shows sample output on the draft background, with each normal
+  color name above its bright variant. It never runs a shell or
   changes the real terminal, the surrounding Settings colors or transparency.
 - **Save** writes an opened local theme against its original revision. It follows
   file and directory links to the regular target and keeps the links. An

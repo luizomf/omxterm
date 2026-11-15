@@ -127,8 +127,10 @@ export function deferred<Value>() {
   return { promise, resolve, reject };
 }
 
+/** A button by what it says: its text, or an icon button's accessible name. */
 export function button(text: string): HTMLButtonElement {
   return [...document.querySelectorAll("button")].find(
-    (button) => button.textContent === text,
+    (button) =>
+      button.textContent === text || button.getAttribute("aria-label") === text,
   )!;
 }
