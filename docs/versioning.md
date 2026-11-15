@@ -239,6 +239,9 @@ Keeping Windows font discovery out of the cursor fixture's timed mount step
 Clicking the trailing-space path only after a rendered frame shows it (#1150)
 moves main to `0.36.1-dev.8`.
 
+Pressing the native drag only once the handle hit-tests as a caption, and
+holding it until the window moves (#983), moves main to `0.36.1-dev.9`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

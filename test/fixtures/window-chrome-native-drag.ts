@@ -68,6 +68,26 @@ public class Pointer {
   [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr window, uint flags);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern void mouse_event(uint flags, uint x, uint y, uint data, UIntPtr extra);
+  [DllImport("user32.dll")] public static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, IntPtr w, IntPtr l, uint flags, uint timeout, out IntPtr result);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetClassName(IntPtr h, System.Text.StringBuilder name, int max);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  // Names whatever covers the point: class and process only, never a title.
+  public static string Describe(IntPtr h) {
+    var name = new System.Text.StringBuilder(256);
+    GetClassName(h, name, 256);
+    uint pid;
+    GetWindowThreadProcessId(h, out pid);
+    string process = "unknown";
+    try { process = System.Diagnostics.Process.GetProcessById((int)pid).ProcessName; } catch {}
+    return name + " (" + process + ")";
+  }
+  // WM_NCHITTEST at a physical screen point, as the press will see it.
+  public static long HitTest(IntPtr h, int x, int y) {
+    IntPtr result;
+    long point = (long)((((uint)y & 0xFFFFu) << 16) | ((uint)x & 0xFFFFu));
+    if (SendMessageTimeout(h, 0x84, IntPtr.Zero, new IntPtr(point), 2, 1000, out result) == IntPtr.Zero) return -1;
+    return result.ToInt64();
+  }
 }
 '@
 # Electron supplies physical pixels. Keep Win32 hit testing and geometry in that space.
@@ -77,10 +97,17 @@ if (-not [Pointer]::GetCursorPos([ref]$original)) { throw 'Original pointer read
 $down = $false
 try {
   if (-not [Pointer]::SetCursorPos(${point.x}, ${point.y})) { throw 'Pointer move failed' }
-  Start-Sleep -Milliseconds 500
+  # Hovering reveals the handle through main's cursor sampling and the
+  # renderer's drag regions. Press only once the point is a caption (HTCAPTION).
+  $deadline = [DateTime]::UtcNow.AddSeconds(5)
+  while (($hit = [Pointer]::HitTest([IntPtr]${handle}, ${point.x}, ${point.y})) -ne 2) {
+    if ([DateTime]::UtcNow -gt $deadline) { throw "Drag handle never became a caption (hit test $hit)" }
+    Start-Sleep -Milliseconds 20
+  }
   $point = New-Object Pointer+Point
   if (-not [Pointer]::GetCursorPos([ref]$point)) { throw 'Pointer read failed' }
-  if ([Pointer]::GetAncestor([Pointer]::WindowFromPoint($point), 2).ToInt64() -ne ${handle}) { throw 'Owned window is not under pointer' }
+  $under = [Pointer]::GetAncestor([Pointer]::WindowFromPoint($point), 2)
+  if ($under.ToInt64() -ne ${handle}) { throw "Owned window is not under pointer; on top: $([Pointer]::Describe($under))" }
   $beforeGeometry = [Pointer]::Snapshot([IntPtr]${handle})
   [Pointer]::mouse_event(2, 0, 0, 0, [UIntPtr]::Zero)
   $down = $true
@@ -88,6 +115,13 @@ try {
     Start-Sleep -Milliseconds 30
     if (-not [Pointer]::SetCursorPos(${point.x} + $i * 5, ${point.y} + $i * 5)) { throw 'Drag pointer move failed' }
   }
+  # Hold the button until the move loop has moved the window: a busy UI
+  # thread that reads the press late would otherwise see it already released.
+  $deadline = [DateTime]::UtcNow.AddSeconds(5)
+  do {
+    Start-Sleep -Milliseconds 20
+    $held = [Pointer]::Snapshot([IntPtr]${handle})
+  } while (($held.outer.x -eq $beforeGeometry.outer.x -or $held.outer.y -eq $beforeGeometry.outer.y) -and [DateTime]::UtcNow -lt $deadline)
   Start-Sleep -Milliseconds 100
   if ([Pointer]::GetForegroundWindow().ToInt64() -ne ${handle}) { throw 'Native press did not activate the owned window' }
 } finally {
