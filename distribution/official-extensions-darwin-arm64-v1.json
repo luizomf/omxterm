@@ -5,7 +5,7 @@
       "id": "omxterm.files",
       "name": "Files",
       "description": "Browse your files and folders: create, rename, move, trash and delete them, and insert their paths into the terminal.",
-      "version": "0.9.4",
+      "version": "0.9.5",
       "engines": {
         "omxterm": ">=0.26.0",
         "api": "0.1.x"
@@ -18,18 +18,18 @@
         "win32-x64"
       ],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.9.4/files-0.9.4.omxext",
-        "sha256": "881bea69d653f7627e355e897ba29bb8c1f7ea3d7b427a210a02c8d3e148b8d6",
-        "bytes": 30554
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-files-v0.9.5/files-0.9.5.omxext",
+        "sha256": "b10edf63b864097c3da464d6b8449d6db6c4851ab8e7d32492f4eb89e1845772",
+        "bytes": 30740
       },
-      "sourceCommit": "c51517aa4ebd9f959bb7b97062349c40ea194717",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.9.4"
+      "sourceCommit": "77d3eeb3b5bfb080ca7a322f95484253beac0f57",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-files-v0.9.5"
     },
     {
       "id": "omxterm.ssh",
       "name": "SSH Connect",
       "description": "Pick a server from your SSH config, or type an address, and connect in a new terminal tab.",
-      "version": "0.4.3",
+      "version": "0.4.4",
       "engines": {
         "omxterm": ">=0.27.0-dev.0",
         "api": "0.1.x"
@@ -42,36 +42,36 @@
         "win32-x64"
       ],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.4.3/ssh-0.4.3.omxext",
-        "sha256": "48e70109f9e40990bd229662eb93d1b66fac54c32cc0e5f48aa119d44c1857c1",
-        "bytes": 14454
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-ssh-v0.4.4/ssh-0.4.4.omxext",
+        "sha256": "001e6b1e03fa94802befd2a1dc5c31f76ce62819984d4d3b40383a7d87c299fe",
+        "bytes": 14542
       },
-      "sourceCommit": "c51517aa4ebd9f959bb7b97062349c40ea194717",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.4.3"
+      "sourceCommit": "77d3eeb3b5bfb080ca7a322f95484253beac0f57",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-ssh-v0.4.4"
     },
     {
       "id": "omxterm.snippets",
       "name": "Snippets",
       "description": "Search your saved text snippets, hover one to see its full text, then insert it into the terminal or run it.",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "engines": {
         "omxterm": ">=0.24.0-dev.8",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64", "darwin-arm64", "linux-x64", "win32-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.5/snippets-0.1.5.omxext",
-        "sha256": "6470985017cad22e6ed1be5cb047fde3ad90d2a3563cf068c57ea930991b28bc",
-        "bytes": 84036
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.6/snippets-0.1.6.omxext",
+        "sha256": "beac01d870cefc961d733612ae71d22c008788da942db1387b0000924d111194",
+        "bytes": 84262
       },
-      "sourceCommit": "c51517aa4ebd9f959bb7b97062349c40ea194717",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.5"
+      "sourceCommit": "77d3eeb3b5bfb080ca7a322f95484253beac0f57",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.6"
     },
     {
       "id": "omxterm.restoration",
       "name": "Saved Layout",
       "description": "Save a window's tabs, splits and folders, then open them again with fresh shells.",
-      "version": "0.3.3",
+      "version": "0.3.4",
       "engines": {
         "omxterm": ">=0.29.1-dev.0",
         "api": "0.1.x"
@@ -84,30 +84,30 @@
         "win32-x64"
       ],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-restoration-v0.3.3/restoration-0.3.3.omxext",
-        "sha256": "a339a3630e50757da88c01404a86f08ef02d45afa35182898b81c0cbc118fa29",
-        "bytes": 16970
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-restoration-v0.3.4/restoration-0.3.4.omxext",
+        "sha256": "13a72572689528fb7e0110f9534a09d86d4da4d3447ab5607b6b572b5dc95a3f",
+        "bytes": 17058
       },
-      "sourceCommit": "c51517aa4ebd9f959bb7b97062349c40ea194717",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.3.3"
+      "sourceCommit": "77d3eeb3b5bfb080ca7a322f95484253beac0f57",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-restoration-v0.3.4"
     },
     {
       "id": "omxterm.mirror-typing",
       "name": "Mirror Typing",
       "description": "Type into several panes of one tab at once. Paste, snippets and drops stop mirroring and go to one pane.",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "engines": {
         "omxterm": ">=0.29.1-dev.0",
         "api": "0.1.x"
       },
       "targets": ["linux-arm64", "darwin-arm64", "win32-arm64"],
       "archive": {
-        "url": "https://github.com/luizomf/omxterm/releases/download/ext-mirror-typing-v0.3.2/mirror-typing-0.3.2.omxext",
-        "sha256": "0e6f111b56a405308498d689a47a3a4d068897c823f9747040cc62bd60ce0a40",
-        "bytes": 11198
+        "url": "https://github.com/luizomf/omxterm/releases/download/ext-mirror-typing-v0.3.3/mirror-typing-0.3.3.omxext",
+        "sha256": "80c893df0dfb9514e980ddf5c9122bb092c587e715d9b3113bc818b513ecbceb",
+        "bytes": 11286
       },
-      "sourceCommit": "c51517aa4ebd9f959bb7b97062349c40ea194717",
-      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-mirror-typing-v0.3.2"
+      "sourceCommit": "77d3eeb3b5bfb080ca7a322f95484253beac0f57",
+      "releaseUrl": "https://github.com/luizomf/omxterm/releases/tag/ext-mirror-typing-v0.3.3"
     }
   ]
 }
