@@ -16,6 +16,7 @@ import { attentionOscCorrections } from "../../scripts/restty-attention-osc-corr
 import { replyOrderCorrections } from "../../scripts/restty-reply-order-corrections.mjs";
 import { keyPressCorrections } from "../../scripts/restty-key-press-corrections.mjs";
 import { selectionCorrections } from "../../scripts/restty-selection-corrections.mjs";
+import { cff2Corrections } from "../../scripts/restty-cff2-corrections.mjs";
 import { runInNewContext } from "node:vm";
 import { createInputHandler } from "restty/internal";
 import { describe, expect, it, vi } from "vitest";
@@ -83,7 +84,11 @@ describe("actual prepared final-key routing", () => {
         expect(value.split(corrected)).toHaveLength(occurrences + 1);
         return value.replaceAll(corrected, original);
       }, text);
-    const preRisMode = reverse(source, risModeCorrections);
+    const preCff2 = reverse(source, cff2Corrections);
+    expect(hash(preCff2)).toBe(
+      "1a067f98ac1905611f51d186a95bae144c496174a6aa0f5de4ddea591608f533",
+    );
+    const preRisMode = reverse(preCff2, risModeCorrections);
     expect(hash(preRisMode)).toBe(
       "3cdffe590dff2c420f41841fbe6aacdc4cad94e60ba927c6610514965db4c83c",
     );

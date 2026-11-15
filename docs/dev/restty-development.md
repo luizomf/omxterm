@@ -289,6 +289,17 @@ npx vitest run test/integration/restty-font-resources.test.ts test/integration/r
 npx vitest run test/integration/restty-host-integration.test.ts
 ```
 
+### CFF2 variable outlines
+
+Restty draws glyphs with its bundled `text-shaper`, which misreads CFF2
+variable outlines: its vstore offsets skip the length prefix, its
+ItemVariationData reader drops `regionIndexCount`, and `blend` leaves its deltas
+on the stack at default axes. `cff2Corrections`
+(`scripts/restty-cff2-corrections.mjs`) fixes all three and draws a CFF2 face at
+`wght` 400 when its default master is another weight (Noto Sans CJK VF defaults
+to Thin). `test/unit/restty-cff2-outlines.test.ts` checks a synthesized CFF2
+font through the prepared runtime.
+
 ### Optional rendering and memory diagnostics
 
 These opt-in diagnostic runs inspect specific rendering and memory boundaries in isolated fixtures:
@@ -314,7 +325,7 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `1a067f98ac1905611f51d186a95bae144c496174a6aa0f5de4ddea591608f533` |
+| Restty JavaScript runtime | `5b89db17bcc3274adfb8b57a426df4cd8fcc84671c0d0f8b2abfe22f470d8ca8` |
 | Embedded-core chunk       | `9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
 | Tracked WASM core         | `0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf` |

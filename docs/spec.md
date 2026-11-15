@@ -1445,6 +1445,8 @@ startup, shell exit, tab close and renderer-loss cleanup.
   emoji, or regular and italic-only text. Pixel parity with native rasterizers
   is not promised.
 - Missing glyphs use the regular fallback faces.
+- Variable CFF2 faces, such as the `Noto Sans CJK` collection Fedora installs,
+  draw at Regular weight (`wght` 400), whatever their default master.
 - Compatible tabs share native font bytes and parsed faces; faces in one
   collection share its buffer. Apple Color Emoji reaches Restty as memory-only
   shaping input without the unused `sbix` bitmap table, keeping every face and

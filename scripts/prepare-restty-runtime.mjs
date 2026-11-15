@@ -10,6 +10,7 @@ import { backgroundCorrections } from "./restty-background-corrections.mjs";
 import { blinkCorrections } from "./restty-blink-corrections.mjs";
 import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
+import { cff2Corrections } from "./restty-cff2-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import {
   altScreenCorrections,
@@ -188,8 +189,10 @@ const priorRisAltScreenDigest =
   "76c74a23600aa3cc0e442ad95443e15a7118864e578513885e9d2da739e83222";
 const priorRisModeDigest =
   "3cdffe590dff2c420f41841fbe6aacdc4cad94e60ba927c6610514965db4c83c";
-const correctedDigest =
+const priorCff2Digest =
   "1a067f98ac1905611f51d186a95bae144c496174a6aa0f5de4ddea591608f533";
+const correctedDigest =
+  "5b89db17bcc3274adfb8b57a426df4cd8fcc84671c0d0f8b2abfe22f470d8ca8";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -2089,6 +2092,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, risAltScreenCorrections);
       case priorRisModeDigest:
         source = applyCorrections(source, risModeCorrections);
+      case priorCff2Digest:
+        source = applyCorrections(source, cff2Corrections);
         break;
       default:
         throw new Error(
