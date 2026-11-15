@@ -2,6 +2,7 @@ export interface PrepareResttyRuntimeOptions {
   readonly runtimePath?: string;
   readonly corePath?: string;
   readonly eventTypesPath?: string;
+  readonly surfacePath?: string;
   readonly declarationRoot?: string;
   readonly correctedCorePath?: string;
   /** @deprecated Use correctedCorePath. */

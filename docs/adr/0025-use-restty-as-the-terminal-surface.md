@@ -41,6 +41,9 @@ not recreate a core around a surviving PTY or switch engines. The validated
 close route carries a fixed rendering-failure reason, not renderer-provided
 dialog text. Main owns native failure acknowledgement and final window closure
 under [ADR 0016](0016-adopt-tabs-with-one-live-session-per-tab.md).
+A hidden Surface may give its context back on purpose and create a new one
+when shown; that is not a loss
+([ADR 0059](0059-release-the-gpu-context-of-hidden-panes.md)).
 
 ## Dependency pins and corrections
 

@@ -318,6 +318,9 @@ Copy Last Command Output (#1027) moves main to `0.38.0-dev.2`.
 Putting the tabs in the macOS title row, beside the traffic lights (#1194),
 moves main to `0.38.0-dev.3`.
 
+Releasing the GPU context of hidden panes, so a 17th tab or split no longer
+closes a session (#1202), moves main to `0.38.0-dev.4`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

@@ -35,7 +35,12 @@ const harness = vi.hoisted(() => {
       runtime: {
         events: { subscribe: () => () => undefined },
         lifecycle: { init: async () => undefined, state: () => "ready" },
-        render: { getBackend: () => "webgl2", refresh: vi.fn() },
+        render: {
+          getBackend: () => "webgl2",
+          refresh: vi.fn(),
+          release: () => false,
+          restore: () => true,
+        },
         io: {
           connectPty: () => {
             const transport = this.services().ptyTransport;

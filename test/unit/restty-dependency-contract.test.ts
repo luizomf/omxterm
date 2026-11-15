@@ -7,6 +7,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareResttyRuntime } from "../../scripts/prepare-restty-runtime.mjs";
 import { applicationCursorDeclarations } from "../../scripts/restty-application-cursor-corrections.mjs";
+import { gpuReleaseSurfaceCorrection } from "../../scripts/restty-gpu-release-corrections.mjs";
 
 const require = createRequire(import.meta.url);
 const packageRoot = path.dirname(path.dirname(require.resolve("restty")));
@@ -127,8 +128,12 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3",
+      "a9d670bae0cfa50658e3dcb995a666e728d939033583ae773e2b7fdd14dccd7b",
     );
+    const surface = readFileSync(
+      path.join(packageRoot, "dist", "chunk-0jmxpyyw.js"),
+    );
+    expect(digest(surface)).toBe(gpuReleaseSurfaceCorrection.correctedDigest);
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
@@ -204,12 +209,18 @@ describe("Restty dependency contract", () => {
       const corePath = path.join(root, "core.js");
       const artifactPath = path.join(root, "core.wasm");
       const eventTypesPath = path.join(root, "runtime-events.d.ts");
+      const surfacePath = path.join(root, "surface.js");
       const installedRuntime = path.join(
         packageRoot,
         "dist",
         "chunk-c0rcpsc5.js",
       );
       const installedCore = path.join(packageRoot, "dist", "chunk-6dxqza9q.js");
+      const installedSurface = path.join(
+        packageRoot,
+        "dist",
+        "chunk-0jmxpyyw.js",
+      );
       const installedEventTypes = path.join(
         packageRoot,
         "dist",
@@ -223,6 +234,7 @@ describe("Restty dependency contract", () => {
         copyFile(installedRuntime, runtimePath),
         copyFile(installedCore, corePath),
         copyFile(installedEventTypes, eventTypesPath),
+        copyFile(installedSurface, surfacePath),
         copyFile(trackedCore, artifactPath),
       ]);
       const declarationRoot = path.join(root, "declarations");
@@ -237,6 +249,7 @@ describe("Restty dependency contract", () => {
         corePath,
         correctedCorePath: artifactPath,
         eventTypesPath,
+        surfacePath,
         declarationRoot,
       };
 
@@ -265,6 +278,21 @@ describe("Restty dependency contract", () => {
         /Unrecognized Restty event types/u,
       );
       await copyFile(installedEventTypes, eventTypesPath);
+      const correctedSurface = readFileSync(surfacePath, "utf8");
+      await writeFile(
+        surfacePath,
+        correctedSurface.replace(
+          gpuReleaseSurfaceCorrection.corrected,
+          gpuReleaseSurfaceCorrection.original,
+        ),
+      );
+      await prepareResttyRuntime(options);
+      expect(readFileSync(surfacePath, "utf8")).toBe(correctedSurface);
+      await writeFile(surfacePath, `${correctedSurface}\n`);
+      await expect(prepareResttyRuntime(options)).rejects.toThrow(
+        /Unrecognized Restty pane surface/u,
+      );
+      await copyFile(installedSurface, surfacePath);
       for (const correction of applicationCursorDeclarations) {
         const file = path.join(declarationRoot, correction.path);
         const corrected = readFileSync(file, "utf8");

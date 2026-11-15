@@ -208,6 +208,22 @@ These are not DOM Surface, native PTY or graphical qualification.
 
 Panes in hidden tabs continue synchronous output ingestion, protocol replies, and Adapter ACKs while suppressing WebGL frame clears, draws, and texture uploads. Disposable renderer image copies are released while hidden and rebuilt from core storage when the tab is selected again.
 
+Chromium keeps at most 16 live WebGL contexts per renderer process (one per
+window) and loses the oldest when another is created, so a window with more
+panes than that used to lose sessions (#1202). `gpuReleaseCorrections`
+(`scripts/restty-gpu-release-corrections.mjs`) adds `render.release()` and
+`render.restore()`: release cancels the loop, swaps in a fresh canvas and frees
+the context at once through `WEBGL_lose_context`; restore builds a new context
+on that canvas and resumes the loop. Upstream's canvas swap read the parent
+before the native scroll host unwrapped the canvas; the swap now uses the
+canvas's current place. The core handle is untouched. `destroy()`
+frees its context the same way, and the pane's focus target follows the
+current canvas (`gpuReleaseSurfaceCorrection` on the pane surface chunk).
+`src/terminal-surface/renderer-context-budget.ts` decides when: past 12 live
+contexts in a window, the hidden Surfaces shown least recently release theirs
+before a new one is created; a Surface shown again restores and draws in the
+same task, before the frame is presented ([ADR 0059](../adr/0059-release-the-gpu-context-of-hidden-panes.md)).
+
 ### Idle rendering
 
 The pinned loop requested a display frame on every vsync, even for an unchanged
@@ -327,9 +343,10 @@ Prepared SHA-256 digests:
 
 | Input                     | SHA-256                                                            |
 | ------------------------- | ------------------------------------------------------------------ |
-| Restty JavaScript runtime | `735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3` |
+| Restty JavaScript runtime | `a9d670bae0cfa50658e3dcb995a666e728d939033583ae773e2b7fdd14dccd7b` |
 | Embedded-core chunk       | `c61dd249e4e7555ff37b1701680f92d2172309efd4b29a07bf449b2137ac8ad5` |
 | Event declarations        | `428304b91fffa494abcda7e2ac96fc4d305db9906b1436f07650969840a2fa34` |
+| Pane surface chunk        | `e93e09544f30a7ea5ef6f9c12f22790f6e53d283aeb9d3372159adf13b8888ef` |
 | Tracked WASM core         | `045bd4cdd61bf235ac622a8d1ca509a6fc0b4ce018c11a0d86c7ee9d78ec16f8` |
 | Unix `node-pty` runtime   | `a8ee8107e9d1a26c133e6d450149d2712facce0e97db12b57500e869bbab6578` |
 | Windows argv agent        | `6042a70008684243efbc865d2615c22a16a910c7a65475bc1a33e49447bcd815` |
