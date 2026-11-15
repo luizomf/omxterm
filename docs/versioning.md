@@ -327,6 +327,9 @@ Stable 0.38.0 uses the frozen cut `77d3eeb3`; the next development baseline is
 `0.38.1-dev.0`. Its bridge admits ranges that accept both `0.38.0` and
 `0.38.1`. Every catalog archive stays installable unchanged.
 
+Re-pinning the bundled default Snippets to the published 0.1.6 moves main to
+`0.38.1-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

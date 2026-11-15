@@ -20,7 +20,7 @@ import {
 } from "../../src/installed-packages/installed-packages";
 
 export const publicArchive = new URL(
-  "../../assets/default-snippets/snippets-0.1.5.omxext",
+  "../../assets/default-snippets/snippets-0.1.6.omxext",
   import.meta.url,
 );
 
