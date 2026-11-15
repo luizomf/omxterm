@@ -2812,8 +2812,12 @@ See [ADR 0004](adr/0004-log-the-operational-envelope-not-terminal-payload.md).
   [archive contract](dev/extension-installation-foundation.md#archive-contract).
   Install and Update never activate code automatically. A catalog selection
   that would downgrade or swap the installed bytes, such as one from a stale
-  card in another window, still gets a replacement warning in the native trust
-  prompt. Official
+  card in another window, still gets a replacement warning in the native install
+  prompt. Installing an official extension asks a short question, "Install
+  Files?", with one sentence and Install / Cancel: the catalog entry is pinned
+  by digest, so the digest and package id are not shown. Installing from a file
+  or link keeps the package id and SHA-256 in the prompt, because there the user
+  is the trust check. Nothing installs without that confirmation. Official
   means project-maintained, not sandboxed or signed. Settings says what
   extensions can do in one plain sentence with a link to the
   [trust notes](extension-distribution.md#trust); idle and loaded catalogs and

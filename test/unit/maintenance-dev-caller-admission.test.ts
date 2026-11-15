@@ -218,12 +218,11 @@ it.each(releases)(
     const selected = catalog.select(card.selection);
     const downloaded = Buffer.from(bytes);
     adapters.consent.mockImplementationOnce(async (_window, prompt) => {
-      expect(prompt.detail).toContain(fixture.id);
-      expect(prompt.detail).toContain(digest);
-      expect(prompt.detail).toContain("Current generation: 0");
-      expect(prompt.detail).toContain(
-        translator().t("extensions.catalogTrust"),
+      // Official installs are pinned by the catalog digest: a short confirm.
+      expect(prompt.detail).toBe(
+        translator().t("extensions.trustOfficialDetail"),
       );
+      expect(prompt.detail).not.toContain(digest);
       // Mutating the transport buffer after trust preparation cannot change consent.
       downloaded.fill(0);
       return { response: 1 };
@@ -247,8 +246,9 @@ it("admits a published manifest through local and direct-link trust with the sam
   });
   adapters.consent.mockImplementationOnce(async (_window, prompt) => {
     expect(prompt.detail).toContain(digest);
+    expect(prompt.detail).toContain(fixture.id);
     expect(prompt.detail).not.toContain(
-      translator().t("extensions.catalogTrust"),
+      translator().t("extensions.trustOfficialDetail"),
     );
     await writeFile(file, "changed after preparation");
     return { response: 1 };
@@ -260,9 +260,9 @@ it("admits a published manifest through local and direct-link trust with the sam
   const downloaded = Buffer.from(bytes);
   adapters.consent.mockImplementationOnce(async (_window, prompt) => {
     expect(prompt.detail).toContain(digest);
-    expect(prompt.detail).toContain("Current generation: 1");
+    expect(prompt.detail).toContain(fixture.id);
     expect(prompt.detail).not.toContain(
-      translator().t("extensions.catalogTrust"),
+      translator().t("extensions.trustOfficialDetail"),
     );
     downloaded.fill(0);
     return { response: 1 };

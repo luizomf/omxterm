@@ -170,7 +170,7 @@ except macOS) and `distribution/official-extensions-darwin-arm64-v1.json`
 catalog entry does not change it ([Default Snippets](default-snippets.md)).
 
 Users install or update in one of two ways. Both use the same captured-byte
-trust prompt:
+install prompt:
 
 1. **Settings → Extensions → Browse official extensions**, then Install or
    Update on the Snippets card. Browsing is explicit; opening Settings does not

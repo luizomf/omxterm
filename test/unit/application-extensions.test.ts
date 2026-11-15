@@ -253,9 +253,11 @@ it.each(["linux", "darwin"])(
     expect(adapters.download.mock.calls[0]![0]).toBe(endpoint);
     const selection = loaded.catalog!.entries[0]!.selection;
     adapters.consent.mockImplementationOnce(async (_window, options) => {
-      expect(options.detail).toContain(
-        translatorFor("en-US").t("extensions.catalogTrust"),
+      expect(options.detail).toBe(
+        translatorFor("en-US").t("extensions.trustOfficialDetail"),
       );
+      expect(options.buttons).toHaveLength(2);
+      expect(options.defaultId).toBe(0);
       await request({ operation: "catalog-refresh", token });
       return { response: 1 };
     });
@@ -1851,7 +1853,7 @@ it("Settings installs captured bytes through explicit trust without activating c
     entries: [{ version: "1.0.0", local: "dormant", enabled: true }],
   });
   expect(adapters.activate).not.toHaveBeenCalled();
-  expect(adapters.consent.mock.calls[0]![1].detail).toContain("network");
+  expect(adapters.consent.mock.calls[0]![1].detail).toContain("read your files");
   expect(service.actions()).toMatchObject([
     { id: "example.files.open", accelerator: null },
   ]);
@@ -2149,7 +2151,7 @@ it("localizes native trust at display time without changing captured package ide
     "Instalar extensão local",
   );
   expect(adapters.consent.mock.calls[0]![1]).toMatchObject({
-    title: "Confiar no código da extensão?",
+    title: "Instalar extensão",
   });
   expect(adapters.consent.mock.calls[0]![1].detail).toMatch(
     /SHA-256: [a-f0-9]{64}/,

@@ -37,26 +37,27 @@ export async function installExtensionFromDialog(
       expected,
     );
     if (owner.isDestroyed() || stopping()) return false;
-    const consent = await dialog.showMessageBox(window, {
-      type: "warning",
-      title: translator().t("extensions.trustTitle"),
-      message: translator().t("extensions.trustMessage", {
-        name: preview.manifest.name,
-        version: preview.manifest.version,
-      }),
-      detail:
-        translator().t("extensions.trustDetail", {
+    // The catalog source (`expected`) is pinned by digest and verified in
+    // prepare(), so official installs get a short confirm. File and link
+    // installs keep the package id and digest visible: the user is the check.
+    const detail = expected
+      ? translator().t("extensions.trustOfficialDetail") +
+        (preview.catalogAction === "replace"
+          ? "\n\n" + translator().t("extensions.catalogReplaceWarning")
+          : "")
+      : translator().t("extensions.trustDetail", {
           id: preview.manifest.id,
           digest: preview.digest,
-          generation: preview.expectedGeneration,
-        }) +
-        (expected
-          ? "\n\n" +
-            translator().t("extensions.catalogTrust") +
-            (preview.catalogAction === "replace"
-              ? "\n\n" + translator().t("extensions.catalogReplaceWarning")
-              : "")
-          : ""),
+        });
+    const consent = await dialog.showMessageBox(window, {
+      type: expected ? "question" : "warning",
+      title: translator().t("extensions.trustTitle"),
+      message: translator().t("extensions.trustMessage", {
+        name: expected
+          ? preview.manifest.name
+          : `${preview.manifest.name} ${preview.manifest.version}`,
+      }),
+      detail,
       buttons: [
         translator().t("common.cancel"),
         translator().t("extensions.trustInstall"),

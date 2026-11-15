@@ -12,7 +12,7 @@ from their [releases](https://github.com/luizomf/omxterm/releases).
 
 1. Open **Settings → Extensions → Browse official extensions** and choose
    **Install** on the Files card shown for your computer.
-2. Review the package and trust prompt before approving. The add-on runs with
+2. Read the install prompt before approving. The add-on runs with
    your account's permissions; it is not sandboxed.
 3. Open **Files** from the File menu or Command Palette to browse local folders.
 

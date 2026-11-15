@@ -282,3 +282,32 @@ it("still warns in the trust prompt when a catalog selection would downgrade", a
     { manifest: { version: "1.0.0" } },
   ]);
 });
+
+it("keeps the package id and digest visible for captured installs and installs nothing without consent", async () => {
+  adapters.consent.mockResolvedValueOnce({ response: 0 });
+  expect(
+    await installExtensionFromDialog(
+      window,
+      manager,
+      () => false,
+      translator,
+      bytes,
+    ),
+  ).toBe(false);
+  const prompt = adapters.consent.mock.lastCall![1] as {
+    type: string;
+    message: string;
+    detail: string;
+    buttons: string[];
+    defaultId: number;
+  };
+  expect(prompt.type).toBe("warning");
+  expect(prompt.message).toBe("Install Files 1.0.0?");
+  expect(prompt.detail).toContain(id);
+  expect(prompt.detail).toContain(
+    createHash("sha256").update(bytes).digest("hex"),
+  );
+  expect(prompt.buttons).toEqual(["Cancel", "Install"]);
+  expect(prompt.defaultId).toBe(0);
+  expect(await manager.snapshot()).toEqual([]);
+});

@@ -254,8 +254,6 @@ export const englishMessages = {
   "extensions.url": "HTTPS link",
   "extensions.downloading": "Downloading the extension…",
   "extensions.catalogHeading": "Official extensions",
-  "extensions.catalogTrust":
-    "Official extensions are maintained by the OMXTerm project. They aren't sandboxed.",
   "extensions.catalogBrowse": "Browse official extensions",
   "extensions.catalogRefresh": "Refresh",
   "extensions.catalogRetry": "Try again",
@@ -330,11 +328,13 @@ export const englishMessages = {
   "extensions.unavailableDetail": "Open Settings → Extensions to check it.",
   "extensions.chooserTitle": "Install local extension",
   "extensions.chooserType": "OMXTerm extension",
-  "extensions.trustTitle": "Trust extension code?",
-  "extensions.trustMessage": "Install {name} {version}?",
+  "extensions.trustTitle": "Install extension",
+  "extensions.trustMessage": "Install {name}?",
   "extensions.trustDetail":
-    "This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: {id}\nSHA-256: {digest}\nCurrent generation: {generation}",
-  "extensions.trustInstall": "Trust and install",
+    "This extension can read your files and run programs with your permissions. Only install it if you trust where it came from.\n\nPackage: {id}\nSHA-256: {digest}",
+  "extensions.trustOfficialDetail":
+    "Extensions can read your files and run programs.",
+  "extensions.trustInstall": "Install",
   "settings.language": "Language",
   "settings.english": "English (United States)",
   "settings.portuguese": "Português (Brasil)",

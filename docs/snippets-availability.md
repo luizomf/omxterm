@@ -15,7 +15,7 @@ ARM64. It was not checked on Linux x64.
 
 1. Open **Settings → Extensions → Browse official extensions** and choose
    **Install** or **Update** on the Snippets card.
-2. Review the trust prompt before approving. The add-on runs with your
+2. Read the install prompt before approving. The add-on runs with your
    account's permissions and is not sandboxed.
 3. Return to a terminal tab, then choose **View → Toggle Snippets**.
 
