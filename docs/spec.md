@@ -447,6 +447,13 @@ are the job of a session manager such as tmux.
   retention. Selecting the tab refits and redraws current content and cursor
   before the first visible frame, without a background render-budget delay or
   replacing the Surface, core, or session.
+- A window keeps working with any number of tabs and splits within the pane
+  limits. Chromium keeps at most 16 live WebGL contexts per window, so past 12
+  live Surfaces, the hidden ones shown least recently give their GPU context
+  back before another is created. Their core, scrollback, session and grid stay
+  as they are; showing one again creates a new context and draws it before the
+  first visible frame. Shown Surfaces always keep theirs
+  ([ADR 0059](adr/0059-release-the-gpu-context-of-hidden-panes.md)).
 - An unchanged Surface stops requesting display frames. It draws at blink phases
   only while something on screen blinks (a blinking cursor, or SGR 5 text while
   cursor blink is on); a steady, hidden, or unfocused cursor over plain text
@@ -1427,7 +1434,8 @@ startup, shell exit, tab close and renderer-loss cleanup.
   Pending acquisitions settle before their partial resources and font leases
   are released. Genuine failures of a live owner stay visible.
 - WebGL context loss shows a persistent failure and disposes only the owning
-  Surface and session, without recreating the core.
+  Surface and session, without recreating the core. A context the Surface gave
+  back on purpose while hidden is not a loss.
 - Main keeps a fixed, actionable native failure dialog until it is
   acknowledged, including when the failed session was the window's last one.
 - Native rasterization can differ across Supported Platforms and GPUs;

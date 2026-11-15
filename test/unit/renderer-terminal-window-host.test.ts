@@ -202,6 +202,7 @@ describe("renderer Terminal Window page host", () => {
         contextMenuEnabled: true,
         background: "host",
         focus: false,
+        rendererContexts: expect.any(Object) as object,
         labels: surfaceLabels("en-US"),
         appearance: {
           fontSize: 19,

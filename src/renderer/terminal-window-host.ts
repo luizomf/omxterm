@@ -50,6 +50,7 @@ import type {
   LocalImageData,
 } from "../shared/local-image";
 import { createTerminalFontGenerationOwner } from "./terminal-font-generations";
+import { createRendererContextBudget } from "../terminal-surface/renderer-context-budget";
 import { applyWindowInsets, applyWindowTheme } from "./terminal-window-theme";
 import type { TerminalWindowActionSubscriptions } from "./terminal-window-actions";
 
@@ -177,6 +178,7 @@ export function mountTerminalWindowPage(
     ...activeSurfaceConfiguration,
     background: "host",
     focus: false,
+    rendererContexts: createRendererContextBudget(),
     ...(fontGenerations ? { acquireFontInputs: fontGenerations.acquire } : {}),
     ...(options.clipboard ? { clipboard: options.clipboard } : {}),
     ...(options.onExternalLink

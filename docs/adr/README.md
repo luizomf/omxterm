@@ -146,10 +146,15 @@ ADR 0055.
 puts the tab strip in the title row beside the traffic lights on macOS, with
 both ends of the row kept for dragging. It amends ADR 0027 and ADR 0016.
 
+[ADR0059: Release the GPU context of hidden panes](0059-release-the-gpu-context-of-hidden-panes.md)
+keeps a window under Chromium's 16 live WebGL contexts: past 12, the hidden
+panes shown least recently give their context back and draw again when shown,
+so many tabs and splits lose no session. It amends ADR 0025.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051, 0053, 0058.
-- Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037, 0055, 0057.
+- Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037, 0055, 0057, 0059.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052, 0054, 0056.
 - Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046, 0049.

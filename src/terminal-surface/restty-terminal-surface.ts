@@ -6,6 +6,7 @@ import {
   type PatchedResttyTerminalConfig,
 } from "./restty-runtime-contract";
 import { createSurfaceGeometry } from "./surface-geometry";
+import type { RendererContextLease } from "./renderer-context-budget";
 import type { TerminalSize } from "../shared/terminal-contract";
 import {
   createSemanticInputDelivery,
@@ -163,11 +164,15 @@ export async function mountResttyTerminalSurface(
   let estimated = false;
   let settledSize: TerminalSize | undefined;
   let removeRuntimeListener: (() => void) | undefined;
-  let removeShowRefit: (() => void) | undefined;
+  let showRefit: ReturnType<typeof refitWhenShown>;
   let visibleLinkController: ResttyVisibleLinkController | undefined;
   let restty: PatchedRestty | undefined;
   let fontLease: TerminalFontInputLease | undefined;
   let pane: PatchedResttyPane | undefined;
+  // The canvas drawing now; none while the context is released (#1202).
+  let canvas: HTMLCanvasElement | undefined;
+  let released = false;
+  let lease: RendererContextLease | undefined;
   let baselineFontSize = resolveFontSize(options.appearance?.fontSize);
   let currentFontSize = baselineFontSize;
   const initialLineHeight = resolveLineHeight(options.appearance?.lineHeight);
@@ -210,9 +215,64 @@ export async function mountResttyTerminalSurface(
     paintFontMetrics(container, fontSize, initialLineHeight);
     pane?.runtime.terminal.setFontSize(fontSize);
   };
+  const shown = () => container.getBoundingClientRect().width > 0;
+  const onContextLost = (event: Event) => {
+    event.preventDefault();
+    // A released canvas reports its own, deliberate loss later.
+    if (event.target === canvas) fail({ kind: "backend-loss" });
+  };
+  const attachCanvas = (current: PatchedResttyPane) => {
+    const next = current.container.querySelector("canvas");
+    if (!next) throw new Error("Restty did not create its rendering canvas");
+    canvas = next;
+    next.addEventListener("webglcontextlost", onContextLost, { once: true });
+    if (options.onExternalLink || options.onLocalImageActivation)
+      visibleLinkController = installResttyVisibleLinks(
+        next,
+        current.runtime.interaction,
+        (url) => requestVisibleLink(url, options),
+        navigator.platform,
+        options.linkHoverAvailability,
+      );
+  };
+  // Only a hidden, drawing Surface gives its context back; the core keeps
+  // every cell, and showing it draws again on a fresh canvas.
+  const releaseContext = () => {
+    if (!canvas || isInactive()) return false;
+    try {
+      if (!pane?.runtime.render.release()) return false;
+    } catch {
+      // A half-swapped renderer can't draw again: end only this Surface.
+      fail({ kind: "backend-loss" });
+      return false;
+    }
+    canvas = undefined;
+    released = true;
+    showRefit?.rearm();
+    visibleLinkController?.dispose();
+    visibleLinkController = undefined;
+    return true;
+  };
+  const restoreContext = (current: PatchedResttyPane) => {
+    lease?.use();
+    if (!current.runtime.render.restore()) {
+      fail({ kind: "backend-loss" });
+      return false;
+    }
+    released = false;
+    attachCanvas(current);
+    return true;
+  };
   const refit = () => {
+    const current = pane;
+    if (!current || disposed) return;
+    const restoring = released && shown();
+    if (restoring && !restoreContext(current)) return;
+    if (!restoring && !released && shown()) lease?.use();
     visibleLinkController?.invalidate();
-    pane?.runtime.interaction.updateSize(true);
+    current.runtime.interaction.updateSize(true);
+    // The fresh canvas is blank: draw it before this frame is presented.
+    if (restoring) current.runtime.render.refresh();
   };
   const geometry = createSurfaceGeometry(container, isSurfaceVisible, refit);
   const applyConfiguration = (configuration: TerminalSurfaceConfiguration) => {
@@ -247,10 +307,11 @@ export async function mountResttyTerminalSurface(
       () => delivery.dispose(),
       () => container.removeEventListener("contextmenu", contextMenu.handle),
       () => removeRuntimeListener?.(),
-      () => removeShowRefit?.(),
+      () => showRefit?.dispose(),
       releaseSearchEscape,
       releaseSearchClear,
       () => visibleLinkController?.dispose(),
+      () => lease?.dispose(),
       () => adapter.close(reason),
       () => restty?.destroy(),
       () => fontLease?.release(),
@@ -322,6 +383,11 @@ export async function mountResttyTerminalSurface(
         options.onTitleRequest?.(event.title);
       else if (!ended && event.type === "bell") options.onBell?.();
     });
+    // Hidden Surfaces past the budget release before this context exists.
+    lease = options.rendererContexts?.acquire({
+      shown,
+      release: releaseContext,
+    });
     await pane.runtime.lifecycle.init();
     if (isInactive()) return createDisposedSurface();
     if (
@@ -333,29 +399,14 @@ export async function mountResttyTerminalSurface(
       );
 
     pane.runtime.io.connectPty();
-    const canvas = pane.container.querySelector("canvas");
-    if (!canvas) throw new Error("Restty did not create its rendering canvas");
-    removeShowRefit = refitWhenShown(container, refit);
+    attachCanvas(pane);
+    showRefit = refitWhenShown(container, refit);
     container.dataset.resttyBackend = "webgl2";
     container.dataset.resttyFont =
       initialFamily ?? DEFAULT_TERMINAL_FONT_FAMILY;
-    if (options.onExternalLink || options.onLocalImageActivation)
-      visibleLinkController = installResttyVisibleLinks(
-        canvas,
-        pane.runtime.interaction,
-        (url) => requestVisibleLink(url, options),
-        navigator.platform,
-        options.linkHoverAvailability,
-      );
     container.addEventListener("contextmenu", contextMenu.handle);
-    canvas.addEventListener(
-      "webglcontextlost",
-      (event) => {
-        event.preventDefault();
-        fail({ kind: "backend-loss" });
-      },
-      { once: true },
-    );
+    // Ready now: Surfaces that were still starting may release.
+    lease?.use();
 
     // Allow parser replies before startup output can replay synchronously.
     ready = true;
@@ -478,7 +529,16 @@ function refitWhenShown(container: HTMLElement, refit: () => void) {
     laidOut = next;
   });
   observer.observe(container);
-  return () => observer.disconnect();
+  return {
+    dispose: () => observer.disconnect(),
+    // A pane released and shown again within one frame has no size change to
+    // report; a fresh observation reports it once it is laid out.
+    rearm: () => {
+      laidOut = false;
+      observer.unobserve(container);
+      observer.observe(container);
+    },
+  };
 }
 
 async function acquireSurfaceFonts(

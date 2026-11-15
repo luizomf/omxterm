@@ -5,6 +5,7 @@ import type {
 } from "../shared/terminal-contract";
 import type { LocalImageActivation } from "../shared/local-image";
 import type { TerminalFontInput } from "./terminal-font-stack";
+import type { RendererContextBudget } from "./renderer-context-budget";
 import type {
   OptionKeyMode,
   TerminalPadding,
@@ -144,6 +145,9 @@ export interface TerminalSurfaceOptions {
     family: string | undefined,
     abortSignal?: AbortSignal,
   ) => Promise<TerminalFontInputLease>;
+  // One per window: past it, hidden Surfaces give their WebGL context back and
+  // create a new one when shown (#1202). Without it a Surface keeps its own.
+  readonly rendererContexts?: RendererContextBudget;
   readonly scrollbackLines?: number;
   readonly optionKeyMode?: OptionKeyMode;
   readonly appearance?: TerminalAppearance;

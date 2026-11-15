@@ -15,7 +15,15 @@ import type { VisibleLinkMatch } from "./visible-links";
 export type PatchedResttyRuntime = {
   readonly events: UpstreamRuntime["events"];
   readonly lifecycle: Pick<UpstreamRuntime["lifecycle"], "init" | "state">;
-  readonly render: { getBackend(): string | null; refresh(): void };
+  readonly render: {
+    getBackend(): string | null;
+    refresh(): void;
+    // Gives a ready pane's WebGL context back and swaps in a blank canvas; the
+    // core keeps its state. False when there is no context to give back.
+    release(): boolean;
+    // A new context on the current canvas; false when none can be created.
+    restore(): boolean;
+  };
   readonly io: Pick<UpstreamRuntime["io"], "connectPty">;
   readonly interaction: Pick<
     UpstreamRuntime["interaction"],

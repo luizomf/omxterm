@@ -14,7 +14,8 @@ const harness = vi.hoisted(() => {
   let connectGrid:
     { cols?: number; rows?: number; cellW: number; cellH: number } | undefined;
   class FakeRestty {
-    readonly canvas = document.createElement("canvas");
+    // Like Restty, a release swaps in a fresh canvas.
+    canvas = document.createElement("canvas");
     readonly listeners = new Set<(event: ResttyRuntimeEvent) => void>();
     readonly destroy = vi.fn();
     readonly focus = vi.fn();
@@ -57,7 +58,24 @@ const harness = vi.hoisted(() => {
           }),
           state: () => this.state,
         },
-        render: { getBackend: () => this.backend, refresh: vi.fn() },
+        render: {
+          getBackend: () => this.backend,
+          refresh: vi.fn(),
+          release: vi.fn(() => {
+            if (this.state !== "ready" || this.backend !== "webgl2")
+              return false;
+            const fresh = document.createElement("canvas");
+            this.canvas.replaceWith(fresh);
+            this.canvas = fresh;
+            this.backend = "none";
+            return true;
+          }),
+          restore: vi.fn(() => {
+            if (this.state !== "ready") return false;
+            this.backend = "webgl2";
+            return true;
+          }),
+        },
         io: {
           connectPty: () => {
             const transport = this.options.services.ptyTransport;

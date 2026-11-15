@@ -13,6 +13,10 @@ import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { cff2Corrections } from "./restty-cff2-corrections.mjs";
 import { promptJumpCorrections } from "./restty-prompt-jump-corrections.mjs";
 import { commandOutputCorrections } from "./restty-command-output-corrections.mjs";
+import {
+  gpuReleaseCorrections,
+  gpuReleaseSurfaceCorrection,
+} from "./restty-gpu-release-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import {
   altScreenCorrections,
@@ -47,6 +51,7 @@ const entryPath = require.resolve("restty");
 const packageDist = path.dirname(entryPath);
 const runtimePath = path.join(packageDist, "chunk-c0rcpsc5.js");
 const corePath = path.join(packageDist, "chunk-6dxqza9q.js");
+const surfacePath = path.join(packageDist, "chunk-0jmxpyyw.js");
 const eventTypesPath = path.join(
   packageDist,
   "runtime/core/runtime-events.d.ts",
@@ -203,8 +208,10 @@ const priorPromptJumpDigest =
   "5b89db17bcc3274adfb8b57a426df4cd8fcc84671c0d0f8b2abfe22f470d8ca8";
 const priorCommandOutputDigest =
   "599f4c483ab13a414aac4ae94f0a60436c4a763bd11ce72c98f0a8703b3d7838";
-const correctedDigest =
+const priorGpuReleaseDigest =
   "735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3";
+const correctedDigest =
+  "a13b40d0a5ad2e1449b097004c0e1d20f0ca90854d3db0d5fdb8ddc5d98f52ba";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1923,6 +1930,23 @@ async function prepareApplicationCursorDeclarations(root) {
   }
 }
 
+async function prepareResttySurface(selectedPath) {
+  const correction = gpuReleaseSurfaceCorrection;
+  const source = await readFile(selectedPath, "utf8");
+  const sourceDigest = digest(source);
+  if (sourceDigest === correction.correctedDigest) return;
+  if (sourceDigest !== correction.originalDigest)
+    throw new Error(
+      "Unrecognized Restty pane surface; review the pinned OMXTerm corrections",
+    );
+  const corrected = applyCorrections(source, [correction]);
+  if (digest(corrected) !== correction.correctedDigest)
+    throw new Error(
+      `Restty pane surface correction did not produce reviewed bytes: ${digest(corrected)}`,
+    );
+  await writeFile(selectedPath, corrected);
+}
+
 async function prepareResttyEventTypes(selectedPath) {
   let source = await readFile(selectedPath, "utf8");
   const sourceDigest = digest(source);
@@ -1953,6 +1977,7 @@ export async function prepareResttyRuntime(options = {}) {
   const selectedRuntimePath = options.runtimePath ?? runtimePath;
   const selectedCorePath = options.corePath ?? corePath;
   const selectedEventTypesPath = options.eventTypesPath ?? eventTypesPath;
+  const selectedSurfacePath = options.surfacePath ?? surfacePath;
   const selectedArtifactPath =
     options.correctedCorePath ??
     options.scrollbackCorePath ??
@@ -2118,6 +2143,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, promptJumpCorrections);
       case priorCommandOutputDigest:
         source = applyCorrections(source, commandOutputCorrections);
+      case priorGpuReleaseDigest:
+        source = applyCorrections(source, gpuReleaseCorrections);
         break;
       default:
         throw new Error(
@@ -2132,6 +2159,7 @@ export async function prepareResttyRuntime(options = {}) {
   }
   await prepareResttyCore(selectedCorePath, selectedArtifactPath);
   await prepareResttyEventTypes(selectedEventTypesPath);
+  await prepareResttySurface(selectedSurfacePath);
   await prepareApplicationCursorDeclarations(
     options.declarationRoot ?? packageDist,
   );

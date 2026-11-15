@@ -93,7 +93,8 @@ function harness(start = 599) {
     idleTimer: number;
   };
   internalState.backend = "webgl2";
-  const state = { gl: {} };
+  // Teardown frees the context through WEBGL_lose_context when it has one.
+  const state = { gl: { getExtension: () => null } };
   const shared = {
     wasmReady: true,
     wasmHandle: 1,
