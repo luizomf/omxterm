@@ -69,7 +69,7 @@ reopening Settings does not hit the network.
 A newer compatible release offers Update. When the installed version is the same
 or newer, for example one installed from a local file, the card just says
 Installed: Settings never offers an older version or different bytes of the same
-version. If a stale selection still asks for one, the native trust prompt warns
+version. If a stale selection still asks for one, the native install prompt warns
 that it replaces the installed version. To go back to an older release on
 purpose, install its archive from a file or link.
 
@@ -81,6 +81,12 @@ published at that moment; it is not an independent publisher signature. Whoever
 controls the catalog can replace both metadata and hashes, and a stale snapshot
 is not proof of the newest release or of revocation. The UI adds no persistent
 "Official" badge and no second trust ledger.
+
+The install prompt follows the source. A catalog install is pinned by digest and
+verified before the prompt, so it asks "Install Files?" with one sentence and
+Install / Cancel. A file or link install has no such pin, so its prompt keeps
+the package id and SHA-256 visible. Both need explicit confirmation before
+anything installs.
 
 Catalog admission also does not qualify every version in an engine range on every
 platform.

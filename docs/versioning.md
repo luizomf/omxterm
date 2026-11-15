@@ -278,6 +278,10 @@ rebuilt on it (#1178), moves main to `0.37.0-dev.4`. Every official extension
 bundles the stylesheet: Saved Layout goes to 0.3.3, and the others ride with
 their unpublished versions. Catalogs stay at the published versions.
 
+The extension install prompt rewrite (#1180) moves main to `0.37.0-dev.5`. Official
+installs get a short confirm; file and link installs keep the package id and
+digest. No extension package changes.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

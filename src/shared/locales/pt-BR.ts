@@ -263,8 +263,6 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.url": "Link HTTPS",
   "extensions.downloading": "Baixando a extensão…",
   "extensions.catalogHeading": "Extensões oficiais",
-  "extensions.catalogTrust":
-    "Extensões oficiais são mantidas pelo projeto OMXTerm. Elas não rodam isoladas.",
   "extensions.catalogBrowse": "Explorar extensões oficiais",
   "extensions.catalogRefresh": "Recarregar",
   "extensions.catalogRetry": "Tentar de novo",
@@ -343,11 +341,13 @@ export const brazilianPortugueseMessages: Readonly<
     "Abra Configurações → Extensões para conferir.",
   "extensions.chooserTitle": "Instalar extensão local",
   "extensions.chooserType": "Extensão OMXTerm",
-  "extensions.trustTitle": "Confiar no código da extensão?",
-  "extensions.trustMessage": "Instalar {name} {version}?",
+  "extensions.trustTitle": "Instalar extensão",
+  "extensions.trustMessage": "Instalar {name}?",
   "extensions.trustDetail":
-    "Este é código local confiável, sem isolamento de segurança. Ele pode ler e alterar arquivos, executar programas e usar a rede com as permissões do seu usuário. Autores terceiros são responsáveis por suas extensões. Instale apenas pacotes em que você confia. A instalação fica inativa até você acionar sua ação.\n\nPacote: {id}\nSHA-256: {digest}\nGeração atual: {generation}",
-  "extensions.trustInstall": "Confiar e instalar",
+    "Esta extensão pode ler seus arquivos e executar programas com as suas permissões. Instale só se você confia na origem.\n\nPacote: {id}\nSHA-256: {digest}",
+  "extensions.trustOfficialDetail":
+    "Extensões podem ler seus arquivos e executar programas.",
+  "extensions.trustInstall": "Instalar",
   "settings.language": "Idioma",
   "settings.english": "English (United States)",
   "settings.portuguese": "Português (Brasil)",
