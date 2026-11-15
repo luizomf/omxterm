@@ -49,6 +49,7 @@ import type {
   TerminalExportContext,
   TerminalExportSaveRequest,
   TerminalFontZoom,
+  TerminalPromptJump,
   TerminalSessionId,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
@@ -229,6 +230,7 @@ export interface TerminalTabs {
     clipboard?: TerminalHostClipboard,
   ): TerminalClipboard | undefined;
   find(): void;
+  jumpToPrompt(direction: TerminalPromptJump): void;
   injectText(text: string): void;
   // The selected live terminal, captured for one snippet action.
   captureSnippetTarget(): SnippetTarget | undefined;
@@ -364,8 +366,9 @@ export function createTerminalTabs(
     renderStrip();
     focusPane(focusedPane(), options, true);
   };
-  // An agent's shortcut, once its pane is focused (ADR 0052). Copy and
-  // Select All take that pane, as the user's would after a click on it.
+  // An agent's shortcut, once its pane is focused (ADR 0052). Copy, Select
+  // All and the prompt jumps take that pane, as the user's would after a
+  // click on it.
   const runAgentCommand = (
     pane: TerminalPane,
     command: AgentWindowCommand,
@@ -379,6 +382,9 @@ export function createTerminalTabs(
         return true;
       case "select-all":
         pane.surface?.selectAll();
+        return true;
+      case "jump-to-prompt":
+        pane.surface?.jumpToPrompt?.(command.direction);
         return true;
       case "toggle-tab-bar":
         toggleTabBar();
@@ -799,6 +805,8 @@ export function createTerminalTabs(
     exportRequest: contextMenu.exportRequest,
     fieldClipboard: contextMenu.fieldClipboard,
     find: () => interactivePane()?.surface?.find(),
+    jumpToPrompt: (direction) =>
+      interactivePane()?.surface?.jumpToPrompt?.(direction),
     injectText: (text) => void interactivePane()?.surface?.inject(text),
     captureSnippetTarget: () => {
       const pane = interactivePane(),

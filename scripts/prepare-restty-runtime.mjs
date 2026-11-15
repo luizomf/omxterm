@@ -11,6 +11,7 @@ import { blinkCorrections } from "./restty-blink-corrections.mjs";
 import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { cff2Corrections } from "./restty-cff2-corrections.mjs";
+import { promptJumpCorrections } from "./restty-prompt-jump-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import {
   altScreenCorrections,
@@ -79,10 +80,13 @@ const priorKittyContinuationCoreDigest =
 // Same as the continuation core, with the 4,194,304-pixel image limit.
 const priorImageLimitCoreDigest =
   "fd2d171689d66ac51435ea2cc76ee1c07ebb371c3992496f2337ed83a289032a";
-const correctedCoreDigest =
+// Carries every JavaScript core correction; only its WASM changed.
+const priorWasmAddressCoreDigest =
   "9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9";
+const correctedCoreDigest =
+  "002160c6135a9ab99909e8e9b523890176d7a8e7ac2eebdb88217a214e5f6eb7";
 const correctedCoreWasmDigest =
-  "0654237ed3f3df0d89b37e944850d884e9583aa5865de9f979efdfeed8ab6caf";
+  "a2f3c1f2de08df1e79c72a629824e87fab498acf37330b5feeb384b45e5304e9";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -191,8 +195,10 @@ const priorRisModeDigest =
   "3cdffe590dff2c420f41841fbe6aacdc4cad94e60ba927c6610514965db4c83c";
 const priorCff2Digest =
   "1a067f98ac1905611f51d186a95bae144c496174a6aa0f5de4ddea591608f533";
-const correctedDigest =
+const priorPromptJumpDigest =
   "5b89db17bcc3274adfb8b57a426df4cd8fcc84671c0d0f8b2abfe22f470d8ca8";
+const correctedDigest =
+  "599f4c483ab13a414aac4ae94f0a60436c4a763bd11ce72c98f0a8703b3d7838";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1845,6 +1851,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorApplicationCursorCoreDigest &&
     sourceDigest !== priorKittyContinuationCoreDigest &&
     sourceDigest !== priorImageLimitCoreDigest &&
+    sourceDigest !== priorWasmAddressCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1859,7 +1866,8 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
   );
   if (
     sourceDigest !== priorKittyContinuationCoreDigest &&
-    sourceDigest !== priorImageLimitCoreDigest
+    sourceDigest !== priorImageLimitCoreDigest &&
+    sourceDigest !== priorWasmAddressCoreDigest
   ) {
     source = applyCorrections(
       source,
@@ -1878,7 +1886,8 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     );
     source = applyCorrections(source, applicationCursorCoreCorrections);
   }
-  source = applyCorrections(source, wasmAddressCorrections);
+  if (sourceDigest !== priorWasmAddressCoreDigest)
+    source = applyCorrections(source, wasmAddressCorrections);
   if (digest(source) !== correctedCoreDigest)
     throw new Error(
       `Restty WASM correction did not produce reviewed bytes: ${digest(source)}`,
@@ -2094,6 +2103,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, risModeCorrections);
       case priorCff2Digest:
         source = applyCorrections(source, cff2Corrections);
+      case priorPromptJumpDigest:
+        source = applyCorrections(source, promptJumpCorrections);
         break;
       default:
         throw new Error(

@@ -8,6 +8,7 @@ import type {
 import type {
   TerminalExit,
   TerminalFontZoom,
+  TerminalPromptJump,
   TerminalClipboardAction,
   TerminalContextMenuTarget,
   TerminalExportContext,
@@ -127,6 +128,10 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
   ) => void;
   readonly sendSnippetsToggle: (window: Window) => void;
   readonly sendFind: (window: Window) => void;
+  readonly sendJumpToPrompt?: (
+    window: Window,
+    direction: TerminalPromptJump,
+  ) => void;
   readonly sendTabBarToggle: (window: Window) => void;
   readonly sendPaneMarksToggle: (window: Window) => void;
   readonly sendAuxiliaryPanelToggle: (window: Window) => void;
@@ -185,6 +190,7 @@ export interface TerminalApplication<
   ): void;
   exportPane(window: Window, context: TerminalExportContext): void;
   findInSelectedWindow(): void;
+  jumpToPromptInSelectedWindow(direction: TerminalPromptJump): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
   toggleSelectedPaneMarks(): void;
@@ -466,6 +472,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
       if (window) options.sendClipboardAction(window, action);
     },
     findInSelectedWindow: selectedWindowAction(options.sendFind),
+    jumpToPromptInSelectedWindow(direction) {
+      const window = selectedWindow();
+      if (window) options.sendJumpToPrompt?.(window, direction);
+    },
     ...selectedWindowToggles(options, selectedWindowAction),
     openLocalImageInSelectedWindow: selectedWindowAction(
       options.sendLocalImageOpen,

@@ -705,6 +705,8 @@ app
           sendExportRequest: (window, context) =>
             window.webContents.send(terminalIpc.exportRequest, context),
           sendFind: notifyWindow(terminalIpc.find),
+          sendJumpToPrompt: (window, direction) =>
+            sendAction(window.webContents, terminalIpc.jumpToPrompt, direction),
           sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
           sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
           sendPaneMarksToggle: notifyWindow(terminalIpc.paneMarksToggle),

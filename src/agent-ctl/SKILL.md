@@ -133,7 +133,7 @@ in.
   in vim, less, htop or a menu: `Up`, `Down`, `Left`, `Right`, `Home`, `End`,
   `PageUp`, `PageDown`, `Insert`, `Delete`, `F1` to `F12`, `Enter`, `Tab`,
   `Escape`, `Backspace` and `Space`, each with any of `Ctrl+`, `Alt+` and
-  `Shift+` (`Ctrl+Shift+Up`). They arrive exactly as the user's own keys
+  `Shift+` (`Ctrl+Shift+Right`). They arrive exactly as the user's own keys
   would. To see what a key did, `read` the pane. `Up` recalls history into
   the prompt: clear the line first (`send --keys Ctrl+U`), or what you type
   next is appended to the recalled command.

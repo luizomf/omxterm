@@ -23,6 +23,7 @@ const harness = vi.hoisted(() => {
     readonly destroy = vi.fn();
     readonly getSelectionText = vi.fn(() => this.selection);
     readonly selectAll = vi.fn(() => true);
+    readonly scrollToPrompt = vi.fn();
     readonly getBufferText = vi.fn(() => "scrollback\nscreen");
     readonly isSearchOpen = vi.fn(() => false);
     readonly setSearchUiStyleOptions = vi.fn();
@@ -53,6 +54,7 @@ const harness = vi.hoisted(() => {
           setVisibleLinkHover: vi.fn(),
           selectAll: this.selectAll,
           scrollToBottom: vi.fn(),
+          scrollToPrompt: this.scrollToPrompt,
           updateSize: vi.fn(),
         },
         terminal: {
@@ -623,5 +625,20 @@ describe("Restty Protected Paste", () => {
     expect(mounted.clipboard.writeText).toHaveBeenCalledWith("hello");
     expect(mounted.clipboard.readText).not.toHaveBeenCalled();
     mounted.surface.dispose();
+  });
+});
+
+describe("Restty prompt jumps", () => {
+  it("moves the view one prompt either way until disposed", async () => {
+    const value = await mount();
+    value.surface.jumpToPrompt?.("previous");
+    value.surface.jumpToPrompt?.("next");
+    expect(value.restty.scrollToPrompt.mock.calls).toEqual([[-1], [1]]);
+    expect(
+      value.restty.pane.runtime.interaction.scrollToBottom,
+    ).not.toHaveBeenCalled();
+    value.surface.dispose();
+    value.surface.jumpToPrompt?.("previous");
+    expect(value.restty.scrollToPrompt).toHaveBeenCalledTimes(2);
   });
 });

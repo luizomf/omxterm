@@ -118,6 +118,8 @@ export type TerminalTabCommand =
   | TerminalPaneCommand;
 
 export type TerminalFontZoom = "in" | "out" | "reset";
+// Jump to Previous/Next Prompt: the OSC 133 prompt above or below the view.
+export type TerminalPromptJump = "previous" | "next";
 export type TerminalClipboardAction = "copy" | "paste" | "select-all";
 
 // The contextual kind is fixed at popup opening, before the synchronous read.
@@ -407,6 +409,12 @@ export function isTerminalExit(value: unknown): value is TerminalExit {
 
 export function isTerminalFontZoom(value: unknown): value is TerminalFontZoom {
   return value === "in" || value === "out" || value === "reset";
+}
+
+export function isTerminalPromptJump(
+  value: unknown,
+): value is TerminalPromptJump {
+  return value === "previous" || value === "next";
 }
 
 export function isTerminalClipboardAction(

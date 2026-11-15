@@ -58,6 +58,7 @@ export async function exerciseApplicationMenu(
     pasteSelectedTerminal: unexpected,
     selectAllSelectedTerminal: unexpected,
     findInSelectedTerminal: unexpected,
+    jumpToPromptInSelectedTerminal: unexpected,
     toggleSelectedSnippets: unexpected,
     toggleSelectedTabBar: unexpected,
     toggleSelectedPaneMarks: unexpected,

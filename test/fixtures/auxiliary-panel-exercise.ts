@@ -106,6 +106,7 @@ function createScenario(options: PanelOptions) {
     selectAllSelectedTerminal: () =>
       application.clipboardSelectedWindow("select-all"),
     findInSelectedTerminal: unexpected,
+    jumpToPromptInSelectedTerminal: unexpected,
     toggleSelectedSnippets: () => application.toggleSelectedSnippets(),
     toggleSelectedTabBar: () => application.toggleSelectedTabBar(),
     toggleSelectedPaneMarks: () => application.toggleSelectedPaneMarks(),

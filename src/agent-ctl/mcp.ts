@@ -154,7 +154,7 @@ const TOOLS: readonly Tool[] = [
         items: { type: "string" },
         minItems: 1,
         description:
-          "Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, each with any of Ctrl+, Alt+ and Shift+, such as Ctrl+Shift+Up; or one shortcut chord such as Cmd+T or Ctrl+Shift+E.",
+          "Up, Down, Left, Right, Home, End, PageUp, PageDown, Insert, Delete, F1 to F12, Enter, Tab, Escape, Backspace or Space, each with any of Ctrl+, Alt+ and Shift+, such as Ctrl+Shift+Right; or one shortcut chord such as Cmd+T or Ctrl+Shift+E.",
       },
       window,
     },

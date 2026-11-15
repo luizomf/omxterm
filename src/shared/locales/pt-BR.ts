@@ -21,6 +21,8 @@ export const brazilianPortugueseMessages: Readonly<
   "menu.paste": "Colar",
   "menu.selectAll": "Selecionar Tudo",
   "menu.find": "Buscar…",
+  "menu.jumpToPreviousPrompt": "Ir para o Prompt Anterior",
+  "menu.jumpToNextPrompt": "Ir para o Próximo Prompt",
   "menu.exportSelection": "Exportar Seleção…",
   "menu.exportContent": "Exportar Conteúdo do Terminal…",
   "menu.file": "Arquivo",

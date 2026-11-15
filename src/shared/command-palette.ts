@@ -28,6 +28,7 @@ export const paletteActionChannels: ReadonlySet<string> = new Set([
   terminalIpc.tabCommand,
   terminalIpc.fontZoom,
   terminalIpc.find,
+  terminalIpc.jumpToPrompt,
   terminalIpc.snippetsToggle,
   terminalIpc.tabBarToggle,
   terminalIpc.paneMarksToggle,

@@ -409,6 +409,12 @@ export async function mountResttyTerminalSurface(
         options,
       ),
       find: () => openSearch(disposed ? undefined : restty),
+      jumpToPrompt: (direction) => {
+        const interaction = live();
+        if (!interaction) return;
+        visibleLinkController?.invalidate();
+        interaction.scrollToPrompt(direction === "previous" ? -1 : 1);
+      },
       encodeKeyPress: (key) =>
         isInactive() || ended || !ready
           ? undefined

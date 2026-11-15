@@ -12,6 +12,7 @@ import {
   type TerminalActionName,
   type TerminalKeybinds,
 } from "../shared/terminal-keybinds";
+import type { TerminalPromptJump } from "../shared/terminal-contract";
 import type {
   TerminalPaneDirection,
   TerminalPaneFocusTarget,
@@ -37,6 +38,9 @@ export interface TerminalApplicationMenuActions {
   readonly pasteSelectedTerminal: () => void;
   readonly selectAllSelectedTerminal: () => void;
   readonly findInSelectedTerminal: () => void;
+  readonly jumpToPromptInSelectedTerminal: (
+    direction: TerminalPromptJump,
+  ) => void;
   readonly toggleSelectedSnippets: () => void;
   readonly toggleSelectedTabBar: () => void;
   readonly toggleSelectedPaneMarks: () => void;
@@ -113,6 +117,12 @@ export function createCoreActionCatalog(
       false,
     ),
     find: action(t("menu.find"), actions.findInSelectedTerminal, false),
+    jumpToPreviousPrompt: action(t("menu.jumpToPreviousPrompt"), () =>
+      actions.jumpToPromptInSelectedTerminal("previous"),
+    ),
+    jumpToNextPrompt: action(t("menu.jumpToNextPrompt"), () =>
+      actions.jumpToPromptInSelectedTerminal("next"),
+    ),
     newWindow: action(t("menu.newWindow"), actions.newWindow),
     newTab: action(t("menu.newTab"), actions.newTabInSelectedWindow),
     openLocalImage: action(t("menu.openLocalImage"), actions.openLocalImage),

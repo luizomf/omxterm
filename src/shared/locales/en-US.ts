@@ -18,6 +18,8 @@ export const englishMessages = {
   "menu.paste": "Paste",
   "menu.selectAll": "Select All",
   "menu.find": "Find…",
+  "menu.jumpToPreviousPrompt": "Jump to Previous Prompt",
+  "menu.jumpToNextPrompt": "Jump to Next Prompt",
   "menu.exportSelection": "Export Selection…",
   "menu.exportContent": "Export Terminal Content…",
   "menu.file": "File",

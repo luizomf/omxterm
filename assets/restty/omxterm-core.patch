@@ -106,7 +106,23 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
      h.alloc.destroy(h);
  }
 
-@@ -749,6 +798,25 @@
+@@ -623,6 +672,15 @@
+     return @intFromEnum(ErrorCode.ok);
+ }
+
++// Moves the viewport |delta| OSC 133 prompts up (negative) or down, putting
++// the prompt's first row at the top; a prompt in the active area returns the
++// view to the bottom. Without marks the view stays where it is.
++pub export fn restty_scroll_viewport_prompt(handle: ?*Restty, delta: i32) u32 {
++    const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
++    h.term.screens.active.scroll(.{ .delta_prompt = delta });
++    return @intFromEnum(ErrorCode.ok);
++}
++
+ pub export fn restty_search_set_query(handle: ?*Restty, ptr: [*]const u8, len: usize) u32 {
+     const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
+     const query = ptr[0..len];
+@@ -749,6 +807,25 @@
      return @intCast(sb.len);
  }
 
@@ -132,7 +148,7 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
  pub export fn restty_output_ptr(handle: ?*Restty) usize {
      const h = handle orelse return 0;
      return if (h.output.items.len == 0) 0 else @intFromPtr(h.output.items.ptr);
-@@ -778,1 +846,7 @@
+@@ -778,1 +855,7 @@
 +// Read the parser-owned DECCKM value, including mode save/restore and reset.
 +pub export fn restty_application_cursor_keys(handle: ?*Restty) u32 {
 +    const h = handle orelse return 0;
@@ -140,7 +156,7 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
 +}
 +
  pub export fn restty_kitty_keyboard_flags(handle: ?*Restty) u32 {
-@@ -805,16 +879,22 @@
+@@ -805,16 +888,22 @@
      const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
      if (len == 0) return @intFromEnum(ErrorCode.ok);
      const count: usize = if (len > 256) 256 else len;
@@ -165,7 +181,7 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
      h.term.flags.dirty.palette = true;
      return @intFromEnum(ErrorCode.ok);
  }
-@@ -829,7 +909,16 @@
+@@ -829,7 +918,16 @@
  pub export fn restty_resize(handle: ?*Restty, cols: u16, rows: u16) u32 {
      const h = handle orelse return @intFromEnum(ErrorCode.invalid_handle);
      if (cols == 0 or rows == 0) return @intFromEnum(ErrorCode.invalid_arg);
@@ -183,16 +199,16 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
      ensureScrollingRegion(h);
      return @intFromEnum(ErrorCode.ok);
  }
-@@ -928,1 +1017,2 @@
+@@ -928,1 +1026,2 @@
 -            const bg = style.bg(&raw, palette) orelse default_bg;
 +            const explicit_bg = style.bg(&raw, palette);
 +            const bg = explicit_bg orelse default_bg;
-@@ -932,1 +1022,3 @@
+@@ -932,1 +1031,3 @@
 -            h.buffers.bg_rgba[idx] = packRGBA(bg, 0xFF);
 +            // Preserve explicit identity (even equal RGB) and reversed defaults.
 +            // DECSCNM swaps render defaults without setting per-cell inverse.
 +            h.buffers.bg_rgba[idx] = packRGBA(bg, if (explicit_bg != null or h.term.modes.get(.reverse_colors)) 0xFF else 0);
-@@ -1167,6 +1259,26 @@
+@@ -1167,6 +1268,26 @@
      return h.term.screens.active.pages.rows;
  }
 
@@ -219,7 +235,7 @@ diff --git a/wasm/src/restty.zig b/wasm/src/restty.zig
  pub export fn restty_kitty_placement_stride() u32 {
      return @sizeOf(KittyPlacementAbi);
  }
-@@ -1192,3 +1304,18 @@
+@@ -1192,3 +1313,18 @@
      const buf = @as([*]u8, @ptrFromInt(ptr));
      std.heap.wasm_allocator.free(buf[0..len]);
  }

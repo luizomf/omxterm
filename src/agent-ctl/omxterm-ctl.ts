@@ -35,7 +35,7 @@ Commands:
                                Home, End, PageUp, PageDown, Insert, Delete,
                                F1 ... F12, Enter, Tab, Escape, Backspace,
                                Space, with any of Ctrl+, Alt+ and Shift+
-                               (Ctrl+Shift+Up). A shortcut of the window
+                               (Ctrl+Shift+Right). A shortcut of the window
                                (Cmd+T) runs on that pane instead, on its
                                own, and prints the action and pane.
   keys                         List the window's shortcuts that press runs,

@@ -85,7 +85,8 @@ OMXTerm:
   per Terminal Tab and one or more Application Tabs per native Terminal Window,
   including an optional graphical Settings tab;
 - provides native new-window, new-tab, close, copy, paste, select-all,
-  scrollback search, explicit text export, zoom, fullscreen, always-on-top,
+  scrollback search, prompt-to-prompt jumps, explicit text export, zoom,
+  fullscreen, always-on-top,
   bounded local-image preview, and quit actions without an in-window toolbar;
 - renders the bundled [`omtheme`](omtheme.json) palette by default and allows
   one explicitly configured external Terminal Theme. SGR bold text keeps its
@@ -1572,7 +1573,8 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 [ADR 0013](adr/0013-do-not-inject-shell-integration.md)).
 Main reads the OSC 133 command marks a shell prints (`A` prompt, `C` command
 start, `D;<code>` command end), in local and SSH Connect panes alike, for the
-agent API's `wait`; the [shell integration guide](shell-integration.md) has
+agent API's `wait`, and the core keeps its own prompt row marks for
+[prompt jumps](#prompt-jumps); the [shell integration guide](shell-integration.md) has
 the lines users add for zsh, bash and PowerShell (their prompt mark says `redraw=0`, so a
 resize keeps the prompt; a marked prompt after output that didn't end its line
 starts on a new line), and fish 4.0 prints them by default
@@ -1959,6 +1961,24 @@ paths open a Local Image Preview
   IPC.
 - Find is ignored while a Local Image Preview or About owns modal input.
 
+### Prompt jumps
+
+- **Edit → Jump to Previous Prompt** and **Jump to Next Prompt**
+  (`jumpToPreviousPrompt`, `jumpToNextPrompt`: `Cmd+Shift+Up` / `Cmd+Shift+Down`
+  on macOS, `Ctrl+Shift+Up` / `Ctrl+Shift+Down` on Linux and Windows, also in
+  the Command Palette) scroll the focused pane to the shell's previous or next
+  OSC 133 prompt (`A` mark): that prompt's first row becomes the top of the
+  view. Previous starts above the view's top row; a next prompt on the live
+  screen returns the view to the bottom
+  ([ADR 0055](adr/0055-jump-between-prompts-in-the-core.md)).
+- The Ghostty core finds the prompts from its own row marks, which follow
+  reflow and scrollback trimming; nothing else keeps their rows. A selection
+  moves with its text, as with any scroll.
+- With no marks (no [shell integration](shell-integration.md), tmux, a remote
+  shell without the lines) or on the alternate screen, the jumps do nothing and
+  show nothing. They are ignored while a Local Image Preview or About owns
+  modal input.
+
 ### Terminal export
 
 - The terminal context menu offers **Export Selection…** when selected text
@@ -2260,7 +2280,8 @@ identity and main-process delivery.
 Vocabulary:
 
 - `keybinds` remaps this fixed action set: `quit`, `copy`, `paste`,
-  `selectAll`, `find`, `newWindow`, `closeWindow`, `newTab`, `closeTab`,
+  `selectAll`, `find`, `jumpToPreviousPrompt`, `jumpToNextPrompt`,
+  `newWindow`, `closeWindow`, `newTab`, `closeTab`,
   `nextTab`, `previousTab`, `selectTab1`–`selectTab9`, `zoomIn`, `zoomOut`,
   `actualSize`, `toggleFullScreen`, `toggleSnippets`, `toggleFiles`,
   `toggleSshConnect`, `toggleAuxiliaryPanel`, `toggleTabBar`, `togglePaneMarks`,
@@ -3064,7 +3085,7 @@ implementation; there is no renderer selector or registry
   ([extension distribution](extension-distribution.md)).
 - Narrow [development bridges](dev/extension-installation-foundation.md#archive-contract)
   let a recognized `0.24.1-dev.N`, `0.25.0-dev.N`, `0.26.0-dev.N`,
-  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N`, `0.35.1-dev.N`, `0.36.0-dev.N`, `0.36.1-dev.N` or `0.36.2-dev.N` host admit a
+  `0.26.1-dev.N`, `0.27.0-dev.N`, `0.27.1-dev.N`, `0.28.0-dev.N`, `0.28.1-dev.N`, `0.29.1-dev.N`, `0.30.1-dev.N`, `0.31.0-dev.N`, `0.31.1-dev.N`, `0.32.0-dev.N`, `0.32.1-dev.N`, `0.33.0-dev.N`, `0.33.1-dev.N`, `0.34.0-dev.N`, `0.34.1-dev.N`, `0.35.0-dev.N`, `0.35.1-dev.N`, `0.36.0-dev.N`, `0.36.1-dev.N`, `0.36.2-dev.N` or `0.37.0-dev.N` host admit a
   range only when ordinary semver admits both stable
   endpoints of that family. Other development families and incompatible APIs
   are refused. Admission alone does not qualify native behavior or packages.

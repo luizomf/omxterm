@@ -210,6 +210,8 @@ Every shortcut needs a key and at least one modifier other than Shift. Function 
 | `quit`                                | `Cmd+Q`                                                               | `Ctrl+Alt+Shift+Q`                         |
 | `copy` / `paste`                      | `Cmd+C` / `Cmd+V`                                                     | `Ctrl+Shift+C` / `Ctrl+Shift+V`            |
 | `selectAll` / `find`                  | `Cmd+A` / `Cmd+F`                                                     | `Ctrl+Shift+A` / `Ctrl+Shift+F`            |
+| `jumpToPreviousPrompt`                | `Cmd+Shift+Up`                                                        | `Ctrl+Shift+Up`                            |
+| `jumpToNextPrompt`                    | `Cmd+Shift+Down`                                                      | `Ctrl+Shift+Down`                          |
 | `newWindow` / `newTab`                | `Cmd+N` / `Cmd+T`                                                     | `Ctrl+Shift+N` / `Ctrl+Shift+T`            |
 | `closeTab` / `closeWindow`            | `Cmd+W` / `Cmd+Shift+W`                                               | `Ctrl+Shift+W` / `Ctrl+Shift+Q`            |
 | `nextTab` / `previousTab`             | `Ctrl+Tab` / `Ctrl+Shift+Tab`                                         | `Ctrl+PageDown` / `Ctrl+PageUp`            |
