@@ -282,6 +282,10 @@ The extension install prompt rewrite (#1180) moves main to `0.37.0-dev.5`. Offic
 installs get a short confirm; file and link installs keep the package id and
 digest. No extension package changes.
 
+Tab titles that name the shell's folder, quieter unselected tab titles and a
+full-width split focus line (#1182) move main to `0.37.0-dev.6`. Extension
+packages already on unpublished versions carry the stylesheet; none bumps.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

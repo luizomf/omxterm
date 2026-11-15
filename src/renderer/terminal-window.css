@@ -302,14 +302,14 @@ body.tabs-visible .hosted-content-tab {
   background: var(--terminal-foreground, #e6e6e6);
 }
 
-/* Paint above the canvas even when the Surface has no top padding. */
+/* The focused pane's cue is its top edge at full width, so in a stacked split
+   the divider itself lights up, and in a side-by-side one it is the same line.
+   It paints above the canvas even when the Surface has no top padding. */
 .terminal-tab[data-split] .terminal-surface.pane-focused::after {
   content: "";
   position: absolute;
   z-index: 1;
-  top: 0;
-  right: var(--terminal-padding-right, 12px);
-  left: var(--terminal-padding-left, 12px);
+  inset: 0 0 auto;
   height: 1px;
   background: var(--terminal-pane-accent, var(--terminal-foreground));
   pointer-events: none;

@@ -107,6 +107,11 @@ export interface TerminalIpcControllerOptions {
   ) => void;
   readonly onSessionSelected: (sessionId: TerminalSessionId | null) => void;
   readonly onSettingsSelected?: () => void;
+  // The folder a local shell is in, as its display name; undefined when unknown.
+  readonly onFolderChange?: (
+    sessionId: TerminalSessionId,
+    folder: string | undefined,
+  ) => void;
   readonly onSessionTitleSync?: (sessionId: TerminalSessionId) => void;
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;

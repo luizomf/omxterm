@@ -142,7 +142,8 @@ does not complete the broader planned Extension work.
 one window, relative to its configured baseline.
 
 **Terminal Title** — A sanitized, bounded session label from OSC 0/2, shown on
-the tab and selected window. It is untrusted display text, excluded from logs
+the tab and selected window. Until the shell sets one, a local session shows its
+folder name (`~` for home) and, without a folder, the shell's name. It is untrusted display text, excluded from logs
 and PTY replies.
 
 **Terminal Bell** — A silent BEL request. Like a Program Notification, it
