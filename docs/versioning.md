@@ -254,6 +254,9 @@ Adding AppleGothic as the macOS Hangul fallback (#1164) moves main to
 Saying why a refused permanent delete was refused, instead of "failed" (#1166),
 moves main to `0.36.2-dev.2`. Files goes to 0.9.4.
 
+Drawing CFF2 variable faces, such as Fedora's Noto Sans CJK collection, as
+whole characters at Regular weight (#1163) moves main to `0.36.2-dev.3`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

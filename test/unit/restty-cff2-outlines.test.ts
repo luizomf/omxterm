@@ -33,6 +33,10 @@ function load(defaultWeight: number): Font {
   return Font.load(cff2VariableFont(defaultWeight).slice().buffer);
 }
 
+function points(contours: { x: number; y: number }[][] | null) {
+  return contours?.map((contour) => contour.map(({ x, y }) => ({ x, y })));
+}
+
 function bar(thickness: number) {
   return [
     [
@@ -40,21 +44,25 @@ function bar(thickness: number) {
       { x: 100, y: 400 + thickness },
       { x: 900, y: 400 + thickness },
       { x: 900, y: 400 },
-    ].map((point) => expect.objectContaining(point)),
+    ],
   ];
 }
 
 describe("Restty CFF2 variable outlines", () => {
   it("draws a Regular-default face at its default outline", () => {
-    expect(load(400).getGlyphContours(1)).toEqual(bar(30));
+    expect(points(load(400).getGlyphContours(1))).toEqual(bar(30));
   });
 
   it("draws a Thin-default face, like Noto Sans CJK VF, at Regular", () => {
     // wght 400 normalizes to (400 - 100) / (900 - 100) on a 100–900 axis.
-    expect(load(100).getGlyphContours(1)).toEqual(bar(30 + 200 * 0.375));
+    expect(points(load(100).getGlyphContours(1))).toEqual(
+      bar(30 + 200 * 0.375),
+    );
   });
 
   it("blends explicit axis coordinates", () => {
-    expect(load(100).getGlyphContoursWithVariation(1, [1])).toEqual(bar(230));
+    expect(points(load(100).getGlyphContoursWithVariation(1, [1]))).toEqual(
+      bar(230),
+    );
   });
 });
