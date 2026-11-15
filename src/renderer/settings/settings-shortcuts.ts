@@ -297,7 +297,11 @@ export function renderShortcuts(
     const actions = document.createElement("div");
     actions.className = "settings-shortcut-actions ui-actions ui-actions-dense";
     actions.append(recordButton, unbind, inherit);
-    row.append(name, actions, binding);
+    // One trailing group, so the actions and the keys wrap together.
+    const end = document.createElement("div");
+    end.className = "ui-form-value";
+    end.append(actions, binding);
+    row.append(name, end);
     panel.append(row);
   }
   panel.append(empty);

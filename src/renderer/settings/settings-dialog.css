@@ -452,6 +452,8 @@ body.tabs-visible .settings-tab {
   .settings-body .settings-tabs {
     flex-direction: row;
     flex-wrap: wrap;
+    /* As tall as its rows, never squeezed: a short window scrolls the page. */
+    min-height: auto;
     overflow: visible;
   }
 }

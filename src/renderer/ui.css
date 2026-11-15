@@ -362,7 +362,12 @@ textarea.page-control {
   max-width: 100%;
 }
 /* One width per kind of field, so the controls' left edges line up too. */
-.ui-form-row :is(input, select).page-control:not([type="checkbox"]) {
+.ui-form-row
+  :is(input, select).page-control:not(
+    [type="checkbox"],
+    [type="range"],
+    [type="color"]
+  ) {
   width: 280px;
 }
 .ui-form-row input.page-control[type="number"] {
@@ -372,6 +377,14 @@ textarea.page-control {
 .ui-form-row-dense {
   min-height: 36px;
   padding-block: var(--ui-space-1);
+}
+/* A row that ends in a value with actions before it (a shortcut's keys):
+   one trailing group, so both wrap together and stay at the right edge. */
+.ui-form-value {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-4);
+  margin-inline-start: auto;
 }
 /* Actions in a row are quiet words; the value is what the eye should find. */
 .ui-form-row .page-button-text {
