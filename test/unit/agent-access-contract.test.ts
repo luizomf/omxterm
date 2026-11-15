@@ -255,11 +255,19 @@ it("passes only the tab and pane commands a shortcut runs, never a popup's close
     { action: "split", direction: "left" },
     { action: "close-pane" },
     { action: "select", position: 2 },
+    { action: "jump-to-prompt", direction: "up" },
+    { action: "jump-to-prompt", direction: "next", extra: 1 },
+    { action: "jump-to-prompt", direction: "next" },
   ])
     listeners.get(agentIpc.action)!({}, { id, sessionId: "s1", command });
   expect(requests).toEqual([
     { id, sessionId: "s1", command: { action: "close-pane" } },
     { id, sessionId: "s1", command: { action: "select", position: 2 } },
+    {
+      id,
+      sessionId: "s1",
+      command: { action: "jump-to-prompt", direction: "next" },
+    },
   ]);
 
   bridge.actionResult({ id });

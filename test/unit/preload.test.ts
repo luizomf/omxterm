@@ -477,6 +477,21 @@ describe("isolated preload terminal bridge responses", () => {
     },
   );
 
+  it("passes only a previous or next prompt jump", () => {
+    const listener = vi.fn();
+    const remove = electron.bridge!.onJumpToPrompt(listener);
+    const handler = electron.listeners.get(terminalIpc.jumpToPrompt)!;
+    for (const payload of [undefined, null, "up", 1, { direction: "next" }])
+      handler({}, payload);
+    expect(listener).not.toHaveBeenCalled();
+    handler({}, "previous");
+    handler({}, "next");
+    expect(listener.mock.calls).toEqual([["previous"], ["next"]]);
+    remove();
+    const removed = [terminalIpc.jumpToPrompt, handler];
+    expect(electron.removeListener).toHaveBeenCalledWith(...removed);
+  });
+
   it("validates narrow Window Chrome commands and complete bounded snapshots", () => {
     const bridge = electron.bridge!;
     electron.send.mockClear();
