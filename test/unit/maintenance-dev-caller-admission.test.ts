@@ -43,19 +43,19 @@ const runtime = { appVersion, apiVersion: "0.1.0" };
 // Verbatim extension.json bytes extracted from the published archives.
 const releases = [
   {
-    name: "Files 0.9.3",
+    name: "Files 0.9.4",
     id: "omxterm.files",
-    manifest: `{"format":1,"id":"omxterm.files","version":"0.9.3","name":"Files","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
+    manifest: `{"format":1,"id":"omxterm.files","version":"0.9.4","name":"Files","engines":{"omxterm":">=0.26.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.insertPath.v1"],"view":{"entry":"index.html","action":"omxterm.files.open","title":"Files"}}`,
   },
   {
-    name: "SSH 0.4.2",
+    name: "SSH 0.4.3",
     id: "omxterm.ssh",
-    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.4.2","name":"SSH Connect","engines":{"omxterm":">=0.27.0-dev.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1","links.open.v1"],"links":{"docs":"https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md"},"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
+    manifest: `{"format":1,"id":"omxterm.ssh","version":"0.4.3","name":"SSH Connect","engines":{"omxterm":">=0.27.0-dev.0","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.openSsh.v1","links.open.v1"],"links":{"docs":"https://github.com/luizomf/omxterm/blob/main/docs/ssh-connect.md"},"view":{"entry":"index.html","action":"omxterm.ssh.open","title":"SSH Connect"}}`,
   },
   {
-    name: "Snippets 0.1.4",
+    name: "Snippets 0.1.5",
     id: "omxterm.snippets",
-    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.4","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
+    manifest: `{"format":1,"id":"omxterm.snippets","version":"0.1.5","name":"Snippets","engines":{"omxterm":">=0.24.0-dev.8","api":"0.1.x"},"backend":"backend.mjs","capabilities":["terminal.semanticInput.v1"],"view":{"entry":"index.html","action":"omxterm.snippets.open","title":"Snippets"}}`,
   },
 ] as const;
 type ReleaseFixture = (typeof releases)[number];
