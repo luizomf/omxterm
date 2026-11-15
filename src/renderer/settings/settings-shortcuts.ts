@@ -172,11 +172,7 @@ export function renderShortcuts(
     if (again) return;
     recording = action;
     syncAll();
-    context.report(
-      context.platform === "darwin"
-        ? "shortcuts.promptMac"
-        : "shortcuts.prompt",
-    );
+    context.report("shortcuts.prompt");
     stopCapture = context.captureShortcut((shortcut) => {
       if (!context.live() || !context.interactive() || recording !== action)
         return;

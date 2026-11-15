@@ -62,18 +62,14 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
   quickSection.className = "quick-connect";
   quickSection.append(quickLabel, connectButton);
   const aliasHeading = document.createElement("h2");
-  const searchLabel = document.createElement("label");
-  const searchText = document.createTextNode("");
-  searchLabel.append(searchText);
   const search = document.createElement("input");
   search.className = "page-control";
   search.type = "search";
   search.spellcheck = false;
-  searchLabel.append(search);
   const refresh = createPageButton(document);
   const toolbar = document.createElement("div");
   toolbar.className = "alias-toolbar";
-  toolbar.append(searchLabel, refresh);
+  toolbar.append(search, refresh);
   const summary = document.createElement("p");
   summary.className = "ui-meta";
   const rows = document.createElement("div");
@@ -121,8 +117,8 @@ export function mountSshPage(document: Document, bridge: SshBridge) {
     quick.placeholder = m.placeholder;
     connectButton.textContent = m.connect;
     aliasHeading.textContent = m.aliases;
-    searchText.data = m.search;
-    search.placeholder = m.filter;
+    search.placeholder = m.search;
+    search.setAttribute("aria-label", m.search);
     refresh.textContent = m.refresh;
     summary.textContent = reading
       ? m.reading

@@ -583,7 +583,7 @@ quietest form that works:
 
 - `About OMXTerm` in the application menu opens one compact in-window dialog on
   every Supported Platform. It shows the application icon, name, running
-  version, and MIT license, and text links on one line to the project,
+  version, and text links on one line to the project,
   contributors, issue tracker, and license. Developer lists live in `CONTRIBUTORS.md`, not the
   dialog; no individual copyright is spotlighted, and legal notices stay in the
   distribution.

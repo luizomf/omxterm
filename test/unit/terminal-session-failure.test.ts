@@ -56,13 +56,8 @@ describe("Terminal Session native failure dialog", () => {
       ] as const
     ).map((failure) => terminalSessionFailureDialog(failure));
     expect(new Set(dialogs.map((dialog) => dialog.title)).size).toBe(5);
-    expect(dialogs[1]!.detail).toContain("15");
-    expect(
-      terminalSessionFailureDialog({
-        reason: "signal",
-        launchKind: "explicit-command",
-        signal: null,
-      }).detail,
-    ).not.toContain("null");
+    // The raw signal goes to the log, not the dialog.
+    expect(dialogs[1]!.detail).not.toContain("15");
+    expect(dialogs[0]!.detail).toContain("Settings");
   });
 });

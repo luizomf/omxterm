@@ -133,14 +133,15 @@ export const brazilianPortugueseMessages: Readonly<
   "failure.commandStart.message": "O comando solicitado não iniciou.",
   "failure.shellStart.title": "Não foi possível iniciar o shell",
   "failure.shellStart.message": "Seu shell não iniciou.",
-  "failure.spawnDetail": "Verifique se o programa existe e pode ser executado.",
+  "failure.shellSpawnDetail": "Confira o caminho do shell em Configurações.",
+  "failure.commandSpawnDetail":
+    "Verifique se o programa existe e pode ser executado.",
   "failure.commandExit.title": "O comando terminou inesperadamente",
   "failure.commandExit.message":
     "O comando solicitado terminou inesperadamente.",
   "failure.shellExit.title": "O shell terminou inesperadamente",
   "failure.shellExit.message": "Seu shell terminou inesperadamente.",
-  "failure.signalDetail": "Sinal: {signal}.",
-  "failure.unknownSignal": "desconhecido",
+  "failure.signalDetail": "Abra uma nova aba para começar de novo.",
   "failure.start.title": "O OMXTerm não pôde iniciar",
   "failure.launchRequest": "A opção -e exige um executável.",
   "failure.rendererLoad.title": "Não foi possível carregar a janela",
@@ -151,13 +152,13 @@ export const brazilianPortugueseMessages: Readonly<
   "failure.startup": "Não foi possível criar a primeira janela.",
 
   "notice.reloadFailed":
-    "Não foi possível recarregar as configurações, então o OMXTerm manteve as últimas válidas. {detail} Corrija o arquivo e escolha Exibir → Recarregar Configurações.",
+    "Não foi possível recarregar as configurações, então o OMXTerm manteve as últimas válidas. {detail} Corrija o arquivo e recarregue as configurações.",
   "notice.reloadUnexpected":
     "Não foi possível carregar as configurações por causa de um erro inesperado.",
   "notice.restartDeferred": {
-    one: "As abas abertas continuam com o valor anterior de {settings}. Novas abas e janelas usam o novo; reinicie o OMXTerm para aplicá-lo em todas.",
+    one: "As abas abertas mantêm o valor antigo de {settings}. Novas abas usam o novo.",
     other:
-      "As abas abertas continuam com os valores anteriores de {settings}. Novas abas e janelas usam os novos; reinicie o OMXTerm para aplicá-los em todas.",
+      "As abas abertas mantêm os valores antigos de {settings}. Novas abas usam os novos.",
   },
   "notice.and": "{first} e {second}",
 
@@ -167,7 +168,7 @@ export const brazilianPortugueseMessages: Readonly<
   "chrome.restore": "Restaurar",
   "chrome.closeWindow": "Fechar Janela",
 
-  "terminal.surface": "Superfície do terminal",
+  "terminal.surface": "Terminal",
   "terminal.filesDropCandidate": "Solte para inserir o caminho (sem executar)",
   "terminal.filesDropRefused":
     "Caminho não inserido. Arraste de novo pelo Files desta janela.",
@@ -176,9 +177,9 @@ export const brazilianPortugueseMessages: Readonly<
   "layout.saved": "Layout salvo.",
   "layout.saveFailed": "Não foi possível salvar o layout desta janela.",
   "layout.saveUnknown": "Não foi possível confirmar se o layout foi salvo.",
-  "terminal.tabs": "Abas do terminal",
-  "terminal.userFileErrors": "Erros nos arquivos do usuário",
-  "terminal.surfaceFailure": "Falha na superfície do terminal",
+  "terminal.tabs": "Abas",
+  "terminal.userFileErrors": "Erros de arquivo",
+  "terminal.surfaceFailure": "Erro no terminal",
   "terminal.initializationFailure":
     "Não foi possível iniciar o terminal: {detail}",
   "terminal.backendLost": "O renderizador do terminal parou",
@@ -197,10 +198,8 @@ export const brazilianPortugueseMessages: Readonly<
   "search.matchBelow": "Resultado abaixo",
   "search.close": "Fechar busca",
 
-  "about.title": "Sobre o OMXTerm",
   "about.loading": "Carregando versão…",
   "about.version": "Versão {version}",
-  "about.license": "Licença MIT. Fornecido sem garantia.",
   "about.project": "Projeto",
   "about.contributors": "Contribuidores",
   "about.issues": "Relatar um problema",
@@ -217,7 +216,7 @@ export const brazilianPortugueseMessages: Readonly<
   "preview.unsupported":
     "Formato de imagem não suportado. Escolha um PNG ou JPEG estático; WebP não é suportado.",
   "preview.error":
-    "Não foi possível pré-visualizar esta imagem. O arquivo pode estar indisponível, ser inválido ou passar dos limites de PNG/JPEG estáticos (64 MiB, 8192 por lado, 32 milhões de pixels).",
+    "Não foi possível pré-visualizar esta imagem. Ela pode estar ausente, inválida ou grande demais.",
 
   "panel.resize": "Redimensionar barra lateral",
   "panel.width": "{width} pixels de largura",
@@ -244,7 +243,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.page.appearance": "Aparência",
   "settings.page.terminal": "Terminal",
   "settings.page.window": "Janela",
-  "settings.page.file": "Arquivo de configuração",
+  "settings.page.file": "Arquivo",
   "settings.page.extensions": "Extensões",
   "extensions.heading": "Extensões",
   "extensions.snippetsOptional":
@@ -278,7 +277,8 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.catalogManagementUnavailable":
     "Não é possível instalar extensões agora.",
   "extensions.catalogEmpty": "Ainda não há extensões oficiais.",
-  "extensions.catalogInstalled": "Instalada",
+  "extensions.catalogAllInstalled":
+    "Todas as extensões oficiais já estão instaladas.",
   "extensions.catalogPlatformIncompatible": "Indisponível neste sistema",
   "extensions.catalogEngineIncompatible":
     "Não funciona com esta versão do OMXTerm",
@@ -334,11 +334,11 @@ export const brazilianPortugueseMessages: Readonly<
   "mirrorTyping.needTwoPanes":
     "Abra pelo menos dois painéis ativos na mesma aba e abra Espelhar digitação.",
   "extensions.noActiveTerminalDirectory":
-    "Nenhum diretório local foi informado pelo terminal ativo. Ele pode ser remoto ou não informar seu diretório. Use Pasta pessoal ou digite um caminho",
+    "O terminal ativo não informou uma pasta local. Use Pasta pessoal ou digite um caminho.",
   "extensions.activeTerminalChanged":
-    "O terminal ativo mudou ou não pôde ser confirmado. Tente novamente",
+    "O terminal ativo mudou ou não pôde ser confirmado. Tente de novo.",
   "extensions.terminalDirectoryBusy":
-    "Uma solicitação de diretório do terminal já está em andamento. Tente novamente",
+    "Ainda lendo a pasta do terminal. Tente de novo em instantes.",
   "extensions.unavailable": "Extensão indisponível",
   "extensions.unavailableDetail":
     "Abra Configurações → Extensões para conferir.",
@@ -425,7 +425,7 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.saving": "Salvando…",
   "settings.requestError": "Não salvo: a solicitação falhou.",
   "settings.fileGuidance":
-    "Alterações gráficas são verificadas no arquivo inteiro. Corrija valores inválidos em Configurações ou edite o Arquivo de configuração; se não for possível ler o arquivo, repare-o externamente e recarregue.",
+    "Corrija valores inválidos aqui ou em config.json e recarregue o arquivo.",
   "settings.saved": "Salvo.",
   "settings.choiceSuperseded":
     "Uma escolha mais recente substituiu esta seleção antes de ela ser salva.",
@@ -445,10 +445,10 @@ export const brazilianPortugueseMessages: Readonly<
     "config.json mudou desde que você começou a editar. Seu rascunho foi mantido; o salvamento será recusado até recarregar o arquivo.",
   "settings.newer": "As edições mais recentes não foram salvas.",
   "settings.readError":
-    "não foi possível ler config.json. Verifique as permissões e o local do arquivo.",
-  "settings.utf8Error": "config.json não é UTF-8 válido",
-  "settings.jsonError": "config.json não é JSON válido",
-  "settings.objectError": "config.json deve conter um objeto",
+    "Não foi possível ler config.json. Verifique as permissões e o local do arquivo.",
+  "settings.utf8Error": "config.json não é UTF-8 válido.",
+  "settings.jsonError": "config.json não é JSON válido.",
+  "settings.objectError": "config.json deve conter um objeto.",
   "settings.symlinkError":
     "Um link de config.json ou de seu diretório está quebrado ou é cíclico. Corrija o link ou seu destino e recarregue o arquivo.",
   "settings.targetError":
@@ -460,19 +460,17 @@ export const brazilianPortugueseMessages: Readonly<
   "settings.cleanupError":
     "config.json não foi salvo. Um arquivo temporário pode ter permanecido no diretório de destino; verifique o diretório e as permissões antes de tentar novamente.",
   "settings.applicationError":
-    "Erro inesperado ao aplicar. Algumas configurações podem já estar ativas; escolha Exibir → Recarregar Configurações novamente.",
+    "Erro inesperado ao aplicar. Algumas configurações podem já estar ativas; recarregue as configurações para conferir.",
   "settings.page.shortcuts": "Atalhos",
   "shortcuts.hint":
     "Atalhos do app recebem a tecla antes dos programas do terminal.",
   "shortcuts.search": "Buscar atalhos",
   "shortcuts.noMatch": "Nenhum atalho corresponde à busca.",
   "shortcuts.prompt": "Pressione o novo atalho, ou Escape para cancelar.",
-  "shortcuts.promptMac":
-    "Pressione o novo atalho, ou Escape para cancelar. Option sem outros modificadores com letras e dígitos da fileira superior pode funcionar em layouts compatíveis. Algumas teclas mortas podem não ser graváveis; métodos de entrada ou suporte nativo indisponível também podem impedir a gravação. A opção de usar Option como Alt afeta apenas a entrada no terminal.",
   "shortcuts.invalid":
-    "Essa combinação de teclas não é compatível. Use Ctrl, Alt, Cmd ou AltGr com uma tecla compatível, ou use F1–F24.",
+    "Essa combinação não é compatível; use Ctrl, Alt, Cmd ou AltGr com uma tecla, ou F1–F24.",
   "shortcuts.invalidMac":
-    "Essa combinação de teclas não é compatível. Alguns caracteres de Option e teclas mortas podem não ser graváveis, inclusive com métodos de entrada ou suporte nativo indisponível; tente Option com uma seta ou tecla de função, outro modificador, ou F1–F24.",
+    "Essa combinação não é compatível; algumas teclas Option e mortas não podem ser gravadas.",
   "shortcuts.cancelled": "Gravação cancelada.",
   "shortcuts.pressing": "Pressione um atalho…",
   "shortcuts.none": "Nenhum",

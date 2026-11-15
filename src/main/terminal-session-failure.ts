@@ -110,13 +110,11 @@ export function terminalSessionFailureDialog(
     return dialog(
       command ? "failure.commandStart.title" : "failure.shellStart.title",
       command ? "failure.commandStart.message" : "failure.shellStart.message",
-      t("failure.spawnDetail"),
+      t(command ? "failure.commandSpawnDetail" : "failure.shellSpawnDetail"),
     );
   return dialog(
     command ? "failure.commandExit.title" : "failure.shellExit.title",
     command ? "failure.commandExit.message" : "failure.shellExit.message",
-    t("failure.signalDetail", {
-      signal: failure.signal ?? t("failure.unknownSignal"),
-    }),
+    t("failure.signalDetail"),
   );
 }

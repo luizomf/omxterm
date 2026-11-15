@@ -90,7 +90,7 @@ it("offers Install for an extension that isn't installed", async () => {
     en("extensions.catalogInstall"),
   );
 });
-it("offers nothing for an installed extension without a newer release", async () => {
+it("lists no card for an installed extension without a newer release", async () => {
   mount(
     vi.fn().mockResolvedValue({
       ok: true,
@@ -99,19 +99,16 @@ it("offers nothing for an installed extension without a newer release", async ()
     }),
   );
   await vi.waitFor(() =>
-    expect(cardElement().textContent).toContain(
-      en("extensions.catalogInstalled"),
+    expect(catalogNotice().textContent).toBe(
+      en("extensions.catalogAllInstalled"),
     ),
   );
-  expect(cardElement().querySelector("button")).toBeNull();
-  // The installed row has the real version; the card doesn't repeat the catalog's.
-  expect(cardElement().textContent).not.toContain("0.2.0");
+  expect(document.querySelector("[data-extension-id]")).toBeNull();
 });
 it.each([
   ["platform", "install", "extensions.catalogPlatformIncompatible"],
   ["engine", "install", "extensions.catalogEngineIncompatible"],
   ["platform-and-engine", "install", "extensions.catalogPlatformIncompatible"],
-  ["engine", "update", "extensions.catalogInstalled"],
 ] as const)(
   "explains a %s incompatibility for %s without a button",
   async (incompatibility, cardAction, key) => {

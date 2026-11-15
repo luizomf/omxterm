@@ -32,7 +32,7 @@ afterEach(() => {
 function fixture(initial = configuration) {
   document.documentElement.lang = "en";
   document.body.innerHTML =
-    '<nav id="tab-strip" aria-label="Terminal Tabs"></nav><div id="terminal-tabs"></div><section id="user-file-errors" role="alert" aria-label="User File Errors" hidden></section><section id="terminal-surface-failure" role="alert" aria-label="Terminal Surface Failure" hidden></section>';
+    '<nav id="tab-strip" aria-label="Tabs"></nav><div id="terminal-tabs"></div><section id="user-file-errors" role="alert" aria-label="File errors" hidden></section><section id="terminal-surface-failure" role="alert" aria-label="Terminal error" hidden></section>';
   const tabStrip = document.querySelector<HTMLElement>("nav")!;
   const tabsContainer = document.querySelector<HTMLElement>("#terminal-tabs")!;
   let update!: (value: TerminalRendererConfiguration) => void;
@@ -134,18 +134,13 @@ describe("window localization lifecycle", () => {
     ];
     const portuguese = [
       "pt-BR",
-      "Abas do terminal",
-      "Erros nos arquivos do usuário",
-      "Falha na superfície do terminal",
+      "Abas",
+      "Erros de arquivo",
+      "Erro no terminal",
     ];
     expect(names()).toEqual(portuguese);
     f.update(configuration);
-    expect(names()).toEqual([
-      "en-US",
-      "Terminal Tabs",
-      "User File Errors",
-      "Terminal Surface Failure",
-    ]);
+    expect(names()).toEqual(["en-US", "Tabs", "File errors", "Terminal error"]);
     f.update({ ...configuration, language: "pt-BR" });
     expect(names()).toEqual(portuguese);
     f.host.dispose();
@@ -349,9 +344,7 @@ describe("window localization lifecycle", () => {
         expect(f.adapters[index]!.start).toHaveBeenCalledOnce(),
       );
       await f.host.ready;
-      expect(container.getAttribute("aria-label")).toBe(
-        "Superfície do terminal",
-      );
+      expect(container.getAttribute("aria-label")).toBe("Terminal");
       await vi.waitFor(() =>
         expect(search.placeholder).toBe("Buscar no histórico"),
       );

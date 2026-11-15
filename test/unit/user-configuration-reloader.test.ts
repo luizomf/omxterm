@@ -274,7 +274,7 @@ describe("User Configuration reloader", () => {
     expect(reloader.current().userFileErrors).toHaveLength(1);
     expect(reloader.current().userFileErrors[0]).toContain(privatePath);
     expect(reloader.current().userFileErrors[0]).toContain("font.size");
-    expect(reloader.current().userFileErrors[0]).toContain("Reload Settings");
+    expect(reloader.current().userFileErrors[0]).toContain("reload settings");
     expect(apply).toHaveBeenCalledExactlyOnceWith(reloader.current(), false);
     expect(setLevel).not.toHaveBeenCalled();
     expect(writeStderr).toHaveBeenCalledWith(
@@ -358,7 +358,7 @@ describe("User Configuration reloader", () => {
       expect.stringContaining("font.family and font.lineHeight"),
     ]);
     expect(reloader.current().userFileErrors[0]).toBe(
-      "Open tabs keep their previous font.family and font.lineHeight values. New tabs and windows use the new ones; restart OMXTerm to apply them everywhere.",
+      "Open tabs keep the old font.family and font.lineHeight values. New tabs use the new ones.",
     );
 
     await reloader.reload();
@@ -444,7 +444,7 @@ describe("User Configuration notice lifetime", () => {
     reloader.refreshTerminalSurfaceNotices();
     expect(reloader.current().userFileErrors).toEqual([
       "actionable warning",
-      expect.stringContaining("previous font.lineHeight value"),
+      expect.stringContaining("old font.lineHeight value"),
     ]);
     expect(apply).toHaveBeenLastCalledWith(reloader.current(), false);
     activeSurfaces.length = 0;

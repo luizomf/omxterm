@@ -1031,7 +1031,7 @@ it("bounds concurrent reported-directory selection confirmations in one Files vi
   await expect(requestDirectory()).resolves.toEqual({
     ok: false,
     reason: "terminal-directory-busy",
-    error: "A terminal directory request is already in progress. Try again",
+    error: "Still reading the terminal's folder. Try again in a moment.",
   });
   await expect(
     adapters.hosts[0]!.options.onRequest!(

@@ -117,9 +117,7 @@ export function createAboutDialog(
       const current = document.createElement("dialog");
       dialog = current;
       current.className = "about-dialog ui-dialog";
-      current.setAttribute("aria-labelledby", "about-title");
-      const title = document.createElement("h2");
-      title.id = "about-title";
+      current.setAttribute("aria-labelledby", "about-name");
       const icon = document.createElement("img");
       icon.src = "./application-icon.png";
       icon.alt = "";
@@ -127,9 +125,9 @@ export function createAboutDialog(
       icon.height = 64;
       const name = document.createElement("p");
       name.className = "about-name";
+      name.id = "about-name";
       name.textContent = "OMXTerm";
       const version = document.createElement("p");
-      const license = document.createElement("p");
       const error = document.createElement("p");
       error.setAttribute("role", "status");
       const links = document.createElement("div");
@@ -161,14 +159,12 @@ export function createAboutDialog(
       done.type = "button";
       done.className = "about-close page-control page-button page-button-quiet";
       relabel = (t) => {
-        title.textContent = t("about.title");
         version.textContent =
           versionText === undefined
             ? t("about.loading")
             : versionText === null
               ? t("about.unavailable")
               : t("about.version", { version: versionText });
-        license.textContent = t("about.license");
         for (const [button, label] of linkButtons)
           button.textContent = t(label);
         error.textContent = linkFailed ? t("about.linkError") : "";
@@ -186,7 +182,7 @@ export function createAboutDialog(
         keyboard.track(event, done);
         event.stopPropagation();
       });
-      current.append(title, icon, name, version, license, links, error, done);
+      current.append(icon, name, version, links, error, done);
       document.body.append(current);
       options.onActivityChange(true);
       current.showModal();

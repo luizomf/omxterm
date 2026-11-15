@@ -72,7 +72,7 @@ export function createPane(
 ): TerminalPane {
   const container = tab.container.ownerDocument.createElement("main");
   container.className = "terminal-surface";
-  container.setAttribute("aria-label", "Terminal Surface");
+  container.setAttribute("aria-label", "Terminal");
   return {
     tab,
     container,

@@ -236,7 +236,7 @@ describe("Shortcuts page", () => {
     view.button("find", "record").click();
     expect(view.cells("find")[0]).toBe("Press a shortcut…");
     view.deliver({ invalid: true });
-    expect(view.status()).toContain("key combination is not supported");
+    expect(view.status()).toContain("combination isn't supported");
     expect(view.changeKeybind).not.toHaveBeenCalled();
     view.deliver({ accelerator: "F2" });
     await view.settle();
@@ -248,15 +248,13 @@ describe("Shortcuts page", () => {
     expect(view.status()).toBe("Saved.");
   });
 
-  it("explains macOS Option recording limits before and after an unsupported key", async () => {
+  it("explains macOS Option recording limits after an unsupported key", async () => {
     const view = await open(undefined, "darwin");
     view.button("find", "record").click();
-    expect(view.status()).toMatch(
-      /^Press the new shortcut, or Escape to cancel\. .*Option/u,
-    );
+    expect(view.status()).toBe("Press the new shortcut, or Escape to cancel.");
     view.deliver({ invalid: true });
     expect(view.status()).toMatch(
-      /^That key combination is not supported\. .*Option/u,
+      /^That combination isn't supported; .*Option/u,
     );
     expect(view.button("find", "record").textContent).toBe("Cancel");
     expect(view.changeKeybind).not.toHaveBeenCalled();
@@ -266,13 +264,11 @@ describe("Shortcuts page", () => {
     const language = createRendererLanguage("en-US");
     const view = await open(language, "darwin");
     view.button("find", "record").click();
-    language.set("pt-BR");
-    expect(view.status()).toContain("teclas mortas podem não ser graváveis");
-    expect(view.status()).toContain("afeta apenas a entrada no terminal");
     view.deliver({ invalid: true });
-    expect(view.status()).toContain("teclas mortas podem não ser graváveis");
+    language.set("pt-BR");
+    expect(view.status()).toContain("teclas Option e mortas");
     language.set("en-US");
-    expect(view.status()).toContain("dead keys may not be recordable");
+    expect(view.status()).toContain("Option and dead keys");
   });
 
   it("shows a default taken by another binding as unbound and keeps it recordable", async () => {

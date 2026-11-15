@@ -85,10 +85,8 @@ it("foregrounds the project and collective contributors without individual copyr
   );
   const dialog = document.querySelector("dialog")!;
   expect(dialog.hasAttribute("open")).toBe(true);
-  expect(dialog.getAttribute("aria-labelledby")).toBe("about-title");
-  expect(document.getElementById("about-title")?.textContent).toBe(
-    "About OMXTerm",
-  );
+  expect(dialog.getAttribute("aria-labelledby")).toBe("about-name");
+  expect(document.getElementById("about-name")?.textContent).toBe("OMXTerm");
   expect(dialog.querySelector(".about-name")?.textContent).toBe("OMXTerm");
   expect(dialog.textContent).not.toContain("Copyright");
   expect(dialog.textContent).not.toContain("Luiz Otávio Miranda");
@@ -179,12 +177,12 @@ it("relabels the open dialog when the window language changes, keeping loaded va
     expect(text()).toContain("Não foi possível abrir o link."),
   );
   expect(text()).toEqual(
-    expect.arrayContaining(["Sobre o OMXTerm", "Projeto", "Fechar"]),
+    expect.arrayContaining(["OMXTerm", "Projeto", "Fechar"]),
   );
   language.set("en-US");
   expect(text()).toEqual(
     expect.arrayContaining([
-      "About OMXTerm",
+      "OMXTerm",
       "Version 1.2.3",
       "Project",
       "Couldn't open the link.",

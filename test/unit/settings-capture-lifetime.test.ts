@@ -145,7 +145,7 @@ it("reports unsupported native identity truthfully and keeps recording for anoth
   view.press("<", { code: "IntlBackslash", control: true, shift: true });
   view.flush();
   expect(document.querySelector(".settings-status")!.textContent).toContain(
-    "That key combination is not supported.",
+    "That combination isn't supported;",
   );
   expect(view.record("find").textContent).toBe("Cancel");
   expect(await readFile(view.file, "utf8")).toBe(view.original);

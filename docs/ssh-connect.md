@@ -39,7 +39,7 @@ required by that server. Ask the server administrator if you do not have these.
 Choose one connection method:
 
 - **Saved alias:** SSH Connect reads aliases from `~/.ssh/config` when it opens.
-  **Search aliases** only filters that list; it is not a destination field.
+  **Search hosts** only filters that list; it is not a destination field.
   Click an alias to connect immediately, without pressing **Connect**.
 - **Quick connect:** enter a destination, then choose **Connect**. Examples:
   `work-server`, `alice@example.org`, `alice@example.org:2222` or

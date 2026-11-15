@@ -1,7 +1,6 @@
 /* eslint-disable max-lines -- One action fixture drives every menu section, shortcut and extension projection. */
 import { describe, expect, it, vi } from "vitest";
 import { translatorFor } from "../../src/shared/i18n";
-import { settingsMessageText } from "../../src/shared/settings-messages";
 import {
   coreActionMenuTemplate,
   terminalActionInvocations,
@@ -84,28 +83,6 @@ it("labels Quit with the name it is given, independently of the branded dialog t
     actions.requestQuit,
   );
   expect(items.some((item) => item.label === "Quit OMXTerm")).toBe(false);
-});
-
-it("names the actual Portuguese menu path in Settings application-failure guidance", () => {
-  const { t } = translatorFor("pt-BR");
-  const actions = menuActions();
-  const menu = terminalApplicationMenuTemplate(
-    "OMXTerm",
-    actions,
-    DEFAULT_TERMINAL_KEYBINDS,
-    t,
-  );
-  const view = menu.find((item) => item.label === t("menu.view"));
-  const submenu = view?.submenu;
-  expect(Array.isArray(submenu)).toBe(true);
-  if (!Array.isArray(submenu)) throw new Error("View menu missing");
-  const reload = submenu.find(
-    (item) => item.click === actions.reloadUserConfiguration,
-  );
-  expect(reload).toBeDefined();
-  expect(settingsMessageText({ kind: "application" }, t)).toContain(
-    `${view!.label} → ${reload!.label}`,
-  );
 });
 
 it.each(["en-US", "pt-BR"] as const)(

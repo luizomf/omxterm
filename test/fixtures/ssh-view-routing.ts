@@ -114,7 +114,7 @@ export async function exerciseCompanionRouting(
       ? {
           ok: false,
           error:
-            "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
+            "The active terminal didn't report a local folder. Use Home or enter a path.",
           reason: "terminal-directory-unavailable",
         }
       : { ok: true, directory: "/original" },
