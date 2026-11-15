@@ -27,10 +27,16 @@ export type Control = Caption &
       }
     | { readonly kind: "text"; readonly placeholder: MessageKey }
   );
+/** Several small number fields that make one setting, on one row. */
+export interface ControlGroup {
+  readonly kind: "group";
+  readonly label: MessageKey;
+  readonly fields: readonly Extract<Control, { kind: "number" }>[];
+}
 export interface Page {
   readonly id: string;
   readonly label: MessageKey;
-  readonly controls: readonly Control[];
+  readonly controls: readonly (Control | ControlGroup)[];
 }
 
 export function pages(platform: string): readonly Page[] {
@@ -52,16 +58,6 @@ export function pages(platform: string): readonly Page[] {
           kind: "toggle",
           path: "confirmClose",
           label: "settings.confirmClose",
-        },
-        {
-          kind: "choice",
-          path: "logLevel",
-          label: "settings.logLevel",
-          options: [
-            ["error", "settings.errors"],
-            ["info", "settings.info"],
-            ["debug", "settings.debug"],
-          ],
         },
         ...(platform === "win32"
           ? [
@@ -111,12 +107,6 @@ export function pages(platform: string): readonly Page[] {
           step: 0.05,
         },
         { kind: "toggle", path: "font.ligatures", label: "settings.ligatures" },
-        {
-          kind: "text",
-          path: "theme.path",
-          label: "settings.theme",
-          placeholder: "settings.bundledTheme",
-        },
       ],
     },
     {
@@ -152,16 +142,20 @@ export function pages(platform: string): readonly Page[] {
           label: "settings.soundFile",
           placeholder: "settings.systemSound",
         },
-        ...(["top", "right", "bottom", "left"] as const).map(
-          (side) =>
-            ({
-              kind: "number",
-              path: `terminal.padding.${side}`,
-              label: `settings.padding.${side}`,
-              min: 0,
-              max: 128,
-            }) as const,
-        ),
+        {
+          kind: "group",
+          label: "settings.padding",
+          fields: (["top", "right", "bottom", "left"] as const).map(
+            (side) =>
+              ({
+                kind: "number",
+                path: `terminal.padding.${side}`,
+                label: `settings.padding.${side}`,
+                min: 0,
+                max: 128,
+              }) as const,
+          ),
+        },
         ...(platform === "darwin"
           ? [
               {
@@ -230,20 +224,15 @@ export function renderSettingsPage(
   },
 ): HTMLElement {
   const panel = document.createElement("div");
-  panel.className = "settings-panel settings-form";
+  panel.className = "settings-panel settings-form ui-form";
   if (page.id === "appearance")
     panel.append(renderSettingsThemes(document, options.bridge, options));
   for (const control of page.controls) {
-    panel.append(
-      renderControl(
-        document,
-        control,
-        options.value,
-        options.change,
-        options.syncs,
-        options.labels,
-      ),
-    );
+    if (control.kind === "group") {
+      panel.append(renderGroup(document, control, options));
+      continue;
+    }
+    panel.append(renderControl(document, control, options));
     if (control.path === "window.blur") {
       const hint = document.createElement("p");
       hint.id = "settings-background-hint";
@@ -272,18 +261,55 @@ export function renderSettingsPage(
   return panel;
 }
 
+interface ControlWiring {
+  readonly value: (path: SettingsPath) => unknown;
+  readonly change: (
+    path: SettingsPath,
+    value: unknown,
+    settled: () => void,
+  ) => void;
+  readonly syncs: (() => void)[];
+  readonly labels: ((t: Translate) => void)[];
+}
+
+// One row for a setting made of several small fields: its name on the left,
+// then each field behind its own short name. Every field saves its own path.
+function renderGroup(
+  document: Document,
+  group: ControlGroup,
+  options: ControlWiring,
+): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "settings-row settings-group ui-form-row";
+  row.setAttribute("role", "group");
+  const caption = document.createElement("span");
+  caption.className = "settings-control-caption";
+  caption.id = `settings-group-${group.label.replaceAll(".", "-")}`;
+  row.setAttribute("aria-labelledby", caption.id);
+  options.labels.push((t) => {
+    caption.textContent = t(group.label);
+  });
+  const fields = document.createElement("span");
+  fields.className = "ui-field-group";
+  for (const field of group.fields)
+    fields.append(renderControl(document, field, options, true));
+  row.append(caption, fields);
+  return row;
+}
+
 export function renderControl(
   document: Document,
   control: Control,
-  value: (path: SettingsPath) => unknown,
-  change: (path: SettingsPath, value: unknown, settled: () => void) => void,
-  syncs: (() => void)[],
-  labels: ((t: Translate) => void)[],
+  { value, change, syncs, labels }: ControlWiring,
+  // Inside a ui-field-group the label is a short name beside its field.
+  grouped = false,
 ): HTMLElement {
   const row = document.createElement("label");
-  row.className = `settings-row settings-${control.kind}`;
+  row.className = grouped
+    ? "settings-field"
+    : `settings-row settings-${control.kind} ui-form-row`;
   const caption = document.createElement("span");
-  caption.className = "settings-control-caption";
+  caption.className = grouped ? "ui-meta" : "settings-control-caption";
   let t = englishLanguage.t;
   labels.push((translate) => {
     t = translate;
@@ -403,7 +429,6 @@ export function renderControl(
     input = field;
   }
   input.classList.add("page-control");
-  if (control.kind === "toggle") row.append(input, caption);
-  else row.append(caption, input);
+  row.append(caption, input);
   return row;
 }

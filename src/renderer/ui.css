@@ -15,7 +15,12 @@
   --ui-hover: color-mix(in srgb, var(--ui-surface), var(--ui-neutral) 25%);
   --ui-selected: color-mix(in srgb, var(--ui-surface), var(--ui-neutral) 35%);
   --ui-decoration: color-mix(in srgb, var(--ui-surface), var(--ui-text) 18%);
-  --ui-input-border: color-mix(in srgb, var(--ui-surface), var(--ui-text) 55%);
+  /* A field's outline: the quietest tone that still reads 3:1 against the
+     surface. The window computes it per theme; the mix is the fallback. */
+  --ui-input-border: var(
+    --terminal-field-border,
+    color-mix(in srgb, var(--ui-surface), var(--ui-text) 40%)
+  );
   --ui-secondary: color-mix(in srgb, var(--ui-surface), var(--ui-text) 75%);
   /* The soft ring around a focused field. */
   --ui-focus-halo: rgb(from var(--ui-text) r g b / 0.14);
@@ -51,7 +56,8 @@
      to different faces on Linux and Windows. */
   --ui-font: system-ui, sans-serif;
   --ui-font-mono: ui-monospace, monospace;
-  /* Type scale: metadata, chrome, body, title. Nothing else. */
+  /* Type scale: metadata, chrome, long-form text, title. Nothing else.
+     Every surface is set in the chrome size. */
   --ui-text-meta: 12px;
   --ui-text-chrome: 13px;
   --ui-text-body: 14px;
@@ -100,9 +106,9 @@
 
 .page-control {
   box-sizing: border-box;
-  min-height: 36px;
+  min-height: 28px;
   max-width: 100%;
-  padding: 7px 12px;
+  padding: 3px 10px;
   font: inherit;
   color: inherit;
   background: var(--ui-control);
@@ -113,8 +119,17 @@
   background: var(--ui-surface);
 }
 .page-control[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  height: 16px;
   min-height: auto;
+  margin: 0;
+  padding: 0;
   accent-color: var(--ui-text);
+}
+/* Several lines of text need more air than one. */
+textarea.page-control {
+  padding: var(--ui-space-2) 10px;
 }
 .page-control::placeholder {
   color: var(--ui-secondary);
@@ -161,12 +176,6 @@
 }
 .page-button-text {
   background: transparent;
-}
-/* Dense rows: 28 px, chrome-size text. */
-.page-button-compact {
-  min-height: 28px;
-  padding: 2px 10px;
-  font-size: var(--ui-text-chrome);
 }
 .ui-icon-button {
   display: inline-grid;
@@ -317,6 +326,113 @@
   > :is([aria-selected="true"], [aria-pressed="true"]):hover:not(:disabled) {
   font-weight: 600;
   background: var(--ui-control-selected);
+}
+
+/* Form --------------------------------------------------------------------- */
+
+/* A settings-like page: one setting per row, its name on the left and its
+   control at the right edge, rows separated by hairlines. The row is the
+   control's <label>, so the whole line is the target. */
+.ui-form {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ui-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-1) var(--ui-space-4);
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 44px;
+  padding-block: var(--ui-space-2);
+  border-block-end: 1px solid var(--ui-decoration);
+}
+/* The name takes the free space; when the two no longer fit on one line the
+   control wraps under the name. */
+.ui-form-row > :first-child {
+  flex: 1 1 144px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ui-form-row > :not(:first-child) {
+  flex: none;
+  max-width: 100%;
+}
+/* One width per kind of field, so the controls' left edges line up too. */
+.ui-form-row
+  :is(input, select).page-control:not(
+    [type="checkbox"],
+    [type="range"],
+    [type="color"]
+  ) {
+  width: 280px;
+}
+.ui-form-row input.page-control[type="number"] {
+  width: 88px;
+}
+/* A list of many short rows (Shortcuts). */
+.ui-form-row-dense {
+  min-height: 36px;
+  padding-block: var(--ui-space-1);
+}
+/* A row that ends in a value with actions before it (a shortcut's keys):
+   one trailing group, so both wrap together and stay at the right edge. */
+.ui-form-value {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-4);
+  margin-inline-start: auto;
+}
+/* Actions in a row are quiet words; the value is what the eye should find. */
+.ui-form-row .page-button-text {
+  color: var(--ui-secondary);
+}
+.ui-form-row .page-button-text:hover:not(:disabled) {
+  color: var(--ui-text);
+}
+/* The one sentence that explains the row above it shares that row's
+   hairline. */
+.ui-form-row:has(+ .ui-hint) {
+  padding-block-end: 0;
+  border-block-end: 0;
+}
+.ui-form-row + .ui-hint {
+  max-width: none;
+  padding-block: 0 var(--ui-space-2);
+  border-block-end: 1px solid var(--ui-decoration);
+  font-size: var(--ui-text-meta);
+}
+/* Several small fields that make one setting (the four sides of a padding):
+   each is a <label> holding a ui-meta name and its field. */
+.ui-field-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2) var(--ui-space-3);
+}
+.ui-field-group > label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+.ui-form-row .ui-field-group input.page-control[type="number"] {
+  width: 56px;
+}
+/* Row actions that wait out of sight until the row is hovered, holds focus
+   or is busy (is-active). They keep their space and their place in the tab
+   order, so nothing moves when they appear. */
+.ui-reveal {
+  opacity: 0;
+}
+:is(.ui-form-row, .ui-row):is(:hover, :focus-within, .is-active) .ui-reveal {
+  opacity: 1;
+}
+@media (hover: none) {
+  .ui-reveal {
+    opacity: 1;
+  }
 }
 
 /* Icon --------------------------------------------------------------------- */
@@ -581,7 +697,6 @@
   padding: var(--ui-space-6);
   overflow: auto;
   overflow-wrap: anywhere;
-  font-size: var(--ui-text-body);
 }
 .ui-dialog::backdrop {
   background: transparent;
@@ -691,6 +806,9 @@
   .ui-list,
   .ui-nav,
   .ui-actions,
+  .ui-form,
+  .ui-form-row,
+  .ui-field-group,
   .ui-icon-button,
   .ui-chip,
   .ui-card,

@@ -77,6 +77,12 @@ body {
   right: var(--ui-space-1);
   transform: none;
 }
+/* A narrow page's header ends in that corner too, so it makes room. */
+@media (max-width: 639px) {
+  :has(> .state-marks-corner) .application-page-header {
+    padding-inline-end: var(--ui-space-8);
+  }
+}
 
 .state-notice {
   position: fixed;
@@ -156,7 +162,7 @@ body:has(> .ui-dialog:modal) > :not(dialog, script, style, link) {
   padding-top: var(--native-title-inset, 0px);
   color: var(--ui-text);
   background: var(--ui-surface);
-  font: var(--ui-text-body) / 1.5 var(--ui-font);
+  font: var(--ui-text-chrome) / 1.5 var(--ui-font);
 }
 body.tabs-visible .hosted-content-tab {
   padding-top: 0;

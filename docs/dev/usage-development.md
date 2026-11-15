@@ -63,7 +63,7 @@ command is running. `"confirmClose": false` turns the prompt off.
 
 ## Terminal context menu
 
-Turning off **Terminal context menu** (`terminal.contextMenuEnabled: false`)
+Turning off **Right-click menu** (`terminal.contextMenuEnabled: false`)
 also disables keyboard-opened terminal popups, with no Shift exception.
 Application mouse input, Edit actions, keybindings and the Find query menu are
 unchanged.

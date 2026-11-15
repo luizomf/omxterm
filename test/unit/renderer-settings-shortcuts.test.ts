@@ -138,10 +138,10 @@ describe("Shortcuts page", () => {
     const view = await open(language);
     const record = view.button("find", "record");
     expect(view.button("find", "unbind").getAttribute("aria-label")).toBe(
-      "Unbind shortcut for Find",
+      "Remove shortcut for Find",
     );
     expect(view.button("find", "default").getAttribute("aria-label")).toBe(
-      "Use default shortcut for Find",
+      "Reset shortcut for Find",
     );
     record.focus();
     record.click();
@@ -156,13 +156,13 @@ describe("Shortcuts page", () => {
       "Cancelar gravação de atalho para Buscar",
     );
     expect(view.button("find", "unbind").getAttribute("aria-label")).toBe(
-      "Remover atalho para Buscar",
+      "Remover atalho de Buscar",
     );
     expect(view.button("find", "default").getAttribute("aria-label")).toBe(
-      "Usar atalho padrão para Buscar",
+      "Redefinir atalho de Buscar",
     );
     record.click();
-    expect(record.getAttribute("aria-label")).toBe("Gravar atalho para Buscar");
+    expect(record.getAttribute("aria-label")).toBe("Alterar atalho de Buscar");
     expect(view.status()).toBe("Gravação cancelada.");
   });
   it("releases capture on page departure even when activation never focused Record", async () => {
@@ -182,7 +182,7 @@ describe("Shortcuts page", () => {
     document
       .querySelector<HTMLButtonElement>("#settings-tab-shortcuts")!
       .click();
-    expect(view.button("find", "record").textContent).toBe("Record");
+    expect(view.button("find", "record").textContent).toBe("Change");
   });
   it.each(["cancel", "blur"])(
     "replaces recording instructions after %s",
@@ -197,7 +197,7 @@ describe("Shortcuts page", () => {
       if (reason === "cancel") record.click();
       else record.blur();
       expect(view.status()).toBe("Recording cancelled.");
-      expect(record.textContent).toBe("Record");
+      expect(record.textContent).toBe("Change");
       expect(view.stopCapture).toHaveBeenCalledOnce();
       view.deliver({ accelerator: "F2" });
       expect(view.changeKeybind).not.toHaveBeenCalled();
@@ -211,24 +211,24 @@ describe("Shortcuts page", () => {
     expect(view.cells("moveAuxiliaryPanel")).toEqual(["Ctrl+Alt+Shift+P", ""]);
     expect(
       view.button("moveAuxiliaryPanel", "record").getAttribute("aria-label"),
-    ).toBe("Record shortcut for Move Side Panel to Other Side");
+    ).toBe("Change shortcut for Move Side Panel to Other Side");
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
-    ).toBe("Record shortcut for Toggle Side Panel");
+    ).toBe("Change shortcut for Toggle Side Panel");
     for (const [action, title] of [
       ["toggleFiles", "Files"],
       ["toggleSshConnect", "SSH Connect"],
     ]) {
       expect(view.cells(action!)).toEqual(["None", ""]);
       expect(view.button(action!, "record").getAttribute("aria-label")).toBe(
-        `Record shortcut for Toggle ${title}`,
+        `Change shortcut for Toggle ${title}`,
       );
     }
     expect(view.cells("quit")).toEqual(["None", ""]);
     expect(view.button("find", "record").getAttribute("aria-label")).toBe(
-      "Record shortcut for Find",
+      "Change shortcut for Find",
     );
-    expect(view.button("find", "default").disabled).toBe(true);
+    expect(view.button("find", "default").hidden).toBe(true);
   });
 
   it("records a shortcut from main and saves it as custom", async () => {
@@ -295,15 +295,23 @@ describe("Shortcuts page", () => {
     expect(view.status()).toBe("Recording cancelled.");
     expect(view.changeKeybind).not.toHaveBeenCalled();
 
+    view.button("find", "unbind").focus();
     view.button("find", "unbind").click();
     await view.settle();
     expect(view.cells("find")).toEqual(["None", "Unbound"]);
+    // The pressed button is gone; the keyboard stays on the row.
+    expect(document.activeElement).toBe(view.button("find", "record"));
+    // Only a changed row offers Reset, and only a bound one offers Remove.
+    expect(view.button("find", "default").hidden).toBe(false);
+    expect(view.button("find", "unbind").hidden).toBe(true);
     view.button("find", "default").click();
     await view.settle();
     expect(
       view.changeKeybind.mock.calls.map(([change]) => change.choice),
     ).toEqual([{ state: "unbound" }, { state: "inherit" }]);
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
+    expect(view.button("find", "default").hidden).toBe(true);
+    expect(view.button("find", "unbind").hidden).toBe(false);
   });
 
   it("ends capture when recording is toggled off or the dialog closes", async () => {
@@ -331,7 +339,7 @@ describe("Shortcuts page", () => {
     ]) {
       expect(view.cells(action!)).toEqual(["Nenhum", ""]);
       expect(view.button(action!, "record").getAttribute("aria-label")).toBe(
-        `Gravar atalho para Alternar ${title}`,
+        `Alterar atalho de Alternar ${title}`,
       );
     }
     expect(
@@ -342,8 +350,8 @@ describe("Shortcuts page", () => {
     expect(view.cells("moveAuxiliaryPanel")).toEqual(["Ctrl+Alt+Shift+P", ""]);
     expect(
       view.button("toggleAuxiliaryPanel", "record").getAttribute("aria-label"),
-    ).toBe("Gravar atalho para Alternar Barra Lateral");
-    expect(view.button("find", "record").textContent).toBe("Gravar");
+    ).toBe("Alterar atalho de Alternar Barra Lateral");
+    expect(view.button("find", "record").textContent).toBe("Alterar");
     expect(
       document.querySelector(
         '[data-action="selectTab3"] .settings-shortcut-name',
@@ -354,7 +362,7 @@ describe("Shortcuts page", () => {
       document.querySelector(".settings-shortcuts .settings-hint")!.textContent,
     ).toBe("App shortcuts get the key before terminal programs do.");
     expect(view.cells("find")).toEqual(["Ctrl+Shift+F", ""]);
-    expect(view.button("find", "record").textContent).toBe("Record");
+    expect(view.button("find", "record").textContent).toBe("Change");
   });
 });
 

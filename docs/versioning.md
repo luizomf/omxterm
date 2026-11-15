@@ -273,6 +273,11 @@ The Snippets panel polish (#1176) moves main to `0.37.0-dev.3`. Snippets goes to
 0.1.5; the catalogs, the bundled default and its pins stay at the published
 0.1.4.
 
+One text size and one control height across the design system, with Settings
+rebuilt on it (#1178), moves main to `0.37.0-dev.4`. Every official extension
+bundles the stylesheet: Saved Layout goes to 0.3.3, and the others ride with
+their unpublished versions. Catalogs stay at the published versions.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

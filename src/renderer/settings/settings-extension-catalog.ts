@@ -50,7 +50,6 @@ export function renderExtensionCatalog(
   const browse = createPageButton(document);
   browse.dataset.action = "catalog-browse";
   const cancel = createPageButton(document, "text");
-  cancel.classList.add("page-button-compact");
   const notice = document.createElement("div");
   notice.setAttribute("role", "status");
   const list = document.createElement("div");
@@ -72,7 +71,7 @@ export function renderExtensionCatalog(
     heading.hidden = !shown;
     heading.textContent = t("extensions.catalogHeading");
     browse.className = `page-control page-button ${
-      shown ? "page-button-text page-button-compact" : "page-button-quiet"
+      shown ? "page-button-text" : "page-button-quiet"
     }`;
     browse.textContent = t(
       failed
@@ -143,7 +142,6 @@ export function renderExtensionCatalog(
       } else {
         const action = entry.action!;
         const button = createPageButton(document);
-        button.classList.add("page-button-compact");
         button.dataset.action = `catalog-${action}`;
         bindings.push(() => {
           button.textContent = t(

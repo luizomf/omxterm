@@ -94,7 +94,6 @@ describe("local theme picker", () => {
     expect(view.query(".settings-themes-message").textContent).toContain(
       "These theme files couldn't be used",
     );
-    expect(view.field("Theme file").value).toContain("themes/b.json");
   });
 
   it("uses the existing change route and preserves saved-but-not-applied feedback", async () => {
@@ -306,7 +305,7 @@ describe("theme discovery feedback", () => {
       "some files may not be shown",
     );
     expect(view.query(".settings-themes-message").textContent).toContain(
-      "outside this list or unavailable",
+      "isn't in this list",
     );
     expect(view.query(".settings-themes-invalid").textContent).toContain(
       "valid JSON",

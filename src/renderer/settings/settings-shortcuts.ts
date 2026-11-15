@@ -9,6 +9,7 @@ import type {
 } from "../../shared/settings-keybinds";
 import {
   displayAccelerator,
+  shortcutText,
   TERMINAL_ACTION_NAMES,
   type TerminalActionName,
 } from "../../shared/terminal-keybinds";
@@ -107,7 +108,7 @@ export function renderShortcuts(
   },
 ) {
   const panel = document.createElement("div");
-  panel.className = "settings-panel settings-shortcuts";
+  panel.className = "settings-panel settings-shortcuts ui-form";
   const hint = document.createElement("p");
   hint.className = "ui-hint settings-hint";
   context.labels.push((t) => {
@@ -196,20 +197,18 @@ export function renderShortcuts(
 
   for (const action of TERMINAL_ACTION_NAMES) {
     const row = document.createElement("div");
-    row.className = "settings-shortcut";
+    row.className = "settings-shortcut ui-form-row ui-form-row-dense";
     row.dataset.action = action;
     const name = document.createElement("span");
     name.className = "settings-shortcut-name";
     const value = document.createElement("span");
-    value.className = "settings-shortcut-value ui-chip";
+    value.className = "settings-shortcut-value ui-shortcut";
+    // A changed row shows Reset; the state itself is for assistive technology.
     const state = document.createElement("span");
-    state.className = "settings-shortcut-state";
+    state.className = "settings-shortcut-state ui-visually-hidden";
     const button = (className: string, onClick: () => void) => {
-      const element = createPageButton(
-        document,
-        className === "settings-shortcut-record" ? "quiet" : "text",
-      );
-      element.classList.add(className, "page-button-compact");
+      const element = createPageButton(document, "text");
+      element.classList.add(className);
       element.addEventListener("click", onClick);
       return element;
     };
@@ -227,9 +226,14 @@ export function renderShortcuts(
       release();
       save(action, { state: "inherit" });
     });
+    // Change and Remove wait for the row's hover or focus; Reset stays in
+    // sight, because it is also how a changed row is told apart.
+    recordButton.classList.add("ui-reveal");
+    unbind.classList.add("ui-reveal");
     rows.push((t) => {
       const keybind = context.snapshot()?.keybinds?.[action];
       row.classList.toggle("is-recording", recording === action);
+      row.classList.toggle("is-active", recording === action);
       const actionName = shortcutActionName(action, t);
       name.textContent = actionName;
       value.textContent =
@@ -237,7 +241,7 @@ export function renderShortcuts(
           ? t("shortcuts.pressing")
           : keybind?.effective == null
             ? t("shortcuts.none")
-            : (displayAccelerator(keybind.effective, context.platform) ??
+            : (shortcutText(keybind.effective, context.platform) ??
               keybind.effective);
       // A binding without a mark is the default; only changes are labelled.
       state.textContent =
@@ -264,8 +268,17 @@ export function renderShortcuts(
         "aria-label",
         t("shortcuts.defaultLabel", { action: actionName }),
       );
-      unbind.disabled = keybind?.state === "unbound";
-      inherit.disabled = keybind?.state === "inherit";
+      // Nothing to remove without a shortcut, nothing to reset on a default.
+      // A button that leaves while it holds focus hands it to Change, so the
+      // keyboard stays on the row.
+      for (const [element, gone] of [
+        [unbind, keybind?.effective == null],
+        [inherit, !keybind || keybind.state === "inherit"],
+      ] as const) {
+        if (gone && !element.hidden && document.activeElement === element)
+          recordButton.focus();
+        element.hidden = gone;
+      }
     });
     filtered.push({
       element: row,
@@ -290,9 +303,13 @@ export function renderShortcuts(
     binding.className = "settings-shortcut-binding";
     binding.append(value, state);
     const actions = document.createElement("div");
-    actions.className = "settings-shortcut-actions";
+    actions.className = "settings-shortcut-actions ui-actions ui-actions-dense";
     actions.append(recordButton, unbind, inherit);
-    row.append(name, binding, actions);
+    // One trailing group, so the actions and the keys wrap together.
+    const end = document.createElement("div");
+    end.className = "ui-form-value";
+    end.append(actions, binding);
+    row.append(name, end);
     panel.append(row);
   }
   panel.append(empty);

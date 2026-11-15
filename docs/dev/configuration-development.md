@@ -217,8 +217,9 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
   per theme and 4 MiB of configuration. It doesn't watch for changes; the user
   chooses **Refresh themes**. Missing folders, unreadable or invalid files and a
   truncated list are reported. Discovery never edits theme files.
-- A custom path outside `themes/` may not show as a selected card; the
-  **Theme file (advanced)** field still accepts relative or absolute paths.
+- A custom path outside `themes/` doesn't show as a selected card. Settings
+  has no field for it; `theme.path` in the config file accepts relative or
+  absolute paths.
 
 ### Author a theme
 
@@ -241,7 +242,7 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
 - Saving doesn't apply the theme. **Use saved theme**, available once all edits
   are saved, writes its path through the normal Settings path and reloads the
   whole configuration. A failed activation leaves the file saved.
-- **Export JSON…** writes the complete valid draft to a new file. It never
+- **Export JSON** writes the complete valid draft to a new file. It never
   replaces an existing file, even if the OS dialog offers to. Export doesn't
   select the theme, mark the draft saved or retarget later Saves.
 - Optional `appearance` values survive import, edit, save, copy and export,

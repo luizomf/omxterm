@@ -1,6 +1,6 @@
 export const englishThemeAuthoringMessages = {
   "settings.author.new": "New theme",
-  "settings.author.import": "Import theme JSON…",
+  "settings.author.import": "Import theme JSON",
   "settings.author.edit": "Edit {name}",
   "settings.author.title": "Edit theme",
   "settings.author.name": "Theme name",
@@ -14,7 +14,7 @@ export const englishThemeAuthoringMessages = {
   "settings.author.filename": "New filename",
   "settings.author.filenameHint": "Saved as a new file in themes/.",
   "settings.author.copy": "Save copy",
-  "settings.author.export": "Export JSON…",
+  "settings.author.export": "Export JSON",
   "settings.author.exportTitle": "Export theme to a new file",
   "settings.author.exportNew": "Export new file",
   "settings.author.exportHint": "Export never replaces an existing file.",
@@ -88,7 +88,7 @@ export const englishThemeAuthoringMessages = {
 
 export const brazilianPortugueseThemeAuthoringMessages = {
   "settings.author.new": "Novo tema",
-  "settings.author.import": "Importar JSON de tema…",
+  "settings.author.import": "Importar JSON de tema",
   "settings.author.edit": "Editar {name}",
   "settings.author.title": "Editar tema",
   "settings.author.name": "Nome do tema",
@@ -102,7 +102,7 @@ export const brazilianPortugueseThemeAuthoringMessages = {
   "settings.author.filename": "Novo nome de arquivo",
   "settings.author.filenameHint": "Salvo como um novo arquivo em themes/.",
   "settings.author.copy": "Salvar cópia",
-  "settings.author.export": "Exportar JSON…",
+  "settings.author.export": "Exportar JSON",
   "settings.author.exportTitle": "Exportar tema para um arquivo novo",
   "settings.author.exportNew": "Exportar arquivo novo",
   "settings.author.exportHint":

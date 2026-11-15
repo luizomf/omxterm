@@ -145,24 +145,28 @@ it("keeps pending toggle and choice changes across another control's response", 
   const toggle = view.field("Programming ligatures");
   toggle.checked = false;
   toggle.dispatchEvent(new Event("change"));
-  const choice = view.field("Log level");
-  choice.value = "debug";
+  const choice = view.field("Side panel position");
+  choice.value = "left";
   choice.dispatchEvent(new Event("change"));
   first.resolve(saved(base));
   await view.settle();
   expect(toggle.checked).toBe(false);
-  expect(choice.value).toBe("debug");
+  expect(choice.value).toBe("left");
   second.resolve(
     saved({ ...base, values: { ...base.values, "font.ligatures": false } }),
   );
   await view.settle();
-  expect(choice.value).toBe("debug");
+  expect(choice.value).toBe("left");
   third.resolve(
     saved({
       ...base,
-      values: { ...base.values, "font.ligatures": false, logLevel: "debug" },
+      values: {
+        ...base.values,
+        "font.ligatures": false,
+        "window.auxiliaryPanelSide": "left",
+      },
     }),
   );
   await view.settle();
-  expect(choice.value).toBe("debug");
+  expect(choice.value).toBe("left");
 });

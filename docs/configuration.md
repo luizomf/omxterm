@@ -23,7 +23,7 @@ Use **Settings…** in the application menu for preferences and shortcuts. To ed
 
 ## Settings
 
-Choose **Settings…** from the application menu. Preference changes are saved and applied as you make them, except theme drafts and the **Config file** editor, which require explicit saving. Use **General** for language and close confirmation, **Appearance** for fonts, themes, transparency and blur, **Terminal** for terminal preferences, **Window** for window defaults, and **Shortcuts** to record, reset or unbind application shortcuts.
+Choose **Settings…** from the application menu. Preference changes are saved and applied as you make them, except theme drafts and the **Config file** editor, which require explicit saving. Use **General** for language and close confirmation, **Appearance** for fonts, themes, transparency and blur, **Terminal** for terminal preferences, **Window** for window defaults, and **Shortcuts** to change, reset or remove application shortcuts.
 
 Settings has local theme cards with inline editing, font controls, and transparency and blur controls. **Config file** provides a text editor for `config.json`; choose **Save** explicitly. Snippets are edited in `snippets.yaml`.
 
@@ -35,7 +35,7 @@ Settings shows status for saved changes and errors. Some preferences apply to ne
 
 ### Terminal context menu
 
-In **Settings → Terminal**, clear **Terminal context menu** to disable the popup over terminal content and padding. To set it in JSON:
+In **Settings → Terminal**, clear **Right-click menu** to disable the popup over terminal content and padding. To set it in JSON:
 
 ```json
 {
@@ -102,7 +102,7 @@ All fields are optional except `version`. The built-in defaults are shown below.
 | `notifications.sound`                      | boolean                                 | `false`                         |
 | `notifications.soundFile`                  | absolute file path                      | system sound                    |
 
-`keyboard.optionAsAlt` affects terminal input on macOS. The `keybinds` options are listed in [Keyboard shortcuts](#keyboard-shortcuts).
+`logLevel` is set only in this file; Settings has no control for it. `keyboard.optionAsAlt` affects terminal input on macOS. The `keybinds` options are listed in [Keyboard shortcuts](#keyboard-shortcuts).
 
 OMXTerm creates the configuration folder on first launch. If needed, locate it from a terminal:
 
@@ -193,7 +193,7 @@ You can also use a PowerShell 7 executable such as `C:\\Program Files\\PowerShel
 
 <a id="keybinds"></a>
 
-Use **Settings → Shortcuts** to record, reset or unbind application shortcuts. The search field finds an action by its name or by its current keys, such as `split`, `⌘D` or `cmd+d`; **Escape** clears it. To edit JSON, use `keybinds` with [Electron accelerator syntax](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators). For example:
+Use **Settings → Shortcuts** to change, reset or remove application shortcuts: point at a row, or move to it with **Tab**, to see **Change** and **Remove**; **Reset** shows on a row you changed. The search field finds an action by its name or by its current keys, such as `split`, `⌘D` or `cmd+d`; **Escape** clears it. To edit JSON, use `keybinds` with [Electron accelerator syntax](https://www.electronjs.org/docs/latest/tutorial/keyboard-shortcuts#accelerators). For example:
 
 ```json
 {

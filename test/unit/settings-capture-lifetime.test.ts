@@ -157,7 +157,7 @@ it("clears the real dialog's recording prompt when native capture times out", as
   view.record("find").click();
   vi.advanceTimersByTime(30_000);
   view.flush();
-  expect(view.record("find").textContent).toBe("Record");
+  expect(view.record("find").textContent).toBe("Change");
   expect(document.querySelector(".settings-status")!.textContent).toBe(
     "Recording cancelled.",
   );

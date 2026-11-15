@@ -184,7 +184,7 @@ it("retains invalid input per role across categories and blocks saving last-vali
   role.dispatchEvent(new Event("change"));
   expect(hex.value).toBe("#ffffff");
   expect(button("Save copy").disabled).toBe(true);
-  expect(button("Export JSON…").disabled).toBe(true);
+  expect(button("Export JSON").disabled).toBe(true);
   button("General").click();
   view.dialog.setSelected(false);
   view.dialog.setSelected(true);
@@ -215,7 +215,7 @@ it("preserves imported appearance and newer typing during Save, then saves to th
   vi.mocked(docs.saveTheme).mockReturnValueOnce(saved.promise);
   const view = await open({ themeDocuments: docs });
   button("Appearance").click();
-  button("Import theme JSON…").click();
+  button("Import theme JSON").click();
   await view.settle();
   expect(button("Save").disabled).toBe(true);
   button("Save copy").click();
@@ -337,7 +337,7 @@ it("keeps a conflicting local draft until explicit source reload", async () => {
   });
   const view = await open({ themeDocuments: docs });
   button("Appearance").click();
-  button("Import theme JSON…").click();
+  button("Import theme JSON").click();
   await view.settle();
   button("Save copy").click();
   await view.settle();
@@ -373,7 +373,7 @@ it("explains new-name export before the chooser and keeps local dirty state on c
   const view = await open({ themeDocuments: docs });
   button("Appearance").click();
   button("New theme").click();
-  const exportButton = button("Export JSON…");
+  const exportButton = button("Export JSON");
   expect(
     document.getElementById(exportButton.getAttribute("aria-describedby")!)!
       .textContent,

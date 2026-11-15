@@ -40,28 +40,41 @@ This page and those two files are enough to build an official surface. Read
 All tokens derive from the active Terminal Theme, so light and dark themes need
 no separate rules.
 
-| Token                                                             | Value                                     | Use                                     |
-| ----------------------------------------------------------------- | ----------------------------------------- | --------------------------------------- |
-| `--ui-surface`, `--ui-text`                                       | theme background and foreground           | page background and text                |
-| `--ui-raised`, `--ui-hover`, `--ui-selected`                      | neutral mixed into the surface 12/25/35 % | opaque fills                            |
-| `--ui-raised-tint`, `--ui-hover-tint`                             | the same, faded by window transparency    | fills on overlays and cards             |
-| `--ui-control`, `--ui-control-hover`, `--ui-control-selected`     | set by context (below)                    | what components read for their fills    |
-| `--ui-decoration`                                                 | text at 18 %                              | hairlines                               |
-| `--ui-input-border`                                               | text at 55 %                              | field borders, scrollbars               |
-| `--ui-secondary`                                                  | text at 75 %                              | secondary text                          |
-| `--ui-agent`                                                      | theme red, or foreground when too faint   | the agent grant's mark, nothing else    |
-| `--ui-success-accent`, `--ui-warning-accent`, `--ui-error-accent` | theme green, yellow, red                  | `page-notice` severities, nothing else  |
-| `--ui-overlay`                                                    | surface at window opacity                 | overlay surface                         |
-| `--ui-font`, `--ui-font-mono`                                     | `system-ui`, `ui-monospace`               | all chrome; mono only for keys and code |
-| `--ui-text-meta/chrome/body/title`                                | 12 / 13 / 14 / 18 px                      | metadata, chrome, body, page titles     |
-| `--ui-space-1…8`                                                  | 4, 8, 12, 16, 24, 32 px                   | the only spacing values                 |
-| `--ui-radius`, `--ui-radius-overlay`, `--ui-radius-chip`          | 6 / 8 / 4 px                              | controls, overlays, chips and swatches  |
+| Token                                                             | Value                                     | Use                                       |
+| ----------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------- |
+| `--ui-surface`, `--ui-text`                                       | theme background and foreground           | page background and text                  |
+| `--ui-raised`, `--ui-hover`, `--ui-selected`                      | neutral mixed into the surface 12/25/35 % | opaque fills                              |
+| `--ui-raised-tint`, `--ui-hover-tint`                             | the same, faded by window transparency    | fills on overlays and cards               |
+| `--ui-control`, `--ui-control-hover`, `--ui-control-selected`     | set by context (below)                    | what components read for their fills      |
+| `--ui-decoration`                                                 | text at 18 %                              | hairlines                                 |
+| `--ui-input-border`                                               | quietest text mix that reads 3:1          | field borders, scrollbars                 |
+| `--ui-secondary`                                                  | text at 75 %                              | secondary text                            |
+| `--ui-agent`                                                      | theme red, or foreground when too faint   | the agent grant's mark, nothing else      |
+| `--ui-success-accent`, `--ui-warning-accent`, `--ui-error-accent` | theme green, yellow, red                  | `page-notice` severities, nothing else    |
+| `--ui-overlay`                                                    | surface at window opacity                 | overlay surface                           |
+| `--ui-font`, `--ui-font-mono`                                     | `system-ui`, `ui-monospace`               | all chrome; mono only for keys and code   |
+| `--ui-text-meta/chrome/body/title`                                | 12 / 13 / 14 / 18 px                      | metadata, everything, unused, page titles |
+| `--ui-space-1…8`                                                  | 4, 8, 12, 16, 24, 32 px                   | the only spacing values                   |
+| `--ui-radius`, `--ui-radius-overlay`, `--ui-radius-chip`          | 6 / 8 / 4 px                              | controls, overlays, chips and swatches    |
 
 Color means state, never decoration: everything is the text color or its
-secondary tier, except the three notice tones and the agent mark. Type has
-four sizes and two weights (400, and 600 for titles and the selected item).
-Spacing is the `--ui-space-*` scale; controls are 36 px tall, 28 px in dense
-rows (`page-button-compact`, `ui-icon-button`).
+secondary tier, except the three notice tones and the agent mark.
+
+**One text size.** Every surface (pages, Settings, panels, dialogs) is set in
+13 px, `--ui-text-chrome`. 12 px is for metadata and key hints, 18 px for a
+page title and nothing else. 14 px (`--ui-text-body`) is kept for long-form
+text and no surface uses it. Hierarchy comes from the grey tiers and from
+weight (400, and 600 for titles and the selected item), never from another
+size.
+
+**One control height.** Fields, selects, buttons and icon buttons are all
+28 px tall. A list row (`ui-row`) is 32 px, a form row 44 px and a dense form
+row 36 px. Spacing is the `--ui-space-*` scale.
+
+**Field borders** are the quietest mix of the text color that still reads 3:1
+against the surface, so a field's outline never competes with its label. The
+window computes it for each theme (about 38 % on a black theme, more on
+low-contrast ones); the fallback is 40 %.
 
 **Contexts** swap the control fills so the same component reads right
 anywhere:
@@ -88,13 +101,17 @@ take `color-scheme` from background luminance (light above 0.179).
 | `page-button` + `-primary`          | The one main action of a view (Save, Connect). Foreground fill.                                                                                                                                                                                                                                                                        |
 | `page-button` + `-quiet`            | Ordinary actions. Control fill, no border.                                                                                                                                                                                                                                                                                             |
 | `page-button` + `-text`             | Secondary actions in dense lists and navigation. No fill until hover.                                                                                                                                                                                                                                                                  |
-| `page-button-compact`               | Add to any button in a dense row: 28 px tall, 13 px text.                                                                                                                                                                                                                                                                              |
 | `ui-icon-button`                    | A 28 px square button holding one 16 px icon (close, hide, toolbars). Always give it an accessible name and a tooltip.                                                                                                                                                                                                                 |
 | `ui-link`                           | A text link, such as "Learn more" or About's links.                                                                                                                                                                                                                                                                                    |
-| `page-control`                      | Native text fields, selects and textareas. 36 px, control fill, input border. Checkboxes stay native. A search field's clear button is two secondary hairlines.                                                                                                                                                                        |
+| `page-control`                      | Native text fields, selects and textareas. 28 px, control fill, input border. Checkboxes stay native, 16 px. A search field's clear button is two secondary hairlines.                                                                                                                                                                 |
 | `ui-line-field`                     | Add to a `page-control` that heads an overlay (the Command Palette search): no box or ring, only a hairline under it.                                                                                                                                                                                                                  |
 | `ui-actions` (`ui-actions-dense`)   | A group of buttons: wraps with an 8 px (4 px) gap. Buttons never touch.                                                                                                                                                                                                                                                                |
 | `ui-list` + `ui-row`                | Lists people pick from (snippets, aliases, files, palette results). Hover and selection are fills, never borders or bars. In a `role="listbox"` the active option is the only filled row: the pointer moves it, and a parked pointer takes no fill.                                                                                    |
+| `ui-form` + `ui-form-row`           | A settings-like page: one setting per row, its name on the left, its control at the right edge, a hairline under each row. See [Forms](#forms).                                                                                                                                                                                        |
+| `ui-form-row-dense`                 | Add to the rows of a long list of short settings (Shortcuts): 36 px instead of 44 px.                                                                                                                                                                                                                                                  |
+| `ui-form-value`                     | The end of a row that shows a value with actions: the actions, then the value at the right edge (a shortcut's keys). They wrap together.                                                                                                                                                                                               |
+| `ui-field-group`                    | Several small fields that make one setting, on one row (the four sides of the terminal padding). Each is a `<label>` holding a `ui-meta` name and its field.                                                                                                                                                                           |
+| `ui-reveal`                         | Add to a row's action buttons that should wait out of sight: they show while the row is hovered, holds focus or has `is-active`. They keep their space and their place in the tab order.                                                                                                                                               |
 | `ui-nav`                            | Navigation (Settings categories, the panel's tool switcher). Only the selected item gets a fill and 600 weight.                                                                                                                                                                                                                        |
 | `ui-tab`                            | Window tabs. Neutral alpha fills (10 %, 25 % hover, 40 % selected) with an underline that survives full transparency.                                                                                                                                                                                                                  |
 | `ui-panel-header`                   | The header of a side panel: a truncating title, then icon buttons.                                                                                                                                                                                                                                                                     |
@@ -184,22 +201,88 @@ Every recipe is DOM built in TypeScript with `textContent` and
 need the window's `StateMarks`, which only the core renderer holds; an
 extension view reports through its page notice instead.
 
-| You need                       | Build it like this                                                                                                                                                                                                             |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| The view's one main action     | `createPageButton(document, "primary")`. One per view at most.                                                                                                                                                                 |
-| Any other action               | `createPageButton(document, "quiet")`; `"text"` inside rows and navigation. Add `page-button-compact` in dense rows and side panels. Group buttons in a `ui-actions` (`ui-actions-dense` in rows).                             |
-| An action with an icon         | `<button class="ui-icon-button">` + `setIcon()` + `aria-label` + `title`. No text beside it.                                                                                                                                   |
-| A text field or select         | `<input class="page-control">` inside a `<label>` whose text is the name. Search fields use `type="search"`. Placeholders are one or two words, never instructions.                                                            |
-| A toggle                       | A native `<input type="checkbox" class="page-control">` inside its `<label>`. There is no switch component.                                                                                                                    |
-| A list to pick from            | `<ul class="ui-list">` of `<li>`/`<button class="ui-row">`; mark the choice with `aria-selected="true"`. One line per row, truncated with an ellipsis; details go in a `ui-meta` span at the end.                              |
-| Navigation between sections    | `<nav class="ui-nav">` of buttons; the current one has `aria-selected` or `aria-pressed`.                                                                                                                                      |
-| A key or literal value         | `<kbd class="ui-chip">`.                                                                                                                                                                                                       |
-| A page                         | `createApplicationPage(document, { title, actions, navigation, notice, content, status })`. The first child of `content` may be one `ui-hint` sentence.                                                                        |
-| A side-panel tool              | An extension panel view: `<html class="ui-on-tint">`, CSS starts with `@import "../shared/appearance.css";`, body is a compact page. No title, no header, no border: the host draws the `ui-panel-header` with Hide and Close. |
-| A short task over the terminal | An extension dialog view (same setup as a panel view). The host draws the `ui-dialog`, its title and Close; the view ends in a `ui-actions` with the primary button.                                                           |
-| A result on the page           | `setPageNotice(element, { text, severity })` on one retained element with `role="status"`. Nothing for success unless the action has no other visible result.                                                                  |
-| A toast (core only)            | `stateMarks.flash(text)`: one sentence, gone in 4 s ("Layout saved."). Something the user must deal with: `stateMarks.notify(text)`.                                                                                           |
-| An ongoing state (core only)   | `stateMarks.set(pane, owner, { glyph, label, action? })`. Never your own strip, badge, dot or color.                                                                                                                           |
+| You need                       | Build it like this                                                                                                                                                                                                                                 |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The view's one main action     | `createPageButton(document, "primary")`. One per view at most.                                                                                                                                                                                     |
+| Any other action               | `createPageButton(document, "quiet")`; `"text"` inside rows and navigation. Group buttons in a `ui-actions` (`ui-actions-dense` in rows).                                                                                                          |
+| An action with an icon         | `<button class="ui-icon-button">` + `setIcon()` + `aria-label` + `title`. No text beside it.                                                                                                                                                       |
+| A text field or select         | `<input class="page-control">` inside a `<label>` whose text is the name. Search fields use `type="search"`. Placeholders are one or two words, never instructions.                                                                                |
+| A toggle                       | A native `<input type="checkbox" class="page-control">` inside its `<label>`, after the name. There is no switch component.                                                                                                                        |
+| A page of settings             | A `ui-form` of `ui-form-row`s. See [Forms](#forms).                                                                                                                                                                                                |
+| Actions on a row               | A `ui-form-value` holding a `ui-actions ui-actions-dense` of `"text"` buttons, then the row's value. Add `ui-reveal` to the ones that can wait for hover or focus; leave visible only what also tells the user something (Reset on a changed row). |
+| A list to pick from            | `<ul class="ui-list">` of `<li>`/`<button class="ui-row">`; mark the choice with `aria-selected="true"`. One line per row, truncated with an ellipsis; details go in a `ui-meta` span at the end.                                                  |
+| Navigation between sections    | `<nav class="ui-nav">` of buttons; the current one has `aria-selected` or `aria-pressed`.                                                                                                                                                          |
+| A key or literal value         | `<kbd class="ui-chip">`.                                                                                                                                                                                                                           |
+| A page                         | `createApplicationPage(document, { title, actions, navigation, notice, content, status })`. The first child of `content` may be one `ui-hint` sentence.                                                                                            |
+| A side-panel tool              | An extension panel view: `<html class="ui-on-tint">`, CSS starts with `@import "../shared/appearance.css";`, body is a compact page. No title, no header, no border: the host draws the `ui-panel-header` with Hide and Close.                     |
+| A short task over the terminal | An extension dialog view (same setup as a panel view). The host draws the `ui-dialog`, its title and Close; the view ends in a `ui-actions` with the primary button.                                                                               |
+| A result on the page           | `setPageNotice(element, { text, severity })` on one retained element with `role="status"`. Nothing for success unless the action has no other visible result.                                                                                      |
+| A toast (core only)            | `stateMarks.flash(text)`: one sentence, gone in 4 s ("Layout saved."). Something the user must deal with: `stateMarks.notify(text)`.                                                                                                               |
+| An ongoing state (core only)   | `stateMarks.set(pane, owner, { glyph, label, action? })`. Never your own strip, badge, dot or color.                                                                                                                                               |
+
+## Forms
+
+A page of settings is one `ui-form`. Each setting is one `ui-form-row`: the
+name first, then the control. The row puts the name on the left and ends the
+control at the content's right edge; when the two no longer fit on one line the
+control wraps under the name, so a form needs no breakpoints of its own.
+
+```ts
+const form = document.createElement("div");
+form.className = "ui-form";
+
+// A field, a select or a checkbox. The row is the control's <label>: the name
+// first, then the control. A toggle is this same row with type="checkbox".
+const row = document.createElement("label");
+row.className = "ui-form-row";
+const name = document.createElement("span");
+name.textContent = t("settings.fontSize");
+const field = document.createElement("input");
+field.type = "number";
+field.className = "page-control";
+row.append(name, field);
+
+// Several small values that make one setting: a group named by its caption.
+const group = document.createElement("div");
+group.className = "ui-form-row";
+group.setAttribute("role", "group");
+const caption = document.createElement("span");
+caption.id = "padding-caption";
+caption.textContent = t("settings.padding");
+group.setAttribute("aria-labelledby", caption.id);
+const fields = document.createElement("span");
+fields.className = "ui-field-group";
+for (const side of ["top", "right", "bottom", "left"] as const) {
+  const item = document.createElement("label");
+  const sideName = document.createElement("span");
+  sideName.className = "ui-meta";
+  sideName.textContent = t(`settings.padding.${side}`);
+  const value = document.createElement("input");
+  value.type = "number";
+  value.className = "page-control";
+  item.append(sideName, value);
+  fields.append(item);
+}
+group.append(caption, fields);
+
+form.append(row, group);
+```
+
+- **Widths are the component's.** In a form row a text field or select is
+  280 px, a number field 88 px, a number in a `ui-field-group` 56 px. Don't set
+  other widths in surface CSS.
+- **Names are the user's words**, in sentence case, without a colon: "Side
+  panel position", "Right-click menu". Anything only a developer changes (log
+  level, raw paths) stays in the config file and its docs.
+- **One sentence under a row.** A `ui-hint` placed right after a row explains
+  that row and shares its hairline. A page has one at most.
+- **A long list of short rows** (Shortcuts) adds `ui-form-row-dense`. Such a
+  row ends in a `ui-form-value`: a `ui-actions ui-actions-dense` of `"text"`
+  buttons with `ui-reveal`, then the value itself, which ends the row. The
+  list at rest shows only names and values, and nothing moves on hover. Add
+  `is-active` to the row while one of its actions is in progress.
+- **A labelled field outside a form** (a dialog, a panel, an editor) puts the
+  name above the field: a `<label>` with `display: grid; gap: 4px`.
 
 ## Do and don't
 
@@ -219,6 +302,8 @@ extension view reports through its page notice instead.
 - **Don't confirm the obvious.** No "Saved!" when the thing visibly changed.
 - **Do** keep hover and selection as fills, focus as the outline, and borders
   for fields only.
+- **Do** keep every control 28 px and every text 13 px. A bigger button or a
+  bolder border is never how one surface gets attention.
 - **Do** check the surface on opaque black, on a transparent window and on a
   light theme: tokens make all three work unless a literal sneaks in.
 - **Do** ship English and Portuguese together, tooltips and accessible names
@@ -236,14 +321,16 @@ Default terminal padding is 12 px.
 **Settings.** An 18 px title and Close above a hairline. A flat `ui-nav`.
 Every category shares a 720 px content boundary; the sidebar is 168 px below
 900 px viewport width and 192 px above; outer padding is 24 px, 32 px from
-1200 px. Form rows have 12 px vertical padding and a hairline; labels sit left,
-fields end at the content edge (fields at most 384 px, numbers 112 px); below
-560 px of content width labels sit above fields. Shortcut rows are at least
-48 px with the binding as a `ui-chip` and compact actions; only Custom and
-Unbound are labelled. A search `page-control` above the rows filters them; it
-ends at the 384 px field boundary and an empty result is one `ui-hint` line. Extensions lists installed extensions as `ui-row`s with
-compact `-text` actions and official extensions as `ui-card`s. Settings is
-comfortable at 640×480; below 480 px categories become a two-column grid.
+1200 px. Below 640 px there is no sidebar: the categories become one wrapping
+row above the page, and the page keeps the only scrollbar. Each category is a
+`ui-form` (see [Forms](#forms)): the name on the left, the control at the
+right edge, checkboxes included. Shortcuts is a dense form: each row shows the
+action and its keys as `ui-shortcut` text (`⇧ ⌘ W` on macOS, `Ctrl+Shift+W`
+elsewhere); Change and Remove appear on hover or focus, and Reset shows only
+on a row the user changed, which is also how such a row is told apart. A
+search `page-control` above the rows filters them, and an empty result is one
+`ui-hint` line. Extensions lists installed extensions as `ui-row`s with
+`-text` actions and official extensions as `ui-card`s.
 
 **Auxiliary panel.** 13 px text on a 15 % neutral layer, separated from the
 terminal by a hairline. The header holds the tool name, or a single-line
@@ -331,6 +418,8 @@ Pick the smallest presentation that fits:
   needed, what to do next, in one or two sentences. State notices (see State
   marks) take one.
 - Buttons are verbs ("Connect", "Save"), not "OK". Sentence case everywhere.
+- No ellipsis outside menus: the `…` promises a dialog in a menu and is noise
+  on a button or in a list. (An ongoing state keeps it: "Saving…".)
 - Keep user data literal, never HTML.
 - Interface Languages ship together: update English and Portuguese in the same
   change.
