@@ -1,11 +1,11 @@
 # Fixed default Snippets input
 
-`snippets-0.1.4.omxext` is an unchanged public release input, **not** an output of the current source builder.
+`snippets-0.1.5.omxext` is an unchanged public release input, **not** an output of the current source builder.
 
-- Public immutable release: <https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.4>
-- Exact asset: <https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.4/snippets-0.1.4.omxext>
-- 82,514 bytes; SHA256 `2ab03c51b5a341323765195eaa459fd94a3c9f61b392719c965ecb60d9819557`.
-- Original source/tag commit: `b91350c575641031793b85ef8030ca4eb31f9059`.
+- Public immutable release: <https://github.com/luizomf/omxterm/releases/tag/ext-snippets-v0.1.5>
+- Exact asset: <https://github.com/luizomf/omxterm/releases/download/ext-snippets-v0.1.5/snippets-0.1.5.omxext>
+- 84,036 bytes; SHA256 `6470985017cad22e6ed1be5cb047fde3ad90d2a3563cf068c57ea930991b28bc`.
+- Original source/tag commit: `c51517aa4ebd9f959bb7b97062349c40ea194717`.
 - Admission/resource descriptor: [`../default-snippets.json`](../default-snippets.json).
 - Original MIT and bundled YAML ISC notices remain inside the ZIP. It contains no native addon.
 

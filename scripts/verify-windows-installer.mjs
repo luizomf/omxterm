@@ -69,7 +69,7 @@ export function inspectWindowsInstallerInputs(
   // NSIS identity, paths, templates and options are unchanged.
   // The bundled default Snippets archive is re-pinned to 0.1.3 (#1105); only its
   // resource filename changes. NSIS identity, paths and options are unchanged.
-  // It is re-pinned again to 0.1.4; same scope.
+  // It is re-pinned again to 0.1.4 and 0.1.5; same scope.
   // #1071 adds only the Lucide ISC/MIT icon notice under resources/licenses.
   // NSIS identity, registration/cache paths, templates and options are unchanged.
   const digest = (text) =>
@@ -78,7 +78,7 @@ export function inspectWindowsInstallerInputs(
     builderVersion !== "26.15.3" ||
     packageName !== "omxterm" ||
     digest(configuration) !==
-      "732a835c469f133946ad681ee0412af004eeac30e4a237c5b4e0cb4d99e794d3" ||
+      "93744aba62727d652651c50eb13482e08cebb4091720dde0aecd6ee964a133c1" ||
     typeof nsisInclude !== "string" ||
     digest(nsisInclude) !==
       "98bb5a2a43c4e4bad076c7476410a1256420dd917b5d8cd3d59a2ef2759a5aeb"
