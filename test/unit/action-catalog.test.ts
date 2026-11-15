@@ -178,7 +178,9 @@ it.each(["en-US", "pt-BR"] as const)(
       "devTools",
     ] as const) {
       expect(palette).toContain(catalog[id]);
-      expect(catalog[id].accelerator).toBeNull();
+      expect(catalog[id].accelerator).toBe(
+        id === "settings" ? bindings.settings : null,
+      );
     }
     const match = coreActionForKeyboardInput(
       catalog,

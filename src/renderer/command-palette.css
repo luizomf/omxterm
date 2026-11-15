@@ -9,7 +9,7 @@
 }
 .command-palette [role="listbox"] {
   max-height: min(400px, calc(100vh - 200px));
-  margin-top: var(--ui-space-3);
+  margin-top: var(--ui-space-2);
   overflow-y: auto;
 }
 .command-palette [role="option"] {
@@ -22,10 +22,7 @@
 .command-palette [role="option"] span {
   overflow-wrap: anywhere;
 }
-.command-palette kbd {
-  white-space: nowrap;
-}
-.command-palette kbd:empty {
+.command-palette .ui-shortcut:empty {
   display: none;
 }
 .command-palette [role="status"] {

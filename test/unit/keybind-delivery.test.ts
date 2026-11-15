@@ -306,6 +306,16 @@ it("distinguishes the Plus fallback policy from an explicit Shift requirement", 
   }
 });
 
+it.each(["linux", "win32"])("opens Settings with Ctrl+, on %s", (platform) => {
+  const { invoke, sendKey } = keybindDeliveryHarness(
+    terminalDefaultKeybinds(platform),
+    platform,
+  );
+  const event = sendKey({ key: ",", code: "Comma", control: true });
+  expect(invoke).toHaveBeenCalledExactlyOnceWith("settings");
+  expect(event.preventDefault).toHaveBeenCalledOnce();
+});
+
 it("leaves unrelated modifiers, layouts and ordinary terminal input untouched", () => {
   const { invoke, sendKey } = keybindDeliveryHarness(
     terminalDefaultKeybinds("linux"),
@@ -315,7 +325,6 @@ it("leaves unrelated modifiers, layouts and ordinary terminal input untouched", 
     { key: "=", control: true },
     { key: "+", shift: true },
     { key: "+", control: true, alt: true, shift: true },
-    { key: "<", code: "Comma", control: true },
     { key: "<", code: "IntlBackslash", control: true, shift: true },
     { key: "<", control: true, shift: true },
     { key: ">", code: "Comma", control: true, shift: true },

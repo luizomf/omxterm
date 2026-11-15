@@ -4,13 +4,14 @@ import { surfaceLabels } from "../../src/renderer/renderer-language";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
 import {
   applySearchTheme,
+  clearSearchOnClose,
   focusedSearchField,
   retainSearchEscapeGesture,
   withSearchFieldClipboard,
 } from "../../src/terminal-surface/restty-search-field";
 import {
   mixThemeColors,
-  toResttySearchStatusStyle,
+  toGhosttyTheme,
   toResttySearchUiStyle,
 } from "../../src/terminal-surface/restty-theme";
 
@@ -182,30 +183,47 @@ describe("search bar theme", () => {
     ["a white/black theme", LIGHT_THEME],
   ])("keeps the match counter legible on %s", (_name, theme) => {
     const ui = toResttySearchUiStyle(theme);
-    const badge = toResttySearchStatusStyle(theme).background;
+    const badge = ui.panelBackground!;
     for (const text of [
       ui.statusTextColor!,
       ui.statusActiveTextColor!,
       ui.statusCompleteTextColor!,
     ])
       expect(contrast(text, badge)).toBeGreaterThanOrEqual(4.5);
-    expect(contrast(ui.inputPlaceholderColor!, ui.inputBackground!)).toBe(
-      contrast(ui.inputPlaceholderColor!, badge),
+  });
+
+  it.each([
+    ["the default theme", DEFAULT_TERMINAL_THEME],
+    ["a white/black theme", LIGHT_THEME],
+  ])("paints matches from the selection colors on %s", (_name, theme) => {
+    const { colors } = toGhosttyTheme(theme);
+    const hex = (value: unknown) => {
+      const c = value as { r: number; g: number; b: number };
+      return `#${[c.r, c.g, c.b].map((n) => n.toString(16).padStart(2, "0")).join("")}`;
+    };
+    expect(hex(colors.searchBackground)).toBe(theme.colors.selectionBackground);
+    expect(hex(colors.searchForeground)).toBe(theme.colors.selectionForeground);
+    // The current match is a different, stronger tone that stays legible.
+    const current = hex(colors.searchSelectedBackground);
+    expect(current).not.toBe(theme.colors.selectionBackground);
+    expect(
+      contrast(current, hex(colors.searchSelectedForeground)),
+    ).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(current, theme.colors.background)).toBeGreaterThan(
+      contrast(theme.colors.selectionBackground, theme.colors.background),
     );
   });
 
-  it("paints Restty's fixed counter colors from the theme on every apply", () => {
+  it("shows the match counter as quiet text, not a chip, on every apply", () => {
     const bar = searchBar();
+    bar.status.style.background = "#252525";
     const restty = { setSearchUiStyleOptions: vi.fn() };
     applySearchTheme(restty, bar.container, LIGHT_THEME);
-    expect(bar.status.style.background).toBe("rgb(235, 235, 235)");
-    expect(bar.status.style.borderColor).toBe("rgb(191, 191, 191)");
+    expect(bar.status.style.background).toBe("transparent");
+    expect(bar.status.style.borderColor).toBe("transparent");
     expect(restty.setSearchUiStyleOptions).toHaveBeenCalledExactlyOnceWith(
       toResttySearchUiStyle(LIGHT_THEME),
     );
-
-    applySearchTheme(restty, bar.container, DEFAULT_TERMINAL_THEME);
-    expect(bar.status.style.background).not.toBe("rgb(235, 235, 235)");
   });
 
   it("relabels Restty's search controls in the configured language", () => {
@@ -239,13 +257,41 @@ describe("search bar theme", () => {
         labels.searchClose,
       ]);
       expect(buttons[0]!.title).toBe(labels.searchMatchAbove);
-      expect(buttons[2]!.textContent).toBe(labels.searchClear);
-      // Above, below and close are one icon each, however often this runs.
+      // The bar keeps one close: Clear is gone, and the other three are one
+      // icon each, however often this runs.
+      expect(buttons[2]!.isConnected).toBe(false);
       expect(
         buttons.map((button) => button.querySelectorAll("svg").length),
       ).toEqual([1, 1, 0, 1]);
       expect(buttons[3]!.textContent).toBe("");
     }
+  });
+});
+
+describe("closing the search bar", () => {
+  const flush = () => Promise.resolve();
+
+  it("clears the search when the bar goes from open to closed, however it closed", async () => {
+    const bar = searchBar();
+    const search = bar.container.querySelector<HTMLElement>('[role="search"]')!;
+    search.dataset.open = "0";
+    const clear = vi.fn();
+    const release = clearSearchOnClose(bar.container, clear);
+    await flush();
+    expect(clear).not.toHaveBeenCalled();
+
+    search.dataset.open = "1";
+    await flush();
+    expect(clear).not.toHaveBeenCalled();
+    search.dataset.open = "0";
+    await flush();
+    expect(clear).toHaveBeenCalledOnce();
+
+    release();
+    search.dataset.open = "1";
+    search.dataset.open = "0";
+    await flush();
+    expect(clear).toHaveBeenCalledOnce();
   });
 });
 

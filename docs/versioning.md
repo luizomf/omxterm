@@ -266,6 +266,9 @@ Plain-words copy for dialogs, errors and small surfaces (#1172) moves main to
 filter label rides with the unpublished 0.9.4. Catalogs stay at the published
 versions.
 
+The Command Palette and Find in scrollback polish (#1173) moves main to
+`0.37.0-dev.2`. Settings gains `Cmd+,` and `Ctrl+,`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

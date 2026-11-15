@@ -66,6 +66,7 @@ const MENU_KEYS: Readonly<
   moveAuxiliaryPanel: "menu.moveAuxiliaryPanel",
   toggleTitleBar: "menu.toggleTitleBar",
   reloadConfig: "menu.reloadConfiguration",
+  settings: "menu.settings",
 };
 
 export function shortcutActionName(

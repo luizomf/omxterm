@@ -10,6 +10,40 @@ import type { TerminalTabs } from "./terminal-tabs";
 import { editPaletteQuery } from "./command-palette-input";
 import { retainDismissalGesture } from "./about/about-dialog";
 
+// True when a position differs from the previous one.
+function pointerMoves() {
+  let last: { x: number; y: number } | undefined;
+  return (x: number, y: number) => {
+    const changed = last?.x !== x || last?.y !== y;
+    last = { x, y };
+    return changed;
+  };
+}
+
+function paletteRow(
+  document: Document,
+  action: PaletteAction,
+  index: number,
+  on: { hover(x: number, y: number): void; choose(): void },
+): HTMLElement {
+  const row = document.createElement("div");
+  row.id = `command-palette-option-${index}`;
+  row.setAttribute("role", "option");
+  row.className = "ui-row";
+  const label = document.createElement("span");
+  label.textContent = action.label;
+  const key = document.createElement("kbd");
+  key.className = "ui-shortcut";
+  key.textContent = action.accelerator ?? "";
+  row.append(label, key);
+  row.addEventListener("mousedown", (event) => event.preventDefault());
+  row.addEventListener("pointermove", (event) =>
+    on.hover(event.clientX, event.clientY),
+  );
+  row.addEventListener("click", on.choose);
+  return row;
+}
+
 export function mountWindowPalette(
   document: Document,
   options: {
@@ -92,7 +126,7 @@ export function createCommandPalette(
     const query = document.createElement("input");
     input = query;
     query.type = "text";
-    query.className = "page-control";
+    query.className = "page-control ui-line-field";
     query.autocomplete = "off";
     query.spellcheck = false;
     query.setAttribute("role", "combobox");
@@ -108,6 +142,7 @@ export function createCommandPalette(
     let matches: readonly PaletteAction[] = [];
     let selected = 0;
     let failed = false;
+    const moved = pointerMoves();
     const restore = () => {
       if (!target.isCurrent()) return;
       if (
@@ -160,6 +195,19 @@ export function createCommandPalette(
       hide();
       if (!event) invoke();
     };
+    // One row is active: the arrow keys and the pointer both move it, so a
+    // hovered row never looks selected next to the real one.
+    const mark = () => {
+      [...list.children].forEach((row, index) =>
+        row.setAttribute("aria-selected", String(index === selected)),
+      );
+      if (matches.length)
+        query.setAttribute(
+          "aria-activedescendant",
+          `command-palette-option-${selected}`,
+        );
+      else query.removeAttribute("aria-activedescendant");
+    };
     const render = () => {
       heading.textContent = options.language.t("palette.title");
       query.placeholder = options.language.t("palette.query");
@@ -173,28 +221,21 @@ export function createCommandPalette(
         ) ?? [];
       selected = Math.max(0, Math.min(selected, matches.length - 1));
       list.replaceChildren();
-      matches.forEach((action, index) => {
-        const row = document.createElement("div");
-        row.id = `command-palette-option-${index}`;
-        row.setAttribute("role", "option");
-        row.className = "ui-row";
-        row.setAttribute("aria-selected", String(index === selected));
-        const label = document.createElement("span");
-        label.textContent = action.label;
-        const key = document.createElement("kbd");
-        key.className = "ui-chip";
-        key.textContent = action.accelerator ?? "";
-        row.append(label, key);
-        row.addEventListener("mousedown", (event) => event.preventDefault());
-        row.addEventListener("click", () => run(action));
-        list.append(row);
-      });
-      if (matches.length)
-        query.setAttribute(
-          "aria-activedescendant",
-          `command-palette-option-${selected}`,
-        );
-      else query.removeAttribute("aria-activedescendant");
+      matches.forEach((action, index) =>
+        list.append(
+          paletteRow(document, action, index, {
+            // Only a real pointer move selects: scrolling under a parked
+            // pointer repeats its position and must not fight the keyboard.
+            hover: (x, y) => {
+              if (!moved(x, y) || selected === index) return;
+              selected = index;
+              mark();
+            },
+            choose: () => run(action),
+          }),
+        ),
+      );
+      mark();
       status.hidden = !!matches.length;
       status.textContent = options.language.t(
         failed

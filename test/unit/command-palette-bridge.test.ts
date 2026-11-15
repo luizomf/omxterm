@@ -72,6 +72,35 @@ it("guards auxiliary panel envelopes and removes both direct and palette subscri
   expect(events.listenerCount(paletteIpc.dispatch)).toBe(0);
 });
 
+it.each([
+  ["darwin" as NodeJS.Platform, "⇧ ⌘ ="],
+  ["linux" as NodeJS.Platform, "Ctrl+Shift+="],
+])("shows shortcuts as quiet text on %s", async (platform, shown) => {
+  const events = new EventEmitter();
+  const { palette } = createPaletteTransport(
+    {
+      on: events.on.bind(events),
+      removeListener: events.removeListener.bind(events),
+      invoke: async () => ({
+        token: "a",
+        actions: [
+          {
+            id: "zoomIn",
+            label: "Zoom In",
+            accelerator: "CommandOrControl+Plus",
+          },
+          { id: "about", label: "About", accelerator: null },
+        ],
+      }),
+    },
+    platform,
+  );
+  expect((await palette.snapshot()).actions.map((a) => a.accelerator)).toEqual([
+    shown,
+    null,
+  ]);
+});
+
 it("validates snapshots and literal invoke arguments and excludes non-action channels", async () => {
   const events = new EventEmitter();
   const invoke = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({

@@ -122,6 +122,38 @@ it("filters localized labels case-insensitively, navigates and announces empty r
   key("keydown", "Enter");
   expect(h.invoke).not.toHaveBeenCalled();
 });
+it("shows shortcuts as quiet text and keeps one active row, moved by keys or a real pointer move", async () => {
+  const h = setup();
+  h.open();
+  await flush();
+  const rows = () => [
+    ...document.querySelectorAll<HTMLElement>("[role=option]"),
+  ];
+  const active = () =>
+    rows()
+      .filter((row) => row.getAttribute("aria-selected") === "true")
+      .map((row) => rows().indexOf(row));
+  expect(rows()[1]!.querySelector(".ui-shortcut")?.textContent).toBe("Ctrl++");
+  expect(document.querySelector(".ui-chip")).toBeNull();
+  expect(active()).toEqual([0]);
+
+  const move = (row: HTMLElement, x: number, y: number) =>
+    row.dispatchEvent(
+      new MouseEvent("pointermove", { clientX: x, clientY: y, bubbles: true }),
+    );
+  move(rows()[1]!, 5, 5);
+  expect(active()).toEqual([1]);
+  expect(query().getAttribute("aria-activedescendant")).toBe(
+    "command-palette-option-1",
+  );
+  key("keydown", "ArrowUp");
+  expect(active()).toEqual([0]);
+  // The list scrolling under a parked pointer repeats the same position.
+  move(rows()[1]!, 5, 5);
+  expect(active()).toEqual([0]);
+  move(rows()[1]!, 6, 5);
+  expect(active()).toEqual([1]);
+});
 it("settles held Enter and accepts delayed notification after the invoke reply", async () => {
   const h = setup();
   h.open();
