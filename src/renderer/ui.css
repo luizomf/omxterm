@@ -339,8 +339,11 @@ textarea.page-control {
 .ui-switcher > .ui-icon-button {
   color: var(--ui-secondary);
 }
+/* Hover is a step under the selected fill, so the open view stays the
+   strongest thing in the row while the pointer is on another. */
 .ui-switcher > .ui-icon-button:hover:not(:disabled) {
   color: var(--ui-text);
+  background: var(--ui-control);
 }
 .ui-switcher > .ui-icon-button[aria-pressed="true"],
 .ui-switcher > .ui-icon-button[aria-pressed="true"]:hover:not(:disabled) {
