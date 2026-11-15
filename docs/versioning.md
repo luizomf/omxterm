@@ -236,6 +236,9 @@ resolved font files for later windows (#1154), moves main to `0.36.1-dev.6`.
 Keeping Windows font discovery out of the cursor fixture's timed mount step
 (#1054) moves main to `0.36.1-dev.7`.
 
+Clicking the trailing-space path only after a rendered frame shows it (#1150)
+moves main to `0.36.1-dev.8`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
