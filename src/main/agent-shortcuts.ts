@@ -98,6 +98,7 @@ export const AGENT_SHORTCUTS: Readonly<
     "brings in the clipboard, which comes from outside this window, and can ask the user to confirm; type text with send.",
   ),
   commandPalette: opensUi,
+  settings: opensUi,
   find: opensUi,
   toggleSnippets: opensUi,
   toggleAuxiliaryPanel: opensUi,

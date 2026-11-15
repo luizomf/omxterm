@@ -82,6 +82,7 @@ export interface PatchedResttyServices {
 export interface PatchedResttyPane {
   readonly container: HTMLElement;
   readonly runtime: PatchedResttyRuntime;
+  clearSearch(): void;
 }
 
 export type PatchedResttyConfig = Pick<ResttyConfig, "root" | "surface"> & {

@@ -189,6 +189,7 @@ describe("native application menu", () => {
       const settings = items.find((item) => item.label === "Settings…")!;
       expect(settings).toEqual({
         label: "Settings…",
+        accelerator: "CommandOrControl+,",
         click: actions.showSettings,
       });
       (settings.click as () => void)();

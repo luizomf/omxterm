@@ -1,10 +1,7 @@
 import type { TerminalTheme } from "../shared/terminal-theme";
 import { setIcon } from "../shared/ui-icons";
 import type { PatchedRestty } from "./restty-runtime-contract";
-import {
-  toResttySearchStatusStyle,
-  toResttySearchUiStyle,
-} from "./restty-theme";
+import { toResttySearchUiStyle } from "./restty-theme";
 import type {
   TerminalSurface,
   TerminalSurfaceLabels,
@@ -103,9 +100,9 @@ export function withSearchFieldClipboard<Actions extends ClipboardActions>(
   };
 }
 
-// Restty paints the match counter with fixed dark colors that no style option
-// reaches, so the Surface paints it from the Terminal Theme as well, and
-// applies the window language when labels are given.
+// Restty draws the match counter as a dark chip that no style option reaches,
+// so the Surface makes it quiet text on the bar, and applies the window
+// language when labels are given.
 export function applySearchTheme(
   restty: Pick<PatchedRestty, "setSearchUiStyleOptions"> | undefined,
   container: HTMLElement,
@@ -114,13 +111,20 @@ export function applySearchTheme(
 ): void {
   restty?.setSearchUiStyleOptions(toResttySearchUiStyle(theme));
   applySearchLabels(container, labels);
-  const { background, borderColor } = toResttySearchStatusStyle(theme);
   for (const status of container.querySelectorAll<HTMLElement>(
     ".restty-pane-search-status",
   )) {
-    status.style.background = background;
-    status.style.borderColor = borderColor;
+    status.style.background = "transparent";
+    status.style.borderColor = "transparent";
+    // Restty sets no face, so the count fell back to the browser's serif.
+    status.style.fontFamily = "var(--ui-font)";
+    status.style.fontSize = "var(--ui-text-meta)";
+    status.style.color = "var(--ui-secondary)";
   }
+  for (const input of container.querySelectorAll<HTMLElement>(
+    ".restty-pane-search-input",
+  ))
+    input.style.fontFamily = "var(--ui-font)";
 }
 
 // Restty closes the bar on the query's Escape keydown and moves focus to the
@@ -175,9 +179,13 @@ export function applySearchLabels(
   for (const root of container.querySelectorAll<HTMLElement>(
     '[role="search"]',
   )) {
-    const [above, below, clear, close] = root.querySelectorAll<HTMLElement>(
-      ".restty-pane-search-button",
-    );
+    const buttons = [
+      ...root.querySelectorAll<HTMLElement>(".restty-pane-search-button"),
+    ];
+    // Closing the bar already clears the search, so Clear goes (once; it is
+    // the third of Restty's four buttons) and one close is enough.
+    if (buttons.length === 4) buttons.splice(2, 1)[0]!.remove();
+    const [above, below, close] = buttons;
     if (above) setIcon(above, "arrow-up");
     if (below) setIcon(below, "arrow-down");
     if (close) setIcon(close, "x");
@@ -189,8 +197,35 @@ export function applySearchLabels(
     above?.setAttribute("aria-label", labels.searchMatchAbove);
     below?.setAttribute("title", labels.searchMatchBelow);
     below?.setAttribute("aria-label", labels.searchMatchBelow);
-    if (clear) clear.textContent = labels.searchClear;
     close?.setAttribute("title", labels.searchClose);
     close?.setAttribute("aria-label", labels.searchClose);
   }
+}
+
+// Restty only hides the bar when it closes, so the highlights would stay on
+// screen. The Surface clears the search the moment the bar goes from open to
+// closed, whichever way it closed (Escape, the close button, a pane change).
+export function clearSearchOnClose(
+  container: HTMLElement,
+  clear: () => void,
+): () => void {
+  const View = container.ownerDocument.defaultView;
+  if (!View) return () => undefined;
+  const observer = new View.MutationObserver((records) => {
+    for (const record of records)
+      if (
+        record.oldValue === "1" &&
+        record.target instanceof View.HTMLElement &&
+        record.target.dataset.open !== "1" &&
+        record.target.matches('[role="search"]')
+      )
+        clear();
+  });
+  observer.observe(container, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-open"],
+    attributeOldValue: true,
+  });
+  return () => observer.disconnect();
 }

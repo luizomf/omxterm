@@ -31,6 +31,7 @@ const harness = vi.hoisted(() => {
     bracketedPaste = false;
     readonly pane = {
       container: document.createElement("div"),
+      clearSearch: vi.fn(),
       runtime: {
         events: { subscribe: () => () => undefined },
         lifecycle: { init: async () => undefined, state: () => "ready" },

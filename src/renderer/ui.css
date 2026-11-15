@@ -37,6 +37,11 @@
     var(--ui-hover) calc(var(--terminal-background-opacity, 1) * 100%),
     transparent
   );
+  --ui-selected-tint: color-mix(
+    in srgb,
+    var(--ui-selected) calc(var(--terminal-background-opacity, 1) * 100%),
+    transparent
+  );
   /* Control fills. Contexts below swap them; components only read these. */
   --ui-control: var(--ui-raised);
   --ui-control-hover: var(--ui-hover);
@@ -230,6 +235,21 @@
   border-color: var(--ui-text);
   box-shadow: 0 0 0 3px var(--ui-focus-halo);
 }
+/* A line field: no box, only a hairline under it, for a search or command
+   field that is the top of an overlay (the Command Palette). It keeps the
+   field's accessible focus tone by darkening the hairline instead of a ring. */
+.page-control.ui-line-field {
+  background: transparent;
+  border-width: 0 0 1px;
+  border-color: var(--ui-decoration);
+  border-radius: 0;
+  padding-inline: var(--ui-space-2);
+}
+:is(.application-page, .ui-dialog, .ui-overlay, .ui-on-tint)
+  input.page-control.ui-line-field:focus-visible {
+  border-color: var(--ui-secondary);
+  box-shadow: none;
+}
 /* A surface that focuses itself (Settings opening) is not keyboard navigation
    yet; the outline returns with the next key press. */
 :is(.application-page, .ui-dialog, .ui-overlay, .ui-on-tint)
@@ -273,6 +293,12 @@
 }
 .ui-row:focus-visible {
   outline-offset: -2px;
+}
+/* In a listbox one option is active (aria-selected), and the pointer moves it.
+   A hovered option that is not the active one takes no fill, so a parked
+   pointer never makes two rows look selected. */
+[role="listbox"] > .ui-row:hover:not([aria-selected="true"]) {
+  background: transparent;
 }
 /* Navigation: only the selected item gets a fill. */
 .ui-nav {
@@ -495,6 +521,15 @@
   border-radius: var(--ui-radius-chip);
 }
 
+/* A key binding shown quietly in a list row, as text: "⇧ ⌘ =" or
+   "Ctrl+Shift+=". Use ui-chip when the binding is the subject of the row. */
+.ui-shortcut {
+  color: var(--ui-secondary);
+  font: var(--ui-text-meta) / 1.5 var(--ui-font);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 /* Text --------------------------------------------------------------------- */
 
 /* One short sentence of guidance. */
@@ -533,6 +568,10 @@
   border: 1px solid var(--ui-decoration);
   border-radius: var(--ui-radius-overlay);
   font: var(--ui-text-chrome) / 1.5 var(--ui-font);
+}
+.ui-overlay,
+.ui-dialog {
+  --ui-control-selected: var(--ui-selected-tint);
 }
 /* Modal: centered, padded, over a clear backdrop (the underlay softens). */
 .ui-dialog {

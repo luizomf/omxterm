@@ -6,7 +6,7 @@ import {
   type CommandPaletteBridge,
 } from "../shared/command-palette";
 
-import { displayAccelerator } from "../shared/terminal-keybinds";
+import { shortcutText } from "../shared/terminal-keybinds";
 
 type Listener = (event: Electron.IpcRendererEvent, payload: unknown) => void;
 interface Transport {
@@ -64,7 +64,7 @@ export function createPaletteTransport(
           accelerator:
             action.accelerator === null
               ? null
-              : (displayAccelerator(action.accelerator, platform) ?? null),
+              : (shortcutText(action.accelerator, platform) ?? null),
         })),
       };
     },

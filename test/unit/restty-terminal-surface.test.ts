@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { harness } from "../fixtures/restty-surface-harness";
 import type { TerminalSessionHandlers } from "../../src/terminal-surface/terminal-session-adapter";
 import { DEFAULT_TERMINAL_THEME } from "../../src/shared/terminal-theme";
+import { mixThemeColors } from "../../src/terminal-surface/restty-theme";
 import { mountResttyTerminalSurface } from "../../src/terminal-surface/restty-terminal-surface";
 import { mountTerminalWindowPage } from "../../src/renderer/terminal-window-host";
 import { createElectronTerminalAdapter } from "../../src/renderer/electron-terminal-adapter";
@@ -381,6 +382,12 @@ function expectedTheme(theme = DEFAULT_TERMINAL_THEME) {
       cursor: hex(colors.cursor),
       selectionBackground: hex(colors.selectionBackground),
       selectionForeground: hex(colors.selectionForeground),
+      searchBackground: hex(colors.selectionBackground),
+      searchForeground: hex(colors.selectionForeground),
+      searchSelectedBackground: hex(
+        mixThemeColors(colors.foreground, colors.selectionBackground, 75),
+      ),
+      searchSelectedForeground: hex(colors.background),
       palette: Object.assign(
         new Array(256),
         [

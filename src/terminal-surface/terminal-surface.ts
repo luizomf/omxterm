@@ -97,7 +97,6 @@ export interface TerminalSurfaceLabels {
   readonly surfaceRegion: string;
   readonly searchRegion: string;
   readonly searchPlaceholder: string;
-  readonly searchClear: string;
   readonly searchMatchAbove: string;
   readonly searchMatchBelow: string;
   readonly searchClose: string;

@@ -31,6 +31,13 @@ export function toGhosttyTheme(theme: TerminalTheme): GhosttyTheme {
     colors.brightWhite,
   ];
   ansi.forEach((value, index) => (palette[index] = color(value)));
+  // Find matches take the theme's selection colors. The current match is a
+  // stronger tone: mostly the foreground, with the background as its text.
+  const current = mixThemeColors(
+    colors.foreground,
+    colors.selectionBackground,
+    75,
+  );
   return {
     name: theme.name,
     colors: {
@@ -39,6 +46,10 @@ export function toGhosttyTheme(theme: TerminalTheme): GhosttyTheme {
       cursor: color(colors.cursor),
       selectionBackground: color(colors.selectionBackground),
       selectionForeground: color(colors.selectionForeground),
+      searchBackground: color(colors.selectionBackground),
+      searchForeground: color(colors.selectionForeground),
+      searchSelectedBackground: color(current),
+      searchSelectedForeground: color(colors.background),
       palette,
     },
     raw: {},
@@ -80,17 +91,5 @@ export function toResttySearchUiStyle(
     statusTextColor: tint(70),
     statusActiveTextColor: foreground,
     statusCompleteTextColor: tint(70),
-  };
-}
-
-// The match counter sits on the same surface as the query field.
-export function toResttySearchStatusStyle(theme: TerminalTheme): {
-  readonly background: string;
-  readonly borderColor: string;
-} {
-  const { background, foreground } = theme.colors;
-  return {
-    background: mixThemeColors(foreground, background, 8),
-    borderColor: mixThemeColors(foreground, background, 25),
   };
 }

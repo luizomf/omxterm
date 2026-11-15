@@ -236,6 +236,7 @@ Every shortcut needs a key and at least one modifier other than Shift. Function 
 | `togglePaneMarks`                     | `Cmd+Shift+H`                                                         | `Ctrl+Shift+H`                             |
 | `toggleTabBar` / `toggleTitleBar`     | `Cmd+Shift+B` / `Cmd+Shift+D`                                         | `Ctrl+Shift+B` / `Ctrl+Shift+D`            |
 | `reloadConfig`                        | `Cmd+Shift+,`                                                         | `Ctrl+Shift+,`                             |
+| `settings`                            | `Cmd+,`                                                               | `Ctrl+,`                                   |
 
 The Command Palette is also available from **View → Command Palette…** when its shortcut is unbound. `toggleMirrorTyping` works only while the [Mirror Typing](mirror-typing.md) extension is installed and enabled, and `saveLayout` only while [Saved Layout](saved-layout.md) is; otherwise their keys reach the terminal. On Linux and Windows, Find uses Ctrl+Shift+F and full screen uses F11.
 

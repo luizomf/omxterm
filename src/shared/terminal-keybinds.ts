@@ -56,6 +56,7 @@ export const TERMINAL_ACTION_NAMES = [
   "toggleTitleBar",
   "reloadConfig",
   "commandPalette",
+  "settings",
 ] as const;
 
 export type TerminalActionName = (typeof TERMINAL_ACTION_NAMES)[number];
@@ -162,6 +163,7 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     moveAuxiliaryPanel: "CommandOrControl+Shift+Alt+P",
     toggleTitleBar: "CommandOrControl+Shift+D",
     reloadConfig: "CommandOrControl+Shift+,",
+    settings: "CommandOrControl+,",
   },
 );
 
@@ -221,6 +223,7 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   moveAuxiliaryPanel: "Control+Shift+Alt+P",
   toggleTitleBar: "Control+Shift+D",
   reloadConfig: "Control+Shift+,",
+  settings: "Control+,",
 });
 
 export function terminalDefaultKeybinds(
@@ -625,4 +628,36 @@ export function displayAccelerator(
       ? parsed.key.toUpperCase()
       : parsed.key.replace(/^./, (first) => first.toUpperCase());
   return [...modifiers, key].join("+");
+}
+
+const MAC_SYMBOLS = {
+  ctrl: "⌃",
+  alt: "⌥",
+  altgr: "⌥",
+  shift: "⇧",
+  cmd: "⌘",
+} as const;
+const MAC_KEYS: Readonly<Record<string, string>> = {
+  Up: "↑",
+  Down: "↓",
+  Left: "←",
+  Right: "→",
+  Tab: "⇥",
+};
+
+// The quiet form for lists: "⇧ ⌘ =" on macOS, "Ctrl+Shift+=" elsewhere.
+export function shortcutText(
+  value: string,
+  platform: string = "darwin",
+): string | undefined {
+  const shown = displayAccelerator(value, platform);
+  if (shown === undefined || platform !== "darwin") return shown;
+  const parsed = parseAccelerator(value, platform)!;
+  const key = shown.slice(shown.lastIndexOf("+", shown.length - 2) + 1);
+  return [
+    ...(["ctrl", "alt", "altgr", "shift", "cmd"] as const)
+      .filter((modifier) => parsed.modifiers.has(modifier))
+      .map((modifier) => MAC_SYMBOLS[modifier]),
+    MAC_KEYS[key] ?? key,
+  ].join(" ");
 }

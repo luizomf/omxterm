@@ -174,7 +174,8 @@ are the job of a session manager such as tmux.
 
 - Settings is one lazy graphical Application Tab per window. It is appended on
   first open and then reused without reread, reorder, or state reset. It has no
-  Terminal Pane, Surface, Adapter, shell, or PTY.
+  Terminal Pane, Surface, Adapter, shell, or PTY. Its default shortcut is
+  `Cmd+,` on macOS and `Ctrl+,` on Linux and Windows (`settings`).
 - One ordered collection owns selection, reordering, and positional/next/previous
   navigation for every Application Tab kind, including general hosted tabs.
   Separately installed Files and SSH Connect open in the Auxiliary Panel instead,
@@ -613,8 +614,10 @@ quietest form that works:
 - It shows localized labels and effective shortcuts from the internal Action
   Catalog shared with the native menu and main key matcher. Matching is
   case-insensitive substring in en-US or pt-BR, with no fuzzy matching, aliases,
-  ranking, or history.
-- Up/Down selects a result; Enter or a click invokes it after dismissal. Escape
+  ranking, or history. Shortcuts show as quiet text (`⇧ ⌘ =` on macOS,
+  `Ctrl+Shift+=` elsewhere).
+- Up/Down selects a result, and so does moving the pointer over a row, so one
+  row is ever highlighted; Enter or a click invokes it after dismissal. Escape
   or the backdrop cancels. Enter/Escape repeats and release stay owned by the
   closing dialog; keyboard invocation waits for the owned Enter release, and
   blur or a lost release cancels it.
@@ -1954,7 +1957,10 @@ paths open a Local Image Preview
   menu, a keybind or the context menu) act on the query instead of the terminal.
   Paste inserts clipboard text at the field's selection with line breaks
   replaced by spaces; nothing reaches Protected Paste or the PTY.
-- The bar, including its match counter, follows the active Terminal Theme.
+- The bar, including its match counter (quiet text such as `3/24`), follows the
+  active Terminal Theme. Matches use the theme's selection colors and the
+  current match a stronger tone. Closing the bar, by any route, clears the
+  query and the highlights.
 - Each Surface has its own query. The query and its matches stay in renderer
   memory: never persisted, logged, written to the PTY or sent to main. Only an
   explicit Copy from the field moves query text, through the normal clipboard
@@ -2293,7 +2299,7 @@ Vocabulary:
   `focusPaneLeft`, `focusPaneRight`, `focusPaneUp`, `focusPaneDown`,
   `swapPaneLeft`, `swapPaneRight`, `swapPaneUp`, `swapPaneDown`,
   `equalizePanes`, `commandPalette`, `toggleMirrorTyping`, `saveLayout`,
-  `toggleAgentAccess`. New actions, global shortcuts, chords and
+  `toggleAgentAccess`, `settings`. New actions, global shortcuts, chords and
   per-platform maps are unsupported.
 - A value is `null` or a case-insensitive Electron accelerator with exactly one
   key and at least one non-Shift modifier. Only `F1`–`F24` may be bare or

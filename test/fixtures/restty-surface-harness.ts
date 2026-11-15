@@ -35,6 +35,7 @@ const harness = vi.hoisted(() => {
     state: ResttyRuntimeLifecycleState = "created";
     readonly pane = {
       container: document.createElement("div"),
+      clearSearch: vi.fn(),
       runtime: {
         events: {
           subscribe: (listener: (event: ResttyRuntimeEvent) => void) => {

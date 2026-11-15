@@ -47,6 +47,7 @@ import {
   focusedSearchField,
   focusSurfacePreservingSearch,
   focusSurfaceInput,
+  clearSearchOnClose,
   retainSearchEscapeGesture,
   withSearchFieldClipboard,
 } from "./restty-search-field";
@@ -179,6 +180,9 @@ export async function mountResttyTerminalSurface(
   const live = () => (disposed ? undefined : pane?.runtime.interaction);
   const contextMenu = createResttyContextMenu(container, options, live);
   const releaseSearchEscape = retainSearchEscapeGesture(container);
+  const releaseSearchClear = clearSearchOnClose(container, () =>
+    pane?.clearSearch(),
+  );
   const revealInput = () => {
     visibleLinkController?.invalidate();
     pane?.runtime.interaction.scrollToBottom();
@@ -245,6 +249,7 @@ export async function mountResttyTerminalSurface(
       () => removeRuntimeListener?.(),
       () => removeShowRefit?.(),
       releaseSearchEscape,
+      releaseSearchClear,
       () => visibleLinkController?.dispose(),
       () => adapter.close(reason),
       () => restty?.destroy(),

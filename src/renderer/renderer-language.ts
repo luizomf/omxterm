@@ -68,7 +68,6 @@ export function surfaceLabels(
       surfaceRegion: t("terminal.surface"),
       searchRegion: t("search.region"),
       searchPlaceholder: t("search.placeholder"),
-      searchClear: t("search.clear"),
       searchMatchAbove: t("search.matchAbove"),
       searchMatchBelow: t("search.matchBelow"),
       searchClose: t("search.close"),
