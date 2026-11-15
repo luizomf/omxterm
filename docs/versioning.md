@@ -310,6 +310,9 @@ and moves main to `0.38.0-dev.0`, with a bridge for ranges that accept both
 extension takes a patch: Files 0.9.5, SSH Connect 0.4.4, Snippets 0.1.6,
 Saved Layout 0.3.4 and Mirror Typing 0.3.3.
 
+Showing the install prompt's SHA-256 as four lines of 16 characters, so macOS
+never hyphenates it when it wraps (#1190), moves main to `0.38.0-dev.1`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):
