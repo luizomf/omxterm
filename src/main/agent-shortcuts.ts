@@ -81,6 +81,11 @@ export const AGENT_SHORTCUTS: Readonly<
   // A pane program can already write the clipboard (OSC 52).
   copy: run({ action: "copy" }),
   selectAll: run({ action: "select-all" }),
+  jumpToPreviousPrompt: run({
+    action: "jump-to-prompt",
+    direction: "previous",
+  }),
+  jumpToNextPrompt: run({ action: "jump-to-prompt", direction: "next" }),
   toggleTabBar: run({ action: "toggle-tab-bar" }),
   togglePaneMarks: notYet(
     "changes what the user sees of this window, and the agent's own mark can't be hidden.",

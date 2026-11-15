@@ -63,6 +63,7 @@ import {
   createWindowActionSender,
   deliverExtensionKeybind,
 } from "./window-action-delivery";
+import { trackTextEntryFocus } from "./text-entry-focus";
 import { createKeybindCapture } from "./keybind-capture";
 import { loadMacOSOptionShortcut } from "./macos-option-shortcut";
 import { createDefaultShellResolver, defaultShellName } from "./default-shell";
@@ -440,6 +441,7 @@ app
               keybindCapture,
               () => palette,
               optionShortcutIdentity,
+              trackTextEntryFocus(window.webContents, ipcMain).editing,
             );
             guardTerminalWindowClose(window, terminalApplication!);
             const chrome = registerWindowChrome(window, ipcMain, {
@@ -705,6 +707,8 @@ app
           sendExportRequest: (window, context) =>
             window.webContents.send(terminalIpc.exportRequest, context),
           sendFind: notifyWindow(terminalIpc.find),
+          sendJumpToPrompt: (window, direction) =>
+            sendAction(window.webContents, terminalIpc.jumpToPrompt, direction),
           sendTitleBarToggle: notifyWindow(terminalIpc.titleBarToggle),
           sendTabBarToggle: notifyWindow(terminalIpc.tabBarToggle),
           sendPaneMarksToggle: notifyWindow(terminalIpc.paneMarksToggle),

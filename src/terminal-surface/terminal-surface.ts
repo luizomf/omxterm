@@ -1,6 +1,7 @@
 import type {
   TerminalExportKind,
   TerminalFontZoom,
+  TerminalPromptJump,
 } from "../shared/terminal-contract";
 import type { LocalImageActivation } from "../shared/local-image";
 import type { TerminalFontInput } from "./terminal-font-stack";
@@ -37,6 +38,10 @@ export interface TerminalSurface {
   selectAll(): void;
   // Opens the in-memory scrollback search bar, or focuses it when open.
   find(): void;
+  // Scrolls the view so the shell's previous or next prompt (OSC 133 marks)
+  // is its top row; a prompt on the live screen returns to the bottom. Does
+  // nothing when the shell prints no marks.
+  jumpToPrompt?(direction: TerminalPromptJump): void;
   // Reads selection or retained screen/history without changing interaction state.
   exportText(kind: TerminalExportKind): string;
   // The active screen's rows as text, one line per row, wherever the user

@@ -8,6 +8,8 @@ export const TERMINAL_ACTION_NAMES = [
   "paste",
   "selectAll",
   "find",
+  "jumpToPreviousPrompt",
+  "jumpToNextPrompt",
   "newWindow",
   "closeWindow",
   "newTab",
@@ -89,6 +91,12 @@ export function isDiscreteWindowAction(
   return action === "moveAuxiliaryPanel";
 }
 
+// The prompt jumps scroll the focused pane, so they yield to a focused text
+// field, where the same chords select to the start or end of the text.
+export function yieldsToTextEntry(action: string): boolean {
+  return action === "jumpToPreviousPrompt" || action === "jumpToNextPrompt";
+}
+
 // null disables an action's shortcut; the action stays in the menu.
 export type TerminalKeybinds = Readonly<
   Record<TerminalActionName, string | null>
@@ -107,6 +115,8 @@ export const DEFAULT_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze(
     paste: "CommandOrControl+V",
     selectAll: "CommandOrControl+A",
     find: "CommandOrControl+F",
+    jumpToPreviousPrompt: "CommandOrControl+Shift+Up",
+    jumpToNextPrompt: "CommandOrControl+Shift+Down",
     newWindow: "CommandOrControl+N",
     closeWindow: "CommandOrControl+Shift+W",
     newTab: "CommandOrControl+T",
@@ -164,6 +174,8 @@ const SHIFTED_TERMINAL_KEYBINDS: DefaultTerminalKeybinds = Object.freeze({
   paste: "Control+Shift+V",
   selectAll: "Control+Shift+A",
   find: "Control+Shift+F",
+  jumpToPreviousPrompt: "Control+Shift+Up",
+  jumpToNextPrompt: "Control+Shift+Down",
   newWindow: "Control+Shift+N",
   closeWindow: "Control+Shift+Q",
   newTab: "Control+Shift+T",

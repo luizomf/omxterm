@@ -94,6 +94,7 @@ export async function exerciseExtensionViews(options: {
       selectAllSelectedTerminal: () =>
         application.clipboardSelectedWindow("select-all"),
       findInSelectedTerminal: unexpected,
+      jumpToPromptInSelectedTerminal: unexpected,
       reloadUserConfiguration: unexpected,
       openLocalImage: unexpected,
       showAbout: options.showAbout,

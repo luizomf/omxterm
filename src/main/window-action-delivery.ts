@@ -11,6 +11,7 @@ import { createCompanionDismissal } from "./companion-dismissal";
 import {
   isDiscreteWindowAction,
   isExtensionShortcutAction,
+  yieldsToTextEntry,
 } from "../shared/terminal-keybinds";
 
 // Extension slots, the panel-side action and the agent grant toggle each own
@@ -65,7 +66,13 @@ export function deliverExtensionKeybind(
     { ...interpret(input), altGr: hasNativeAltGr(input) },
     optionIdentity.platform,
   );
-  if (!action || (companionOnly && !ownsPhysicalPress(action.id))) return;
+  // Extension views never hold the terminal: their fields keep these keys.
+  if (
+    !action ||
+    yieldsToTextEntry(action.id) ||
+    (companionOnly && !ownsPhysicalPress(action.id))
+  )
+    return;
   event.preventDefault();
   if (ownsPhysicalPress(action.id) && !gestures.claimShortcut(input)) return;
   action.invoke();
@@ -97,15 +104,27 @@ export function registerWindowActionDelivery(
   capture: KeybindCapture,
   palette: () => ReturnType<typeof startCommandPalette> | undefined,
   optionIdentity: OptionShortcutIdentity = { platform: process.platform },
+  textEntry: () => boolean = () => false,
 ) {
   const contents = window.webContents;
   const gestures = createCompanionDismissal(window);
   const interpret = optionShortcutInterpreter(optionIdentity, () =>
     window.getNativeWindowHandle(),
   );
+  // A focused text field keeps the chords of the actions that yield to it.
+  const keybinds = () => {
+    const current = coreActionKeybinds(catalog());
+    if (!textEntry()) return current;
+    return Object.fromEntries(
+      Object.entries(current).map(([action, chord]) => [
+        action,
+        yieldsToTextEntry(action) ? null : chord,
+      ]),
+    ) as typeof current;
+  };
   deliverKeybindsFromKeyEvents(
     contents,
-    () => coreActionKeybinds(catalog()),
+    keybinds,
     (action, input) => {
       if (ownsPhysicalPress(action) && !gestures.claimShortcut(input)) return;
       catalog()[action].invoke();

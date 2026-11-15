@@ -73,7 +73,8 @@ first condition met answers.
 
 **Navigation later.** Jumping between prompts needs the prompt rows, which
 only the core knows; that waits for a core export, and nothing in the UI
-changes now.
+changes now. [ADR 0055](0055-jump-between-prompts-in-the-core.md) adds the
+export and the jumps.
 
 ## Tradeoffs
 

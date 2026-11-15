@@ -41,6 +41,7 @@ export function terminalMenuActions(
     selectAllSelectedTerminal: () =>
       application.clipboardSelectedWindow("select-all"),
     findInSelectedTerminal: application.findInSelectedWindow,
+    jumpToPromptInSelectedTerminal: application.jumpToPromptInSelectedWindow,
     toggleSelectedSnippets: application.toggleSelectedSnippets,
     toggleSelectedTabBar: application.toggleSelectedTabBar,
     toggleSelectedPaneMarks: application.toggleSelectedPaneMarks,

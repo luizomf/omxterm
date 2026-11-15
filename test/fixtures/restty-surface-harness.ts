@@ -93,6 +93,7 @@ const harness = vi.hoisted(() => {
           getScreenText: this.getScreenText,
           selectAll: vi.fn(() => false),
           scrollToBottom: vi.fn(),
+          scrollToPrompt: vi.fn(),
           getVisibleLinkAtClientPoint: vi.fn(() => null),
           setVisibleLinkHover: vi.fn(),
           updateSize: this.updateSize,

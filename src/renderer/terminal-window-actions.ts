@@ -2,6 +2,7 @@ import type { TerminalBridge } from "../shared/terminal-bridge";
 import type {
   TerminalClipboardAction,
   TerminalFontZoom,
+  TerminalPromptJump,
   TerminalTabCommand,
 } from "../shared/terminal-contract";
 import type { TerminalTabs } from "./terminal-tabs";
@@ -23,6 +24,9 @@ export interface TerminalWindowActionSubscriptions {
     listener: () => void,
   ) => () => void;
   readonly subscribeToFind?: (listener: () => void) => () => void;
+  readonly subscribeToJumpToPrompt?: (
+    listener: (direction: TerminalPromptJump) => void,
+  ) => () => void;
   readonly subscribeToExportRequests?: TerminalBridge["onExportRequest"];
   readonly saveTerminalExport?: TerminalBridge["saveTerminalExport"];
 }
@@ -75,6 +79,10 @@ export function subscribeToGuardedActions(
     () =>
       options.subscribeToFind?.(() => {
         if (!blocked()) tabs.find();
+      }),
+    () =>
+      options.subscribeToJumpToPrompt?.((direction) => {
+        if (!blocked()) tabs.jumpToPrompt(direction);
       }),
     () =>
       options.subscribeToExportRequests?.((context) => {

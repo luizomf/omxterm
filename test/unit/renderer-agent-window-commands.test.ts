@@ -4,7 +4,7 @@ import { createTabsHarness } from "../fixtures/terminal-tabs-harness";
 
 // An agent's window shortcuts (ADR 0052, #1052), run by the window once the
 // pane they name is focused.
-it("copies, selects and toggles the bars for an agent on the pane it names", async () => {
+it("copies, selects, jumps and toggles the bars for an agent on the pane it names", async () => {
   let titleBar = true;
   const harness = createTabsHarness({
     tabsOptions: {
@@ -29,6 +29,14 @@ it("copies, selects and toggles the bars for an agent on the pane it names", asy
     action: "select-all",
   });
   expect(harness.surfaces[1]!.selectAll).toHaveBeenCalledOnce();
+  await harness.tabs.runSessionCommand("jump", "s1", {
+    action: "jump-to-prompt",
+    direction: "previous",
+  });
+  expect(harness.surfaces[0]!.jumpToPrompt).toHaveBeenCalledExactlyOnceWith(
+    "previous",
+  );
+  expect(harness.surfaces[1]!.jumpToPrompt).not.toHaveBeenCalled();
 
   expect(harness.strip.hidden).toBe(false);
   await harness.tabs.runSessionCommand("three", "s2", {

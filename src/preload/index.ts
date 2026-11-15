@@ -28,6 +28,7 @@ import {
   isTerminalExportContext,
   isTerminalExportSaveRequest,
   isTerminalFontZoom,
+  isTerminalPromptJump,
   isTerminalSessionExit,
   isTerminalSessionId,
   isTerminalSessionOutput,
@@ -40,6 +41,7 @@ import {
   isTerminalWriteReceipt,
   type TerminalExit,
   type TerminalFontZoom,
+  type TerminalPromptJump,
   type TerminalSessionId,
   type TerminalSize,
   type TerminalTabCommand,
@@ -137,6 +139,19 @@ const terminal: TerminalBridge = {
   onAuxiliaryPanelToggle: plainAction(terminalIpc.auxiliaryPanelToggle),
   onAuxiliaryPanelSideToggle: plainAction(terminalIpc.auxiliaryPanelSideToggle),
   onFind: plainAction(terminalIpc.find),
+  textEntryFocus(editing: boolean) {
+    if (typeof editing !== "boolean")
+      throw new TypeError("Invalid text entry focus");
+    ipcRenderer.send(terminalIpc.textEntryFocus, editing);
+  },
+  onJumpToPrompt(listener: (direction: TerminalPromptJump) => void) {
+    const handler = (_event: Electron.IpcRendererEvent, direction: unknown) => {
+      if (isTerminalPromptJump(direction)) listener(direction);
+    };
+    actionTransport.on(terminalIpc.jumpToPrompt, handler);
+    return () =>
+      actionTransport.removeListener(terminalIpc.jumpToPrompt, handler);
+  },
   onTitleBarToggle: plainAction(terminalIpc.titleBarToggle),
   windowChrome(command) {
     if (!isWindowChromeCommand(command))

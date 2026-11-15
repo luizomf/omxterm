@@ -64,6 +64,7 @@ it("saves the selector through validated IPC, reloader, menu and two retained wi
       "pasteSelectedTerminal",
       "selectAllSelectedTerminal",
       "findInSelectedTerminal",
+      "jumpToPromptInSelectedTerminal",
       "toggleSelectedSnippets",
       "toggleSelectedTabBar",
       "toggleSelectedTitleBar",

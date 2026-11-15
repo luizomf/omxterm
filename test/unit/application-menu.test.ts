@@ -36,6 +36,7 @@ function menuActions() {
     pasteSelectedTerminal: vi.fn(),
     selectAllSelectedTerminal: vi.fn(),
     findInSelectedTerminal: vi.fn(),
+    jumpToPromptInSelectedTerminal: vi.fn(),
     toggleSelectedSnippets: vi.fn(),
     toggleSelectedTabBar: vi.fn(),
     toggleSelectedPaneMarks: vi.fn(),
@@ -157,6 +158,38 @@ it.each(["en-US", "pt-BR"] as const)(
     expect(close).not.toHaveProperty("accelerator");
     (close.click as () => void)();
     expect(actions.closeSelectedPane).toHaveBeenCalledOnce();
+  },
+);
+
+it.each([
+  ["darwin", "CommandOrControl+Shift+Up", "CommandOrControl+Shift+Down"],
+  ["linux", "Control+Shift+Up", "Control+Shift+Down"],
+  ["win32", "Control+Shift+Up", "Control+Shift+Down"],
+])(
+  "offers Jump to Previous/Next Prompt after Find on %s",
+  (platform, previous, next) => {
+    const actions = menuActions();
+    const template = terminalApplicationMenuTemplate(
+      "OMXTerm",
+      actions,
+      terminalDefaultKeybinds(platform!),
+    );
+    const edit = template.find((item) => item.label === "Edit")!
+      .submenu as MenuTemplate;
+    const index = edit.findIndex((item) => item.label === "Find…");
+    expect(edit[index + 1]).toEqual({ type: "separator" });
+    expect(edit.slice(index + 2).map((item) => item.label)).toEqual([
+      "Jump to Previous Prompt",
+      "Jump to Next Prompt",
+    ]);
+    expect(edit[index + 2]!.accelerator).toBe(previous);
+    expect(edit[index + 3]!.accelerator).toBe(next);
+    (edit[index + 2]!.click as () => void)();
+    (edit[index + 3]!.click as () => void)();
+    expect(actions.jumpToPromptInSelectedTerminal.mock.calls).toEqual([
+      ["previous"],
+      ["next"],
+    ]);
   },
 );
 

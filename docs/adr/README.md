@@ -126,10 +126,15 @@ documented lines, never injected, so an agent's `wait` answers when the typed
 command ended and with its exit code. It amends ADR 0013 and implements part
 of ADR 0052's slice 8.
 
+[ADR0055: Jump between prompts in the core](0055-jump-between-prompts-in-the-core.md)
+exports the Ghostty core's prompt scroll for Jump to Previous/Next Prompt
+(`Cmd+Shift+Up/Down`, `Ctrl+Shift+Up/Down` on Linux and Windows), with no row
+index kept beside the core. It amends ADR 0054.
+
 ## Related boundaries
 
 - Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051, 0053.
-- Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037.
+- Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037, 0055.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052, 0054.
 - Native distribution, verification and installers: 0015, 0019, 0020, 0023, 0031, 0034, 0036, 0046, 0049.

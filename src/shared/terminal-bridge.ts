@@ -10,6 +10,7 @@ import type {
   TerminalContextMenuTarget,
   TerminalContextMenuRequest,
   TerminalFontZoom,
+  TerminalPromptJump,
   TerminalSessionId,
   TerminalSize,
   TerminalTabCommand,
@@ -38,6 +39,9 @@ export interface TerminalBridge {
   onAuxiliaryPanelToggle(listener: () => void): () => void;
   onAuxiliaryPanelSideToggle(listener: () => void): () => void;
   onFind(listener: () => void): () => void;
+  // Whether a text field, not the terminal, holds focus in this page.
+  textEntryFocus?(editing: boolean): void;
+  onJumpToPrompt(listener: (direction: TerminalPromptJump) => void): () => void;
   onTitleBarToggle(listener: () => void): () => void;
   windowChrome(command: WindowChromeCommand): void;
   onWindowChrome(listener: (state: WindowChromeState) => void): () => void;

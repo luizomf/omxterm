@@ -187,6 +187,8 @@ it("runs zoom, copy, select all and the bar toggles on the pane it names", async
     "Cmd+A": { action: "select-all" },
     "Cmd+Shift+B": { action: "toggle-tab-bar" },
     "Cmd+Shift+D": { action: "toggle-title-bar" },
+    "Cmd+Shift+Up": { action: "jump-to-prompt", direction: "previous" },
+    "Cmd+Shift+Down": { action: "jump-to-prompt", direction: "next" },
   };
   for (const [chord, command] of Object.entries(commands)) {
     await expect(window.press("s3", chord), chord).resolves.toMatchObject({
@@ -199,6 +201,20 @@ it("runs zoom, copy, select all and the bar toggles on the pane it names", async
     );
   }
   expect(window.native).not.toHaveBeenCalled();
+  expect(window.writes).toEqual([]);
+});
+
+it("runs the prompt jump for Ctrl+Shift+Up on Linux instead of sending the key", async () => {
+  const window = grantedWindow({ platform: "linux" });
+  await expect(window.press("s1", "Ctrl+Shift+Up")).resolves.toEqual({
+    action: "jumpToPreviousPrompt",
+    pane: "s1",
+  });
+  expect(window.act).toHaveBeenLastCalledWith(
+    "s1",
+    { action: "jump-to-prompt", direction: "previous" },
+    expect.any(AbortSignal),
+  );
   expect(window.writes).toEqual([]);
 });
 

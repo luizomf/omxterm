@@ -67,6 +67,9 @@ export function coreActionMenuTemplate(
         item("selectAll"),
         { type: "separator" },
         item("find"),
+        { type: "separator" },
+        item("jumpToPreviousPrompt"),
+        item("jumpToNextPrompt"),
       ],
     },
     {

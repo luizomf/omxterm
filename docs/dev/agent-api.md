@@ -359,7 +359,7 @@ Keys and shortcuts, as the user would press them in the granted window.
   `Down`, `Left`, `Right`, `Home`, `End`, `PageUp`, `PageDown`, `Insert`,
   `Delete`, `F1` … `F12`, `Enter`, `Tab`, `Escape`, `Backspace` or `Space`,
   after any of `Ctrl+`, `Alt+` and `Shift+`, each at most once
-  (`Ctrl+Shift+Up`), in any letter case. Anything else answers
+  (`Ctrl+Shift+Right`), in any letter case. Anything else answers
   `unsupported-key` and nothing is written. So does `Ctrl+Space` (with any
   other modifier) on macOS, which keeps it for switching input sources: the
   user's own press sends the pane nothing.
@@ -400,8 +400,9 @@ elsewhere), as accelerators do: `Cmd+T`, `Ctrl+Shift+]`, `Cmd+Ctrl+=`,
   on the pane `press` names, even when another window is selected: the window
   first focuses that pane, selecting its tab, as a user clicks a pane and
   presses, so `press s3 Cmd+W` closes the tab holding `s3`. So do `zoomIn`,
-  `zoomOut`, `actualSize`, `toggleTabBar` and `toggleTitleBar`, and `copy`
-  and `selectAll`, which take that pane's selection. The result names
+  `zoomOut`, `actualSize`, `toggleTabBar` and `toggleTitleBar`, `copy`
+  and `selectAll`, which take that pane's selection, and
+  `jumpToPreviousPrompt` and `jumpToNextPrompt`, which scroll that pane. The result names
   the action and the pane; nothing is written to the PTY. The chord must be
   the press's only key (`invalid-request` otherwise). A window that can't take
   it now (a dialog or preview over it) answers `unavailable`.

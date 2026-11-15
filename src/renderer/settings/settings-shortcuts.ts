@@ -27,6 +27,8 @@ const MENU_KEYS: Readonly<
   paste: "menu.paste",
   selectAll: "menu.selectAll",
   find: "menu.find",
+  jumpToPreviousPrompt: "menu.jumpToPreviousPrompt",
+  jumpToNextPrompt: "menu.jumpToNextPrompt",
   commandPalette: "action.commandPalette",
   newWindow: "menu.newWindow",
   closeWindow: "menu.closeWindow",

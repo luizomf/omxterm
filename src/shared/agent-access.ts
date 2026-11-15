@@ -1,8 +1,10 @@
 import {
   isTerminalFontZoom,
+  isTerminalPromptJump,
   isTerminalSessionId,
   isTerminalTabCommand,
   type TerminalFontZoom,
+  type TerminalPromptJump,
   type TerminalSessionId,
   type TerminalTabCommand,
 } from "./terminal-contract";
@@ -269,10 +271,15 @@ export function isAgentTabsResult(value: unknown): value is AgentTabsResult {
 /**
  * The tab, pane and window commands an agent's shortcut runs in the window
  * (#1050, #1052). Close Pane never carries a popup target: the pane it closes
- * is the one the request names. Copy and Select All act on that pane too.
+ * is the one the request names. Copy, Select All and the prompt jumps act on
+ * that pane too.
  */
 export type AgentWindowCommand =
   | { readonly action: "zoom"; readonly zoom: TerminalFontZoom }
+  | {
+      readonly action: "jump-to-prompt";
+      readonly direction: TerminalPromptJump;
+    }
   | {
       readonly action:
         "copy" | "select-all" | "toggle-tab-bar" | "toggle-title-bar";
@@ -320,6 +327,11 @@ export function isAgentWindowCommand(
   if (isPlainRecord(value) && value.action === "zoom")
     return (
       hasOnlyKeys(value, ["action", "zoom"]) && isTerminalFontZoom(value.zoom)
+    );
+  if (isPlainRecord(value) && value.action === "jump-to-prompt")
+    return (
+      hasOnlyKeys(value, ["action", "direction"]) &&
+      isTerminalPromptJump(value.direction)
     );
   if (
     isPlainRecord(value) &&

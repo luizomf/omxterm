@@ -4,7 +4,9 @@ With a few lines in your shell's startup file, your shell tells OMXTerm where
 each command starts and ends, and its exit code (OSC 133 command marks). An
 agent you allow in a window can then wait for a command to finish and know
 whether it worked, instead of guessing from the screen
-([agent API](dev/agent-api.md#wait)).
+([agent API](dev/agent-api.md#wait)). You can also jump between prompts in
+scrollback with **Edit → Jump to Previous Prompt** (`Cmd+Shift+Up`, or
+`Ctrl+Shift+Up` on Linux and Windows) and **Jump to Next Prompt**.
 
 OMXTerm never edits your startup files or adds anything to your shell
 ([ADR 0054](adr/0054-read-command-marks-for-agents.md)). It only reads the

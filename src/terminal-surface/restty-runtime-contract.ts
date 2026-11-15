@@ -31,6 +31,8 @@ export type PatchedResttyRuntime = {
       getScreenText(): string | null;
       selectAll(): boolean;
       scrollToBottom(): void;
+      // Moves the view |delta| OSC 133 prompts up (negative) or down.
+      scrollToPrompt(delta: number): void;
     };
   readonly terminal: Pick<
     UpstreamRuntime["terminal"],
