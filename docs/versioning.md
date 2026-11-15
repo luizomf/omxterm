@@ -251,6 +251,9 @@ Stable 0.36.1 uses the frozen cut `3722cb28`; the next development baseline is
 Adding AppleGothic as the macOS Hangul fallback (#1164) moves main to
 `0.36.2-dev.1`.
 
+Saying why a refused permanent delete was refused, instead of "failed" (#1166),
+moves main to `0.36.2-dev.2`. Files goes to 0.9.4.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

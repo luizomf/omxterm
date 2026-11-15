@@ -75,7 +75,7 @@ it("refuses a confirmed delete when a file with a nearly equal large ID took the
     token: confirmation.token!,
   });
 
-  expect(result.ok).toBe(false);
+  expect(result).toEqual({ ok: false, error: "changed-entry" });
   expect(await readFile(target, "utf8")).toBe("replacement");
 });
 
@@ -103,4 +103,12 @@ it("refuses a prepared move when a file with a nearly equal large ID took the so
 
   expect(result).toEqual({ ok: false, error: "changed-entry" });
   expect(moveNoReplace).not.toHaveBeenCalled();
+});
+
+it("reports an unknown delete confirmation as expired", async () => {
+  const files = activate({ signal, files: { moveNoReplace: vi.fn() } });
+
+  expect(
+    await invoke(files, { operation: "delete", token: "unknown" }),
+  ).toEqual({ ok: false, error: "expired-confirmation" });
 });

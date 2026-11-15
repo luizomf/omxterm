@@ -327,10 +327,10 @@ export function activate(context: {
           throw new Error("invalid-request");
         const captured = deletions.get(request.token);
         deletions.delete(request.token);
-        if (!captured) throw new Error("expired-confirmation");
+        if (!captured) refuse("FILES_EXPIRED");
         const stat = await lstat(captured.target, { bigint: true });
         if (stat.dev !== captured.device || stat.ino !== captured.inode)
-          throw new Error("changed-entry");
+          refuse("FILES_CHANGED");
         check(signal);
         mutation = true;
         uncertain = true; // Recursive deletion may fail after partial effects.
