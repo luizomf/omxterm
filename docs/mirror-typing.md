@@ -6,7 +6,7 @@ or in a few folders, side by side. It's an optional add-on (an extension).
 
 ## Availability
 
-The official extension catalog offers Mirror Typing 0.3.2 on **Macs with
+The official extension catalog offers Mirror Typing 0.3.3 on **Macs with
 Apple silicon**, **Windows on ARM** and **Linux on ARM64**, for OMXTerm 0.30.0
 or later. Other platforms aren't tested yet. See the
 [developer notes](mirror-typing-development.md) for how it works.

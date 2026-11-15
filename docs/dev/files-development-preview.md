@@ -23,7 +23,7 @@ or the terminal renderer; it ships only as a `.omxext` archive.
 - `view.ts`, `page.ts`, `tree.ts`, `toolbar.ts`, `messages.ts`, `index.html`,
   `files.css` — the view page shown in the companion panel.
 
-Files 0.9.4 declares host `>=0.26.0`, API `0.1.x` and the
+Files 0.9.5 declares host `>=0.26.0`, API `0.1.x` and the
 `terminal.insertPath.v1` capability. Host 0.26.0 is the first published host
 with the protected path consumer, so older hosts neither offer nor admit Files 0.8
 or later. Paths are handled in the form the backend reports them (POSIX, or
@@ -280,15 +280,15 @@ The AppImage is extracted, not modified.
 
 ## Platform limits
 
-- Files 0.9.4 browses POSIX and Windows drive paths. Rename, move and Windows
+- Files 0.9.5 browses POSIX and Windows drive paths. Rename, move and Windows
   trash need the host's native Files services, which every target has from
   OMXTerm 0.28.0. On older Windows and Linux x64 hosts rename, move and
   Windows trash report unsupported before acting.
   Network shares (`\\server\share`) browse like drives, but the host's
   move and trash take drive paths only, so they refuse share paths (and shares
   have no Recycle Bin).
-- Files 0.9.4 passed the packaged smoke (list, insert, rename, trash) on the
-  published 0.36.1 and the 0.37.0 release builds for macOS, Linux ARM64 and
+- Files 0.9.5 passed the packaged smoke (list, insert, rename, trash) on the
+  published 0.37.0 and the 0.38.0 release builds for macOS, Linux ARM64 and
   Windows ARM64. On a 0.27.0 Windows ARM64 host it lists and inserts, but
   rename reports unsupported. Linux x64 and Windows x64 are build-only: hosted CI runs
   the native move and Recycle Bin tests, never a desktop. Native drag onto the
