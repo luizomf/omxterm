@@ -139,7 +139,7 @@ export async function startFixtureSnippetsHost(
           _owner: Electron.BaseWindow,
           prompt: Electron.MessageBoxOptions,
         ) => {
-          assert.equal(prompt.title, "Trust extension code?");
+          assert.equal(prompt.title, "Install extension");
           assert.ok(
             prompt.detail?.includes(digest),
             "consent names exact archive digest",

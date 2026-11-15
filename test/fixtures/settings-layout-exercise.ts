@@ -131,6 +131,14 @@ async function checkThemeEditor(
     true,
   );
   await frame();
+  // Observe the page again: the keyboard check that follows needs a target
+  // on the page, not the editor control it just closed.
+  const page = await observe();
+  assertSettingsLayout(page, "settings-panel-appearance");
+  assert.ok(
+    page.theme !== null,
+    "Settings theme list did not come back after the editor closed",
+  );
 }
 
 async function checkCompactKeyboardNavigation(

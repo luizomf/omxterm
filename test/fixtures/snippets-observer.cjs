@@ -11,21 +11,25 @@ const BASELINE_SHA256 =
 const UPDATE_SHA256 =
   "e9c798132f09cb3b86783bd9bfe85b72e191243d583defe6f682d7dfcc32fe1b";
 
-function verifySnippetsTrust(prompt, version, digest, generation, official) {
-  assert.equal(prompt.type, "warning");
-  assert.equal(prompt.title, "Trust extension code?");
-  assert.equal(prompt.message, `Install Snippets ${version}?`);
+// Catalog installs are pinned by digest before consent, so they get the short
+// official prompt; local archives keep the package id and digest visible.
+function verifySnippetsTrust(prompt, version, digest, official) {
+  assert.equal(prompt.type, official ? "question" : "warning");
+  assert.equal(prompt.title, "Install extension");
+  assert.equal(
+    prompt.message,
+    official ? "Install Snippets?" : `Install Snippets ${version}?`,
+  );
   assert.equal(
     prompt.detail,
-    `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.snippets\nSHA-256: ${digest}\nCurrent generation: ${generation}` +
-      (official
-        ? "\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions."
-        : ""),
+    official
+      ? "Extensions can read your files and run programs."
+      : `This extension can read your files and run programs with your permissions. Only install it if you trust where it came from.\n\nPackage: omxterm.snippets\nSHA-256: ${digest}`,
   );
   assert.ok(Array.isArray(prompt.buttons));
   assert.equal(prompt.buttons.length, 2);
   assert.equal(prompt.buttons[0], "Cancel");
-  assert.equal(prompt.buttons[1], "Trust and install");
+  assert.equal(prompt.buttons[1], "Install");
   assert.equal(prompt.defaultId, 0);
   assert.equal(prompt.cancelId, 0);
 }
@@ -169,32 +173,21 @@ function observe(options, packageRequire) {
     return { canceled: false, filePaths: [options.archive] };
   };
   dialog.showMessageBox = async (_owner, prompt) => {
-    assert.equal(prompt.title, "Trust extension code?");
+    assert.equal(prompt.title, "Install extension");
     if (options.publicUpdate) {
       if (publicObservation) {
         publicObservation.verifyTrust(prompt);
       } else {
         assert.equal(baselineSelections, 1, "baseline chooser required");
         assert.equal(approvals, 0, "one baseline approval");
-        verifySnippetsTrust(prompt, "0.1.0", BASELINE_SHA256, 0, false);
+        verifySnippetsTrust(prompt, "0.1.0", BASELINE_SHA256, false);
       }
     } else if (options.publicCatalog === true) {
       const digest =
         "6c5723724d0dce26c589909405216c608dd071d7e9b04d63f733e012449c0ab7";
       assert.equal(options.archiveSha256, digest);
       assert.ok(approvals < 2, "only two public approvals");
-      assert.equal(prompt.type, "warning");
-      assert.equal(prompt.message, "Install Snippets 0.1.0?");
-      assert.equal(
-        prompt.detail,
-        `This is trusted local code, not a sandbox. It can read/change files, run programs and use the network with your user permissions. Third-party authors are responsible for their extensions. Only install packages you trust. Installation is dormant until you invoke its action.\n\nPackage: omxterm.snippets\nSHA-256: ${digest}\nCurrent generation: ${approvals}\n\nOfficial means project-maintained, not sandboxed or harmless. Extensions run trusted code with access to files, programs and networks. HTTPS and the catalog hash bind the selected bytes; they are not an independent publisher signature. Third-party authors remain responsible for their extensions.`,
-      );
-      assert.ok(Array.isArray(prompt.buttons));
-      assert.equal(prompt.buttons.length, 2);
-      assert.equal(prompt.buttons[0], "Cancel");
-      assert.equal(prompt.buttons[1], "Trust and install");
-      assert.equal(prompt.defaultId, 0);
-      assert.equal(prompt.cancelId, 0);
+      verifySnippetsTrust(prompt, "0.1.0", digest, true);
     } else assert.ok(prompt.detail.includes(options.archiveSha256));
     approvals++;
     return { response: 1, checkboxChecked: false };
@@ -216,9 +209,9 @@ function observe(options, packageRequire) {
             diagnostics: require("node:diagnostics_channel"),
             catalogSha256,
             archiveSha256: UPDATE_SHA256,
-            verifyTrust: (prompt, digest, index, generation) => {
+            verifyTrust: (prompt, digest, index) => {
               assert.equal(index, 0);
-              verifySnippetsTrust(prompt, "0.1.1", digest, generation, true);
+              verifySnippetsTrust(prompt, "0.1.1", digest, true);
             },
           },
         );

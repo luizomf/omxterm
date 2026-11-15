@@ -383,7 +383,7 @@ describe.skipIf(!["darwin", "linux", "win32"].includes(process.platform))(
         pastedQuery: "needleprivate",
         unicodeStatus: "1",
         themed: true,
-        counterMatchesField: true,
+        counterIsQuietText: true,
         terminalKeysWhileOpen: true,
         openAfterTerminalKeys: true,
         closed: true,

@@ -282,7 +282,7 @@ describe.skipIf(
       expect(result.reloadState.notice).toContain(
         "font.family and font.lineHeight",
       );
-      expect(result.reloadState.notice).toContain("restart OMXTerm");
+      expect(result.reloadState.notice).toContain("New tabs use the new ones");
       expect(result.launchKinds).toEqual([
         "default-shell",
         "explicit-command",
