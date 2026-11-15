@@ -245,7 +245,7 @@ it("admits a published manifest through local and direct-link trust with the sam
     filePaths: [file],
   });
   adapters.consent.mockImplementationOnce(async (_window, prompt) => {
-    expect(prompt.detail).toContain(digest);
+    expect(prompt.detail?.replaceAll("\n", "")).toContain(digest);
     expect(prompt.detail).toContain(fixture.id);
     expect(prompt.detail).not.toContain(
       translator().t("extensions.trustOfficialDetail"),
@@ -259,7 +259,7 @@ it("admits a published manifest through local and direct-link trust with the sam
   await expectInstalled(fixture, digest, backend);
   const downloaded = Buffer.from(bytes);
   adapters.consent.mockImplementationOnce(async (_window, prompt) => {
-    expect(prompt.detail).toContain(digest);
+    expect(prompt.detail?.replaceAll("\n", "")).toContain(digest);
     expect(prompt.detail).toContain(fixture.id);
     expect(prompt.detail).not.toContain(
       translator().t("extensions.trustOfficialDetail"),

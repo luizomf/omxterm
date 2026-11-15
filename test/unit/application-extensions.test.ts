@@ -2156,7 +2156,7 @@ it("localizes native trust at display time without changing captured package ide
     title: "Instalar extensão",
   });
   expect(adapters.consent.mock.calls[0]![1].detail).toMatch(
-    /SHA-256: [a-f0-9]{64}/,
+    /SHA-256:\n([a-f0-9]{16}\n){3}[a-f0-9]{16}$/,
   );
   expect(adapters.activate).not.toHaveBeenCalled();
 });

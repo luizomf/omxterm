@@ -47,7 +47,7 @@ export async function installExtensionFromDialog(
           : "")
       : translator().t("extensions.trustDetail", {
           id: preview.manifest.id,
-          digest: preview.digest,
+          digest: preview.digest.match(/.{1,16}/g)!.join("\n"),
         });
     const consent = await dialog.showMessageBox(window, {
       type: expected ? "question" : "warning",

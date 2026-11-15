@@ -304,9 +304,10 @@ it("keeps the package id and digest visible for captured installs and installs n
   expect(prompt.type).toBe("warning");
   expect(prompt.message).toBe("Install Files 1.0.0?");
   expect(prompt.detail).toContain(id);
-  expect(prompt.detail).toContain(
-    createHash("sha256").update(bytes).digest("hex"),
-  );
+  // 4 lines of 16 characters: short enough that no native dialog wraps (and
+  // hyphenates) the digest.
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  expect(prompt.detail.split("\n").slice(-4)).toEqual(digest.match(/.{16}/g));
   expect(prompt.buttons).toEqual(["Cancel", "Install"]);
   expect(prompt.defaultId).toBe(0);
   expect(await manager.snapshot()).toEqual([]);

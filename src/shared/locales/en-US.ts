@@ -331,7 +331,7 @@ export const englishMessages = {
   "extensions.trustTitle": "Install extension",
   "extensions.trustMessage": "Install {name}?",
   "extensions.trustDetail":
-    "This extension can read your files and run programs with your permissions. Only install it if you trust where it came from.\n\nPackage: {id}\nSHA-256: {digest}",
+    "This extension can read your files and run programs with your permissions. Only install it if you trust where it came from.\n\nPackage: {id}\nSHA-256:\n{digest}",
   "extensions.trustOfficialDetail":
     "Extensions can read your files and run programs.",
   "extensions.trustInstall": "Install",

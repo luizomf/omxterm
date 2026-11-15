@@ -344,7 +344,7 @@ export const brazilianPortugueseMessages: Readonly<
   "extensions.trustTitle": "Instalar extensão",
   "extensions.trustMessage": "Instalar {name}?",
   "extensions.trustDetail":
-    "Esta extensão pode ler seus arquivos e executar programas com as suas permissões. Instale só se você confia na origem.\n\nPacote: {id}\nSHA-256: {digest}",
+    "Esta extensão pode ler seus arquivos e executar programas com as suas permissões. Instale só se você confia na origem.\n\nPacote: {id}\nSHA-256:\n{digest}",
   "extensions.trustOfficialDetail":
     "Extensões podem ler seus arquivos e executar programas.",
   "extensions.trustInstall": "Instalar",
