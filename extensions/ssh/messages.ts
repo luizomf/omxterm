@@ -5,11 +5,10 @@ const english = {
   hint: "Connects with OpenSSH and your SSH config.",
   learnMore: "Learn more",
   quick: "Quick connect",
-  placeholder: "user@host:port or user@[::1]:port",
+  placeholder: "user@host",
   connect: "Connect",
   aliases: "From your SSH config",
-  search: "Search aliases",
-  filter: "Filter the listed aliases",
+  search: "Search hosts",
   refresh: "Refresh",
   opening: "Opening terminal…",
   accepted: "Terminal accepted. Authentication continues in the terminal.",
@@ -24,7 +23,7 @@ const english = {
   unavailable:
     "This host does not provide SSH Connect. Check the OMXTerm version and platform requirements.",
   capabilities: "Host capabilities unavailable.",
-  reading: "Reading aliases…",
+  reading: "Reading hosts…",
   discovery:
     "Alias discovery is unavailable or may still be reading. Quick connect remains available; no automatic retry.",
   invalidated:
@@ -32,7 +31,9 @@ const english = {
   incomplete: "Incomplete index",
   omitted: "Quick connect accepts omitted aliases.",
   summary: (visible: number, total: number) =>
-    `${visible} of ${total} indexed aliases${total === 0 ? " — use Quick connect or Refresh" : ""}`,
+    total === 0
+      ? "No hosts in your SSH config."
+      : `${visible} of ${total} hosts`,
   connectTo: (alias: string) => `Connect to ${alias}`,
 };
 type Messages = {
@@ -44,11 +45,10 @@ const portuguese: Messages = {
   hint: "Conecta com o OpenSSH e a sua configuração SSH.",
   learnMore: "Saiba mais",
   quick: "Conexão rápida",
-  placeholder: "usuário@host:porta ou usuário@[::1]:porta",
+  placeholder: "usuário@host",
   connect: "Conectar",
   aliases: "Da sua configuração SSH",
-  search: "Buscar aliases",
-  filter: "Filtrar os aliases listados",
+  search: "Buscar hosts",
   refresh: "Atualizar",
   opening: "Abrindo terminal…",
   accepted: "Terminal aceito. A autenticação continua no terminal.",
@@ -63,7 +63,7 @@ const portuguese: Messages = {
   unavailable:
     "Este host não oferece SSH Connect. Confira os requisitos de versão do OMXTerm e de plataforma.",
   capabilities: "Recursos do host indisponíveis.",
-  reading: "Lendo aliases…",
+  reading: "Lendo hosts…",
   discovery:
     "A descoberta de aliases está indisponível ou ainda pode estar lendo. A conexão rápida continua disponível; não há repetição automática.",
   invalidated:
@@ -71,7 +71,9 @@ const portuguese: Messages = {
   incomplete: "Índice incompleto",
   omitted: "A conexão rápida aceita aliases omitidos.",
   summary: (visible, total) =>
-    `${visible} de ${total} aliases indexados${total === 0 ? " — use Conexão rápida ou Atualizar" : ""}`,
+    total === 0
+      ? "Nenhum host na sua configuração SSH."
+      : `${visible} de ${total} hosts`,
   connectTo: (alias) => `Conectar a ${alias}`,
 };
 export type SshNotice =

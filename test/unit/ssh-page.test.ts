@@ -97,7 +97,7 @@ it("explains a missing SSH capability and disables quick connect", async () => {
 it("replays the initial language and preserves keyboard selection across relabeling", async () => {
   const { request, search, language } = await setup("pt-BR");
   expect(document.documentElement.lang).toBe("pt-BR");
-  expect(document.body.textContent).toContain("Buscar aliases");
+  expect(search.placeholder).toBe("Buscar hosts");
   search.dispatchEvent(
     new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
   );
@@ -215,7 +215,7 @@ it("relabels reading, incomplete discovery and invalidated results without rerea
   );
   refresh.click();
   language("pt-BR");
-  expect(document.body.textContent).toContain("Lendo aliases");
+  expect(document.body.textContent).toContain("Lendo hosts");
   finish({
     ok: true,
     aliases: ["literal-alias"],
@@ -223,7 +223,7 @@ it("relabels reading, incomplete discovery and invalidated results without rerea
     reasons: { syntax: 2, "file-limit": 1 },
   });
   await Promise.resolve();
-  expect(document.body.textContent).toContain("1 de 1 aliases indexados");
+  expect(document.body.textContent).toContain("1 de 1 hosts");
   expect(document.body.textContent).toContain(
     "sintaxe: 2; limite de arquivos: 1",
   );

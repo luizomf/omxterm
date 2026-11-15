@@ -261,6 +261,11 @@ Jump to Previous/Next Prompt (#1027) is the first feature of this cycle, so
 main moves to `0.37.0-dev.0`. Its bridge admits ranges that accept both
 `0.36.1` and `0.37.0`, and every catalog archive stays installable unchanged.
 
+Plain-words copy for dialogs, errors and small surfaces (#1172) moves main to
+`0.37.0-dev.1`. SSH Connect goes to 0.4.3 and Mirror Typing to 0.3.2; Files'
+filter label rides with the unpublished 0.9.4. Catalogs stay at the published
+versions.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

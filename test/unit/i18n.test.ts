@@ -92,10 +92,10 @@ describe("translator", () => {
 
   it("selects plural forms with the language's rules", () => {
     for (const [language, count, expected] of [
-      ["en-US", 1, "previous x value."],
-      ["en-US", 2, "previous x values."],
-      ["pt-BR", 1, "o valor anterior de x."],
-      ["pt-BR", 2, "os valores anteriores de x."],
+      ["en-US", 1, "old x value."],
+      ["en-US", 2, "old x values."],
+      ["pt-BR", 1, "o valor antigo de x."],
+      ["pt-BR", 2, "os valores antigos de x."],
     ] as const)
       expect(
         translatorFor(language).t("notice.restartDeferred", {
@@ -105,7 +105,7 @@ describe("translator", () => {
       ).toContain(expected);
     expect(
       translatorFor("en-US").t("notice.restartDeferred", { settings: "x" }),
-    ).toContain("previous x values.");
+    ).toContain("old x values.");
   });
 
   it("falls back to English for a key missing from a catalog", () => {
@@ -208,7 +208,7 @@ describe("translated main-process text", () => {
       ),
     ).toMatchObject({
       title: "O comando terminou inesperadamente",
-      detail: "Sinal: desconhecido.",
+      detail: "Abra uma nova aba para começar de novo.",
       buttons: ["OK"],
     });
     const failure = terminalApplicationFailure(
@@ -245,7 +245,7 @@ describe("translated main-process text", () => {
     const [notice] = reloader.current().userFileErrors;
     expect(notice).toMatch(/^Não foi possível recarregar as configurações,/u);
     expect(notice).toContain("must be from 8 through 72 $&");
-    expect(notice).toContain("Recarregar Configurações");
+    expect(notice).toContain("recarregue as configurações");
     expect(reloader.current().configuration).toBe(initial);
   });
 });

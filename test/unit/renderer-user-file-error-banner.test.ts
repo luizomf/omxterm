@@ -20,7 +20,7 @@ describe("User File Error banner", () => {
   it("shows every message as text without interpreting markup", () => {
     const banner = createBanner();
     renderUserFileErrorBanner(banner, [
-      'User Configuration "/home/tester/.config/omxterm/config.json" is not valid JSON.',
+      'Settings file "/home/tester/.config/omxterm/config.json" is not valid JSON.',
       "<img src=x onerror=alert(1)>",
     ]);
     expect(banner.hidden).toBe(false);

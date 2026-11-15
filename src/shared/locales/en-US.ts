@@ -127,14 +127,14 @@ export const englishMessages = {
   "failure.commandStart.message": "The command you asked for didn't start.",
   "failure.shellStart.title": "Couldn't start the shell",
   "failure.shellStart.message": "Your shell didn't start.",
-  "failure.spawnDetail": "Check that the program exists and can run.",
+  "failure.shellSpawnDetail": "Check the shell path in Settings.",
+  "failure.commandSpawnDetail": "Check that the program exists and can run.",
   "failure.commandExit.title": "Command exited unexpectedly",
   "failure.commandExit.message":
     "The command you asked for exited unexpectedly.",
   "failure.shellExit.title": "Shell exited unexpectedly",
   "failure.shellExit.message": "Your shell exited unexpectedly.",
-  "failure.signalDetail": "Signal: {signal}.",
-  "failure.unknownSignal": "unknown",
+  "failure.signalDetail": "Open a new tab to start again.",
   "failure.start.title": "OMXTerm couldn't start",
   "failure.launchRequest": "The -e option requires an executable.",
   "failure.rendererLoad.title": "Couldn't load the window",
@@ -145,13 +145,13 @@ export const englishMessages = {
   "failure.startup": "Couldn't create the first window.",
 
   "notice.reloadFailed":
-    "Couldn't reload your settings, so OMXTerm kept the last valid ones. {detail} Fix the file, then choose View → Reload Settings.",
+    "Couldn't reload your settings, so OMXTerm kept the last valid ones. {detail} Fix the file, then reload settings.",
   "notice.reloadUnexpected":
     "Couldn't load your settings because of an unexpected error.",
   "notice.restartDeferred": {
-    one: "Open tabs keep their previous {settings} value. New tabs and windows use the new one; restart OMXTerm to apply it everywhere.",
+    one: "Open tabs keep the old {settings} value. New tabs use the new one.",
     other:
-      "Open tabs keep their previous {settings} values. New tabs and windows use the new ones; restart OMXTerm to apply them everywhere.",
+      "Open tabs keep the old {settings} values. New tabs use the new ones.",
   },
   "notice.and": "{first} and {second}",
 
@@ -161,7 +161,7 @@ export const englishMessages = {
   "chrome.restore": "Restore",
   "chrome.closeWindow": "Close Window",
 
-  "terminal.surface": "Terminal Surface",
+  "terminal.surface": "Terminal",
   "terminal.filesDropCandidate": "Drop to insert path (not run)",
   "terminal.filesDropRefused":
     "Path not inserted. Drag it again from Files in this window.",
@@ -170,9 +170,9 @@ export const englishMessages = {
   "layout.saved": "Layout saved.",
   "layout.saveFailed": "Couldn't save this window's layout.",
   "layout.saveUnknown": "Couldn't confirm that the layout was saved.",
-  "terminal.tabs": "Terminal Tabs",
-  "terminal.userFileErrors": "User File Errors",
-  "terminal.surfaceFailure": "Terminal Surface Failure",
+  "terminal.tabs": "Tabs",
+  "terminal.userFileErrors": "File errors",
+  "terminal.surfaceFailure": "Terminal error",
   "terminal.initializationFailure": "Couldn't start the terminal: {detail}",
   "terminal.backendLost": "The terminal's renderer stopped",
   "palette.title": "Command Palette",
@@ -190,10 +190,8 @@ export const englishMessages = {
   "search.matchBelow": "Match below",
   "search.close": "Close search",
 
-  "about.title": "About OMXTerm",
   "about.loading": "Loading version…",
   "about.version": "Version {version}",
-  "about.license": "MIT licensed. Provided without warranty.",
   "about.project": "Project",
   "about.contributors": "Contributors",
   "about.issues": "Report an issue",
@@ -210,7 +208,7 @@ export const englishMessages = {
   "preview.unsupported":
     "Unsupported image format. Choose a static PNG or JPEG; WebP is not supported.",
   "preview.error":
-    "Couldn't preview this image. The file may be unavailable, invalid or over the static PNG/JPEG limits (64 MiB, 8192 per side, 32 million pixels).",
+    "Couldn't preview this image. It may be missing, invalid or too large.",
 
   "panel.resize": "Resize side panel",
   "panel.width": "{width} pixels wide",
@@ -268,7 +266,7 @@ export const englishMessages = {
   "extensions.catalogManagementUnavailable":
     "Extensions can't be installed right now.",
   "extensions.catalogEmpty": "No official extensions yet.",
-  "extensions.catalogInstalled": "Installed",
+  "extensions.catalogAllInstalled": "All official extensions are installed.",
   "extensions.catalogPlatformIncompatible": "Not available on this system",
   "extensions.catalogEngineIncompatible":
     "Doesn't work with this OMXTerm version",
@@ -323,11 +321,11 @@ export const englishMessages = {
   "mirrorTyping.needTwoPanes":
     "Open at least two live panes in one tab, then open Mirror Typing.",
   "extensions.noActiveTerminalDirectory":
-    "No local directory was reported for the active terminal. It may be remote or not report its directory. Use Home or enter a path",
+    "The active terminal didn't report a local folder. Use Home or enter a path.",
   "extensions.activeTerminalChanged":
-    "The active terminal changed or couldn't be confirmed. Try again",
+    "The active terminal changed or couldn't be confirmed. Try again.",
   "extensions.terminalDirectoryBusy":
-    "A terminal directory request is already in progress. Try again",
+    "Still reading the terminal's folder. Try again in a moment.",
   "extensions.unavailable": "Extension unavailable",
   "extensions.unavailableDetail": "Open Settings → Extensions to check it.",
   "extensions.chooserTitle": "Install local extension",
@@ -413,7 +411,7 @@ export const englishMessages = {
   "settings.saving": "Saving…",
   "settings.requestError": "Not saved: the request failed.",
   "settings.fileGuidance":
-    "Graphical changes are checked against the whole file. Correct invalid values in Settings or edit Config file; if the file cannot be read, repair it externally and reload.",
+    "Fix invalid values here or in config.json, then reload the file.",
   "settings.saved": "Saved.",
   "settings.choiceSuperseded":
     "A newer choice replaced this selection before it was saved.",
@@ -433,9 +431,9 @@ export const englishMessages = {
   "settings.newer": "Newer edits are not saved.",
   "settings.readError":
     "config.json couldn't be read. Check its permissions and location.",
-  "settings.utf8Error": "config.json is not valid UTF-8",
-  "settings.jsonError": "config.json is not valid JSON",
-  "settings.objectError": "config.json must hold an object",
+  "settings.utf8Error": "config.json isn't valid UTF-8.",
+  "settings.jsonError": "config.json isn't valid JSON.",
+  "settings.objectError": "config.json must hold an object.",
   "settings.symlinkError":
     "A config.json link or linked directory is dangling or cyclic. Fix the link or its target, then reload the file.",
   "settings.targetError":
@@ -447,18 +445,16 @@ export const englishMessages = {
   "settings.cleanupError":
     "config.json was not saved. A temporary file may remain in its target directory; check the directory and permissions before trying again.",
   "settings.applicationError":
-    "Unexpected error. Some settings may already be active; choose View → Reload Settings again.",
+    "Unexpected error. Some settings may already be active; reload settings to check.",
   "settings.page.shortcuts": "Shortcuts",
   "shortcuts.hint": "App shortcuts get the key before terminal programs do.",
   "shortcuts.search": "Search shortcuts",
   "shortcuts.noMatch": "No shortcuts match the search.",
   "shortcuts.prompt": "Press the new shortcut, or Escape to cancel.",
-  "shortcuts.promptMac":
-    "Press the new shortcut, or Escape to cancel. Option-only letters and top-row digits may work with supported layouts. Some dead keys may not be recordable; input methods or missing native support can also prevent recording. Option as Alt affects terminal input only.",
   "shortcuts.invalid":
-    "That key combination is not supported. Use Ctrl, Alt, Cmd or AltGr with a supported key, or use F1–F24.",
+    "That combination isn't supported; try Ctrl, Alt, Cmd or AltGr with a key, or F1–F24.",
   "shortcuts.invalidMac":
-    "That key combination is not supported. Some Option characters and dead keys may not be recordable, including with input methods or missing native support; try Option with an arrow or function key, another modifier, or F1–F24.",
+    "That combination isn't supported; some Option and dead keys can't be recorded.",
   "shortcuts.cancelled": "Recording cancelled.",
   "shortcuts.pressing": "Press a shortcut…",
   "shortcuts.none": "None",

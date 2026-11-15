@@ -64,7 +64,7 @@ it.each([
 it.each([
   ["native-snippets", "Snippets", "Loading snippets"],
   ["files", "Files", "Reading directory"],
-  ["ssh", "SSH Connect", "Reading aliases"],
+  ["ssh", "SSH Connect", "Reading hosts"],
 ] as const)(
   "keeps the %s host identity and child feedback coordinated across single/multiple tools",
   async (id, label, loading) => {

@@ -16,6 +16,10 @@ label {
 input {
   width: 100%;
 }
+.alias-toolbar input {
+  flex: 1;
+  min-width: 0;
+}
 .quick-connect input,
 .alias-row {
   font-family: var(--ui-font-mono);

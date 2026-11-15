@@ -8,17 +8,18 @@ import type { MessageKey } from "../../shared/i18n";
 import { createPageButton, setPageNotice } from "../application-page";
 import { englishLanguage, type Translate } from "../renderer-language";
 
-// A card says one thing: its action, or why there is none.
-function cardState(entry: CatalogCard): MessageKey | undefined {
+// A card says one thing: its action, or why there is none. Installed
+// extensions with nothing to do have no card: the Installed list has them.
+function cardState(entry: CatalogCard): MessageKey | "installed" | undefined {
   if (entry.incompatibility === "engine")
     return entry.action === "install"
       ? "extensions.catalogEngineIncompatible"
-      : "extensions.catalogInstalled";
+      : "installed";
   if (entry.incompatibility)
     return entry.action === "install"
       ? "extensions.catalogPlatformIncompatible"
-      : "extensions.catalogInstalled";
-  return entry.action ? undefined : "extensions.catalogInstalled";
+      : "installed";
+  return entry.action ? undefined : "installed";
 }
 
 /** Independent acquisition state leaves local/installed management usable offline. */
@@ -94,7 +95,9 @@ export function renderExtensionCatalog(
             : "extensions.catalogUnavailable"
           : snapshot.loaded && !snapshot.entries.length
             ? "extensions.catalogEmpty"
-            : undefined;
+            : snapshot.loaded && !list.childElementCount
+              ? "extensions.catalogAllInstalled"
+              : undefined;
     setPageNotice(notice, {
       text: message ? t(message) : "",
       severity:
@@ -113,6 +116,8 @@ export function renderExtensionCatalog(
     buttons.length = 0;
     list.replaceChildren();
     for (const entry of snapshot.entries) {
+      const state = cardState(entry);
+      if (state === "installed") continue;
       const card = document.createElement("section");
       card.className = "extension-catalog-card ui-card";
       card.dataset.extensionId = entry.id;
@@ -121,15 +126,10 @@ export function renderExtensionCatalog(
       const name = document.createElement("h4");
       name.textContent = entry.name;
       title.append(name);
-      const state = cardState(entry);
-      // Installed cards drop the catalog version; the installed row has the
-      // real one, which may be newer than the catalog's.
-      if (state !== "extensions.catalogInstalled") {
-        const version = document.createElement("span");
-        version.className = "ui-meta";
-        version.textContent = entry.version;
-        title.append(version);
-      }
+      const version = document.createElement("span");
+      version.className = "ui-meta";
+      version.textContent = entry.version;
+      title.append(version);
       const description = document.createElement("p");
       description.textContent = entry.description;
       card.append(title, description);
