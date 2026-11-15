@@ -112,6 +112,9 @@ export interface TerminalIpcControllerOptions {
     sessionId: TerminalSessionId,
     folder: string | undefined,
   ) => void;
+  // False while the session's tab shows a title the shell set, so looking up
+  // its folder would change nothing on screen.
+  readonly showsFolder?: (sessionId: TerminalSessionId) => boolean;
   readonly onSessionTitleSync?: (sessionId: TerminalSessionId) => void;
   readonly writeClipboardText: (text: string) => void;
   readonly readClipboardText: () => string;

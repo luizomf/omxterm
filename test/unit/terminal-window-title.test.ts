@@ -124,11 +124,14 @@ describe("native Terminal Title and bell attention", () => {
     h.controller.setFolder("s1", "project");
     expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "project");
     expect(h.chromeTitle).toHaveBeenLastCalledWith("project");
+    expect(h.controller.showsFolder("s1")).toBe(true);
     h.controller.requestTitle("s1", "vim notes");
+    expect(h.controller.showsFolder("s1")).toBe(false);
     h.controller.setFolder("s1", "other");
     expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "vim notes");
     h.controller.requestTitle("s1", "");
     expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "other");
+    expect(h.controller.showsFolder("s1")).toBe(true);
     h.controller.setFolder("s1", undefined);
     expect(h.sessionTitles).toHaveBeenLastCalledWith("s1", "example-shell");
     h.controller.dispose();

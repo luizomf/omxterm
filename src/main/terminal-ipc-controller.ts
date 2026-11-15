@@ -510,7 +510,10 @@ function createTerminalIpcController(
   const workingDirectories = createWorkingDirectoryTracker();
   // A tab shows its shell's folder until the shell sets a title. An OSC 7
   // report is read for free; without one the shell's own folder is looked up
-  // once its output has been quiet for a moment.
+  // once its output has been quiet for a moment and the shell itself is in the
+  // foreground (only the shell changes its folder; a running program, tmux
+  // included, would make the lookup wasted). A title the shell set wins over
+  // the folder, so while one shows there's no lookup either.
   const folders = new Map<TerminalSessionId, string>();
   const folderLookups = new Map<
     TerminalSessionId,
@@ -528,12 +531,22 @@ function createTerminalIpcController(
     else folders.set(sessionId, folder);
     options.onFolderChange?.(sessionId, folder);
   };
+  const showsFolder = (sessionId: TerminalSessionId) =>
+    options.showsFolder?.(sessionId) ?? true;
   const scheduleFolderLookup = (sessionId: TerminalSessionId) => {
-    if (!workingDirectories.readsProcess(sessionId)) return;
+    if (!workingDirectories.readsProcess(sessionId) || !showsFolder(sessionId))
+      return;
     clearTimeout(folderLookups.get(sessionId));
     const timer = setTimeout(() => {
       folderLookups.delete(sessionId);
-      if (disposed || !sessions.has(sessionId)) return;
+      const state = sessions.get(sessionId);
+      if (
+        disposed ||
+        !state ||
+        !showsFolder(sessionId) ||
+        state.session.hasForegroundChildProcess()
+      )
+        return;
       void workingDirectories
         .refresh([sessionId])
         .then(() => announceFolder(sessionId));

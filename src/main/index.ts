@@ -584,6 +584,7 @@ app
               },
               onSessionTitleSync: titleController.syncSessionTitle,
               onFolderChange: titleController.setFolder,
+              showsFolder: titleController.showsFolder,
               onTitleRequest: titleController.requestTitle,
               onBell: titleController.ringBell,
               onNotification: titleController.notify,
