@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   applyTerminalWindowConfiguration,
   lockTerminalRendererNavigation,
+  macTrafficLightPosition,
   terminalNativeTitleInset,
   terminalWindowOptions,
 } from "../../src/main/terminal-window";
@@ -78,6 +79,15 @@ describe("Terminal Window startup contract", () => {
     }
     expect(destroyed.setBackgroundColor).not.toHaveBeenCalled();
     expect(destroyed.setMinimumSize).not.toHaveBeenCalled();
+  });
+
+  it("centers the traffic lights in the 30 px title row", () => {
+    expect(macTrafficLightPosition("27.0.1")).toEqual({ x: 12, y: 8 });
+    expect(macTrafficLightPosition("15.6")).toEqual({ x: 12, y: 7 });
+    expect(
+      terminalWindowOptions("", DEFAULT_USER_CONFIGURATION, "linux")
+        .trafficLightPosition,
+    ).toBeUndefined();
   });
 
   it("uses small native chrome and an isolated renderer preload", () => {

@@ -315,6 +315,9 @@ never hyphenates it when it wraps (#1190), moves main to `0.38.0-dev.1`.
 
 Copy Last Command Output (#1027) moves main to `0.38.0-dev.2`.
 
+Putting the tabs in the macOS title row, beside the traffic lights (#1194),
+moves main to `0.38.0-dev.3`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

@@ -4,6 +4,8 @@
   color-scheme: dark;
   background: transparent;
   --native-title-inset: 30px;
+  /* The traffic lights' width in the title row, with their margins. */
+  --native-controls-inset: 84px;
   --terminal-chrome-neutral: #808090;
 }
 
@@ -401,8 +403,8 @@ body.tabs-visible .terminal-tab {
   outline: none;
 }
 
-/* The tab strip occupies its own full-width row below any app-controlled
-   native title inset and only exists with two or more tabs (body.tabs-visible). */
+/* The tab strip is a full-width row above the content and only exists with
+   two or more tabs (body.tabs-visible). */
 #tab-strip {
   display: flex;
   flex: none;
@@ -410,7 +412,6 @@ body.tabs-visible .terminal-tab {
   align-items: stretch;
   box-sizing: border-box;
   width: 100%;
-  margin-top: var(--native-title-inset);
   /* Line up with the terminal text; never closer than 8 px to the window
      edge, where the corners round. */
   padding: 4px max(8px, var(--tab-strip-inset-end, 12px)) 4px
@@ -433,6 +434,36 @@ body.tabs-visible .terminal-tab {
 
 #tab-strip button:active {
   cursor: grabbing;
+}
+
+/* macOS (ADR 0058): the strip is as tall as the title row, so it can take
+   that row's place and no chrome change moves the terminal by a fraction. */
+:root[data-native-controls] #tab-strip {
+  height: 30px;
+}
+
+/* Title bar showing: the strip is the title row. It starts after the traffic
+   lights and ends in an empty gutter; both are where the window is dragged.
+   The gutter matches the lights' side and gives way, down to 40 px, before
+   crowded tabs clip. */
+:root[data-native-title-row] #tab-strip {
+  padding-inline: var(--native-controls-inset) 0;
+  app-region: drag;
+}
+
+:root[data-native-title-row] #tab-strip::after {
+  content: "";
+  flex: 0 1 calc(var(--native-controls-inset) - 4px);
+  min-width: 36px;
+}
+
+:root[data-native-title-row] #tab-strip button {
+  app-region: no-drag;
+}
+
+/* A local image preview suspends window dragging. */
+:root[data-native-title-row] body.window-preview-active #tab-strip {
+  app-region: no-drag;
 }
 
 .auxiliary-panel {
@@ -568,6 +599,13 @@ body.tabs-visible .terminal-tab {
   left: 0;
   height: var(--native-title-inset);
   app-region: drag;
+}
+
+/* A visible tab strip owns the title row and its dragging. This band comes
+   later in the document, so it would otherwise cover the tabs. */
+body.tabs-visible .terminal-surface::before,
+body.tabs-visible .settings-tab::before {
+  display: none;
 }
 
 body.tabs-visible .auxiliary-panel {

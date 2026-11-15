@@ -17,6 +17,8 @@ interface ChromeWindow extends Pick<
   | "isVisible"
   | "isFocused"
   | "setWindowButtonVisibility"
+  | "getWindowButtonPosition"
+  | "setWindowButtonPosition"
   | "getContentBounds"
   | "minimize"
   | "maximize"
@@ -224,8 +226,14 @@ export function registerWindowChrome(
   const refresh = () => {
     if (!alive()) return;
     closeMenu();
-    if (options.platform === "darwin")
-      window.setWindowButtonVisibility(titleBarVisible && !fullScreen);
+    if (options.platform === "darwin") {
+      const visible = titleBarVisible && !fullScreen;
+      window.setWindowButtonVisibility(visible);
+      // Shown again, the buttons sit a few px off their configured position
+      // until the next native redraw. Setting it once more puts them back.
+      const position = visible ? window.getWindowButtonPosition() : null;
+      if (position) window.setWindowButtonPosition(position);
+    }
     if (needsSampling()) timer ??= setInterval(sample, 100);
     else if (timer !== undefined) {
       clearInterval(timer);

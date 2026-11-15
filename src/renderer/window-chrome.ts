@@ -2,6 +2,7 @@ import type { TerminalBridge } from "../shared/terminal-bridge";
 import { setIcon, type UiIconName } from "../shared/ui-icons";
 import type { WindowChromeState } from "../shared/window-chrome";
 import { englishLanguage, type RendererLanguage } from "./renderer-language";
+import { applyNativeTitleInset } from "./terminal-window-theme";
 
 export type WindowChromeBridge = Pick<
   TerminalBridge,
@@ -69,9 +70,13 @@ export function mountWindowChrome(
       state.titleBarVisible !== current.titleBarVisible;
     current = state;
     const visible = state.titleBarVisible && !state.fullScreen;
-    document.documentElement.style.setProperty(
-      "--native-title-inset",
-      visible && state.style === "native" ? "30px" : "0px",
+    document.documentElement.toggleAttribute(
+      "data-native-controls",
+      state.style === "native",
+    );
+    applyNativeTitleInset(
+      document,
+      visible && state.style === "native" ? 30 : 0,
     );
     row.hidden = !visible || state.style === "native";
     title.textContent = state.title;

@@ -142,9 +142,13 @@ exports the Ghostty core's output lookup for Copy Last Command Output
 command that printed something, without prompt or command line. It amends
 ADR 0055.
 
+[ADR0058: Share the macOS title row with the tabs](0058-share-the-macos-title-row-with-the-tabs.md)
+puts the tab strip in the title row beside the traffic lights on macOS, with
+both ends of the row kept for dragging. It amends ADR 0027 and ADR 0016.
+
 ## Related boundaries
 
-- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051, 0053.
+- Tabs/chrome/close/native completion: 0016, 0017, 0027, 0028, 0032, 0033, 0050, 0051, 0053, 0058.
 - Portable Surface/fonts/protocols: 0008, 0012, 0022, 0025, 0037, 0055, 0057.
 - User-owned configuration and live application: 0002, 0003, 0025, 0029, 0030, 0035, 0048.
 - Renderer privilege and explicit payload actions: 0006, 0009–0011, 0021, 0024, 0026, 0037, 0045, 0052, 0054, 0056.

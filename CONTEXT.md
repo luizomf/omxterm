@@ -83,8 +83,9 @@ live Windows sessions count as busy for close confirmation. Foreground names
 stay in memory and are not displayed or logged.
 
 **Window Chrome** — Controls around the terminal, including the hideable title
-area and tab strip. macOS uses native window buttons; Linux and Windows draw a
-themed title row with native window actions.
+area and tab strip. macOS uses native window buttons, and its tab strip shares
+their row; Linux and Windows draw a themed title row with native window
+actions.
 
 **State Mark** — A small core-owned icon at a pane's corner (and on its tab when
 the tab strip shows) for an ongoing state such as Mirror Typing, Program
