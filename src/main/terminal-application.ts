@@ -132,6 +132,7 @@ interface TerminalApplicationOptions<Window extends NativeTerminalWindow> {
     window: Window,
     direction: TerminalPromptJump,
   ) => void;
+  readonly sendCopyLastCommandOutput?: (window: Window) => void;
   readonly sendTabBarToggle: (window: Window) => void;
   readonly sendPaneMarksToggle: (window: Window) => void;
   readonly sendAuxiliaryPanelToggle: (window: Window) => void;
@@ -191,6 +192,7 @@ export interface TerminalApplication<
   exportPane(window: Window, context: TerminalExportContext): void;
   findInSelectedWindow(): void;
   jumpToPromptInSelectedWindow(direction: TerminalPromptJump): void;
+  copyLastCommandOutputInSelectedWindow(): void;
   toggleSelectedSnippets(): void;
   toggleSelectedTabBar(): void;
   toggleSelectedPaneMarks(): void;
@@ -475,6 +477,10 @@ export function startTerminalApplication<Window extends NativeTerminalWindow>(
     jumpToPromptInSelectedWindow(direction) {
       const window = selectedWindow();
       if (window) options.sendJumpToPrompt?.(window, direction);
+    },
+    copyLastCommandOutputInSelectedWindow() {
+      const window = selectedWindow();
+      if (window) options.sendCopyLastCommandOutput?.(window);
     },
     ...selectedWindowToggles(options, selectedWindowAction),
     openLocalImageInSelectedWindow: selectedWindowAction(

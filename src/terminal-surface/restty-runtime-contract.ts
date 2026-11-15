@@ -29,6 +29,9 @@ export type PatchedResttyRuntime = {
       // scrolled, leaving selection, scroll and cursor as they are; null
       // while the core isn't ready.
       getScreenText(): string | null;
+      // The latest finished command's output that has text, as the shell's
+      // OSC 133 marks bound it, without prompt or command line; "" without.
+      getLastCommandOutput(): string;
       selectAll(): boolean;
       scrollToBottom(): void;
       // Moves the view |delta| OSC 133 prompts up (negative) or down.

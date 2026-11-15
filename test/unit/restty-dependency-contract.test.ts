@@ -127,13 +127,13 @@ describe("Restty dependency contract", () => {
       path.join(packageRoot, "dist", "chunk-c0rcpsc5.js"),
     );
     expect(digest(runtime)).toBe(
-      "599f4c483ab13a414aac4ae94f0a60436c4a763bd11ce72c98f0a8703b3d7838",
+      "735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3",
     );
     const core = readFileSync(
       path.join(packageRoot, "dist", "chunk-6dxqza9q.js"),
     );
     expect(digest(core)).toBe(
-      "002160c6135a9ab99909e8e9b523890176d7a8e7ac2eebdb88217a214e5f6eb7",
+      "c61dd249e4e7555ff37b1701680f92d2172309efd4b29a07bf449b2137ac8ad5",
     );
     expect(core.toString("utf8")).toContain("restty_set_scrollback_limits");
     expect(core.toString("utf8")).toContain("restty_event_consume");

@@ -42,6 +42,10 @@ export interface TerminalSurface {
   // is its top row; a prompt on the live screen returns to the bottom. Does
   // nothing when the shell prints no marks.
   jumpToPrompt?(direction: TerminalPromptJump): void;
+  // Copies the output of the latest finished command that printed something,
+  // without its prompt or command line, as the shell's OSC 133 marks bound
+  // it. Leaves the clipboard alone when the shell prints no marks.
+  copyLastCommandOutput?(): Promise<void>;
   // Reads selection or retained screen/history without changing interaction state.
   exportText(kind: TerminalExportKind): string;
   // The active screen's rows as text, one line per row, wherever the user

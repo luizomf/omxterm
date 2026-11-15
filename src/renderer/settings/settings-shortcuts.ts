@@ -30,6 +30,7 @@ const MENU_KEYS: Readonly<
   find: "menu.find",
   jumpToPreviousPrompt: "menu.jumpToPreviousPrompt",
   jumpToNextPrompt: "menu.jumpToNextPrompt",
+  copyLastCommandOutput: "menu.copyLastCommandOutput",
   commandPalette: "action.commandPalette",
   newWindow: "menu.newWindow",
   closeWindow: "menu.closeWindow",

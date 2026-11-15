@@ -82,12 +82,14 @@ async function setup(
     paste: vi.fn(async () => {}),
     selectAll: vi.fn(),
     find: vi.fn(),
+    copyLastCommandOutput: vi.fn(async () => {}),
     exportText: vi.fn((kind: string) => `${kind} text`),
   };
   let openImage!: () => void;
   let openAbout!: () => void;
   let toggleTabBar!: () => void;
   let find!: () => void;
+  let copyLastCommandOutput!: () => void;
   let exportRequest!: (context: TerminalExportContext) => void;
   const saveTerminalExport = vi.fn(async () => {});
   const requestContextMenu =
@@ -180,6 +182,10 @@ async function setup(
         find = listener;
         return () => {};
       },
+      subscribeToCopyLastCommandOutput(listener) {
+        copyLastCommandOutput = listener;
+        return () => {};
+      },
       subscribeToExportRequests(listener) {
         exportRequest = listener;
         return () => {};
@@ -204,6 +210,7 @@ async function setup(
     openAbout,
     toggleTabBar,
     find: () => find(),
+    copyLastCommandOutput: () => copyLastCommandOutput(),
     exportRequest: (context: TerminalExportContext) => exportRequest(context),
     saveTerminalExport,
     requestContextMenu,
@@ -399,6 +406,7 @@ describe("local image preview through the Terminal Window host", () => {
         view.clipboard("copy");
         view.clipboard("select-all");
         view.find();
+        view.copyLastCommandOutput();
         view.surfaceOptions.clipboard!.requestContextMenu({
           target: "terminal",
           hasSelection: true,
@@ -423,6 +431,7 @@ describe("local image preview through the Terminal Window host", () => {
       expect.soft(view.surface.copy).not.toHaveBeenCalled();
       expect.soft(view.surface.selectAll).not.toHaveBeenCalled();
       expect.soft(view.surface.find).not.toHaveBeenCalled();
+      expect.soft(view.surface.copyLastCommandOutput).not.toHaveBeenCalled();
       expect.soft(view.surface.exportText).not.toHaveBeenCalled();
       expect.soft(view.saveTerminalExport).not.toHaveBeenCalled();
       expect.soft(view.surface.inject).not.toHaveBeenCalled();
@@ -435,6 +444,7 @@ describe("local image preview through the Terminal Window host", () => {
       expect(view.surface.copy).toHaveBeenCalledOnce();
       expect(view.surface.selectAll).toHaveBeenCalledOnce();
       expect(view.surface.find).toHaveBeenCalledOnce();
+      expect(view.surface.copyLastCommandOutput).toHaveBeenCalledOnce();
       expect(view.surface.exportText).toHaveBeenCalledExactlyOnceWith(
         "selection",
       );

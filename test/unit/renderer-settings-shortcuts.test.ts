@@ -449,7 +449,7 @@ describe("Shortcuts filter", () => {
   it("reads a spelled-out modifier as a key only inside a combination", async () => {
     await open(createRendererLanguage("en-US"), "darwin");
     type("command");
-    expect(shown()).toEqual(["commandPalette"]);
+    expect(shown()).toEqual(["copyLastCommandOutput", "commandPalette"]);
     type("win");
     expect(shown()).toContain("newWindow");
     expect(shown()).not.toContain("moveAuxiliaryPanel");

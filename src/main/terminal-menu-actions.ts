@@ -42,6 +42,8 @@ export function terminalMenuActions(
       application.clipboardSelectedWindow("select-all"),
     findInSelectedTerminal: application.findInSelectedWindow,
     jumpToPromptInSelectedTerminal: application.jumpToPromptInSelectedWindow,
+    copyLastCommandOutputInSelectedTerminal:
+      application.copyLastCommandOutputInSelectedWindow,
     toggleSelectedSnippets: application.toggleSelectedSnippets,
     toggleSelectedTabBar: application.toggleSelectedTabBar,
     toggleSelectedPaneMarks: application.toggleSelectedPaneMarks,

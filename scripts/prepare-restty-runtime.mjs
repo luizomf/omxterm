@@ -12,6 +12,7 @@ import { wideWrapLinkCorrections } from "./restty-wide-wrap-corrections.mjs";
 import { cprCorrections } from "./restty-cpr-corrections.mjs";
 import { cff2Corrections } from "./restty-cff2-corrections.mjs";
 import { promptJumpCorrections } from "./restty-prompt-jump-corrections.mjs";
+import { commandOutputCorrections } from "./restty-command-output-corrections.mjs";
 import { inputRoutingCorrections } from "./restty-input-routing-corrections.mjs";
 import {
   altScreenCorrections,
@@ -83,10 +84,13 @@ const priorImageLimitCoreDigest =
 // Carries every JavaScript core correction; only its WASM changed.
 const priorWasmAddressCoreDigest =
   "9a8b8cc33d845e94ca0c957ab38edc0d7b7b1c82a0be6f1f5c1046f2536d32e9";
-const correctedCoreDigest =
+// The prompt-jump core: every JavaScript core correction; only its WASM changed.
+const priorPromptJumpCoreDigest =
   "002160c6135a9ab99909e8e9b523890176d7a8e7ac2eebdb88217a214e5f6eb7";
+const correctedCoreDigest =
+  "c61dd249e4e7555ff37b1701680f92d2172309efd4b29a07bf449b2137ac8ad5";
 const correctedCoreWasmDigest =
-  "a2f3c1f2de08df1e79c72a629824e87fab498acf37330b5feeb384b45e5304e9";
+  "045bd4cdd61bf235ac622a8d1ca509a6fc0b4ce018c11a0d86c7ee9d78ec16f8";
 const originalEventTypesDigest =
   "1c9383be2d0377635b3463a5ac2ec31eac3e2b233fc664de751ad3e9f54ea650";
 const correctedEventTypesDigest =
@@ -197,8 +201,10 @@ const priorCff2Digest =
   "1a067f98ac1905611f51d186a95bae144c496174a6aa0f5de4ddea591608f533";
 const priorPromptJumpDigest =
   "5b89db17bcc3274adfb8b57a426df4cd8fcc84671c0d0f8b2abfe22f470d8ca8";
-const correctedDigest =
+const priorCommandOutputDigest =
   "599f4c483ab13a414aac4ae94f0a60436c4a763bd11ce72c98f0a8703b3d7838";
+const correctedDigest =
+  "735bcf064ba7c7e1e0cadc8b2f70e6c6c1e3c2c09881377e54d55dc4d5a314d3";
 
 const nativeScrollFeedbackCorrections = [
   {
@@ -1852,6 +1858,7 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     sourceDigest !== priorKittyContinuationCoreDigest &&
     sourceDigest !== priorImageLimitCoreDigest &&
     sourceDigest !== priorWasmAddressCoreDigest &&
+    sourceDigest !== priorPromptJumpCoreDigest &&
     sourceDigest !== priorInteractionCoreDigest
   )
     throw new Error(
@@ -1867,7 +1874,8 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
   if (
     sourceDigest !== priorKittyContinuationCoreDigest &&
     sourceDigest !== priorImageLimitCoreDigest &&
-    sourceDigest !== priorWasmAddressCoreDigest
+    sourceDigest !== priorWasmAddressCoreDigest &&
+    sourceDigest !== priorPromptJumpCoreDigest
   ) {
     source = applyCorrections(
       source,
@@ -1886,7 +1894,10 @@ async function prepareResttyCore(selectedCorePath, selectedArtifactPath) {
     );
     source = applyCorrections(source, applicationCursorCoreCorrections);
   }
-  if (sourceDigest !== priorWasmAddressCoreDigest)
+  if (
+    sourceDigest !== priorWasmAddressCoreDigest &&
+    sourceDigest !== priorPromptJumpCoreDigest
+  )
     source = applyCorrections(source, wasmAddressCorrections);
   if (digest(source) !== correctedCoreDigest)
     throw new Error(
@@ -2105,6 +2116,8 @@ export async function prepareResttyRuntime(options = {}) {
         source = applyCorrections(source, cff2Corrections);
       case priorPromptJumpDigest:
         source = applyCorrections(source, promptJumpCorrections);
+      case priorCommandOutputDigest:
+        source = applyCorrections(source, commandOutputCorrections);
         break;
       default:
         throw new Error(

@@ -132,7 +132,7 @@ it("asks about every pane of the tab a close would take", async () => {
 });
 
 it("refuses the grant toggle by action, whatever key it is bound to", async () => {
-  for (const binding of ["F9", "CommandOrControl+Shift+A"]) {
+  for (const binding of ["F9", "CommandOrControl+Shift+Y"]) {
     const window = grantedWindow({
       keybinds: {
         ...terminalDefaultKeybinds("darwin"),
@@ -189,6 +189,7 @@ it("runs zoom, copy, select all and the bar toggles on the pane it names", async
     "Cmd+Shift+D": { action: "toggle-title-bar" },
     "Cmd+Shift+Up": { action: "jump-to-prompt", direction: "previous" },
     "Cmd+Shift+Down": { action: "jump-to-prompt", direction: "next" },
+    "Cmd+Shift+A": { action: "copy-last-command-output" },
   };
   for (const [chord, command] of Object.entries(commands)) {
     await expect(window.press("s3", chord), chord).resolves.toMatchObject({

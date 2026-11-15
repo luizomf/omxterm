@@ -37,6 +37,11 @@ it("copies, selects, jumps and toggles the bars for an agent on the pane it name
     "previous",
   );
   expect(harness.surfaces[1]!.jumpToPrompt).not.toHaveBeenCalled();
+  await harness.tabs.runSessionCommand("output", "s1", {
+    action: "copy-last-command-output",
+  });
+  expect(harness.surfaces[0]!.copyLastCommandOutput).toHaveBeenCalledOnce();
+  expect(harness.surfaces[1]!.copyLastCommandOutput).not.toHaveBeenCalled();
 
   expect(harness.strip.hidden).toBe(false);
   await harness.tabs.runSessionCommand("three", "s2", {

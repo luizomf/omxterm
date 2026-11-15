@@ -95,6 +95,7 @@ const harness = vi.hoisted(() => {
           selectAll: vi.fn(() => false),
           scrollToBottom: vi.fn(),
           scrollToPrompt: vi.fn(),
+          getLastCommandOutput: vi.fn(() => ""),
           getVisibleLinkAtClientPoint: vi.fn(() => null),
           setVisibleLinkHover: vi.fn(),
           updateSize: this.updateSize,

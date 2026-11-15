@@ -212,6 +212,7 @@ Every shortcut needs a key and at least one modifier other than Shift. Function 
 | `selectAll` / `find`                  | `Cmd+A` / `Cmd+F`                                                     | `Ctrl+Shift+A` / `Ctrl+Shift+F`            |
 | `jumpToPreviousPrompt`                | `Cmd+Shift+Up`                                                        | `Ctrl+Shift+Up`                            |
 | `jumpToNextPrompt`                    | `Cmd+Shift+Down`                                                      | `Ctrl+Shift+Down`                          |
+| `copyLastCommandOutput`               | `Cmd+Shift+A`                                                         | `Ctrl+Shift+G`                             |
 | `newWindow` / `newTab`                | `Cmd+N` / `Cmd+T`                                                     | `Ctrl+Shift+N` / `Ctrl+Shift+T`            |
 | `closeTab` / `closeWindow`            | `Cmd+W` / `Cmd+Shift+W`                                               | `Ctrl+Shift+W` / `Ctrl+Shift+Q`            |
 | `nextTab` / `previousTab`             | `Ctrl+Tab` / `Ctrl+Shift+Tab`                                         | `Ctrl+PageDown` / `Ctrl+PageUp`            |

@@ -53,3 +53,5 @@ Edit menu, in the Command Palette and in Settings → Shortcuts. An agent's
   Next from the last prompt in scrollback lands on the live screen.
 - **A rebuilt core.** The export is one more function in the tracked patch
   and WASM, rebuilt with the pinned Zig.
+  [ADR 0057](0057-copy-the-last-command-output-from-the-core.md) adds the
+  next one, for Copy Last Command Output.

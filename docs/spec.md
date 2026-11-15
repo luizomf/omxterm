@@ -85,7 +85,8 @@ OMXTerm:
   per Terminal Tab and one or more Application Tabs per native Terminal Window,
   including an optional graphical Settings tab;
 - provides native new-window, new-tab, close, copy, paste, select-all,
-  scrollback search, prompt-to-prompt jumps, explicit text export, zoom,
+  scrollback search, prompt-to-prompt jumps, copying the last command's
+  output, explicit text export, zoom,
   fullscreen, always-on-top,
   bounded local-image preview, and quit actions without an in-window toolbar;
 - renders the bundled [`omtheme`](omtheme.json) palette by default and allows
@@ -1582,8 +1583,9 @@ OMXTerm uses standard xterm capabilities and does not inject shell integration
 [ADR 0013](adr/0013-do-not-inject-shell-integration.md)).
 Main reads the OSC 133 command marks a shell prints (`A` prompt, `C` command
 start, `D;<code>` command end), in local and SSH Connect panes alike, for the
-agent API's `wait`, and the core keeps its own prompt row marks for
-[prompt jumps](#prompt-jumps); the [shell integration guide](shell-integration.md) has
+agent API's `wait`, and the core keeps its own prompt and output marks for
+[prompt jumps](#prompt-jumps) and
+[Copy Last Command Output](#copy-last-command-output); the [shell integration guide](shell-integration.md) has
 the lines users add for zsh, bash and PowerShell (their prompt mark says `redraw=0`, so a
 resize keeps the prompt; a marked prompt after output that didn't end its line
 starts on a new line), and fish 4.0 prints them by default
@@ -1994,6 +1996,24 @@ paths open a Local Image Preview
   show nothing. They are ignored while a Local Image Preview or About owns
   modal input.
 
+### Copy Last Command Output
+
+- **Edit → Copy Last Command Output** (`copyLastCommandOutput`: `Cmd+Shift+A`
+  on macOS, `Ctrl+Shift+G` on Linux and Windows, also in the Command Palette)
+  copies what the focused pane's latest finished command printed, without its
+  prompt or command line, as the shell's OSC 133 marks bound it (`C` starts the
+  output, the next prompt ends it). The text matches selecting that output by
+  hand; selection and scroll don't change
+  ([ADR 0057](adr/0057-copy-the-last-command-output-from-the-core.md)).
+- The prompt at the bottom is the live one or the running command's, so it's
+  skipped. A command that printed nothing (an empty Enter, `cd`) is skipped
+  too: the copy is the latest output there is.
+- It copies quietly, like Copy. With no marks (no
+  [shell integration](shell-integration.md), tmux, a remote shell without the
+  lines, the PowerShell lines, which mark no output start), on the alternate
+  screen, or with no output yet, the clipboard stays as it was. It is ignored
+  while a Local Image Preview or About owns modal input.
+
 ### Terminal export
 
 - The terminal context menu offers **Export Selection…** when selected text
@@ -2296,7 +2316,7 @@ Vocabulary:
 
 - `keybinds` remaps this fixed action set: `quit`, `copy`, `paste`,
   `selectAll`, `find`, `jumpToPreviousPrompt`, `jumpToNextPrompt`,
-  `newWindow`, `closeWindow`, `newTab`, `closeTab`,
+  `copyLastCommandOutput`, `newWindow`, `closeWindow`, `newTab`, `closeTab`,
   `nextTab`, `previousTab`, `selectTab1`–`selectTab9`, `zoomIn`, `zoomOut`,
   `actualSize`, `toggleFullScreen`, `toggleSnippets`, `toggleFiles`,
   `toggleSshConnect`, `toggleAuxiliaryPanel`, `toggleTabBar`, `togglePaneMarks`,

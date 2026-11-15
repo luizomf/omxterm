@@ -56,6 +56,7 @@ const harness = vi.hoisted(() => {
           selectAll: this.selectAll,
           scrollToBottom: vi.fn(),
           scrollToPrompt: this.scrollToPrompt,
+          getLastCommandOutput: vi.fn(() => ""),
           updateSize: vi.fn(),
         },
         terminal: {

@@ -27,6 +27,9 @@ export interface TerminalWindowActionSubscriptions {
   readonly subscribeToJumpToPrompt?: (
     listener: (direction: TerminalPromptJump) => void,
   ) => () => void;
+  readonly subscribeToCopyLastCommandOutput?: (
+    listener: () => void,
+  ) => () => void;
   readonly subscribeToExportRequests?: TerminalBridge["onExportRequest"];
   readonly saveTerminalExport?: TerminalBridge["saveTerminalExport"];
 }
@@ -83,6 +86,10 @@ export function subscribeToGuardedActions(
     () =>
       options.subscribeToJumpToPrompt?.((direction) => {
         if (!blocked()) tabs.jumpToPrompt(direction);
+      }),
+    () =>
+      options.subscribeToCopyLastCommandOutput?.(() => {
+        if (!blocked()) tabs.copyLastCommandOutput();
       }),
     () =>
       options.subscribeToExportRequests?.((context) => {

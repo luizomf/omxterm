@@ -42,6 +42,7 @@ export interface TerminalBridge {
   // Whether a text field, not the terminal, holds focus in this page.
   textEntryFocus?(editing: boolean): void;
   onJumpToPrompt(listener: (direction: TerminalPromptJump) => void): () => void;
+  onCopyLastCommandOutput(listener: () => void): () => void;
   onTitleBarToggle(listener: () => void): () => void;
   windowChrome(command: WindowChromeCommand): void;
   onWindowChrome(listener: (state: WindowChromeState) => void): () => void;

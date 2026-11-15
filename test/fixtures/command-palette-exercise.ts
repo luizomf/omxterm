@@ -85,6 +85,7 @@ export async function exerciseCommandPalette(options: {
     selectAllSelectedTerminal: unexpected,
     findInSelectedTerminal: unexpected,
     jumpToPromptInSelectedTerminal: unexpected,
+    copyLastCommandOutputInSelectedTerminal: unexpected,
     reloadUserConfiguration: unexpected,
     openLocalImage: unexpected,
     showAbout: options.showAbout,
