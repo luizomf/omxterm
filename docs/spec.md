@@ -754,7 +754,7 @@ Connect share it; no per-tool placement or second panel exists.
 - The header names tools with icons, never words: a labeled switcher with one
   icon button per open tool, also when only one is open. Each button's tooltip
   and accessible name are the tool's name. The selected tool's icon is in the
-  full text color on a soft fill; the others are one tier quieter. One view is
+  full text color on the selected-row fill; the others are one tier quieter. One view is
   visible at a time; switcher buttons select without closing.
 - The host owns the icons: Files is a folder, Snippets a pair of angle
   brackets, SSH Connect a server. An extension never names, ships or draws

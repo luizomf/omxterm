@@ -127,8 +127,11 @@ it.each([
     expect(child.querySelector("h1")).toBeNull();
     expect(child.body.textContent).toContain(loading);
 
-    f.open("other", true, false, "Other tool");
+    f.open("other", true, false, "Other tool", "server");
     await settle();
+    expect(
+      f.tool("Other tool").querySelector("svg")?.getAttribute("data-icon"),
+    ).toBe("server");
     f.tool(label).click();
     await settle();
     expect(f.tool(label).getAttribute("aria-pressed")).toBe("true");

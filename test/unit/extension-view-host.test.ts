@@ -368,9 +368,12 @@ it("publishes actual panel focus with one-shot default intent, not retained on l
   const descriptor = await host.open({
     ...opening,
     presentation: "panel",
+    icon: "folder",
     panelDefaultToken,
   });
   expect(descriptor.presentation).toBe("panel");
+  // The tool's switcher icon travels with every open, first or revealed.
+  expect(descriptor.icon).toBe("folder");
   expect(descriptor).not.toHaveProperty("panelDefaultToken");
   host.reveal(descriptor);
   expect(f.native.createView).toHaveBeenCalledTimes(1);

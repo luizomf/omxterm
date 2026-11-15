@@ -328,8 +328,8 @@ textarea.page-control {
   background: var(--ui-control-selected);
 }
 /* Switcher: a row of icon buttons that shows one of a few views at a time.
-   The icon's tier says which one: full text color on the quietest fill for
-   the current view, secondary for the others. Names live in the tooltip and
+   The icon's tier says which one: full text color on the selected fill for
+   the current view, secondary and no fill for the others. Names live in the tooltip and
    the accessible name, never beside the icon. */
 .ui-switcher {
   display: flex;
@@ -345,7 +345,7 @@ textarea.page-control {
 .ui-switcher > .ui-icon-button[aria-pressed="true"],
 .ui-switcher > .ui-icon-button[aria-pressed="true"]:hover:not(:disabled) {
   color: var(--ui-text);
-  background: var(--ui-control);
+  background: var(--ui-control-selected);
 }
 /* A view with no icon: the first letter of its name, in an icon's box. */
 .ui-monogram {

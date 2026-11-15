@@ -3,6 +3,7 @@ import type {
   HostedContentBridge,
   HostedContentDescriptor,
   HostedContentPresentation,
+  HostedToolIcon,
 } from "../../src/shared/extension-view";
 import { snippetsWindow } from "./snippets-window";
 
@@ -66,11 +67,18 @@ export async function fixture(
     bridge,
     sshPane,
     focus,
-    open(id = "files", panel = true, toggle = false, title = id) {
+    open(
+      id = "files",
+      panel = true,
+      toggle = false,
+      title = id,
+      icon?: HostedToolIcon,
+    ) {
       for (const listener of opens)
         listener({
           id,
           title,
+          ...(icon ? { icon } : {}),
           ...(toggle ? { toggle: true as const } : {}),
           ...(panel ? { presentation: "panel" as const } : {}),
         });
