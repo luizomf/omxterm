@@ -43,9 +43,12 @@ screen, or with no output yet, the clipboard stays as it was.
 
 ## Tradeoffs
 
-- **PowerShell isn't covered yet.** The documented PowerShell lines print `D`
-  and `A` but no `C`, so the core can't tell output from the command line and
-  nothing is copied. zsh, bash and fish mark output.
+- **PowerShell marks output through PSReadLine.** PowerShell has no hook for
+  a command's start, so its lines wrap PSReadLine's `PSConsoleHostReadLine`
+  and print `C` once the line is read, as VS Code's integration does. Without
+  PSReadLine there's no `C` and nothing to copy. A wrapper that reads no line
+  throws, so PowerShell reads the line itself (checked with Windows PowerShell
+  5.1 and PowerShell 7.7 through ConPTY).
 - **Terminal programs lose `Ctrl+Shift+G` on Linux and Windows.** It can be
   rebound or unbound in `keybinds`, like other shifted shortcuts there.
 - **A rebuilt core.** One more export in the tracked patch and WASM, rebuilt

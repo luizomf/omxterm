@@ -2020,7 +2020,7 @@ paths open a Local Image Preview
   too: the copy is the latest output there is.
 - It copies quietly, like Copy. With no marks (no
   [shell integration](shell-integration.md), tmux, a remote shell without the
-  lines, the PowerShell lines, which mark no output start), on the alternate
+  lines, PowerShell without PSReadLine), on the alternate
   screen, or with no output yet, the clipboard stays as it was. It is ignored
   while a Local Image Preview or About owns modal input.
 

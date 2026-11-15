@@ -8,8 +8,7 @@ whether it worked, instead of guessing from the screen
 scrollback with **Edit → Jump to Previous Prompt** (`Cmd+Shift+Up`, or
 `Ctrl+Shift+Up` on Linux and Windows) and **Jump to Next Prompt**, and copy
 what the last command printed with **Edit → Copy Last Command Output**
-(`Cmd+Shift+A`, or `Ctrl+Shift+G`). The PowerShell lines don't mark where output
-starts, so that copy needs zsh, bash or fish for now.
+(`Cmd+Shift+A`, or `Ctrl+Shift+G`).
 
 OMXTerm never edits your startup files or adds anything to your shell
 ([ADR 0054](adr/0054-read-command-marks-for-agents.md)). It only reads the
@@ -63,7 +62,7 @@ Windows PowerShell 5.1 and PowerShell 7. Add this to the end of your profile
 
 ```powershell
 # Command marks for the terminal (OSC 133)
-$global:__omxtermPrompt = $function:prompt
+if ("$function:prompt" -notmatch '__omxterm') { $global:__omxtermPrompt = $function:prompt }
 $global:__omxtermLastId = (Get-History -Count 1).Id
 function global:prompt {
   $ok = $?
@@ -76,11 +75,26 @@ function global:prompt {
   $global:__omxtermLastId = $id
   "$mark$e]133;A;redraw=0$a" + (& $global:__omxtermPrompt)
 }
+# Output starts once PSReadLine has read the line. If that read fails,
+# PowerShell reads the line itself.
+if ((Test-Path Function:\PSConsoleHostReadLine) -and
+    "$function:PSConsoleHostReadLine" -notmatch '__omxterm') {
+  $global:__omxtermReadLine = $function:PSConsoleHostReadLine
+  function global:PSConsoleHostReadLine {
+    $line = & $global:__omxtermReadLine
+    if ($null -eq $line) { throw }
+    [Console]::Write("$([char]27)]133;C$([char]7)")
+    $line
+  }
+}
 ```
 
 If Windows PowerShell says running scripts is disabled, it isn't loading any
 profile; `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` lets it load
 yours. A failed cmdlet reports exit code 1; a program reports its own.
+Output is marked through PSReadLine, which both versions load by default;
+without it, prompts and exit codes still work, but there's no output to copy.
+Running `. $PROFILE` again is safe.
 
 ## fish
 
