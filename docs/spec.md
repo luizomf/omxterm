@@ -2631,12 +2631,17 @@ Live and restart-only settings:
 
 Controls:
 
-- Covers `language`, `confirmClose`, `logLevel`, `windowsShell` (Windows), the
+- Covers `language`, `confirmClose`, `windowsShell` (Windows), the
   font fields, `terminal.padding`, `terminal.contextMenuEnabled`,
   `scrollback.lines`, `keyboard.optionAsAlt` (macOS), the new-window defaults
   (`showTitleBar`, `showTabBar`, `showPaneMarks`, `alwaysOnTop`), `auxiliaryPanelSide`,
-  `theme.path`, `transparency`, `blur` and the `notifications` fields
-  (Terminal page).
+  `transparency`, `blur` and the `notifications` fields
+  (Terminal page). The theme picker writes `theme.path`. `logLevel` and a
+  theme path outside `themes/` have no control: they are edited in the config
+  file.
+- Every setting is one row: its name on the left and its control, checkboxes
+  included, at the right edge. `terminal.padding` is one **Padding** row with
+  a field per side, each saving its own entry.
 - A change saves immediately; clearing a field removes the entry. The language
   selector shows **English (United States)** and **Português (Brasil)** in any
   interface language.
@@ -2649,9 +2654,13 @@ Controls:
 
 Shortcuts page:
 
-- Shows each action's effective shortcut as a key chip. Custom and unbound
-  bindings are marked in text; an unmarked binding is the default. Default removes the entry (and an emptied group), Unbind writes
-  `null`, and recording writes an accelerator, all through the normal save.
+- Shows each action's effective shortcut as quiet key text (`⇧ ⌘ W` on macOS,
+  `Ctrl+Shift+W` elsewhere), or **None**. A row's **Change** and **Remove**
+  appear while the row is hovered or holds keyboard focus; **Reset** shows
+  only on a custom or unbound row, which is how such a row is told apart
+  (assistive technology also reads its state). Reset removes the entry (and
+  an emptied group), Remove writes `null` and is absent on a row without a
+  shortcut, and Change records an accelerator, all through the normal save.
   Recording another action's default takes the key; that action shows no
   shortcut until it is recorded again or the taking entry is reset.
 - A search field above the list filters it by action name in the Interface
@@ -2684,7 +2693,7 @@ Shortcuts page:
 - Each capture request, stop and notification carries a recording identity: a
   retired notification cannot save or cancel a newer recording, and a retired
   stop cannot release its keyboard.
-- Record/Cancel, Unbind and Default have localized, action-specific accessible
+- Change/Cancel, Remove and Reset have localized, action-specific accessible
   names that follow the current operation.
 
 Config file page and writes:

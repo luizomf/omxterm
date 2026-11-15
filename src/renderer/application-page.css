@@ -15,7 +15,7 @@
   color: var(--ui-text);
   background: var(--ui-surface);
   color-scheme: var(--ui-color-scheme, dark);
-  font: 14px/1.5 var(--ui-font);
+  font: var(--ui-text-chrome) / 1.5 var(--ui-font);
 }
 .application-page.has-navigation {
   grid-template-columns: 168px minmax(0, 1fr);
@@ -31,12 +31,12 @@
 }
 .application-page-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--ui-text-title);
   font-weight: 600;
 }
-/* Section titles sit on the 14 px body size; only the page title is 18 px. */
+/* Section titles keep the page's text size; only the page title is larger. */
 .application-page :is(h3, h4) {
-  font-size: 14px;
+  font-size: inherit;
   font-weight: 600;
 }
 .application-page-header > button {
@@ -99,10 +99,6 @@
     padding-bottom: 8px;
     gap: 12px;
   }
-  .application-page-header h2 {
-    font-size: 18px;
-  }
-
   .application-page-content {
     grid-row: 4;
   }

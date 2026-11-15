@@ -217,8 +217,9 @@ node scripts/convert-ghostty-theme.mjs input-theme output-theme.json
   per theme and 4 MiB of configuration. It doesn't watch for changes; the user
   chooses **Refresh themes**. Missing folders, unreadable or invalid files and a
   truncated list are reported. Discovery never edits theme files.
-- A custom path outside `themes/` may not show as a selected card; the
-  **Theme file (advanced)** field still accepts relative or absolute paths.
+- A custom path outside `themes/` doesn't show as a selected card. Settings
+  has no field for it; `theme.path` in the config file accepts relative or
+  absolute paths.
 
 ### Author a theme
 

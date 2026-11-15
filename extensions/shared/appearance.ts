@@ -1,5 +1,8 @@
 import type { HostedAppearance } from "../../src/shared/extension-view.js";
-import { luminance } from "../../src/renderer/terminal-pane-accent.js";
+import {
+  fieldBorderTone,
+  luminance,
+} from "../../src/renderer/terminal-pane-accent.js";
 
 export interface AppearanceBridge {
   onAppearance(listener: (appearance: HostedAppearance) => void): () => void;
@@ -16,6 +19,10 @@ export function mountHostedAppearance(
     root.style.setProperty("--terminal-background", background);
     root.style.setProperty("--terminal-foreground", foreground);
     root.style.setProperty("--terminal-background-opacity", String(opacity));
+    root.style.setProperty(
+      "--terminal-field-border",
+      fieldBorderTone(background, foreground),
+    );
     root.style.colorScheme = luminance(background) > 0.179 ? "light" : "dark";
   });
 }

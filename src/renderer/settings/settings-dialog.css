@@ -61,19 +61,12 @@ body.tabs-visible .settings-tab {
   max-width: 720px;
   min-width: 0;
 }
-/* Form pages read as one list: rows separated by hairlines, not gaps. */
+/* Form pages are one ui-form: rows separated by hairlines, not gaps. */
 .settings-form {
   gap: 0;
 }
 .settings-form > .settings-themes {
   margin-block-end: 24px;
-}
-.settings-form > .settings-row {
-  padding-block: 12px;
-  border-block-end: 1px solid var(--ui-decoration);
-}
-.settings-form > .settings-row:has(+ .settings-background-hint) {
-  border-block-end: 0;
 }
 .extensions-status,
 .extensions-installed,
@@ -217,7 +210,7 @@ body.tabs-visible .settings-tab {
 .settings-theme-selected {
   display: none;
   color: var(--ui-secondary);
-  font-size: 12px;
+  font-size: var(--ui-text-meta);
 }
 .settings-theme-card
   input:checked
@@ -227,7 +220,7 @@ body.tabs-visible .settings-tab {
 }
 .settings-theme-path {
   color: var(--ui-secondary);
-  font-size: 12px;
+  font-size: var(--ui-text-meta);
   overflow-wrap: anywhere;
 }
 .settings-themes-invalid {
@@ -260,7 +253,6 @@ body.tabs-visible .settings-tab {
 }
 .settings-theme-editor h4 {
   margin: 0;
-  font-size: 14px;
 }
 .settings-theme-color-controls {
   display: flex;
@@ -269,9 +261,9 @@ body.tabs-visible .settings-tab {
   align-items: end;
 }
 .settings-theme-color-controls input[type="color"] {
-  width: 48px;
-  height: 40px;
-  padding: 4px;
+  width: 40px;
+  height: 28px;
+  padding: 3px;
 }
 .settings-theme-color-controls .settings-row {
   display: flex;
@@ -353,40 +345,34 @@ body.tabs-visible .settings-tab {
 .settings-theme-use {
   align-items: flex-start;
 }
-.settings-row {
+/* A labelled field outside a form list (the theme editor, the install
+   link): the name above its field. Form rows are ui-form-row. */
+.settings-row:not(.ui-form-row) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 4px;
   min-width: 0;
   width: 100%;
 }
 .settings-row > span {
   overflow-wrap: anywhere;
 }
-.settings-toggle {
-  flex-direction: row;
-  align-items: center;
-}
-.settings-row input:not([type="checkbox"]),
-.settings-row select {
+.settings-row:not(.ui-form-row) :is(input, select) {
   width: min(100%, 384px);
   min-width: 0;
-}
-.settings-number input {
-  max-width: 112px;
 }
 .settings-range-control {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: min(100%, 384px);
+  width: 280px;
   min-width: 0;
 }
 .settings-range-control input[type="range"] {
   flex: 1;
   width: 0;
-  min-height: 36px;
+  min-height: 28px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -398,13 +384,6 @@ body.tabs-visible .settings-tab {
   min-width: 4ch;
   text-align: end;
   font-variant-numeric: tabular-nums;
-}
-.settings-form > .settings-background-hint {
-  /* Its hairline spans the row width like the rows around it. */
-  max-width: none;
-  padding-block: 0 12px;
-  border-block-end: 1px solid var(--ui-decoration);
-  font-size: 12px;
 }
 .settings-config-file {
   min-height: 100%;
@@ -431,12 +410,12 @@ body.tabs-visible .settings-tab {
 }
 .settings-shortcuts > .settings-hint {
   max-width: none;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
-/* A field like any other in Settings: it ends at the 384 px field boundary. */
+/* A field like any other in Settings: 280 px, or the row when narrower. */
 .settings-shortcut-filter {
   width: 100%;
-  max-width: 384px;
+  max-width: 280px;
   margin-bottom: 8px;
 }
 .settings-shortcut-empty {
@@ -445,101 +424,34 @@ body.tabs-visible .settings-tab {
 .settings-shortcut[hidden] {
   display: none;
 }
-.settings-shortcut {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px 16px;
-  align-items: center;
-  min-height: 48px;
-  padding-block: 6px;
-  border-bottom: 1px solid var(--ui-decoration);
-}
-.settings-shortcut-name,
-.settings-shortcut-binding {
+/* The keys end every row at the content edge; the row's actions sit just
+   before them, so nothing moves when they appear. */
+.settings-shortcut-name {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .settings-shortcut-binding {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-}
-.settings-shortcut-state:empty {
-  display: none;
-}
-.settings-shortcut-state {
-  font-size: 12px;
-  color: var(--ui-secondary);
-}
-.settings-shortcut-actions {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-/* Quiet row actions; the binding is what the eye should find. */
-.settings-shortcut-actions .page-button-text {
-  color: var(--ui-secondary);
-}
-.settings-shortcut-record {
-  min-width: 72px;
+  min-width: 64px;
+  text-align: end;
 }
 .settings-shortcut.is-recording .settings-shortcut-value {
-  font-weight: 600;
+  color: var(--ui-text);
 }
-.settings-shortcut.is-recording .settings-shortcut-record {
-  border-color: var(--ui-text);
-}
-@container (min-width: 560px) {
-  .settings-row:not(.settings-toggle) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(112px, 384px);
-    align-items: center;
-  }
-}
-@container (min-width: 600px) {
-  .settings-shortcut {
-    grid-template-columns: minmax(144px, 1fr) minmax(112px, 200px) auto;
-  }
-  .settings-shortcut-actions {
-    grid-column: auto;
-  }
-}
-@media (max-height: 360px) {
+@media (min-width: 640px) and (max-height: 360px) {
   /* Reserve a usable navigation scrollport even when the page itself scrolls. */
   .settings-body .settings-tabs {
     min-height: min(72px, 34vh);
   }
 }
 @media (max-width: 639px) {
-  /* Keep the sidebar at compact desktop widths; don't clip its last row. */
-  .settings-body.application-page.has-navigation {
-    grid-template-columns: minmax(120px, 168px) minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-  }
-  .settings-body .application-page-content {
-    grid-row: 3;
-  }
-  .settings-body .application-page-status {
-    grid-row: 4;
-  }
-}
-@media (max-width: 479px) {
+  /* No room for a sidebar: the categories become one wrapping row above the
+     page, and the page keeps the only scrollbar. */
   .settings-body.application-page.has-navigation {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   }
   .settings-body .settings-tabs {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-auto-rows: minmax(36px, auto);
-    max-height: min(180px, 34vh);
-  }
-  .settings-body .application-page-content {
-    grid-row: 4;
-  }
-  .settings-body .application-page-status {
-    grid-row: 5;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 }

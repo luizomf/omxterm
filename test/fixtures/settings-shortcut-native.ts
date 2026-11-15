@@ -347,7 +347,7 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       await waitFor(
         () =>
           evaluate<boolean>(
-            `${button}.textContent === 'Record' && document.querySelector('.settings-status').classList.contains('error')`,
+            `${button}.textContent === 'Change' && document.querySelector('.settings-status').classList.contains('error')`,
           ),
         `${phase} collision result`,
       );
@@ -446,7 +446,7 @@ export async function exerciseShortcutCapture(options: ShortcutCaptureOptions) {
       await waitFor(
         () =>
           evaluate<boolean>(
-            `${status} === 'Recording cancelled.' && ${button}.textContent === 'Record'`,
+            `${status} === 'Recording cancelled.' && ${button}.textContent === 'Change'`,
           ),
         "real no-input timeout",
         35_000,

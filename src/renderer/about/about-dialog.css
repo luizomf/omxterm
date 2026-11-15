@@ -5,7 +5,7 @@
 .about-dialog h2 {
   margin: 0 0 var(--ui-space-4);
   color: var(--ui-secondary);
-  font-size: var(--ui-text-body);
+  font-size: var(--ui-text-chrome);
   font-weight: 500;
 }
 .about-dialog p {

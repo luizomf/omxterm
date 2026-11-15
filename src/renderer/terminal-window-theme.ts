@@ -1,6 +1,7 @@
 import type { TerminalTheme } from "../shared/terminal-theme";
 import type { TerminalRendererConfiguration } from "../shared/user-configuration";
 import {
+  fieldBorderTone,
   luminance,
   terminalAgentTone,
   terminalPaneAccent,
@@ -37,6 +38,10 @@ export function applyWindowTheme(
   // A consent mark can't be something a theme turns off: its tone ignores
   // activePaneHighlight.
   style.setProperty("--terminal-agent", terminalAgentTone(theme));
+  style.setProperty(
+    "--terminal-field-border",
+    fieldBorderTone(background, foreground),
+  );
   const highlight = appearance?.activePaneHighlight;
   style.setProperty(
     "--terminal-pane-accent",

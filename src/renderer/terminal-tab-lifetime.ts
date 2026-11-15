@@ -38,8 +38,7 @@ export function terminalPaneEnded(
     notice.dataset.exitCode = String(exit.exitCode);
     notice.append(pane.container.ownerDocument.createElement("span"));
     const close = pane.container.ownerDocument.createElement("button");
-    close.className =
-      "page-control page-button page-button-quiet page-button-compact";
+    close.className = "page-control page-button page-button-quiet";
     close.addEventListener("keydown", (event) => keyboard.track(event, close));
     close.addEventListener("click", () => panes.closePane(pane));
     notice.append(close);

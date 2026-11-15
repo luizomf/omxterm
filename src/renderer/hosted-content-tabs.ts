@@ -46,7 +46,6 @@ export function createHostedContentTabs(
     container.className = "hosted-content-tab";
     container.hidden = true;
     const close = createPageButton(parent.ownerDocument);
-    close.classList.add("page-button-compact");
     close.textContent = language.t("hosted.close");
     const slot = parent.ownerDocument.createElement("div");
     slot.className = "hosted-content-slot";

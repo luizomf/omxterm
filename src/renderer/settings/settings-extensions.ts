@@ -142,11 +142,9 @@ export function renderExtensions(
   const statusActions = document.createElement("div");
   statusActions.className = "ui-actions";
   const cancel = createPageButton(document);
-  cancel.classList.add("page-button-compact");
   bind(cancel, () => t("common.cancel"));
   cancel.hidden = true;
   const refresh = createPageButton(document);
-  refresh.classList.add("page-button-compact");
   refresh.dataset.action = "refresh";
   bind(refresh, () => t("extensions.refresh"));
   refresh.hidden = true;
@@ -169,11 +167,9 @@ export function renderExtensions(
   const more = document.createElement("div");
   more.className = "ui-actions";
   const fileButton = createPageButton(document, "text");
-  fileButton.classList.add("page-button-compact");
   fileButton.dataset.action = "install-file";
   bind(fileButton, () => t("extensions.install"));
   const linkToggle = createPageButton(document, "text");
-  linkToggle.classList.add("page-button-compact");
   linkToggle.dataset.action = "install-link";
   linkToggle.setAttribute("aria-expanded", "false");
   bind(linkToggle, () => t("extensions.installLink"));
@@ -196,7 +192,6 @@ export function renderExtensions(
   const linkActions = document.createElement("div");
   linkActions.className = "ui-actions";
   const link = createPageButton(document);
-  link.classList.add("page-button-compact");
   link.dataset.action = "install-link-submit";
   bind(link, () => t("extensions.catalogInstall"));
   linkActions.append(link);
@@ -258,7 +253,6 @@ export function renderExtensions(
     parent: HTMLElement,
   ) {
     const element = createPageButton(document, "text");
-    element.classList.add("page-button-compact");
     element.dataset.action = request.operation;
     bind(element, () => t(label));
     element.disabled = busy;

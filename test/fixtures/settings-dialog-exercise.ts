@@ -310,7 +310,7 @@ export async function exerciseSettingsDialog(
     "[...document.querySelectorAll('[role=\"tabpanel\"]')].filter((panel) => getComputedStyle(panel).display !== 'none').map((panel) => panel.id).join() === 'settings-panel-terminal'",
   );
   await evaluate(
-    `(() => { const input = ${field("Padding top")}; input.value = "24"; input.dispatchEvent(new Event("change")); })()`,
+    `(() => { const input = ${field("Top")}; input.value = "24"; input.dispatchEvent(new Event("change")); })()`,
   );
   const liveStatus = await settle();
   const liveFile: unknown = JSON.parse(await readConfig());

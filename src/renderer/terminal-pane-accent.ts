@@ -27,6 +27,36 @@ function readableTone(theme: TerminalTheme, color: string): string {
     : color;
 }
 
+// A field's outline (--ui-input-border): the quietest mix of the foreground
+// into the background that still reads 3:1 against that background, the
+// floor for a control's boundary. High-contrast themes get a soft grey;
+// low-contrast ones a firmer line, up to the foreground itself.
+export function fieldBorderTone(background: string, foreground: string) {
+  const channel = (hex: string, offset: number) =>
+    Number.parseInt(hex.slice(offset, offset + 2), 16);
+  const base = luminance(background);
+  let tone = foreground;
+  for (let share = 100; share >= 20; share -= 2) {
+    const mixed = `#${[1, 3, 5]
+      .map((offset) =>
+        Math.round(
+          channel(background, offset) +
+            ((channel(foreground, offset) - channel(background, offset)) *
+              share) /
+              100,
+        )
+          .toString(16)
+          .padStart(2, "0"),
+      )
+      .join("")}`;
+    const value = luminance(mixed);
+    if ((Math.max(value, base) + 0.05) / (Math.min(value, base) + 0.05) < 3)
+      break;
+    tone = mixed;
+  }
+  return tone;
+}
+
 export function luminance(hex: string): number {
   // Terminal Theme validation guarantees six-digit sRGB colors.
   const channels = [1, 3, 5].map((offset) => {

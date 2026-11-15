@@ -22,6 +22,33 @@ import {
 
 beforeAll(installSettingsDom);
 
+it("edits each side of the terminal padding from one Padding row", async () => {
+  const view = await open();
+  const row = view.query('[role="group"]');
+  expect(
+    document.getElementById(row.getAttribute("aria-labelledby")!)!.textContent,
+  ).toBe("Padding");
+  expect(
+    [...row.querySelectorAll("label")].map((label) => [
+      label.textContent,
+      label.querySelector("input")!.value,
+    ]),
+  ).toEqual([
+    ["Top", "0"],
+    ["Right", "8"],
+    ["Bottom", "8"],
+    ["Left", "8"],
+  ]);
+  const bottom = view.field("Bottom");
+  bottom.value = "24";
+  bottom.dispatchEvent(new Event("change"));
+  await view.settle();
+  expect(view.bridge.change).toHaveBeenCalledExactlyOnceWith({
+    path: "terminal.padding.bottom",
+    value: 24,
+  });
+});
+
 it("edits shared panel placement on the Window page with live feedback", async () => {
   const view = await open();
   view.query<HTMLButtonElement>("#settings-tab-window").click();

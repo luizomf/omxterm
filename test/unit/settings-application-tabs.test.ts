@@ -398,7 +398,7 @@ it.each(["tab", "overlay", "close"] as const)(
       expect(document.querySelector(".settings-status")!.textContent).toBe(
         "Recording cancelled.",
       );
-      expect(record.textContent).toBe("Record");
+      expect(record.textContent).toBe("Change");
       const focused = document.activeElement;
       record.click();
       expect(document.activeElement).toBe(focused);

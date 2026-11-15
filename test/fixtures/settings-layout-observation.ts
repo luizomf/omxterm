@@ -25,8 +25,10 @@ interface Box {
 }
 interface Form {
   readonly nestedColor: boolean;
-  readonly display: string;
-  readonly direction: string;
+  /** A ui-form-row; otherwise a labelled field with its name above it. */
+  readonly formRow: boolean;
+  /** One row holding several small fields. */
+  readonly group: boolean;
   readonly box: Box;
   readonly label: Box;
   readonly field: Box;
@@ -39,7 +41,6 @@ interface Label {
 }
 interface Shortcut {
   readonly box: Box;
-  readonly columns: number;
   readonly name: Box;
   readonly binding: Box;
   readonly actions: Box;
@@ -159,7 +160,7 @@ export function observeSettingsLayout(
       parseFloat(style.paddingLeft) -
       parseFloat(style.paddingRight),
     navigation: {
-      mode: getComputedStyle(nav).display,
+      mode: getComputedStyle(nav).flexDirection,
       reachable: navReachable,
     },
     theme:
@@ -186,21 +187,26 @@ export function observeSettingsLayout(
             ].map(box),
           }
         : null,
-    forms: [
-      ...panel.querySelectorAll<HTMLElement>(
-        ".settings-row:not(.settings-toggle)",
-      ),
-    ]
+    forms: [...panel.querySelectorAll<HTMLElement>(".settings-row")]
       .filter((row) => !row.closest("[hidden]"))
       .slice(0, 16)
-      .map((row) => ({
-        nestedColor: !!row.closest(".settings-theme-color-controls"),
-        display: getComputedStyle(row).display,
-        direction: getComputedStyle(row).flexDirection,
-        box: box(row),
-        label: box(row.querySelector(".settings-control-caption, span")!),
-        field: box(row.querySelector("input, select")!),
-      })),
+      .map((row) => {
+        const formRow = row.classList.contains("ui-form-row");
+        return {
+          nestedColor: !!row.closest(".settings-theme-color-controls"),
+          formRow,
+          group: row.classList.contains("settings-group"),
+          box: box(row),
+          label: box(row.querySelector(".settings-control-caption, span")!),
+          // A form row's control is its last child: a field, a slider with
+          // its readout, or a group of fields.
+          field: box(
+            formRow
+              ? row.lastElementChild!
+              : row.querySelector("input, select")!,
+          ),
+        };
+      }),
     labels: [
       ...panel.querySelectorAll<HTMLElement>(
         ".settings-control-caption, .settings-shortcut-name, .extensions-panel .settings-row > span",
@@ -226,7 +232,6 @@ export function observeSettingsLayout(
       .slice(0, 2)
       .map((row) => ({
         box: box(row),
-        columns: getComputedStyle(row).gridTemplateColumns.split(/\s+/u).length,
         name: box(row.querySelector(".settings-shortcut-name")!),
         binding: box(row.querySelector(".settings-shortcut-binding")!),
         actions: box(row.querySelector(".settings-shortcut-actions")!),
@@ -264,7 +269,7 @@ function assertSettingsDetails(
   );
   assert.equal(
     observation.navigation.mode,
-    observation.width < 480 ? "grid" : "flex",
+    observation.width < 640 ? "row" : "column",
     "Settings compact navigation did not follow its viewport breakpoint",
   );
   if (expectedPanel === "settings-panel-appearance") {
@@ -335,12 +340,12 @@ function assertShortcutProportions(
       Math.abs(observation.shortcutIntro.right - panel.box.right) <= 2,
     "Settings shortcut introduction misses the common content boundary",
   );
-  if (observation.contentWidth >= 600)
-    for (const row of observation.shortcuts)
-      assert.ok(
-        row.binding.width <= 202 && row.actions.right <= row.box.right + 1,
-        "Settings shortcut columns are over-spread",
-      );
+  for (const row of observation.shortcuts)
+    assert.ok(
+      Math.abs(row.binding.right - row.box.right) <= 1 &&
+        row.actions.right <= row.binding.left + 1,
+      "Settings shortcut keys do not end the row after its actions",
+    );
 }
 
 export function assertSettingsLayout(
@@ -404,25 +409,23 @@ export function assertSettingsLayout(
       row.field.width > 0 && row.field.height > 0,
       "Settings field has no geometry",
     );
-    assert.equal(
-      row.display,
-      contentWidth < 560 ? "flex" : "grid",
-      "Settings form did not follow content breakpoint",
-    );
-    if (contentWidth < 560) {
-      assert.equal(row.direction, "column", "Settings form is not stacked");
-      assert.ok(
-        row.field.top >= row.label.bottom,
-        "Settings field overlaps stacked label",
-      );
-    } else {
-      assert.ok(
-        row.field.left >= row.label.right &&
-          row.field.top < row.label.bottom &&
-          row.field.bottom > row.label.top,
-        "Settings form columns do not align",
-      );
+    const beside =
+      row.field.left >= row.label.right - 1 &&
+      row.field.top < row.label.bottom &&
+      row.field.bottom > row.label.top;
+    const below = row.field.top >= row.label.bottom - 1;
+    if (!row.formRow) {
+      assert.ok(below, "Settings field overlaps its stacked label");
+      continue;
     }
+    assert.ok(beside || below, "Settings control overlaps its name");
+    // A single control always fits beside its name from 480 px of content,
+    // and ends at the content edge; only a group of fields may wrap sooner.
+    if (contentWidth >= 480 && !row.group)
+      assert.ok(
+        beside && Math.abs(row.field.right - row.box.right) <= 1,
+        "Settings control does not end its row at the content edge",
+      );
   }
   for (const label of observation.labels) {
     assert.ok(
@@ -447,23 +450,12 @@ export function assertSettingsLayout(
       row.actions.width > 0 && row.actions.height > 0,
       "Settings shortcut actions have no geometry",
     );
-    assert.equal(
-      row.columns,
-      contentWidth < 600 ? 2 : 3,
-      "Settings shortcuts did not follow content breakpoint",
-    );
-    if (contentWidth < 600)
+    if (contentWidth >= 480)
       assert.ok(
-        row.actions.top >= Math.max(row.name.bottom, row.binding.bottom) &&
-          Math.abs(row.actions.left - row.name.left) <= 1,
-        "Settings shortcut actions do not occupy their own line",
-      );
-    else
-      assert.ok(
-        row.actions.left >= row.binding.right &&
-          row.actions.top < row.binding.bottom &&
-          row.actions.bottom > row.binding.top,
-        "Settings shortcut actions are not in the third column",
+        row.actions.left >= row.name.right - 1 &&
+          row.binding.top < row.name.bottom &&
+          row.binding.bottom > row.name.top,
+        "Settings shortcut name, actions and keys do not share one line",
       );
   }
 }

@@ -303,10 +303,12 @@ not visual quality. The `settings-only` Window Chrome case checks real layout:
 - The minimum slot records the requested minimum and the actual outer, content
   and viewport sizes. It needs a compact viewport (at most 639×360) smaller than
   the desktop one; the runtime minimum is never lowered.
-- Each case checks the clicked category's selected/hidden state, form and
-  shortcut placement on both sides of the breakpoints, label geometry, theme
-  and Extension card edges against the 720 px boundary, editor rows, and
-  navigation scroll on focus.
+- Each case checks the clicked category's selected/hidden state, that the
+  categories are a sidebar from 640 px and a wrapping row below, that a
+  setting's control sits beside its name and ends at the content edge (or
+  wraps under it when it can't fit), that a shortcut's keys end its row after
+  its actions, label geometry, theme and Extension card edges against the
+  720 px boundary, editor rows, and navigation reach on focus.
 - It uses only synthetic themes and Extension entries, with no catalog network.
   `OMXTERM_SETTINGS_EVIDENCE_DIR` saves optional captures; failures keep a
   bounded frame and geometry under `.scratch/native-fixtures/`. Programmatic
