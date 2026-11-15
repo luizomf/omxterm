@@ -91,6 +91,12 @@ export function isDiscreteWindowAction(
   return action === "moveAuxiliaryPanel";
 }
 
+// The prompt jumps scroll the focused pane, so they yield to a focused text
+// field, where the same chords select to the start or end of the text.
+export function yieldsToTextEntry(action: string): boolean {
+  return action === "jumpToPreviousPrompt" || action === "jumpToNextPrompt";
+}
+
 // null disables an action's shortcut; the action stays in the menu.
 export type TerminalKeybinds = Readonly<
   Record<TerminalActionName, string | null>

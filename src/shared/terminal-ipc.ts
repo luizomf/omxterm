@@ -37,6 +37,7 @@ export const terminalIpc = {
   auxiliaryPanelSideToggle: "terminal:auxiliary-panel-side-toggle",
   find: "terminal:find",
   jumpToPrompt: "terminal:jump-to-prompt",
+  textEntryFocus: "terminal:text-entry-focus",
   titleBarToggle: "terminal:title-bar-toggle",
   windowChromeCommand: "terminal:window-chrome-command",
   windowChromeState: "terminal:window-chrome-state",

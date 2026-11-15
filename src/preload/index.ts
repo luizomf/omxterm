@@ -139,6 +139,11 @@ const terminal: TerminalBridge = {
   onAuxiliaryPanelToggle: plainAction(terminalIpc.auxiliaryPanelToggle),
   onAuxiliaryPanelSideToggle: plainAction(terminalIpc.auxiliaryPanelSideToggle),
   onFind: plainAction(terminalIpc.find),
+  textEntryFocus(editing: boolean) {
+    if (typeof editing !== "boolean")
+      throw new TypeError("Invalid text entry focus");
+    ipcRenderer.send(terminalIpc.textEntryFocus, editing);
+  },
   onJumpToPrompt(listener: (direction: TerminalPromptJump) => void) {
     const handler = (_event: Electron.IpcRendererEvent, direction: unknown) => {
       if (isTerminalPromptJump(direction)) listener(direction);

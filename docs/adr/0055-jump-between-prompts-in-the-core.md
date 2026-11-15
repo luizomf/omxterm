@@ -43,10 +43,12 @@ Edit menu, in the Command Palette and in Settings → Shortcuts. An agent's
   that use it can be given another chord, or the action unbound, in
   `keybinds`. An agent's `press Ctrl+Shift+Up` now runs the action instead of
   sending the key.
-- **Text fields lose a selection chord.** Shortcuts run before the page sees
-  the key, so in OMXTerm's own fields (Find, Snippets, Settings)
-  `Cmd+Shift+Up/Down` (`Ctrl+Shift+Up/Down`) jumps the focused pane instead
-  of extending the selection to the start or end of the text.
+- **Text fields keep the chord, so main needs to know about them.**
+  Shortcuts run in main before the page sees the key, and these chords
+  select to the start or end of the text in a field. The window's page tells
+  main whether a text field (Find, Settings, the palette) holds focus, and main
+  then leaves these two chords to it; extension views (the Snippets editor)
+  never get the jumps. No other shortcut does this yet.
 - **Ghostty's rules, not ours.** Previous skips prompts already in view, and
   Next from the last prompt in scrollback lands on the live screen.
 - **A rebuilt core.** The export is one more function in the tracked patch

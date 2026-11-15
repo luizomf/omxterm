@@ -9,6 +9,7 @@ import { createElectronTerminalAdapter } from "./electron-terminal-adapter";
 import { mountTerminalWindowPage } from "./terminal-window-host";
 import { renderUserFileErrorBanner } from "./user-file-error-banner";
 import { mountResttyTerminalSurface } from "../terminal-surface/restty-terminal-surface";
+import { reportTextEntryFocus } from "./text-entry-focus";
 
 // Share composition with fixture entries without replacing host policy or mounts.
 export function startTerminalWindow(bridge: Window["omxterm"]): void {
@@ -27,6 +28,9 @@ export function startTerminalWindow(bridge: Window["omxterm"]): void {
   if (!surfaceFailure)
     throw new Error("Terminal Surface failure banner is missing");
 
+  reportTextEntryFocus(document, (editing) =>
+    bridge.terminal.textEntryFocus?.(editing),
+  );
   let retired = false;
   const retireStartup = () => {
     retired = true;

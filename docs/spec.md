@@ -1974,6 +1974,9 @@ paths open a Local Image Preview
 - The Ghostty core finds the prompts from its own row marks, which follow
   reflow and scrollback trimming; nothing else keeps their rows. A selection
   moves with its text, as with any scroll.
+- While a text field holds focus (Find, Settings, the Command Palette, an
+  extension view such as the Snippets editor), the chords keep their text
+  meaning, selecting to the start or end, and the pane doesn't move.
 - With no marks (no [shell integration](shell-integration.md), tmux, a remote
   shell without the lines) or on the alternate screen, the jumps do nothing and
   show nothing. They are ignored while a Local Image Preview or About owns
