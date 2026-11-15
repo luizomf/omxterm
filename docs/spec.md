@@ -3172,8 +3172,8 @@ uploads, and download checks. This section states only the contract it follows.
   release carries the same verified assets and is GitHub's global Latest, so
   `/releases/latest` always offers the newest version for every platform, with
   a plain "which file do I download?" guide at the top of its notes.
-- The [README download index](../README.md#platforms-and-downloads) links each
-  target's version, assets, checksums, and notes.
+- The [README downloads](../README.md#platforms-and-downloads) send users to
+  `/releases/latest` and name the file for each computer.
 - Artifacts include SHA-256 checksums but no verified publisher identity. The
   macOS release app is signed with OMXTerm's stable self-signed certificate, so
   its designated requirement (`identifier "com.otaviomiranda.omxterm" and

@@ -8,7 +8,7 @@ See [versioning.md](versioning.md) for SemVer rules and [development.md](develop
 
 1. Select application version `X.Y.Z` under [versioning.md](versioning.md), remove the development suffix and review one frozen source cut. Every author of a merged outside contribution since the last release is in [CONTRIBUTORS.md](../CONTRIBUTORS.md). Record its full commit SHA. All targets for that application version use this cut; they need not ship together.
 2. Build and verify a ready target using the relevant procedure below. Retain the actual build SHA, checksums and evidence; prove any build-to-cut differences are non-artifact changes. Collect its files in the ignored `release/` directory.
-3. Create its target tag and draft, upload its complete [asset set](#publication), read back sizes and hashes, publish, and verify public downloads. Update that target's exact links in the README download index. A target that is not ready does not block another.
+3. Create its target tag and draft, upload its complete [asset set](#publication), read back sizes and hashes, publish, and verify public downloads. A target that is not ready does not block another.
 4. Advance the development baseline once for the selected application cut, not for each later target, after reviewing [extension compatibility](versioning.md#development-baseline-between-releases) for the new family.
 
 For example, Linux ARM64 can ship `linux-arm64-v0.26.0` first; macOS ARM64 can later ship `macos-arm64-v0.26.0` from the same frozen cut without an artificial version bump or rebuilding Linux. If product code, dependencies or build inputs need correction after a target ships, select a new application version and cut for the correction. Do not change a sealed release, move its tag, or create a later roll-up release.
@@ -312,7 +312,7 @@ Download the draft assets and compare every byte count and SHA-256 with the loca
 gh release edit "$tag" --draft=false --latest=false
 ```
 
-Verify the release is stable, non-Latest and points to the frozen cut. Never move a published tag, replace assets, disable immutability, or add platforms to a sealed release. When it is the newest application version for its target, update that row in the [README index](../README.md#platforms-and-downloads), using exact tag URLs for its version, download, checksum and release notes; Linux rows also link their own helper and checksum. An older backfill does not replace a newer indexed version. Leave other rows at their latest available versions. Target rows use exact tag URLs, not `/latest/download`.
+Verify the release is stable, non-Latest and points to the frozen cut. Never move a published tag, replace assets, disable immutability, or add platforms to a sealed release. The [README downloads](../README.md#platforms-and-downloads) point at the latest release, so they need no edit.
 
 ### Complete release
 
