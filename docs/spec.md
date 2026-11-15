@@ -1437,8 +1437,9 @@ startup, shell exit, tab close and renderer-loss cleanup.
   names or substitution.
 - Missing styles use Restty's synthesis. Bold-italic may use a same-family bold
   or italic face; regular, bold-only and italic-only text never gain an
-  unrequested trait. Non-default variable-font instances are not materialized,
-  so a style that needs them is synthesized and the regular family still works.
+  unrequested trait. Bold and italic variable-font instances are not
+  materialized, so a style that needs them is synthesized and the regular family
+  still works.
 - Synthetic bold thickens monochrome strokes in both directions, also over a
   real italic face. Extra ink stays inside the cell and keeps any italic
   overhang. It does not change cell layout, ANSI colors, real bold faces, color
