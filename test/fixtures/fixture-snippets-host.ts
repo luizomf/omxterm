@@ -141,7 +141,7 @@ export async function startFixtureSnippetsHost(
         ) => {
           assert.equal(prompt.title, "Install extension");
           assert.ok(
-            prompt.detail?.includes(digest),
+            prompt.detail?.replaceAll("\n", "").includes(digest),
             "consent names exact archive digest",
           );
           approved++;
