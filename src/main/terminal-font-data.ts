@@ -22,10 +22,10 @@ import type { TerminalIpcRouter } from "./terminal-ipc-types";
 export function fontIpcRouter(
   ipcMain: unknown,
   operationalEvents: Pick<OperationalEventLog, "write">,
-): TerminalIpcRouter {
   // Later app windows reuse the installed-font lookups; every load still reads
   // and validates the bytes. A configuration reload looks the families up again.
-  const faces = createTerminalFontFaceCache();
+  faces = createTerminalFontFaceCache(),
+): TerminalIpcRouter {
   const router = registerTerminalIpcRouter(
     ipcMain as IpcMainPort,
     operationalEvents,

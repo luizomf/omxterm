@@ -9,7 +9,13 @@ import {
   type FontMetricsCommandOptions,
 } from "../../src/main/installed-font-family";
 import { installedFontStyleFaces } from "../../src/main/installed-font-style-faces";
-import { loadTerminalFontData } from "../../src/main/terminal-font-data";
+import { terminalRendererConfiguration } from "../../src/main/active-user-configuration";
+import {
+  fontIpcRouter,
+  loadTerminalFontData,
+} from "../../src/main/terminal-font-data";
+import { DEFAULT_USER_CONFIGURATION } from "../../src/main/user-configuration";
+import { terminalIpc } from "../../src/shared/terminal-ipc";
 import {
   createTerminalFontFaceCache,
   installedTerminalFontFaces,
@@ -288,5 +294,70 @@ describe("Terminal Font lookup cache", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("Terminal Font IPC lookups", () => {
+  it("reuses lookups across font requests until a configuration is applied", async () => {
+    const handlers = new Map<
+      string,
+      (event: unknown, payload?: unknown) => unknown
+    >();
+    const ignore = () => {};
+    const lookup = vi.fn(async (): Promise<TerminalFontFaces> => ({
+      styles: [],
+      fallbacks: [],
+    }));
+    const router = fontIpcRouter(
+      {
+        handle: (key: string, handler: (event: unknown) => unknown) =>
+          handlers.set(key, handler),
+        on: ignore,
+        removeHandler: ignore,
+        removeListener: ignore,
+      },
+      { write: () => true },
+      createTerminalFontFaceCache(lookup),
+    );
+    const webContents = {
+      mainFrame: {},
+      isDestroyed: () => false,
+      send: ignore,
+    };
+    const configuration = terminalRendererConfiguration(
+      { configuration: DEFAULT_USER_CONFIGURATION, userFileErrors: [] },
+      0,
+    );
+    router.registerController({
+      webContents,
+      configuration,
+      createSession: vi.fn(),
+      onSessionStartError: ignore,
+      onSessionExit: ignore,
+      onSessionStarted: ignore,
+      onSessionSelected: ignore,
+      onTitleRequest: ignore,
+      onBell: ignore,
+      onUserInteraction: ignore,
+      writeClipboardText: ignore,
+      readClipboardText: () => "",
+      confirmPaste: async () => false,
+      showClipboardContextMenu: ignore,
+      openExternalLink: async () => {},
+      onExternalLinkOpenError: ignore,
+      loadSnippets: async () => ({ snippets: [] }),
+      loadLocalImage: async () => null,
+    });
+    const event = { sender: webContents, senderFrame: webContents.mainFrame };
+    const request = () => handlers.get(terminalIpc.fontData)!(event, undefined);
+
+    await request();
+    await request();
+    expect(lookup).toHaveBeenCalledTimes(1);
+
+    router.applyConfiguration(configuration);
+    await request();
+    expect(lookup).toHaveBeenCalledTimes(2);
+    router.dispose();
   });
 });
