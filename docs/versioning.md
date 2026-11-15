@@ -290,6 +290,11 @@ The Appearance theme list and theme editor redesign (#1184) moves main to
 `0.37.0-dev.7`. The stylesheet gains choice cards and swatches; extension
 packages already on unpublished versions carry it, and none bumps.
 
+Looking up a tab's folder only while the shell itself is in the foreground and
+no title of its own shows (#1183's lookup ran `lsof` on macOS after every quiet
+second of output, including under tmux and running programs) moves main to
+`0.37.0-dev.8`.
+
 ## Public contract
 
 The versioned public contract covers the user-facing behavior documented in [`spec.md`](spec.md):

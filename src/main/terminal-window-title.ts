@@ -49,6 +49,9 @@ export interface TerminalWindowTitleController {
   // The folder the session's shell is in, or undefined when unknown. It names
   // the tab until the shell sets a title of its own.
   setFolder(sessionId: TerminalSessionId, folder: string | undefined): void;
+  // Whether the session's tab is named after its folder: no title of the
+  // shell's own is showing.
+  showsFolder(sessionId: TerminalSessionId): boolean;
   requestTitle(sessionId: TerminalSessionId, request: string): void;
   // inSelectedTab: the session is a pane of the selected tab, so it is on
   // screen. It defaults to whether it is the selected tab's focused pane.
@@ -222,6 +225,9 @@ export function createTerminalWindowTitleController(
       // Publish the current value on the same ordered stream as OSC/BEL updates;
       // a start-time snapshot could overwrite a newer accepted title.
       if (!disposed) pushSessionTitle(sessionId);
+    },
+    showsFolder(sessionId) {
+      return !disposed && sessions.get(sessionId)?.title === undefined;
     },
     setFolder(sessionId, folder) {
       if (disposed) return;
