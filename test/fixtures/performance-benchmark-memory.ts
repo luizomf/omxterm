@@ -94,8 +94,13 @@ export function parseFootprintJson(text: string): Map<number, number> {
   if (unit !== "byte") throw new Error(`Unsupported footprint unit: ${unit}`);
   for (const entry of document.processes ?? []) {
     const bytes = entry.auxiliary?.phys_footprint ?? entry.footprint;
-    if (!Number.isSafeInteger(entry.pid) || typeof bytes !== "number") continue;
-    readings.set(entry.pid!, Math.round(bytes));
+    if (
+      !Number.isSafeInteger(entry.pid) ||
+      !Number.isSafeInteger(bytes) ||
+      bytes! < 0
+    )
+      continue;
+    readings.set(entry.pid!, bytes!);
   }
   return readings;
 }
@@ -151,9 +156,13 @@ export function parseWindowsPrivateBytes(text: string): Map<number, number> {
   const parsed = JSON.parse(trimmed) as
     { pid?: number; bytes?: number } | Array<{ pid?: number; bytes?: number }>;
   for (const row of Array.isArray(parsed) ? parsed : [parsed]) {
-    if (!Number.isSafeInteger(row.pid) || typeof row.bytes !== "number")
+    if (
+      !Number.isSafeInteger(row.pid) ||
+      !Number.isSafeInteger(row.bytes) ||
+      row.bytes! < 0
+    )
       continue;
-    readings.set(row.pid!, row.bytes);
+    readings.set(row.pid!, row.bytes!);
   }
   return readings;
 }
